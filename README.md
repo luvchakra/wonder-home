@@ -84,6 +84,28 @@ cookies, so removing it would log users out at random.
 Run `npm run db:types` after every migration — `types.ts` currently holds an
 empty-schema placeholder, because no tables have been defined yet.
 
+## Supabase MCP server
+
+`.mcp.json` configures a project-scoped, **read-only** Supabase MCP server
+pinned to the same project ref as the app. It is checked in, so the token is
+not: `${SUPABASE_ACCESS_TOKEN}` is expanded from the environment your editor
+was launched in.
+
+```bash
+export SUPABASE_ACCESS_TOKEN=sbp_...   # from Supabase -> Account -> Access Tokens
+```
+
+Put that in your shell profile. It is deliberately *not* read from
+`.env.local` — that file is loaded by Next.js at runtime, whereas `.mcp.json`
+is expanded by the editor before the app ever starts.
+
+Two things worth knowing about the token:
+
+- It is **account-scoped, not project-scoped**. `--project-ref` constrains what
+  the MCP server will do, not what the token can do. Never commit a literal one.
+- Restart your editor after changing `.mcp.json`; a project-scoped server is
+  read at startup and needs an explicit approval before it will run.
+
 ## Health check
 
 `GET /api/health/supabase` performs a real round trip to the project's Auth
