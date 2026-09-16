@@ -106,6 +106,34 @@ Two things worth knowing about the token:
 - Restart your editor after changing `.mcp.json`; a project-scoped server is
   read at startup and needs an explicit approval before it will run.
 
+`--features` omits the `docs` group deliberately. That group fetches Supabase's
+Content API GraphQL schema while the server is still starting, and if that one
+host is unreachable the whole `tools/list` call fails — the server connects but
+registers *zero* tools. Dropping it trades `search_docs` for a server that comes
+up on a minimal network allowlist. Add `docs` back once `supabase.com` is
+reachable.
+
+`--project-ref` also disables the account-level tools (`list_projects`,
+`list_organizations`), so the MCP server cannot enumerate or reach any other
+project. That is the one-database rule applied to tooling as well as to the app.
+
+### Network egress
+
+The MCP server and the app need these hosts reachable:
+
+| Host | Needed for |
+|---|---|
+| `api.supabase.com` | Management API — every MCP tool |
+| `stehegovxlssxdepiruk.supabase.co` | the app itself: Auth, REST, health check |
+| `db.stehegovxlssxdepiruk.supabase.co:5432` | `supabase db push`, `psql` |
+| `supabase.com`, `content-api.supabase.com` | only if you re-enable the `docs` group |
+
+In a sandboxed environment (Claude Code on the web, CI with an egress
+allowlist), a blocked host returns a synthetic `HTTP 403` whose body reads
+`Host not in allowlist: <host>`. The Supabase MCP server reports that 403 as
+*"your access token may be scoped to a different organization"*, which is
+misleading — check the response body before suspecting the token.
+
 ## Health check
 
 `GET /api/health/supabase` performs a real round trip to the project's Auth
