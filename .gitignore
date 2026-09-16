@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Holds a literal Supabase access token — must not reach this public repo
+.mcp.json
