@@ -1,0 +1,10 @@
+# Supabase CLI configuration for WonderHome.
+#
+# `project_id` is the ref of the one project this repo may be linked to.
+# Do not point this at another project — see src/lib/supabase/project.ts.
+project_id = "stehegovxlssxdepiruk"
+
+[db]
+# Should match the remote project's Postgres major version, so a local stack
+# behaves like production. Confirm under Project Settings -> Infrastructure.
+major_version = 17
