@@ -66,6 +66,10 @@ const SHIPPED_TABLES = [
   "payment_attempts",
   "spend_anomalies",
   "budgets",
+  "family_events",
+  "event_participants",
+  "schedule_conflicts",
+  "gift_plans",
 ];
 
 /**
@@ -97,6 +101,12 @@ const EMBEDDED_READS = [
     table: "household_members",
     select:
       "id, display_name, date_of_birth, member_guardians!member_guardians_child_member_id_fkey(guardian_member_id)",
+  },
+  {
+    name: "family events embed resolves",
+    table: "family_events",
+    select:
+      "id, title, kind, starts_at, ends_at, protected, owner_member_id, status, action_state, action_due_at, event_participants(member_id, response, required)",
   },
   {
     name: "meals embed resolves",

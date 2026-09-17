@@ -18,6 +18,7 @@
     "./commerce/*": "./src/commerce/*.ts",
     "./meals/*": "./src/meals/*.ts",
     "./finance/*": "./src/finance/*.ts",
+    "./family/*": "./src/family/*.ts",
     "./integrations/*": "./src/integrations/*.ts",
     "./ai/*": "./src/ai/*.ts",
     "./identity/*": "./src/identity/*.ts",

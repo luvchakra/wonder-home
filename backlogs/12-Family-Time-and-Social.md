@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 12-001 | Family events | Not Started | |
-| 2 | P0 | 12-002 | Protected family time | Not Started | |
-| 3 | P0 | 12-003 | Common availability | Not Started | |
-| 4 | P1 | 12-004 | Family activity planning | Not Started | |
-| 5 | P1 | 12-005 | Social events | Not Started | |
-| 6 | P1 | 12-006 | Gift planning | Not Started | |
-| 7 | P1 | 12-007 | Conflict detection | Not Started | |
-| 8 | P2 | 12-008 | End-to-end outing | Not Started | |
+| 1 | P0 | 12-001 | Family events | Done | events keep their participants, so a commitment constrains the right people |
+| 2 | P0 | 12-002 | Protected family time | Done | protected is a column; automation can ask about it and cannot spend it |
+| 3 | P0 | 12-003 | Common availability | Done | free/busy only — wh.busy_windows returns times, never what anybody is doing |
+| 4 | P1 | 12-004 | Family activity planning | Done | at most three options, filtered by free time, budget, travel and age |
+| 5 | P1 | 12-005 | Social events | Done | every social event has an owner and an explicit action state |
+| 6 | P1 | 12-006 | Gift planning | Done | gifts planned against an explicit occasion, never guessed from a date |
+| 7 | P1 | 12-007 | Conflict detection | Done | both sides named and a proposal made; never a silent move |
+| 8 | P2 | 12-008 | End-to-end outing | Done | outing planning composes availability, conflicts and gifts already built |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

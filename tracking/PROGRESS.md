@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 120 |
+| Done | 128 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 50 |
-| Completion | 70.6% |
-| Current module | 12 Family Time & Social |
-| Current story | 12-001 Family events |
+| Not Started | 42 |
+| Completion | 75.3% |
+| Current module | 17 External Integrations |
+| Current story | 17-002 Calendar |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -98,6 +98,15 @@
 | 2026-09-17 | 11 | 11-006 | Done | 4 unit tests | the comparison basis travels with the finding; a review, never a block |
 | 2026-09-17 | 11 | 11-007 | Done | 2 unit tests | budgets describe intent and never stop a payment |
 | 2026-09-17 | 11 | 11-008 | Done | policy + idempotency | deterministic policy and retry rules; no payment provider is live |
+
+| 2026-09-17 | 12 | 12-001 | Done | 6 unit + 13 db tests | events stay linked to participants; an event has to end after it starts |
+| 2026-09-17 | 12 | 12-002 | Done | 4 unit + db tests | protected time is a column automation may read and never spend |
+| 2026-09-17 | 12 | 12-003 | Done | 6 unit + 3 db tests | free/busy only: wh.busy_windows returns times and nothing about why |
+| 2026-09-17 | 12 | 12-004 | Done | 3 unit tests | at most three options, and anything that does not fit is removed |
+| 2026-09-17 | 12 | 12-005 | Done | 4 unit tests | an owner and an explicit action state, so nothing becomes passive calendar data |
+| 2026-09-17 | 12 | 12-006 | Done | 4 unit tests | gifts planned against a stated occasion, chased as the date nears |
+| 2026-09-17 | 12 | 12-007 | Done | 6 unit + 3 db tests | both sides named, a proposal offered, protected time never moved |
+| 2026-09-17 | 12 | 12-008 | Done | composition | an outing uses availability, conflict and gift planning together |
 
 ## Progress protocol
 - Mark the story In Progress before coding.
