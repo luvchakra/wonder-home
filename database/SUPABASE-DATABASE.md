@@ -48,6 +48,32 @@ Use Supabase PostgreSQL as used by the WonderArk core architecture, with `@supab
 ## Domain tables
 Create normalized household-scoped tables for helper profiles/availability, school connections/assignments/documents/exams, groceries/inventory/orders, meals/recipes, bills/payment intents, pets/care outcomes, maintenance/assets/work orders, family-time events, social events/invitations/RSVPs/gifts.
 
+### Helper operations (module 07)
+- `helper_profiles`, `member_availability`, `availability_exceptions`
+
+Availability is split into a recurring pattern and dated exceptions. An absence
+is a row in `availability_exceptions`, never an edit to the pattern, because the
+pattern is what tells us the absence is unusual.
+
+### Home, maintenance & pets (module 13)
+- `home_assets`: category, location, service_interval_days, last_serviced_on,
+  warranty/AMC expiry, responsible_member_id, status
+- `asset_service_events`: what was actually done, when, by whom and at what cost
+- `service_requests`: provider, status, scheduled_for, `next_action`, `next_action_by`
+- `laundry_needs`: label, needed_by, inferred state with `state_as_of`/`state_source`
+- `pets`, `pet_care_needs`: kind, interval or date, responsible member, supply days
+- `home_device_signals`: optional readings — kind, observed_at, value, confidence
+
+Three deliberate absences carry the module's product rules. There is no
+completion or chore table, because nobody is asked to keep WonderHome accurate.
+`laundry_needs` has no wash/dry/fold step to tick: state advances from
+observation, and `unknown` is both the default and the honest common case.
+`home_device_signals` has **no insert policy for members** — readings are
+server-ingested, because evidence a member can write is not evidence.
+
+`next_action_by` is the column that makes an open service request actionable
+rather than informational, and a settled request is constrained to hold none.
+
 ## Integrations
 - `integrations`: provider, status, scopes, credential reference, last sync
 - `integration_events`: provider event identity, type, payload hash, processing timestamps
