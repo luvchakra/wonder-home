@@ -100,3 +100,42 @@ export async function acceptInvitationAction(
 
   redirect("/");
 }
+
+const roleChangeSchema = z.object({
+  householdId: z.uuid(),
+  memberId: z.uuid(),
+  role: z.enum(["administrator", "adult", "child", "helper"]),
+  granted: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
+
+/**
+ * Grants or revokes a role. Head is not assignable here — transferring
+ * ownership is its own operation, not a role grant.
+ */
+export async function setMemberRoleAction(formData: FormData): Promise<void> {
+  const parsed = roleChangeSchema.safeParse({
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId"),
+    role: formData.get("role"),
+    granted: formData.get("granted"),
+  });
+  if (!parsed.success) return;
+
+  const supabase = await createClient();
+  const { requireMembership, setMemberRole } = await import(
+    "@wonderhome/core/identity/households"
+  );
+
+  try {
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    await setMemberRole(supabase, actor, {
+      memberId: parsed.data.memberId,
+      role: parsed.data.role,
+      granted: parsed.data.granted,
+    });
+  } catch (error) {
+    log.warn("role change refused", { reason: error instanceof Error ? error.name : "unknown" });
+  }
+
+  revalidatePath("/household/members");
+}

@@ -11,6 +11,7 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 
 import { InviteMemberForm } from "../../_components/invite-member-form";
+import { MemberRoleControl } from "../../_components/member-role-control";
 import { PendingInvitations } from "../../_components/pending-invitations";
 
 export const metadata = { title: "Members & roles" };
@@ -55,11 +56,20 @@ export default async function MembersPage() {
                     {describeRoles(member.roles, member.isOwner)}
                   </p>
                 </div>
-                {member.status !== "active" ? (
-                  <span className="rounded-full bg-[var(--wh-surface-muted)] px-2 py-0.5 text-xs text-[var(--wh-foreground-muted)]">
-                    {member.status}
-                  </span>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-2">
+                  {member.status !== "active" ? (
+                    <span className="rounded-full bg-[var(--wh-surface-muted)] px-2 py-0.5 text-xs text-[var(--wh-foreground-muted)]">
+                      {member.status}
+                    </span>
+                  ) : null}
+                  {membership.roles.includes("head") && !member.isOwner ? (
+                    <MemberRoleControl
+                      householdId={membership.household.id}
+                      memberId={member.id}
+                      isAdministrator={member.roles.includes("administrator")}
+                    />
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

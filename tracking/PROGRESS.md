@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 12 |
+| Done | 13 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 158 |
-| Completion | 7.1% |
+| Not Started | 157 |
+| Completion | 7.6% |
 | Current module | 01 Identity & Family Accounts |
-| Current story | 01-003 Roles and permissions |
+| Current story | 01-004 Child profiles |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -19,7 +19,7 @@
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
-| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 2 | In Progress |
+| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 3 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 0 | Not Started |
@@ -64,3 +64,4 @@
 | 2026-09-17 | 00 | — | Done | 50 unit, 15 script, 18 E2E | Module 00 complete; foundation ready for module 01 |
 | 2026-09-17 | 01 | 01-001 | Done | 12 RLS, 10 unit, 7 E2E | Tenant model, wh.create_household, auth + onboarding surfaces |
 | 2026-09-17 | 01 | 01-002 | Done | 10 RLS, 7 unit, 3 E2E | Hashed expiring invitation tokens, supersession on re-invite, acceptance path |
+| 2026-09-17 | 01 | 01-003 | Done | 9 RLS, 12 unit | Permission catalogue, role assignment API and head-only admin designation |
