@@ -77,3 +77,30 @@ security/           threat model, reviewed as surfaces are added
 backlogs/           the 21 module backlogs (170 stories)
 tracking/           live progress; PROGRESS.md is the source of truth
 ```
+
+## Deploying
+
+The repository builds as a monorepo from its root (`vercel.json` pins the build
+rather than relying on a dashboard Root Directory setting), so a fresh project
+needs no extra configuration to build.
+
+It does need environment variables, and **when** they are needed differs:
+
+| Variable | Needed at | If missing |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | **build** time | inlined as `undefined`; the app fails its startup check and every request errors |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | **build** time | same |
+| `SUPABASE_SERVICE_ROLE_KEY` | run time | privileged paths fail; ordinary requests are unaffected |
+
+The first two are read through literal `process.env.NEXT_PUBLIC_*` accesses so
+Next.js can inline them into the client bundle, which means **setting them after
+a build does not fix that build** — the values are already compiled in. Set them
+on the project, then redeploy.
+
+A build with no environment at all still succeeds. Configuration is validated at
+server start, not at build, so a misconfigured deployment fails fast on boot
+rather than shipping a broken bundle quietly — but it does mean a green build is
+not by itself evidence that the deployment is configured.
+
+After deploying, `npm run verify:live` against the same project confirms every
+migration landed and the privileged path works.
