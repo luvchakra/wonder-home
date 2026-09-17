@@ -11,8 +11,7 @@ const acceptSchema = z.object({
 });
 
 /** Joins the signed-in person to a household using an invitation token. */
-export const POST = defineRoute({ input: acceptSchema }, async ({ body }) => {
-  await requireUser();
+export const POST = defineRoute({ input: acceptSchema, authenticate: requireUser }, async ({ body }) => {
   const supabase = await createClient();
   return acceptInvitation(supabase, body.token, body.displayName);
 });

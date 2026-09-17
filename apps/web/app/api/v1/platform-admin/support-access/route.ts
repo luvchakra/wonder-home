@@ -25,16 +25,18 @@ const grantSchema = z.object({
  * The grant is written where the household can read it, and audited, so the
  * family can see who looked at their home and why.
  */
-export const POST = defineRoute({ input: grantSchema }, async ({ body, requestId }) => {
-  const supabase = await createClient();
-  const actor = await requirePlatformAdmin(supabase);
+export const POST = defineRoute(
+  // Staff, not a household member, and established before the body is read: an
+  // anonymous caller should not learn what a support grant looks like.
+  { input: grantSchema, authenticate: async () => requirePlatformAdmin(await createClient()) },
+  async ({ body, requestId, actor }) => {
+    const granted = await grantSupportAccess(createAdminClient(), actor, body, requestId);
 
-  const granted = await grantSupportAccess(createAdminClient(), actor, body, requestId);
-
-  return new Response(JSON.stringify(granted), {
-    status: 201,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-  });
-});
+    return new Response(JSON.stringify(granted), {
+      status: 201,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    });
+  },
+);
 
 export const dynamic = "force-dynamic";

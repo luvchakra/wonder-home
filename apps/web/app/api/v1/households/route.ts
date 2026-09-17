@@ -12,8 +12,7 @@ export const GET = defineRoute({}, async () => {
 });
 
 /** Creates a household and makes the caller its Head of Family. */
-export const POST = defineRoute({ input: createHouseholdSchema }, async ({ body }) => {
-  await requireUser();
+export const POST = defineRoute({ input: createHouseholdSchema, authenticate: requireUser }, async ({ body }) => {
   const supabase = await createClient();
   const created = await createHousehold(supabase, body);
 

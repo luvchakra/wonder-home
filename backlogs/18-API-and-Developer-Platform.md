@@ -6,9 +6,9 @@
 |---|---|---|---|---|---|
 | 1 | P0 | 18-001 | Versioned API | Done | Established in 00-007; /api/v1 with correlation ids |
 | 2 | P0 | 18-002 | Schemas/errors | Done | Zod validation and one error envelope |
-| 3 | P0 | 18-003 | Auth/authorization | Done | requireUser plus household scope; RLS behind it |
+| 3 | P0 | 18-003 | Auth/authorization | Done | requireUser plus household scope; RLS behind it; authentication settled before the body is read |
 | 4 | P0 | 18-004 | Idempotency | Done | Idempotency-Key replay with request fingerprinting |
-| 5 | P0 | 18-005 | OpenAPI | Done | Generated from the route schemas, served at /api/v1/openapi |
+| 5 | P0 | 18-005 | OpenAPI | Done | Generated from the route schemas, served at /api/v1/openapi; E2E derives the endpoint list from disk so it cannot go stale |
 | 6 | P0 | 18-006 | Audit hooks | Done | recordAuditEvent with redaction; never fails the request |
 | 7 | P1 | 18-007 | Webhooks/events | Not Started | |
 | 8 | P2 | 18-008 | Developer platform | Not Started | |

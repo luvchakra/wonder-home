@@ -14,20 +14,32 @@ import { REQUEST_ID_HEADER, requestIdFrom } from "./request-id";
  *
  * Authorization is deliberately NOT defaulted here. Each handler declares what
  * it requires, because a wrapper that silently authorizes is a wrapper that
- * eventually authorizes something it should not.
+ * eventually authorizes something it should not. What the wrapper does
+ * guarantee is the order: a declared `authenticate` step runs before the body
+ * is read, so an anonymous caller is refused without being told the shape of
+ * the request they failed to make.
  */
 
-export type RouteContext<TBody> = {
+export type RouteContext<TBody, TActor> = {
   request: Request;
   requestId: string;
   body: TBody;
+  /** Whatever `authenticate` returned; `undefined` on an endpoint without one. */
+  actor: TActor;
   /** Present when the caller sent an Idempotency-Key. */
   idempotencyKey: string | null;
 };
 
-export type RouteOptions<TSchema extends z.ZodTypeAny | undefined> = {
+export type RouteOptions<TSchema extends z.ZodTypeAny | undefined, TActor> = {
   /** Zod schema for the JSON request body. Omit for methods without one. */
   input?: TSchema;
+  /**
+   * Establishes who is calling, before anything else happens. Declaring it here
+   * rather than calling it inside the handler is what keeps 401 ahead of 400:
+   * validation detail is a description of the API, and an anonymous caller has
+   * not earned one.
+   */
+  authenticate?: () => Promise<TActor>;
   /**
    * Makes the handler replay-safe when the caller sends an Idempotency-Key.
    * The store is resolved per request, because it is scoped to the household
@@ -36,16 +48,22 @@ export type RouteOptions<TSchema extends z.ZodTypeAny | undefined> = {
   idempotency?: (context: { request: Request }) => Promise<IdempotencyStore | null>;
 };
 
-type Handler<TBody> = (context: RouteContext<TBody>) => Promise<unknown> | unknown;
+type Handler<TBody, TActor> = (context: RouteContext<TBody, TActor>) => Promise<unknown> | unknown;
 
-export function defineRoute<TSchema extends z.ZodTypeAny | undefined = undefined>(
-  options: RouteOptions<TSchema>,
-  handler: Handler<TSchema extends z.ZodTypeAny ? z.infer<TSchema> : undefined>,
+export function defineRoute<
+  TSchema extends z.ZodTypeAny | undefined = undefined,
+  TActor = undefined,
+>(
+  options: RouteOptions<TSchema, TActor>,
+  handler: Handler<TSchema extends z.ZodTypeAny ? z.infer<TSchema> : undefined, TActor>,
 ) {
   return async (request: Request): Promise<Response> => {
     const requestId = requestIdFrom(request.headers);
 
     try {
+      // Before the body: see the note on RouteOptions.authenticate.
+      const actor = (options.authenticate ? await options.authenticate() : undefined) as TActor;
+
       let body: unknown = undefined;
 
       if (options.input) {
@@ -67,7 +85,7 @@ export function defineRoute<TSchema extends z.ZodTypeAny | undefined = undefined
       const typedBody = body as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : undefined;
 
       const run = async () => {
-        const result = await handler({ request, requestId, body: typedBody, idempotencyKey });
+        const result = await handler({ request, requestId, body: typedBody, actor, idempotencyKey });
         return result instanceof Response
           ? { status: result.status, body: await result.clone().json().catch(() => null) }
           : { status: 200, body: result };

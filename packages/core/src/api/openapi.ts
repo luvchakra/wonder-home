@@ -357,6 +357,124 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/openapi": {
+        get: {
+          summary: "This document",
+          security: [],
+          responses: { "200": { description: "The OpenAPI description of /api/v1" } },
+        },
+      },
+      "/households/{householdId}/school": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "School work that needs the household",
+          description:
+            "Which children the caller may see is decided underneath by guardianship, so a guardian and a non-guardian adult get different agendas from the same request.",
+          responses: {
+            "200": { description: "The school agenda" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Record an item of school work",
+          responses: {
+            "201": { description: "The new item" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/shopping": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "What the household is running out of",
+          responses: {
+            "200": { description: "The shopping agenda" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Price a basket and apply the household's purchase policy",
+          description:
+            "Buys nothing. It returns the cost, the quantities and the policy decision, so a person sees what an order would do before it does it.",
+          responses: {
+            "200": { description: "The priced basket and the policy decision" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/meals": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "What is planned to eat, and what is about to go wrong with it",
+          responses: {
+            "200": { description: "The meal agenda" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Plan a meal",
+          description:
+            "A recipe's ingredients are copied onto the meal, so editing the recipe later cannot rewrite a dinner the household already committed to.",
+          responses: {
+            "201": { description: "The planned meal" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/bills": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "What the household owes and what needs paying",
+          description: "A child reading this receives an empty agenda rather than a filtered one.",
+          responses: {
+            "200": { description: "The finance agenda" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Prepare a payment for a bill",
+          description:
+            "Creates an intent awaiting approval. It reaches no payment provider: approving the intent, and the step-up that requires, are separate deliberate acts.",
+          responses: {
+            "201": { description: "The payment intent, unapproved" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/family": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "What is coming, what needs answering and what clashes",
+          responses: {
+            "200": { description: "The family agenda, with any conflicts and their proposals" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Put something in the family's calendar",
+          description:
+            "Protected time can be created here and is never moved here. A clash with a confirmed commitment produces a proposal for a person to decide.",
+          responses: {
+            "201": { description: "The new event" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

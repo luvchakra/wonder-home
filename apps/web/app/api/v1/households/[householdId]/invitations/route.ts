@@ -30,12 +30,12 @@ export async function POST(request: Request, { params }: Params) {
   const { householdId } = await params;
   return defineRoute({
     input: inviteSchema,
+    authenticate: requireUser,
     idempotency: async () => {
       const supabase = await createClient();
       return supabaseIdempotencyStore(supabase, householdId);
     },
   }, async ({ body }) => {
-    await requireUser();
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, householdId);
 

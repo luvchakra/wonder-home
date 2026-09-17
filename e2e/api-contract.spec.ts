@@ -48,15 +48,22 @@ test("the API describes itself, without exposing household content", async ({ re
   expect(JSON.stringify(document)).not.toMatch(/chakraborty|@example|token_hash/i);
 });
 
-test("an idempotency key is rejected when it is too short to be unique", async ({ request }) => {
+test("authentication is settled before anything about the request is judged", async ({ request }) => {
+  // A malformed idempotency key and a malformed body are both grounds for a
+  // 400 — for a caller who has a session. An anonymous caller is turned away
+  // first, so probing this endpoint teaches nothing about its rules. The rules
+  // themselves are covered in packages/core/src/api/idempotency.test.ts.
   const householdId = "00000000-0000-4000-8000-000000000000";
   const response = await request.post(`/api/v1/households/${householdId}/invitations`, {
     headers: { "idempotency-key": "short" },
-    data: { email: "a@b.test", displayName: "A" },
+    data: { email: "not-an-email", displayName: "" },
   });
 
-  expect(response.status()).toBe(400);
-  expect((await response.json()).error.code).toBe("bad_request");
+  expect(response.status()).toBe(401);
+
+  const payload = await response.json();
+  expect(payload.error.code).toBe("unauthenticated");
+  expect(payload.error).not.toHaveProperty("details");
 });
 
 test("readiness reports each dependency without describing the deployment", async ({ request }) => {

@@ -19,8 +19,7 @@ type Params = { params: Promise<{ householdId: string; memberId: string }> };
 export async function PATCH(request: Request, { params }: Params) {
   const { householdId, memberId } = await params;
 
-  return defineRoute({ input: roleChangeSchema }, async ({ body }) => {
-    await requireUser();
+  return defineRoute({ input: roleChangeSchema, authenticate: requireUser }, async ({ body }) => {
     const supabase = await createClient();
     const actor = await requireMembership(supabase, householdId);
 

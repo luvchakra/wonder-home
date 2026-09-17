@@ -47,12 +47,26 @@ describe("the OpenAPI document", () => {
   const paths = document.paths as Record<string, Record<string, unknown>>;
 
   it("describes every endpoint the app serves", () => {
+    // A fixed list can only go stale, so e2e/domains.spec.ts derives the same
+    // check from the route files on disk and fails on anything missing here.
+    // This list stays as the readable statement of what the API is.
     for (const path of [
       "/health",
       "/health/ready",
+      "/openapi",
       "/me",
       "/me/view",
       "/households",
+      "/households/{householdId}/bills",
+      "/households/{householdId}/entitlements",
+      "/households/{householdId}/family",
+      "/households/{householdId}/home",
+      "/households/{householdId}/home/assets",
+      "/households/{householdId}/home/service-requests",
+      "/households/{householdId}/integrations",
+      "/households/{householdId}/meals",
+      "/households/{householdId}/school",
+      "/households/{householdId}/shopping",
       "/households/{householdId}/invitations",
       "/households/{householdId}/children",
       "/households/{householdId}/members/{memberId}/roles",

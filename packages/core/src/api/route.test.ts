@@ -90,4 +90,47 @@ describe("defineRoute", () => {
     expect(payload.requestId).not.toContain("<script>");
     expect(payload.requestId).toMatch(/^[0-9a-f-]{36}$/);
   });
+
+  it("refuses an anonymous caller before it reads the body, not after", async () => {
+    // Validation detail describes the API. A caller who cannot authenticate has
+    // not earned that description, and the order of these two steps is the only
+    // thing that decides which they get.
+    let bodyWasRead = false;
+    const route = defineRoute(
+      {
+        input: z.object({ amountMinor: z.number().int().positive() }),
+        authenticate: async () => {
+          throw ApiError.unauthenticated();
+        },
+      },
+      () => {
+        bodyWasRead = true;
+        return {};
+      },
+    );
+
+    const response = await route(
+      new Request("https://wonderhome.test/api/v1/example", {
+        method: "POST",
+        body: JSON.stringify({ amountMinor: "not a number" }),
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(payload.error.code).toBe("unauthenticated");
+    expect(payload.error).not.toHaveProperty("details");
+    expect(bodyWasRead).toBe(false);
+  });
+
+  it("hands the handler whoever authenticated, so it is not looked up twice", async () => {
+    const route = defineRoute(
+      { authenticate: async () => ({ userId: "kunal" }) },
+      ({ actor }) => ({ seen: actor.userId }),
+    );
+
+    const response = await route(new Request("https://wonderhome.test/api/v1/example"));
+
+    expect(await response.json()).toEqual({ seen: "kunal" });
+  });
 });

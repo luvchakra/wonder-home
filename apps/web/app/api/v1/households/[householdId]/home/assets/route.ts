@@ -21,8 +21,7 @@ export async function GET(request: Request, { params }: Params) {
 export async function POST(request: Request, { params }: Params) {
   const { householdId } = await params;
 
-  return defineRoute({ input: createAssetSchema }, async ({ body }) => {
-    await requireUser();
+  return defineRoute({ input: createAssetSchema, authenticate: requireUser }, async ({ body }) => {
     const supabase = await createClient();
     // Membership only: whether this caller may *write* is RLS's answer, and
     // asking the database means the rule cannot drift from the one that ships.

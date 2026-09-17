@@ -30,7 +30,7 @@
 | 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 8 | Done |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
-| 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
+| 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
@@ -167,3 +167,4 @@
 | 2026-09-17 | 14 | 14-001..006 | Done | 41 unit, 11 database | Governed tools; every call re-checked; refusals recorded |
 | 2026-09-17 | 07 | 07-001..005 | Done | 17 unit | Helper model with no task-completion table, by design |
 | 2026-09-17 | 01 | 01-006 | Done | 17 unit | Recurring windows plus date exceptions, queryable by the planner |
+| 2026-09-17 | 18 | 18-003/005 | Hardened | 138 E2E, 614 unit | E2E derives the endpoint list from disk; authentication now precedes body validation |

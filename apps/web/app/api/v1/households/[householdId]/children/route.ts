@@ -29,8 +29,7 @@ export async function GET(request: Request, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   const { householdId } = await params;
-  return defineRoute({ input: createChildSchema }, async ({ body }) => {
-    await requireUser();
+  return defineRoute({ input: createChildSchema, authenticate: requireUser }, async ({ body }) => {
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, householdId);
 
