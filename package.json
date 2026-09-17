@@ -20,7 +20,7 @@
     "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
     "lint:migrations": "node scripts/lint-migration-schema.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
-    "test:db": "node --test scripts/test-*-rls.mjs"
+    "test:db": "node --test --test-concurrency=1 scripts/test-*-rls.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

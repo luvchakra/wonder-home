@@ -172,3 +172,58 @@ export async function listMembers(
     isOwner: row.id === ownerMemberId,
   }));
 }
+
+/**
+ * Grants or revokes a role on a member (story 01-003).
+ *
+ * Authorization is decided here, in application code, before the database is
+ * touched: canAssignRole() is authoritative and the RLS policy behind it is the
+ * second line. Both refuse the same things, so neither is load-bearing alone.
+ */
+export async function setMemberRole(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  input: { memberId: string; role: HouseholdRole; granted: boolean },
+): Promise<void> {
+  const { canAssignRole } = await import("./permissions");
+
+  if (!canAssignRole({ roles: actor.roles }, input.role)) {
+    throw ApiError.forbidden(
+      input.role === "administrator"
+        ? "Only the Head of Family can change who administers the household."
+        : "You do not have permission to change roles.",
+    );
+  }
+
+  const householdId = actor.household.id;
+
+  // A member of another household is not this actor's to change; the query is
+  // scoped so a mismatched id simply matches nothing.
+  const { data: target, error: lookupError } = await supabase
+    .from("household_members")
+    .select("id")
+    .eq("id", input.memberId)
+    .eq("household_id", householdId)
+    .maybeSingle();
+
+  if (lookupError) throw new Error(`setMemberRole lookup failed: ${lookupError.code ?? "unknown"}`);
+  if (!target) throw ApiError.notFound("That member is not part of this household.");
+
+  if (input.granted) {
+    const { error } = await supabase
+      .from("household_roles")
+      .upsert(
+        { household_id: householdId, member_id: input.memberId, role: input.role },
+        { onConflict: "household_id,member_id,role" },
+      );
+    if (error) throw new Error(`granting role failed: ${error.code ?? "unknown"}`);
+  } else {
+    const { error } = await supabase
+      .from("household_roles")
+      .delete()
+      .eq("household_id", householdId)
+      .eq("member_id", input.memberId)
+      .eq("role", input.role);
+    if (error) throw new Error(`revoking role failed: ${error.code ?? "unknown"}`);
+  }
+}
