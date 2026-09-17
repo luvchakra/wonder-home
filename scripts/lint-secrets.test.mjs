@@ -62,3 +62,16 @@ test("honours an explicit fixture marker, and only an explicit one", () => {
   assert.equal(lintSecretSource("a.test.ts", key).length, 1);
   assert.deepEqual(lintSecretSource("a.test.ts", `// lint-secrets: fixtures\n${key}`), []);
 });
+
+test("a gitignored local env file is not the lint's business", () => {
+  // The lint prevents committing a credential. A real key in a gitignored
+  // .env.local is correct and expected; flagging it would train people to
+  // ignore this lint, which is worse than not having it. Enforced by scanning
+  // only what `git ls-files -co --exclude-standard` returns.
+  const key = `SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiJ9.eyJyZWYiOiJhYmMifQ.c2ln`;
+  assert.equal(
+    lintSecretSource(".env.local", key).length,
+    1,
+    "the content check itself should still flag it; exclusion happens by file selection",
+  );
+});

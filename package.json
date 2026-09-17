@@ -21,7 +21,8 @@
     "lint:migrations": "node scripts/lint-migration-schema.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
     "test:db": "node --test --test-concurrency=1 scripts/test-*-rls.mjs",
-    "lint:secrets": "node scripts/lint-secrets.mjs"
+    "lint:secrets": "node scripts/lint-secrets.mjs",
+    "verify:live": "node scripts/verify-live-project.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

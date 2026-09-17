@@ -47,6 +47,12 @@ npm run test:e2e         # Playwright smoke tests, mobile and desktop
 
 CI runs all of the above on every pull request (`.github/workflows/ci.yml`).
 
+`npm run verify:live` checks a real Supabase project: that every migration
+landed, that the service-role path works, and that an anonymous caller is
+refused what it should be. It needs `SUPABASE_SERVICE_ROLE_KEY` and so never
+runs in CI — that key bypasses RLS and does not belong in a shared runner.
+Without it the script skips rather than failing.
+
 `npm run test:db` builds a throwaway database from the committed migrations and
 exercises the real RLS policies as the `authenticated` role. It needs a
 PostgreSQL 16 server and the usual `PG*` environment variables; CI provides one

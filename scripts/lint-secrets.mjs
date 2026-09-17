@@ -15,7 +15,13 @@
  * opt out with an explicit `lint-secrets: fixtures` marker. That is deliberate:
  * the exemption is a visible line in a diff someone has to add on purpose,
  * rather than a filename convention a real key could hide behind.
+ *
+ * Only files git would actually take are scanned — tracked, plus untracked and
+ * not ignored. A real credential in a gitignored .env.local is correct and
+ * expected; flagging it would train people to ignore this lint, which is worse
+ * than not having it.
  */
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -75,6 +81,22 @@ export function lintSecretSource(file, source) {
   return problems;
 }
 
+/** Files git would include: tracked, plus untracked and not ignored. */
+function committableFiles() {
+  try {
+    const listed = execFileSync("git", ["ls-files", "-co", "--exclude-standard", "-z"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return listed.split("\0").filter(Boolean).map((file) => join(ROOT, file));
+  } catch {
+    // Not a git checkout (a release tarball, say): fall back to walking, which
+    // is stricter rather than laxer.
+    return [...walk(ROOT)];
+  }
+}
+
 function* walk(dir) {
   for (const entry of readdirSync(dir)) {
     if (SKIP_DIRS.has(entry)) continue;
@@ -88,9 +110,10 @@ function main() {
   const problems = [];
   let checked = 0;
 
-  for (const full of walk(ROOT)) {
-    checked += 1;
+  for (const full of committableFiles()) {
     const file = relative(ROOT, full);
+    if (!SCANNED.test(file.split("/").pop() ?? "")) continue;
+    checked += 1;
     // The lint's own pattern list is not a finding.
     if (file === "scripts/lint-secrets.mjs") continue;
     problems.push(...lintSecretSource(file, readFileSync(full, "utf8")));
