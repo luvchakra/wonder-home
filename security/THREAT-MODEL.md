@@ -51,7 +51,7 @@ what the household spends, who is in the house and when.
 | T16 | Clickjacking, sniffing, mixed content | CSP with `frame-ancestors 'none'`, `X-Frame-Options`, `nosniff`, HSTS in production | **Built** — asserted in E2E against real responses |
 | T17 | Step-up authentication for payments, export and deletion | Re-authentication before a consequential action | **Planned** — module 11 and 15-007; no payment path exists yet |
 | T18 | MFA for household administrators | Supabase TOTP enrolment and policy | **Planned** — 15-004 follow-up |
-| T19 | Prompt injection through household content | Deterministic authorization outside the model; tools validate identity, scope, role and policy independently of anything the model says | **Planned** — module 14; the rule is fixed in `CLAUDE.md`, the enforcement arrives with the tools |
+| T19 | Prompt injection through household content | Deterministic authorization outside the model: `proposeFromIntent` decides by permission, autonomy and entitlement, never by what the model concluded | **Partly built** — the decision boundary exists and is tested (04-004); the governed tool surface arrives with module 14 |
 | T20 | SSRF via integration URLs | Allow-list of provider hosts, no caller-supplied fetch targets | **Planned** — module 17 |
 | T21 | Hostile data from a provider | Provider-neutral adapters; parse and validate before use; never treat provider text as instructions | **Planned** — module 17 |
 | T22 | Support access used beyond its purpose | Reason-coded grants bounded to 24h, revocable, audited, and readable by the household they concern | **Built** — `scripts/test-platform-admin-rls.mjs` |
