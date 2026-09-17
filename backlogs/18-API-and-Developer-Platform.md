@@ -4,12 +4,12 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 18-001 | Versioned API | Not Started | |
-| 2 | P0 | 18-002 | Schemas/errors | Not Started | |
-| 3 | P0 | 18-003 | Auth/authorization | Not Started | |
-| 4 | P0 | 18-004 | Idempotency | Not Started | |
-| 5 | P0 | 18-005 | OpenAPI | Not Started | |
-| 6 | P0 | 18-006 | Audit hooks | Not Started | |
+| 1 | P0 | 18-001 | Versioned API | Done | Established in 00-007; /api/v1 with correlation ids |
+| 2 | P0 | 18-002 | Schemas/errors | Done | Zod validation and one error envelope |
+| 3 | P0 | 18-003 | Auth/authorization | Done | requireUser plus household scope; RLS behind it |
+| 4 | P0 | 18-004 | Idempotency | Done | Idempotency-Key replay with request fingerprinting |
+| 5 | P0 | 18-005 | OpenAPI | Done | Generated from the route schemas, served at /api/v1/openapi |
+| 6 | P0 | 18-006 | Audit hooks | Done | recordAuditEvent with redaction; never fails the request |
 | 7 | P1 | 18-007 | Webhooks/events | Not Started | |
 | 8 | P2 | 18-008 | Developer platform | Not Started | |
 

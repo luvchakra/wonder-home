@@ -4,6 +4,7 @@ import { requireUser } from "@wonderhome/core/api/auth";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { createInvitation, listInvitations } from "@wonderhome/core/identity/invitations";
 
 const inviteSchema = z.object({
@@ -27,7 +28,13 @@ export async function GET(request: Request, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   const { householdId } = await params;
-  return defineRoute({ input: inviteSchema }, async ({ body }) => {
+  return defineRoute({
+    input: inviteSchema,
+    idempotency: async () => {
+      const supabase = await createClient();
+      return supabaseIdempotencyStore(supabase, householdId);
+    },
+  }, async ({ body }) => {
     await requireUser();
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, householdId);
