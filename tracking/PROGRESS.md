@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 35 |
+| Done | 39 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 135 |
-| Completion | 20.6% |
-| Current module | 16 Platform Admin & Operations |
-| Current story | 02-001 Setup wizard (Phase 2) |
+| Not Started | 131 |
+| Completion | 22.9% |
+| Current module | 02 Household Configuration & Playbook |
+| Current story | 02-001 Setup wizard |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -20,7 +20,7 @@
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 5 | In Progress |
-| 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 4 | In Progress |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 0 | Not Started |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 0 | Not Started |
@@ -87,3 +87,7 @@
 | 2026-09-17 | 16 | 16-002 | Done | 8 unit | support/operator/owner; support cannot grant itself access |
 | 2026-09-17 | 16 | 16-003 | Done | 1 E2E | Operations aggregates only, never one family's activity |
 | 2026-09-17 | 16 | 16-004 | Done | 11 database | Reason-coded, time-boxed, revocable, visible to the household |
+| 2026-09-17 | 02 | 02-002 | Done | 13 database | Responsibility matrix; gaps representable, invalid targets refused |
+| 2026-09-17 | 02 | 02-003 | Done | 13 database | Playbook items with a dependency graph, not an array |
+| 2026-09-17 | 02 | 02-004 | Done | 13 database | Versioned policies; exactly one in force per name |
+| 2026-09-17 | 02 | 02-005 | Done | 12 unit, 13 database | Autonomy decided per action; three kinds always need a person |
