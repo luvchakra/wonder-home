@@ -17,6 +17,7 @@
     "./billing/*": "./src/billing/*.ts",
     "./commerce/*": "./src/commerce/*.ts",
     "./meals/*": "./src/meals/*.ts",
+    "./finance/*": "./src/finance/*.ts",
     "./integrations/*": "./src/integrations/*.ts",
     "./ai/*": "./src/ai/*.ts",
     "./identity/*": "./src/identity/*.ts",

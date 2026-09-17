@@ -60,6 +60,12 @@ const SHIPPED_TABLES = [
   "food_preferences",
   "meals",
   "meal_ingredient_needs",
+  "obligations",
+  "obligation_history",
+  "payment_intents",
+  "payment_attempts",
+  "spend_anomalies",
+  "budgets",
 ];
 
 /**

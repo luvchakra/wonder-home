@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 112 |
+| Done | 120 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 58 |
-| Completion | 65.9% |
-| Current module | 11 Bills, Fees & Finance |
-| Current story | 11-001 Obligation model |
+| Not Started | 50 |
+| Completion | 70.6% |
+| Current module | 12 Family Time & Social |
+| Current story | 12-001 Family events |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -29,7 +29,7 @@
 | 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 8 | Done |
 | 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 8 | Done |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
-| 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
@@ -89,6 +89,15 @@
 | 2026-09-17 | 10 | 10-006 | Done | 6 unit tests | cook, shop, substitute or defer — a recommendation always names the next step |
 | 2026-09-17 | 10 | 10-007 | Done | 6 unit + 3 db tests | allergy outranks dislike; a member cannot state another's preference |
 | 2026-09-17 | 10 | 10-008 | Done | db constraint | readiness accepts an observed source, so an appliance signal has a home |
+
+| 2026-09-17 | 11 | 11-001 | Done | 8 unit + 15 db tests | an obligation exists before its amount; source, due date and owner recorded |
+| 2026-09-17 | 11 | 11-002 | Done | db tests | integration identity makes a re-import reconcile instead of paying twice |
+| 2026-09-17 | 11 | 11-003 | Done | 7 unit tests | lead time by consequence; silent once paid, scheduled or delegated |
+| 2026-09-17 | 11 | 11-004 | Done | 8 unit tests | approval fingerprints bill, amount and currency; a change invalidates it |
+| 2026-09-17 | 11 | 11-005 | Done | 13 unit + db tests | step-up separate from session; one success per intent enforced by a partial unique index |
+| 2026-09-17 | 11 | 11-006 | Done | 4 unit tests | the comparison basis travels with the finding; a review, never a block |
+| 2026-09-17 | 11 | 11-007 | Done | 2 unit tests | budgets describe intent and never stop a payment |
+| 2026-09-17 | 11 | 11-008 | Done | policy + idempotency | deterministic policy and retry rules; no payment provider is live |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

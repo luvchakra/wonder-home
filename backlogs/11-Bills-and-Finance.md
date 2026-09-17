@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 11-001 | Obligation model | Not Started | |
-| 2 | P0 | 11-002 | Bill ingestion | Not Started | |
-| 3 | P0 | 11-003 | Due-date risk | Not Started | |
-| 4 | P0 | 11-004 | Approval | Not Started | |
-| 5 | P0 | 11-005 | Payment safety | Not Started | |
-| 6 | P1 | 11-006 | Anomaly detection | Not Started | |
-| 7 | P1 | 11-007 | Budget planning | Not Started | |
-| 8 | P2 | 11-008 | Autonomous recurring payments | Not Started | |
+| 1 | P0 | 11-001 | Obligation model | Done | an obligation may exist before its amount does, which is the normal case |
+| 2 | P0 | 11-002 | Bill ingestion | Done | provider identity makes a re-import reconcile rather than duplicate |
+| 3 | P0 | 11-003 | Due-date risk | Done | lead time by consequence, and silence once a payment is arranged |
+| 4 | P0 | 11-004 | Approval | Done | approval is for one exact amount; a changed figure invalidates it |
+| 5 | P0 | 11-005 | Payment safety | Done | step-up is separate from being signed in; one success per intent, enforced by index |
+| 6 | P1 | 11-006 | Anomaly detection | Done | an anomaly carries its comparison and is a review, never a block |
+| 7 | P1 | 11-007 | Budget planning | Done | a budget describes intent; it never stops the rent being paid |
+| 8 | P2 | 11-008 | Autonomous recurring payments | Done | policy and idempotency in place; no payment provider is live |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
