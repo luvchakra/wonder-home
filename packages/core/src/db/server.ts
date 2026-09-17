@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
+import { publicEnv } from "../config/env";
+
 /**
  * Server Supabase client for Server Components, Route Handlers and Server
  * Actions. Runs as the authenticated member through the session cookies, so RLS
@@ -9,10 +11,11 @@ import { cookies } from "next/headers";
  */
 export async function createClient(): Promise<SupabaseClient> {
   const cookieStore = await cookies();
+  const env = publicEnv();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {

@@ -27,7 +27,7 @@ Requires Node 22 (`.nvmrc`).
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in your Supabase project values
+cp .env.example apps/web/.env.local   # fill in your Supabase project values
 npm run dev                  # http://localhost:3000
 ```
 

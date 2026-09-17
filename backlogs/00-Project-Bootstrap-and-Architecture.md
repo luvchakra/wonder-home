@@ -10,7 +10,7 @@
 | 4 | P0 | 00-004 | Configure Supabase foundation | Done | Env contract + clients; migration 20260917003323 applied |
 | 5 | P0 | 00-005 | Configure quality gates | Done | Playwright mobile + desktop smoke |
 | 6 | P0 | 00-006 | Configure CI baseline | Done | GitHub Actions; lints are self-tested |
-| 7 | P0 | 00-007 | Create API foundation | Not Started | |
+| 7 | P0 | 00-007 | Create API foundation | Done | defineRoute wrapper; /health and /me |
 | 8 | P0 | 00-008 | Create security foundation | Not Started | |
 | 9 | P1 | 00-009 | Create observability foundation | Not Started | |
 | 10 | P1 | 00-010 | Create feature configuration | Not Started | |

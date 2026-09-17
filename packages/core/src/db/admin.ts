@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { serverEnv } from "../config/env";
+import { publicEnv, serverEnv } from "../config/env";
 
 /**
  * Service-role Supabase client. BYPASSES Row Level Security entirely.
@@ -16,7 +16,7 @@ export function createAdminClient(): SupabaseClient {
   const { SUPABASE_SERVICE_ROLE_KEY } = serverEnv();
 
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    publicEnv().NEXT_PUBLIC_SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } },
   );

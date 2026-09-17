@@ -12,6 +12,13 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      # Placeholders, not secrets. The build and the E2E smoke run against no
+      # real project: with no session cookie, Supabase reports a missing session
+      # locally, so /api/v1/me answers 401 without ever reaching this host.
+      # Stories that need a live database bring their own service container.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder_key
     steps:
       - uses: actions/checkout@v4
 

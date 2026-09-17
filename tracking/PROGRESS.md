@@ -5,20 +5,20 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 6 |
+| Done | 7 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 164 |
-| Completion | 3.5% |
+| Not Started | 163 |
+| Completion | 4.1% |
 | Current module | 00 Project Bootstrap & Architecture |
-| Current story | 00-007 Create API foundation |
+| Current story | 00-008 Create security foundation |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
 
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 6 | In Progress |
+| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 7 | In Progress |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -57,3 +57,4 @@
 - Completion percentage is `Done / Total stories * 100`.
 | 2026-09-17 | 00 | 00-005 | Done | 6 E2E specs, mobile + desktop | Playwright set up fresh; not inherited from the WonderArk baseline |
 | 2026-09-17 | 00 | 00-006 | Done | 24 tests across gates | CI: typecheck, lint, migration + boundary lints, tests, build, E2E |
+| 2026-09-17 | 00 | 00-007 | Done | 6 unit + 3 E2E contract tests | /api/v1 wrapper, error envelope, correlation ids, health + authenticated example |
