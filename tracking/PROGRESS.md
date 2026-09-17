@@ -5,11 +5,11 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 128 |
+| Done | 129 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 42 |
-| Completion | 75.3% |
+| Not Started | 41 |
+| Completion | 75.9% |
 | Current module | 17 External Integrations |
 | Current story | 17-002 Calendar |
 | Last updated | 2026-09-17 |
@@ -22,7 +22,7 @@
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 6 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 4 | In Progress |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 5 | In Progress |
-| 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 7 | In Progress |
+| 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 8 | Done |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 7 | In Progress |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -168,3 +168,4 @@
 | 2026-09-17 | 07 | 07-001..005 | Done | 17 unit | Helper model with no task-completion table, by design |
 | 2026-09-17 | 01 | 01-006 | Done | 17 unit | Recurring windows plus date exceptions, queryable by the planner |
 | 2026-09-17 | 18 | 18-003/005 | Hardened | 138 E2E, 614 unit | E2E derives the endpoint list from disk; authentication now precedes body validation |
+| 2026-09-17 | UI | v3 UI/UX | Done | 630 unit, 160 E2E | Design system v3: tokens, Inter, motion, 30-component kit, AI assistant (talk/text), 18 screens, landing page |

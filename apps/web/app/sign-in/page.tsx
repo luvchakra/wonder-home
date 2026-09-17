@@ -6,29 +6,19 @@ import { AuthLayout } from "../_components/auth-layout";
 
 export const metadata = { title: "Sign in" };
 
-export default async function SignInPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ next?: string }>;
-}) {
+export default async function SignInPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
 
   return (
     <AuthLayout
-      title="Welcome back"
-      lede="Less mental load. More family time."
-      footer={{ prompt: "New to WonderHome?", href: "/sign-up", label: "Create an account" }}
+      title="Welcome back!"
+      lede="Good to see you again."
+      footer={{ prompt: "Don't have an account?", href: "/sign-up", label: "Sign up" }}
     >
       <AuthForm action={signIn} submitLabel="Sign in" pendingLabel="Signing in…">
         <input type="hidden" name="next" value={next ?? "/"} />
-        <Field label="Email" name="email" type="email" autoComplete="email" required />
-        <Field
-          label="Password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
+        <Field label="Email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
+        <Field label="Password" name="password" type="password" autoComplete="current-password" required />
       </AuthForm>
     </AuthLayout>
   );

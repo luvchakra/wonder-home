@@ -1,52 +1,66 @@
 /*
  * WonderHome design tokens.
  *
- * Derived from design/UI-MOCKUP-IMPLEMENTATION-SPEC.md and the approved mockups:
- * warm light neutral surfaces, deep navy typography, restrained teal primary
- * actions, rounded cards with soft elevation and generous spacing.
+ * The single source for the product and the landing page. Derived from
+ * design/UI-UX-REQUIREMENTS-v3.md and the approved mockup sheets: warm cream
+ * surfaces, deep navy typography, a restrained teal for every committing
+ * action, soft green for handled, amber for attention, red kept for the
+ * genuinely critical. Rounded cards, soft shadows, subtle gradients, and
+ * generous whitespace — premium and family-friendly, never a dashboard.
  *
- * Every module's screens share this one system; a module never brings its own look.
+ * Every screen shares this one system; a module never brings its own look.
  */
 
 :root {
   /*
-   * WonderHome is a light product.
-   *
-   * Every approved mockup is the warm mint-and-white palette below, and there
-   * is no designed dark counterpart yet. Following the operating system's dark
-   * preference would therefore ship a colour scheme nobody has reviewed — so
-   * the dark tokens are kept, and applied only when someone explicitly asks for
-   * them with data-theme="dark". When a dark variant is designed, this becomes
-   * a one-line change back to the media query.
+   * WonderHome is a light product. Every approved mockup is the warm cream
+   * palette below and there is no designed dark counterpart yet, so the dark
+   * tokens apply only when asked for explicitly with data-theme="dark".
    */
   color-scheme: light;
 
-  /* Surfaces — a mint-tinted near-white, never pure grey */
-  --wh-background: oklch(0.982 0.012 168);
+  /* Typography — Inter, wired in by the app through next/font */
+  --wh-font-sans:
+    var(--font-inter, "Inter"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Type scale (requirements §2). Fluid between phone and desktop. */
+  --wh-text-hero: clamp(2.25rem, 1.4rem + 4vw, 5rem);
+  --wh-text-display: clamp(2rem, 1.3rem + 3vw, 3.25rem);
+  --wh-text-title: clamp(1.625rem, 1.45rem + 0.6vw, 1.875rem);
+  --wh-text-heading: 1.125rem;
+  --wh-text-body: 0.9375rem;
+  --wh-text-caption: 0.75rem;
+
+  /* Surfaces — warm cream, never grey, never pure white for the page */
+  --wh-background: oklch(0.985 0.009 80);
   --wh-surface: oklch(1 0 0);
-  --wh-surface-muted: oklch(0.968 0.014 168);
-  --wh-border: oklch(0.922 0.011 168);
+  --wh-surface-muted: oklch(0.965 0.012 80);
+  --wh-surface-raised: oklch(0.995 0.004 80);
+  --wh-border: oklch(0.92 0.012 75);
+  --wh-border-strong: oklch(0.86 0.014 75);
 
-  /* Typography */
-  --wh-foreground: oklch(0.28 0.045 245);
-  --wh-foreground-muted: oklch(0.52 0.03 245);
-  --wh-foreground-subtle: oklch(0.64 0.02 245);
+  /* Typography colours — deep navy, softened for secondary copy */
+  --wh-foreground: oklch(0.27 0.05 255);
+  --wh-foreground-muted: oklch(0.5 0.035 250);
+  --wh-foreground-subtle: oklch(0.62 0.025 250);
 
-  /* Primary action — the deep teal the mockups use for every committing action */
-  --wh-primary: oklch(0.47 0.086 176);
-  --wh-primary-hover: oklch(0.41 0.086 176);
-  --wh-primary-foreground: oklch(0.99 0 0);
-  --wh-primary-soft: oklch(0.948 0.032 176);
+  /* Primary action — the teal the mockups use for every committing action */
+  --wh-primary: oklch(0.49 0.09 190);
+  --wh-primary-hover: oklch(0.43 0.09 190);
+  --wh-primary-foreground: oklch(0.995 0 0);
+  --wh-primary-soft: oklch(0.955 0.03 185);
+  --wh-primary-glow: oklch(0.49 0.09 190 / 0.28);
 
   /* Outcome and risk states */
-  --wh-attention: oklch(0.7 0.16 55);
-  --wh-attention-soft: oklch(0.96 0.04 70);
+  --wh-attention: oklch(0.72 0.16 60);
+  --wh-attention-soft: oklch(0.965 0.04 75);
   --wh-risk: oklch(0.58 0.2 25);
-  --wh-risk-soft: oklch(0.96 0.03 25);
-  --wh-handled: oklch(0.6 0.13 155);
-  --wh-handled-soft: oklch(0.95 0.04 155);
-  --wh-info: oklch(0.55 0.12 250);
-  --wh-info-soft: oklch(0.95 0.03 250);
+  --wh-risk-soft: oklch(0.965 0.03 25);
+  --wh-handled: oklch(0.62 0.13 155);
+  --wh-handled-soft: oklch(0.955 0.04 155);
+  --wh-info: oklch(0.55 0.13 250);
+  --wh-info-soft: oklch(0.955 0.03 250);
 
   /*
    * Domain accents.
@@ -56,44 +70,79 @@
    * pair is the icon tile behind the glyph, never a text colour.
    */
   --wh-tone-money: oklch(0.68 0.16 62);
-  --wh-tone-money-soft: oklch(0.958 0.042 72);
+  --wh-tone-money-soft: oklch(0.96 0.045 75);
   --wh-tone-school: oklch(0.55 0.17 295);
-  --wh-tone-school-soft: oklch(0.955 0.032 295);
+  --wh-tone-school-soft: oklch(0.955 0.035 295);
   --wh-tone-people: oklch(0.6 0.19 20);
-  --wh-tone-people-soft: oklch(0.957 0.03 20);
+  --wh-tone-people-soft: oklch(0.96 0.03 20);
   --wh-tone-home: oklch(0.56 0.11 200);
-  --wh-tone-home-soft: oklch(0.953 0.032 200);
+  --wh-tone-home-soft: oklch(0.955 0.035 200);
   --wh-tone-care: oklch(0.55 0.13 150);
-  --wh-tone-care-soft: oklch(0.95 0.04 150);
+  --wh-tone-care-soft: oklch(0.955 0.04 150);
+  --wh-tone-meals: oklch(0.66 0.17 45);
+  --wh-tone-meals-soft: oklch(0.965 0.045 60);
+  --wh-tone-ai: oklch(0.55 0.15 275);
+  --wh-tone-ai-soft: oklch(0.955 0.035 275);
+
+  /* Gradients — subtle, warm, and the only place colour is allowed to bloom */
+  --wh-gradient-page:
+    radial-gradient(60rem 30rem at 15% -10%, oklch(0.965 0.035 60 / 0.9), transparent 60%),
+    radial-gradient(50rem 28rem at 110% 10%, oklch(0.955 0.035 185 / 0.9), transparent 55%);
+  --wh-gradient-hero:
+    linear-gradient(160deg, oklch(0.985 0.012 70) 0%, oklch(0.975 0.02 60) 45%, oklch(0.965 0.028 180) 100%);
+  --wh-gradient-primary: linear-gradient(135deg, oklch(0.55 0.1 190) 0%, oklch(0.45 0.09 200) 100%);
+  --wh-gradient-orb:
+    radial-gradient(circle at 30% 30%, oklch(0.9 0.06 240), oklch(0.7 0.14 265) 45%, oklch(0.5 0.16 285) 100%);
+  --wh-gradient-sunset:
+    linear-gradient(180deg, oklch(0.97 0.03 70) 0%, oklch(0.93 0.06 55) 55%, oklch(0.9 0.05 40) 100%);
 
   /* Shape and depth */
-  --wh-radius: 1.125rem;
-  --wh-radius-sm: 0.75rem;
-  --wh-radius-lg: 1.5rem;
+  --wh-radius: 1.25rem;
+  --wh-radius-sm: 0.875rem;
+  --wh-radius-xs: 0.625rem;
+  --wh-radius-lg: 1.75rem;
   --wh-radius-pill: 999px;
-  --wh-shadow-card: 0 1px 2px oklch(0.28 0.045 245 / 0.03), 0 6px 20px oklch(0.28 0.045 245 / 0.055);
+  --wh-shadow-card:
+    0 1px 2px oklch(0.27 0.05 255 / 0.03), 0 8px 24px -8px oklch(0.27 0.05 255 / 0.08);
+  --wh-shadow-raised:
+    0 2px 4px oklch(0.27 0.05 255 / 0.04), 0 18px 40px -12px oklch(0.27 0.05 255 / 0.16);
+  --wh-shadow-float:
+    0 4px 8px oklch(0.27 0.05 255 / 0.05), 0 30px 60px -18px oklch(0.27 0.05 255 / 0.25);
+  --wh-shadow-primary: 0 10px 24px -10px var(--wh-primary-glow);
+
+  /* Motion — one easing, three durations, all disabled under reduced motion */
+  --wh-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --wh-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --wh-duration-fast: 160ms;
+  --wh-duration: 260ms;
+  --wh-duration-slow: 600ms;
 
   /* Layout */
   --wh-tabbar-height: 4.25rem;
-  --wh-sidebar-width: 16rem;
-  --wh-content-max: 40rem;
+  --wh-header-height: 3.5rem;
+  --wh-sidebar-width: 16.5rem;
+  --wh-content-max: 42rem;
+  --wh-content-wide: 72rem;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --wh-background: oklch(0.21 0.02 245);
-  --wh-surface: oklch(0.26 0.022 245);
-  --wh-surface-muted: oklch(0.29 0.022 245);
-  --wh-border: oklch(0.34 0.02 245);
+  --wh-background: oklch(0.21 0.02 255);
+  --wh-surface: oklch(0.26 0.022 255);
+  --wh-surface-muted: oklch(0.29 0.022 255);
+  --wh-surface-raised: oklch(0.3 0.022 255);
+  --wh-border: oklch(0.34 0.02 255);
+  --wh-border-strong: oklch(0.4 0.02 255);
 
   --wh-foreground: oklch(0.96 0.008 85);
-  --wh-foreground-muted: oklch(0.78 0.015 245);
-  --wh-foreground-subtle: oklch(0.65 0.015 245);
+  --wh-foreground-muted: oklch(0.78 0.015 250);
+  --wh-foreground-subtle: oklch(0.65 0.015 250);
 
-  --wh-primary: oklch(0.7 0.11 185);
-  --wh-primary-hover: oklch(0.76 0.11 185);
-  --wh-primary-foreground: oklch(0.18 0.02 245);
-  --wh-primary-soft: oklch(0.32 0.05 185);
+  --wh-primary: oklch(0.72 0.11 190);
+  --wh-primary-hover: oklch(0.78 0.11 190);
+  --wh-primary-foreground: oklch(0.18 0.02 255);
+  --wh-primary-soft: oklch(0.32 0.05 190);
+  --wh-primary-glow: oklch(0.72 0.11 190 / 0.3);
 
   --wh-attention: oklch(0.78 0.15 60);
   --wh-attention-soft: oklch(0.33 0.05 60);
@@ -101,7 +150,7 @@
   --wh-risk-soft: oklch(0.32 0.06 25);
   --wh-handled: oklch(0.72 0.13 155);
   --wh-handled-soft: oklch(0.3 0.05 155);
-    --wh-info: oklch(0.72 0.11 250);
+  --wh-info: oklch(0.72 0.11 250);
   --wh-info-soft: oklch(0.31 0.05 250);
 
   --wh-tone-money: oklch(0.8 0.14 68);
@@ -114,6 +163,162 @@
   --wh-tone-home-soft: oklch(0.31 0.045 200);
   --wh-tone-care: oklch(0.75 0.12 150);
   --wh-tone-care-soft: oklch(0.3 0.05 150);
+  --wh-tone-meals: oklch(0.78 0.14 50);
+  --wh-tone-meals-soft: oklch(0.33 0.05 50);
+  --wh-tone-ai: oklch(0.75 0.12 275);
+  --wh-tone-ai-soft: oklch(0.32 0.05 275);
 
-  --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
+  --wh-gradient-page:
+    radial-gradient(60rem 30rem at 15% -10%, oklch(0.3 0.04 60 / 0.6), transparent 60%),
+    radial-gradient(50rem 28rem at 110% 10%, oklch(0.3 0.04 185 / 0.6), transparent 55%);
+  --wh-gradient-hero: linear-gradient(160deg, oklch(0.24 0.02 255) 0%, oklch(0.27 0.03 200) 100%);
+  --wh-gradient-sunset: linear-gradient(180deg, oklch(0.28 0.03 60) 0%, oklch(0.24 0.04 40) 100%);
+
+  --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -8px oklch(0 0 0 / 0.35);
+  --wh-shadow-raised: 0 2px 4px oklch(0 0 0 / 0.3), 0 18px 40px -12px oklch(0 0 0 / 0.5);
+  --wh-shadow-float: 0 4px 8px oklch(0 0 0 / 0.3), 0 30px 60px -18px oklch(0 0 0 / 0.6);
+}
+
+/*
+ * Motion primitives.
+ *
+ * Small, physical, and always optional: everything here is transform and
+ * opacity only, and the reduced-motion block at the bottom removes all of it.
+ * No information is carried by animation — a card that fades in is fully
+ * readable before it has finished doing so.
+ */
+@keyframes wh-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--wh-float-tilt, 0deg));
+  }
+  50% {
+    transform: translate3d(0, -8px, 0) rotate(var(--wh-float-tilt, 0deg));
+  }
+}
+
+@keyframes wh-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes wh-pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes wh-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: saturate(1.15);
+  }
+}
+
+@keyframes wh-shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes wh-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Scroll reveal: opacity + translateY + subtle scale (requirements §41). */
+.wh-reveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0) scale(0.985);
+  transition:
+    opacity var(--wh-duration-slow) var(--wh-ease),
+    transform var(--wh-duration-slow) var(--wh-ease);
+  transition-delay: var(--wh-reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.wh-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.wh-float {
+  animation: wh-float 6s ease-in-out infinite;
+  animation-delay: var(--wh-float-delay, 0s);
+}
+
+.wh-rise {
+  animation: wh-rise var(--wh-duration-slow) var(--wh-ease) both;
+  animation-delay: var(--wh-rise-delay, 0ms);
+}
+
+.wh-skeleton {
+  background:
+    linear-gradient(90deg, var(--wh-surface-muted) 0%, var(--wh-surface) 50%, var(--wh-surface-muted) 100%)
+    0 0 / 200% 100%;
+  animation: wh-shimmer 1.6s linear infinite;
+  border-radius: var(--wh-radius-xs);
+}
+
+/* Translucent blurred surface for the sticky header and the tab bar. */
+.wh-glass {
+  background: color-mix(in oklch, var(--wh-surface) 80%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+}
+
+/* Card lift on hover — pointer devices only, so touch never gets a stuck hover. */
+@media (hover: hover) {
+  .wh-lift {
+    transition:
+      transform var(--wh-duration) var(--wh-ease),
+      box-shadow var(--wh-duration) var(--wh-ease);
+  }
+  .wh-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--wh-shadow-raised);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wh-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .wh-float,
+  .wh-rise,
+  .wh-skeleton {
+    animation: none;
+  }
+  .wh-rise {
+    opacity: 1;
+    transform: none;
+  }
+  .wh-lift:hover {
+    transform: none;
+  }
 }

@@ -1,0 +1,152 @@
+import { GraduationCap, HandHeart, ListChecks, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet, Wrench } from "lucide-react";
+import type { ComponentType } from "react";
+
+import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { Card } from "@wonderhome/core/ui/card";
+import type { IconTone } from "@wonderhome/core/ui/icon-tile";
+import { ResponsibilityCard } from "@wonderhome/core/ui/outcome-card";
+import { Badge, PillLink } from "@wonderhome/core/ui/pill";
+import { QuoteCard } from "@wonderhome/core/ui/quote-card";
+import { SectionHeader } from "@wonderhome/core/ui/section-header";
+import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
+import { EmptyState } from "@wonderhome/core/ui/states";
+
+import { requireSession } from "../../_lib/session";
+
+export const metadata = { title: "Responsibilities" };
+export const dynamic = "force-dynamic";
+
+type Row = {
+  id: string;
+  outcome_key: string;
+  primary_member_id: string | null;
+  backup_member_id: string | null;
+  ai_mode: "observe" | "prepare" | "approve" | "execute";
+  priority: number;
+  playbook_items: { name: string; outcome_definition: string; cadence: Record<string, unknown> } | { name: string; outcome_definition: string; cadence: Record<string, unknown> }[] | null;
+};
+
+const BY_PREFIX: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
+  school: { icon: GraduationCap, tone: "school" },
+  bills: { icon: Wallet, tone: "money" },
+  finance: { icon: Wallet, tone: "money" },
+  groceries: { icon: ShoppingBasket, tone: "care" },
+  shopping: { icon: ShoppingBasket, tone: "care" },
+  meals: { icon: Utensils, tone: "meals" },
+  kitchen: { icon: Utensils, tone: "meals" },
+  laundry: { icon: Wrench, tone: "home" },
+  home: { icon: Wrench, tone: "home" },
+  cleaning: { icon: Wrench, tone: "home" },
+  pet: { icon: PawPrint, tone: "care" },
+  pets: { icon: PawPrint, tone: "care" },
+  kids: { icon: HandHeart, tone: "people" },
+};
+
+/**
+ * Responsibilities (requirements §14): outcomes, not micro-task sequences.
+ * Each has an owner, a backup, a cadence and an AI involvement level. An
+ * unowned outcome is shown as a gap — the most useful thing the matrix can say.
+ */
+export default async function ResponsibilitiesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const [{ tab }, session] = await Promise.all([searchParams, requireSession("/household/responsibilities")]);
+  const { supabase, membership, view, viewer, secondary } = session;
+  const householdId = membership.household.id;
+  const active = tab === "mine" || tab === "family" ? tab : "all";
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/responsibilities", back: { href: "/more", label: "Back" }, title: "Responsibilities" };
+
+  if (view.tone === "child") {
+    return (
+      <AppShell {...shell}>
+        <EmptyState icon={ListChecks} title="Not available to you" description="Responsibilities are set by the adults in the household." />
+      </AppShell>
+    );
+  }
+
+  const [members, { data }] = await Promise.all([
+    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    supabase.from("responsibilities").select("id, outcome_key, primary_member_id, backup_member_id, ai_mode, priority, playbook_items(name, outcome_definition, cadence)").eq("household_id", householdId).order("priority"),
+  ]);
+
+  const rows = (data as Row[] | null) ?? [];
+  const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
+  const shown = rows.filter((row) => (active === "mine" ? row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId : active === "family" ? row.primary_member_id !== membership.memberId : true));
+  const gaps = rows.filter((row) => !row.primary_member_id);
+  const admin = isHouseholdAdmin(membership);
+
+  return (
+    <AppShell {...shell}>
+      <div className="space-y-5">
+        <header className="wh-rise hidden items-end justify-between gap-3 lg:flex">
+          <div>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Responsibilities</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">Clear roles, less chaos. Outcomes, not checklists.</p>
+          </div>
+          {admin ? <PillLink href="/ai?q=Priya%20handles%20the%20school%20run%20from%20now%20on." tone="primary"><Sparkles aria-hidden className="size-3.5" /> Assign with AI</PillLink> : null}
+        </header>
+
+        <SegmentedControl
+          label="Whose responsibilities"
+          active={active}
+          segments={[
+            { key: "all", label: "All", href: "/household/responsibilities", count: rows.length },
+            { key: "mine", label: "Mine", href: "/household/responsibilities?tab=mine", count: rows.filter((r) => r.primary_member_id === membership.memberId).length },
+            { key: "family", label: "Family", href: "/household/responsibilities?tab=family" },
+          ]}
+        />
+
+        {gaps.length > 0 && active === "all" ? (
+          <Card className="flex items-center gap-3 bg-[var(--wh-attention-soft)]/60 p-4">
+            <Badge tone="attention">{gaps.length} unowned</Badge>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">Some outcomes have nobody responsible. Assign them so WonderHome knows who to ask.</p>
+          </Card>
+        ) : null}
+
+        {shown.length === 0 ? (
+          <EmptyState icon={ListChecks} title={rows.length === 0 ? "No responsibilities defined yet" : "Nothing here"} description={rows.length === 0 ? "Start from the playbook: each outcome gets an owner, a backup and how much WonderHome may do on its own." : "Nothing matches this view."} action={admin && rows.length === 0 ? <PillLink href="/household">Set up the playbook</PillLink> : null} />
+        ) : (
+          <Card className="p-2">
+            <ul className="divide-y divide-[var(--wh-border)]">
+              {shown.map((row) => {
+                const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
+                const prefix = row.outcome_key.split(".")[0] ?? "";
+                const presentation = BY_PREFIX[prefix] ?? { icon: ListChecks, tone: "primary" as IconTone };
+                return (
+                  <ResponsibilityCard
+                    key={row.id}
+                    icon={presentation.icon}
+                    tone={presentation.tone}
+                    title={item?.name ?? row.outcome_key.replace(/[._]/g, " ")}
+                    owner={nameOf(row.primary_member_id) ?? "Nobody yet"}
+                    backup={nameOf(row.backup_member_id)}
+                    frequency={cadenceLabel(item?.cadence)}
+                    aiMode={row.ai_mode}
+                    action={!row.primary_member_id ? <Badge tone="attention">Unowned</Badge> : undefined}
+                  />
+                );
+              })}
+            </ul>
+          </Card>
+        )}
+
+        <section>
+          <SectionHeader title="How WonderHome helps" />
+          <Card className="space-y-2 text-sm text-[var(--wh-foreground-muted)]">
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Watches</span> — notices and tells you.</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Prepares</span> — drafts the order or the plan and waits.</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Asks first</span> — does the work once you say yes.</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Handles it</span> — acts, and tells you what it did. Payments and access changes always ask.</p>
+          </Card>
+        </section>
+
+        <QuoteCard>Clear roles. A smoother home.</QuoteCard>
+      </div>
+    </AppShell>
+  );
+}
+
+function cadenceLabel(cadence: Record<string, unknown> | undefined): string | undefined {
+  if (!cadence) return undefined;
+  const unit = cadence.unit ?? cadence.frequency ?? cadence.every;
+  return typeof unit === "string" ? unit : undefined;
+}

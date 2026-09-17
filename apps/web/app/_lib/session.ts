@@ -1,0 +1,131 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
+
+import { createClient } from "@wonderhome/core/db/server";
+import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
+import { listMemberships } from "@wonderhome/core/identity/households";
+import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
+import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
+import { secondaryNavigationFor, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
+import type { ShellViewer } from "@wonderhome/core/shell/mobile-header";
+
+/**
+ * Everything a signed-in screen needs to render its shell: who is looking,
+ * from which household, with which permissions, and what to offer them.
+ *
+ * The view is assembled server-side: a section this member may not see is
+ * absent from what reaches the browser, not hidden once it gets there. The
+ * pages and the API still check again — this is presentation.
+ */
+export type Session = {
+  supabase: SupabaseClient;
+  membership: HouseholdMembership;
+  view: PersonalView;
+  viewer: ShellViewer;
+  secondary: SecondaryNavItem[];
+};
+
+/**
+ * Loads the session or sends the person where they need to go: sign-in if
+ * there is no account, onboarding if there is no household yet.
+ */
+export async function requireSession(nextPath: string): Promise<Session> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/sign-in?next=${encodeURIComponent(nextPath)}`);
+
+  const memberships = await listMemberships(supabase);
+  if (memberships.length === 0) redirect("/welcome");
+
+  return buildSession(supabase, memberships[0]!);
+}
+
+/** The same, for a screen that has already established there is a user. */
+export async function buildSession(
+  supabase: SupabaseClient,
+  membership: HouseholdMembership,
+): Promise<Session> {
+  const [{ data: memberRow }, unread] = await Promise.all([
+    supabase.from("household_members").select("date_of_birth").eq("id", membership.memberId).maybeSingle(),
+    countUnread(supabase, membership.memberId),
+  ]);
+
+  const view = buildPersonalView(
+    membership,
+    ageBandFor(parseDateOfBirth(memberRow?.date_of_birth as string | null)),
+  );
+
+  return {
+    supabase,
+    membership,
+    view,
+    viewer: {
+      displayName: view.displayName,
+      roleLabel: view.roleLabel,
+      householdName: view.householdName,
+      unread,
+    },
+    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }),
+  };
+}
+
+async function countUnread(supabase: SupabaseClient, memberId: string): Promise<number> {
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("recipient_member_id", memberId)
+    .in("status", ["generated", "delivered"]);
+  return count ?? 0;
+}
+
+/** The date as the household reads it, in the household's own time zone. */
+export function formatToday(timezone: string, now = new Date()): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: timezone,
+    }).format(now);
+  } catch {
+    return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(now);
+  }
+}
+
+export function formatTime(timezone: string, at: Date): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(at);
+  } catch {
+    return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(at);
+  }
+}
+
+export function formatDate(timezone: string, at: Date, style: "short" | "long" = "short"): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: style === "long" ? "short" : undefined,
+      day: "numeric",
+      month: "short",
+      timeZone: timezone,
+    }).format(at);
+  } catch {
+    return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(at);
+  }
+}
+
+/** A greeting for the household's hour, not the server's. */
+export function greetingFor(timezone: string, now = new Date()): string {
+  let hour = now.getHours();
+  try {
+    hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: timezone }).format(now));
+  } catch {
+    // Fall through to the server's hour.
+  }
+  if (hour < 5) return "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}

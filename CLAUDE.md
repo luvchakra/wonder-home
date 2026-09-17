@@ -8,7 +8,8 @@ Build **WonderHome** from this package as an AI-driven Household Operating Syste
 2. Read `TECH-STACK-AND-NFR.md`.
 3. Read `tracking/PROGRESS.md` and `tracking/IMPLEMENTATION-ORDER.md`.
 4. Read `architecture/API-ARCHITECTURE.md`, `architecture/SECURITY-BASELINE.md` and `database/SUPABASE-DATABASE.md`.
-5. Pick the first dependency-ready incomplete story.
+5. For any UI work, read `design/UI-UX-REQUIREMENTS-v3.md` (the UI/UX contract) and `design/DESIGN-NOTES.md` (the rules the components encode).
+6. Pick the first dependency-ready incomplete story.
 
 ## Autonomous execution
 For each story: mark In Progress → inspect existing code → implement → test → typecheck/lint/build → fix → update docs/migrations/contracts → mark Done → update overall/module trackers → continue automatically.

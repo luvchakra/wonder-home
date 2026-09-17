@@ -1,10 +1,23 @@
-import { PawPrint, Shirt, Sparkles, Wrench } from "lucide-react";
+import {
+  CalendarHeart,
+  Gift,
+  GraduationCap,
+  MessageSquareText,
+  PawPrint,
+  ShoppingBasket,
+  Shirt,
+  Sparkles,
+  TriangleAlert,
+  Utensils,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 import type { ComponentType } from "react";
 
 import type { HomeAssessment } from "@wonderhome/core/home/assessment";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import type { IconTone } from "@wonderhome/core/ui/icon-tile";
-import { Pill } from "@wonderhome/core/ui/pill";
+import { PillLink } from "@wonderhome/core/ui/pill";
 
 /**
  * One assessment, rendered as the row the mockups use everywhere.
@@ -13,12 +26,26 @@ import { Pill } from "@wonderhome/core/ui/pill";
  * thing looks the same wherever it appears. The words come from the engine —
  * this component never composes its own explanation of why something is here.
  */
-const BY_DOMAIN: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
-  asset: { icon: Wrench, tone: "home" },
-  service: { icon: Wrench, tone: "home" },
-  laundry: { icon: Shirt, tone: "care" },
-  pet: { icon: PawPrint, tone: "care" },
-  home: { icon: Sparkles, tone: "home" },
+type Presentation = { icon: ComponentType<{ className?: string }>; tone: IconTone; href: string };
+
+const BY_DOMAIN: Record<string, Presentation> = {
+  asset: { icon: Wrench, tone: "home", href: "/household/home" },
+  service: { icon: Wrench, tone: "home", href: "/household/home" },
+  laundry: { icon: Shirt, tone: "care", href: "/household/home" },
+  pet: { icon: PawPrint, tone: "care", href: "/household/home" },
+  home: { icon: Sparkles, tone: "home", href: "/household/home" },
+  school: { icon: GraduationCap, tone: "school", href: "/school" },
+  item: { icon: GraduationCap, tone: "school", href: "/school" },
+  communication: { icon: MessageSquareText, tone: "school", href: "/school" },
+  consumable: { icon: ShoppingBasket, tone: "care", href: "/groceries" },
+  order: { icon: ShoppingBasket, tone: "care", href: "/groceries" },
+  meal: { icon: Utensils, tone: "meals", href: "/meals" },
+  obligation: { icon: Wallet, tone: "money", href: "/bills" },
+  bill: { icon: Wallet, tone: "money", href: "/bills" },
+  anomaly: { icon: TriangleAlert, tone: "money", href: "/bills" },
+  event: { icon: CalendarHeart, tone: "people", href: "/family" },
+  gift: { icon: Gift, tone: "people", href: "/family" },
+  conflict: { icon: CalendarHeart, tone: "people", href: "/family" },
 };
 
 /** The action in the family's words rather than the engine's. */
@@ -39,6 +66,29 @@ const ACTION_LABEL: Record<string, string> = {
   give_medication: "Give",
   arrange_grooming: "Arrange",
   plan_walk: "Plan",
+  make_time: "Plan",
+  check_with_child: "Check in",
+  school_respond: "Reply",
+  add_to_cart: "Add",
+  chase_order: "Track",
+  start_cooking: "Start",
+  find_cook: "Assign",
+  substitute: "Swap",
+  shop_for_meal: "Shop",
+  replan_meal: "Change",
+  pay_bill: "Pay",
+  review_bill: "Review",
+  needs_rsvp: "Reply",
+  needs_gift: "Gift",
+  needs_preparation: "Prepare",
+  needs_travel: "Plan",
+  choose_gift: "Choose",
+  order_gift: "Order",
+  sort_gift: "Sort",
+  move_left: "Resolve",
+  move_right: "Resolve",
+  drop_optional: "Resolve",
+  ask_household: "Decide",
 };
 
 /**
@@ -55,10 +105,18 @@ function withoutLeadingName(title: string, reason: string): string {
   return rest.charAt(0).toUpperCase() + rest.slice(1);
 }
 
-export function AgendaRow({ item }: { item: HomeAssessment }) {
-  const domain = item.subjectKey.split(".")[0] ?? "home";
-  const presentation = BY_DOMAIN[domain] ?? BY_DOMAIN.home!;
-  const label = item.action ? (ACTION_LABEL[item.action.action] ?? "Open") : null;
+export function presentationFor(subjectKey: string): Presentation {
+  const domain = subjectKey.split(".")[0] ?? "home";
+  return BY_DOMAIN[domain] ?? BY_DOMAIN.home!;
+}
+
+export function actionLabelFor(action: string | undefined): string {
+  return action ? (ACTION_LABEL[action] ?? "Open") : "Open";
+}
+
+export function AgendaRow({ item, href }: { item: HomeAssessment; href?: string }) {
+  const presentation = presentationFor(item.subjectKey);
+  const label = item.action ? actionLabelFor(item.action.action) : null;
 
   return (
     <ActionRow
@@ -68,9 +126,9 @@ export function AgendaRow({ item }: { item: HomeAssessment }) {
       meta={withoutLeadingName(item.title, item.reason)}
       action={
         label ? (
-          <Pill tone={item.riskLevel === "high" ? "primary" : "soft"} type="button">
+          <PillLink href={href ?? presentation.href} tone={item.riskLevel === "high" ? "primary" : "soft"}>
             {label}
-          </Pill>
+          </PillLink>
         ) : null
       }
     />

@@ -1,111 +1,158 @@
 # WonderHome — Design notes
 
-Working notes that sit alongside `UI-MOCKUP-IMPLEMENTATION-SPEC.md`. The spec is
-the contract; this file records how we are reading it.
+Working notes that sit alongside the design contracts. The contracts are:
 
-## The mockups are look and feel, not a feature list
+1. `UI-UX-REQUIREMENTS-v3.md` — the complete UI/UX implementation requirements
+   (mobile application + landing page). **This is the primary contract.**
+2. `UI-MOCKUP-IMPLEMENTATION-SPEC.md` — the earlier screen spec; still valid
+   where v3 does not override it.
+3. The mockup sheets (`WonderHome-*.png`) — look and feel, not a feature list.
 
-`WonderHome-Approved-UI-Mockup-Reference.png` and
-`WonderHome-Mockup-Sheet-B-Onboarding-and-Meals.png` guide the **visual
-language** — surfaces, colour, spacing, card shapes, tone of voice, the general
-feel of a family-oriented product rather than an enterprise console.
+This file records how we read them and the rules the code encodes.
 
-They do **not** define the menu or the feature set. Navigation, screens and
-behaviour come from `UI-MOCKUP-IMPLEMENTATION-SPEC.md` and the module backlogs.
-Where a mockup shows a control that no story calls for, the story wins; where a
-story needs a surface the mockups never drew, design it in the same visual
-language rather than forcing it into a screenshot.
+## The one-line brief
 
-## The two mockup sheets differ
+> The family should manage the home. WonderHome should manage the management.
 
-Both are approved references and neither is complete on its own:
+Every screen is judged against that. If a screen asks somebody to update
+routine household work, it is wrong. If a screen shows a number nobody can
+explain from data, it is wrong. If a screen offers a button that does nothing
+because the provider behind it is not live, it is wrong.
 
-| | Sheet A (bundled reference) | Sheet B |
-|---|---|---|
-| Splash & onboarding | — | yes |
-| Meals & cooking | — | yes |
-| Responsibilities | yes | — |
-| School | yes | — |
-| Member profile (child) | child view | fuller profile |
+## Visual language (v3 §2)
 
-`UI-MOCKUP-IMPLEMENTATION-SPEC.md`'s required-screen list matches Sheet A only.
-Two consequences to keep in mind while building:
+| Token family | Decision |
+|---|---|
+| Surfaces | Warm cream page (`--wh-background`), white cards, a fixed radial page gradient behind everything |
+| Type | Inter via `next/font` (self-hosted; CSP allows `font-src 'self'` only), deep navy, fluid hero/display/title sizes (`--wh-text-*`) |
+| Primary | Teal for every committing action and the active nav state |
+| States | Green handled · amber attention · red only for the genuinely critical · blue informational |
+| Domains | One colour per household domain (`--wh-tone-*`), used for the icon tile, never for text |
+| Shape | 1.25rem cards, pill actions, three shadow depths (card / raised / float) |
+| Motion | One easing, three durations, transform+opacity only, all removed under `prefers-reduced-motion` |
 
-- **No onboarding surface is specified anywhere**, though stories 01-001 and
-  01-002 need household creation and invitation acceptance. Sheet B's splash
-  screen is the only visual reference for it. Story 01-001 built the smallest
-  honest version — `/sign-up`, `/sign-in`, `/welcome` — in the shared visual
-  language; a designed onboarding still needs a decision.
-- **Module 10 (Meals & Cooking) has eight stories and no screen in the spec.**
-  Sheet B's Meals screen is the reference until the spec says otherwise.
+Tokens are defined once in `packages/core/src/ui-theme.css`, consumed through
+Tailwind theme variables, and shared by the product and the landing page. Dark
+tokens exist but apply only under an explicit `data-theme="dark"`: there is no
+reviewed dark design yet.
 
-## Where the tokens came from
+## Rules the components encode
 
-`packages/core/src/ui-theme.css` derives from both sheets:
+1. **Colour follows domain, not urgency.** A bill is money-coloured whether it
+   is due tomorrow or paid. Urgency is carried by wording and by which action a
+   row offers; colour alone is not a signal every reader receives.
+2. **A row separates the name from the reason.** `ActionRow` shows what it is,
+   why it is here, and the one thing to do. A row with nothing to do has no
+   action, which is a meaningful state.
+3. **Every metric is a count of something the system evaluated.** `MetricGrid`
+   takes values and never invents one. "Handled quietly" is `checked − needs`.
+4. **Tabs are URLs.** `SegmentedControl` renders links with `aria-current`, so
+   a tab is deep-linkable, works without script, and survives the back button.
+5. **Every data-driven screen has the three states** (v3 §49): `EmptyState`
+   says what happens next, `ErrorState` offers a way forward and never shows
+   the raw failure, `LoadingState` is a skeleton in the content's shape.
+6. **Sheets and dialogs are Radix.** Focus, escape, scroll lock and naming are
+   the parts a hand-rolled dialog gets wrong. Every sheet has a real title.
+7. **An action preview and an executed action look different** (v3 §48). The
+   `ActionPreview` state badge and the presence of Confirm / Change / Cancel
+   are the difference; nobody should mistake "will do" for "did".
+8. **The domains are never in the phone's tab bar** (v3 §4). Five primary
+   areas at every size; domains live in the desktop sidebar and behind More,
+   filtered server-side by the member's permissions.
+9. **UI visibility is never authorization** (v3 §47). The personal view and the
+   secondary navigation are presentation; every page and every API route asks
+   the server again, and RLS asks a third time.
 
-- warm near-white page background, white cards, soft shadow, ~1rem radii
-- deep navy text, muted navy for secondary copy
-- restrained teal primary for actions ("Pay", "Review", active nav)
-- semantic states kept distinct from the primary: amber for attention, red for
-  risk, green for handled, blue for informational updates
+## The "talk to" experience
 
-Tokens are defined once on `:root`, redefined for dark mode, and consumed
-through Tailwind theme variables. A module never introduces its own palette.
+The AI Assistant is the screen the product is judged by, so it has the most
+rules:
 
-## Interaction rules worth repeating
+- **One engine, two channels.** Voice and text hit the same endpoint; the
+  channel is metadata. The microphone uses the browser's own Web Speech API
+  and, where it is missing or refused, says so instead of pretending to listen.
+- **Understand → Decide → Act, in that order and visibly.** A consequential
+  request becomes an `ActionPreview`: what I understood, what I plan to do, the
+  impact, and Confirm / Change / Cancel. Consent is a request naming the
+  action, recorded server-side — never a client-side claim.
+- **"Yes" only means yes to the last proposal, and only for ten minutes.** A
+  stale yes is answered with a question, not an action.
+- **A shaky transcript of something consequential is read back**, never acted on.
+- **"Done" is never said unless a governed tool actually did it.** Autonomy may
+  allow execution, but with nothing wired to execute, the honest reply is
+  "prepared". This is enforced in `converse()` and tested.
+- **Understanding is deterministic today.** No language-model provider has
+  credentials configured, so intents resolve from the fixture set. The seam is
+  `understand`; a live provider slots in there and nothing downstream changes,
+  because nothing downstream ever trusted the model with a decision.
 
-From the spec, these shape components rather than screens:
+## The landing page
 
-1. Never make a user tick off routine household work to keep WonderHome accurate.
-2. A card either carries a real next action or stays out of the actionable queue.
-3. Every action explains: what happened, why it matters, what WonderHome
-   recommends, what you can do.
-4. Pending-approval and already-executed AI changes must look different.
-5. Personalized views are permission-filtered by the API, never hidden with CSS.
-6. Empty states say what WonderHome can do next; error states offer a recovery.
+Apple-style storytelling in WonderHome's own design (v3 §25–§45). It shares the
+product's tokens, mark, buttons, cards and icons, and its product visuals are
+the real components in device frames — never screenshots, never stretched.
+
+What it deliberately does **not** do:
+
+- Show prices. None are configured anywhere; the plan cards come from the live
+  catalogue and show features, not amounts.
+- Quote families. The story cards are labelled *Illustrative* on the card.
+- Offer social sign-in. No OAuth provider is configured; a "Continue with
+  Google" button that goes nowhere is worse than none.
+- Claim certifications. The security section states what the code does.
+
+Motion is one small client script (`reveal.tsx`): IntersectionObserver for
+scroll reveal, one rAF-throttled listener for parallax, and nothing at all when
+`prefers-reduced-motion` is set. No information depends on animation — the
+Playwright suite checks that headings are readable before they scroll in.
+
+## The mockup sheets and where they disagree
+
+Six sheets are approved references. They differ in detail (one shows a
+"Household" tab on Today, another a "Calendar" tab on Bills) and none is
+complete alone. Where a mockup shows a control no story calls for, the story
+wins; where a story needs a surface the mockups never drew, it is designed in
+the same visual language.
 
 ## Spec gaps filled while building
 
 Recorded so they are not mistaken for scope creep:
 
-| Gap | What was built | Story |
+| Gap | What was built | Where |
 |---|---|---|
-| No story covers authentication UI, yet 01-001 needs an authenticated creator | Email/password sign-up, sign-in and sign-out | 01-001 |
-| No story covers household creation UI | `/welcome` onboarding form | 01-001 |
-| Signed-out Home is undefined | Marketing Home with both ways in | 01-001 |
-
-Each is deliberately minimal: enough for the story to work end to end, in the
-shared visual language, and easy to replace when a designed flow exists.
+| No story covers authentication UI | Email sign-up, sign-in, sign-out | `(auth)/actions.ts` |
+| Household setup needs location and currency (v3 §8) but the schema has neither | Time zone only, which is the one setting that changes behaviour; the architecture stays locale-neutral | `/welcome` |
+| Household setup is "step 2 of 4" in v3 but there is no profile step and inviting is optional | Sign up → household → done, shown as 3 steps | `AuthLayout` |
+| Child Goals tab has no backing model | An honest "coming" state rather than a fake streak | `/?tab=goals` |
+| MFA, data export and deletion (v3 §23) are not built | Listed as *Soon*, never as a working button | `/settings` |
 
 ## The shared UI kit
 
-The mockups are made of a handful of repeating parts, so the code is too. All of
-them live in `@wonderhome/core/ui/*` and no screen invents its own:
+All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 
 | Part | What it is |
 |---|---|
-| `IconTile` | The tinted glyph square every row begins with |
-| `ActionRow` / `NavRow` | Name, one line of explanation, one action or a chevron |
-| `Pill` / `PillLink` / `Badge` | The small rounded action or state label on a row |
-| `StatChips` | The counts under a greeting |
-| `SectionHeader` | A section title with its count and at most one way onward |
-| `QuoteCard` | The closing line, labelled as decoration for assistive tech |
-| `Card`, `Button`, `ButtonLink`, `Field`, `Alert` | The surfaces and controls |
-
-Two rules the components encode rather than document:
-
-- **Colour follows domain, not urgency.** A bill is money-coloured whether it is
-  due tomorrow or paid. Urgency is carried by wording and by which action a row
-  offers, because colour alone is not a signal every reader receives.
-- **A row separates the name from the reason.** The name is what somebody
-  recognises, the reason is why it is in front of them; collapsed into one line,
-  neither is readable at phone width.
+| `BrandMark`, `Wordmark` | The house-with-a-heart mark, inline SVG |
+| `Avatar`, `AvatarGroup` | Initials on a name-stable tint; a role glyph, never colour alone |
+| `IconTile` | The tinted glyph square every row begins with; tone by domain |
+| `ActionRow` / `NavRow` | Name, one line of reason, one action or a chevron |
+| `Pill` / `PillLink` / `Badge` | The small rounded action or state label |
+| `MetricCard` / `MetricGrid` / `StatChips` | The counts under a greeting |
+| `DomainCard` / `DomainGrid` | A household domain as a tile |
+| `SegmentedControl` | Link-based tabs with `aria-current` |
+| `Timeline` | The day as a vertical timeline |
+| `CalendarItem`, `PersonCard`, `ResponsibilityCard`, `HandledList` | Domain rows |
+| `NotificationCard`, `CertificationItem`, `ActionPreview` | Threaded notification, a belief with provenance, an approval card |
+| `ProgressRing` | A percentage that is arithmetic, with real text in the middle |
+| `SearchBar` | Search that submits to the assistant, because search and ask are the same thing |
+| `Sheet`, `ConfirmationSheet`, `ToastProvider` | Radix dialog and toast |
+| `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton` | The three states |
+| `AiOrb`, `ChatMessage`, `SuggestionChips`, `ChatComposer`, `VoiceInputButton`, `Waveform` | The conversation |
+| `AppShell`, `MobileHeader`, `PrimaryNav` | The shell |
 
 ### Tailwind has to be told about the shared package
 
-Tailwind's automatic source detection never looks inside `node_modules`, and the
-workspace links `@wonderhome/core` there. Without the explicit
+Tailwind's automatic source detection never looks inside `node_modules`, and
+the workspace links `@wonderhome/core` there. Without the explicit
 `@source "../../../packages/core/src"` in `apps/web/app/globals.css`, a class
-used **only** by a shared component is never generated — so the kit silently
-loses whatever an app file does not happen to use as well. That is how `sr-only`
-and `grid-cols-3` went missing while everything else looked fine.
+used **only** by a shared component is never generated.

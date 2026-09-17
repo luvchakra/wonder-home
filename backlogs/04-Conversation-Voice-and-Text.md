@@ -11,7 +11,7 @@
 | 5 | P0 | 04-005 | Voice | Done | Same engine; transcript confidence kept |
 | 6 | P0 | 04-006 | Text | Done | Same engine as voice |
 | 7 | P0 | 04-007 | Memory extraction | Done | Source, confidence and status on every belief |
-| 8 | P1 | 04-008 | Conversation corrections | In Progress | Reconciliation built and tested; UI pending |
+| 8 | P1 | 04-008 | Conversation corrections | Done | Reconciliation built and tested; corrections flow through the assistant and are written server-side |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

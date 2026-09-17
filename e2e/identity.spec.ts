@@ -12,9 +12,9 @@ import { expect, test } from "@playwright/test";
 test("a signed-out visitor is offered both ways in", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { level: 1, name: "WonderHome" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "I already have an account" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Home runs smoother.");
+  await expect(page.getByRole("link", { name: /Get Started Free/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign In" }).first()).toBeVisible();
 });
 
 test("the sign-in form is labelled and reachable by keyboard", async ({ page }) => {
@@ -30,8 +30,8 @@ test("sign-up asks for a name, so the household has something to call the person
 }) => {
   await page.goto("/sign-up");
 
-  await expect(page.getByLabel("Your name")).toBeVisible();
-  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(page.getByLabel("Full name")).toBeVisible();
+  await expect(page.getByLabel("Email address")).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
 });
 
@@ -60,9 +60,9 @@ test("an invalid create request is rejected with field-level detail", async ({ r
     data: { householdName: "", displayName: "Nobody" },
   });
 
-  // Validation runs before authentication in the wrapper, so a malformed body
-  // is reported as such rather than masked by the 401.
-  expect([400, 401]).toContain(response.status());
+  // Authentication runs before validation, so an anonymous caller is turned
+  // away before learning what a valid body looks like.
+  expect(response.status()).toBe(401);
 });
 
 test("an invitation link sends a signed-out visitor to sign in and back", async ({ page }) => {

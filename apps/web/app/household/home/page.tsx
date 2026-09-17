@@ -1,50 +1,45 @@
-import { redirect } from "next/navigation";
+import { CircleCheck, PawPrint, Shirt, Wrench } from "lucide-react";
 
-import { createClient } from "@wonderhome/core/db/server";
 import { homeAgenda } from "@wonderhome/core/home/repository";
-import { listMemberships } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
+import { MetricGrid } from "@wonderhome/core/ui/metric-card";
+import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
-import { StatChips } from "@wonderhome/core/ui/stat-chips";
+import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../../_components/agenda-row";
+import { requireSession } from "../../_lib/session";
 
-/**
- * Home & upkeep (module 13).
- *
- * The screen shows what needs a person and nothing else — no inventory, no
- * progress bars, no list of everything the household owns. When the house is
- * working, this page says so in one line, and that is the intended state most
- * days rather than an empty-state apology.
- */
 export const metadata = { title: "Home & upkeep" };
 export const dynamic = "force-dynamic";
 
+/**
+ * Home & upkeep (module 13). The screen shows what needs a person and
+ * nothing else — no inventory, no progress bars. When the house is working,
+ * this page says so in one line, and that is the intended state most days.
+ */
 export default async function HomeUpkeepPage() {
-  const supabase = await createClient();
-  const memberships = await listMemberships(supabase);
+  const session = await requireSession("/household/home");
+  const { supabase, membership, view, viewer, secondary } = session;
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/home", back: { href: "/more", label: "Back" }, title: "Home & upkeep" };
 
-  // Not signed in, or signed in with no household: the same redirect either way,
-  // because a page that explains what it would have shown is a disclosure.
-  if (memberships.length === 0) redirect("/welcome");
-
-  const membership = memberships[0]!;
+  if (view.tone === "child") {
+    return (
+      <AppShell {...shell}>
+        <EmptyState icon={Wrench} tone="home" title="Not available to you" description="Home upkeep is for the adults in the household." />
+      </AppShell>
+    );
+  }
 
   let agenda;
   try {
     agenda = await homeAgenda(supabase, membership.household.id);
   } catch {
     return (
-      <AppShell active="more">
-        <div className="space-y-4">
-          <Header householdName={membership.household.name} />
-          <Alert tone="risk">
-            Something went wrong reading the household&apos;s upkeep. Nothing has been changed.
-          </Alert>
-        </div>
+      <AppShell {...shell}>
+        <ErrorState title="Upkeep could not be loaded" retryHref="/household/home" />
       </AppShell>
     );
   }
@@ -55,46 +50,40 @@ export default async function HomeUpkeepPage() {
     { title: "Laundry", items: agenda.laundry },
     { title: "Pets", items: agenda.pets },
   ].filter((section) => section.items.length > 0);
-
   const needsYou = sections.reduce((total, section) => total + section.items.length, 0);
 
   return (
-    <AppShell active="more">
+    <AppShell {...shell}>
       <div className="space-y-5">
-        <Header householdName={membership.household.name} />
+        <header className="wh-rise hidden lg:block">
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Home &amp; upkeep</h1>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">What {membership.household.name} needs to deal with. Everything else is handled.</p>
+        </header>
 
-        <StatChips
-          stats={[
-            { label: "Needs you", value: needsYou, tone: "attention" },
-            { label: "On track", value: Math.max(0, agenda.checked - needsYou), tone: "handled" },
-            {
-              label: "Urgent",
-              value: sections
-                .flatMap((section) => section.items)
-                .filter((item) => item.riskLevel === "high").length,
-              tone: "info",
-            },
+        <MetricGrid
+          metrics={[
+            { label: "Needs you", value: needsYou, icon: Wrench, tone: "attention" },
+            { label: "On track", value: Math.max(0, agenda.checked - needsYou), icon: CircleCheck, tone: "handled" },
+            { label: "Laundry", value: agenda.laundry.length, icon: Shirt, tone: "care" },
+            { label: "Pets", value: agenda.pets.length, icon: PawPrint, tone: "care" },
           ]}
         />
 
         {sections.length === 0 ? (
-          <Card className="space-y-1 p-5 text-center">
-            <p className="text-sm font-semibold">Nothing needs you</p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">
-              {agenda.checked === 0
-                ? "Add an appliance, a pet or something that has to be clean by a deadline, and WonderHome will keep an eye on it."
-                : "Everything is serviced, stocked and on schedule. WonderHome will say something when that changes."}
-            </p>
-          </Card>
+          <EmptyState
+            icon={CircleCheck}
+            tone="handled"
+            title="Nothing needs you"
+            description={agenda.checked === 0 ? "Add an appliance, a pet or something that has to be clean by a deadline, and WonderHome will keep an eye on it." : "Everything is serviced, stocked and on schedule. WonderHome will say something when that changes."}
+            action={agenda.checked === 0 ? <PillLink href="/ai">Tell WonderHome about the house</PillLink> : null}
+          />
         ) : (
           sections.map((section) => (
             <section key={section.title}>
               <SectionHeader title={section.title} count={section.items.length} />
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
-                  {section.items.map((item) => (
-                    <AgendaRow key={item.subjectKey} item={item} />
-                  ))}
+                  {section.items.map((item) => <AgendaRow key={item.subjectKey} item={item} href="/household/home" />)}
                 </ul>
               </Card>
             </section>
@@ -104,16 +93,5 @@ export default async function HomeUpkeepPage() {
         <QuoteCard>A calm home today, a brighter tomorrow.</QuoteCard>
       </div>
     </AppShell>
-  );
-}
-
-function Header({ householdName }: { householdName: string }) {
-  return (
-    <header className="space-y-1">
-      <h1 className="text-[1.375rem] font-semibold tracking-tight">Home &amp; upkeep</h1>
-      <p className="text-sm text-[var(--wh-foreground-muted)]">
-        What {householdName} needs to deal with. Everything else is handled.
-      </p>
-    </header>
   );
 }

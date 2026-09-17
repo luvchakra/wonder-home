@@ -1,18 +1,61 @@
+import { may } from "@wonderhome/core/billing/repository";
+import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { EmptyState } from "@wonderhome/core/ui/states";
+import { Sparkles } from "lucide-react";
 
-import { AreaPlaceholder } from "../_components/area-placeholder";
+import { requireSession } from "../_lib/session";
+import { Assistant, type AssistantMessage } from "./assistant";
 
-export const metadata = { title: "AI" };
+export const metadata = { title: "WonderHome AI" };
+export const dynamic = "force-dynamic";
 
-export default function AiPage() {
+/**
+ * Talk or text — one conversation engine for both (module 04).
+ *
+ * The history is read here with the member's own client, so what reaches the
+ * browser is what RLS lets this person see. New turns go through the API.
+ */
+export default async function AiPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const [{ q }, session] = await Promise.all([searchParams, requireSession("/ai")]);
+  const { supabase, membership, viewer, secondary } = session;
+
+  const entitlement = await may(supabase, membership.household.id, "conversation.text");
+
+  let initialMessages: AssistantMessage[] = [];
+  if (entitlement.allowed) {
+    const sessionId = await currentSessionId(supabase, membership.household.id, membership.memberId);
+    if (sessionId) {
+      const history = await listMessages(supabase, membership.household.id, sessionId, 30).catch(() => []);
+      initialMessages = history
+        .filter((message) => message.role !== "system")
+        .map((message) => ({
+          id: message.id,
+          role: message.role as "member" | "assistant",
+          text: message.content,
+          action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview } : null,
+        }));
+    }
+  }
+
   return (
-    <AppShell active="ai">
-      <AreaPlaceholder
-        title="WonderHome AI"
-        lede="Talk or type — one conversation engine for both."
-        nextUp="Voice and text land with the conversation module (module 04), with action previews before anything consequential runs."
-        quote="Ask anything. WonderHome is already listening."
-      />
+    <AppShell active="ai" viewer={viewer} secondary={secondary} pathname="/ai" title="WonderHome AI">
+      {entitlement.allowed ? (
+        <Assistant
+          householdId={membership.household.id}
+          memberName={viewer.displayName}
+          firstName={viewer.displayName.split(" ")[0] ?? viewer.displayName}
+          initialMessages={initialMessages}
+          initialQuery={typeof q === "string" && q.trim() ? q.trim().slice(0, 500) : undefined}
+        />
+      ) : (
+        <EmptyState
+          icon={Sparkles}
+          tone="ai"
+          title="Conversation is not part of this plan"
+          description={entitlement.reason}
+        />
+      )}
     </AppShell>
   );
 }

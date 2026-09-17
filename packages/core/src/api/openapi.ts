@@ -475,6 +475,29 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/conversation": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "The caller's open conversation with WonderHome",
+          responses: {
+            "200": { description: "Recent messages, with any action each one proposed" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Say something, or decide on a proposal",
+          description:
+            "Text and voice share this one engine; the channel is metadata. A reply may carry an action preview. Consent is a separate call naming the action, or a yes that resolves against the last proposal inside its time limit. Nothing here executes a domain effect.",
+          responses: {
+            "200": { description: "What WonderHome says back, with an action preview when it is prepared to act" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

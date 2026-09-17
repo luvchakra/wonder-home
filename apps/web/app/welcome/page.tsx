@@ -8,15 +8,28 @@ import { createHouseholdAction } from "../(auth)/actions";
 import { AuthForm } from "../_components/auth-form";
 import { AuthLayout } from "../_components/auth-layout";
 
-export const metadata = { title: "Create your household" };
+export const metadata = { title: "Set up your household" };
 export const dynamic = "force-dynamic";
 
+const COMMON_ZONES = [
+  "Asia/Kolkata",
+  "Asia/Dubai",
+  "Asia/Singapore",
+  "Europe/London",
+  "Europe/Berlin",
+  "America/New_York",
+  "America/Chicago",
+  "America/Los_Angeles",
+  "Australia/Sydney",
+];
+
 /**
- * Onboarding: the first household. Creating it makes this person its Head of
- * Family (story 01-001).
+ * Household setup (requirements §8), step 2 of 3. Creating it makes this
+ * person its Head of Family (story 01-001).
  *
- * Someone who already belongs to a household does not need this screen, so they
- * go Home rather than being invited to create a second one by accident.
+ * The architecture stays locale-neutral: the time zone is the one household
+ * setting that changes behaviour (routines, reminders, quiet hours), so it is
+ * the one asked for. Currency and location live with the domains that use them.
  */
 export default async function WelcomePage() {
   const supabase = await createClient();
@@ -34,34 +47,33 @@ export default async function WelcomePage() {
 
   return (
     <AuthLayout
-      title="Create your household"
-      lede="WonderHome manages the outcomes. You get the time back."
+      title="Set up your household"
+      lede="Create a space for the people, pets and plans you care about."
+      step={{ current: 2, total: 3 }}
+      promise={{
+        headline: "Let's build a happier home together.",
+        points: ["You become Head of Family", "Invite everyone next", "WonderHome starts learning your rhythm"],
+      }}
     >
-      <AuthForm
-        action={createHouseholdAction}
-        submitLabel="Create household"
-        pendingLabel="Creating household…"
-      >
-        <Field
-          label="Household name"
-          name="householdName"
-          required
-          placeholder="Chakraborty Home"
-          hint="What your family calls home."
-        />
-        <Field
-          label="Your name"
-          name="displayName"
-          required
-          defaultValue={suggestedName}
-          hint="You will be the Head of Family and can invite others next."
-        />
-        <Field
-          label="Time zone"
-          name="timezone"
-          defaultValue="Asia/Kolkata"
-          hint="Used for routines, reminders and quiet hours."
-        />
+      <AuthForm action={createHouseholdAction} submitLabel="Create household" pendingLabel="Creating household…">
+        <Field label="Household name" name="householdName" required placeholder="Chakraborty Family" hint="What your family calls home." />
+        <Field label="Your name" name="displayName" required defaultValue={suggestedName} hint="You will be the Head of Family." />
+        <div className="space-y-1.5">
+          <label htmlFor="timezone" className="block text-sm font-medium">Time zone</label>
+          <input
+            id="timezone"
+            name="timezone"
+            list="wh-zones"
+            defaultValue="Asia/Kolkata"
+            className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+          />
+          <datalist id="wh-zones">
+            {COMMON_ZONES.map((zone) => (
+              <option key={zone} value={zone} />
+            ))}
+          </datalist>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">Used for routines, reminders and quiet hours.</p>
+        </div>
       </AuthForm>
     </AuthLayout>
   );

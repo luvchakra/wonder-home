@@ -1,0 +1,12 @@
+{
+  "name": "WonderHome",
+  "short_name": "WonderHome",
+  "description": "Happier Homes. Brighter Tomorrows.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf8f3",
+  "theme_color": "#fbf8f3",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

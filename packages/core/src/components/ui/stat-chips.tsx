@@ -1,11 +1,12 @@
-import { cn } from "../../lib/cn";
+import { AlertTriangle, CircleCheck, Sparkles } from "lucide-react";
+
+import { MetricGrid, type Metric } from "./metric-card";
 
 /**
- * The counts under the greeting: what needs you, and what did not.
+ * The counts under a greeting: what needs you, and what did not.
  *
- * Every chip is a real count of something the system actually evaluated. A
- * chip whose number cannot be explained from data is worse than no chip, so
- * this component takes values and never invents one.
+ * Kept as a thin wrapper over MetricGrid so the screens that already use it
+ * keep working; new screens use MetricGrid directly.
  */
 export type Stat = {
   label: string;
@@ -13,24 +14,17 @@ export type Stat = {
   tone: "attention" | "handled" | "info";
 };
 
-const TONE: Record<Stat["tone"], string> = {
-  attention: "text-[var(--wh-attention)]",
-  handled: "text-[var(--wh-handled)]",
-  info: "text-[var(--wh-info)]",
+const PRESENTATION: Record<Stat["tone"], Pick<Metric, "icon" | "tone">> = {
+  attention: { icon: AlertTriangle, tone: "attention" },
+  handled: { icon: CircleCheck, tone: "handled" },
+  info: { icon: Sparkles, tone: "ai" },
 };
 
 export function StatChips({ stats, className }: { stats: readonly Stat[]; className?: string }) {
   return (
-    <ul className={cn("grid grid-cols-3 gap-2", className)}>
-      {stats.map((stat) => (
-        <li
-          key={stat.label}
-          className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2.5 text-center"
-        >
-          <p className={cn("text-lg font-semibold leading-none", TONE[stat.tone])}>{stat.value}</p>
-          <p className="mt-1 text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{stat.label}</p>
-        </li>
-      ))}
-    </ul>
+    <MetricGrid
+      className={className}
+      metrics={stats.map((stat) => ({ label: stat.label, value: stat.value, ...PRESENTATION[stat.tone] }))}
+    />
   );
 }
