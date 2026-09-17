@@ -5,11 +5,11 @@
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
 | 1 | P0 | 02-001 | Setup wizard | Not Started | |
-| 2 | P0 | 02-002 | Responsibility matrix | Not Started | |
-| 3 | P0 | 02-003 | Household playbook | Not Started | |
-| 4 | P0 | 02-004 | Policies | Not Started | |
-| 5 | P0 | 02-005 | AI autonomy | Not Started | |
-| 6 | P0 | 02-006 | Configure by conversation | Not Started | |
+| 2 | P0 | 02-002 | Responsibility matrix | Done | Canonical data; inactive and cross-household targets refused |
+| 3 | P0 | 02-003 | Household playbook | Done | Outcome keys, cadence, verification, escalation, dependencies |
+| 4 | P0 | 02-004 | Policies | Done | Versioned; one active version per policy name |
+| 5 | P0 | 02-005 | AI autonomy | Done | decideAutonomy at execution time; unconfigured means observe |
+| 6 | P0 | 02-006 | Configure by conversation | Blocked | Needs the conversation engine (module 04) |
 | 7 | P1 | 02-007 | Conflict detection | Not Started | |
 | 8 | P2 | 02-008 | Advanced rule builder | Not Started | |
 
