@@ -14,6 +14,7 @@
     "./identity/*": "./src/identity/*.ts",
     "./db/*": "./src/db/*.ts",
     "./observability/*": "./src/observability/*.ts",
+    "./platform/*": "./src/platform/*.ts",
     "./navigation/*": "./src/navigation/*.ts",
     "./shell/*": "./src/components/shell/*.tsx",
     "./ui/*": "./src/components/ui/*.tsx"

@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 31 |
+| Done | 35 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 139 |
-| Completion | 18.2% |
-| Current module | 19 Testing, Observability & Production |
-| Current story | 16-001 Separate admin boundary |
+| Not Started | 135 |
+| Completion | 20.6% |
+| Current module | 16 Platform Admin & Operations |
+| Current story | 02-001 Setup wizard (Phase 2) |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -34,7 +34,7 @@
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 0 | Not Started |
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
-| 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 0 | Not Started |
+| 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 4 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 6 | In Progress |
@@ -83,3 +83,7 @@
 | 2026-09-17 | 19 | 19-004 | Done | 7 unit, 1 E2E | Liveness and readiness separated; degraded keeps serving |
 | 2026-09-17 | 19 | 19-005 | Done | 6 unit | Structured redacting logs with correlation ids (00-009) |
 | 2026-09-17 | 19 | 19-006 | Done | 2 unit | Provider-neutral reporting seam; 5xx only (00-009) |
+| 2026-09-17 | 16 | 16-001 | Done | 11 database, 8 unit | /platform-admin boundary; not staff and no boundary look identical |
+| 2026-09-17 | 16 | 16-002 | Done | 8 unit | support/operator/owner; support cannot grant itself access |
+| 2026-09-17 | 16 | 16-003 | Done | 1 E2E | Operations aggregates only, never one family's activity |
+| 2026-09-17 | 16 | 16-004 | Done | 11 database | Reason-coded, time-boxed, revocable, visible to the household |
