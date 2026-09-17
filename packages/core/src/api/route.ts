@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { reportError } from "../observability/error-reporter";
 import { ApiError, toErrorBody } from "./errors";
 import { REQUEST_ID_HEADER, requestIdFrom } from "./request-id";
 
@@ -67,6 +68,18 @@ export function defineRoute<TSchema extends z.ZodTypeAny | undefined = undefined
       return json(result, 200, requestId);
     } catch (thrown) {
       const { status, body } = toErrorBody(thrown, requestId);
+
+      // Expected refusals (401/403/404/422) are normal traffic. An unexpected
+      // failure is reported server-side, where the detail can safely live.
+      if (status >= 500) {
+        reportError({
+          message: "Unhandled API failure",
+          requestId,
+          context: { method: request.method, path: new URL(request.url).pathname },
+          cause: thrown,
+        });
+      }
+
       return json(body, status, requestId);
     }
   };

@@ -12,8 +12,8 @@
 | 6 | P0 | 00-006 | Configure CI baseline | Done | GitHub Actions; lints are self-tested |
 | 7 | P0 | 00-007 | Create API foundation | Done | defineRoute wrapper; /health and /me |
 | 8 | P0 | 00-008 | Create security foundation | Done | Headers, middleware, route policy, redaction |
-| 9 | P1 | 00-009 | Create observability foundation | Not Started | |
-| 10 | P1 | 00-010 | Create feature configuration | Not Started | |
+| 9 | P1 | 00-009 | Create observability foundation | Done | Redacting structured logs; reporter seam |
+| 10 | P1 | 00-010 | Create feature configuration | Done | Flags + fail-fast startup validation |
 
 ## Purpose
 This is the mandatory greenfield bootstrap for the WonderHome repository. The project is a new repository and will use the WonderArk/founder-collab technical stack as its baseline.

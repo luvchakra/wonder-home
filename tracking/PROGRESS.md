@@ -5,20 +5,20 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 8 |
+| Done | 10 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 162 |
-| Completion | 4.7% |
-| Current module | 00 Project Bootstrap & Architecture |
-| Current story | 00-009 Create observability foundation |
+| Not Started | 160 |
+| Completion | 5.9% |
+| Current module | 01 Identity & Family Accounts |
+| Current story | 01-001 Create household and owner |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
 
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 8 | In Progress |
+| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -59,3 +59,6 @@
 | 2026-09-17 | 00 | 00-006 | Done | 24 tests across gates | CI: typecheck, lint, migration + boundary lints, tests, build, E2E |
 | 2026-09-17 | 00 | 00-007 | Done | 6 unit + 3 E2E contract tests | /api/v1 wrapper, error envelope, correlation ids, health + authenticated example |
 | 2026-09-17 | 00 | 00-008 | Done | 19 unit + 18 E2E | Security headers, session middleware, route gate, log redaction |
+| 2026-09-17 | 00 | 00-009 | Done | 6 unit tests | Structured redacting logger, provider-neutral error reporting seam |
+| 2026-09-17 | 00 | 00-010 | Done | 10 unit tests | Validated flags and fail-fast startup configuration |
+| 2026-09-17 | 00 | — | Done | 50 unit, 15 script, 18 E2E | Module 00 complete; foundation ready for module 01 |
