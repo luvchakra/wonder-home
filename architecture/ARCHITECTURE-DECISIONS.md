@@ -57,3 +57,42 @@ comfortably serves — at the 25,000-household scale target it will not.
 than bought: visibility timeouts, retry with backoff, a dead-letter state, and
 idempotent handlers. A scheduler is an external dependency; the worker endpoint
 is authenticated and safe to call more than once.
+
+## ADR-008 — Entitlements and the connector contract are built before the domains that use them
+
+**Decision:** Story 17-001 (connector framework) and stories 20-001 through
+20-003 (plans, entitlements, usage metering) are implemented ahead of the
+Phase 5 household domains, rather than in Phase 6 where
+`tracking/IMPLEMENTATION-ORDER.md` places them.
+
+**Context:** Every Phase 5 module — school, commerce, meals, bills, family time —
+carries the same two acceptance criteria. One says a direct API call cannot
+bypass the entitlement decision even when the UI does not render the feature.
+The other says provider integrations implement a common contract for
+credentials, health, sync and revoke, with canonical models that stay
+provider-independent.
+
+Built in phase order, each of those five modules would grow its own entitlement
+check and its own provider adapter shape, and the shared versions would arrive
+afterwards as a refactor across code that already shipped. Module 13 is the
+evidence: `checkWeatherAccess` in `home/weather.ts` had to invent a local
+entitlement result type because no service existed to ask.
+
+**Reason:**
+- An entitlement rule enforced in five places is five chances to differ. The
+  criterion is explicitly that it is checked "server-side through one
+  entitlement service".
+- A connector contract is only worth having before there are connectors. Written
+  afterwards it describes what the adapters already do instead of constraining
+  them.
+- Neither story depends on any Phase 5 work, so nothing is being built out of
+  dependency order — only out of listed order.
+
+**Rejected:** following the phase list and refactoring later. The refactor would
+touch five modules' routes and tools at once, which is the change most likely to
+open a hole in exactly the check that is meant to be uniform.
+
+**Consequences:** module 20's remaining stories (upgrade/downgrade, usage UI,
+billing abstraction) still sit in Phase 6, and module 17's provider connectors
+land with the domains that need them. `checkWeatherAccess` is superseded by the
+shared service and is reduced to a caller of it.

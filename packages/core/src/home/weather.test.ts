@@ -73,18 +73,26 @@ describe("the fixture provider", () => {
 });
 
 describe("entitlement", () => {
-  it("refuses on the server, not by hiding a button", () => {
+  const allowed = { allowed: true, remaining: null, reason: "Included." } as const;
+  const refused = {
+    allowed: false,
+    code: "not_in_plan",
+    reason: "Weather-aware planning is not part of this household's plan.",
+    remaining: 0,
+  } as const;
+
+  it("carries the entitlement service's refusal through rather than inventing its own", () => {
     const provider = createFixtureWeatherProvider(FIXTURE_CLEAR_DAY);
 
-    expect(checkWeatherAccess({ entitled: false, provider })).toEqual({
+    expect(checkWeatherAccess({ entitlement: refused, provider })).toEqual({
       allowed: false,
-      code: "not_entitled",
+      code: "not_in_plan",
       reason: "Weather-aware planning is not part of this household's plan.",
     });
   });
 
   it("distinguishes a household without the feature from one without a provider", () => {
-    expect(checkWeatherAccess({ entitled: true, provider: null })).toMatchObject({
+    expect(checkWeatherAccess({ entitlement: allowed, provider: null })).toMatchObject({
       allowed: false,
       code: "not_configured",
     });
@@ -93,6 +101,6 @@ describe("entitlement", () => {
   it("allows an entitled household with a provider", () => {
     const provider = createFixtureWeatherProvider([]);
 
-    expect(checkWeatherAccess({ entitled: true, provider })).toEqual({ allowed: true });
+    expect(checkWeatherAccess({ entitlement: allowed, provider })).toEqual({ allowed: true });
   });
 });

@@ -1,3 +1,5 @@
+import type { EntitlementDecision, EntitlementRefusal } from "../billing/entitlements";
+
 /**
  * Weather-aware planning (story 13-005).
  *
@@ -166,7 +168,7 @@ export function planOutdoorWork(
 
 export type WeatherAccess =
   | { allowed: true }
-  | { allowed: false; code: "not_entitled" | "not_configured"; reason: string };
+  | { allowed: false; code: EntitlementRefusal | "not_configured"; reason: string };
 
 /**
  * Whether weather-aware planning may run for this household.
@@ -176,17 +178,18 @@ export type WeatherAccess =
  * is called on the server path, not consulted by the component. Hiding a
  * feature is presentation; refusing it is authorization, and only one of those
  * is a control.
+ *
+ * The decision itself comes from the one entitlement service (ADR-008). This
+ * function only adds the part that is specific to weather: a household can be
+ * fully entitled and still have no provider configured, which is a different
+ * answer and deserves different words.
  */
 export function checkWeatherAccess(input: {
-  entitled: boolean;
+  entitlement: EntitlementDecision;
   provider: WeatherProvider | null;
 }): WeatherAccess {
-  if (!input.entitled) {
-    return {
-      allowed: false,
-      code: "not_entitled",
-      reason: "Weather-aware planning is not part of this household's plan.",
-    };
+  if (!input.entitlement.allowed) {
+    return { allowed: false, code: input.entitlement.code, reason: input.entitlement.reason };
   }
   if (!input.provider) {
     return {

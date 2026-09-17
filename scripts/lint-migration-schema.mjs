@@ -24,9 +24,16 @@ const FILENAME = /^\d{14}_[a-z0-9_]+\.sql$/;
  *   households      — the tenant root; its own id IS the household id
  *   profiles        — a person, who may belong to several households
  *   plans           — platform-level plan catalogue
+ *   plan_features   — what a plan allows; a property of the plan, not a tenant
  *   platform_admins — the separate platform-admin boundary
  */
-const NON_TENANT_TABLES = new Set(["households", "profiles", "plans", "platform_admins"]);
+const NON_TENANT_TABLES = new Set([
+  "households",
+  "profiles",
+  "plans",
+  "plan_features",
+  "platform_admins",
+]);
 
 export function lintMigrationSource(filename, sql) {
   const problems = [];

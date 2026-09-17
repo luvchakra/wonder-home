@@ -221,6 +221,34 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/entitlements": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "What this household's plan allows",
+          description:
+            "The same data the server enforces with. Rendering is not authorization: every guarded path re-asks the entitlement service regardless of this response.",
+          responses: {
+            "200": { description: "Plan key and enabled features with their limits" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/integrations": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Provider connections and their health",
+          description:
+            "Never includes a credential or where one is stored, and never a provider payload.",
+          responses: {
+            "200": { description: "Connections with status and whether anyone needs to act" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/households/{householdId}/home": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

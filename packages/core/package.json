@@ -13,6 +13,8 @@
     "./home/*": "./src/home/*.ts",
     "./security/*": "./src/security/*.ts",
     "./api/*": "./src/api/*.ts",
+    "./billing/*": "./src/billing/*.ts",
+    "./integrations/*": "./src/integrations/*.ts",
     "./ai/*": "./src/ai/*.ts",
     "./identity/*": "./src/identity/*.ts",
     "./db/*": "./src/db/*.ts",

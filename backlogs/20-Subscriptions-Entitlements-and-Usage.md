@@ -4,9 +4,9 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 20-001 | Plan model | Not Started | |
-| 2 | P0 | 20-002 | Entitlements | Not Started | |
-| 3 | P0 | 20-003 | Usage metering | Not Started | |
+| 1 | P0 | 20-001 | Plan model | Done | free/pro/max seeded as data; changing a plan is a migration |
+| 2 | P0 | 20-002 | Entitlements | Done | one server-side entitlement service; hiding a feature is never the control |
+| 3 | P0 | 20-003 | Usage metering | Done | atomic counters proven against 20 concurrent sessions |
 | 4 | P0 | 20-004 | Upgrade/downgrade | Not Started | |
 | 5 | P1 | 20-005 | Usage UI | Not Started | |
 | 6 | P1 | 20-006 | Billing abstraction | Not Started | |

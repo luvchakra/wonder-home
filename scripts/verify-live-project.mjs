@@ -37,6 +37,12 @@ const SHIPPED_TABLES = [
   "pets",
   "pet_care_needs",
   "home_device_signals",
+  "plans",
+  "plan_features",
+  "household_subscriptions",
+  "usage_counters",
+  "integrations",
+  "integration_events",
 ];
 
 /**

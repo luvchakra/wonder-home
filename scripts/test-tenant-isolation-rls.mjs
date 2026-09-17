@@ -27,6 +27,7 @@ const NON_TENANT_TABLES = new Set([
   "households", // the tenant root; its own id IS the household id
   "profiles", // a person, who may belong to several households
   "plans", // platform-level plan catalogue
+  "plan_features", // what a plan allows; a property of the plan, not of a tenant
   "platform_admins", // the separate platform-admin boundary
 ]);
 

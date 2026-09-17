@@ -5,11 +5,11 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 84 |
+| Done | 88 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 86 |
-| Completion | 49.4% |
+| Not Started | 82 |
+| Completion | 51.8% |
 | Current module | 08 Kids & School Intelligence |
 | Current story | 08-001 Child responsibility |
 | Last updated | 2026-09-17 |
@@ -35,10 +35,10 @@
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 4 | In Progress |
-| 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 17 | External Integrations | 8 | 5 | 2 | 1 | 1 | In Progress |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 6 | In Progress |
-| 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 0 | Not Started |
+| 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 3 | In Progress |
 
 ## Execution Log
 
@@ -57,6 +57,11 @@
 | 2026-09-17 | 13 | 13-006 | Done | 12 unit + db tests | next_action_by is what makes an open request actionable rather than informational |
 | 2026-09-17 | 13 | 13-007 | Done | 8 unit tests | outcome-based pet care; a missed dose never looks like a missed grooming |
 | 2026-09-17 | 13 | 13-008 | Done | 13 unit + db tests | signals are optional and server-ingested; members cannot write their own evidence |
+
+| 2026-09-17 | 17 | 17-001 | Done | 22 unit + 12 db tests | one connector contract; partial sync is degraded, lost access never waits for a threshold |
+| 2026-09-17 | 20 | 20-001 | Done | 12 db tests | free/pro/max seeded as rows — changing a plan is a reviewable migration |
+| 2026-09-17 | 20 | 20-002 | Done | 13 unit tests | one entitlement service; weather's local check replaced by it (ADR-008) |
+| 2026-09-17 | 20 | 20-003 | Done | concurrency test, 20 parallel sessions | atomic counter: exactly 10 of 20 racing requests won a limit of 10 |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

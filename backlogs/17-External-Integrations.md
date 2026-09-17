@@ -4,7 +4,7 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 17-001 | Connector framework | Not Started | |
+| 1 | P0 | 17-001 | Connector framework | Done | connector contract, health, dedupe, fixtures; no live provider yet |
 | 2 | P0 | 17-002 | Calendar | Not Started | |
 | 3 | P0 | 17-003 | Email | Not Started | |
 | 4 | P0 | 17-004 | School | Not Started | |
