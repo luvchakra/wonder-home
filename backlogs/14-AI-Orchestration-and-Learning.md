@@ -4,12 +4,12 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 14-001 | Household orchestrator | Not Started | |
-| 2 | P0 | 14-002 | Governed tools | Not Started | |
-| 3 | P0 | 14-003 | Plan/execute/monitor loop | Not Started | |
-| 4 | P0 | 14-004 | Agent runs | Not Started | |
-| 5 | P0 | 14-005 | Approval integration | Not Started | |
-| 6 | P0 | 14-006 | Learning boundaries | Not Started | |
+| 1 | P0 | 14-001 | Household orchestrator | Done | Authorization outside the model; approval binds to the exact action |
+| 2 | P0 | 14-002 | Governed tools | Done | Authorization outside the model; approval binds to the exact action |
+| 3 | P0 | 14-003 | Plan/execute/monitor loop | Done | Authorization outside the model; approval binds to the exact action |
+| 4 | P0 | 14-004 | Agent runs | Done | Authorization outside the model; approval binds to the exact action |
+| 5 | P0 | 14-005 | Approval integration | Done | Authorization outside the model; approval binds to the exact action |
+| 6 | P0 | 14-006 | Learning boundaries | Done | Authorization outside the model; approval binds to the exact action |
 | 7 | P1 | 14-007 | Multi-agent coordination | Not Started | |
 | 8 | P2 | 14-008 | Predictive intelligence | Not Started | |
 

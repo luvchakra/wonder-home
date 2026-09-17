@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 64 |
+| Done | 70 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 106 |
-| Completion | 37.6% |
-| Current module | 06 Actionable Notification Engine |
-| Current story | 14-001 Household orchestrator |
+| Not Started | 100 |
+| Completion | 41.2% |
+| Current module | 14 AI Orchestration & Learning |
+| Current story | 07-001 Normal helper model (Phase 5) |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -32,7 +32,7 @@
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 0 | Not Started |
-| 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 4 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -105,3 +105,4 @@
 | 2026-09-17 | 04 | 04-007 | Done | 15 unit, 12 database | Memory with source and confidence; confirmed facts are canonical |
 | 2026-09-17 | 05 | 05-001..006 | Done | 21 unit | Certification: explainable coverage, risk by subject, every alert actionable |
 | 2026-09-17 | 06 | 06-001..007 | Done | 28 unit, 12 database | Decision engine: an event alone never interrupts anyone |
+| 2026-09-17 | 14 | 14-001..006 | Done | 41 unit, 11 database | Governed tools; every call re-checked; refusals recorded |
