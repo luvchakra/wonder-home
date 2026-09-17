@@ -49,6 +49,7 @@ describe("the OpenAPI document", () => {
   it("describes every endpoint the app serves", () => {
     for (const path of [
       "/health",
+      "/health/ready",
       "/me",
       "/me/view",
       "/households",
