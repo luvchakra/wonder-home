@@ -85,3 +85,9 @@ test("the invitations API refuses an anonymous caller", async ({ request }) => {
   });
   expect(accept.status()).toBe(401);
 });
+
+test("the personalized view endpoint refuses an anonymous caller", async ({ request }) => {
+  const response = await request.get("/api/v1/me/view");
+  expect(response.status()).toBe(401);
+  expect((await response.json()).error.code).toBe("unauthenticated");
+});

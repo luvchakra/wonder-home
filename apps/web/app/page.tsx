@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@wonderhome/core/db/server";
+import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { listMemberships } from "@wonderhome/core/identity/households";
+import { buildPersonalView } from "@wonderhome/core/identity/views";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
@@ -25,23 +27,68 @@ export default async function HomePage() {
 
   const membership = memberships[0]!;
 
+  const { data: memberRow } = await supabase
+    .from("household_members")
+    .select("date_of_birth")
+    .eq("id", membership.memberId)
+    .maybeSingle();
+
+  // The view is assembled server-side: a section this member may not see is
+  // absent from what reaches the browser, not hidden once it gets there.
+  const view = buildPersonalView(
+    membership,
+    ageBandFor(parseDateOfBirth(memberRow?.date_of_birth as string | null)),
+  );
+
   return (
     <AppShell active="home">
       <div className="space-y-4">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Good day, {membership.displayName}
+            {view.tone === "child" ? `Hi ${view.displayName}!` : `Good day, ${view.displayName}`}
           </h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">
-            {membership.household.name} · {roleLabel(membership.roles)}
+            {view.householdName} · {view.roleLabel}
           </p>
         </header>
 
         <AreaPlaceholder
           title="Needs your attention"
-          lede="Nothing is waiting on you right now."
+          lede={
+            view.tone === "child"
+              ? "Nothing to do right now. Nice."
+              : "Nothing is waiting on you right now."
+          }
           nextUp="Actionable cards arrive with the outcome engine (module 03) and the notification decision engine (module 06). Until then WonderHome has nothing to interrupt you about — which is the point."
         />
+
+        {view.sections.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Your areas</CardTitle>
+            </CardHeader>
+            <ul className="divide-y divide-[var(--wh-border)]">
+              {view.sections.map((section) => (
+                <li key={section.key}>
+                  <Link
+                    href={section.href}
+                    className="flex min-h-11 items-center justify-between gap-3 py-3 text-sm"
+                  >
+                    <span>
+                      <span className="font-medium">{section.label}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                        {section.purpose}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-[var(--wh-foreground-subtle)]">
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         <form action={signOut}>
           <Button type="submit" variant="secondary">
@@ -84,10 +131,4 @@ function SignedOutHome() {
       </div>
     </AppShell>
   );
-}
-
-function roleLabel(roles: readonly string[]): string {
-  if (roles.includes("head")) return "Head of Family";
-  if (roles.includes("administrator")) return "Household Administrator";
-  return "Member";
 }
