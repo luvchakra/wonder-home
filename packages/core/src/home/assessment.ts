@@ -12,6 +12,14 @@ import type { OutcomeStatus, RiskLevel } from "../household/outcomes";
 export type HomeAssessment = {
   /** Stable identity for the thing assessed, used as the notification thread. */
   subjectKey: string;
+  /**
+   * What the thing is called, in two or three words.
+   *
+   * Kept apart from `reason` because a row has to be scannable: the name
+   * carries the recognition and the reason carries the explanation, and
+   * collapsing them into one line makes both harder to read on a phone.
+   */
+  title: string;
   status: OutcomeStatus;
   riskLevel: RiskLevel;
   /**
@@ -27,9 +35,10 @@ export type HomeAssessment = {
   dueOn: string | null;
 };
 
-export function silent(subjectKey: string, reason: string): HomeAssessment {
+export function silent(subjectKey: string, title: string, reason: string): HomeAssessment {
   return {
     subjectKey,
+    title,
     status: "on_track",
     riskLevel: "none",
     notable: false,

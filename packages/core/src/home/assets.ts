@@ -112,7 +112,7 @@ export function assessAsset(
   const subjectKey = `asset.${asset.id}`;
 
   if (asset.status === "retired") {
-    return silent(subjectKey, "This asset is retired.");
+    return silent(subjectKey, asset.name, "This asset is retired.");
   }
 
   // The scheduled date and the wear-adjusted one are kept apart deliberately.
@@ -127,7 +127,7 @@ export function assessAsset(
     if (options.openServiceRequest) {
       // Somebody is already on it. Saying it again is how a household learns to
       // stop reading these.
-      return silent(subjectKey, "A service request is already open for this.");
+      return silent(subjectKey, asset.name, "A service request is already open for this.");
     }
 
     const daysOverdue = -daysBetween(now, scheduled);
@@ -137,6 +137,7 @@ export function assessAsset(
     if (daysOverdue > 0) {
       return {
         subjectKey,
+        title: asset.name,
         status: "missed",
         riskLevel: "high",
         notable: true,
@@ -149,6 +150,7 @@ export function assessAsset(
     if (wear.bringForwardDays > 0 && daysBetween(now, effective) <= SERVICE_LEAD_DAYS) {
       return {
         subjectKey,
+        title: asset.name,
         status: "at_risk",
         riskLevel: "high",
         notable: true,
@@ -163,6 +165,7 @@ export function assessAsset(
     if (daysUntil <= SERVICE_LEAD_DAYS) {
       return {
         subjectKey,
+        title: asset.name,
         status: "at_risk",
         riskLevel: "medium",
         notable: true,
@@ -181,6 +184,7 @@ export function assessAsset(
   ) {
     return {
       subjectKey,
+      title: asset.name,
       status: "at_risk",
       riskLevel: "low",
       notable: true,
@@ -190,7 +194,7 @@ export function assessAsset(
     };
   }
 
-  return silent(subjectKey, `${asset.name} needs nothing right now.`);
+  return silent(subjectKey, asset.name, `${asset.name} needs nothing right now.`);
 }
 
 function describeCoverage(kind: Coverage["kind"]): string {

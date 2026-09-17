@@ -101,7 +101,7 @@ export function assessServiceRequest(request: ServiceRequest, now: Date = new Da
   const subjectKey = `service.${request.id}`;
 
   if (request.status === "completed" || request.status === "cancelled") {
-    return silent(subjectKey, "This request is settled.");
+    return silent(subjectKey, request.subject, "This request is settled.");
   }
 
   // A visit due today or overdue with nothing recorded since is the household's
@@ -110,6 +110,7 @@ export function assessServiceRequest(request: ServiceRequest, now: Date = new Da
   if (request.scheduledFor && request.scheduledFor < now && request.status === "scheduled") {
     return {
       subjectKey,
+      title: request.subject,
       status: "at_risk",
       riskLevel: "medium",
       notable: true,
@@ -125,6 +126,7 @@ export function assessServiceRequest(request: ServiceRequest, now: Date = new Da
     // state this story exists to eliminate.
     return {
       subjectKey,
+      title: request.subject,
       status: "blocked",
       riskLevel: "medium",
       notable: true,
@@ -138,6 +140,7 @@ export function assessServiceRequest(request: ServiceRequest, now: Date = new Da
   if (idleDays >= STALL_DAYS[owner]) {
     return {
       subjectKey,
+      title: request.subject,
       status: "at_risk",
       riskLevel: owner === "household" ? "medium" : "low",
       notable: true,
@@ -153,7 +156,7 @@ export function assessServiceRequest(request: ServiceRequest, now: Date = new Da
     };
   }
 
-  return silent(subjectKey, `${request.subject} is moving along.`);
+  return silent(subjectKey, request.subject, `${request.subject} is moving along.`);
 }
 
 /** Open requests, so an asset assessment can stay quiet while one is live. */

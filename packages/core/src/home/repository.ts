@@ -254,6 +254,15 @@ export type HomeAgenda = {
   laundry: HomeAssessment[];
   pets: HomeAssessment[];
   services: HomeAssessment[];
+  /**
+   * How many subjects were evaluated to produce the lists above.
+   *
+   * Carried so a screen can say "nine things checked, one needs you" without
+   * counting rows it cannot see. The difference between this and the lists is
+   * the part WonderHome handled quietly, which is the number the household
+   * actually cares about.
+   */
+  checked: number;
 };
 
 /**
@@ -286,7 +295,10 @@ export async function homeAgenda(
     byAsset.set(signal.assetId, [...(byAsset.get(signal.assetId) ?? []), signal]);
   }
 
+  const checked = assets.length + requests.length + laundry.length + pets.length;
+
   return {
+    checked,
     maintenance: maintenanceAgenda(assets, {
       now,
       signalsFor: (assetId) => byAsset.get(assetId) ?? [],

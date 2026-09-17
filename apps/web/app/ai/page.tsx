@@ -11,6 +11,7 @@ export default function AiPage() {
         title="WonderHome AI"
         lede="Talk or type — one conversation engine for both."
         nextUp="Voice and text land with the conversation module (module 04), with action previews before anything consequential runs."
+        quote="Ask anything. WonderHome is already listening."
       />
     </AppShell>
   );

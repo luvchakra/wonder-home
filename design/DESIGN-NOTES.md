@@ -76,3 +76,36 @@ Recorded so they are not mistaken for scope creep:
 
 Each is deliberately minimal: enough for the story to work end to end, in the
 shared visual language, and easy to replace when a designed flow exists.
+
+## The shared UI kit
+
+The mockups are made of a handful of repeating parts, so the code is too. All of
+them live in `@wonderhome/core/ui/*` and no screen invents its own:
+
+| Part | What it is |
+|---|---|
+| `IconTile` | The tinted glyph square every row begins with |
+| `ActionRow` / `NavRow` | Name, one line of explanation, one action or a chevron |
+| `Pill` / `PillLink` / `Badge` | The small rounded action or state label on a row |
+| `StatChips` | The counts under a greeting |
+| `SectionHeader` | A section title with its count and at most one way onward |
+| `QuoteCard` | The closing line, labelled as decoration for assistive tech |
+| `Card`, `Button`, `ButtonLink`, `Field`, `Alert` | The surfaces and controls |
+
+Two rules the components encode rather than document:
+
+- **Colour follows domain, not urgency.** A bill is money-coloured whether it is
+  due tomorrow or paid. Urgency is carried by wording and by which action a row
+  offers, because colour alone is not a signal every reader receives.
+- **A row separates the name from the reason.** The name is what somebody
+  recognises, the reason is why it is in front of them; collapsed into one line,
+  neither is readable at phone width.
+
+### Tailwind has to be told about the shared package
+
+Tailwind's automatic source detection never looks inside `node_modules`, and the
+workspace links `@wonderhome/core` there. Without the explicit
+`@source "../../../packages/core/src"` in `apps/web/app/globals.css`, a class
+used **only** by a shared component is never generated — so the kit silently
+loses whatever an app file does not happen to use as well. That is how `sr-only`
+and `grid-cols-3` went missing while everything else looked fine.

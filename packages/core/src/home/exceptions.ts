@@ -88,6 +88,7 @@ export function handleHomeException(
     kind: "tell_household",
     assessment: {
       subjectKey,
+      title: exception.asset?.name ?? describeSubject(exception.kind),
       status: "blocked",
       riskLevel: exception.blocksDailyLife ? "high" : "medium",
       notable: true,
@@ -99,6 +100,22 @@ export function handleHomeException(
       dueOn: null,
     },
   };
+}
+
+/** A two-word name for something that is not an asset. */
+function describeSubject(kind: HomeExceptionKind): string {
+  switch (kind) {
+    case "utility_outage":
+      return "Utility outage";
+    case "damage":
+      return "Damage";
+    case "pest":
+      return "Pests";
+    case "supply_out":
+      return "Supplies";
+    case "appliance_failed":
+      return "The house";
+  }
 }
 
 function describe(exception: HomeException): string {

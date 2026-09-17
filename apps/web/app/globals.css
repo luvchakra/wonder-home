@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "@wonderhome/core/ui-theme.css";
 
+/*
+ * Tailwind's automatic source detection never looks inside node_modules, and
+ * @wonderhome/core is linked there by the workspace. Without this the shared
+ * components' classes are only generated when an app file happens to use the
+ * same ones — which silently dropped `sr-only`, `grid-cols-3` and anything else
+ * that lives solely in the shared UI.
+ */
+@source "../../../packages/core/src";
+
 @theme inline {
   --color-background: var(--wh-background);
   --color-surface: var(--wh-surface);

@@ -9,22 +9,22 @@
  */
 
 :root {
-  /* Surfaces */
-  --wh-background: oklch(0.98 0.008 85);
+  /* Surfaces — a mint-tinted near-white, never pure grey */
+  --wh-background: oklch(0.982 0.012 168);
   --wh-surface: oklch(1 0 0);
-  --wh-surface-muted: oklch(0.97 0.012 85);
-  --wh-border: oklch(0.91 0.008 85);
+  --wh-surface-muted: oklch(0.968 0.014 168);
+  --wh-border: oklch(0.922 0.011 168);
 
   /* Typography */
   --wh-foreground: oklch(0.28 0.045 245);
   --wh-foreground-muted: oklch(0.52 0.03 245);
   --wh-foreground-subtle: oklch(0.64 0.02 245);
 
-  /* Primary action — restrained teal */
-  --wh-primary: oklch(0.52 0.09 185);
-  --wh-primary-hover: oklch(0.46 0.09 185);
+  /* Primary action — the deep teal the mockups use for every committing action */
+  --wh-primary: oklch(0.47 0.086 176);
+  --wh-primary-hover: oklch(0.41 0.086 176);
   --wh-primary-foreground: oklch(0.99 0 0);
-  --wh-primary-soft: oklch(0.95 0.03 185);
+  --wh-primary-soft: oklch(0.948 0.032 176);
 
   /* Outcome and risk states */
   --wh-attention: oklch(0.7 0.16 55);
@@ -36,11 +36,30 @@
   --wh-info: oklch(0.55 0.12 250);
   --wh-info-soft: oklch(0.95 0.03 250);
 
+  /*
+   * Domain accents.
+   *
+   * Each household domain keeps one colour across every screen, so a bill looks
+   * like a bill in a notification, on Today and on the home screen. The `-soft`
+   * pair is the icon tile behind the glyph, never a text colour.
+   */
+  --wh-tone-money: oklch(0.68 0.16 62);
+  --wh-tone-money-soft: oklch(0.958 0.042 72);
+  --wh-tone-school: oklch(0.55 0.17 295);
+  --wh-tone-school-soft: oklch(0.955 0.032 295);
+  --wh-tone-people: oklch(0.6 0.19 20);
+  --wh-tone-people-soft: oklch(0.957 0.03 20);
+  --wh-tone-home: oklch(0.56 0.11 200);
+  --wh-tone-home-soft: oklch(0.953 0.032 200);
+  --wh-tone-care: oklch(0.55 0.13 150);
+  --wh-tone-care-soft: oklch(0.95 0.04 150);
+
   /* Shape and depth */
-  --wh-radius: 1rem;
-  --wh-radius-sm: 0.625rem;
+  --wh-radius: 1.125rem;
+  --wh-radius-sm: 0.75rem;
   --wh-radius-lg: 1.5rem;
-  --wh-shadow-card: 0 1px 2px oklch(0.28 0.045 245 / 0.04), 0 4px 16px oklch(0.28 0.045 245 / 0.06);
+  --wh-radius-pill: 999px;
+  --wh-shadow-card: 0 1px 2px oklch(0.28 0.045 245 / 0.03), 0 6px 20px oklch(0.28 0.045 245 / 0.055);
 
   /* Layout */
   --wh-tabbar-height: 4.25rem;
@@ -73,6 +92,17 @@
     --wh-info: oklch(0.72 0.11 250);
     --wh-info-soft: oklch(0.31 0.05 250);
 
+    --wh-tone-money: oklch(0.8 0.14 68);
+    --wh-tone-money-soft: oklch(0.33 0.05 68);
+    --wh-tone-school: oklch(0.76 0.13 295);
+    --wh-tone-school-soft: oklch(0.32 0.05 295);
+    --wh-tone-people: oklch(0.75 0.15 22);
+    --wh-tone-people-soft: oklch(0.32 0.05 22);
+    --wh-tone-home: oklch(0.75 0.1 200);
+    --wh-tone-home-soft: oklch(0.31 0.045 200);
+    --wh-tone-care: oklch(0.75 0.12 150);
+    --wh-tone-care-soft: oklch(0.3 0.05 150);
+
     --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
   }
 }
@@ -98,8 +128,19 @@
   --wh-risk-soft: oklch(0.32 0.06 25);
   --wh-handled: oklch(0.72 0.13 155);
   --wh-handled-soft: oklch(0.3 0.05 155);
-  --wh-info: oklch(0.72 0.11 250);
+    --wh-info: oklch(0.72 0.11 250);
   --wh-info-soft: oklch(0.31 0.05 250);
+
+  --wh-tone-money: oklch(0.8 0.14 68);
+  --wh-tone-money-soft: oklch(0.33 0.05 68);
+  --wh-tone-school: oklch(0.76 0.13 295);
+  --wh-tone-school-soft: oklch(0.32 0.05 295);
+  --wh-tone-people: oklch(0.75 0.15 22);
+  --wh-tone-people-soft: oklch(0.32 0.05 22);
+  --wh-tone-home: oklch(0.75 0.1 200);
+  --wh-tone-home-soft: oklch(0.31 0.045 200);
+  --wh-tone-care: oklch(0.75 0.12 150);
+  --wh-tone-care-soft: oklch(0.3 0.05 150);
 
   --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
 }

@@ -74,6 +74,17 @@ describe("what an asset needs today", () => {
     expect(assessment.action).toEqual({ action: "book_service", target: "ac-bedroom" });
   });
 
+  it("names the thing separately from the explanation, so a row can be scanned", () => {
+    // The title is what somebody recognises; the reason is why it is in front of
+    // them. A row that only has the sentence is unreadable at phone width.
+    const assessment = assessAsset(asset({ lastServicedOn: "2026-03-25" }), { now: NOW });
+
+    expect(assessment.title).toBe("Bedroom air conditioner");
+    expect(assessment.reason).not.toBe(assessment.title);
+    // Even silence carries a name, so a caller never has to fall back to an id.
+    expect(assessAsset(asset(), { now: NOW }).title).toBe("Bedroom air conditioner");
+  });
+
   it("mentions the cover, because nobody goes looking for the paperwork at that moment", () => {
     const assessment = assessAsset(
       asset({ lastServicedOn: "2026-03-25", warrantyExpiresOn: "2027-01-01" }),

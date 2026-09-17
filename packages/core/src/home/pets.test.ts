@@ -41,6 +41,10 @@ describe("what a pet needs", () => {
     expect(assessment.action).toEqual({ action: "order_supplies", target: "mishti-food" });
   });
 
+  it("names the pet and the kind of care, not the row id", () => {
+    expect(assessPetCare(need({ supplyDaysRemaining: 2 }), NOW).title).toBe("Mishti · food");
+  });
+
   it("treats having run out as blocking", () => {
     const assessment = assessPetCare(need({ supplyDaysRemaining: 0 }), NOW);
 

@@ -11,6 +11,7 @@ export default function TodayPage() {
         title="Today"
         lede="Your actions, decisions and time-sensitive outcomes for today."
         nextUp="Personalized plans arrive with identity and personalized views (module 01) and the routine engine (module 03)."
+        quote="Small steps today, happier tomorrows."
       />
     </AppShell>
   );

@@ -78,6 +78,7 @@ export function nextDue(need: PetCareNeed, now: Date): Date | null {
 
 export function assessPetCare(need: PetCareNeed, now: Date = new Date()): HomeAssessment {
   const subjectKey = `pet.${need.pet.id}.${need.kind}`;
+  const title = `${need.pet.name} · ${describeKind(need.kind)}`;
   const due = nextDue(need, now);
 
   // Supplies run out before a schedule says they should, and the household
@@ -85,6 +86,7 @@ export function assessPetCare(need: PetCareNeed, now: Date = new Date()): HomeAs
   if (need.supplyDaysRemaining !== null && need.supplyDaysRemaining <= PET_LEAD_DAYS[need.kind]) {
     return {
       subjectKey,
+      title,
       status: need.supplyDaysRemaining <= 0 ? "blocked" : "at_risk",
       riskLevel: need.supplyDaysRemaining <= 0 ? "high" : KIND_RISK[need.kind],
       notable: true,
@@ -97,13 +99,14 @@ export function assessPetCare(need: PetCareNeed, now: Date = new Date()): HomeAs
     };
   }
 
-  if (!due) return silent(subjectKey, `${need.pet.name}'s ${describeKind(need.kind)} needs nothing scheduled.`);
+  if (!due) return silent(subjectKey, title, `${need.pet.name}'s ${describeKind(need.kind)} needs nothing scheduled.`);
 
   const daysUntil = daysBetween(now, due);
 
   if (daysUntil < 0) {
     return {
       subjectKey,
+      title,
       status: "missed",
       riskLevel: need.kind === "medication" ? "high" : KIND_RISK[need.kind],
       notable: true,
@@ -119,6 +122,7 @@ export function assessPetCare(need: PetCareNeed, now: Date = new Date()): HomeAs
   if (daysUntil <= PET_LEAD_DAYS[need.kind]) {
     return {
       subjectKey,
+      title,
       status: "at_risk",
       riskLevel: KIND_RISK[need.kind],
       notable: true,
@@ -128,7 +132,7 @@ export function assessPetCare(need: PetCareNeed, now: Date = new Date()): HomeAs
     };
   }
 
-  return silent(subjectKey, `${need.pet.name} is looked after.`);
+  return silent(subjectKey, title, `${need.pet.name} is looked after.`);
 }
 
 function actionFor(kind: PetCareKind): string {

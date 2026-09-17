@@ -100,12 +100,13 @@ export function assessLaundry(need: LaundryNeed, context: LaundryContext): HomeA
   const hoursNeeded = hoursRemaining(need, context.conditions);
 
   if (need.state === "ready") {
-    return silent(subjectKey, `${need.label} is ready.`);
+    return silent(subjectKey, need.label, `${need.label} is ready.`);
   }
 
   if (hoursLeft < 0) {
     return {
       subjectKey,
+      title: need.label,
       status: "missed",
       riskLevel: "high",
       notable: true,
@@ -119,6 +120,7 @@ export function assessLaundry(need: LaundryNeed, context: LaundryContext): HomeA
     const outdoorProblem = need.requiresOutdoorDrying && !context.conditions.outdoorViable;
     return {
       subjectKey,
+      title: need.label,
       status: "at_risk",
       riskLevel: "high",
       notable: true,
@@ -137,6 +139,7 @@ export function assessLaundry(need: LaundryNeed, context: LaundryContext): HomeA
   if (!context.someoneAvailable && hoursNeeded > hoursLeft - WASH_HOURS) {
     return {
       subjectKey,
+      title: need.label,
       status: "at_risk",
       riskLevel: "medium",
       notable: true,
@@ -146,5 +149,5 @@ export function assessLaundry(need: LaundryNeed, context: LaundryContext): HomeA
     };
   }
 
-  return silent(subjectKey, `${need.label} will be ready in time.`);
+  return silent(subjectKey, need.label, `${need.label} will be ready in time.`);
 }
