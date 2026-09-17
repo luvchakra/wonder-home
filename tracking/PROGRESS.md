@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 44 |
+| Done | 51 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 126 |
-| Completion | 25.9% |
-| Current module | 03 Outcome & Routine Engine |
-| Current story | 03-006 Dependency graph |
+| Not Started | 119 |
+| Completion | 30.0% |
+| Current module | 04 Conversation, Voice & Text |
+| Current story | 05-001 Certification overview |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -22,7 +22,7 @@
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 4 | In Progress |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 5 | In Progress |
-| 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 0 | Not Started |
+| 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 7 | In Progress |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 0 | Not Started |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -96,3 +96,10 @@
 | 2026-09-17 | 03 | 03-003 | Done | 20 unit | Evaluation is pure; on track and met produce nothing |
 | 2026-09-17 | 03 | 03-004 | Done | 20 unit | Every exception carries an impact and a recommended action |
 | 2026-09-17 | 03 | 03-005 | Done | 20 unit | Replanning reaches only what the change actually touches |
+| 2026-09-17 | 04 | 04-001 | Done | 26 unit, 12 database | One typed intent; channel is metadata, not a second code path |
+| 2026-09-17 | 04 | 04-002 | Done | 26 unit | 12 deterministic household utterances as regression fixtures |
+| 2026-09-17 | 04 | 04-003 | Done | 26 unit | Short replies resolve against the pending proposal; a stale yes is not consent |
+| 2026-09-17 | 04 | 04-004 | Done | 26 unit | Preview names the knock-on changes, not just the change |
+| 2026-09-17 | 04 | 04-005 | Done | 26 unit | Voice converges on the same intent; transcript confidence retained |
+| 2026-09-17 | 04 | 04-006 | Done | 26 unit | Text shares the engine with voice |
+| 2026-09-17 | 04 | 04-007 | Done | 15 unit, 12 database | Memory with source and confidence; confirmed facts are canonical |

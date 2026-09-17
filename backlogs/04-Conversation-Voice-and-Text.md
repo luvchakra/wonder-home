@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 04-001 | Unified conversation engine | Not Started | |
-| 2 | P0 | 04-002 | Natural commands | Not Started | |
-| 3 | P0 | 04-003 | Contextual replies | Not Started | |
-| 4 | P0 | 04-004 | Action preview | Not Started | |
-| 5 | P0 | 04-005 | Voice | Not Started | |
-| 6 | P0 | 04-006 | Text | Not Started | |
-| 7 | P0 | 04-007 | Memory extraction | Not Started | |
-| 8 | P1 | 04-008 | Conversation corrections | Not Started | |
+| 1 | P0 | 04-001 | Unified conversation engine | Done | Typed intent shared by both channels |
+| 2 | P0 | 04-002 | Natural commands | Done | Fixture-backed; unknown rather than a guess |
+| 3 | P0 | 04-003 | Contextual replies | Done | Resolved against the pending proposal, with expiry |
+| 4 | P0 | 04-004 | Action preview | Done | Summary, changes, reason, reversibility |
+| 5 | P0 | 04-005 | Voice | Done | Same engine; transcript confidence kept |
+| 6 | P0 | 04-006 | Text | Done | Same engine as voice |
+| 7 | P0 | 04-007 | Memory extraction | Done | Source, confidence and status on every belief |
+| 8 | P1 | 04-008 | Conversation corrections | In Progress | Reconciliation built and tested; UI pending |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
