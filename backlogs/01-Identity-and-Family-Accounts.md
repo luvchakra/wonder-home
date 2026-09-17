@@ -9,7 +9,7 @@
 | 3 | P0 | 01-003 | Roles and permissions | Done | Permission catalogue; deny by default for child and helper |
 | 4 | P0 | 01-004 | Child profiles | Done | No account needed; guardianship links; age bands derived on read |
 | 5 | P0 | 01-005 | Personalized views | Done | Permission-filtered on the server, not hidden in the client |
-| 6 | P1 | 01-006 | Availability | Not Started | |
+| 6 | P1 | 01-006 | Availability | Done | Pattern plus exceptions; an absence never rewrites a schedule |
 | 7 | P1 | 01-007 | Preferences | Not Started | |
 | 8 | P2 | 01-008 | Helper/service identity | Not Started | |
 
