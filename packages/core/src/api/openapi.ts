@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { createAssetSchema, createServiceRequestSchema } from "../home/schemas";
 import { createHouseholdSchema } from "../identity/schemas";
 import { API_ERROR_CODES } from "./errors";
 
@@ -216,6 +217,64 @@ export function buildOpenApiDocument(): Json {
           summary: "Add a guardian-controlled child",
           responses: {
             "201": { description: "The new child member" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/home": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "What the home domain needs from this household",
+          description:
+            "Maintenance, laundry, pet care and service requests that currently need a person. Empty is the expected answer for a household where things are working.",
+          responses: {
+            "200": { description: "The home agenda" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/home/assets": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Assets the household has to keep working",
+          responses: { "200": { description: "Assets" }, "403": { $ref: "#/components/responses/Forbidden" } },
+        },
+        post: {
+          summary: "Register an asset",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: toJsonSchema(createAssetSchema) } },
+          },
+          responses: {
+            "201": { description: "The new asset" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/home/service-requests": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Service requests, open and settled",
+          responses: { "200": { description: "Requests" }, "403": { $ref: "#/components/responses/Forbidden" } },
+        },
+        post: {
+          summary: "Raise a service request",
+          description:
+            "nextActionBy records whose move it is, which is what keeps an unresolved request actionable rather than informational.",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: toJsonSchema(createServiceRequestSchema) } },
+          },
+          responses: {
+            "201": { description: "The new request" },
+            "400": { $ref: "#/components/responses/BadRequest" },
             "403": { $ref: "#/components/responses/Forbidden" },
           },
         },

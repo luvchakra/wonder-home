@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 13-001 | Asset registry | Not Started | |
-| 2 | P0 | 13-002 | Maintenance outcomes | Not Started | |
-| 3 | P0 | 13-003 | Laundry readiness | Not Started | |
-| 4 | P0 | 13-004 | Home exceptions | Not Started | |
-| 5 | P1 | 13-005 | Weather-aware planning | Not Started | |
-| 6 | P1 | 13-006 | Service coordination | Not Started | |
-| 7 | P1 | 13-007 | Pet care outcomes | Not Started | |
-| 8 | P2 | 13-008 | Smart-home signals | Not Started | |
+| 1 | P0 | 13-001 | Asset registry | Done | home_assets + service history; agenda is action-only, never an inventory |
+| 2 | P0 | 13-002 | Maintenance outcomes | Done | device wear brings a service forward, never pushes it back |
+| 3 | P0 | 13-003 | Laundry readiness | Done | readiness from deadline and inferred state; no wash/dry/fold check-ins |
+| 4 | P0 | 13-004 | Home exceptions | Done | cover surfaced at the moment of failure; silent when reorderable |
+| 5 | P1 | 13-005 | Weather-aware planning | Done | provider port + fixtures + server-side entitlement; no live provider |
+| 6 | P1 | 13-006 | Service coordination | Done | next_action_by makes an open request actionable, not informational |
+| 7 | P1 | 13-007 | Pet care outcomes | Done | outcome-based; medication never looks like grooming |
+| 8 | P2 | 13-008 | Smart-home signals | Done | optional signals, server-ingested only; members cannot write evidence |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 76 |
+| Done | 84 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 94 |
-| Completion | 44.7% |
-| Current module | 07 Househelper & Home Operations |
-| Current story | 13-001 Asset registry |
+| Not Started | 86 |
+| Completion | 49.4% |
+| Current module | 08 Kids & School Intelligence |
+| Current story | 08-001 Child responsibility |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -31,7 +31,7 @@
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 0 | Not Started |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
-| 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 0 | Not Started |
+| 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 4 | In Progress |
@@ -48,6 +48,15 @@
 | 2026-09-17 | 00 | 00-002 | Done | typecheck/lint/test/build | Stack pinned to WonderArk baseline; lockfile committed |
 | 2026-09-17 | 00 | 00-003 | Done | typecheck/lint/test/build | Design tokens, app shell, 5-area navigation, accessible skip link |
 | 2026-09-17 | 00 | 00-004 | Done | env + migration lint tests | Validated env contract, SSR/browser/admin clients, first migration applied to wonder-home |
+
+| 2026-09-17 | 13 | 13-001 | Done | 17 unit + 12 db tests | home_assets, service history, coverage; the agenda is action-only, never an inventory |
+| 2026-09-17 | 13 | 13-002 | Done | unit + db tests | device wear brings a service forward and never pushes one back |
+| 2026-09-17 | 13 | 13-003 | Done | 17 unit tests | readiness from deadline and inferred state; no wash/dry/fold check-ins exist to click |
+| 2026-09-17 | 13 | 13-004 | Done | 9 unit tests | cover surfaced at the moment something breaks; silent when WonderHome can reorder |
+| 2026-09-17 | 13 | 13-005 | Done | 12 unit tests | weather port + fixtures + server-side entitlement; no live provider configured |
+| 2026-09-17 | 13 | 13-006 | Done | 12 unit + db tests | next_action_by is what makes an open request actionable rather than informational |
+| 2026-09-17 | 13 | 13-007 | Done | 8 unit tests | outcome-based pet care; a missed dose never looks like a missed grooming |
+| 2026-09-17 | 13 | 13-008 | Done | 13 unit + db tests | signals are optional and server-ingested; members cannot write their own evidence |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

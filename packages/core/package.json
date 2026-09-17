@@ -10,6 +10,7 @@
     "./config/*": "./src/config/*.ts",
     "./conversation/*": "./src/conversation/*.ts",
     "./household/*": "./src/household/*.ts",
+    "./home/*": "./src/home/*.ts",
     "./security/*": "./src/security/*.ts",
     "./api/*": "./src/api/*.ts",
     "./ai/*": "./src/ai/*.ts",

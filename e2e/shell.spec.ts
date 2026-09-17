@@ -14,7 +14,7 @@ const PUBLIC_AREAS = [
   { label: "AI", path: "/ai", heading: "WonderHome AI" },
 ];
 
-const GATED_AREAS = ["/today", "/family", "/more"];
+const GATED_AREAS = ["/today", "/family", "/more", "/household/home"];
 
 test("public areas render the shell and mark themselves current", async ({ page }) => {
   for (const area of PUBLIC_AREAS) {
