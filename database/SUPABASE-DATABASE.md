@@ -1,0 +1,63 @@
+# WonderHome — Supabase Database Specification
+
+## Stack alignment
+Use Supabase PostgreSQL as used by the WonderArk core architecture, with `@supabase/ssr` for server-side session-aware access and `@supabase/supabase-js` for database operations. Keep migrations in source control under `supabase/migrations/`.
+
+## Principles
+- Every household-owned table contains `household_id` and has RLS enabled.
+- Application authorization is required in addition to RLS.
+- UUID primary keys; timestamps on mutable entities.
+- Foreign keys and common query filters are indexed.
+- JSONB is for extensible metadata, not core authorization or ownership fields.
+- Service-role credentials are server-only.
+- Never edit an applied migration; create a new migration.
+
+## Core identity
+- `profiles`: id, display_name, avatar_url, timezone, timestamps
+- `households`: id, name, timezone, owner_member_id, status, timestamps
+- `household_members`: id, household_id, profile_id, member_type, display_name, date_of_birth, status
+- `household_roles`: household_id, member_id, role
+- `member_permissions`: member_id, permission, scope_jsonb
+- `member_availability`: member_id, day_of_week, start_time, end_time, source
+
+## Operating model
+- `responsibilities`: outcome_type/key, primary_member_id, backup_member_id, ai_mode, priority
+- `playbook_items`: name, outcome_definition, cadence, window, dependencies, verification, escalation
+- `routines`: playbook_item_id, schedule, next_due_at, active
+- `outcomes`: playbook_item_id, status, due_at, owner_member_id, risk_level, state
+- `policies`: category, name, rule_jsonb, version, active
+- `memories`: scope, category, key, value_jsonb, source_type/id, confidence, status
+
+## Conversation & AI
+- `conversation_sessions`
+- `conversation_messages`
+- `conversation_actions`
+- `agent_runs`
+- `approvals`
+- `audit_events`
+
+## Certification
+- `certification_items`
+- `certification_reviews`
+
+## Notifications
+- `notifications`
+- `notification_preferences`
+- `notification_events`
+
+## Domain tables
+Create normalized household-scoped tables for helper profiles/availability, school connections/assignments/documents/exams, groceries/inventory/orders, meals/recipes, bills/payment intents, pets/care outcomes, maintenance/assets/work orders, family-time events, social events/invitations/RSVPs/gifts.
+
+## Integrations
+- `integrations`: provider, status, scopes, credential reference, last sync
+- `integration_events`: provider event identity, type, payload hash, processing timestamps
+
+## Plans & platform admin
+- `plans`, `entitlements`, `household_subscriptions`, `usage_counters`
+- `platform_admins`, `support_access_grants`
+
+## RLS strategy
+Implement helper functions for authenticated member and household scope. Every tenant table must have SELECT/INSERT/UPDATE/DELETE policies based on membership and explicit permission. Test cross-household access, adult-private access, child boundaries and helper boundaries.
+
+## Data lifecycle
+Define retention per data class. Privacy deletion must actually remove or anonymize records according to policy. Audit records may have a longer retention period but must remain privacy-minimized.

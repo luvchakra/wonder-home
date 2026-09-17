@@ -1,0 +1,54 @@
+# WonderHome — Overall Live Progress
+
+**Source of truth:** Claude Code must update this file after every story status change.
+
+| Metric | Value |
+|---|---:|
+| Total stories | 170 |
+| Done | 0 |
+| In Progress | 0 |
+| Blocked | 0 |
+| Not Started | 170 |
+| Completion | 0% |
+| Current module | — |
+| Current story | — |
+| Last updated | — |
+
+## Module Tracking
+
+| # | Module | Stories | P0 | P1 | P2 | Done | Status |
+|---|---|---:|---:|---:|---:|---:|---|
+| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 0 | Not Started |
+| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 0 | Not Started |
+| 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 0 | Not Started |
+| 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 0 | Not Started |
+| 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 0 | Not Started |
+| 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
+| 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 0 | Not Started |
+| 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 0 | Not Started |
+| 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 0 | Not Started |
+| 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 0 | Not Started |
+| 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 0 | Not Started |
+
+## Execution Log
+
+| Timestamp | Module | Story | Status | Tests | Notes |
+|---|---|---|---|---|---|
+| — | — | — | Not Started | — | Build not started |
+
+## Progress protocol
+- Mark the story In Progress before coding.
+- Update the tracker after meaningful implementation/test milestones.
+- Mark Done only after Definition of Done passes.
+- If blocked by a real external dependency, record the blocker and continue with another dependency-ready story.
+- Completion percentage is `Done / Total stories * 100`.

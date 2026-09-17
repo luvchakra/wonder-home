@@ -1,0 +1,210 @@
+# WonderHome — External Integrations
+
+## Live Module Tracking
+
+| # | Priority | Story ID | Story | Status | Notes |
+|---|---|---|---|---|---|
+| 1 | P0 | 17-001 | Connector framework | Not Started | |
+| 2 | P0 | 17-002 | Calendar | Not Started | |
+| 3 | P0 | 17-003 | Email | Not Started | |
+| 4 | P0 | 17-004 | School | Not Started | |
+| 5 | P0 | 17-005 | Commerce | Not Started | |
+| 6 | P1 | 17-006 | WhatsApp | Not Started | |
+| 7 | P1 | 17-007 | Weather | Not Started | |
+| 8 | P2 | 17-008 | Smart home | Not Started | |
+
+**Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
+
+## Module Purpose
+Implement External Integrations as a first-class WonderHome domain. The module must expose API-backed capabilities to the web client and governed AI tools.
+
+## Epic Map
+
+- **Epic 17-E01 — Connector Platform & Core Integrations:** stories 17-001 through 17-005.
+- **Epic 17-E06 — Communication, Weather & Smart Home:** stories 17-006 through 17-008.
+
+## Dependencies
+- `CLAUDE.md`
+- `TECH-STACK-AND-NFR.md`
+- `architecture/API-ARCHITECTURE.md`
+- `architecture/SECURITY-BASELINE.md`
+- `database/SUPABASE-DATABASE.md`
+- `tracking/PROGRESS.md`
+- `tracking/IMPLEMENTATION-ORDER.md
+
+## Stories
+
+### Story 17-001 — Connector framework
+**Epic:** Connector Platform & Core Integrations
+**Priority:** P0
+**Goal:** Create provider-neutral integration contracts.
+
+**Acceptance criteria**
+- Given the household state described by the story, create provider-neutral integration contracts .
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-002 — Calendar
+**Epic:** Connector Platform & Core Integrations
+**Priority:** P0
+**Goal:** Sync authorized calendars.
+
+**Acceptance criteria**
+- Given the household state described by the story, sync authorized calendars .
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-003 — Email
+**Epic:** Connector Platform & Core Integrations
+**Priority:** P0
+**Goal:** Ingest household-relevant mail.
+
+**Acceptance criteria**
+- Given the household state described by the story, ingest household-relevant mail .
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-004 — School
+**Epic:** Connector Platform & Core Integrations
+**Priority:** P0
+**Goal:** Implement school/LMS connector contract.
+
+**Acceptance criteria**
+- Given the household state described by the story, implement school/LMS connector contract .
+- Every imported school item retains its source/provider identity and child association.
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-005 — Commerce
+**Epic:** Connector Platform & Core Integrations
+**Priority:** P0
+**Goal:** Implement grocery/ecommerce/pet order contracts.
+
+**Acceptance criteria**
+- Given the household state described by the story, implement grocery/ecommerce/pet order contracts .
+- The action shows expected cost/quantity before any purchase side effect occurs.
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-006 — WhatsApp
+**Epic:** Communication, Weather & Smart Home
+**Priority:** P1
+**Goal:** Implement notification/action channel adapter.
+
+**Acceptance criteria**
+- Given the household state described by the story, implement notification/action channel adapter .
+- A notification decision can be explained from stored decision factors for debugging and trust.
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-007 — Weather
+**Epic:** Communication, Weather & Smart Home
+**Priority:** P1
+**Goal:** Use weather as a planning signal.
+
+**Acceptance criteria**
+- Given the household state described by the story, use weather as a planning signal .
+- A direct API call cannot bypass the entitlement decision even when the UI does not render the feature.
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 17-008 — Smart home
+**Epic:** Communication, Weather & Smart Home
+**Priority:** P2
+**Goal:** Add optional device connectors.
+
+**Acceptance criteria**
+- Given the household state described by the story, add optional device connectors .
+- Every provider integration implements a common contract for credentials/scopes, health, sync, error handling, revoke and provider identifiers.
+- Canonical WonderHome models remain provider-independent so replacing a school, commerce or messaging provider does not change domain logic.
+- External data is deduplicated and reconciled using provider identifiers plus household scope.
+- Provider outages, rate limits and partial failures are observable and do not corrupt canonical household state.
+- No connector is considered live until real credentials, consent, authentication and integration tests are configured.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+## Module Completion Rule
+Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
