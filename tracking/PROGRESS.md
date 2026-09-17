@@ -5,20 +5,20 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 4 |
+| Done | 6 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 166 |
-| Completion | 2.4% |
+| Not Started | 164 |
+| Completion | 3.5% |
 | Current module | 00 Project Bootstrap & Architecture |
-| Current story | 00-005 Configure quality gates |
+| Current story | 00-007 Create API foundation |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
 
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 4 | In Progress |
+| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 6 | In Progress |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -55,3 +55,5 @@
 - Mark Done only after Definition of Done passes.
 - If blocked by a real external dependency, record the blocker and continue with another dependency-ready story.
 - Completion percentage is `Done / Total stories * 100`.
+| 2026-09-17 | 00 | 00-005 | Done | 6 E2E specs, mobile + desktop | Playwright set up fresh; not inherited from the WonderArk baseline |
+| 2026-09-17 | 00 | 00-006 | Done | 24 tests across gates | CI: typecheck, lint, migration + boundary lints, tests, build, E2E |
