@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 08-001 | Child responsibility | Not Started | |
-| 2 | P0 | 08-002 | School connector | Not Started | |
-| 3 | P0 | 08-003 | Assignment ingestion | Not Started | |
-| 4 | P0 | 08-004 | Study planning | Not Started | |
-| 5 | P0 | 08-005 | Deadline risk | Not Started | |
-| 6 | P1 | 08-006 | Document workspace | Not Started | |
-| 7 | P1 | 08-007 | School summaries | Not Started | |
-| 8 | P2 | 08-008 | Deep portal automation | Not Started | |
+| 1 | P0 | 08-001 | Child responsibility | Done | age-appropriate effort, sitting length and a child's own view |
+| 2 | P0 | 08-002 | School connector | Done | school connector on the shared contract; broken never looks like empty |
+| 3 | P0 | 08-003 | Assignment ingestion | Done | canonical items keyed by provider identity; a portal cannot mark work done |
+| 4 | P0 | 08-004 | Study planning | Done | work split into sittings that fit the time; what will not fit is reported |
+| 5 | P0 | 08-005 | Deadline risk | Done | risk is time against remaining effort, not the calendar |
+| 6 | P1 | 08-006 | Document workspace | Done | documents by reference, guardian-gated in the API and in RLS |
+| 7 | P1 | 08-007 | School summaries | Done | only messages that ask something surface; a newsletter is filed |
+| 8 | P2 | 08-008 | Deep portal automation | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

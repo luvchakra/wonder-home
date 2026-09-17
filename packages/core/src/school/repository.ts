@@ -1,0 +1,219 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { ApiError } from "../api/errors";
+import type { HomeAssessment } from "../home/assessment";
+import { ageBandFor, parseDateOfBirth } from "../identity/age";
+import { assessCommunication, type SchoolCommunication } from "./communications";
+import { assessDeadline, childView, type SchoolItem, type SchoolItemKind, type SchoolItemStatus } from "./items";
+
+/**
+ * Reading and writing school work (module 08).
+ *
+ * Every read goes through the caller's own client, so guardianship is enforced
+ * by RLS as well as by the route. That redundancy is the point: the acceptance
+ * criterion asks for guardian authorization "at both API and database layers",
+ * and a single check is a single mistake away from a child's homework being
+ * visible to the whole house.
+ */
+
+type Row = Record<string, unknown>;
+
+export async function listSchoolItems(
+  supabase: SupabaseClient,
+  householdId: string,
+  options: { childMemberId?: string } = {},
+): Promise<SchoolItem[]> {
+  let query = supabase
+    .from("school_items")
+    .select(
+      "id, child_member_id, kind, title, subject, due_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id",
+    )
+    .eq("household_id", householdId)
+    .order("due_at", { ascending: true, nullsFirst: false });
+
+  if (options.childMemberId) query = query.eq("child_member_id", options.childMemberId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`listSchoolItems failed: ${error.code ?? "unknown"}`);
+
+  return (data ?? []).map(toItem);
+}
+
+function toItem(row: Row): SchoolItem {
+  return {
+    id: row.id as string,
+    childMemberId: row.child_member_id as string,
+    kind: row.kind as SchoolItemKind,
+    title: row.title as string,
+    subject: (row.subject as string | null) ?? null,
+    dueAt: row.due_at ? new Date(row.due_at as string) : null,
+    estimatedMinutes: (row.estimated_minutes as number | null) ?? null,
+    estimateSource: (row.estimate_source as SchoolItem["estimateSource"]) ?? null,
+    status: row.status as SchoolItemStatus,
+    completedAt: row.completed_at ? new Date(row.completed_at as string) : null,
+    provider: (row.provider as string | null) ?? null,
+    externalId: (row.external_id as string | null) ?? null,
+  };
+}
+
+export type CreateSchoolItemInput = {
+  householdId: string;
+  childMemberId: string;
+  kind: SchoolItemKind;
+  title: string;
+  subject?: string | null;
+  detail?: string | null;
+  dueAt?: string | null;
+  estimatedMinutes?: number | null;
+};
+
+export async function createSchoolItem(
+  supabase: SupabaseClient,
+  input: CreateSchoolItemInput,
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("school_items")
+    .insert({
+      household_id: input.householdId,
+      child_member_id: input.childMemberId,
+      kind: input.kind,
+      title: input.title,
+      subject: input.subject ?? null,
+      detail: input.detail ?? null,
+      due_at: input.dueAt ?? null,
+      estimated_minutes: input.estimatedMinutes ?? null,
+      // A household typing in an estimate is a person confirming it, which is a
+      // stronger source than anything WonderHome infers.
+      estimate_source: input.estimatedMinutes == null ? null : "member_confirmed",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") {
+      throw ApiError.forbidden("Only this child's guardians can add school work for them.");
+    }
+    if (error.code === "23503") throw ApiError.badRequest("That child is not part of this household.");
+    throw new Error(`createSchoolItem failed: ${error.code ?? "unknown"}`);
+  }
+
+  return { id: (data as Row).id as string };
+}
+
+/**
+ * Records that a piece of work is finished.
+ *
+ * Only ever called from a person's action. The completion source is written
+ * alongside so that "a child said they did it" is distinguishable forever from
+ * anything a portal reported, and the database's own constraint refuses a
+ * completion that does not say who said so.
+ */
+export async function completeSchoolItem(
+  supabase: SupabaseClient,
+  itemId: string,
+  source: "member_confirmed" | "provider_confirmed" = "member_confirmed",
+): Promise<void> {
+  const { error } = await supabase
+    .from("school_items")
+    .update({ status: "done", completed_at: new Date().toISOString(), completion_source: source })
+    .eq("id", itemId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("This is not yours to mark done.");
+    throw new Error(`completeSchoolItem failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+export async function listCommunications(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<SchoolCommunication[]> {
+  const { data, error } = await supabase
+    .from("school_communications")
+    .select("id, child_member_id, received_at, subject, summary, requires_action, action_label, action_due_at")
+    .eq("household_id", householdId)
+    .order("received_at", { ascending: false })
+    .limit(100);
+
+  if (error) throw new Error(`listCommunications failed: ${error.code ?? "unknown"}`);
+
+  return (data ?? []).map((row: Row) => ({
+    id: row.id as string,
+    childMemberId: (row.child_member_id as string | null) ?? null,
+    receivedAt: new Date(row.received_at as string),
+    subject: (row.subject as string | null) ?? null,
+    summary: row.summary as string,
+    requiresAction: row.requires_action as boolean,
+    actionLabel: (row.action_label as string | null) ?? null,
+    actionDueAt: row.action_due_at ? new Date(row.action_due_at as string) : null,
+  }));
+}
+
+export type SchoolAgenda = {
+  deadlines: HomeAssessment[];
+  messages: HomeAssessment[];
+  checked: number;
+};
+
+/**
+ * What school currently needs from this household.
+ *
+ * The free time each child has before a deadline is not modelled yet — module
+ * 12 owns the family calendar — so the assessment is given the honest amount:
+ * the hours remaining, which is an upper bound. That overstates availability
+ * rather than understating it, so nothing is called at risk purely because
+ * WonderHome cannot see the diary.
+ */
+export async function schoolAgenda(
+  supabase: SupabaseClient,
+  householdId: string,
+  options: { now?: Date } = {},
+): Promise<SchoolAgenda> {
+  const now = options.now ?? new Date();
+
+  const [items, communications, children] = await Promise.all([
+    listSchoolItems(supabase, householdId),
+    listCommunications(supabase, householdId),
+    supabase
+      .from("household_members")
+      .select("id, date_of_birth")
+      .eq("household_id", householdId)
+      .eq("member_type", "child"),
+  ]);
+
+  const ageByChild = new Map(
+    (children.data ?? []).map((row: Row) => [
+      row.id as string,
+      ageBandFor(parseDateOfBirth((row.date_of_birth as string | null) ?? null)),
+    ]),
+  );
+
+  const deadlines = items
+    .map((item) =>
+      assessDeadline(item, {
+        now,
+        availableMinutesBeforeDue: item.dueAt
+          ? Math.max(0, (item.dueAt.getTime() - now.getTime()) / 60_000)
+          : Number.POSITIVE_INFINITY,
+        ageBand: ageByChild.get(item.childMemberId) ?? null,
+      }),
+    )
+    .filter((assessment) => assessment.notable);
+
+  const messages = communications
+    .map((communication) => assessCommunication(communication, now))
+    .filter((assessment) => assessment.notable);
+
+  return { deadlines, messages, checked: items.length + communications.length };
+}
+
+/** A child's own plan: their work, their words, nothing of anybody else's. */
+export async function childSchoolView(
+  supabase: SupabaseClient,
+  householdId: string,
+  childMemberId: string,
+  now: Date = new Date(),
+) {
+  const items = await listSchoolItems(supabase, householdId, { childMemberId });
+  return childView(items, now);
+}

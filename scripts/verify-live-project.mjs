@@ -43,6 +43,11 @@ const SHIPPED_TABLES = [
   "usage_counters",
   "integrations",
   "integration_events",
+  "school_enrolments",
+  "school_items",
+  "study_sessions",
+  "school_documents",
+  "school_communications",
 ];
 
 /**

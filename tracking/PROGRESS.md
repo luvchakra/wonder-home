@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 88 |
+| Done | 96 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 82 |
-| Completion | 51.8% |
-| Current module | 08 Kids & School Intelligence |
-| Current story | 08-001 Child responsibility |
+| Not Started | 74 |
+| Completion | 56.5% |
+| Current module | 09 Commerce, Groceries & Pet Supplies |
+| Current story | 09-001 Consumable model |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -26,7 +26,7 @@
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 7 | In Progress |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
-| 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 8 | Done |
 | 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 0 | Not Started |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 0 | Not Started |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -62,6 +62,15 @@
 | 2026-09-17 | 20 | 20-001 | Done | 12 db tests | free/pro/max seeded as rows — changing a plan is a reviewable migration |
 | 2026-09-17 | 20 | 20-002 | Done | 13 unit tests | one entitlement service; weather's local check replaced by it (ADR-008) |
 | 2026-09-17 | 20 | 20-003 | Done | concurrency test, 20 parallel sessions | atomic counter: exactly 10 of 20 racing requests won a limit of 10 |
+
+| 2026-09-17 | 08 | 08-001 | Done | 20 unit tests | effort and sitting length follow the child's age; the child's view is built server-side |
+| 2026-09-17 | 08 | 08-002 | Done | 12 unit tests | school adapter on the shared connector contract; a broken connection never looks like no homework |
+| 2026-09-17 | 08 | 08-003 | Done | 12 db tests | provider identity makes a re-import reconcile; a portal cannot mark work done |
+| 2026-09-17 | 08 | 08-004 | Done | 7 unit tests | sittings that fit real free time; work that will not fit is reported, not dropped |
+| 2026-09-17 | 08 | 08-005 | Done | 4 unit tests | risk is remaining effort against remaining time |
+| 2026-09-17 | 08 | 08-006 | Done | 5 unit + db tests | guardianship enforced in the API and again in RLS; refusal does not confirm the file |
+| 2026-09-17 | 08 | 08-007 | Done | 10 unit tests | only an explicit ask or a date surfaces; newsletters are filed |
+| 2026-09-17 | 08 | 08-008 | Done | contract + fixtures | provider seam and scopes ready; nothing claims to be live |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

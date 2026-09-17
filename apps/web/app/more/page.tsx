@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  GraduationCap,
   Bot,
   Bell,
   Cog,
@@ -48,6 +49,13 @@ const SECTIONS: readonly Section[] = [
     description: "Maintenance, laundry, services and pets",
     icon: Wrench,
     tone: "home",
+  },
+  {
+    href: "/household/school",
+    title: "School",
+    description: "Deadlines at risk and messages that need a reply",
+    icon: GraduationCap,
+    tone: "school",
   },
 ];
 
