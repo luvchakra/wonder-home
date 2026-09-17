@@ -4,12 +4,12 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 05-001 | Certification overview | Not Started | |
-| 2 | P0 | 05-002 | Source attribution | Not Started | |
-| 3 | P0 | 05-003 | Confirm | Not Started | |
-| 4 | P0 | 05-004 | Correct/remove | Not Started | |
-| 5 | P0 | 05-005 | Risk prioritization | Not Started | |
-| 6 | P0 | 05-006 | Actionable certification alerts | Not Started | |
+| 1 | P0 | 05-001 | Certification overview | Done | Source on every claim; coverage counted, never estimated |
+| 2 | P0 | 05-002 | Source attribution | Done | Source on every claim; coverage counted, never estimated |
+| 3 | P0 | 05-003 | Confirm | Done | Source on every claim; coverage counted, never estimated |
+| 4 | P0 | 05-004 | Correct/remove | Done | Source on every claim; coverage counted, never estimated |
+| 5 | P0 | 05-005 | Risk prioritization | Done | Source on every claim; coverage counted, never estimated |
+| 6 | P0 | 05-006 | Actionable certification alerts | Done | Source on every claim; coverage counted, never estimated |
 | 7 | P1 | 05-007 | Certification history | Not Started | |
 | 8 | P2 | 05-008 | Certification health | Not Started | |
 
