@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 21 |
+| Done | 25 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 149 |
-| Completion | 12.4% |
-| Current module | 18 API & Developer Platform |
-| Current story | 18-007 Webhooks and events |
+| Not Started | 145 |
+| Completion | 14.7% |
+| Current module | 15 Privacy, Security & Governance |
+| Current story | 19-001 Automated tests |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -33,7 +33,7 @@
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 0 | Not Started |
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 0 | Not Started |
-| 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 0 | Not Started |
+| 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 0 | Not Started |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
@@ -73,3 +73,7 @@
 | 2026-09-17 | 18 | 18-004 | Done | 13 unit | Idempotency-Key replay, fingerprinted, scoped per household and endpoint |
 | 2026-09-17 | 18 | 18-005 | Done | 9 unit, 1 E2E | OpenAPI generated from the same Zod schemas the routes validate with |
 | 2026-09-17 | 18 | 18-006 | Done | 5 unit | Audit hooks: redacted metadata, never throwing, append-only |
+| 2026-09-17 | 15 | 15-001 | Done | — | Threat model: 25 threats, each mapped to a built or planned control |
+| 2026-09-17 | 15 | 15-002 | Done | 9 database | Isolation asserted over the live catalogue, not a remembered list |
+| 2026-09-17 | 15 | 15-003 | Done | 20 unit, 9 database | Deny by default; child and helper inherit nothing |
+| 2026-09-17 | 15 | 15-004 | Done | 10 script | Secret lint in CI; server-only values never behind NEXT_PUBLIC_ |

@@ -38,6 +38,7 @@ npm run typecheck        # tsc --noEmit across every workspace
 npm run lint             # eslint
 npm run lint:migrations  # migration conventions (RLS, household_id, search_path)
 npm run lint:boundaries  # monorepo import layering
+npm run lint:secrets     # credentials in source, server-only values behind NEXT_PUBLIC_
 npm run test             # vitest unit tests + node --test for scripts
 npm run test:db          # schema and RLS authorization tests (needs PostgreSQL)
 npm run build            # next build
@@ -66,6 +67,7 @@ packages/core       shared design system, config, Supabase clients, API primitiv
 supabase/migrations schema history, one logical change per migration
 scripts/            CI lints with their own tests
 e2e/                Playwright smoke specs
+security/           threat model, reviewed as surfaces are added
 backlogs/           the 21 module backlogs (170 stories)
 tracking/           live progress; PROGRESS.md is the source of truth
 ```

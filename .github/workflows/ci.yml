@@ -60,6 +60,9 @@ jobs:
       - name: Import boundary lint
         run: npm run lint:boundaries
 
+      - name: Secret lint
+        run: npm run lint:secrets
+
       - name: Unit tests
         run: npm run test
 

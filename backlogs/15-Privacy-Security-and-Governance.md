@@ -4,10 +4,10 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 15-001 | Threat model | Not Started | |
-| 2 | P0 | 15-002 | Tenant isolation | Not Started | |
-| 3 | P0 | 15-003 | RBAC/privacy scopes | Not Started | |
-| 4 | P0 | 15-004 | Encryption/secrets | Not Started | |
+| 1 | P0 | 15-001 | Threat model | Done | security/THREAT-MODEL.md; revised as surfaces are added |
+| 2 | P0 | 15-002 | Tenant isolation | Done | Catalogue-driven coverage test; proven to detect violations |
+| 3 | P0 | 15-003 | RBAC/privacy scopes | Done | Permission catalogue plus server-side view filtering |
+| 4 | P0 | 15-004 | Encryption/secrets | Done | Secret lint; redaction; HSTS and secure cookies |
 | 5 | P0 | 15-005 | AI privacy | Not Started | |
 | 6 | P0 | 15-006 | Audit | Not Started | |
 | 7 | P0 | 15-007 | Privacy Center | Not Started | |
