@@ -5,20 +5,20 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 0 |
+| Done | 3 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 170 |
-| Completion | 0% |
-| Current module | — |
-| Current story | — |
-| Last updated | — |
+| Not Started | 167 |
+| Completion | 1.8% |
+| Current module | 00 Project Bootstrap & Architecture |
+| Current story | 00-004 Configure Supabase foundation |
+| Last updated | 2026-09-17 |
 
 ## Module Tracking
 
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
-| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 0 | Not Started |
+| 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 3 | In Progress |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
@@ -44,7 +44,9 @@
 
 | Timestamp | Module | Story | Status | Tests | Notes |
 |---|---|---|---|---|---|
-| — | — | — | Not Started | — | Build not started |
+| 2026-09-17 | 00 | 00-001 | Done | typecheck/lint/test/build | npm workspaces monorepo: apps/web + packages/core |
+| 2026-09-17 | 00 | 00-002 | Done | typecheck/lint/test/build | Stack pinned to WonderArk baseline; lockfile committed |
+| 2026-09-17 | 00 | 00-003 | Done | typecheck/lint/test/build | Design tokens, app shell, 5-area navigation, accessible skip link |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

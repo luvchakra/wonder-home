@@ -1,0 +1,105 @@
+/*
+ * WonderHome design tokens.
+ *
+ * Derived from design/UI-MOCKUP-IMPLEMENTATION-SPEC.md and the approved mockups:
+ * warm light neutral surfaces, deep navy typography, restrained teal primary
+ * actions, rounded cards with soft elevation and generous spacing.
+ *
+ * Every module's screens share this one system; a module never brings its own look.
+ */
+
+:root {
+  /* Surfaces */
+  --wh-background: oklch(0.98 0.008 85);
+  --wh-surface: oklch(1 0 0);
+  --wh-surface-muted: oklch(0.97 0.012 85);
+  --wh-border: oklch(0.91 0.008 85);
+
+  /* Typography */
+  --wh-foreground: oklch(0.28 0.045 245);
+  --wh-foreground-muted: oklch(0.52 0.03 245);
+  --wh-foreground-subtle: oklch(0.64 0.02 245);
+
+  /* Primary action — restrained teal */
+  --wh-primary: oklch(0.52 0.09 185);
+  --wh-primary-hover: oklch(0.46 0.09 185);
+  --wh-primary-foreground: oklch(0.99 0 0);
+  --wh-primary-soft: oklch(0.95 0.03 185);
+
+  /* Outcome and risk states */
+  --wh-attention: oklch(0.7 0.16 55);
+  --wh-attention-soft: oklch(0.96 0.04 70);
+  --wh-risk: oklch(0.58 0.2 25);
+  --wh-risk-soft: oklch(0.96 0.03 25);
+  --wh-handled: oklch(0.6 0.13 155);
+  --wh-handled-soft: oklch(0.95 0.04 155);
+  --wh-info: oklch(0.55 0.12 250);
+  --wh-info-soft: oklch(0.95 0.03 250);
+
+  /* Shape and depth */
+  --wh-radius: 1rem;
+  --wh-radius-sm: 0.625rem;
+  --wh-radius-lg: 1.5rem;
+  --wh-shadow-card: 0 1px 2px oklch(0.28 0.045 245 / 0.04), 0 4px 16px oklch(0.28 0.045 245 / 0.06);
+
+  /* Layout */
+  --wh-tabbar-height: 4.25rem;
+  --wh-sidebar-width: 16rem;
+  --wh-content-max: 40rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wh-background: oklch(0.21 0.02 245);
+    --wh-surface: oklch(0.26 0.022 245);
+    --wh-surface-muted: oklch(0.29 0.022 245);
+    --wh-border: oklch(0.34 0.02 245);
+
+    --wh-foreground: oklch(0.96 0.008 85);
+    --wh-foreground-muted: oklch(0.78 0.015 245);
+    --wh-foreground-subtle: oklch(0.65 0.015 245);
+
+    --wh-primary: oklch(0.7 0.11 185);
+    --wh-primary-hover: oklch(0.76 0.11 185);
+    --wh-primary-foreground: oklch(0.18 0.02 245);
+    --wh-primary-soft: oklch(0.32 0.05 185);
+
+    --wh-attention: oklch(0.78 0.15 60);
+    --wh-attention-soft: oklch(0.33 0.05 60);
+    --wh-risk: oklch(0.7 0.17 25);
+    --wh-risk-soft: oklch(0.32 0.06 25);
+    --wh-handled: oklch(0.72 0.13 155);
+    --wh-handled-soft: oklch(0.3 0.05 155);
+    --wh-info: oklch(0.72 0.11 250);
+    --wh-info-soft: oklch(0.31 0.05 250);
+
+    --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
+  }
+}
+
+:root[data-theme="dark"] {
+  --wh-background: oklch(0.21 0.02 245);
+  --wh-surface: oklch(0.26 0.022 245);
+  --wh-surface-muted: oklch(0.29 0.022 245);
+  --wh-border: oklch(0.34 0.02 245);
+
+  --wh-foreground: oklch(0.96 0.008 85);
+  --wh-foreground-muted: oklch(0.78 0.015 245);
+  --wh-foreground-subtle: oklch(0.65 0.015 245);
+
+  --wh-primary: oklch(0.7 0.11 185);
+  --wh-primary-hover: oklch(0.76 0.11 185);
+  --wh-primary-foreground: oklch(0.18 0.02 245);
+  --wh-primary-soft: oklch(0.32 0.05 185);
+
+  --wh-attention: oklch(0.78 0.15 60);
+  --wh-attention-soft: oklch(0.33 0.05 60);
+  --wh-risk: oklch(0.7 0.17 25);
+  --wh-risk-soft: oklch(0.32 0.06 25);
+  --wh-handled: oklch(0.72 0.13 155);
+  --wh-handled-soft: oklch(0.3 0.05 155);
+  --wh-info: oklch(0.72 0.11 250);
+  --wh-info-soft: oklch(0.31 0.05 250);
+
+  --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
+}
