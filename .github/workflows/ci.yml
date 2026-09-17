@@ -57,6 +57,9 @@ jobs:
       - name: Migration schema lint
         run: npm run lint:migrations
 
+      - name: PostgREST embed lint
+        run: npm run lint:embeds
+
       - name: Import boundary lint
         run: npm run lint:boundaries
 

@@ -19,6 +19,7 @@
     "test:e2e": "playwright test",
     "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
     "lint:migrations": "node scripts/lint-migration-schema.mjs",
+    "lint:embeds": "node scripts/lint-postgrest-embeds.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
     "test:db": "node --test --test-concurrency=1 scripts/test-*-rls.mjs",
     "lint:secrets": "node scripts/lint-secrets.mjs",

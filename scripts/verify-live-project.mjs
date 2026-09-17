@@ -31,6 +31,50 @@ const SHIPPED_TABLES = [
   "idempotency_keys",
   "platform_admins",
   "support_access_grants",
+  "home_assets",
+  "service_requests",
+  "laundry_needs",
+  "pets",
+  "pet_care_needs",
+  "home_device_signals",
+];
+
+/**
+ * Every embedded read the application performs, run against the real PostgREST.
+ *
+ * This exists because an embed can be perfectly valid SQL and still be rejected
+ * by PostgREST: where two foreign keys connect the same pair of tables it
+ * answers PGRST201 rather than guessing which one was meant. That happened to
+ * `household_members` -> `households`, and it broke every signed-in page while
+ * every SQL-level test stayed green.
+ *
+ * The ambiguity is resolved before RLS, so the publishable key is enough to
+ * check it — no session, and no rows required.
+ */
+const EMBEDDED_READS = [
+  {
+    name: "memberships embed resolves",
+    table: "household_members",
+    select:
+      "id, display_name, member_type, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role)",
+  },
+  {
+    name: "members embed resolves",
+    table: "household_members",
+    select: "id, display_name, member_type, status, household_roles(role)",
+  },
+  {
+    name: "children embed resolves",
+    table: "household_members",
+    select:
+      "id, display_name, date_of_birth, member_guardians!member_guardians_child_member_id_fkey(guardian_member_id)",
+  },
+  {
+    name: "pet care embed resolves",
+    table: "pet_care_needs",
+    select:
+      "id, kind, interval_days, last_done_on, due_on, responsible_member_id, supply_days_remaining, pets!inner(id, name, species)",
+  },
 ];
 
 function loadEnv() {
@@ -91,6 +135,12 @@ async function main() {
   for (const table of SHIPPED_TABLES) {
     const { error } = await admin.from(table).select("*", { head: true, count: "exact" });
     check(`migration landed: ${table}`, !error, error?.message ?? "");
+  }
+
+  for (const read of EMBEDDED_READS) {
+    const { error } = await anon.from(read.table).select(read.select).limit(1);
+    // PGRST201 is the ambiguity; anything else here would be a real failure too.
+    check(read.name, !error, error?.code ? `${error.code}: ${error.message}` : "");
   }
 
   const rpc = await anon.rpc("create_household", {

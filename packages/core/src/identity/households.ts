@@ -70,12 +70,21 @@ export async function createHousehold(
   return { householdId: row.household_id, memberId: row.member_id };
 }
 
-/** Every household the caller belongs to, with their identity and roles in each. */
+/**
+ * Every household the caller belongs to, with their identity and roles in each.
+ *
+ * The embed names its foreign key explicitly, and has to. Two relationships
+ * connect these tables — a member belongs to a household, and a household names
+ * one member as its owner — so an unqualified `households(...)` is ambiguous and
+ * PostgREST refuses the whole request with PGRST201 rather than guessing. That
+ * refusal is invisible to SQL-level tests, because it is a property of the REST
+ * layer and not of the schema.
+ */
 export async function listMemberships(supabase: SupabaseClient): Promise<HouseholdMembership[]> {
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, member_type, households(id, name, timezone, status, owner_member_id), household_roles(role)",
+      "id, display_name, member_type, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role)",
     )
     .eq("status", "active");
 
