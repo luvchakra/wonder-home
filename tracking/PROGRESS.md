@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 39 |
+| Done | 44 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 131 |
-| Completion | 22.9% |
-| Current module | 02 Household Configuration & Playbook |
-| Current story | 02-001 Setup wizard |
+| Not Started | 126 |
+| Completion | 25.9% |
+| Current module | 03 Outcome & Routine Engine |
+| Current story | 03-006 Dependency graph |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -21,7 +21,7 @@
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 4 | In Progress |
-| 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 0 | Not Started |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 0 | Not Started |
@@ -91,3 +91,8 @@
 | 2026-09-17 | 02 | 02-003 | Done | 13 database | Playbook items with a dependency graph, not an array |
 | 2026-09-17 | 02 | 02-004 | Done | 13 database | Versioned policies; exactly one in force per name |
 | 2026-09-17 | 02 | 02-005 | Done | 12 unit, 13 database | Autonomy decided per action; three kinds always need a person |
+| 2026-09-17 | 03 | 03-001 | Done | 20 unit | Outcomes with owner, window, verification source — not tasks |
+| 2026-09-17 | 03 | 03-002 | Done | 20 unit | Routines instantiate outcomes; one live outcome per due date |
+| 2026-09-17 | 03 | 03-003 | Done | 20 unit | Evaluation is pure; on track and met produce nothing |
+| 2026-09-17 | 03 | 03-004 | Done | 20 unit | Every exception carries an impact and a recommended action |
+| 2026-09-17 | 03 | 03-005 | Done | 20 unit | Replanning reaches only what the change actually touches |

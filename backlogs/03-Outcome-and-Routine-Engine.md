@@ -4,11 +4,11 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 03-001 | Outcome model | Not Started | |
-| 2 | P0 | 03-002 | Routine model | Not Started | |
-| 3 | P0 | 03-003 | Monitoring | Not Started | |
-| 4 | P0 | 03-004 | Exception detection | Not Started | |
-| 5 | P0 | 03-005 | Replanning | Not Started | |
+| 1 | P0 | 03-001 | Outcome model | Done | Desired state, owner, window, verification — not a checklist item |
+| 2 | P0 | 03-002 | Routine model | Done | Routine separate from the outcomes it instantiates |
+| 3 | P0 | 03-003 | Monitoring | Done | Pure evaluation; normal operation is silent |
+| 4 | P0 | 03-004 | Exception detection | Done | Impact and recommended action are NOT NULL by design |
+| 5 | P0 | 03-005 | Replanning | Done | Downstream reachability computed, unaffected plans preserved |
 | 6 | P1 | 03-006 | Dependency graph | Not Started | |
 | 7 | P1 | 03-007 | Pattern learning | Not Started | |
 | 8 | P2 | 03-008 | Optimization | Not Started | |
