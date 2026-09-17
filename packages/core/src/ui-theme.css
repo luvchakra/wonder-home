@@ -9,6 +9,18 @@
  */
 
 :root {
+  /*
+   * WonderHome is a light product.
+   *
+   * Every approved mockup is the warm mint-and-white palette below, and there
+   * is no designed dark counterpart yet. Following the operating system's dark
+   * preference would therefore ship a colour scheme nobody has reviewed — so
+   * the dark tokens are kept, and applied only when someone explicitly asks for
+   * them with data-theme="dark". When a dark variant is designed, this becomes
+   * a one-line change back to the media query.
+   */
+  color-scheme: light;
+
   /* Surfaces — a mint-tinted near-white, never pure grey */
   --wh-background: oklch(0.982 0.012 168);
   --wh-surface: oklch(1 0 0);
@@ -67,47 +79,8 @@
   --wh-content-max: 40rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --wh-background: oklch(0.21 0.02 245);
-    --wh-surface: oklch(0.26 0.022 245);
-    --wh-surface-muted: oklch(0.29 0.022 245);
-    --wh-border: oklch(0.34 0.02 245);
-
-    --wh-foreground: oklch(0.96 0.008 85);
-    --wh-foreground-muted: oklch(0.78 0.015 245);
-    --wh-foreground-subtle: oklch(0.65 0.015 245);
-
-    --wh-primary: oklch(0.7 0.11 185);
-    --wh-primary-hover: oklch(0.76 0.11 185);
-    --wh-primary-foreground: oklch(0.18 0.02 245);
-    --wh-primary-soft: oklch(0.32 0.05 185);
-
-    --wh-attention: oklch(0.78 0.15 60);
-    --wh-attention-soft: oklch(0.33 0.05 60);
-    --wh-risk: oklch(0.7 0.17 25);
-    --wh-risk-soft: oklch(0.32 0.06 25);
-    --wh-handled: oklch(0.72 0.13 155);
-    --wh-handled-soft: oklch(0.3 0.05 155);
-    --wh-info: oklch(0.72 0.11 250);
-    --wh-info-soft: oklch(0.31 0.05 250);
-
-    --wh-tone-money: oklch(0.8 0.14 68);
-    --wh-tone-money-soft: oklch(0.33 0.05 68);
-    --wh-tone-school: oklch(0.76 0.13 295);
-    --wh-tone-school-soft: oklch(0.32 0.05 295);
-    --wh-tone-people: oklch(0.75 0.15 22);
-    --wh-tone-people-soft: oklch(0.32 0.05 22);
-    --wh-tone-home: oklch(0.75 0.1 200);
-    --wh-tone-home-soft: oklch(0.31 0.045 200);
-    --wh-tone-care: oklch(0.75 0.12 150);
-    --wh-tone-care-soft: oklch(0.3 0.05 150);
-
-    --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
-  }
-}
-
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --wh-background: oklch(0.21 0.02 245);
   --wh-surface: oklch(0.26 0.022 245);
   --wh-surface-muted: oklch(0.29 0.022 245);

@@ -12,10 +12,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8f5" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c2733" },
-  ],
+  // One colour, because the app ships one scheme. A dark themeColor here would
+  // tint the browser chrome to match a palette the page never renders.
+  themeColor: "#f2faf7",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
