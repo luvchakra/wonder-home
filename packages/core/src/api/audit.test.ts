@@ -1,3 +1,5 @@
+// lint-secrets: fixtures — the credential-shaped values below are fakes,
+// present precisely to prove they are redacted rather than logged.
 import { describe, expect, it, vi } from "vitest";
 
 import { setLogSink, type LogRecord } from "../observability/logger";

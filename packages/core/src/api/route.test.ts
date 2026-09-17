@@ -1,3 +1,5 @@
+// lint-secrets: fixtures — the credential-shaped values below are fakes,
+// present precisely to prove they are redacted rather than logged.
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
