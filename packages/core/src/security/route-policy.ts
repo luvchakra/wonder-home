@@ -9,7 +9,16 @@
  */
 
 /** Surfaces that require an authenticated member. */
-const AUTHENTICATED_PREFIXES = ["/today", "/family", "/more", "/household", "/welcome"] as const;
+const AUTHENTICATED_PREFIXES = [
+  "/today",
+  "/family",
+  "/more",
+  "/household",
+  "/welcome",
+  // Accepting an invitation needs an account, so an invitee is sent to sign in
+  // and returned to the link afterwards.
+  "/invite",
+] as const;
 
 /** Surfaces only for a signed-out visitor; a signed-in member is sent home. */
 const ANONYMOUS_ONLY = new Set(["/sign-in", "/sign-up", "/forgot-password"]);

@@ -104,3 +104,71 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
     },
   ];
 }
+
+/**
+ * The caller's membership in one household, or a refusal.
+ *
+ * Every household-scoped endpoint starts here: application authorization is
+ * authoritative, so the answer is computed explicitly rather than inferred from
+ * whether a query happened to return rows.
+ */
+export async function requireMembership(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<HouseholdMembership> {
+  const membership = (await listMemberships(supabase)).find(
+    (entry) => entry.household.id === householdId,
+  );
+  // Not a member and no such household give the same answer on purpose: any
+  // other response would confirm that a household with this id exists.
+  if (!membership) throw ApiError.notFound();
+  return membership;
+}
+
+export function isHouseholdAdmin(membership: HouseholdMembership): boolean {
+  return membership.roles.includes("head") || membership.roles.includes("administrator");
+}
+
+export async function requireHouseholdAdmin(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<HouseholdMembership> {
+  const membership = await requireMembership(supabase, householdId);
+  if (!isHouseholdAdmin(membership)) {
+    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can do this.");
+  }
+  return membership;
+}
+
+export type HouseholdMember = {
+  id: string;
+  displayName: string;
+  memberType: MemberType;
+  status: "active" | "invited" | "inactive";
+  roles: HouseholdRole[];
+  isOwner: boolean;
+};
+
+/** Everyone in a household, as any member of it may see them. */
+export async function listMembers(
+  supabase: SupabaseClient,
+  householdId: string,
+  ownerMemberId: string | null,
+): Promise<HouseholdMember[]> {
+  const { data, error } = await supabase
+    .from("household_members")
+    .select("id, display_name, member_type, status, household_roles(role)")
+    .eq("household_id", householdId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`listMembers failed: ${error.code ?? "unknown"}`);
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    displayName: row.display_name as string,
+    memberType: row.member_type as MemberType,
+    status: row.status as HouseholdMember["status"],
+    roles: ((row.household_roles ?? []) as { role: HouseholdRole }[]).map((entry) => entry.role),
+    isOwner: row.id === ownerMemberId,
+  }));
+}
