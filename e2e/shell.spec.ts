@@ -10,7 +10,7 @@ import { expect, test } from "@playwright/test";
  */
 
 const PUBLIC_AREAS = [
-  { label: "Home", path: "/", heading: "Home" },
+  { label: "Home", path: "/", heading: "WonderHome" },
   { label: "AI", path: "/ai", heading: "WonderHome AI" },
 ];
 
@@ -53,7 +53,9 @@ test("keyboard users reach main content before the navigation", async ({ page })
 });
 
 test("empty states say what happens next instead of 'no data'", async ({ page }) => {
-  await page.goto("/");
+  // Home now greets a signed-out visitor, so the rule is checked on a public
+  // area that still has nothing to show.
+  await page.goto("/ai");
   await expect(page.getByRole("heading", { level: 2, name: "Nothing to show yet" })).toBeVisible();
   await expect(page.getByText(/module 0\d/i).first()).toBeVisible();
 });

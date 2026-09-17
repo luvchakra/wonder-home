@@ -9,6 +9,10 @@ describe("route policy", () => {
     expect(routeRequirement("/more/bills")).toBe("authenticated");
   });
 
+  it("gates onboarding, which needs an authenticated creator", () => {
+    expect(routeRequirement("/welcome")).toBe("authenticated");
+  });
+
   it("keeps the platform admin boundary separate from household roles", () => {
     expect(routeRequirement("/platform-admin")).toBe("platform-admin");
     expect(routeRequirement("/platform-admin/households")).toBe("platform-admin");

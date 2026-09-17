@@ -19,8 +19,14 @@ import { join } from "node:path";
 const MIGRATIONS_DIR = new URL("../supabase/migrations/", import.meta.url).pathname;
 const FILENAME = /^\d{14}_[a-z0-9_]+\.sql$/;
 
-/** Tables outside a household's ownership (platform-level, per the DB spec). */
-const NON_TENANT_TABLES = new Set(["profiles", "plans", "platform_admins"]);
+/**
+ * Tables that legitimately carry no household_id, each for a stated reason:
+ *   households      — the tenant root; its own id IS the household id
+ *   profiles        — a person, who may belong to several households
+ *   plans           — platform-level plan catalogue
+ *   platform_admins — the separate platform-admin boundary
+ */
+const NON_TENANT_TABLES = new Set(["households", "profiles", "plans", "platform_admins"]);
 
 export function lintMigrationSource(filename, sql) {
   const problems = [];

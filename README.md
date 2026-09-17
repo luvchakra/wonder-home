@@ -39,11 +39,17 @@ npm run lint             # eslint
 npm run lint:migrations  # migration conventions (RLS, household_id, search_path)
 npm run lint:boundaries  # monorepo import layering
 npm run test             # vitest unit tests + node --test for scripts
+npm run test:db          # schema and RLS authorization tests (needs PostgreSQL)
 npm run build            # next build
 npm run test:e2e         # Playwright smoke tests, mobile and desktop
 ```
 
 CI runs all of the above on every pull request (`.github/workflows/ci.yml`).
+
+`npm run test:db` builds a throwaway database from the committed migrations and
+exercises the real RLS policies as the `authenticated` role. It needs a
+PostgreSQL 16 server and the usual `PG*` environment variables; CI provides one
+as a service container.
 
 If your environment ships a pinned Chromium that Playwright did not install
 itself, point the suite at it instead of downloading another copy:

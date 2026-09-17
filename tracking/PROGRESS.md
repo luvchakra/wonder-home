@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 10 |
+| Done | 11 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 160 |
-| Completion | 5.9% |
+| Not Started | 159 |
+| Completion | 6.5% |
 | Current module | 01 Identity & Family Accounts |
-| Current story | 01-001 Create household and owner |
+| Current story | 01-002 Invite adult members |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -19,7 +19,7 @@
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
-| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 1 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 0 | Not Started |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 0 | Not Started |
@@ -62,3 +62,4 @@
 | 2026-09-17 | 00 | 00-009 | Done | 6 unit tests | Structured redacting logger, provider-neutral error reporting seam |
 | 2026-09-17 | 00 | 00-010 | Done | 10 unit tests | Validated flags and fail-fast startup configuration |
 | 2026-09-17 | 00 | — | Done | 50 unit, 15 script, 18 E2E | Module 00 complete; foundation ready for module 01 |
+| 2026-09-17 | 01 | 01-001 | Done | 12 RLS, 10 unit, 7 E2E | Tenant model, wh.create_household, auth + onboarding surfaces |

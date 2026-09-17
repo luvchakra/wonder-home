@@ -10,6 +10,7 @@
     "./config/*": "./src/config/*.ts",
     "./security/*": "./src/security/*.ts",
     "./api/*": "./src/api/*.ts",
+    "./identity/*": "./src/identity/*.ts",
     "./db/*": "./src/db/*.ts",
     "./observability/*": "./src/observability/*.ts",
     "./navigation/*": "./src/navigation/*.ts",

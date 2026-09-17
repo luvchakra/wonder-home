@@ -48,6 +48,17 @@ test("rejects a tenant table with no household_id", () => {
   assert.match(problems[0], /no household_id column/);
 });
 
+test("allows the tenant root itself to omit household_id", () => {
+  const sql = `
+    create table public.households (
+      id uuid primary key default gen_random_uuid(),
+      name text not null
+    );
+    alter table public.households enable row level security;
+  `;
+  assert.deepEqual(lintMigrationSource(GOOD_NAME, sql), []);
+});
+
 test("allows platform-level tables to omit household_id", () => {
   const sql = `
     create table public.plans (

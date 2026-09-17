@@ -12,7 +12,26 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
       # Placeholders, not secrets. The build and the E2E smoke run against no
       # real project: with no session cookie, Supabase reports a missing session
       # locally, so /api/v1/me answers 401 without ever reaching this host.
@@ -43,6 +62,9 @@ jobs:
 
       - name: Unit tests
         run: npm run test
+
+      - name: Schema and authorization tests
+        run: npm run test:db
 
       - name: Build
         run: npm run build
