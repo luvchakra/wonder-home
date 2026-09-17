@@ -33,7 +33,9 @@ Two consequences to keep in mind while building:
 
 - **No onboarding surface is specified anywhere**, though stories 01-001 and
   01-002 need household creation and invitation acceptance. Sheet B's splash
-  screen is the only visual reference for it.
+  screen is the only visual reference for it. Story 01-001 built the smallest
+  honest version — `/sign-up`, `/sign-in`, `/welcome` — in the shared visual
+  language; a designed onboarding still needs a decision.
 - **Module 10 (Meals & Cooking) has eight stories and no screen in the spec.**
   Sheet B's Meals screen is the reference until the spec says otherwise.
 
@@ -61,3 +63,16 @@ From the spec, these shape components rather than screens:
 4. Pending-approval and already-executed AI changes must look different.
 5. Personalized views are permission-filtered by the API, never hidden with CSS.
 6. Empty states say what WonderHome can do next; error states offer a recovery.
+
+## Spec gaps filled while building
+
+Recorded so they are not mistaken for scope creep:
+
+| Gap | What was built | Story |
+|---|---|---|
+| No story covers authentication UI, yet 01-001 needs an authenticated creator | Email/password sign-up, sign-in and sign-out | 01-001 |
+| No story covers household creation UI | `/welcome` onboarding form | 01-001 |
+| Signed-out Home is undefined | Marketing Home with both ways in | 01-001 |
+
+Each is deliberately minimal: enough for the story to work end to end, in the
+shared visual language, and easy to replace when a designed flow exists.

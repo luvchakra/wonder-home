@@ -9,10 +9,11 @@
  */
 
 /** Surfaces that require an authenticated member. */
-const AUTHENTICATED_PREFIXES = ["/today", "/family", "/more", "/household"] as const;
+const AUTHENTICATED_PREFIXES = ["/today", "/family", "/more", "/household", "/welcome"] as const;
 
 /** Surfaces only for a signed-out visitor; a signed-in member is sent home. */
 const ANONYMOUS_ONLY = new Set(["/sign-in", "/sign-up", "/forgot-password"]);
+
 
 /** The platform admin boundary, authorized separately from household roles. */
 const PLATFORM_ADMIN_PREFIX = "/platform-admin";
