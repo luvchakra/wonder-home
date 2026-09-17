@@ -68,7 +68,8 @@ test("a gitignored local env file is not the lint's business", () => {
   // .env.local is correct and expected; flagging it would train people to
   // ignore this lint, which is worse than not having it. Enforced by scanning
   // only what `git ls-files -co --exclude-standard` returns.
-  const key = `SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiJ9.eyJyZWYiOiJhYmMifQ.c2ln`;
+  const key =
+    "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiJ9.eyJyZWYiOiJhYmNkZWZnIn0.c2lnbmF0dXJlLXZhbHVl";
   assert.equal(
     lintSecretSource(".env.local", key).length,
     1,
