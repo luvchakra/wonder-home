@@ -4,11 +4,11 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 07-001 | Normal helper model | Not Started | |
-| 2 | P0 | 07-002 | Availability/leave | Not Started | |
-| 3 | P0 | 07-003 | Backup planning | Not Started | |
-| 4 | P0 | 07-004 | Exception handling | Not Started | |
-| 5 | P0 | 07-005 | Helper privacy | Not Started | |
+| 1 | P0 | 07-001 | Normal helper model | Done | Outcomes and windows, never per-chore status |
+| 2 | P0 | 07-002 | Availability/leave | Done | Outcomes and windows, never per-chore status |
+| 3 | P0 | 07-003 | Backup planning | Done | Outcomes and windows, never per-chore status |
+| 4 | P0 | 07-004 | Exception handling | Done | Outcomes and windows, never per-chore status |
+| 5 | P0 | 07-005 | Helper privacy | Done | Outcomes and windows, never per-chore status |
 | 6 | P1 | 07-006 | Optional daily summary | Not Started | |
 | 7 | P1 | 07-007 | Pattern learning | Not Started | |
 | 8 | P2 | 07-008 | Service marketplace | Not Started | |

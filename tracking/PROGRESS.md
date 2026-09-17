@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 70 |
+| Done | 76 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 100 |
-| Completion | 41.2% |
-| Current module | 14 AI Orchestration & Learning |
-| Current story | 07-001 Normal helper model (Phase 5) |
+| Not Started | 94 |
+| Completion | 44.7% |
+| Current module | 07 Househelper & Home Operations |
+| Current story | 13-001 Asset registry |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -19,13 +19,13 @@
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
-| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 5 | In Progress |
+| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 6 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 4 | In Progress |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 7 | In Progress |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 7 | In Progress |
-| 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 0 | Not Started |
+| 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 0 | Not Started |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 0 | Not Started |
@@ -106,3 +106,5 @@
 | 2026-09-17 | 05 | 05-001..006 | Done | 21 unit | Certification: explainable coverage, risk by subject, every alert actionable |
 | 2026-09-17 | 06 | 06-001..007 | Done | 28 unit, 12 database | Decision engine: an event alone never interrupts anyone |
 | 2026-09-17 | 14 | 14-001..006 | Done | 41 unit, 11 database | Governed tools; every call re-checked; refusals recorded |
+| 2026-09-17 | 07 | 07-001..005 | Done | 17 unit | Helper model with no task-completion table, by design |
+| 2026-09-17 | 01 | 01-006 | Done | 17 unit | Recurring windows plus date exceptions, queryable by the planner |
