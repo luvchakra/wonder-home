@@ -126,6 +126,18 @@ export function buildOpenApiDocument(): Json {
           responses: { "200": { description: "The service is serving requests" } },
         },
       },
+      "/health/ready": {
+        get: {
+          summary: "Readiness probe",
+          description:
+            "Reports whether this instance can serve: each dependency with a status and a timing, and nothing about the deployment. Degraded still returns 200; only down returns 503.",
+          security: [],
+          responses: {
+            "200": { description: "Serving, possibly degraded" },
+            "503": { description: "A dependency is down" },
+          },
+        },
+      },
       "/me": {
         get: {
           summary: "The authenticated identity",

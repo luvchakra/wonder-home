@@ -4,12 +4,12 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 19-001 | Automated tests | Not Started | |
-| 2 | P0 | 19-002 | Authorization tests | Not Started | |
-| 3 | P0 | 19-003 | AI evaluations | Not Started | |
-| 4 | P0 | 19-004 | Health checks | Not Started | |
-| 5 | P0 | 19-005 | Safe logging | Not Started | |
-| 6 | P0 | 19-006 | Error monitoring | Not Started | |
+| 1 | P0 | 19-001 | Automated tests | Done | Unit, script, database and E2E suites in CI |
+| 2 | P0 | 19-002 | Authorization tests | Done | Catalogue-driven coverage; proven to detect violations |
+| 3 | P0 | 19-003 | AI evaluations | Done | Golden scenarios evaluated against deterministic policy |
+| 4 | P0 | 19-004 | Health checks | Done | Liveness and readiness separated; probes time out |
+| 5 | P0 | 19-005 | Safe logging | Done | Structured logs, redaction, correlation ids |
+| 6 | P0 | 19-006 | Error monitoring | Done | Reporting seam; failures never silently dropped |
 | 7 | P1 | 19-007 | Performance | Not Started | |
 | 8 | P1 | 19-008 | Recovery/runbook | Not Started | |
 

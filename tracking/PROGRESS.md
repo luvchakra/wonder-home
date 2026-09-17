@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 25 |
+| Done | 31 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 145 |
-| Completion | 14.7% |
-| Current module | 15 Privacy, Security & Governance |
-| Current story | 19-001 Automated tests |
+| Not Started | 139 |
+| Completion | 18.2% |
+| Current module | 19 Testing, Observability & Production |
+| Current story | 16-001 Separate admin boundary |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -37,7 +37,7 @@
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 0 | Not Started |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
-| 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 0 | Not Started |
+| 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 0 | Not Started |
 
 ## Execution Log
@@ -77,3 +77,9 @@
 | 2026-09-17 | 15 | 15-002 | Done | 9 database | Isolation asserted over the live catalogue, not a remembered list |
 | 2026-09-17 | 15 | 15-003 | Done | 20 unit, 9 database | Deny by default; child and helper inherit nothing |
 | 2026-09-17 | 15 | 15-004 | Done | 10 script | Secret lint in CI; server-only values never behind NEXT_PUBLIC_ |
+| 2026-09-17 | 19 | 19-001 | Done | 139 unit, 26 script, 50 db, 46 E2E | Every P0 flow covered at the layer that can actually fail |
+| 2026-09-17 | 19 | 19-002 | Done | 50 database | Catalogue-driven; a new unprotected table fails CI |
+| 2026-09-17 | 19 | 19-003 | Done | 7 unit | 13 golden scenarios across all five required categories |
+| 2026-09-17 | 19 | 19-004 | Done | 7 unit, 1 E2E | Liveness and readiness separated; degraded keeps serving |
+| 2026-09-17 | 19 | 19-005 | Done | 6 unit | Structured redacting logs with correlation ids (00-009) |
+| 2026-09-17 | 19 | 19-006 | Done | 2 unit | Provider-neutral reporting seam; 5xx only (00-009) |

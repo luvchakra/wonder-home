@@ -58,3 +58,18 @@ test("an idempotency key is rejected when it is too short to be unique", async (
   expect(response.status()).toBe(400);
   expect((await response.json()).error.code).toBe("bad_request");
 });
+
+test("readiness reports each dependency without describing the deployment", async ({ request }) => {
+  const response = await request.get("/api/v1/health/ready");
+
+  // 200 while serving, 503 only when a dependency is down.
+  expect([200, 503]).toContain(response.status());
+
+  const report = await response.json();
+  expect(["ok", "degraded", "down"]).toContain(report.status);
+  expect(report.checks.map((check: { name: string }) => check.name)).toContain("database");
+
+  // Names and timings only: no host, no credential, no driver message.
+  const serialized = JSON.stringify(report);
+  expect(serialized).not.toMatch(/supabase\.co|postgres|password|key/i);
+});
