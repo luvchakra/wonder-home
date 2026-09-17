@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { cn } from "../../lib/cn";
@@ -36,9 +37,9 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
     "flex items-center gap-3 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]";
 
   return href ? (
-    <a href={href} className={cn(className, "wh-lift")}>
+    <Link href={href} className={cn(className, "wh-lift")}>
       {body}
-    </a>
+    </Link>
   ) : (
     <div className={className}>{body}</div>
   );

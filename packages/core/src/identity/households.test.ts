@@ -25,6 +25,7 @@ describe("membership mapping", () => {
         memberId: "m-1",
         displayName: "Kunal",
         memberType: "adult",
+        dateOfBirth: null,
         roles: ["head"],
         household: {
           id: "h-1",

@@ -19,12 +19,13 @@ import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
-import { EmptyState } from "@wonderhome/core/ui/states";
+import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
+import { Suspense } from "react";
 import { Timeline, type TimelineItem } from "@wonderhome/core/ui/timeline";
 
 import { AgendaRow } from "../_components/agenda-row";
 import { householdAgenda } from "../_lib/agenda";
-import { formatTime, formatToday, requireSession } from "../_lib/session";
+import { formatTime, formatToday, requireSession, type Session } from "../_lib/session";
 
 export const metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -38,17 +39,64 @@ export const dynamic = "force-dynamic";
  */
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const [{ view: requested }, session] = await Promise.all([searchParams, requireSession("/today")]);
-  const { supabase, membership, view, viewer, secondary } = session;
-  const householdId = membership.household.id;
+  const { membership, view, viewer, secondary } = session;
   const timezone = membership.household.timezone;
   const now = new Date();
+  const active = requested === "family" || requested === "household" ? requested : "mine";
+  const isChild = view.tone === "child";
+
+  return (
+    <AppShell active="today" viewer={viewer} secondary={secondary} pathname="/today">
+      <div className="space-y-5">
+        <header className="wh-rise flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Today</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{formatToday(timezone, now)}</p>
+          </div>
+          <PillLink href="/family" tone="quiet">
+            <CalendarHeart aria-hidden className="size-3.5" /> Calendar
+          </PillLink>
+        </header>
+
+        <SegmentedControl
+          label="Whose day"
+          active={active}
+          segments={[
+            { key: "mine", label: "My day", href: "/today" },
+            { key: "family", label: "Family", href: "/today?view=family" },
+            ...(isChild ? [] : [{ key: "household", label: "Household", href: "/today?view=household" }]),
+          ]}
+        />
+
+        <Suspense fallback={<LoadingState rows={4} label="Laying out the day" />}>
+          <TodayBody session={session} active={active} now={now} />
+        </Suspense>
+
+        {active === "mine" && !isChild ? (
+          <Card className="flex items-center gap-3 p-4">
+            <ListChecks aria-hidden className="size-5 shrink-0 text-[var(--wh-primary)]" />
+            <p className="min-w-0 flex-1 text-sm text-[var(--wh-foreground-muted)]">
+              Normal routines stay silent. Only what needs you appears here.
+            </p>
+          </Card>
+        ) : null}
+
+        <QuoteCard>Small steps today. Happier tomorrows.</QuoteCard>
+      </div>
+    </AppShell>
+  );
+}
+
+async function TodayBody({ session, active, now }: { session: Session; active: "mine" | "family" | "household"; now: Date }) {
+  const { supabase, membership, view } = session;
+  const householdId = membership.household.id;
+  const timezone = membership.household.timezone;
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(now);
   dayEnd.setHours(23, 59, 59, 999);
   const today = now.toISOString().slice(0, 10);
 
-  const active = requested === "family" || requested === "household" ? requested : "mine";
   const isChild = view.tone === "child";
   const seesMoney = view.permissions.includes("finance.view");
   const seesSchool = view.permissions.includes("school.manage") || view.permissions.includes("school.view_own");
@@ -145,64 +193,31 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const householdNeeds = active === "household" && agenda ? agenda.needsYou : [];
 
   return (
-    <AppShell active="today" viewer={viewer} secondary={secondary} pathname="/today">
-      <div className="space-y-5">
-        <header className="wh-rise flex items-end justify-between gap-3">
-          <div>
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Today</h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{formatToday(timezone, now)}</p>
-          </div>
-          <PillLink href="/family" tone="quiet">
-            <CalendarHeart aria-hidden className="size-3.5" /> Calendar
-          </PillLink>
-        </header>
-
-        <SegmentedControl
-          label="Whose day"
-          active={active}
-          segments={[
-            { key: "mine", label: "My day", href: "/today", count: items.filter((item) => item.mine && item.state === "needs_you").length },
-            { key: "family", label: "Family", href: "/today?view=family" },
-            ...(isChild ? [] : [{ key: "household", label: "Household", href: "/today?view=household", count: agenda?.needsYou.length }]),
-          ]}
+    <>
+      {shown.length === 0 ? (
+        <EmptyState
+          icon={Clock3}
+          title={active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
+          description="Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."
+          action={<PillLink href="/ai">Plan something</PillLink>}
         />
+      ) : (
+        <Timeline items={shown} />
+      )}
 
-        {shown.length === 0 ? (
-          <EmptyState
-            icon={Clock3}
-            title={active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
-            description="Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."
-            action={<PillLink href="/ai">Plan something</PillLink>}
-          />
-        ) : (
-          <Timeline items={shown} />
-        )}
-
-        {householdNeeds.length > 0 ? (
-          <section>
-            <SectionHeader title="Needs a person" count={householdNeeds.length} />
-            <Card className="p-2">
-              <ul className="divide-y divide-[var(--wh-border)]">
-                {householdNeeds.slice(0, 6).map((item) => (
-                  <AgendaRow key={item.subjectKey} item={item} />
-                ))}
-              </ul>
-            </Card>
-          </section>
-        ) : null}
-
-        {active === "mine" && !isChild ? (
-          <Card className="flex items-center gap-3 p-4">
-            <ListChecks aria-hidden className="size-5 shrink-0 text-[var(--wh-primary)]" />
-            <p className="min-w-0 flex-1 text-sm text-[var(--wh-foreground-muted)]">
-              Normal routines stay silent. Only what needs you appears here.
-            </p>
+      {householdNeeds.length > 0 ? (
+        <section>
+          <SectionHeader title="Needs a person" count={householdNeeds.length} />
+          <Card className="p-2">
+            <ul className="divide-y divide-[var(--wh-border)]">
+              {householdNeeds.slice(0, 6).map((item) => (
+                <AgendaRow key={item.subjectKey} item={item} />
+              ))}
+            </ul>
           </Card>
-        ) : null}
-
-        <QuoteCard>Small steps today. Happier tomorrows.</QuoteCard>
-      </div>
-    </AppShell>
+        </section>
+      ) : null}
+    </>
   );
 }
 

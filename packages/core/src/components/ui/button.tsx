@@ -1,4 +1,5 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
+import Link from "next/link";
+import type { ComponentProps, ButtonHTMLAttributes } from "react";
 
 import { cn } from "../../lib/cn";
 
@@ -44,6 +45,6 @@ export function ButtonLink({
   variant = "primary",
   className,
   ...props
-}: AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: ButtonVariant }) {
-  return <a {...props} className={cn(BASE, variantClass(variant), className)} />;
+}: ComponentProps<typeof Link> & { variant?: ButtonVariant }) {
+  return <Link {...props} className={cn(BASE, variantClass(variant), className)} />;
 }

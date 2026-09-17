@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 
 import { ApiError } from "../api/errors";
 import type {
@@ -33,6 +34,7 @@ type MembershipRow = {
   id: string;
   display_name: string;
   member_type: MemberType;
+  date_of_birth?: string | null;
   // A to-one embed comes back as an object, but the client's inferred types
   // describe every embed as an array, so both shapes are accepted here rather
   // than asserted away.
@@ -80,18 +82,22 @@ export async function createHousehold(
  * refusal is invisible to SQL-level tests, because it is a property of the REST
  * layer and not of the schema.
  */
-export async function listMemberships(supabase: SupabaseClient): Promise<HouseholdMembership[]> {
+/**
+ * Memoised per request: the shell, the page and its sections all need the
+ * membership, and asking once is the difference between one query and four.
+ */
+export const listMemberships = cache(async (supabase: SupabaseClient): Promise<HouseholdMembership[]> => {
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, member_type, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role)",
+      "id, display_name, member_type, date_of_birth, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role)",
     )
     .eq("status", "active");
 
   if (error) throw new Error(`listMemberships failed: ${error.code ?? "unknown"}`);
 
   return ((data ?? []) as unknown as MembershipRow[]).flatMap(toMembership);
-}
+});
 
 export function toMembership(row: MembershipRow): HouseholdMembership[] {
   const household = Array.isArray(row.households) ? row.households[0] : row.households;
@@ -102,6 +108,7 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
       memberId: row.id,
       displayName: row.display_name,
       memberType: row.member_type,
+      dateOfBirth: row.date_of_birth ?? null,
       roles: (row.household_roles ?? []).map((entry) => entry.role),
       household: {
         id: household.id,

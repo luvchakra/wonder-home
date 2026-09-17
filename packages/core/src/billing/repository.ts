@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 
 import {
   checkEntitlement,
@@ -23,10 +24,14 @@ type Row = Record<string, unknown>;
 /** A household with no subscription row is on Free rather than on nothing. */
 export const DEFAULT_PLAN_KEY = "free";
 
-export async function loadSubscription(
+/**
+ * Memoised per request: a screen asks "may this household…" for each domain
+ * it shows, and the subscription behind every answer is the same two rows.
+ */
+export const loadSubscription = cache(async (
   supabase: SupabaseClient,
   householdId: string,
-): Promise<Subscription | null> {
+): Promise<Subscription | null> => {
   const { data: subscriptionRow, error: subscriptionError } = await supabase
     .from("household_subscriptions")
     .select("plan_key, status, current_period_start")
@@ -66,7 +71,7 @@ export async function loadSubscription(
       ? new Date(subscriptionRow.current_period_start as string)
       : periodStart("month"),
   };
-}
+});
 
 export async function usedThisPeriod(
   supabase: SupabaseClient,

@@ -10,7 +10,7 @@
 | 4 | P0 | 19-004 | Health checks | Done | Liveness and readiness separated; probes time out |
 | 5 | P0 | 19-005 | Safe logging | Done | Structured logs, redaction, correlation ids |
 | 6 | P0 | 19-006 | Error monitoring | Done | Reporting seam; failures never silently dropped |
-| 7 | P1 | 19-007 | Performance | Not Started | |
+| 7 | P1 | 19-007 | Performance | In Progress | Region co-location, local JWT verification, request-scoped dedup, prefetching, streaming; p95 measurement against the live project still to do |
 | 8 | P1 | 19-008 | Recovery/runbook | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

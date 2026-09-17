@@ -1,4 +1,4 @@
-import { createClient } from "@wonderhome/core/db/server";
+import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { listMemberships } from "@wonderhome/core/identity/households";
 
 import { buildSession } from "./_lib/session";
@@ -14,10 +14,7 @@ export const dynamic = "force-dynamic";
  * view for a child — a different framing, not a reduced one.
  */
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getVerifiedUser()]);
 
   if (!user) return <Landing />;
 

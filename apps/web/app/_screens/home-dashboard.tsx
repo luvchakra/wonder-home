@@ -21,7 +21,8 @@ import { HandledList } from "@wonderhome/core/ui/outcome-card";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
-import { EmptyState } from "@wonderhome/core/ui/states";
+import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
+import { Suspense } from "react";
 
 import { AgendaRow } from "../_components/agenda-row";
 import { householdAgenda } from "../_lib/agenda";
@@ -36,29 +37,14 @@ import { DOMAIN_ICONS } from "../_lib/domain-icons";
  * product working. Neither is a task list, and nothing here asks anyone to
  * tick off normal household work.
  */
-export async function HomeDashboard({ session }: { session: Session }) {
-  const { supabase, membership, view, viewer, secondary } = session;
-  const householdId = membership.household.id;
+export function HomeDashboard({ session }: { session: Session }) {
+  const { membership, view, viewer, secondary } = session;
   const timezone = membership.household.timezone;
   const now = new Date();
-
-  const [agenda, members, upcoming] = await Promise.all([
-    householdAgenda(supabase, householdId, view),
-    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
-  ]);
-
-  const urgent = agenda.needsYou.filter((item) => item.riskLevel === "high").length;
-  const handledCount = Math.max(0, agenda.checked - agenda.needsYou.length);
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
-  const todayFocus = upcoming.filter((event) => event.startsAt <= endOfToday && event.status !== "cancelled").slice(0, 3);
-  const nextMoment = upcoming.find((event) => event.protected || event.kind === "family_time" || event.kind === "outing") ?? upcoming[0] ?? null;
-
-  const domainTiles = secondary.filter((item) => !["manage", "settings", "notifications", "certification"].includes(item.key));
-
+  // The greeting needs nothing from the database, so it is on screen in the
+  // first flush; everything below it streams in as its queries return.
   return (
     <AppShell active="home" viewer={viewer} secondary={secondary} pathname="/">
       <div className="space-y-6">
@@ -76,6 +62,37 @@ export async function HomeDashboard({ session }: { session: Session }) {
           </div>
         </header>
 
+        <Suspense fallback={<LoadingState rows={4} label="Checking on the household" />}>
+          <DashboardBody session={session} now={now} />
+        </Suspense>
+      </div>
+    </AppShell>
+  );
+}
+
+async function DashboardBody({ session, now }: { session: Session; now: Date }) {
+  const { supabase, membership, view, secondary } = session;
+  const householdId = membership.household.id;
+  const timezone = membership.household.timezone;
+
+  const [agenda, members, upcoming] = await Promise.all([
+    householdAgenda(supabase, householdId, view),
+    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
+  ]);
+
+  const urgent = agenda.needsYou.filter((item) => item.riskLevel === "high").length;
+  const handledCount = Math.max(0, agenda.checked - agenda.needsYou.length);
+
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  const todayFocus = upcoming.filter((event) => event.startsAt <= endOfToday && event.status !== "cancelled").slice(0, 3);
+  const nextMoment = upcoming.find((event) => event.protected || event.kind === "family_time" || event.kind === "outing") ?? upcoming[0] ?? null;
+
+  const domainTiles = secondary.filter((item) => !["manage", "settings", "notifications", "certification"].includes(item.key));
+
+  return (
+    <>
         <MetricGrid
           metrics={[
             { label: "Need attention", value: agenda.needsYou.length, icon: AlertTriangle, tone: "attention" },
@@ -205,7 +222,6 @@ export async function HomeDashboard({ session }: { session: Session }) {
         ) : null}
 
         <QuoteCard>Small steps today, happier tomorrows.</QuoteCard>
-      </div>
-    </AppShell>
+    </>
   );
 }

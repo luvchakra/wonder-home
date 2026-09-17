@@ -92,8 +92,11 @@ export async function POST(request: Request, { params }: Params) {
     const entitlement = await may(supabase, householdId, feature);
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
 
-    const entitled = await consequentialEntitlements(supabase, householdId);
-    const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel });
+    const [entitled, sessionId, autonomyFor] = await Promise.all([
+      consequentialEntitlements(supabase, householdId),
+      openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel }),
+      autonomyLookup(supabase, householdId),
+    ]);
     const pending = await pendingAction(admin, sessionId);
 
     const memberMessageId = await recordMessage(admin, {
@@ -111,7 +114,7 @@ export async function POST(request: Request, { params }: Params) {
       transcriptConfidence: body.transcriptConfidence,
       actor,
       pending: pending ? pendingFrom(pending) : null,
-      autonomyFor: await autonomyLookup(supabase, householdId),
+      autonomyFor,
       entitledFor: (intent) => {
         const needed = FEATURE_FOR_ACTION[intent.action];
         return needed ? entitled[needed] : true;

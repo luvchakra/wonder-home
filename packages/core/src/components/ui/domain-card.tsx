@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { cn } from "../../lib/cn";
@@ -39,9 +40,9 @@ export function DomainCard({ href, icon, tone, title, description, meta, classNa
   );
 
   return href ? (
-    <a href={href} className={cn(base, "wh-lift")}>
+    <Link href={href} className={cn(base, "wh-lift")}>
       {inner}
-    </a>
+    </Link>
   ) : (
     <div className={base}>{inner}</div>
   );

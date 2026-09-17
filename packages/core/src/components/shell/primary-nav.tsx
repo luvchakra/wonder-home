@@ -16,6 +16,7 @@ import {
   Wallet,
   Wrench,
 } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { cn } from "../../lib/cn";
@@ -68,9 +69,9 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
         aria-label="Primary"
         className="sticky top-0 hidden h-dvh w-[var(--wh-sidebar-width)] shrink-0 flex-col border-r border-[var(--wh-border)] bg-[var(--wh-surface)]/60 px-4 py-5 lg:flex"
       >
-        <a href="/" className="mb-6 block px-2">
+        <Link href="/" className="mb-6 block px-2">
           <Wordmark tagline />
-        </a>
+        </Link>
 
         <ul className="space-y-0.5">
           {PRIMARY_NAVIGATION.map((item) => {
@@ -130,7 +131,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
           const isAi = item.key === "ai";
           return (
             <li key={item.key} className="flex-1">
-              <a
+              <Link
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
@@ -152,7 +153,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
                   <Icon className={cn("size-5", isActive && "fill-[var(--wh-primary-soft)]")} />
                 )}
                 <span>{item.label}</span>
-              </a>
+              </Link>
             </li>
           );
         })}
@@ -173,7 +174,7 @@ function SidebarLink({
   active: boolean;
 }) {
   return (
-    <a
+    <Link
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
@@ -185,6 +186,6 @@ function SidebarLink({
     >
       <Icon className="size-[1.125rem] shrink-0" />
       <span className="truncate">{label}</span>
-    </a>
+    </Link>
   );
 }

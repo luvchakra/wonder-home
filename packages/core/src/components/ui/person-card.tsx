@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "../../lib/cn";
 import { Avatar } from "./avatar";
 
@@ -35,9 +36,9 @@ export function PersonCard({ name, role, now, href, badge, className }: PersonCa
   );
 
   return href ? (
-    <a href={href} className={cn(base, "wh-lift")}>
+    <Link href={href} className={cn(base, "wh-lift")}>
       {inner}
-    </a>
+    </Link>
   ) : (
     <div className={base}>{inner}</div>
   );

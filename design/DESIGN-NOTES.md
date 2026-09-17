@@ -106,6 +106,35 @@ scroll reveal, one rAF-throttled listener for parallax, and nothing at all when
 `prefers-reduced-motion` is set. No information depends on animation — the
 Playwright suite checks that headings are readable before they scroll in.
 
+## Performance rules
+
+"Snappy" is a design property, and these are the rules that keep it:
+
+1. **Compute next to the data.** Supabase is in `ap-northeast-1`; `vercel.json`
+   pins the functions to `hnd1`. A page makes tens of queries, and a query
+   across the Pacific is 150–200 ms before it does anything.
+2. **Verify the session locally.** Tokens are ES256, so `getVerifiedUser()`
+   checks the signature against the JWKS (cached process-wide) instead of
+   asking the auth server. The middleware, every page and every API route used
+   to pay that network round trip — now nothing does. `getUser()` remains only
+   as a fallback for a symmetric-key project and for the one screen that needs
+   user metadata.
+3. **Ask once per request.** `createClient`, `getVerifiedUser`,
+   `listMemberships` and `loadSubscription` are wrapped in React's `cache`.
+   The shell, the page and each streamed section share the answers; `may()`
+   for six domains costs one subscription read, not six.
+4. **Navigate, don't reload.** Every link is `next/link`: prefetched in the
+   viewport, rendered client-side, with `app/loading.tsx` answering the tap on
+   the next frame while the screen streams in.
+5. **Shell first, data streams.** A screen renders its header and tabs from the
+   session alone, and wraps its data in `<Suspense>` with a skeleton in the
+   content's shape. Nothing that needs the database blocks the first paint.
+6. **Cache what does not change per visitor.** The landing page's plan
+   catalogue comes from `unstable_cache` with an hourly refresh.
+7. **Ship only what renders.** `optimizePackageImports` keeps lucide and Radix
+   to the handful of icons and primitives each route uses; motion is CSS, and
+   the landing's script is one `IntersectionObserver` and one rAF listener.
+
 ## The mockup sheets and where they disagree
 
 Six sheets are approved references. They differ in detail (one shows a

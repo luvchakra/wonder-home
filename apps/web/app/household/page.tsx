@@ -2,6 +2,8 @@ import { BookOpen, Bot, ChevronRight, Cog, ListChecks, Plug, ShieldCheck, Users 
 
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AUTONOMY_DESCRIPTIONS, type AutonomyMode } from "@wonderhome/core/household/autonomy";
+import Link from "next/link";
+
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
@@ -75,7 +77,7 @@ export default async function ManageHouseholdPage() {
           <ul className="divide-y divide-[var(--wh-border)]">
             {sections.map((section) => (
               <li key={section.title}>
-                <a href={section.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-surface-muted)]">
+                <Link href={section.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-surface-muted)]">
                   <IconTile icon={section.icon} tone={section.tone} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{section.title}</span>
@@ -83,7 +85,7 @@ export default async function ManageHouseholdPage() {
                   </span>
                   {section.badge ? <Badge tone={section.badge.tone}>{section.badge.label}</Badge> : null}
                   <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

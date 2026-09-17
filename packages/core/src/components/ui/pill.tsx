@@ -1,4 +1,5 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
+import Link from "next/link";
+import type { ComponentProps, ButtonHTMLAttributes, ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
 
@@ -32,8 +33,8 @@ export function PillLink({
   tone = "soft",
   className,
   ...props
-}: AnchorHTMLAttributes<HTMLAnchorElement> & { tone?: PillTone }) {
-  return <a {...props} className={cn(BASE, TONE[tone], className)} />;
+}: ComponentProps<typeof Link> & { tone?: PillTone }) {
+  return <Link {...props} className={cn(BASE, TONE[tone], className)} />;
 }
 
 /** A non-interactive state label: "Done", "On track", "Needs review". */

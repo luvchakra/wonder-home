@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { recordAuditEvent } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { verifyUser } from "../db/server";
 
 /**
  * Platform administration (stories 16-001, 16-002, 16-004).
@@ -39,9 +40,7 @@ export function platformCan(admin: PlatformAdmin, capability: string): boolean {
 }
 
 export async function requirePlatformAdmin(supabase: SupabaseClient): Promise<PlatformAdmin> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await verifyUser(supabase);
   if (!user) throw ApiError.unauthenticated();
 
   const { data, error } = await supabase

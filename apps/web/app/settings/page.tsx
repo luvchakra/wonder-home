@@ -1,4 +1,5 @@
 import { Bell, ChevronRight, Database, HelpCircle, KeyRound, Link2, LogOut, Moon, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -9,6 +10,8 @@ import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
+
+import { getVerifiedUser } from "@wonderhome/core/db/server";
 
 import { signOut } from "../(auth)/actions";
 import { requireSession } from "../_lib/session";
@@ -27,10 +30,10 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
 export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: preferenceRows } = await supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId);
+  const [user, { data: preferenceRows }] = await Promise.all([
+    getVerifiedUser(),
+    supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
+  ]);
   const preferences = (preferenceRows as PreferenceRow[] | null) ?? [];
   const inApp = preferences.find((p) => p.channel === "in_app");
 
@@ -85,7 +88,7 @@ export default async function SettingsPage() {
                 );
                 return (
                   <li key={row.title}>
-                    {row.href ? <a href={row.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 hover:bg-[var(--wh-surface-muted)]">{inner}</a> : <div className="flex min-h-14 items-center gap-3 px-2 py-2">{inner}</div>}
+                    {row.href ? <Link href={row.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 hover:bg-[var(--wh-surface-muted)]">{inner}</Link> : <div className="flex min-h-14 items-center gap-3 px-2 py-2">{inner}</div>}
                   </li>
                 );
               })}

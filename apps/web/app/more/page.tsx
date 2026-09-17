@@ -1,5 +1,7 @@
 import { ChevronRight, LogOut } from "lucide-react";
 
+import Link from "next/link";
+
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
@@ -32,7 +34,7 @@ export default async function MorePage() {
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/more">
       <div className="space-y-6">
-        <a
+        <Link
           href="/settings"
           className="wh-rise wh-lift flex items-center gap-3 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-4 shadow-[var(--wh-shadow-card)]"
         >
@@ -44,7 +46,7 @@ export default async function MorePage() {
             </span>
           </span>
           <ChevronRight aria-hidden className="size-5 text-[var(--wh-foreground-subtle)]" />
-        </a>
+        </Link>
 
         <section>
           <SectionHeader title={view.tone === "child" ? "Your areas" : "Household"} />
@@ -64,7 +66,7 @@ export default async function MorePage() {
                   const Icon = DOMAIN_ICONS[item.icon];
                   return (
                     <li key={item.key}>
-                      <a href={item.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 transition-colors hover:bg-[var(--wh-surface-muted)]">
+                      <Link href={item.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 transition-colors hover:bg-[var(--wh-surface-muted)]">
                         <span className="grid size-10 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-muted)]">
                           <Icon className="size-5" />
                         </span>
@@ -73,7 +75,7 @@ export default async function MorePage() {
                           <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{item.purpose}</span>
                         </span>
                         <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
-                      </a>
+                      </Link>
                     </li>
                   );
                 })}

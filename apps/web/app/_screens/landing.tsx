@@ -33,6 +33,8 @@ import { ButtonLink } from "@wonderhome/core/ui/button";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 
+import { unstable_cache } from "next/cache";
+
 import { HomeIllustration } from "../_components/home-illustration";
 import { LandingHeader } from "./landing/header";
 import { AssistantMock, DashboardMock, DesktopMock, FloatingCard, LaptopFrame, PhoneFrame } from "./landing/mockups";
@@ -55,7 +57,12 @@ const PLAN_TAGLINE: Record<string, string> = {
   max: "Let WonderHome Run the Home",
 };
 
-async function loadPlans(): Promise<Plan[]> {
+/**
+ * The plan catalogue changes when a plan is edited, not per visitor, so the
+ * landing page reads it from Next's data cache and refreshes it hourly rather
+ * than querying on every anonymous request.
+ */
+const loadPlans = unstable_cache(async (): Promise<Plan[]> => {
   try {
     const admin = createAdminClient();
     const [{ data: plans }, { data: features }] = await Promise.all([
@@ -79,7 +86,7 @@ async function loadPlans(): Promise<Plan[]> {
       { key: "max", name: "Max", description: "Everything, with autonomous action and deeper integrations.", features: [] },
     ];
   }
-}
+}, ["landing-plans"], { revalidate: 3600 });
 
 export async function Landing() {
   const plans = await loadPlans();

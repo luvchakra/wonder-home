@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { createClient } from "@wonderhome/core/db/server";
+import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { listMemberships } from "@wonderhome/core/identity/households";
 import { Field } from "@wonderhome/core/ui/field";
 
@@ -32,18 +32,16 @@ const COMMON_ZONES = [
  * the one asked for. Currency and location live with the domains that use them.
  */
 export default async function WelcomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, verified] = await Promise.all([createClient(), getVerifiedUser()]);
+  if (!verified) redirect("/sign-in?next=%2Fwelcome");
 
-  if (!user) redirect("/sign-in?next=%2Fwelcome");
-
-  const memberships = await listMemberships(supabase);
+  // The display name given at sign-up lives in user metadata, which the
+  // token does not carry; this is the one screen that needs it.
+  const [memberships, { data: userData }] = await Promise.all([listMemberships(supabase), supabase.auth.getUser()]);
   if (memberships.length > 0) redirect("/");
 
   const suggestedName =
-    typeof user.user_metadata?.display_name === "string" ? user.user_metadata.display_name : "";
+    typeof userData.user?.user_metadata?.display_name === "string" ? userData.user.user_metadata.display_name : "";
 
   return (
     <AuthLayout

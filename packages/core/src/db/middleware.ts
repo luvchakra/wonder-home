@@ -3,14 +3,15 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { publicEnv } from "../config/env";
 import { redirectFor } from "../security/route-policy";
+import { verifyUser } from "./server";
 
 /**
  * Refreshes the Supabase session cookie on every request and applies the
  * route-level gate.
  *
- * getUser() is called deliberately: it verifies the token with the auth server
- * instead of trusting whatever the cookie decodes to, and it is also what keeps
- * the refreshed cookies flowing onto the response.
+ * The token is verified locally against the project's signing keys rather
+ * than by a round trip to the auth server; a refresh, when the token is about
+ * to expire, still flows through the cookie adapter onto the response.
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   let response = NextResponse.next({ request });
@@ -35,9 +36,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await verifyUser(supabase);
 
   const decision = redirectFor(request.nextUrl.pathname, Boolean(user));
   if (decision) {

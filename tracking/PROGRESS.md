@@ -6,9 +6,9 @@
 |---|---:|
 | Total stories | 170 |
 | Done | 129 |
-| In Progress | 0 |
+| In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 41 |
+| Not Started | 40 |
 | Completion | 75.9% |
 | Current module | 17 External Integrations |
 | Current story | 17-002 Calendar |
@@ -169,3 +169,4 @@
 | 2026-09-17 | 01 | 01-006 | Done | 17 unit | Recurring windows plus date exceptions, queryable by the planner |
 | 2026-09-17 | 18 | 18-003/005 | Hardened | 138 E2E, 614 unit | E2E derives the endpoint list from disk; authentication now precedes body validation |
 | 2026-09-17 | UI | v3 UI/UX | Done | 630 unit, 160 E2E | Design system v3: tokens, Inter, motion, 30-component kit, AI assistant (talk/text), 18 screens, landing page |
+| 2026-09-17 | 19 | 19-007 | In Progress | 635 unit, 160 E2E | Perf: functions in hnd1 beside the database, local ES256 verification, per-request query dedup, next/link + loading skeletons, streaming shells |

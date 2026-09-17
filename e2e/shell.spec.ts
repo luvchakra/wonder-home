@@ -43,8 +43,13 @@ test("the old school route still lands somewhere sensible", async ({ page }) => 
 
 test("keyboard users reach main content before anything else", async ({ page }) => {
   await page.goto("/");
+  // The skip link is the first focusable thing in the document; wait for the
+  // page to settle so the first Tab is measured against the finished DOM.
+  const skip = page.getByRole("link", { name: "Skip to main content" });
+  await skip.waitFor({ state: "attached" });
+  await page.waitForLoadState("networkidle");
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
+  await expect(skip).toBeFocused({ timeout: 10_000 });
 });
 
 test("the sign-in screen carries the brand and one task", async ({ page }) => {

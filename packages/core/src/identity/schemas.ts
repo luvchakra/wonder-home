@@ -61,5 +61,7 @@ export type HouseholdMembership = {
   memberId: string;
   displayName: string;
   memberType: MemberType;
+  /** ISO date, when known. Drives the age band; never stored as an age. */
+  dateOfBirth?: string | null;
   roles: HouseholdRole[];
 };

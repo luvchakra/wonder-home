@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "../../lib/cn";
 
 /**
@@ -30,7 +31,7 @@ export function SegmentedControl({
           const isActive = segment.key === active;
           return (
             <li key={segment.key} className="flex-1">
-              <a
+              <Link
                 href={segment.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
@@ -53,7 +54,7 @@ export function SegmentedControl({
                     {segment.count}
                   </span>
                 ) : null}
-              </a>
+              </Link>
             </li>
           );
         })}

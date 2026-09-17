@@ -1,4 +1,5 @@
 import { Bell, ChevronLeft } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
@@ -42,17 +43,17 @@ export function MobileHeader({
     >
       <div className="mx-auto flex h-[var(--wh-header-height)] max-w-[var(--wh-content-wide)] items-center gap-3 px-4 lg:px-8">
         {back ? (
-          <a
+          <Link
             href={back.href}
             aria-label={back.label}
             className="-ml-2 grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
           >
             <ChevronLeft className="size-5" />
-          </a>
+          </Link>
         ) : (
-          <a href="/" aria-label="WonderHome home" className="shrink-0 lg:hidden">
+          <Link href="/" aria-label="WonderHome home" className="shrink-0 lg:hidden">
             <BrandMark size={30} />
-          </a>
+          </Link>
         )}
 
         {title ? (
@@ -71,7 +72,7 @@ export function MobileHeader({
           {trailing}
           {viewer ? (
             <>
-              <a
+              <Link
                 href="/notifications"
                 aria-label={viewer.unread ? `Notifications, ${viewer.unread} unread` : "Notifications"}
                 className="relative grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
@@ -80,14 +81,14 @@ export function MobileHeader({
                 {viewer.unread ? (
                   <span aria-hidden className="absolute top-2.5 right-2.5 size-2 rounded-full bg-[var(--wh-attention)] ring-2 ring-[var(--wh-surface)]" />
                 ) : null}
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/settings"
                 aria-label={`${viewer.displayName}, ${viewer.roleLabel}. Settings and profile`}
                 className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
               >
                 <Avatar name={viewer.displayName} size="sm" />
-              </a>
+              </Link>
             </>
           ) : null}
         </div>

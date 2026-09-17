@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@wonderhome/core/db/server";
+import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { listMemberships } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
@@ -30,10 +30,7 @@ export type Session = {
  * there is no account, onboarding if there is no household yet.
  */
 export async function requireSession(nextPath: string): Promise<Session> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getVerifiedUser()]);
   if (!user) redirect(`/sign-in?next=${encodeURIComponent(nextPath)}`);
 
   const memberships = await listMemberships(supabase);
@@ -47,15 +44,12 @@ export async function buildSession(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
 ): Promise<Session> {
-  const [{ data: memberRow }, unread] = await Promise.all([
-    supabase.from("household_members").select("date_of_birth").eq("id", membership.memberId).maybeSingle(),
-    countUnread(supabase, membership.memberId),
-  ]);
+  // The unread dot is the only thing the shell needs beyond the membership,
+  // and it is not worth waiting for: a failure or a slow count leaves the
+  // dot off rather than the page late.
+  const unread = await countUnread(supabase, membership.memberId).catch(() => 0);
 
-  const view = buildPersonalView(
-    membership,
-    ageBandFor(parseDateOfBirth(memberRow?.date_of_birth as string | null)),
-  );
+  const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
 
   return {
     supabase,

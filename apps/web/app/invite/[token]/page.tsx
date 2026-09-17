@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { createClient } from "@wonderhome/core/db/server";
+import { getVerifiedUser } from "@wonderhome/core/db/server";
 
 import { acceptInvitationAction } from "../../(auth)/household-actions";
 import { AcceptInvitationForm } from "../../_components/accept-invitation-form";
@@ -23,10 +23,7 @@ export default async function AcceptInvitationPage({
 }) {
   const { token } = await params;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getVerifiedUser();
 
   if (!user) redirect(`/sign-in?next=${encodeURIComponent(`/invite/${token}`)}`);
 

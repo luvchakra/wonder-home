@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
@@ -50,7 +51,7 @@ export function NavRow({
 }: Omit<ActionRowProps, "action"> & { href: string }) {
   return (
     <li>
-      <a
+      <Link
         href={href}
         className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-1 py-2 transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
       >
@@ -64,7 +65,7 @@ export function NavRow({
         <span aria-hidden className="shrink-0 text-[var(--wh-foreground-subtle)]">
           ›
         </span>
-      </a>
+      </Link>
     </li>
   );
 }
