@@ -48,6 +48,13 @@ const SHIPPED_TABLES = [
   "study_sessions",
   "school_documents",
   "school_communications",
+  "consumables",
+  "consumable_purchases",
+  "purchase_policies",
+  "cart_suggestions",
+  "merchant_offers",
+  "orders",
+  "order_items",
 ];
 
 /**

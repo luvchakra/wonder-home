@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 96 |
+| Done | 104 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 74 |
-| Completion | 56.5% |
-| Current module | 09 Commerce, Groceries & Pet Supplies |
-| Current story | 09-001 Consumable model |
+| Not Started | 66 |
+| Completion | 61.2% |
+| Current module | 10 Meals & Cooking |
+| Current story | 10-001 Meal outcome |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -27,7 +27,7 @@
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 7 | In Progress |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 8 | Done |
-| 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 0 | Not Started |
+| 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 8 | Done |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 0 | Not Started |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
@@ -71,6 +71,15 @@
 | 2026-09-17 | 08 | 08-006 | Done | 5 unit + db tests | guardianship enforced in the API and again in RLS; refusal does not confirm the file |
 | 2026-09-17 | 08 | 08-007 | Done | 10 unit tests | only an explicit ask or a date surfaces; newsletters are filed |
 | 2026-09-17 | 08 | 08-008 | Done | contract + fixtures | provider seam and scopes ready; nothing claims to be live |
+
+| 2026-09-17 | 09 | 09-001 | Done | 18 unit + 15 db tests | consumption rate plus evidence; the constraint refuses a rate with no basis |
+| 2026-09-17 | 09 | 09-002 | Done | 6 unit tests | a suggestion states why, how much and by when, or is not made |
+| 2026-09-17 | 09 | 09-003 | Done | fixture + contract tests | commerce adapter on the shared connector; no merchant is live |
+| 2026-09-17 | 09 | 09-004 | Done | 13 unit tests | deterministic allow/approve/refuse; silence is never read as consent |
+| 2026-09-17 | 09 | 09-005 | Done | 3 unit + db tests | idempotency derived from the basket, not a clock; a retry cannot buy twice |
+| 2026-09-17 | 09 | 09-006 | Done | 4 unit tests | only a real transition moves an outcome, so polling cannot duplicate a notification |
+| 2026-09-17 | 09 | 09-007 | Done | db + unit tests | pet supplies share the depletion model and stay scoped to the animal |
+| 2026-09-17 | 09 | 09-008 | Done | 6 unit tests | availability and timing filter, price decides; stale quotes excluded |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

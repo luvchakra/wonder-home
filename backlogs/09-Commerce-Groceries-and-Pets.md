@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 09-001 | Consumable model | Not Started | |
-| 2 | P0 | 09-002 | Suggested cart | Not Started | |
-| 3 | P0 | 09-003 | Commerce adapter | Not Started | |
-| 4 | P0 | 09-004 | Purchase approval | Not Started | |
-| 5 | P1 | 09-005 | Auto recurring orders | Not Started | |
-| 6 | P1 | 09-006 | Order tracking | Not Started | |
-| 7 | P1 | 09-007 | Pet supply prediction | Not Started | |
-| 8 | P2 | 09-008 | Merchant optimization | Not Started | |
+| 1 | P0 | 09-001 | Consumable model | Done | a rate and its evidence, never an inventory somebody must keep accurate |
+| 2 | P0 | 09-002 | Suggested cart | Done | every suggestion carries why, how much and by when |
+| 3 | P0 | 09-003 | Commerce adapter | Done | commerce adapter on the shared connector contract; nothing live |
+| 4 | P0 | 09-004 | Purchase approval | Done | one deterministic allow/approve/refuse used by both the API and the tool gate |
+| 5 | P1 | 09-005 | Auto recurring orders | Done | idempotency keyed on the basket, so a retry cannot buy twice |
+| 6 | P1 | 09-006 | Order tracking | Done | only a real transition moves an outcome, so a poll cannot duplicate a notification |
+| 7 | P1 | 09-007 | Pet supply prediction | Done | pet supplies use the same depletion model, scoped to the animal |
+| 8 | P2 | 09-008 | Merchant optimization | Done | cheapest that can actually deliver in time; stale prices are excluded |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

@@ -15,6 +15,7 @@
     "./security/*": "./src/security/*.ts",
     "./api/*": "./src/api/*.ts",
     "./billing/*": "./src/billing/*.ts",
+    "./commerce/*": "./src/commerce/*.ts",
     "./integrations/*": "./src/integrations/*.ts",
     "./ai/*": "./src/ai/*.ts",
     "./identity/*": "./src/identity/*.ts",
