@@ -4,13 +4,13 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 06-001 | Decision engine | Not Started | |
-| 2 | P0 | 06-002 | Actionable types | Not Started | |
-| 3 | P0 | 06-003 | Recipient routing | Not Started | |
-| 4 | P0 | 06-004 | Timing | Not Started | |
-| 5 | P0 | 06-005 | Escalation | Not Started | |
-| 6 | P0 | 06-006 | Lifecycle | Not Started | |
-| 7 | P0 | 06-007 | Threading/grouping | Not Started | |
+| 1 | P0 | 06-001 | Decision engine | Done | One recipient, a reason, and something they can do |
+| 2 | P0 | 06-002 | Actionable types | Done | One recipient, a reason, and something they can do |
+| 3 | P0 | 06-003 | Recipient routing | Done | One recipient, a reason, and something they can do |
+| 4 | P0 | 06-004 | Timing | Done | One recipient, a reason, and something they can do |
+| 5 | P0 | 06-005 | Escalation | Done | One recipient, a reason, and something they can do |
+| 6 | P0 | 06-006 | Lifecycle | Done | One recipient, a reason, and something they can do |
+| 7 | P0 | 06-007 | Threading/grouping | Done | One recipient, a reason, and something they can do |
 | 8 | P1 | 06-008 | Channels | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
