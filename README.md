@@ -117,3 +117,11 @@ The rule is deliberately one-sided: anything the script cannot confidently
 classify as documentation — including a shallow clone with no parent commit to
 compare against — builds. Skipping a build that was needed is a far worse
 failure than running one that was not.
+
+The command locates the script through `git rev-parse --show-toplevel` rather
+than by a relative path, because Vercel runs `ignoreCommand` from the project's
+**Root Directory**, which is not always the repository root. A project whose
+root is `apps/web` would otherwise fail the whole deployment with
+`No such file or directory` — which is exactly what happened once. If the script
+cannot be found at all the command exits 1, so a missing file builds rather than
+breaking anything.
