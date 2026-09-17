@@ -32,17 +32,24 @@ as $$
   )::uuid;
 $$;
 
+-- Roles are cluster-wide, not per-database, so two test databases built at the
+-- same time race here: both pass the existence check, then one CREATE loses on
+-- pg_authid's unique index. Catching duplicate_object makes this safe under
+-- any concurrency rather than relying on the check winning.
 do $$
 begin
-  if not exists (select 1 from pg_roles where rolname = 'anon') then
+  begin
     create role anon nologin noinherit;
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+  exception when duplicate_object then null;
+  end;
+  begin
     create role authenticated nologin noinherit;
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'service_role') then
+  exception when duplicate_object then null;
+  end;
+  begin
     create role service_role nologin noinherit bypassrls;
-  end if;
+  exception when duplicate_object then null;
+  end;
 end $$;
 
 grant usage on schema public to anon, authenticated, service_role;

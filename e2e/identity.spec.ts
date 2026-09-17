@@ -64,3 +64,24 @@ test("an invalid create request is rejected with field-level detail", async ({ r
   // is reported as such rather than masked by the 401.
   expect([400, 401]).toContain(response.status());
 });
+
+test("an invitation link sends a signed-out visitor to sign in and back", async ({ page }) => {
+  await page.goto("/invite/some-invitation-token-value");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Finvite%2Fsome-invitation-token-value/);
+});
+
+test("members and roles is gated", async ({ page }) => {
+  await page.goto("/household/members");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fhousehold%2Fmembers/);
+});
+
+test("the invitations API refuses an anonymous caller", async ({ request }) => {
+  const householdId = "00000000-0000-4000-8000-000000000000";
+  const list = await request.get(`/api/v1/households/${householdId}/invitations`);
+  expect(list.status()).toBe(401);
+
+  const accept = await request.post("/api/v1/invitations/accept", {
+    data: { token: "x".repeat(40) },
+  });
+  expect(accept.status()).toBe(401);
+});

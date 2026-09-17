@@ -5,8 +5,8 @@
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
 | 1 | P0 | 01-001 | Create household and owner | Done | Tenant model + creation path; auth/onboarding UI added (spec gap) |
-| 2 | P0 | 01-002 | Invite adult members | Not Started | |
-| 3 | P0 | 01-003 | Roles and permissions | Not Started | Role model, policies and head/admin separation already landed with 01-001 |
+| 2 | P0 | 01-002 | Invite adult members | Done | Token digests only; expiry, revocation, single use, supersession |
+| 3 | P0 | 01-003 | Roles and permissions | Done | Permission catalogue; deny by default for child and helper |
 | 4 | P0 | 01-004 | Child profiles | Not Started | |
 | 5 | P0 | 01-005 | Personalized views | Not Started | |
 | 6 | P1 | 01-006 | Availability | Not Started | |

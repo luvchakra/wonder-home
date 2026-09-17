@@ -104,3 +104,126 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
     },
   ];
 }
+
+/**
+ * The caller's membership in one household, or a refusal.
+ *
+ * Every household-scoped endpoint starts here: application authorization is
+ * authoritative, so the answer is computed explicitly rather than inferred from
+ * whether a query happened to return rows.
+ */
+export async function requireMembership(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<HouseholdMembership> {
+  const membership = (await listMemberships(supabase)).find(
+    (entry) => entry.household.id === householdId,
+  );
+  // Not a member and no such household give the same answer on purpose: any
+  // other response would confirm that a household with this id exists.
+  if (!membership) throw ApiError.notFound();
+  return membership;
+}
+
+export function isHouseholdAdmin(membership: HouseholdMembership): boolean {
+  return membership.roles.includes("head") || membership.roles.includes("administrator");
+}
+
+export async function requireHouseholdAdmin(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<HouseholdMembership> {
+  const membership = await requireMembership(supabase, householdId);
+  if (!isHouseholdAdmin(membership)) {
+    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can do this.");
+  }
+  return membership;
+}
+
+export type HouseholdMember = {
+  id: string;
+  displayName: string;
+  memberType: MemberType;
+  status: "active" | "invited" | "inactive";
+  roles: HouseholdRole[];
+  isOwner: boolean;
+};
+
+/** Everyone in a household, as any member of it may see them. */
+export async function listMembers(
+  supabase: SupabaseClient,
+  householdId: string,
+  ownerMemberId: string | null,
+): Promise<HouseholdMember[]> {
+  const { data, error } = await supabase
+    .from("household_members")
+    .select("id, display_name, member_type, status, household_roles(role)")
+    .eq("household_id", householdId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`listMembers failed: ${error.code ?? "unknown"}`);
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    displayName: row.display_name as string,
+    memberType: row.member_type as MemberType,
+    status: row.status as HouseholdMember["status"],
+    roles: ((row.household_roles ?? []) as { role: HouseholdRole }[]).map((entry) => entry.role),
+    isOwner: row.id === ownerMemberId,
+  }));
+}
+
+/**
+ * Grants or revokes a role on a member (story 01-003).
+ *
+ * Authorization is decided here, in application code, before the database is
+ * touched: canAssignRole() is authoritative and the RLS policy behind it is the
+ * second line. Both refuse the same things, so neither is load-bearing alone.
+ */
+export async function setMemberRole(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  input: { memberId: string; role: HouseholdRole; granted: boolean },
+): Promise<void> {
+  const { canAssignRole } = await import("./permissions");
+
+  if (!canAssignRole({ roles: actor.roles }, input.role)) {
+    throw ApiError.forbidden(
+      input.role === "administrator"
+        ? "Only the Head of Family can change who administers the household."
+        : "You do not have permission to change roles.",
+    );
+  }
+
+  const householdId = actor.household.id;
+
+  // A member of another household is not this actor's to change; the query is
+  // scoped so a mismatched id simply matches nothing.
+  const { data: target, error: lookupError } = await supabase
+    .from("household_members")
+    .select("id")
+    .eq("id", input.memberId)
+    .eq("household_id", householdId)
+    .maybeSingle();
+
+  if (lookupError) throw new Error(`setMemberRole lookup failed: ${lookupError.code ?? "unknown"}`);
+  if (!target) throw ApiError.notFound("That member is not part of this household.");
+
+  if (input.granted) {
+    const { error } = await supabase
+      .from("household_roles")
+      .upsert(
+        { household_id: householdId, member_id: input.memberId, role: input.role },
+        { onConflict: "household_id,member_id,role" },
+      );
+    if (error) throw new Error(`granting role failed: ${error.code ?? "unknown"}`);
+  } else {
+    const { error } = await supabase
+      .from("household_roles")
+      .delete()
+      .eq("household_id", householdId)
+      .eq("member_id", input.memberId)
+      .eq("role", input.role);
+    if (error) throw new Error(`revoking role failed: ${error.code ?? "unknown"}`);
+  }
+}

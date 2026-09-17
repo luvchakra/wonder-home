@@ -13,6 +13,13 @@ describe("route policy", () => {
     expect(routeRequirement("/welcome")).toBe("authenticated");
   });
 
+  it("sends an invitee to sign in and back to the invitation link", () => {
+    expect(routeRequirement("/invite/abc123")).toBe("authenticated");
+    expect(redirectFor("/invite/abc123", false)).toEqual({
+      redirectTo: "/sign-in?next=%2Finvite%2Fabc123",
+    });
+  });
+
   it("keeps the platform admin boundary separate from household roles", () => {
     expect(routeRequirement("/platform-admin")).toBe("platform-admin");
     expect(routeRequirement("/platform-admin/households")).toBe("platform-admin");
