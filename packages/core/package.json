@@ -1,0 +1,42 @@
+{
+  "name": "@wonderhome/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./ui-theme.css": "./src/ui-theme.css",
+    "./lib/*": "./src/lib/*.ts",
+    "./config/*": "./src/config/*.ts",
+    "./security/*": "./src/security/*.ts",
+    "./api/*": "./src/api/*.ts",
+    "./db/*": "./src/db/*.ts",
+    "./observability/*": "./src/observability/*.ts",
+    "./navigation/*": "./src/navigation/*.ts",
+    "./shell/*": "./src/components/shell/*.tsx",
+    "./ui/*": "./src/components/ui/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "peerDependencies": {
+    "next": "16.3.4"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.6",
+    "@supabase/supabase-js": "^2.115.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  }
+}

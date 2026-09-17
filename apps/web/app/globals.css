@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "@wonderhome/core/ui-theme.css";
+
+@theme inline {
+  --color-background: var(--wh-background);
+  --color-surface: var(--wh-surface);
+  --color-surface-muted: var(--wh-surface-muted);
+  --color-border: var(--wh-border);
+  --color-foreground: var(--wh-foreground);
+  --color-foreground-muted: var(--wh-foreground-muted);
+  --color-foreground-subtle: var(--wh-foreground-subtle);
+  --color-primary: var(--wh-primary);
+  --color-primary-foreground: var(--wh-primary-foreground);
+  --color-attention: var(--wh-attention);
+  --color-risk: var(--wh-risk);
+  --color-handled: var(--wh-handled);
+  --color-info: var(--wh-info);
+  --radius-card: var(--wh-radius);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--wh-background);
+  color: var(--wh-foreground);
+  font-synthesis-weight: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

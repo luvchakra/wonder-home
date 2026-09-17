@@ -1,0 +1,28 @@
+{
+  "name": "wonderhome",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "start": "npm run start -w apps/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present && npm run test:scripts",
+    "test:e2e": "playwright test",
+    "lint:boundaries": "node scripts/lint-import-boundaries.mjs",
+    "lint:migrations": "node scripts/lint-migration-schema.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "typescript": "^5.9.3"
+  }
+}
