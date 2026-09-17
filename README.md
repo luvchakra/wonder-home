@@ -104,3 +104,16 @@ not by itself evidence that the deployment is configured.
 
 After deploying, `npm run verify:live` against the same project confirms every
 migration landed and the privileged path works.
+
+### Which commits build
+
+A deployment platform builds every push, and a large share of this repository's
+commits touch only the backlog, the trackers or a README — none of which can
+change a byte of the built application. `vercel.json` therefore points
+`ignoreCommand` at `scripts/vercel-should-build.sh`, which builds unless every
+changed path is documentation.
+
+The rule is deliberately one-sided: anything the script cannot confidently
+classify as documentation — including a shallow clone with no parent commit to
+compare against — builds. Skipping a build that was needed is a far worse
+failure than running one that was not.
