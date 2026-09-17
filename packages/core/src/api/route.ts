@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { reportError } from "../observability/error-reporter";
 import { ApiError, toErrorBody } from "./errors";
+import { idempotencyKeyFrom, withIdempotency, type IdempotencyStore } from "./idempotency";
 import { REQUEST_ID_HEADER, requestIdFrom } from "./request-id";
 
 /**
@@ -20,11 +21,19 @@ export type RouteContext<TBody> = {
   request: Request;
   requestId: string;
   body: TBody;
+  /** Present when the caller sent an Idempotency-Key. */
+  idempotencyKey: string | null;
 };
 
 export type RouteOptions<TSchema extends z.ZodTypeAny | undefined> = {
   /** Zod schema for the JSON request body. Omit for methods without one. */
   input?: TSchema;
+  /**
+   * Makes the handler replay-safe when the caller sends an Idempotency-Key.
+   * The store is resolved per request, because it is scoped to the household
+   * the caller turns out to belong to.
+   */
+  idempotency?: (context: { request: Request }) => Promise<IdempotencyStore | null>;
 };
 
 type Handler<TBody> = (context: RouteContext<TBody>) => Promise<unknown> | unknown;
@@ -54,18 +63,28 @@ export function defineRoute<TSchema extends z.ZodTypeAny | undefined = undefined
         body = parsed.data;
       }
 
-      const result = await handler({
-        request,
-        requestId,
-        body: body as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : undefined,
-      });
+      const idempotencyKey = idempotencyKeyFrom(request.headers);
+      const typedBody = body as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : undefined;
 
-      if (result instanceof Response) {
-        result.headers.set(REQUEST_ID_HEADER, requestId);
-        return result;
+      const run = async () => {
+        const result = await handler({ request, requestId, body: typedBody, idempotencyKey });
+        return result instanceof Response
+          ? { status: result.status, body: await result.clone().json().catch(() => null) }
+          : { status: 200, body: result };
+      };
+
+      // Only a declared endpoint participates: idempotency changes retry
+      // semantics, so it is opted into rather than applied to everything.
+      if (!options.idempotency || !idempotencyKey) {
+        const { status, body: payload } = await run();
+        return json(payload, status, requestId);
       }
 
-      return json(result, 200, requestId);
+      const store = await options.idempotency({ request });
+      const endpoint = `${request.method} ${new URL(request.url).pathname}`;
+      const replayed = await withIdempotency(store, { key: idempotencyKey, endpoint, body: typedBody }, run);
+
+      return json(replayed.body, replayed.status, requestId);
     } catch (thrown) {
       const { status, body } = toErrorBody(thrown, requestId);
 

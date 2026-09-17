@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 15 |
+| Done | 21 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 155 |
-| Completion | 8.8% |
-| Current module | 01 Identity & Family Accounts |
-| Current story | 01-006 Availability |
+| Not Started | 149 |
+| Completion | 12.4% |
+| Current module | 18 API & Developer Platform |
+| Current story | 18-007 Webhooks and events |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -36,7 +36,7 @@
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 0 | Not Started |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 0 | Not Started |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 0 | Not Started |
-| 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 0 | Not Started |
+| 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 0 | Not Started |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 0 | Not Started |
 
@@ -67,3 +67,9 @@
 | 2026-09-17 | 01 | 01-003 | Done | 9 RLS, 12 unit | Permission catalogue, role assignment API and head-only admin designation |
 | 2026-09-17 | 01 | 01-004 | Done | 10 RLS, 9 unit | Guardian-controlled children with no account; age derived, never stored |
 | 2026-09-17 | 01 | 01-005 | Done | 8 unit, 1 E2E | Views assembled server-side; forbidden sections absent from the payload |
+| 2026-09-17 | 18 | 18-001 | Done | 44 E2E, 19 unit | /api/v1 established in 00-007; contract verified end to end |
+| 2026-09-17 | 18 | 18-002 | Done | 6 unit | One error envelope; validation detail without echoing values |
+| 2026-09-17 | 18 | 18-003 | Done | 41 database | Identity plus household scope on every endpoint, RLS behind it |
+| 2026-09-17 | 18 | 18-004 | Done | 13 unit | Idempotency-Key replay, fingerprinted, scoped per household and endpoint |
+| 2026-09-17 | 18 | 18-005 | Done | 9 unit, 1 E2E | OpenAPI generated from the same Zod schemas the routes validate with |
+| 2026-09-17 | 18 | 18-006 | Done | 5 unit | Audit hooks: redacted metadata, never throwing, append-only |
