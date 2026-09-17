@@ -7,7 +7,7 @@
 | 1 | P0 | 00-001 | Initialize WonderHome monorepo | Done | apps/web + packages/core; npm workspaces |
 | 2 | P0 | 00-002 | Pin WonderArk-aligned stack | Done | Versions verified against founder-collab manifests |
 | 3 | P0 | 00-003 | Create application shell | Done | Tokens + shell + 5 primary areas |
-| 4 | P0 | 00-004 | Configure Supabase foundation | Not Started | |
+| 4 | P0 | 00-004 | Configure Supabase foundation | Done | Env contract + clients; migration 20260917003323 applied |
 | 5 | P0 | 00-005 | Configure quality gates | Not Started | |
 | 6 | P0 | 00-006 | Configure CI baseline | Not Started | |
 | 7 | P0 | 00-007 | Create API foundation | Not Started | |
