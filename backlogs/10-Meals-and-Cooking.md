@@ -4,14 +4,14 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 10-001 | Meal outcome | Not Started | |
-| 2 | P0 | 10-002 | Meal planning | Not Started | |
-| 3 | P0 | 10-003 | Ingredient dependencies | Not Started | |
-| 4 | P0 | 10-004 | Cooking responsibility | Not Started | |
-| 5 | P1 | 10-005 | Adaptive replanning | Not Started | |
-| 6 | P1 | 10-006 | Recipe intelligence | Not Started | |
-| 7 | P2 | 10-007 | Advanced nutrition | Not Started | |
-| 8 | P2 | 10-008 | Cooking automation hooks | Not Started | |
+| 1 | P0 | 10-001 | Meal outcome | Done | readiness for eating, with no preparation step anybody ticks |
+| 2 | P0 | 10-002 | Meal planning | Done | plans against real time, preferences and what is actually in |
+| 3 | P0 | 10-003 | Ingredient dependencies | Done | a shortage writes a shopping suggestion, never an informational note |
+| 4 | P0 | 10-004 | Cooking responsibility | Done | the cook is a named responsibility; an absent cook is raised before the clock |
+| 5 | P1 | 10-005 | Adaptive replanning | Done | replans on change but will not move protected family time on its own |
+| 6 | P1 | 10-006 | Recipe intelligence | Done | every recommendation names a next action: cook, shop, substitute or defer |
+| 7 | P2 | 10-007 | Advanced nutrition | Done | preference scope and source kept so a dislike never becomes a house rule |
+| 8 | P2 | 10-008 | Cooking automation hooks | Done | readiness accepts an observed source, so an appliance signal has somewhere to land |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

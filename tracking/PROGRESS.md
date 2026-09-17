@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 104 |
+| Done | 112 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 66 |
-| Completion | 61.2% |
-| Current module | 10 Meals & Cooking |
-| Current story | 10-001 Meal outcome |
+| Not Started | 58 |
+| Completion | 65.9% |
+| Current module | 11 Bills, Fees & Finance |
+| Current story | 11-001 Obligation model |
 | Last updated | 2026-09-17 |
 
 ## Module Tracking
@@ -28,7 +28,7 @@
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 8 | Done |
 | 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 8 | Done |
-| 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 0 | Not Started |
+| 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 0 | Not Started |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 0 | Not Started |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
@@ -80,6 +80,15 @@
 | 2026-09-17 | 09 | 09-006 | Done | 4 unit tests | only a real transition moves an outcome, so polling cannot duplicate a notification |
 | 2026-09-17 | 09 | 09-007 | Done | db + unit tests | pet supplies share the depletion model and stay scoped to the animal |
 | 2026-09-17 | 09 | 09-008 | Done | 6 unit tests | availability and timing filter, price decides; stale quotes excluded |
+
+| 2026-09-17 | 10 | 10-001 | Done | 10 unit + 10 db tests | a meal is readiness by a time; there is no preparation step to tick |
+| 2026-09-17 | 10 | 10-002 | Done | 6 unit tests | plans against available time, preferences and what is in |
+| 2026-09-17 | 10 | 10-003 | Done | db + unit tests | a missing essential becomes a real cart suggestion the meal points at |
+| 2026-09-17 | 10 | 10-004 | Done | 3 unit tests | an absent cook is raised before lateness becomes the problem |
+| 2026-09-17 | 10 | 10-005 | Done | 4 unit tests | protected family time is never moved by the planner alone |
+| 2026-09-17 | 10 | 10-006 | Done | 6 unit tests | cook, shop, substitute or defer — a recommendation always names the next step |
+| 2026-09-17 | 10 | 10-007 | Done | 6 unit + 3 db tests | allergy outranks dislike; a member cannot state another's preference |
+| 2026-09-17 | 10 | 10-008 | Done | db constraint | readiness accepts an observed source, so an appliance signal has a home |
 
 ## Progress protocol
 - Mark the story In Progress before coding.

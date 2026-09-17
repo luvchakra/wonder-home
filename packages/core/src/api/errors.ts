@@ -60,6 +60,11 @@ export class ApiError extends Error {
   static notFound(message = "Not found.") {
     return new ApiError("not_found", message);
   }
+
+  /** The request was valid but the world already says otherwise. */
+  static conflict(message: string, details?: unknown) {
+    return new ApiError("conflict", message, details);
+  }
 }
 
 export function statusForCode(code: ApiErrorCode): number {

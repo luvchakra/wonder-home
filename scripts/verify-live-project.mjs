@@ -55,6 +55,11 @@ const SHIPPED_TABLES = [
   "merchant_offers",
   "orders",
   "order_items",
+  "recipes",
+  "recipe_ingredients",
+  "food_preferences",
+  "meals",
+  "meal_ingredient_needs",
 ];
 
 /**
@@ -86,6 +91,12 @@ const EMBEDDED_READS = [
     table: "household_members",
     select:
       "id, display_name, date_of_birth, member_guardians!member_guardians_child_member_id_fkey(guardian_member_id)",
+  },
+  {
+    name: "meals embed resolves",
+    table: "meals",
+    select:
+      "id, name, slot, on_date, ready_by, cook_member_id, status, ready_at, recipes(id, name, active_minutes, total_minutes, serves), meal_ingredient_needs(name, consumable_id, quantity, unit, essential, status, substitute_name)",
   },
   {
     name: "pet care embed resolves",
