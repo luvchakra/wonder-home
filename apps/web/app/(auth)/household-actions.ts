@@ -139,3 +139,55 @@ export async function setMemberRoleAction(formData: FormData): Promise<void> {
 
   revalidatePath("/household/members");
 }
+
+const addChildSchema = z.object({
+  householdId: z.uuid(),
+  displayName: z.string().trim().min(1, { error: "Give them a name." }).max(80),
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Use a date like 2016-09-18." })
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+});
+
+/**
+ * Adds a child to the household. A child has no account of their own, so there
+ * is no invitation to send and nothing for them to accept.
+ */
+export async function addChildAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = addChildSchema.safeParse({
+    householdId: formData.get("householdId"),
+    displayName: formData.get("displayName"),
+    dateOfBirth: formData.get("dateOfBirth") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+
+  const supabase = await createClient();
+  const { createChildMember } = await import("@wonderhome/core/identity/children");
+  const { requireHouseholdAdmin } = await import("@wonderhome/core/identity/households");
+
+  try {
+    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await createChildMember(supabase, {
+      householdId: parsed.data.householdId,
+      displayName: parsed.data.displayName,
+      dateOfBirth: parsed.data.dateOfBirth ?? null,
+      // The adult adding the child is their guardian by default; others can be
+      // added afterwards.
+      guardianMemberIds: [actor.memberId],
+    });
+  } catch (error) {
+    log.warn("adding a child failed", {
+      reason: error instanceof Error ? error.name : "unknown",
+    });
+    return { error: "We could not add that child. Please try again." };
+  }
+
+  revalidatePath("/household/members");
+  return {};
+}

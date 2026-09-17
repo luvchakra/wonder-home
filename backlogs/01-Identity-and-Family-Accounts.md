@@ -7,7 +7,7 @@
 | 1 | P0 | 01-001 | Create household and owner | Done | Tenant model + creation path; auth/onboarding UI added (spec gap) |
 | 2 | P0 | 01-002 | Invite adult members | Done | Token digests only; expiry, revocation, single use, supersession |
 | 3 | P0 | 01-003 | Roles and permissions | Done | Permission catalogue; deny by default for child and helper |
-| 4 | P0 | 01-004 | Child profiles | Not Started | |
+| 4 | P0 | 01-004 | Child profiles | Done | No account needed; guardianship links; age bands derived on read |
 | 5 | P0 | 01-005 | Personalized views | Not Started | |
 | 6 | P1 | 01-006 | Availability | Not Started | |
 | 7 | P1 | 01-007 | Preferences | Not Started | |

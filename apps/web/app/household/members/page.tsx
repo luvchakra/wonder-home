@@ -10,6 +10,7 @@ import { listInvitations } from "@wonderhome/core/identity/invitations";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 
+import { AddChildForm } from "../../_components/add-child-form";
 import { InviteMemberForm } from "../../_components/invite-member-form";
 import { MemberRoleControl } from "../../_components/member-role-control";
 import { PendingInvitations } from "../../_components/pending-invitations";
@@ -82,6 +83,7 @@ export default async function MembersPage() {
               canInviteAdministrator={membership.roles.includes("head")}
             />
             <PendingInvitations invitations={invitations} />
+            <AddChildForm householdId={membership.household.id} />
           </>
         ) : (
           <Card>
