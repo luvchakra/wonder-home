@@ -247,6 +247,29 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/operations": {
+        get: {
+          summary: "Platform operations overview",
+          description:
+            "Aggregate counts only, behind the platform boundary. A caller who is not staff receives 404 rather than 403.",
+          responses: {
+            "200": { description: "Platform-wide counts" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/platform-admin/support-access": {
+        post: {
+          summary: "Grant time-boxed access to one household",
+          description:
+            "Reason-coded and bounded to at most 24 hours. The grant is readable by the household's administrators and audited, so a family can see who looked at their home and why.",
+          responses: {
+            "201": { description: "The grant and when it expires" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

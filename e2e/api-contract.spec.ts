@@ -73,3 +73,19 @@ test("readiness reports each dependency without describing the deployment", asyn
   const serialized = JSON.stringify(report);
   expect(serialized).not.toMatch(/supabase\.co|postgres|password|key/i);
 });
+
+test("the platform admin boundary does not admit a household session", async ({ request }) => {
+  // 404 rather than 403: confirming the boundary exists would tell a caller
+  // where to point the next attempt.
+  const operations = await request.get("/api/v1/platform-admin/operations");
+  expect([401, 404]).toContain(operations.status());
+
+  const grant = await request.post("/api/v1/platform-admin/support-access", {
+    data: {
+      householdId: "00000000-0000-4000-8000-000000000000",
+      reasonCode: "user_reported_issue",
+      reasonNote: "An anonymous caller should never reach this",
+    },
+  });
+  expect([401, 404]).toContain(grant.status());
+});

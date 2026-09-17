@@ -4,10 +4,10 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 16-001 | Separate admin boundary | Not Started | |
-| 2 | P0 | 16-002 | Admin roles | Not Started | |
-| 3 | P0 | 16-003 | Operations dashboard | Not Started | |
-| 4 | P0 | 16-004 | Support access | Not Started | |
+| 1 | P0 | 16-001 | Separate admin boundary | Done | Separate boundary; household roles confer nothing here |
+| 2 | P0 | 16-002 | Admin roles | Done | Platform capabilities per role, tested |
+| 3 | P0 | 16-003 | Operations dashboard | Done | Aggregate counts behind the boundary |
+| 4 | P0 | 16-004 | Support access | Done | Grants bounded to 24h; household can read them |
 | 5 | P0 | 16-005 | Subscription administration | Not Started | |
 | 6 | P0 | 16-006 | AI operations | Not Started | |
 | 7 | P1 | 16-007 | Privacy requests | Not Started | |

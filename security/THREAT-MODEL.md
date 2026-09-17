@@ -54,7 +54,7 @@ what the household spends, who is in the house and when.
 | T19 | Prompt injection through household content | Deterministic authorization outside the model; tools validate identity, scope, role and policy independently of anything the model says | **Planned** — module 14; the rule is fixed in `CLAUDE.md`, the enforcement arrives with the tools |
 | T20 | SSRF via integration URLs | Allow-list of provider hosts, no caller-supplied fetch targets | **Planned** — module 17 |
 | T21 | Hostile data from a provider | Provider-neutral adapters; parse and validate before use; never treat provider text as instructions | **Planned** — module 17 |
-| T22 | Support access used beyond its purpose | Reason-coded, time-boxed grants, audited | **Planned** — module 16 |
+| T22 | Support access used beyond its purpose | Reason-coded grants bounded to 24h, revocable, audited, and readable by the household they concern | **Built** — `scripts/test-platform-admin-rls.mjs` |
 | T23 | Data retained past its purpose | Retention policy per data class; deletion that actually deletes | **Planned** — 15-007 |
 | T24 | Household content used to train a model | Provider configuration and consent checked before sensitive content is sent | **Planned** — 15-005 |
 | T25 | Abuse and brute force | Rate limiting on authentication and expensive endpoints | **Planned** — 15-008 |
