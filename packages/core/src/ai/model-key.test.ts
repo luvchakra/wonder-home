@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { describeKeySource, platformKey, resolveModelKey } from "./model-key";
 
 describe("which key answers for a household", () => {
-  const theirs = { provider: "anthropic" as const, key: "sk-household-0123456789" };
-  const ours = { provider: "anthropic" as const, key: "sk-platform-0123456789" };
+  const theirs = { provider: "anthropic" as const, key: "household-key-for-tests-only" };
+  const ours = { provider: "anthropic" as const, key: "platform-key-for-tests-only" };
 
   it("uses WonderHome's own key when the household has not set one", () => {
     expect(resolveModelKey(null, ours)).toEqual({
@@ -43,9 +43,9 @@ describe("the platform's own key", () => {
   });
 
   it("defaults to Anthropic, which CLAUDE.md names as the primary provider", () => {
-    expect(platformKey({ WONDERHOME_AI_KEY: "sk-ant-0123456789012345" })).toEqual({
+    expect(platformKey({ WONDERHOME_AI_KEY: "platform-key-for-tests-only" })).toEqual({
       provider: "anthropic",
-      key: "sk-ant-0123456789012345",
+      key: "platform-key-for-tests-only",
     });
   });
 
