@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 
 import { listEvents } from "@wonderhome/core/family/repository";
+import { assessSetup, setupWindow } from "@wonderhome/core/household/setup";
+import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { AvatarGroup } from "@wonderhome/core/ui/avatar";
@@ -21,6 +23,7 @@ import { HandledList } from "@wonderhome/core/ui/outcome-card";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
+import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
 
@@ -75,11 +78,20 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
 
-  const [agenda, members, upcoming] = await Promise.all([
+  // Setup guidance is for the people who can act on it: the Head of Family
+  // and administrators. Prominent for their first week, one quiet row after,
+  // gone at 100%.
+  const manages = view.permissions.includes("household.manage");
+
+  const [agenda, members, upcoming, setupFacts] = await Promise.all([
     householdAgenda(supabase, householdId, view),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
+    manages ? loadSetupFacts(supabase, membership.household).catch(() => null) : Promise.resolve(null),
   ]);
+
+  const setup = setupFacts ? assessSetup(setupFacts) : null;
+  const week = setupWindow({ firstSeenAt: membership.firstSeenAt, adminSince: membership.adminSince, now });
 
   const urgent = agenda.needsYou.filter((item) => item.riskLevel === "high").length;
   const handledCount = Math.max(0, agenda.checked - agenda.needsYou.length);
@@ -93,6 +105,12 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
   return (
     <>
+        {setup && week.prominent ? (
+          <SetupProgressCard assessment={setup} variant="prominent" daysLeft={week.daysLeft} />
+        ) : setup && !setup.complete ? (
+          <SetupProgressCard assessment={setup} variant="compact" />
+        ) : null}
+
         <MetricGrid
           metrics={[
             { label: "Need attention", value: agenda.needsYou.length, icon: AlertTriangle, tone: "attention" },

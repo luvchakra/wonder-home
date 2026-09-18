@@ -1,5 +1,7 @@
 import { BookOpen, Bot, ChevronRight, Cog, ListChecks, Plug, ShieldCheck, Users } from "lucide-react";
 
+import { assessSetup } from "@wonderhome/core/household/setup";
+import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AUTONOMY_DESCRIPTIONS, type AutonomyMode } from "@wonderhome/core/household/autonomy";
 import Link from "next/link";
@@ -10,6 +12,7 @@ import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
+import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { requireSession } from "../_lib/session";
@@ -41,13 +44,15 @@ export default async function ManageHouseholdPage() {
     );
   }
 
-  const [{ count: memberCount }, playbook, policies, responsibilities, integrations] = await Promise.all([
+  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts] = await Promise.all([
     supabase.from("household_members").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "active"),
     supabase.from("playbook_items").select("id, name, outcome_definition, active").eq("household_id", householdId).order("name"),
     supabase.from("policies").select("id, category, name, active").eq("household_id", householdId).eq("active", true).order("category"),
     supabase.from("responsibilities").select("ai_mode").eq("household_id", householdId),
     listIntegrations(supabase, householdId).catch(() => []),
+    loadSetupFacts(supabase, membership.household).catch(() => null),
   ]);
+  const setup = setupFacts ? assessSetup(setupFacts) : null;
 
   const items = (playbook.data as PlaybookRow[] | null) ?? [];
   const rules = (policies.data as PolicyRow[] | null) ?? [];
@@ -72,6 +77,8 @@ export default async function ManageHouseholdPage() {
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Manage household</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{membership.household.name} — who does what, how the home runs, and how much WonderHome may do on its own.</p>
         </header>
+
+        {setup ? <SetupProgressCard assessment={setup} variant="full" /> : null}
 
         <Card className="p-2">
           <ul className="divide-y divide-[var(--wh-border)]">

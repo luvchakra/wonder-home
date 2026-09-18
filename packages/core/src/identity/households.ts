@@ -35,11 +35,12 @@ type MembershipRow = {
   display_name: string;
   member_type: MemberType;
   date_of_birth?: string | null;
+  first_seen_at?: string | null;
   // A to-one embed comes back as an object, but the client's inferred types
   // describe every embed as an array, so both shapes are accepted here rather
   // than asserted away.
   households: HouseholdRow | HouseholdRow[] | null;
-  household_roles: { role: HouseholdRole }[] | null;
+  household_roles: { role: HouseholdRole; created_at?: string | null }[] | null;
 };
 
 /**
@@ -90,7 +91,7 @@ export const listMemberships = cache(async (supabase: SupabaseClient): Promise<H
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, member_type, date_of_birth, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role)",
+      "id, display_name, member_type, date_of_birth, first_seen_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role, created_at)",
     )
     .eq("status", "active");
 
@@ -110,6 +111,8 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
       memberType: row.member_type,
       dateOfBirth: row.date_of_birth ?? null,
       roles: (row.household_roles ?? []).map((entry) => entry.role),
+      firstSeenAt: row.first_seen_at ?? null,
+      adminSince: adminSince(row.household_roles ?? []),
       household: {
         id: household.id,
         name: household.name,
@@ -242,4 +245,13 @@ export async function setMemberRole(
       .eq("role", input.role);
     if (error) throw new Error(`revoking role failed: ${error.code ?? "unknown"}`);
   }
+}
+
+/** The most recent grant of head or administrator: when this person's setup week begins. */
+function adminSince(roles: readonly { role: HouseholdRole; created_at?: string | null }[]): string | null {
+  const grants = roles
+    .filter((entry) => (entry.role === "head" || entry.role === "administrator") && entry.created_at)
+    .map((entry) => entry.created_at as string)
+    .sort();
+  return grants.length > 0 ? grants[grants.length - 1]! : null;
 }

@@ -154,6 +154,7 @@ Recorded so they are not mistaken for scope creep:
 | Household setup is "step 2 of 4" in v3 but there is no profile step and inviting is optional | Sign up → household → done, shown as 3 steps | `AuthLayout` |
 | Child Goals tab has no backing model | An honest "coming" state rather than a fake streak | `/?tab=goals` |
 | MFA, data export and deletion (v3 §23) are not built | Listed as *Soon*, never as a working button | `/settings` |
+| No story covers first-week onboarding for the Head of Family or an administrator | A household-setup card, prominent on Home for that person's first week (from their own first sign-in or promotion), one quiet row afterwards, gone at 100%; the full checklist on Manage Household. The percentage is weighted arithmetic over facts that exist, steps that do not apply (no children, no helper) are left out, and 100% is shown as an achievement | `household/setup.ts`, `ui/setup-progress.tsx` |
 
 ## The shared UI kit
 

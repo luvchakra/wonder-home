@@ -47,7 +47,10 @@ export async function buildSession(
   // The unread dot is the only thing the shell needs beyond the membership,
   // and it is not worth waiting for: a failure or a slow count leaves the
   // dot off rather than the page late.
-  const unread = await countUnread(supabase, membership.memberId).catch(() => 0);
+  const [unread] = await Promise.all([
+    countUnread(supabase, membership.memberId).catch(() => 0),
+    markFirstSeen(supabase, membership),
+  ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
 
@@ -63,6 +66,24 @@ export async function buildSession(
     },
     secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }),
   };
+}
+
+/**
+ * Records this person's first sign-in to the household, once.
+ *
+ * The moment starts their week of setup guidance. It is written by a
+ * definer function that only fills an empty value, so nobody — this code
+ * included — can move it later. A failure leaves the membership as it was;
+ * the screen then treats them as brand new, which is the safe direction.
+ */
+async function markFirstSeen(supabase: SupabaseClient, membership: HouseholdMembership): Promise<void> {
+  if (membership.firstSeenAt) return;
+  try {
+    const { data } = await supabase.rpc("mark_member_seen", { p_household_id: membership.household.id });
+    if (typeof data === "string") membership.firstSeenAt = data;
+  } catch {
+    // Not worth failing a page for.
+  }
 }
 
 async function countUnread(supabase: SupabaseClient, memberId: string): Promise<number> {

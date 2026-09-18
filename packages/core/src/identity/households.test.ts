@@ -26,6 +26,8 @@ describe("membership mapping", () => {
         displayName: "Kunal",
         memberType: "adult",
         dateOfBirth: null,
+        firstSeenAt: null,
+        adminSince: null,
         roles: ["head"],
         household: {
           id: "h-1",

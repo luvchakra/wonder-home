@@ -202,6 +202,9 @@ async function main() {
   });
   check("anonymous cannot forge an audit event", Boolean(forged.error), forged.error?.code ?? "no error");
 
+  const seen = await anon.rpc("mark_member_seen", { p_household_id: "00000000-0000-4000-8000-000000000000" });
+  check("anonymous cannot record a first sign-in", Boolean(seen.error), seen.error?.code ?? "no error");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

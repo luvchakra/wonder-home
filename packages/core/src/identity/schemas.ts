@@ -64,4 +64,8 @@ export type HouseholdMembership = {
   /** ISO date, when known. Drives the age band; never stored as an age. */
   dateOfBirth?: string | null;
   roles: HouseholdRole[];
+  /** When this person first signed in to this household; null until they have. */
+  firstSeenAt?: string | null;
+  /** When they most recently became head or administrator; null if they are neither. */
+  adminSince?: string | null;
 };

@@ -171,3 +171,4 @@
 | 2026-09-17 | UI | v3 UI/UX | Done | 630 unit, 160 E2E | Design system v3: tokens, Inter, motion, 30-component kit, AI assistant (talk/text), 18 screens, landing page |
 | 2026-09-17 | 19 | 19-007 | In Progress | 635 unit, 160 E2E | Perf: functions in bom1 beside the database (migrated to the ap-south-1 project, 23 migrations, verify:live 59/59), local ES256 verification, per-request query dedup, next/link + loading skeletons, streaming shells |
 | 2026-09-18 | 17 | 17-002 | Done | 34 unit, E2E endpoint suite | Calendar connector: imported events never protected or confirmed, private entries are time only, partial sync never cancels, identities mapped by a person (integration_identities) |
+| 2026-09-18 | UI | Household setup | Done | 19 unit | First-week setup guidance for head/admin: weighted progress ring, next steps with a reason each, achievement at 100%; first sign-in recorded once per member (mark_member_seen) |
