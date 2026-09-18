@@ -101,4 +101,12 @@ Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests 
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 
+**Regenerate `docs/PROGRESS.md` after every story status change.** Run
+`npm run tracker`. It projects all twenty-one backlogs into one page — where
+the whole application stands, what is left, and every story with its status —
+so nobody has to read twenty-one files to answer "what is done". The backlogs
+stay the source of truth: edit the story's row there, then regenerate. Never
+edit `docs/PROGRESS.md` by hand; CI runs `npm run tracker -- --check` and
+fails when it is out of date.
+
 **Write a progress note in `docs/progress/` after every major activity.** A major activity is anything a reader would want to find later without reading git history: a story or module completed, an infrastructure change (a database or hosting move, a new provider, a region change), a design-system or performance pass, a security fix, or a decision that shapes later work. Name the file `YYYY-MM-DD-short-slug.md` and write it before moving on to the next activity, not at the end of the session. Each note says what was done, why, what was verified (which gates ran and their results), what is still open or needs a person, and where the code lives. `docs/progress/README.md` is the index: add every new note to it. The trackers say *that* something is done; these notes say *what it was and how to pick it up*.

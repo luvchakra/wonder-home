@@ -23,7 +23,8 @@
     "test:scripts": "node --test scripts/*.test.mjs",
     "test:db": "node --test --test-concurrency=1 scripts/test-*-rls.mjs",
     "lint:secrets": "node scripts/lint-secrets.mjs",
-    "verify:live": "node scripts/verify-live-project.mjs"
+    "verify:live": "node scripts/verify-live-project.mjs",
+    "tracker": "node scripts/build-progress.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
