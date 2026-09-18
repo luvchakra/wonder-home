@@ -7,7 +7,11 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { AUTONOMY_MODES } from "@wonderhome/core/household/autonomy";
 import { POLICY_CATEGORIES } from "@wonderhome/core/household/configuration";
+import { proposeConfiguration } from "@wonderhome/core/household/configuration-intent";
 import {
+  applyConfigurationChange,
+  listResponsibilities,
+  policyVersions,
   savePlaybookItem,
   savePolicy,
   saveResponsibility,
@@ -151,6 +155,130 @@ export async function savePolicyAction(
     revalidatePath("/household/setup");
     revalidatePath("/household");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+/**
+ * Teaching the household in a sentence (story 02-006).
+ *
+ * Two steps, and the split matters. The first reads the sentence and shows
+ * what it would do; the second applies it. Nothing is written by the first,
+ * and the second writes only what a person has seen.
+ *
+ * The confirm step deliberately takes the *sentence* back, not the change.
+ * Re-deriving the change on the server is what stops a crafted form post
+ * writing a responsibility nobody said out loud — the browser never gets to
+ * hand back a change it was not given. It also catches the household moving
+ * underneath the preview: if the sentence now means something different from
+ * what was on screen, the new reading is shown instead of being applied.
+ */
+
+export type TeachState = {
+  error?: string;
+  notice?: string;
+  /** Asked back when the sentence was not understood, or was ambiguous. */
+  question?: string;
+  examples?: string[];
+  /** What would happen, waiting for a yes. */
+  proposal?: { utterance: string; summary: string; downstream: string[] };
+  downstream?: string[];
+};
+
+const teachSchema = z.object({
+  householdId: z.uuid(),
+  utterance: z.string().trim().min(1, { error: "Tell WonderHome something about how the home runs." }).max(300),
+  /** The summary the person actually saw. Absent on the first pass. */
+  agreedTo: z.string().max(300).optional(),
+});
+
+async function readProposal(householdId: string, utterance: string) {
+  const supabase = await createClient();
+  const membership = await requireHouseholdAdmin(supabase, householdId);
+  const [members, existing, versions] = await Promise.all([
+    listMembers(supabase, householdId, membership.household.ownerMemberId),
+    listResponsibilities(supabase, householdId),
+    policyVersions(supabase, householdId),
+  ]);
+
+  const proposal = proposeConfiguration(utterance, {
+    members,
+    existing,
+    nextVersionFor: (category, name) => (versions.get(`${category}:${name}`) ?? 0) + 1,
+  });
+
+  return { supabase, membership, members, proposal };
+}
+
+export async function previewConfigurationAction(
+  _previous: TeachState,
+  formData: FormData,
+): Promise<TeachState> {
+  const parsed = teachSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check what you typed." };
+  }
+
+  const { householdId, utterance } = parsed.data;
+
+  try {
+    const { proposal } = await readProposal(householdId, utterance);
+
+    switch (proposal.kind) {
+      case "clarify":
+        return { question: proposal.question, examples: [...proposal.examples] };
+      case "refused":
+        return { error: proposal.reason };
+      case "change":
+        return {
+          proposal: { utterance, summary: proposal.summary, downstream: proposal.downstream },
+        };
+    }
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+export async function applyConfigurationAction(
+  _previous: TeachState,
+  formData: FormData,
+): Promise<TeachState> {
+  const parsed = teachSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check what you typed." };
+  }
+
+  const { householdId, utterance, agreedTo } = parsed.data;
+
+  try {
+    const { supabase, membership, members, proposal } = await readProposal(householdId, utterance);
+
+    if (proposal.kind === "clarify") return { question: proposal.question, examples: [...proposal.examples] };
+    if (proposal.kind === "refused") return { error: proposal.reason };
+
+    if (agreedTo && agreedTo !== proposal.summary) {
+      // Something about the household changed between seeing it and saying
+      // yes. Applying the new meaning silently would be applying something
+      // nobody agreed to.
+      return {
+        notice: "Something changed while you were reading. Here is what this means now.",
+        proposal: { utterance, summary: proposal.summary, downstream: proposal.downstream },
+      };
+    }
+
+    const saved = await applyConfigurationChange(supabase, {
+      householdId,
+      actorMemberId: membership.memberId,
+      members,
+      change: proposal.change,
+    });
+
+    revalidatePath("/household/setup");
+    revalidatePath("/household");
+    revalidatePath("/household/responsibilities");
+
+    return { notice: proposal.summary, downstream: saved.downstream };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
   }

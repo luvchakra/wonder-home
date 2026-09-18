@@ -9,7 +9,7 @@
 | 3 | P0 | 02-003 | Household playbook | Done | Outcome keys, cadence, verification, escalation, dependencies |
 | 4 | P0 | 02-004 | Policies | Done | Versioned; one active version per policy name |
 | 5 | P0 | 02-005 | AI autonomy | Done | decideAutonomy at execution time; unconfigured means observe |
-| 6 | P0 | 02-006 | Configure by conversation | Blocked | Needs the conversation engine (module 04) |
+| 6 | P0 | 02-006 | Configure by conversation | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
 | 7 | P1 | 02-007 | Conflict detection | Not Started | |
 | 8 | P2 | 02-008 | Advanced rule builder | Not Started | |
 

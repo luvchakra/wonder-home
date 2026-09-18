@@ -1,7 +1,8 @@
-import { BookOpen, CircleCheck, ListChecks, Plug, ShieldCheck, Users } from "lucide-react";
+import { BookOpen, CircleCheck, ListChecks, MessageSquareText, Plug, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 
 import { assessSetup } from "@wonderhome/core/household/setup";
+import { UNDERSTOOD_SHAPES } from "@wonderhome/core/household/configuration-intent";
 import { listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers } from "@wonderhome/core/identity/households";
@@ -16,11 +17,13 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import {
+  applyConfigurationAction,
+  previewConfigurationAction,
   savePlaybookAction,
   savePolicyAction,
   saveResponsibilityAction,
 } from "../../(auth)/configuration-actions";
-import { PlaybookForm, PolicyForm, ResponsibilityForm } from "../../_components/config-forms";
+import { PlaybookForm, PolicyForm, ResponsibilityForm, TeachForm } from "../../_components/config-forms";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Set up your household" };
@@ -44,6 +47,7 @@ const STEPS = [
   { key: "responsibilities", label: "Who does what", icon: ListChecks },
   { key: "policies", label: "Policies", icon: ShieldCheck },
   { key: "connections", label: "Connections", icon: Plug },
+  { key: "teach", label: "Just tell me", icon: MessageSquareText },
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
@@ -122,6 +126,7 @@ export default async function SetupWizardPage({
       case "policies":
         return setup.steps.find((s) => s.key === "policies")?.done ?? false;
       case "connections":
+      case "teach":
         return false;
     }
   };
@@ -236,6 +241,22 @@ export default async function SetupWizardPage({
               </p>
               <PillLink href="/household/integrations" tone="quiet">See what is connected</PillLink>
             </div>
+          </Step>
+        ) : null}
+
+        {active === "teach" ? (
+          <Step
+            icon={MessageSquareText}
+            title="Or just say it"
+            purpose="The same configuration, reached in a sentence. WonderHome reads it back and spells out what it would mean before anything is saved — and if it did not follow you, it asks rather than guesses."
+            done={false}
+          >
+            <TeachForm
+              preview={previewConfigurationAction}
+              apply={applyConfigurationAction}
+              householdId={householdId}
+              shapes={[...UNDERSTOOD_SHAPES]}
+            />
           </Step>
         ) : null}
 

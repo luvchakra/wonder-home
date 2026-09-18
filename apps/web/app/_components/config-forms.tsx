@@ -8,6 +8,7 @@ import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 
 import type { ActionState } from "../(auth)/actions";
+import type { TeachState } from "../(auth)/configuration-actions";
 
 /**
  * The wizard's forms.
@@ -212,6 +213,119 @@ export function PolicyForm({
       />
       <Field label="Note" name="note" maxLength={300} placeholder="Why this rule exists." />
       <Submit label="Save policy" />
+    </form>
+  );
+}
+
+/**
+ * Teaching the household in a sentence (story 02-006).
+ *
+ * The preview is the whole point. A sentence is read, what it would do is
+ * spelled out in the household's own terms, and only then is there a button
+ * that changes anything. The "Yes, do that" button carries the exact summary
+ * the person is looking at, so the server can refuse to apply something that
+ * has come to mean something else since.
+ *
+ * When the sentence is not understood the reply is a question with examples,
+ * never a shrug — and the forms above can say anything this can, so nobody is
+ * ever stuck with a sentence WonderHome will not take.
+ */
+export function TeachForm({
+  preview,
+  apply,
+  householdId,
+  shapes,
+}: {
+  preview: (state: TeachState, formData: FormData) => Promise<TeachState>;
+  apply: (state: TeachState, formData: FormData) => Promise<TeachState>;
+  householdId: string;
+  shapes: { example: string; does: string }[];
+}) {
+  const [state, formAction] = useActionState(preview, {});
+
+  return (
+    <div className="space-y-3">
+      <form action={formAction} className="space-y-3">
+        {state.error ? <Alert>{state.error}</Alert> : null}
+        {state.notice && !state.proposal ? <Alert tone="info">{state.notice}</Alert> : null}
+        <input type="hidden" name="householdId" value={householdId} />
+        <Field
+          label="Tell WonderHome how the home runs"
+          name="utterance"
+          required
+          maxLength={300}
+          placeholder="Priya handles the school run from now on."
+          hint="Nothing changes until you have seen what it would do."
+        />
+        <Submit label="See what that would do" />
+      </form>
+
+      {state.question ? (
+        <div className="space-y-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
+          <p className="text-sm font-medium">{state.question}</p>
+          <ul className="space-y-1">
+            {(state.examples ?? []).map((example) => (
+              <li key={example} className="text-sm text-[var(--wh-foreground-muted)]">“{example}”</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {state.proposal ? (
+        <ApplyPanel apply={apply} householdId={householdId} proposal={state.proposal} notice={state.notice} />
+      ) : null}
+
+      <details className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
+        <summary className="cursor-pointer text-sm font-medium">What you can say</summary>
+        <ul className="mt-2 space-y-2">
+          {shapes.map((shape) => (
+            <li key={shape.example} className="text-sm">
+              <span className="block">“{shape.example}”</span>
+              <span className="block text-xs text-[var(--wh-foreground-muted)]">{shape.does}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
+function ApplyPanel({
+  apply,
+  householdId,
+  proposal,
+  notice,
+}: {
+  apply: (state: TeachState, formData: FormData) => Promise<TeachState>;
+  householdId: string;
+  proposal: { utterance: string; summary: string; downstream: string[] };
+  notice?: string;
+}) {
+  const [state, formAction] = useActionState(apply, {});
+  const shown = state.proposal ?? proposal;
+  const applied = Boolean(state.notice && !state.proposal);
+
+  return (
+    <form action={formAction} className="space-y-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-4">
+      {state.error ? <Alert>{state.error}</Alert> : null}
+      {notice && !state.notice ? <Alert tone="info">{notice}</Alert> : null}
+      {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+
+      <p className="text-sm font-semibold">{applied ? "Saved." : shown.summary}</p>
+      <ul className="space-y-1.5">
+        {(applied ? (state.downstream ?? []) : shown.downstream).map((line) => (
+          <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
+        ))}
+      </ul>
+
+      {applied ? null : (
+        <>
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="utterance" value={shown.utterance} />
+          <input type="hidden" name="agreedTo" value={shown.summary} />
+          <Submit label="Yes, do that" />
+        </>
+      )}
     </form>
   );
 }

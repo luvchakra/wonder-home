@@ -20,7 +20,7 @@
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 6 | In Progress |
-| 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 5 | In Progress |
+| 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 8 | Done |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |

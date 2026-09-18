@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [Configure by conversation (story 02-006)](2026-09-19-configure-by-conversation.md) |
 | 2026-09-19 | [The setup wizard (story 02-001)](2026-09-19-setup-wizard.md) |
 | 2026-09-19 | [Landing: no video, contact, and a real footer](2026-09-19-landing-contact-footer.md) |
 | 2026-09-19 | [Get Help: user guide, FAQ, and searching them](2026-09-19-help-centre.md) |

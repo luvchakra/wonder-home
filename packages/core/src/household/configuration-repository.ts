@@ -4,6 +4,7 @@ import { recordAuditEvent, type AuditEventType } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
 import type { AutonomyMode } from "./autonomy";
+import type { ResolvedChange } from "./configuration-intent";
 import {
   canDependOn,
   downstreamOf,
@@ -316,6 +317,80 @@ export async function listResponsibilities(
     aiMode: row.ai_mode as AutonomyMode,
     priority: Number(row.priority),
   }));
+}
+
+/**
+ * The next version each policy name would take (02-006).
+ *
+ * Read in one query so a proposal can say "saved as version 3" before
+ * anything is written. A preview that cannot name the version it would
+ * create is a preview of something slightly different from what happens.
+ */
+export async function policyVersions(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<Map<string, number>> {
+  const { data, error } = await supabase
+    .from("policies")
+    .select("category, name, version")
+    .eq("household_id", householdId);
+
+  if (error) throw new Error(`policyVersions failed: ${error.code ?? "unknown"}`);
+
+  const highest = new Map<string, number>();
+  for (const row of (data as Row[] | null) ?? []) {
+    const key = `${row.category as string}:${row.name as string}`;
+    highest.set(key, Math.max(highest.get(key) ?? 0, Number(row.version)));
+  }
+  return highest;
+}
+
+/**
+ * Applies a change a person has just agreed to (02-006).
+ *
+ * Every branch goes through the same function the forms call, so a change
+ * arrived at by sentence is validated by the same rules, written to the same
+ * canonical tables and audited the same way. There is deliberately no shorter
+ * path here: the moment a sentence can reach a write a form cannot, the
+ * validation stops being the truth about what a household can configure.
+ */
+export async function applyConfigurationChange(
+  supabase: SupabaseClient,
+  input: {
+    householdId: string;
+    actorMemberId: string;
+    members: readonly ConfigMember[];
+    change: ResolvedChange;
+  },
+): Promise<SavedChange> {
+  const { householdId, actorMemberId, members, change } = input;
+
+  switch (change.kind) {
+    case "responsibility":
+      return saveResponsibility(supabase, {
+        householdId,
+        actorMemberId,
+        members,
+        responsibility: change.responsibility,
+      });
+
+    case "policy":
+      return savePolicy(supabase, {
+        householdId,
+        actorMemberId,
+        category: change.category,
+        name: change.name,
+        rule: change.rule,
+      });
+
+    case "playbook":
+      return savePlaybookItem(supabase, {
+        householdId,
+        actorMemberId,
+        item: change.item,
+        dependsOnKey: null,
+      });
+  }
 }
 
 function writeFailure(what: string, error: { code?: string; message?: string }): Error {

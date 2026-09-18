@@ -11,13 +11,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**133 of 170 stories done — 78.2%**
+**134 of 170 stories done — 78.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 133 |
+| Done | 134 |
 | In Progress | 1 |
-| Blocked | 1 |
+| Blocked | 0 |
 | Not Started | 35 |
 
 ## By module
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `███████░░░` | 6 | 8 | 2 not started |
-| 02 Household Configuration & Playbook | `██████░░░░` | 5 | 8 | 1 blocked, 2 not started |
+| 02 Household Configuration & Playbook | `███████░░░` | 6 | 8 | 2 not started |
 | 03 Outcome & Routine Engine | `██████░░░░` | 5 | 8 | 3 not started |
 | 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
 | 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
@@ -52,7 +52,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `01-007` Preferences | 01 Identity & Family Accounts | P1 | Not Started |
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
-| `02-006` Configure by conversation | 02 Household Configuration & Playbook | P0 | Blocked |
 | `02-007` Conflict detection | 02 Household Configuration & Playbook | P1 | Not Started |
 | `02-008` Advanced rule builder | 02 Household Configuration & Playbook | P2 | Not Started |
 | `03-006` Dependency graph | 03 Outcome & Routine Engine | P1 | Not Started |
@@ -124,7 +123,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 02 — Household Configuration & Playbook
 
-5 of 8 done `██████░░░░`
+6 of 8 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -133,7 +132,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `02-003` Household playbook | P0 | Done | Outcome keys, cadence, verification, escalation, dependencies |
 | `02-004` Policies | P0 | Done | Versioned; one active version per policy name |
 | `02-005` AI autonomy | P0 | Done | decideAutonomy at execution time; unconfigured means observe |
-| `02-006` Configure by conversation | P0 | Blocked | Needs the conversation engine (module 04) |
+| `02-006` Configure by conversation | P0 | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
 | `02-007` Conflict detection | P1 | Not Started | — |
 | `02-008` Advanced rule builder | P2 | Not Started | — |
 
