@@ -1,8 +1,10 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { createClient } from "@wonderhome/core/db/server";
 import { createHousehold } from "@wonderhome/core/identity/households";
 import { createHouseholdSchema } from "@wonderhome/core/identity/schemas";
@@ -19,7 +21,8 @@ import { log } from "@wonderhome/core/observability/logger";
  * tells the person nothing about what to do next.
  */
 
-export type ActionState = { error?: string };
+/** `error` is something that went wrong; `notice` is something that went right. */
+export type ActionState = { error?: string; notice?: string };
 
 const credentialsSchema = z.object({
   email: z.email({ error: "Enter a valid email address." }),
@@ -75,11 +78,138 @@ export async function signUp(_previous: ActionState, formData: FormData): Promis
 
   // With email confirmation switched on there is no session yet; say so rather
   // than dropping the person on a gated page that bounces them straight back.
+  // This is a notice, not a failure: nothing went wrong, and showing it in the
+  // red of an error made a normal sign-up look like a rejection.
   if (!data.session) {
-    return { error: "Check your email to confirm your address, then sign in." };
+    return { notice: "Check your email to confirm your address, then sign in." };
   }
 
   redirect("/welcome");
+}
+
+const emailSchema = z.object({ email: z.email({ error: "Enter a valid email address." }) });
+
+/**
+ * The one answer a password reset request ever gives.
+ *
+ * It is the same whether or not the address has an account, because the
+ * alternative is an endpoint that tells anybody who asks which of their
+ * guesses are real people. Sign-in already holds this line; so does this.
+ */
+const RESET_REQUESTED =
+  "If that address has a WonderHome account, a link to set a new password is on its way. It expires in an hour.";
+
+export async function requestPasswordReset(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = emailSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Enter a valid email address." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    // Supabase sends the person here with a one-time code; the callback
+    // exchanges it for a session and hands them to the form.
+    redirectTo: `${await siteOrigin()}/auth/callback?next=%2Freset-password`,
+  });
+
+  // A failure is logged and never shown: the message must not differ by
+  // outcome, or it becomes the enumeration oracle the wording avoids.
+  if (error) log.warn("password reset request failed", { reason: error.code ?? "unknown" });
+
+  return { notice: RESET_REQUESTED };
+}
+
+const newPasswordSchema = z
+  .object({
+    password: z.string().min(8, { error: "Use at least 8 characters." }),
+    confirm: z.string(),
+  })
+  .refine((value) => value.password === value.confirm, {
+    error: "Those two passwords do not match.",
+    path: ["confirm"],
+  });
+
+/**
+ * Sets a new password for whoever holds the recovery session.
+ *
+ * There is no "current password" field and there does not need to be: the
+ * recovery link *is* the proof, and it only reaches the address on the
+ * account. Without that session Supabase refuses the update, which is the
+ * check that matters — so an expired or reused link cannot change anything.
+ */
+export async function resetPassword(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = newPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+
+  if (error) {
+    log.warn("password reset rejected", { reason: error.code ?? "unknown" });
+    return {
+      error:
+        "That link has expired or has already been used. Ask for a new one and try again.",
+    };
+  }
+
+  redirect("/");
+}
+
+/**
+ * Starts the Google redirect, when Google is configured for this deployment.
+ *
+ * The flag is checked here as well as in the pages that render the button:
+ * a hidden button is presentation, and a server action is reachable without
+ * one.
+ */
+export async function signInWithGoogle(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  if (!googleAuthEnabled()) {
+    return { error: "Google sign-in is not available on this deployment." };
+  }
+
+  const next = safeNext(formData.get("next"));
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${await siteOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+
+  if (error || !data.url) {
+    log.warn("google sign-in could not start", { reason: error?.code ?? "no-url" });
+    return { error: "Google sign-in could not be started. Try again, or use your email address." };
+  }
+
+  redirect(data.url);
+}
+
+/**
+ * Where this deployment lives, for the links Supabase mails out.
+ *
+ * Taken from the request rather than configuration so that a preview
+ * deployment mails links back to itself instead of to production.
+ */
+async function siteOrigin(): Promise<string> {
+  const incoming = await headers();
+  const origin = incoming.get("origin");
+  if (origin) return origin;
+
+  const host = incoming.get("host") ?? "localhost:3000";
+  const protocol = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  return `${protocol}://${host}`;
 }
 
 export async function signOut(): Promise<void> {

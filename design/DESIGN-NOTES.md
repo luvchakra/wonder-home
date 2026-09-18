@@ -114,8 +114,10 @@ What it deliberately does **not** do:
 - Show prices. None are configured anywhere; the plan cards come from the live
   catalogue and show features, not amounts.
 - Quote families. The story cards are labelled *Illustrative* on the card.
-- Offer social sign-in. No OAuth provider is configured; a "Continue with
-  Google" button that goes nowhere is worse than none.
+- Offer social sign-in it cannot honour. The rule stands — a "Continue with
+  Google" button that goes nowhere is worse than none — but it is now
+  enforced at runtime: the button renders only where
+  `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` is set and Supabase has the provider.
 - Claim certifications. The security section states what the code does.
 
 Motion is one small client script (`reveal.tsx`): IntersectionObserver for

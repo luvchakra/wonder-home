@@ -35,6 +35,22 @@ describe("route policy", () => {
     expect(redirectFor("/platform-admin/households", false)).toEqual({ redirectTo: "/" });
   });
 
+  it("lets an anonymous visitor ask for a password reset, and keeps a signed-in one away", () => {
+    expect(redirectFor("/forgot-password", false)).toBeNull();
+    expect(redirectFor("/forgot-password", true)).toEqual({ redirectTo: "/" });
+  });
+
+  it("lets the reset form and the auth callback through either way", () => {
+    // Both are reached carrying a one-time code, and the callback turns that
+    // code into a session — so a signed-out visitor must not be bounced to
+    // sign-in before the link can be used, and a signed-in one (the callback
+    // has just signed them in) must not be bounced home before the form.
+    for (const path of ["/reset-password", "/auth/callback"]) {
+      expect(redirectFor(path, false), `${path} signed out`).toBeNull();
+      expect(redirectFor(path, true), `${path} signed in`).toBeNull();
+    }
+  });
+
   it("keeps a signed-in member out of the sign-in screen", () => {
     expect(redirectFor("/sign-in", true)).toEqual({ redirectTo: "/" });
     expect(redirectFor("/sign-in", false)).toBeNull();

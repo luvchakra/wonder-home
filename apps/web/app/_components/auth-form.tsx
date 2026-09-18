@@ -34,6 +34,7 @@ export function AuthForm({ action, submitLabel, pendingLabel, children }: AuthFo
   return (
     <form action={formAction} className="space-y-4">
       {state.error ? <Alert>{state.error}</Alert> : null}
+      {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       {children}
       <SubmitButton label={submitLabel} pendingLabel={pendingLabel} />
     </form>
