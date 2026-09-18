@@ -15,7 +15,11 @@ export function Card({ children, className, id }: CardProps) {
     <section
       id={id}
       className={cn(
+        // The brand mark's halo follows the surface it sits on, so a card
+        // re-declares it for everything inside rather than every screen
+        // passing it down by hand.
         "rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-4 shadow-[var(--wh-shadow-card)]",
+        "[--wh-brand-surface:var(--wh-surface)]",
         className,
       )}
     >

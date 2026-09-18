@@ -35,6 +35,17 @@ export const metadata: Metadata = {
   applicationName: "WonderHome",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "WonderHome", statusBarStyle: "default" },
+  // Every file here is generated from the same geometry the header renders,
+  // by `npm run brand`. The dark tile is offered to browsers that ask for it:
+  // a white tile in a dark tab strip is a bright rectangle, not a brand.
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {

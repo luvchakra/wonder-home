@@ -63,6 +63,48 @@ reviewed dark design yet.
    secondary navigation are presentation; every page and every API route asks
    the server again, and RLS asks a third time.
 
+## The brand mark (rules 1, 3, 5)
+
+The mark is the supplied logo: a house drawn in two strokes — a roof chevron
+running blue through teal to a warm green, and a wave beneath it that reads as
+a W, running blue through deep navy to coral and amber — with a four-pane
+window under the apex and a leaf on a short stem growing past the roofline.
+
+It is the one place in the product where colour is not doing a job. Everywhere
+else, teal commits, amber is attention, red is critical and green is handled;
+the mark uses the whole spectrum at once because it is an identity rather than
+a signal. That is why it appears only as identity — in the header, on the
+signed-out frame, on the landing page and as the app icon — and never inside a
+row, a tile or a state.
+
+**One geometry, three consumers.** `packages/core/src/brand/mark.ts` holds
+every path, width and gradient stop, measured off the supplied artwork rather
+than eyeballed. `components/ui/brand.tsx` renders the JSX from it and
+`scripts/build-brand-assets.ts` writes the `.svg` and `.png` files
+`apps/web/public` serves. Icons are the assets most likely to rot — binary,
+far from the component they should match, and nobody notices a stale one until
+it is on somebody's home screen — so `npm run brand -- --check` runs in CI and
+fails when what is on disk no longer matches the mark.
+
+**The mark must be told what it is sitting on.** Three of its shapes carry a
+halo, which is what produces the clean separations where the leaf, the stem and
+the wave cross the roof. The halo reads `--wh-brand-surface`: the page
+background by default, and `Card` re-declares it as the card's own surface, so
+a mark inside a card gets the right halo through inheritance rather than a prop
+threaded through every screen. Get this wrong and the mark grows white seams on
+a coloured surface.
+
+**Two things flip with the theme, and only two.** The halo, as above; and the
+window, because a deep blue pane on a dark background is a hole rather than a
+window — on dark it becomes the light blue the supplied dark tile uses. Every
+gradient stays exactly as supplied: they were chosen to hold up against cream
+and against navy alike.
+
+**The mark is not a watermark.** A full-colour logo faded to 40% over a
+gradient reads as a printing mistake. Where a warm surface wants decoration,
+that is `LeafDecor`'s job (rule 5), which is what the landing feature cards now
+use.
+
 ## The handwritten line, and the greenery
 
 Two things carry the mockups' warmth, and they are easy to lose in a refactor

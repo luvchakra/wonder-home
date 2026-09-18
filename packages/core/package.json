@@ -8,6 +8,7 @@
     "./ui-theme.css": "./src/ui-theme.css",
     "./lib/*": "./src/lib/*.ts",
     "./config/*": "./src/config/*.ts",
+    "./brand/*": "./src/brand/*.ts",
     "./conversation/*": "./src/conversation/*.ts",
     "./household/*": "./src/household/*.ts",
     "./home/*": "./src/home/*.ts",
