@@ -32,6 +32,51 @@ Do not ask “what next?”. Ask only for genuinely blocking product, security/p
 
 Do not switch to React Native, a different backend framework, Clerk, Prisma or another ORM without an explicit architecture decision. The mobile-first requirement means responsive Next.js/PWA-capable web UI, not React Native.
 
+## Design principles — keep every screen close to the mockups
+The approved sheets in `design/` (splash and onboarding, the app screens, the
+device sheet, the landing page) are the look, not a suggestion. Read
+`design/UI-UX-REQUIREMENTS-v3.md` and `design/DESIGN-NOTES.md` before any UI
+work, and hold new work against these:
+
+1. **Warm, never clinical.** Cream page, white cards, soft shadows, generous
+   rounding and generous whitespace. Never grey, never pure white for the page,
+   never a dense dashboard. If a screen could belong to an analytics product,
+   it is wrong.
+2. **One handwritten line per screen.** Every sheet closes with script —
+   "Less mental load. More family time.", "Home runs smoother. Together." Use
+   `ScriptAccent` or `QuoteCard`, once per screen, always decoration and never
+   a control. Nothing a household must read is said only in the script face.
+3. **Teal commits, domains colour, state speaks in words.** The teal is for
+   every committing action and the active nav state. Each household domain
+   keeps its own colour, used on the icon tile and never on text. Amber is
+   attention, red is only for the genuinely critical, green is handled. Colour
+   alone never carries a meaning — the wording and the offered action do.
+4. **Every row begins with a tinted icon tile** (`IconTile`), then the name,
+   then one line of reason, then the single thing to do. A row with nothing to
+   do carries no action, which is itself the message.
+5. **Botanical framing on warm surfaces.** `LeafDecor` in the corners of the
+   signed-out frame, the landing hero and the closing section — faint, behind
+   the content, never over anything readable.
+6. **Five primary areas at every size, with the assistant raised in the middle**
+   of the phone tab bar. Domains live in the desktop sidebar and behind More.
+7. **A human sentence opens every screen and a warm one closes it.** A greeting
+   with the person's name, a plain-language lede, and no bare table dropped on
+   the page.
+8. **Imagery is warm family life** — illustrated, in the household's own tones.
+   Never stock-office photography, never a stretched screenshot: product
+   visuals are the real components in device frames.
+9. **Numbers are arithmetic somebody can explain.** A ring, a metric or a
+   percentage is a count of things the system evaluated. Never invent one, and
+   never show a figure with no source.
+10. **Mobile-first and real.** Every screen works at 360px with no horizontal
+    scroll, honours `prefers-reduced-motion`, keeps the three states
+    (empty, error, loading), and never offers a button that does nothing
+    because the provider behind it is not live.
+
+Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card,
+row, pill or tile. A new pattern belongs in the kit, with a note in
+`design/DESIGN-NOTES.md` saying which rule it encodes.
+
 ## Product rules
 - Manage outcomes, not micro-task checklists.
 - Normal household routines are silent.

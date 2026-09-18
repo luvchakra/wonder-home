@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -15,8 +18,32 @@ const baseURL = `http://127.0.0.1:${PORT}`;
  * release's expected build number. PLAYWRIGHT_CHROMIUM_PATH points at that
  * binary so the suite runs there without re-downloading; CI leaves it unset and
  * uses `playwright install`.
+ *
+ * When it is unset we look for a pinned build ourselves, because the failure
+ * it prevents is a quiet one: the specs that only use `request` still pass, so
+ * a run can report green while every spec that needs a browser never opened
+ * one. On a machine with a normal install there is nothing to find and this
+ * costs one directory read.
  */
-const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
+const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || findPinnedChromium();
+
+function findPinnedChromium(): string | undefined {
+  const root = process.env.PLAYWRIGHT_BROWSERS_PATH;
+  if (!root) return undefined;
+
+  try {
+    const build = readdirSync(root)
+      .filter((entry) => /^chromium-\d+$/.test(entry))
+      .sort()
+      .pop();
+    if (!build) return undefined;
+
+    const binary = join(root, build, "chrome-linux", "chrome");
+    return existsSync(binary) ? binary : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export default defineConfig({
   testDir: "./e2e",

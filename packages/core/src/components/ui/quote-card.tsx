@@ -1,21 +1,27 @@
 import { cn } from "../../lib/cn";
 
+import { ScriptAccent } from "./script-accent";
+
 /**
- * The soft line the mockups close a screen with.
+ * The line the mockups close a screen with.
  *
- * It is decoration, and it is labelled as such for assistive technology rather
+ * In the sheets this is not a banner but a soft handwritten note at the foot
+ * of the page — "Small steps today. Happier tomorrows.", "A happy family is a
+ * well-managed adventure." It is decoration, and it is marked as such rather
  * than read out as if it were household information.
  */
 export function QuoteCard({ children, className }: { children: string; className?: string }) {
   return (
     <aside
-      aria-label="Encouragement"
+      aria-hidden
       className={cn(
-        "rounded-[var(--wh-radius)] bg-[var(--wh-primary-soft)] px-5 py-6 text-center",
+        "relative overflow-hidden rounded-[var(--wh-radius)] bg-[var(--wh-primary-soft)]/60 px-6 py-7 text-center",
         className,
       )}
     >
-      <p className="text-balance text-sm font-medium italic text-[var(--wh-primary)]">{children}</p>
+      <ScriptAccent tone="primary" size="sm" heart className="mx-auto max-w-sm">
+        {children}
+      </ScriptAccent>
     </aside>
   );
 }

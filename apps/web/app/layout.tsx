@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Caveat, Inter } from "next/font/google";
 
 import "./globals.css";
 
@@ -12,6 +12,18 @@ const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+});
+
+/**
+ * Caveat, the handwritten accent the mockups close every screen with. Only
+ * ever decoration (see ui/script-accent.tsx), so `display: swap` showing the
+ * system face for a moment costs nothing a household needs to read.
+ */
+const caveat = Caveat({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600"],
+  variable: "--font-caveat",
 });
 
 export const metadata: Metadata = {
@@ -36,7 +48,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${caveat.variable}`}>
       <body>{children}</body>
     </html>
   );

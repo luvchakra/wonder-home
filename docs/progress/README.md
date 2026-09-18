@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-18 | [Design principles in CLAUDE.md, and the handwritten accent](2026-09-18-design-principles-and-handwritten-accent.md) |
 | 2026-09-18 | [Household setup guidance for the first week](2026-09-18-household-setup-guidance.md) |
 | 2026-09-18 | [Calendar connector (story 17-002)](2026-09-18-calendar-connector.md) |
 | 2026-09-18 | [Database moved to the Mumbai Supabase project](2026-09-18-database-move-to-ap-south-1.md) |

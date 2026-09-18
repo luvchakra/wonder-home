@@ -48,6 +48,7 @@ export default async function WelcomePage() {
       title="Set up your household"
       lede="Create a space for the people, pets and plans you care about."
       step={{ current: 2, total: 3 }}
+      accent="Let's build a happier home together."
       promise={{
         headline: "Let's build a happier home together.",
         points: ["You become Head of Family", "Invite everyone next", "WonderHome starts learning your rhythm"],

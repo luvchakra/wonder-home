@@ -14,6 +14,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
       title="Welcome back!"
       lede="Good to see you again."
       footer={{ prompt: "Don't have an account?", href: "/sign-up", label: "Sign up" }}
+      accent="Same family. Smarter days."
     >
       <AuthForm action={signIn} submitLabel="Sign in" pendingLabel="Signing in…">
         <input type="hidden" name="next" value={next ?? "/"} />

@@ -63,6 +63,23 @@ reviewed dark design yet.
    secondary navigation are presentation; every page and every API route asks
    the server again, and RLS asks a third time.
 
+## The handwritten line, and the greenery
+
+Two things carry the mockups' warmth, and they are easy to lose in a refactor
+because neither is information.
+
+- **`ScriptAccent`** is Caveat, self-hosted through `next/font` like Inter so
+  the CSP's `font-src 'self'` still holds. One line per screen, marked
+  decorative, never a control, never the only place something is said. The
+  sheets put it on the splash, under the sign up form, beside the landing hero
+  and at the foot of most app screens (that last one is `QuoteCard`).
+- **`LeafDecor`** is the botanical corner the sheets frame their warm surfaces
+  with: one inline SVG, drawn from the household's own leaf tokens rather than
+  photographed, faint enough that nothing readable ever competes with it.
+
+Both are decoration in the strict sense — hidden from assistive technology,
+and every screen reads correctly with them removed.
+
 ## The "talk to" experience
 
 The AI Assistant is the screen the product is judged by, so it has the most
@@ -177,6 +194,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `SearchBar` | Search that submits to the assistant, because search and ask are the same thing |
 | `Sheet`, `ConfirmationSheet`, `ToastProvider` | Radix dialog and toast |
 | `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton` | The three states |
+| `ScriptAccent`, `LeafDecor` | The handwritten line and the botanical corner |
 | `AiOrb`, `ChatMessage`, `SuggestionChips`, `ChatComposer`, `VoiceInputButton`, `Waveform` | The conversation |
 | `AppShell`, `MobileHeader`, `PrimaryNav` | The shell |
 

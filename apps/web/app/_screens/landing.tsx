@@ -32,6 +32,8 @@ import { BrandMark, Wordmark } from "@wonderhome/core/ui/brand";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
+import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
+import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 
 import { unstable_cache } from "next/cache";
 
@@ -102,7 +104,9 @@ export async function Landing() {
       <main id="wh-main">
         {/* Hero */}
         <section className="relative overflow-hidden" style={{ background: "var(--wh-gradient-hero)" }}>
-          <div className="mx-auto grid max-w-[var(--wh-content-wide)] items-center gap-10 px-4 pt-12 pb-16 lg:grid-cols-[1fr_1.1fr] lg:px-8 lg:pt-20 lg:pb-28">
+          <LeafDecor corner="top-right" size={300} opacity={0.32} />
+          <LeafDecor corner="bottom-left" size={220} opacity={0.22} />
+          <div className="relative mx-auto grid max-w-[var(--wh-content-wide)] items-center gap-10 px-4 pt-12 pb-16 lg:grid-cols-[1fr_1.1fr] lg:px-8 lg:pt-20 lg:pb-28">
             <div className="wh-rise max-w-xl">
               <span className="inline-flex items-center gap-1.5 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)]/80 px-3 py-1 text-xs font-semibold text-[var(--wh-primary)]">
                 <Leaf aria-hidden className="size-3.5" /> A calmer home is possible
@@ -126,6 +130,9 @@ export async function Landing() {
               <p className="mt-4 text-xs text-[var(--wh-foreground-subtle)]">
                 No credit card required · Works on all your devices · Made for families
               </p>
+              <ScriptAccent tone="people" size="md" heart className="mt-7">
+                Less mental load.<br />More family time.
+              </ScriptAccent>
             </div>
 
             <div className="relative mx-auto w-full max-w-lg lg:max-w-none" data-parallax="-0.04">
@@ -400,6 +407,9 @@ export async function Landing() {
               </div>
               <p className="mt-3 text-xs text-[var(--wh-foreground-subtle)]">No credit card required</p>
             </div>
+            <ScriptAccent tone="people" size="lg" heart className="mt-10 max-w-sm lg:absolute lg:top-4 lg:right-8 lg:mt-0 lg:text-right">
+              More family time.<br />A brighter tomorrow.
+            </ScriptAccent>
           </div>
         </section>
       </main>

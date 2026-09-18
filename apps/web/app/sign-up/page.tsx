@@ -19,6 +19,7 @@ export default function SignUpPage() {
       lede="Join families building happier homes together."
       footer={{ prompt: "Already have an account?", href: "/sign-in", label: "Sign in" }}
       step={{ current: 1, total: 3 }}
+      accent="A brighter tomorrow starts at home."
     >
       <AuthForm action={signUp} submitLabel="Create account" pendingLabel="Creating account…">
         <Field label="Full name" name="displayName" autoComplete="name" required placeholder="Kunal Chakraborty" hint="What your family calls you." />

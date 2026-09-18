@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 
 import { Wordmark } from "@wonderhome/core/ui/brand";
 import { Card } from "@wonderhome/core/ui/card";
+import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
+import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 
 import { HomeIllustration } from "./home-illustration";
 
@@ -15,6 +17,8 @@ export type AuthLayoutProps = {
   step?: { current: number; total: number };
   /** The line on the illustrated panel. */
   promise?: { headline: string; points: string[] };
+  /** The handwritten line under the form. One per screen, decoration only. */
+  accent?: string;
 };
 
 /**
@@ -22,14 +26,14 @@ export type AuthLayoutProps = {
  * illustrated promise beside it (mockup sheet F, screen 1). Calm, warm, and
  * the same design language as the product behind it.
  */
-export function AuthLayout({ title, lede, children, footer, step, promise }: AuthLayoutProps) {
+export function AuthLayout({ title, lede, children, footer, step, promise, accent }: AuthLayoutProps) {
   const pitch = promise ?? {
     headline: "A calmer home is possible.",
     points: ["Less mental load", "More family time", "A brighter tomorrow"],
   };
 
   return (
-    <main className="min-h-dvh lg:grid lg:grid-cols-[1.1fr_1fr]">
+    <main className="relative min-h-dvh overflow-x-clip lg:grid lg:grid-cols-[1.1fr_1fr]">
       <aside
         aria-hidden
         className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12"
@@ -47,11 +51,19 @@ export function AuthLayout({ title, lede, children, footer, step, promise }: Aut
             ))}
           </ul>
         </div>
+        <LeafDecor corner="top-right" size={280} opacity={0.45} />
+        <LeafDecor corner="bottom-left" size={200} opacity={0.3} />
         <HomeIllustration className="pointer-events-none absolute -right-16 -bottom-10 w-[34rem] opacity-95" />
-        <p className="relative z-10 font-serif text-xl text-[var(--wh-tone-people)] italic">Home runs smoother. Together. ♥</p>
+        <ScriptAccent tone="people" size="md" heart className="relative z-10">
+          Home runs smoother. Together.
+        </ScriptAccent>
       </aside>
 
-      <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-6 px-4 py-10 lg:px-10">
+      <div className="relative mx-auto flex w-full max-w-md flex-col justify-center gap-6 px-4 py-10 lg:px-10">
+        {/* The mockups frame the form with greenery on a phone too, where the
+            illustrated panel beside it is not there to carry the warmth. */}
+        <LeafDecor corner="top-right" size={170} opacity={0.24} className="lg:hidden" />
+
         <div className="lg:hidden">
           <Link href="/" aria-label="WonderHome home" className="inline-block">
             <Wordmark tagline size={32} />
@@ -74,6 +86,8 @@ export function AuthLayout({ title, lede, children, footer, step, promise }: Aut
         </header>
 
         <Card className="p-5 shadow-[var(--wh-shadow-raised)]">{children}</Card>
+
+        {accent ? <ScriptAccent tone="primary" size="sm" className="mx-auto text-center">{accent}</ScriptAccent> : null}
 
         {footer ? (
           <p className="text-center text-sm text-[var(--wh-foreground-muted)]">
