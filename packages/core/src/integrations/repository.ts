@@ -193,3 +193,112 @@ export async function recordEvent(
     throw new Error(`recordEvent failed: ${error.code ?? "unknown"}`);
   }
 }
+
+/**
+ * A connection as the server needs it to run a sync — including where the
+ * credential lives.
+ *
+ * Server-only. This is the one reader of `credential_ref`, and its result is
+ * never serialised to a client: a route that returns it has leaked the pointer
+ * to a secret, even if not the secret itself.
+ */
+export type Connection = {
+  id: string;
+  householdId: string;
+  kind: ConnectorKind;
+  provider: string;
+  credentialRef: string | null;
+  scopes: string[];
+  state: ConnectionState;
+};
+
+export async function loadConnection(
+  supabase: SupabaseClient,
+  householdId: string,
+  kind: ConnectorKind,
+  provider?: string,
+): Promise<Connection | null> {
+  let query = supabase
+    .from("integrations")
+    .select("id, kind, provider, status, scopes, credential_ref, consecutive_failures, last_error_code")
+    .eq("household_id", householdId)
+    .eq("kind", kind);
+  if (provider) query = query.eq("provider", provider);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`loadConnection failed: ${error.code ?? "unknown"}`);
+
+  const rows = (data ?? []) as Row[];
+  if (rows.length === 0) return null;
+  if (rows.length > 1) {
+    throw ApiError.conflict("More than one provider of this kind is connected; say which one.", {
+      providers: rows.map((row) => row.provider as string),
+    });
+  }
+
+  const row = rows[0]!;
+  return {
+    id: row.id as string,
+    householdId,
+    kind: row.kind as ConnectorKind,
+    provider: row.provider as string,
+    credentialRef: (row.credential_ref as string | null) ?? null,
+    scopes: (row.scopes as string[] | null) ?? [],
+    state: {
+      status: row.status as ConnectorStatus,
+      consecutiveFailures: Number(row.consecutive_failures ?? 0),
+      lastErrorCode: (row.last_error_code as string | null) ?? null,
+    },
+  };
+}
+
+/** The provider's identifier for a person or their calendar, to a household member. */
+export type IdentityMapping = {
+  externalId: string;
+  memberId: string;
+};
+
+/**
+ * Who the household has said each provider identifier is (17-002).
+ *
+ * Stated by an administrator and read by every sync. A record whose identity
+ * is not here is left unmatched; it is never assigned by similarity.
+ */
+export async function listIdentities(
+  supabase: SupabaseClient,
+  integrationId: string,
+): Promise<IdentityMapping[]> {
+  const { data, error } = await supabase
+    .from("integration_identities")
+    .select("external_id, member_id")
+    .eq("integration_id", integrationId);
+
+  if (error) throw new Error(`listIdentities failed: ${error.code ?? "unknown"}`);
+
+  return ((data ?? []) as Row[]).map((row) => ({
+    externalId: row.external_id as string,
+    memberId: row.member_id as string,
+  }));
+}
+
+export async function mapIdentity(
+  supabase: SupabaseClient,
+  input: { householdId: string; integrationId: string; externalId: string; memberId: string },
+): Promise<void> {
+  const { error } = await supabase.from("integration_identities").upsert(
+    {
+      household_id: input.householdId,
+      integration_id: input.integrationId,
+      external_id: input.externalId,
+      member_id: input.memberId,
+    },
+    { onConflict: "integration_id,external_id" },
+  );
+
+  if (error) {
+    if (error.code === "42501") {
+      throw ApiError.forbidden("Only a household administrator can say who a provider identity belongs to.");
+    }
+    throw new Error(`mapIdentity failed: ${error.code ?? "unknown"}`);
+  }
+}

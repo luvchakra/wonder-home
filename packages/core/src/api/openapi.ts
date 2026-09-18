@@ -249,6 +249,31 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/calendar/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Sync the household's connected calendar now",
+          description:
+            "Runs the calendar connector for an administrator and reconciles what it returns onto the family calendar by provider identity. Imported events are never protected and never confirmed; a private entry arrives as time only. Responds with counts and the connection's health, never a provider payload. 409 while no provider is live.",
+          parameters: [
+            {
+              name: "provider",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Which provider, when more than one calendar is connected.",
+            },
+          ],
+          responses: {
+            "200": { description: "Counts of what changed and the connection's state" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "No calendar is connected" },
+            "409": { description: "The provider is not configured, or more than one is connected and none was named" },
+          },
+        },
+      },
       "/households/{householdId}/home": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

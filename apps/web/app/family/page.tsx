@@ -1,9 +1,11 @@
-import { CalendarHeart, Gift, Heart, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, Gift, Heart, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
 import { familyAgenda, listEvents } from "@wonderhome/core/family/repository";
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
@@ -32,10 +34,19 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement] = await Promise.all([
+  const [members, entitlement, integrations] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
+    listIntegrations(supabase, householdId).catch(() => []),
   ]);
+
+  // A stale calendar and a free afternoon must never look alike (17-002): if a
+  // connected calendar is not working, the screen says so before the events.
+  const calendarHealth =
+    integrations
+      .filter((integration) => integration.kind === "calendar")
+      .map((integration) => describeCalendarHealth({ status: integration.status, lastSuccessAt: integration.lastSuccessAt, now }))
+      .find((health) => health.tone !== "silent") ?? null;
 
   const [events, agenda] = entitlement.allowed
     ? await Promise.all([
@@ -59,6 +70,20 @@ export default async function FamilyPage() {
           </div>
           {admin ? <PillLink href="/household/members" tone="quiet"><Users aria-hidden className="size-3.5" /> Invite member</PillLink> : null}
         </header>
+
+        {calendarHealth ? (
+          <Card className="flex items-start gap-3 p-4">
+            <CalendarDays aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-foreground-muted)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm">{calendarHealth.message}</p>
+              {calendarHealth.tone === "needs_action" && admin ? (
+                <div className="mt-2">
+                  <PillLink href="/household/integrations" tone="primary">Fix the connection</PillLink>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
 
         <section className="wh-rise" style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}>
           <SectionHeader title="Family members" count={members.length} action={admin ? <PillLink href="/household/members" tone="quiet">Manage</PillLink> : null} />

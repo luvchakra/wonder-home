@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import type { HomeAssessment } from "../home/assessment";
+import type { ExistingImport, ImportedEvent, ReconciliationPlan } from "./calendar-connector";
 import {
   assessEvent,
   assessGift,
@@ -206,5 +207,99 @@ export async function familyAgenda(
     gifts: gifts.map((gift) => assessGift(gift, now)).filter((assessment) => assessment.notable),
     conflicts,
     checked: events.length + gifts.length,
+  };
+}
+
+/**
+ * Events this connection has imported before, as reconciliation needs them
+ * (17-002). Identity only — the sync decides what to do from the provider's
+ * ids and content hashes, never by comparing titles.
+ */
+export async function listImportedEvents(
+  supabase: SupabaseClient,
+  integrationId: string,
+): Promise<ExistingImport[]> {
+  const { data, error } = await supabase
+    .from("family_events")
+    .select("id, external_id, status")
+    .eq("integration_id", integrationId);
+
+  if (error) throw new Error(`listImportedEvents failed: ${error.code ?? "unknown"}`);
+
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    externalId: row.external_id as string,
+    status: row.status as ExistingImport["status"],
+  }));
+}
+
+/**
+ * Writes a reconciliation plan (17-002).
+ *
+ * Inserts and updates carry the provider identity so a retry lands on the same
+ * rows; a vanished event is cancelled, never deleted. Participants are added,
+ * never removed — an answer somebody already gave is theirs to keep. Nothing
+ * here can set `protected`: the column is not written, so it keeps whatever a
+ * person set.
+ */
+export async function applyCalendarPlan(
+  supabase: SupabaseClient,
+  input: { householdId: string; integrationId: string; plan: ReconciliationPlan },
+): Promise<void> {
+  const { householdId, integrationId, plan } = input;
+  const fail = (step: string, error: { code?: string }) => {
+    if (error.code === "42501") return ApiError.forbidden("You cannot change this household's calendar.");
+    return new Error(`applyCalendarPlan ${step} failed: ${error.code ?? "unknown"}`);
+  };
+  const participants: { household_id: string; event_id: string; member_id: string }[] = [];
+
+  if (plan.insert.length > 0) {
+    const { data, error } = await supabase
+      .from("family_events")
+      .insert(plan.insert.map((event) => ({ household_id: householdId, integration_id: integrationId, ...eventColumns(event) })))
+      .select("id, external_id");
+    if (error) throw fail("insert", error);
+
+    const idByExternal = new Map(((data as Row[] | null) ?? []).map((row) => [row.external_id as string, row.id as string]));
+    for (const event of plan.insert) {
+      const id = idByExternal.get(event.externalId);
+      if (!id) continue;
+      for (const memberId of event.participantMemberIds) {
+        participants.push({ household_id: householdId, event_id: id, member_id: memberId });
+      }
+    }
+  }
+
+  for (const { id, event } of plan.update) {
+    const { error } = await supabase.from("family_events").update(eventColumns(event)).eq("id", id);
+    if (error) throw fail("update", error);
+    for (const memberId of event.participantMemberIds) {
+      participants.push({ household_id: householdId, event_id: id, member_id: memberId });
+    }
+  }
+
+  if (plan.cancel.length > 0) {
+    const { error } = await supabase.from("family_events").update({ status: "cancelled" }).in("id", plan.cancel);
+    if (error) throw fail("cancel", error);
+  }
+
+  if (participants.length > 0) {
+    const { error } = await supabase
+      .from("event_participants")
+      .upsert(participants, { onConflict: "event_id,member_id", ignoreDuplicates: true });
+    if (error) throw fail("participants", error);
+  }
+}
+
+function eventColumns(event: ImportedEvent) {
+  return {
+    external_id: event.externalId,
+    title: event.title,
+    kind: event.kind,
+    starts_at: event.startsAt.toISOString(),
+    ends_at: event.endsAt.toISOString(),
+    location: event.location,
+    status: event.status,
+    owner_member_id: event.ownerMemberId,
   };
 }
