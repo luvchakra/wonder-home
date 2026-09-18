@@ -6,6 +6,7 @@ import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
@@ -58,11 +59,11 @@ export default async function SettingsPage() {
 
   const rows: { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href?: string; badge?: string }[] = [
     { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/notifications" },
-    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "Sessions verified on every request · sensitive actions ask again" },
+    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "What is shared, how long it is kept, and taking your data with you", href: "/settings/privacy" },
     { icon: KeyRound, tone: "neutral", title: "Two-factor authentication", meta: "Coming — not switched on for this account yet", badge: "Soon" },
     { icon: Link2, tone: "care", title: "Connected accounts", meta: "School, calendar, shopping, weather", href: view.permissions.includes("integrations.manage") ? "/household/integrations" : undefined },
-    { icon: Database, tone: "home", title: "Export my data", meta: "Coming — a copy of everything WonderHome holds about you", badge: "Soon" },
-    { icon: Trash2, tone: "risk", title: "Delete my account", meta: "Coming — removes you and what only you can see", badge: "Soon" },
+    { icon: Database, tone: "home", title: "Export my data", meta: "A copy of what WonderHome holds about you", href: "/settings/privacy" },
+    { icon: Trash2, tone: "risk", title: "Delete my data", meta: `Removes what is yours, after ${DELETION_GRACE_DAYS} days to change your mind`, href: "/settings/privacy" },
     { icon: HelpCircle, tone: "ai", title: "Get Help", meta: "User guide, common questions, and a way to search them", href: "/help" },
   ];
 

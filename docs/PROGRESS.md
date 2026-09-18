@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**136 of 170 stories done — 80%**
+**137 of 170 stories done — 80.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 136 |
+| Done | 137 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 33 |
+| Not Started | 32 |
 
 ## By module
 
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `███████░░░` | 6 | 8 | 2 not started |
-| 15 Privacy, Security & Governance | `███████░░░` | 6 | 8 | 2 not started |
+| 15 Privacy, Security & Governance | `████████░░` | 7 | 8 | 1 not started |
 | 16 Platform Admin & Operations | `█████░░░░░` | 4 | 8 | 4 not started |
 | 17 External Integrations | `█████░░░░░` | 4 | 8 | 4 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
@@ -65,7 +65,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-007` Multi-agent coordination | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
-| `15-007` Privacy Center | 15 Privacy, Security & Governance | P0 | Not Started |
 | `15-008` Security testing | 15 Privacy, Security & Governance | P0 | Not Started |
 | `16-005` Subscription administration | 16 Platform Admin & Operations | P0 | Not Started |
 | `16-006` AI operations | 16 Platform Admin & Operations | P0 | Not Started |
@@ -316,7 +315,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 15 — Privacy, Security & Governance
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -326,7 +325,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `15-004` Encryption/secrets | P0 | Done | Secret lint; redaction; HSTS and secure cookies |
 | `15-005` AI privacy | P0 | Done | Consent gate before assembly; context minimised and pseudonymised; retry is idempotent |
 | `15-006` Audit | P0 | Done | Catalogue with a coverage test; nine unrecorded actions closed; household-facing trail |
-| `15-007` Privacy Center | P0 | Not Started | — |
+| `15-007` Privacy Center | P0 | Done | Step-up that actually verifies; export, deletion with a grace window, retention applied by a nightly sweep |
 | `15-008` Security testing | P0 | Not Started | — |
 
 ### 16 — Platform Admin & Operations

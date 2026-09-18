@@ -104,6 +104,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/ai/credentials.ts",
   },
   {
+    event: "privacy.export_requested",
+    because: "A copy of household data left the household. Somebody will ask when, and who asked for it.",
+    recordedIn: "packages/core/src/privacy/repository.ts",
+  },
+  {
+    event: "privacy.deletion_requested",
+    because: "Starts a clock that ends with data gone. The grace window only helps if the household can see it running.",
+    recordedIn: "packages/core/src/privacy/repository.ts",
+  },
+  {
+    event: "privacy.deletion_cancelled",
+    because: "Stopping the clock matters as much as starting it, and proves the window was real.",
+    recordedIn: "packages/core/src/privacy/repository.ts",
+  },
+  {
     event: "support.access_granted",
     because: "Somebody outside the family was allowed in. The family can read this row.",
     recordedIn: "packages/core/src/platform/admin.ts",
@@ -124,8 +139,6 @@ export const NOT_YET_BUILT: readonly { event: AuditEventType; story: string }[] 
   { event: "member.removed", story: "removing a member is not built" },
   { event: "child.updated", story: "editing a child's record is not built" },
   { event: "integration.disconnected", story: "nothing disconnects an account yet; module 17" },
-  { event: "privacy.export_requested", story: "15-007" },
-  { event: "privacy.deletion_requested", story: "15-007" },
 ];
 
 /**
@@ -182,7 +195,12 @@ export function describeAuditEvent(
     case "privacy.export_requested":
       return { title: "A copy of the data was requested", detail: null };
     case "privacy.deletion_requested":
-      return { title: "Deletion was requested", detail: null };
+      return {
+        title: "Deletion was requested",
+        detail: typeof metadata.graceDays === "number" ? `Acts in ${metadata.graceDays} days unless cancelled.` : null,
+      };
+    case "privacy.deletion_cancelled":
+      return { title: "A deletion was called off", detail: null };
     case "support.access_granted":
       return {
         title: "Support was given access",

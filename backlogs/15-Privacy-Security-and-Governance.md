@@ -10,7 +10,7 @@
 | 4 | P0 | 15-004 | Encryption/secrets | Done | Secret lint; redaction; HSTS and secure cookies |
 | 5 | P0 | 15-005 | AI privacy | Done | Consent gate before assembly; context minimised and pseudonymised; retry is idempotent |
 | 6 | P0 | 15-006 | Audit | Done | Catalogue with a coverage test; nine unrecorded actions closed; household-facing trail |
-| 7 | P0 | 15-007 | Privacy Center | Not Started | |
+| 7 | P0 | 15-007 | Privacy Center | Done | Step-up that actually verifies; export, deletion with a grace window, retention applied by a nightly sweep |
 | 8 | P0 | 15-008 | Security testing | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

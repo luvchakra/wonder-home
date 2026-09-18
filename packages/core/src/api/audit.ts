@@ -38,6 +38,7 @@ export const AUDIT_EVENTS = [
   "ai.key_removed",
   "privacy.export_requested",
   "privacy.deletion_requested",
+  "privacy.deletion_cancelled",
   "support.access_granted",
 ] as const;
 

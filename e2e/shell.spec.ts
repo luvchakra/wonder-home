@@ -28,6 +28,7 @@ const GATED_AREAS = [
   "/notifications",
   "/certification",
   "/settings",
+  "/settings/privacy",
   "/help",
 ];
 

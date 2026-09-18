@@ -72,6 +72,8 @@ const SHIPPED_TABLES = [
   "event_participants",
   "schedule_conflicts",
   "gift_plans",
+  "step_up_verifications",
+  "privacy_requests",
 ];
 
 /**
@@ -215,6 +217,48 @@ async function main() {
     "nobody can read a household's model key",
     Boolean(keys.error) || (Array.isArray(keys.data) && keys.data.length === 0),
     keys.error ? keys.error.code : `${keys.data?.length ?? "?"} rows`,
+  );
+
+  // Step-up verifications (story 15-007). The table has no INSERT policy at
+  // all, deliberately: a client that could write one could hand itself the
+  // very proof the check exists to demand. Both halves are asserted, because
+  // "cannot read" without "cannot write" would still leave the control open.
+  const forgedProof = await anon.from("step_up_verifications").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    purpose: "payment",
+    expires_at: new Date(Date.now() + 600_000).toISOString(),
+  });
+  check(
+    "anonymous cannot forge a step-up verification",
+    Boolean(forgedProof.error),
+    forgedProof.error?.code ?? "no error",
+  );
+
+  const proofs = await anon.from("step_up_verifications").select("id").limit(1);
+  check(
+    "nobody can read another person's step-up verifications",
+    Boolean(proofs.error) || (Array.isArray(proofs.data) && proofs.data.length === 0),
+    proofs.error ? proofs.error.code : `${proofs.data?.length ?? "?"} rows`,
+  );
+
+  const requests = await anon.from("privacy_requests").select("id").limit(1);
+  check(
+    "anonymous cannot read privacy requests",
+    Boolean(requests.error) || (Array.isArray(requests.data) && requests.data.length === 0),
+    requests.error ? requests.error.code : `${requests.data?.length ?? "?"} rows`,
+  );
+
+  const forgedRequest = await anon.from("privacy_requests").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    subject_member_id: "00000000-0000-4000-8000-000000000000",
+    requested_by_member_id: "00000000-0000-4000-8000-000000000000",
+    kind: "deletion",
+  });
+  check(
+    "anonymous cannot ask for somebody else's data to be deleted",
+    Boolean(forgedRequest.error),
+    forgedRequest.error?.code ?? "no error",
   );
 
   for (const { name, ok, detail } of results) {

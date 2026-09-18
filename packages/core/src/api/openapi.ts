@@ -573,6 +573,33 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/privacy/export": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "A copy of the caller's own data",
+          description:
+            "Returns the file itself rather than a link to one: a link is a second way to reach the data, outliving the session that proved itself for it. Requires a step-up verification, which is spent before a single row is read. Contains only what this member could already see on screen, narrowed by RLS and again by permission.",
+          responses: {
+            "200": { description: "The export, as a JSON attachment" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/platform/retention": {
+        post: {
+          summary: "Apply the retention schedule",
+          description:
+            "Deletes everything past its keeping, across every household, on the schedule the Privacy Centre publishes — a published policy nothing applies is a promise rather than a policy. Authorised by a shared secret rather than a session, because there is no person here; it is deliberately unreachable from a household's own session. Reports counts per table, never what was removed.",
+          responses: {
+            "200": { description: "Every table swept" },
+            "207": { description: "Swept, with at least one table that could not be" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
