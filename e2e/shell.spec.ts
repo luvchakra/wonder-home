@@ -17,6 +17,7 @@ const GATED_AREAS = [
   "/household/home",
   "/household/members",
   "/household/responsibilities",
+  "/household/setup",
   "/household/integrations",
   "/school",
   "/groceries",

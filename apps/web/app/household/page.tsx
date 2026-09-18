@@ -1,4 +1,4 @@
-import { BookOpen, Bot, ChevronRight, Cog, ListChecks, Plug, ShieldCheck, Users } from "lucide-react";
+import { BookOpen, Bot, ChevronRight, Cog, ListChecks, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
 
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
@@ -61,6 +61,7 @@ export default async function ManageHouseholdPage() {
   const attention = integrations.filter((integration) => integration.needsAttention).length;
 
   const sections: { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } }[] = [
+    { href: "/household/setup", icon: Wand2, tone: "primary", title: "Set up your household", meta: "The guided walk through family, playbook, responsibilities and policies" },
     { href: "/household/members", icon: Users, tone: "people", title: "Members & roles", meta: `${memberCount ?? 0} active · roles, permissions, privacy scopes` },
     { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: "Responsibilities", meta: `${modes.length} outcomes · owners, backups and outcomes` },
     { href: "#playbook", icon: BookOpen, tone: "home", title: "Household playbook", meta: `${items.filter((i) => i.active).length} routines and operating rules` },

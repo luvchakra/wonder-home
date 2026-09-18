@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**132 of 170 stories done — 77.6%**
+**133 of 170 stories done — 78.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 132 |
+| Done | 133 |
 | In Progress | 1 |
 | Blocked | 1 |
-| Not Started | 36 |
+| Not Started | 35 |
 
 ## By module
 
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `███████░░░` | 6 | 8 | 2 not started |
-| 02 Household Configuration & Playbook | `█████░░░░░` | 4 | 8 | 1 blocked, 3 not started |
+| 02 Household Configuration & Playbook | `██████░░░░` | 5 | 8 | 1 blocked, 2 not started |
 | 03 Outcome & Routine Engine | `██████░░░░` | 5 | 8 | 3 not started |
 | 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
 | 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
@@ -52,7 +52,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `01-007` Preferences | 01 Identity & Family Accounts | P1 | Not Started |
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
-| `02-001` Setup wizard | 02 Household Configuration & Playbook | P0 | Not Started |
 | `02-006` Configure by conversation | 02 Household Configuration & Playbook | P0 | Blocked |
 | `02-007` Conflict detection | 02 Household Configuration & Playbook | P1 | Not Started |
 | `02-008` Advanced rule builder | 02 Household Configuration & Playbook | P2 | Not Started |
@@ -125,11 +124,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 02 — Household Configuration & Playbook
 
-4 of 8 done `█████░░░░░`
+5 of 8 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
-| `02-001` Setup wizard | P0 | Not Started | — |
+| `02-001` Setup wizard | P0 | Done | Five resumable steps reading real config; dependency cycles refused; every change audited |
 | `02-002` Responsibility matrix | P0 | Done | Canonical data; inactive and cross-household targets refused |
 | `02-003` Household playbook | P0 | Done | Outcome keys, cadence, verification, escalation, dependencies |
 | `02-004` Policies | P0 | Done | Versioned; one active version per policy name |

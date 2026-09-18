@@ -4,7 +4,7 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 02-001 | Setup wizard | Not Started | |
+| 1 | P0 | 02-001 | Setup wizard | Done | Five resumable steps reading real config; dependency cycles refused; every change audited |
 | 2 | P0 | 02-002 | Responsibility matrix | Done | Canonical data; inactive and cross-household targets refused |
 | 3 | P0 | 02-003 | Household playbook | Done | Outcome keys, cadence, verification, escalation, dependencies |
 | 4 | P0 | 02-004 | Policies | Done | Versioned; one active version per policy name |
