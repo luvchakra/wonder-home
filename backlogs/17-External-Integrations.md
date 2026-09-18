@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | 1 | P0 | 17-001 | Connector framework | Done | connector contract, health, dedupe, fixtures; no live provider yet |
 | 2 | P0 | 17-002 | Calendar | Done | canonical payload → family_events by provider identity; never protected/confirmed; private = time only; partial sync never cancels; POST integrations/calendar/sync (409 until a provider is live) |
-| 3 | P0 | 17-003 | Email | Not Started | |
+| 3 | P0 | 17-003 | Email | Done | recognised bills → obligations by provider identity + content hash; status never touched by a sync; POST integrations/email/sync (409 until a provider is live) |
 | 4 | P0 | 17-004 | School | Not Started | |
 | 5 | P0 | 17-005 | Commerce | Not Started | |
 | 6 | P1 | 17-006 | WhatsApp | Not Started | |

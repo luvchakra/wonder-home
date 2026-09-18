@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import type { HomeAssessment } from "../home/assessment";
+import type { ExistingObligationImport, ImportedObligation, ObligationSyncPlan } from "./email-connector";
 import {
   assessObligation,
   detectAnomaly,
@@ -220,4 +221,83 @@ export async function prepareIntent(
 
   const row = data as Row;
   return { id: row.id as string, idempotencyKey, status: row.status as string };
+}
+
+/**
+ * Obligations this connection has imported before, as reconciliation needs
+ * them (17-003). Identity only, so a sync decides from provider ids and
+ * content hashes, never by comparing bill names.
+ */
+export async function listImportedObligations(
+  supabase: SupabaseClient,
+  integrationId: string,
+): Promise<ExistingObligationImport[]> {
+  const { data, error } = await supabase
+    .from("obligations")
+    .select("id, external_id")
+    .eq("integration_id", integrationId);
+
+  if (error) throw new Error(`listImportedObligations failed: ${error.code ?? "unknown"}`);
+
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    externalId: row.external_id as string,
+  }));
+}
+
+/**
+ * Writes an obligation sync plan (17-003).
+ *
+ * An insert is source 'imported' and starts life as 'received' — the bill has
+ * arrived, which is the one fact an email can honestly report — and marked
+ * `requires_review`, because auto-extracted amounts and dates are exactly the
+ * kind of thing a household should get to check once before trusting them. An
+ * update touches only the content columns: `status` is never part of what
+ * changes, so a bill a person already marked paid stays paid even if a
+ * corrected copy of the same email arrives later.
+ */
+export async function applyObligationSyncPlan(
+  supabase: SupabaseClient,
+  input: { householdId: string; integrationId: string; plan: ObligationSyncPlan },
+): Promise<void> {
+  const { householdId, integrationId, plan } = input;
+  const fail = (step: string, error: { code?: string }) => {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot add bills to this household.");
+    return new Error(`applyObligationSyncPlan ${step} failed: ${error.code ?? "unknown"}`);
+  };
+
+  if (plan.insert.length > 0) {
+    const { error } = await supabase.from("obligations").insert(
+      plan.insert.map((obligation) => ({
+        household_id: householdId,
+        integration_id: integrationId,
+        source: "imported",
+        status: "received",
+        requires_review: true,
+        ...obligationColumns(obligation),
+      })),
+    );
+    if (error) throw fail("insert", error);
+  }
+
+  for (const { id, obligation } of plan.update) {
+    const { error } = await supabase
+      .from("obligations")
+      .update({ requires_review: true, ...obligationColumns(obligation) })
+      .eq("id", id);
+    if (error) throw fail("update", error);
+  }
+}
+
+function obligationColumns(obligation: ImportedObligation) {
+  return {
+    external_id: obligation.externalId,
+    name: obligation.name,
+    kind: obligation.kind,
+    payee: obligation.payee,
+    amount_minor: obligation.amountMinor,
+    currency: obligation.currency,
+    due_on: obligation.dueOn,
+    recurrence: obligation.recurrence,
+  };
 }

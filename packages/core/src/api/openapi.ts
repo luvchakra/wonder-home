@@ -274,6 +274,31 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/email/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Sync the household's connected mailbox now",
+          description:
+            "Runs the mail connector for an administrator and reconciles recognised bills onto the household's obligations by provider identity and content hash. An email can never mark a bill paid, and a bill already marked paid is never touched by a re-sync. Mail the adapter does not recognise as a bill is filed, not surfaced. Responds with counts and the connection's health, never message content. 409 while no provider is live.",
+          parameters: [
+            {
+              name: "provider",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Which provider, when more than one mailbox is connected.",
+            },
+          ],
+          responses: {
+            "200": { description: "Counts of what changed and the connection's state" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "No mailbox is connected" },
+            "409": { description: "The provider is not configured, or more than one is connected and none was named" },
+          },
+        },
+      },
       "/households/{householdId}/home": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

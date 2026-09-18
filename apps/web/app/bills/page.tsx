@@ -1,14 +1,16 @@
-import { CalendarDays, CircleCheck, Receipt, ShieldCheck, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { CalendarDays, CircleCheck, Mail, Receipt, ShieldCheck, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { describeEmailHealth } from "@wonderhome/core/finance/email-connector";
 import { budgetView, format as formatMoney, type Obligation } from "@wonderhome/core/finance/payments";
 import { financeAgenda, listObligations } from "@wonderhome/core/finance/repository";
-import { listMembers } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
+import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
@@ -54,17 +56,27 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   }
 
   const active = tab === "transactions" ? "transactions" : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows] = await Promise.all([
+  const [agenda, obligations, members, historyRows, budgetRows, integrations] = await Promise.all([
     financeAgenda(supabase, householdId).catch(() => null),
     listObligations(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     supabase.from("obligation_history").select("obligation_id, period_label, amount_minor, currency").eq("household_id", householdId).order("period_label", { ascending: false }).limit(120),
     supabase.from("budgets").select("id, category, limit_minor, currency, spent_minor").eq("household_id", householdId),
+    listIntegrations(supabase, householdId).catch(() => []),
   ]);
+
+  // A stale mailbox and "no bills by email" must never look alike (17-003): if
+  // a connected mailbox is not working, the screen says so before the totals.
+  const mailHealth =
+    integrations
+      .filter((integration) => integration.kind === "email")
+      .map((integration) => describeEmailHealth({ status: integration.status, lastSuccessAt: integration.lastSuccessAt }))
+      .find((health) => health.tone !== "silent") ?? null;
 
   const history = (historyRows.data as HistoryRow[] | null) ?? [];
   const budgets = (budgetRows.data as BudgetRow[] | null) ?? [];
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
+  const admin = isHouseholdAdmin(membership);
   const currency = obligations.find((o) => o.currency)?.currency ?? history[0]?.currency ?? "INR";
 
   const upcoming = obligations.filter((o) => o.status !== "paid" && o.status !== "cancelled").sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"));
@@ -87,6 +99,20 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Bills &amp; Finance</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top. Stress less.</p>
         </header>
+
+        {mailHealth ? (
+          <Card className="flex items-start gap-3 p-4">
+            <Mail aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-foreground-muted)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm">{mailHealth.message}</p>
+              {mailHealth.tone === "needs_action" && admin ? (
+                <div className="mt-2">
+                  <PillLink href="/household/integrations" tone="primary">Fix the connection</PillLink>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
 
         <SegmentedControl
           label="Finance view"

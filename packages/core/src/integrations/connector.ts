@@ -203,6 +203,39 @@ export function dedupeKey<T>(record: ProviderRecord<T>): string {
   return `${record.externalId}:${record.contentHash}`;
 }
 
+const KNOWN_CODES = new Set<ConnectorError["code"]>([
+  "unauthorized",
+  "revoked",
+  "rate_limited",
+  "unavailable",
+  "timeout",
+  "malformed",
+  "not_configured",
+]);
+
+/**
+ * Anything a connector throws becomes a contract error.
+ *
+ * An adapter that throws its SDK's own exception has not told us anything
+ * safe to show a household, so it is treated as the provider being
+ * unavailable — and its message is never passed on, because provider prose
+ * can carry a token or another detail that should not reach a screen.
+ */
+export function toConnectorError(thrown: unknown): ConnectorError {
+  if (
+    typeof thrown === "object" &&
+    thrown !== null &&
+    "code" in thrown &&
+    KNOWN_CODES.has((thrown as { code: ConnectorError["code"] }).code) &&
+    typeof (thrown as { retryable?: unknown }).retryable === "boolean" &&
+    typeof (thrown as { message?: unknown }).message === "string"
+  ) {
+    return thrown as ConnectorError;
+  }
+
+  return { code: "unavailable", retryable: true, message: "The provider did not answer." };
+}
+
 /** What a household may be told a connector is doing, with no provider detail. */
 export function describeStatus(status: ConnectorStatus): string {
   switch (status) {

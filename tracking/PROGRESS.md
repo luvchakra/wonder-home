@@ -5,14 +5,14 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 130 |
+| Done | 131 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 39 |
-| Completion | 76.5% |
+| Not Started | 38 |
+| Completion | 77.1% |
 | Current module | 17 External Integrations |
-| Current story | 17-003 Email |
-| Last updated | 2026-09-18 |
+| Current story | 17-004 School |
+| Last updated | 2026-09-19 |
 
 ## Module Tracking
 
@@ -35,7 +35,7 @@
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 4 | In Progress |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 4 | In Progress |
-| 17 | External Integrations | 8 | 5 | 2 | 1 | 2 | In Progress |
+| 17 | External Integrations | 8 | 5 | 2 | 1 | 3 | In Progress |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 3 | In Progress |
@@ -171,4 +171,5 @@
 | 2026-09-17 | UI | v3 UI/UX | Done | 630 unit, 160 E2E | Design system v3: tokens, Inter, motion, 30-component kit, AI assistant (talk/text), 18 screens, landing page |
 | 2026-09-17 | 19 | 19-007 | In Progress | 635 unit, 160 E2E | Perf: functions in bom1 beside the database (migrated to the ap-south-1 project, 23 migrations, verify:live 59/59), local ES256 verification, per-request query dedup, next/link + loading skeletons, streaming shells |
 | 2026-09-18 | 17 | 17-002 | Done | 34 unit, E2E endpoint suite | Calendar connector: imported events never protected or confirmed, private entries are time only, partial sync never cancels, identities mapped by a person (integration_identities) |
+| 2026-09-19 | 17 | 17-003 | Done | 20 unit, 168 E2E | Email connector: recognised bills only, reconciled onto obligations by provider identity; an email can never mark a bill paid, and a re-sync never touches status once set |
 | 2026-09-18 | UI | Household setup | Done | 19 unit | First-week setup guidance for head/admin: weighted progress ring, next steps with a reason each, achievement at 100%; first sign-in recorded once per member (mark_member_seen) |

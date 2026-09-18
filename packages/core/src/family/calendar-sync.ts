@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ConnectionState, ConnectorError, ProviderRecord } from "../integrations/connector";
+import { toConnectorError, type ConnectionState, type ConnectorError, type ProviderRecord } from "../integrations/connector";
 import {
   listImportedEvents as readImportedEvents,
   applyCalendarPlan,
@@ -125,38 +125,6 @@ export async function syncCalendar(input: {
   };
 }
 
-const KNOWN_CODES = new Set<ConnectorError["code"]>([
-  "unauthorized",
-  "revoked",
-  "rate_limited",
-  "unavailable",
-  "timeout",
-  "malformed",
-  "not_configured",
-]);
-
-/**
- * Anything a connector throws becomes a contract error.
- *
- * An adapter that throws its SDK's exception has not told us anything safe to
- * show a household, so it is treated as the provider being unavailable — and
- * its message is not passed on, because provider prose can carry a token.
- */
-export function toConnectorError(thrown: unknown): ConnectorError {
-  if (
-    typeof thrown === "object" &&
-    thrown !== null &&
-    "code" in thrown &&
-    KNOWN_CODES.has((thrown as { code: ConnectorError["code"] }).code) &&
-    typeof (thrown as { retryable?: unknown }).retryable === "boolean" &&
-    typeof (thrown as { message?: unknown }).message === "string"
-  ) {
-    return thrown as ConnectorError;
-  }
-
-  return { code: "unavailable", retryable: true, message: "The calendar provider did not answer." };
-}
-
 /** The real ports, over the household's own RLS-scoped client. */
 export function calendarSyncPorts(supabase: SupabaseClient, connection: Connection): CalendarSyncPorts {
   return {
@@ -176,3 +144,5 @@ export function calendarSyncPorts(supabase: SupabaseClient, connection: Connecti
     recordOutcome: (outcome) => recordSyncOutcome(supabase, connection.id, connection.state, outcome),
   };
 }
+
+export { toConnectorError };
