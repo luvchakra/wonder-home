@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [The audit trail, and the nine things it was not recording (15-006)](2026-09-19-audit-trail.md) |
 | 2026-09-19 | [The AI privacy gate (story 15-005)](2026-09-19-ai-privacy-gate.md) |
 | 2026-09-19 | [Configure by conversation (story 02-006)](2026-09-19-configure-by-conversation.md) |
 | 2026-09-19 | [The setup wizard (story 02-001)](2026-09-19-setup-wizard.md) |

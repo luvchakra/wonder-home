@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import {
   applySyncOutcome,
@@ -81,6 +82,8 @@ export async function connectIntegration(
     provider: string;
     scopes: readonly string[];
     credentialRef?: string | null;
+    /** Who connected it. Recorded in the household's trail (story 15-006). */
+    actorMemberId?: string;
   },
 ): Promise<{ id: string }> {
   const { data, error } = await supabase
@@ -106,7 +109,21 @@ export async function connectIntegration(
     throw new Error(`connectIntegration failed: ${error.code ?? "unknown"}`);
   }
 
-  return { id: (data as Row).id as string };
+  const id = (data as Row).id as string;
+
+  // Household data now flows to or from somewhere outside the household, so
+  // it is recorded (story 15-006). The provider and the scopes, never the
+  // credential reference — that is the thing the connection is protected by.
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.actorMemberId ?? null,
+    eventType: "integration.connected",
+    targetTable: "integrations",
+    targetId: id,
+    metadata: { provider: input.provider, kind: input.kind, scopes: [...input.scopes] },
+  });
+
+  return { id };
 }
 
 /**

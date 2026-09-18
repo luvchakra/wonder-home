@@ -1,4 +1,4 @@
-import { BookOpen, Bot, ChevronRight, Cog, ListChecks, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
+import { BookOpen, Bot, ChevronRight, Cog, FileClock, ListChecks, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
 
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
@@ -65,6 +65,7 @@ export default async function ManageHouseholdPage() {
     { href: "/household/members", icon: Users, tone: "people", title: "Members & roles", meta: `${memberCount ?? 0} active · roles, permissions, privacy scopes` },
     { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: "Responsibilities", meta: `${modes.length} outcomes · owners, backups and outcomes` },
     { href: "#playbook", icon: BookOpen, tone: "home", title: "Household playbook", meta: `${items.filter((i) => i.active).length} routines and operating rules` },
+    { href: "/household/activity", icon: FileClock, tone: "neutral", title: "Activity", meta: "Who changed what, and when — kept as a record" },
     { href: "#policies", icon: ShieldCheck, tone: "money", title: "Policies", meta: `${rules.length} active · spending, approval, notifications, privacy` },
     { href: "#autonomy", icon: Bot, tone: "ai", title: "AI autonomy", meta: "Suggest · Prepare · Ask approval · Execute" },
     { href: "/household/integrations", icon: Plug, tone: "care", title: "Integrations", meta: `${integrations.length} connected · school, calendar, email, shopping, weather, payments`, badge: attention > 0 ? { label: `${attention} need you`, tone: "attention" } : undefined },
