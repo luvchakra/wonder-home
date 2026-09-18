@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parsePublicEnv, parseServerEnv } from "./env";
 
-const VALID_URL = "https://stehegovxlssxdepiruk.supabase.co";
+const VALID_URL = "https://kqxndableyysxqhxiorz.supabase.co";
 const VALID_KEY = "sb_publishable_0123456789abcdef";
 
 describe("environment contract", () => {
@@ -27,7 +27,7 @@ describe("environment contract", () => {
   it("rejects a URL that is not absolute", () => {
     expect(() =>
       parsePublicEnv({
-        NEXT_PUBLIC_SUPABASE_URL: "stehegovxlssxdepiruk.supabase.co",
+        NEXT_PUBLIC_SUPABASE_URL: "kqxndableyysxqhxiorz.supabase.co",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: VALID_KEY,
       }),
     ).toThrowError(/NEXT_PUBLIC_SUPABASE_URL/);

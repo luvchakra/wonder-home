@@ -6,6 +6,6 @@
   "outputDirectory": "apps/web/.next",
   "ignoreCommand": "bash -c 'f=\"$(git rev-parse --show-toplevel 2>/dev/null)/scripts/vercel-should-build.sh\"; if [ -f \"$f\" ]; then bash \"$f\"; else echo \"Building: ignore script not found\"; exit 1; fi'",
   "regions": [
-    "hnd1"
+    "bom1"
   ]
 }

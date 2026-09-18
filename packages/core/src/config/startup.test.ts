@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setLogSink, type LogRecord } from "../observability/logger";
 import { assertConfiguration } from "./startup";
 
-const VALID_URL = "https://stehegovxlssxdepiruk.supabase.co";
+const VALID_URL = "https://kqxndableyysxqhxiorz.supabase.co";
 const VALID_KEY = "sb_publishable_0123456789abcdef";
 
 const ORIGINAL = { ...process.env };

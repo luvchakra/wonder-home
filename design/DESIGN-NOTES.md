@@ -110,8 +110,8 @@ Playwright suite checks that headings are readable before they scroll in.
 
 "Snappy" is a design property, and these are the rules that keep it:
 
-1. **Compute next to the data.** Supabase is in `ap-northeast-1`; `vercel.json`
-   pins the functions to `hnd1`. A page makes tens of queries, and a query
+1. **Compute next to the data.** Supabase is in `ap-south-1` (Mumbai); `vercel.json`
+   pins the functions to `bom1`. A page makes tens of queries, and a query
    across the Pacific is 150–200 ms before it does anything.
 2. **Verify the session locally.** Tokens are ES256, so `getVerifiedUser()`
    checks the signature against the JWKS (cached process-wide) instead of
