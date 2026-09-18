@@ -109,6 +109,12 @@ Apple-style storytelling in WonderHome's own design (v3 §25–§45). It shares 
 product's tokens, mark, buttons, cards and icons, and its product visuals are
 the real components in device frames — never screenshots, never stretched.
 
+It closes with a contact section and a real footer — three columns where
+every link resolves, because a footer full of dead ends is the fastest way to
+teach somebody the product is a mock-up. There is no video call to action:
+the approved sheets show "Watch Video", there is no video, and an E2E test
+keeps one from appearing.
+
 What it deliberately does **not** do:
 
 - Show prices. None are configured anywhere; the plan cards come from the live

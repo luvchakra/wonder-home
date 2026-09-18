@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BadgeCheck,
   Bell,
+  BookOpen,
   Brain,
   CalendarHeart,
   CircleCheck,
@@ -10,11 +11,12 @@ import {
   GraduationCap,
   HandHeart,
   Heart,
+  Compass,
   Laptop,
   Leaf,
   ListChecks,
   Lock,
-  Play,
+  Mail,
   ShieldCheck,
   ShoppingBasket,
   Smartphone,
@@ -23,6 +25,7 @@ import {
   Utensils,
   Wallet,
 } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { FEATURES } from "@wonderhome/core/billing/entitlements";
@@ -31,6 +34,7 @@ import { cn } from "@wonderhome/core/lib/cn";
 import { BrandMark, Wordmark } from "@wonderhome/core/ui/brand";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
+import { contactEmail } from "@wonderhome/core/config/contact";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
@@ -92,6 +96,9 @@ const loadPlans = unstable_cache(async (): Promise<Plan[]> => {
 
 export async function Landing() {
   const plans = await loadPlans();
+  // A contact address is configuration: where none is set, the section offers
+  // the routes that do work rather than a mailto addressed to nobody.
+  const mailTo = contactEmail();
 
   return (
     <div id="top" className="min-h-dvh overflow-x-clip text-[var(--wh-foreground)]">
@@ -123,8 +130,8 @@ export async function Landing() {
                 <ButtonLink href="/sign-up" className="min-h-12 rounded-[var(--wh-radius-pill)] px-6 text-base shadow-[var(--wh-shadow-primary)]">
                   Get Started Free <ArrowRight aria-hidden className="size-4" />
                 </ButtonLink>
-                <ButtonLink href="#solution" variant="secondary" className="min-h-12 rounded-[var(--wh-radius-pill)] px-6 text-base">
-                  <Play aria-hidden className="size-4" /> See how it works
+                <ButtonLink href="#features" variant="secondary" className="min-h-12 rounded-[var(--wh-radius-pill)] px-6 text-base">
+                  <Compass aria-hidden className="size-4" /> Explore what it does
                 </ButtonLink>
               </div>
               <p className="mt-4 text-xs text-[var(--wh-foreground-subtle)]">
@@ -293,14 +300,52 @@ export async function Landing() {
                 At home.<br />On the go.<br />Always with you.
               </h2>
               <p className="mt-5 max-w-md text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
-                WonderHome works seamlessly across mobile, tablet and desktop, keeping your home in sync wherever life takes you.
+                The same household, shaped for where you are. These are the real screens, not
+                pictures of them.
               </p>
-              <ul className="mt-6 flex gap-5 text-sm font-medium text-[var(--wh-foreground-muted)]">
-                <li className="flex items-center gap-2"><Smartphone aria-hidden className="size-4" /> iOS &amp; Android</li>
-                <li className="flex items-center gap-2"><Laptop aria-hidden className="size-4" /> Web</li>
-              </ul>
+
+              {/* Each frame gets a number and a sentence, so the devices inform
+                  rather than decorate. */}
+              <ol className="mt-7 space-y-4">
+                {[
+                  {
+                    device: "On the desktop",
+                    icon: Laptop,
+                    copy: "The whole household at a glance — every domain in the sidebar, the week in one view.",
+                  },
+                  {
+                    device: "In your pocket",
+                    icon: Smartphone,
+                    copy: "Five areas, the assistant always in the middle of the bar. Installs like an app.",
+                  },
+                  {
+                    device: "Wherever you are",
+                    icon: Sparkles,
+                    copy: "Ask in your own words. Anything consequential comes back as a plan before it happens.",
+                  },
+                ].map((row, index) => (
+                  <li key={row.device} className="flex gap-3.5">
+                    <span
+                      aria-hidden
+                      className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--wh-primary-soft)] text-xs font-bold text-[var(--wh-primary)]"
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <row.icon aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+                        {row.device}
+                      </span>
+                      <span className="mt-0.5 block text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+                        {row.copy}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+
               <ButtonLink href="/sign-up" className="mt-8 min-h-12 rounded-[var(--wh-radius-pill)] px-6">
-                See it in action <ArrowRight aria-hidden className="size-4" />
+                Start with your household <ArrowRight aria-hidden className="size-4" />
               </ButtonLink>
             </div>
           </div>
@@ -412,21 +457,154 @@ export async function Landing() {
             </ScriptAccent>
           </div>
         </section>
+        {/* Contact */}
+        <Section
+          id="contact"
+          eyebrow="Get in touch"
+          title="Talk to the people building it."
+          lede="WonderHome is early, and the households using it are shaping what comes next. If something is missing, wrong, or nearly right, we want to hear it."
+        >
+          <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+            {mailTo ? (
+              <ContactCard
+                icon={Mail}
+                tone="primary"
+                title="Email us"
+                copy="Questions, problems, or a feature your home needs. A person reads every one."
+                action={
+                  <a
+                    href={`mailto:${mailTo}?subject=${encodeURIComponent("WonderHome")}`}
+                    className="text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline"
+                  >
+                    {mailTo}
+                  </a>
+                }
+              />
+            ) : (
+              <ContactCard
+                icon={Sparkles}
+                tone="ai"
+                title="Ask WonderHome"
+                copy="Once you have an account, the assistant answers in your own words — and can act on your household, which a support inbox cannot."
+                action={
+                  <Link href="/sign-up" className="text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                    Create an account
+                  </Link>
+                }
+              />
+            )}
+
+            <ContactCard
+              icon={BookOpen}
+              tone="home"
+              title="Read the guide"
+              copy="How WonderHome works, what it will never do without asking, and the questions families ask first."
+              action={
+                <Link href="/help" className="text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                  Open the user guide
+                </Link>
+              }
+            />
+          </div>
+        </Section>
       </main>
 
       <footer className="border-t border-[var(--wh-border)] bg-[var(--wh-surface)]/70">
-        <div className="mx-auto flex max-w-[var(--wh-content-wide)] flex-col gap-6 px-4 py-10 md:flex-row md:items-center md:justify-between lg:px-8">
-          <Wordmark tagline size={32} />
-          <nav aria-label="Footer">
-            <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--wh-foreground-muted)]">
-              {[["#top", "Home"], ["#features", "Features"], ["#pricing", "Pricing"], ["#security", "Security"], ["#security", "Privacy"], ["/ai", "Help"], ["/sign-in", "Sign In"]].map(([href, label]) => (
-                <li key={label}><a href={href} className="hover:text-[var(--wh-foreground)]">{label}</a></li>
-              ))}
-            </ul>
-          </nav>
-          <p className="text-xs text-[var(--wh-foreground-subtle)]">Made for families. Built for a brighter tomorrow. <span aria-hidden>♥</span></p>
+        <div className="mx-auto max-w-[var(--wh-content-wide)] px-4 py-12 lg:px-8">
+          <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+            <div className="max-w-xs">
+              <Wordmark tagline size={32} />
+              <p className="mt-3 text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+                An AI household operating system. The family runs the home; WonderHome manages the
+                managing.
+              </p>
+              <ScriptAccent tone="people" size="sm" heart className="mt-4">
+                Home runs smoother. Together.
+              </ScriptAccent>
+            </div>
+
+            {/* Every link here resolves. A footer full of dead ends is the
+                fastest way to teach somebody the product is a mock-up. */}
+            {[
+              {
+                heading: "Product",
+                links: [
+                  ["#why", "Why WonderHome"],
+                  ["#features", "Features"],
+                  ["#families", "The assistant"],
+                  ["#pricing", "Plans"],
+                  ["#security", "Security"],
+                ],
+              },
+              {
+                heading: "Get started",
+                links: [
+                  ["/sign-up", "Create an account"],
+                  ["/sign-in", "Sign in"],
+                  ["/forgot-password", "Reset your password"],
+                  ["#contact", "Contact us"],
+                ],
+              },
+              {
+                heading: "More",
+                links: [
+                  ["/help", "User guide"],
+                  ["/legal", "Terms & privacy"],
+                  ["#top", "Back to top"],
+                ],
+              },
+            ].map((column) => (
+              <nav key={column.heading} aria-label={column.heading}>
+                <p className="text-[0.6875rem] font-bold tracking-[0.1em] text-[var(--wh-foreground-subtle)] uppercase">
+                  {column.heading}
+                </p>
+                <ul className="mt-3 space-y-2 text-sm text-[var(--wh-foreground-muted)]">
+                  {column.links.map(([href, label]) => (
+                    <li key={label}>
+                      <a href={href} className="underline-offset-2 hover:text-[var(--wh-foreground)] hover:underline">
+                        {label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
+          </div>
+
+          <div className="mt-10 flex flex-col gap-3 border-t border-[var(--wh-border)] pt-6 text-xs text-[var(--wh-foreground-subtle)] sm:flex-row sm:items-center sm:justify-between">
+            <p>© {new Date().getFullYear()} WonderHome. Made for families.</p>
+            <p className="flex items-center gap-1.5">
+              <Lock aria-hidden className="size-3.5" />
+              Your household is never training data.
+            </p>
+          </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ContactCard({
+  icon: Icon,
+  tone,
+  title,
+  copy,
+  action,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  tone: IconTone;
+  title: string;
+  copy: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <div className="wh-reveal flex flex-col gap-3 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-5 shadow-[var(--wh-shadow-card)]">
+      <IconTile icon={Icon} tone={tone} size="lg" />
+      <div>
+        <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--wh-foreground-muted)]">{copy}</p>
+      </div>
+      <div className="mt-auto">{action}</div>
     </div>
   );
 }

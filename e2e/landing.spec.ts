@@ -28,13 +28,49 @@ test("Get Started leads to sign-up and Sign In to sign-in — the product's own 
 test("every story section the requirements call for is on the page", async ({ page }) => {
   await page.goto("/");
 
-  for (const id of ["why", "solution", "features", "families", "security", "stories", "pricing"]) {
+  for (const id of ["why", "solution", "features", "families", "security", "stories", "pricing", "contact"]) {
     await expect(page.locator(`#${id}`)).toHaveCount(1);
   }
   await expect(page.getByRole("heading", { name: /Modern life is beautiful/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Meet WonderHome/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Your home is private/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /A brighter tomorrow/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Talk to the people building it/ })).toBeVisible();
+});
+
+test("nothing on the page offers a video, because there is no video", async ({ page }) => {
+  await page.goto("/");
+
+  // The approved sheets showed a "Watch Video" call to action. There is no
+  // video, and a button that opens nothing is the thing this page avoids.
+  await expect(page.getByRole("link", { name: /watch|video|play/i })).toHaveCount(0);
+  await expect(page.locator("video")).toHaveCount(0);
+});
+
+test("every footer link goes somewhere that exists", async ({ page, request }) => {
+  await page.goto("/");
+
+  const footer = page.locator("footer");
+  const hrefs = await footer.locator("a[href]").evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href") ?? ""),
+  );
+
+  expect(hrefs.length).toBeGreaterThan(8);
+
+  for (const href of hrefs) {
+    if (href.startsWith("#")) {
+      // An anchor has to land on something, or the link is decoration.
+      await expect(page.locator(href), `footer anchor ${href}`).toHaveCount(1);
+      continue;
+    }
+
+    // A gated page answers with a redirect to sign-in rather than a 404,
+    // which is still a link that goes somewhere real.
+    const response = await request.get(href, { maxRedirects: 0 });
+    expect([200, 307, 308], `footer link ${href} → ${response.status()}`).toContain(
+      response.status(),
+    );
+  }
 });
 
 test("the header navigation reaches each section", async ({ page, isMobile }) => {

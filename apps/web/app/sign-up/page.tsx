@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { Field } from "@wonderhome/core/ui/field";
 import { PasswordField } from "@wonderhome/core/ui/password-field";
@@ -47,8 +49,11 @@ export default function SignUpPage() {
             hint="At least 8 characters."
           />
           <p className="text-xs text-[var(--wh-foreground-subtle)]">
-            By creating an account you agree to our Terms of Service and Privacy Policy. Your household&apos;s data
-            is never used to train models by default.
+            By creating an account you agree to our{" "}
+            <Link href="/legal" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+              terms and privacy
+            </Link>
+            . Your household&apos;s data is never used to train models by default.
           </p>
         </AuthForm>
       </div>
