@@ -44,6 +44,7 @@ const SHIPPED_TABLES = [
   "integrations",
   "integration_events",
   "integration_identities",
+  "household_ai_credentials",
   "school_enrolments",
   "school_items",
   "study_sessions",
@@ -204,6 +205,17 @@ async function main() {
 
   const seen = await anon.rpc("mark_member_seen", { p_household_id: "00000000-0000-4000-8000-000000000000" });
   check("anonymous cannot record a first sign-in", Boolean(seen.error), seen.error?.code ?? "no error");
+
+  // The table that holds a household's own model key has no SELECT policy at
+  // all. Row level security answers that by returning no rows rather than by
+  // raising — so "no rows and no error" is the property to assert, and an
+  // error here would actually be the weaker result.
+  const keys = await anon.from("household_ai_credentials").select("api_key").limit(1);
+  check(
+    "nobody can read a household's model key",
+    Boolean(keys.error) || (Array.isArray(keys.data) && keys.data.length === 0),
+    keys.error ? keys.error.code : `${keys.data?.length ?? "?"} rows`,
+  );
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

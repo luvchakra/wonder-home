@@ -1,7 +1,9 @@
-import { Bell, ChevronRight, Database, HelpCircle, KeyRound, Link2, LogOut, Moon, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Link2, LogOut, Moon, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
+import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
@@ -14,7 +16,9 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { getVerifiedUser } from "@wonderhome/core/db/server";
 
 import { signOut } from "../(auth)/actions";
-import { requireSession } from "../_lib/session";
+import { removeAiKey, saveAiKey } from "../(auth)/ai-key-actions";
+import { AiKeyForm } from "../_components/ai-key-form";
+import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Settings & profile" };
 export const dynamic = "force-dynamic";
@@ -30,10 +34,20 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
 export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const [user, { data: preferenceRows }] = await Promise.all([
+  const [user, { data: preferenceRows }, credential] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
+    credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
   ]);
+
+  // Which key actually answers for this household, decided in one place so
+  // the screen can never disagree with the server about it.
+  const key = resolveModelKey(
+    credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null,
+    platformKey(),
+  );
+  const keyNote = describeKeySource(key.source);
+  const manages = view.permissions.includes("household.manage");
   const preferences = (preferenceRows as PreferenceRow[] | null) ?? [];
   const inApp = preferences.find((p) => p.channel === "in_app");
 
@@ -68,6 +82,50 @@ export default async function SettingsPage() {
               <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={Moon} tone="home" size="sm" /><span className="flex-1 text-sm">Time zone</span><span className="text-xs text-[var(--wh-foreground-muted)]">{membership.household.timezone}</span></li>
               <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={ShieldCheck} tone="primary" size="sm" /><span className="flex-1 text-sm">What you can do</span><span className="text-xs text-[var(--wh-foreground-muted)]">{view.permissions.length} permissions</span></li>
             </ul>
+          </Card>
+        </section>
+
+        <section>
+          <SectionHeader title="AI assistant" />
+          <Card className="space-y-4 p-4">
+            <div className="flex items-start gap-3">
+              <IconTile icon={Bot} tone="ai" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{keyNote.title}</p>
+                <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{keyNote.detail}</p>
+                {credential.configured && credential.updatedAt ? (
+                  <p className="mt-1 text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+                    Set {formatDate(membership.household.timezone, credential.updatedAt, "long")}
+                  </p>
+                ) : null}
+              </div>
+              <Badge tone={keyNote.tone === "attention" ? "attention" : "handled"}>
+                {key.source === "household" ? "Your key" : key.source === "platform" ? "Included" : "Rules only"}
+              </Badge>
+            </div>
+
+            {manages ? (
+              <>
+                <p className="text-xs text-[var(--wh-foreground-muted)]">
+                  WonderHome runs the assistant on its own key, so you do not need an account with a model
+                  provider. Use your own instead if you would rather the requests were billed to you and
+                  covered by your own agreement with them.
+                </p>
+                <AiKeyForm
+                  householdId={membership.household.id}
+                  save={saveAiKey}
+                  remove={removeAiKey}
+                  configured={credential.configured}
+                />
+                {key.source === "none" ? (
+                  <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs text-[var(--wh-foreground-muted)]">
+                    This deployment has no key of its own either. An operator sets one with the
+                    <code className="mx-1 rounded bg-[var(--wh-surface)] px-1 py-0.5 text-[0.6875rem]">WONDERHOME_AI_KEY</code>
+                    environment variable — there is no platform administration screen for it.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
           </Card>
         </section>
 
