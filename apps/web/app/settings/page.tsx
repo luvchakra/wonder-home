@@ -4,6 +4,8 @@ import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { describeDataUse } from "@wonderhome/core/ai/privacy";
+import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
@@ -17,7 +19,9 @@ import { getVerifiedUser } from "@wonderhome/core/db/server";
 
 import { signOut } from "../(auth)/actions";
 import { removeAiKey, saveAiKey } from "../(auth)/ai-key-actions";
+import { saveDataUseAction } from "../(auth)/privacy-actions";
 import { AiKeyForm } from "../_components/ai-key-form";
+import { DataUseForm } from "../_components/data-use-form";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Settings & profile" };
@@ -34,10 +38,11 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
 export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const [user, { data: preferenceRows }, credential] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, dataUse] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
+    loadDataUse(supabase, membership.household.id),
   ]);
 
   // Which key actually answers for this household, decided in one place so
@@ -126,6 +131,30 @@ export default async function SettingsPage() {
                 ) : null}
               </>
             ) : null}
+          </Card>
+        </section>
+
+        <section>
+          <SectionHeader title="What the assistant may share" />
+          <Card className="space-y-4 p-4">
+            {/* Read on the server every time. A screen cannot cache its way
+                into a more permissive answer (story 15-005). */}
+            <ul className="space-y-1.5">
+              {describeDataUse(dataUse).map((line) => (
+                <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
+              ))}
+            </ul>
+            {manages ? (
+              <DataUseForm
+                action={saveDataUseAction}
+                householdId={membership.household.id}
+                policy={dataUse}
+              />
+            ) : (
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">
+                The Head of Family and administrators decide this for the household.
+              </p>
+            )}
           </Card>
         </section>
 

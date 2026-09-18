@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**134 of 170 stories done — 78.8%**
+**135 of 170 stories done — 79.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 134 |
+| Done | 135 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 35 |
+| Not Started | 34 |
 
 ## By module
 
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `███████░░░` | 6 | 8 | 2 not started |
-| 15 Privacy, Security & Governance | `█████░░░░░` | 4 | 8 | 4 not started |
+| 15 Privacy, Security & Governance | `██████░░░░` | 5 | 8 | 3 not started |
 | 16 Platform Admin & Operations | `█████░░░░░` | 4 | 8 | 4 not started |
 | 17 External Integrations | `█████░░░░░` | 4 | 8 | 4 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
@@ -65,7 +65,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-007` Multi-agent coordination | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
-| `15-005` AI privacy | 15 Privacy, Security & Governance | P0 | Not Started |
 | `15-006` Audit | 15 Privacy, Security & Governance | P0 | Not Started |
 | `15-007` Privacy Center | 15 Privacy, Security & Governance | P0 | Not Started |
 | `15-008` Security testing | 15 Privacy, Security & Governance | P0 | Not Started |
@@ -318,7 +317,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 15 — Privacy, Security & Governance
 
-4 of 8 done `█████░░░░░`
+5 of 8 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -326,7 +325,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `15-002` Tenant isolation | P0 | Done | Catalogue-driven coverage test; proven to detect violations |
 | `15-003` RBAC/privacy scopes | P0 | Done | Permission catalogue plus server-side view filtering |
 | `15-004` Encryption/secrets | P0 | Done | Secret lint; redaction; HSTS and secure cookies |
-| `15-005` AI privacy | P0 | Not Started | — |
+| `15-005` AI privacy | P0 | Done | Consent gate before assembly; context minimised and pseudonymised; retry is idempotent |
 | `15-006` Audit | P0 | Not Started | — |
 | `15-007` Privacy Center | P0 | Not Started | — |
 | `15-008` Security testing | P0 | Not Started | — |
