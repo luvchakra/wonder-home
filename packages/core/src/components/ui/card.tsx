@@ -5,12 +5,15 @@ import { cn } from "../../lib/cn";
 export type CardProps = {
   children: ReactNode;
   className?: string;
+  /** Anchor target, for a card a link elsewhere on the page points at. */
+  id?: string;
 };
 
 /** The one card surface: white, rounded, softly elevated, generously padded. */
-export function Card({ children, className }: CardProps) {
+export function Card({ children, className, id }: CardProps) {
   return (
     <section
+      id={id}
       className={cn(
         "rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-4 shadow-[var(--wh-shadow-card)]",
         className,

@@ -23,6 +23,7 @@ const AUTHENTICATED_PREFIXES = [
   "/notifications",
   "/certification",
   "/settings",
+  "/help",
   "/welcome",
   // Accepting an invitation needs an account, so an invitee is sent to sign in
   // and returned to the link afterwards.

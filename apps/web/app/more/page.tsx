@@ -1,4 +1,4 @@
-import { ChevronRight, LogOut } from "lucide-react";
+import { ChevronRight, LifeBuoy, LogOut } from "lucide-react";
 
 import Link from "next/link";
 
@@ -83,6 +83,27 @@ export default async function MorePage() {
             </Card>
           </section>
         ) : null}
+
+        <section>
+          <SectionHeader title="Help" />
+          <Card className="p-2">
+            <Link
+              href="/help"
+              className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 transition-colors hover:bg-[var(--wh-surface-muted)]"
+            >
+              <span className="grid size-10 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]">
+                <LifeBuoy className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">Get Help</span>
+                <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">
+                  User guide, common questions, and a way to search them
+                </span>
+              </span>
+              <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+            </Link>
+          </Card>
+        </section>
 
         <form action={signOut}>
           <Button type="submit" variant="secondary" className="w-full gap-2">

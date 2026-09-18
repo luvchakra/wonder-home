@@ -26,6 +26,7 @@ const GATED_AREAS = [
   "/notifications",
   "/certification",
   "/settings",
+  "/help",
 ];
 
 test("a personal area sends an anonymous visitor to sign in, remembering the destination", async ({ page }) => {

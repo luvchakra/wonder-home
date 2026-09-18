@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [Get Help: user guide, FAQ, and searching them](2026-09-19-help-centre.md) |
 | 2026-09-19 | [The platform's model key, and bring your own](2026-09-19-platform-ai-key-and-byok.md) |
 | 2026-09-19 | [Password recovery, reveal, and Google sign-in](2026-09-19-auth-recovery-reveal-google.md) |
 | 2026-09-19 | [School connector wired to a real sync (story 17-004)](2026-09-19-school-connector-sync.md) |

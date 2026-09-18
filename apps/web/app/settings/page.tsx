@@ -58,7 +58,7 @@ export default async function SettingsPage() {
     { icon: Link2, tone: "care", title: "Connected accounts", meta: "School, calendar, shopping, weather", href: view.permissions.includes("integrations.manage") ? "/household/integrations" : undefined },
     { icon: Database, tone: "home", title: "Export my data", meta: "Coming — a copy of everything WonderHome holds about you", badge: "Soon" },
     { icon: Trash2, tone: "risk", title: "Delete my account", meta: "Coming — removes you and what only you can see", badge: "Soon" },
-    { icon: HelpCircle, tone: "ai", title: "Help & support", meta: "Ask WonderHome, or write to us", href: "/ai?q=How%20do%20I%20get%20help%3F" },
+    { icon: HelpCircle, tone: "ai", title: "Get Help", meta: "User guide, common questions, and a way to search them", href: "/help" },
   ];
 
   return (

@@ -3,9 +3,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
-import { Avatar } from "../ui/avatar";
 import { BrandMark, Wordmark } from "../ui/brand";
 import { SearchBar } from "../ui/search-bar";
+import { ViewerMenu } from "./viewer-menu";
 
 /**
  * The top of every signed-in screen: the mark, search, notifications and the
@@ -82,13 +82,7 @@ export function MobileHeader({
                   <span aria-hidden className="absolute top-2.5 right-2.5 size-2 rounded-full bg-[var(--wh-attention)] ring-2 ring-[var(--wh-surface)]" />
                 ) : null}
               </Link>
-              <Link
-                href="/settings"
-                aria-label={`${viewer.displayName}, ${viewer.roleLabel}. Settings and profile`}
-                className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-              >
-                <Avatar name={viewer.displayName} size="sm" />
-              </Link>
+              <ViewerMenu viewer={viewer} />
             </>
           ) : null}
         </div>
