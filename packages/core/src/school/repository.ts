@@ -4,6 +4,8 @@ import { ApiError } from "../api/errors";
 import type { HomeAssessment } from "../home/assessment";
 import { ageBandFor, parseDateOfBirth } from "../identity/age";
 import { assessCommunication, type SchoolCommunication } from "./communications";
+import type { ExistingSchoolItemImport, SchoolItemsSyncPlan } from "./school-sync";
+import type { TranslatedSchoolItem } from "./connector";
 import { assessDeadline, childView, type SchoolItem, type SchoolItemKind, type SchoolItemStatus } from "./items";
 
 /**
@@ -216,4 +218,83 @@ export async function childSchoolView(
 ) {
   const items = await listSchoolItems(supabase, householdId, { childMemberId });
   return childView(items, now);
+}
+
+/**
+ * School items this connection has imported before, as reconciliation needs
+ * them (17-004). Status travels with identity: a reconciler has to know
+ * whether an item is already submitted or done before it can decide whether
+ * a provider's cancellation signal is safe to apply.
+ */
+export async function listImportedSchoolItems(
+  supabase: SupabaseClient,
+  integrationId: string,
+): Promise<ExistingSchoolItemImport[]> {
+  const { data, error } = await supabase
+    .from("school_items")
+    .select("id, external_id, status")
+    .eq("integration_id", integrationId);
+
+  if (error) throw new Error(`listImportedSchoolItems failed: ${error.code ?? "unknown"}`);
+
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    externalId: row.external_id as string,
+    status: row.status as ExistingSchoolItemImport["status"],
+  }));
+}
+
+/**
+ * Writes a school sync plan (17-004).
+ *
+ * An insert is source-tagged by the provider column and starts at 'pending',
+ * unless the provider itself reported the item cancelled, in which case it is
+ * inserted already cancelled — there is no one's completion to protect yet. An
+ * update touches only content columns and, when the plan says so, `status`
+ * to 'cancelled' — never to 'done' or 'submitted', which only a person or a
+ * provider-confirmed completion (never written here) may set.
+ */
+export async function applySchoolItemsSyncPlan(
+  supabase: SupabaseClient,
+  input: { householdId: string; integrationId: string; plan: SchoolItemsSyncPlan },
+): Promise<void> {
+  const { householdId, integrationId, plan } = input;
+  const fail = (step: string, error: { code?: string }) => {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot add school work to this household.");
+    return new Error(`applySchoolItemsSyncPlan ${step} failed: ${error.code ?? "unknown"}`);
+  };
+
+  if (plan.insert.length > 0) {
+    const { error } = await supabase.from("school_items").insert(
+      plan.insert.map((item) => ({
+        household_id: householdId,
+        integration_id: integrationId,
+        status: item.providerCancelled ? "cancelled" : "pending",
+        ...schoolItemColumns(item),
+      })),
+    );
+    if (error) throw fail("insert", error);
+  }
+
+  for (const { id, item, cancel } of plan.update) {
+    const { error } = await supabase
+      .from("school_items")
+      .update({ ...schoolItemColumns(item), ...(cancel ? { status: "cancelled" } : {}) })
+      .eq("id", id);
+    if (error) throw fail("update", error);
+  }
+}
+
+function schoolItemColumns(item: TranslatedSchoolItem) {
+  return {
+    child_member_id: item.childMemberId,
+    external_id: item.externalId,
+    kind: item.kind,
+    title: item.title,
+    subject: item.subject,
+    due_at: item.dueAt ? item.dueAt.toISOString() : null,
+    estimated_minutes: item.estimatedMinutes,
+    estimate_source: item.estimateSource,
+    provider: item.provider,
+  };
 }

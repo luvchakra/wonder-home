@@ -56,9 +56,26 @@ export type ChildMapping = {
   childMemberId: string;
 };
 
+/** A translated item, carrying what reconciliation needs beyond the canonical shape. */
+export type TranslatedSchoolItem = Omit<SchoolItem, "id" | "status" | "completedAt" | "externalId"> & {
+  /** Always present: a translated item always came from a provider record. */
+  externalId: string;
+  /** Identity plus a stable hash of the payload, so a re-sync can tell "unchanged" from "corrected". */
+  contentHash: string;
+  /**
+   * Whether the provider itself reported this item cancelled (17-004).
+   *
+   * Applying it is the reconciler's decision, not this function's: a provider
+   * saying "cancelled" is exactly as unable to report work *done* as it is to
+   * un-report work a child already turned in, so a reconciler must never let
+   * this override an item already submitted or done.
+   */
+  providerCancelled: boolean;
+};
+
 export type Translation = {
   /** Ready to become canonical school items. */
-  items: Omit<SchoolItem, "id" | "status" | "completedAt">[];
+  items: TranslatedSchoolItem[];
   /**
    * Records naming a child this household has not mapped.
    *
@@ -104,6 +121,8 @@ export function translate(
       estimateSource: record.payload.estimatedMinutes != null ? "provider" : null,
       provider,
       externalId: record.externalId,
+      contentHash: record.contentHash,
+      providerCancelled: record.payload.status === "cancelled",
     });
   }
 

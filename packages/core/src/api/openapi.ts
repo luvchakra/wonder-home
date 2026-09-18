@@ -299,6 +299,31 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/school/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Sync the household's connected school portal now",
+          description:
+            "Runs the school connector for an administrator and reconciles what it returns onto school_items by provider identity and content hash. A portal can never report work done, and a provider's own cancellation signal is applied only when nobody has already submitted or finished the item. A record naming a child the household has not mapped waits, unmatched. Responds with counts and the connection's health, never a child's work. 409 while no provider is live.",
+          parameters: [
+            {
+              name: "provider",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Which provider, when more than one school portal is connected.",
+            },
+          ],
+          responses: {
+            "200": { description: "Counts of what changed and the connection's state" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "No school portal is connected" },
+            "409": { description: "The provider is not configured, or more than one is connected and none was named" },
+          },
+        },
+      },
       "/households/{householdId}/home": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

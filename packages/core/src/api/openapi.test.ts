@@ -66,6 +66,7 @@ describe("the OpenAPI document", () => {
       "/households/{householdId}/integrations",
       "/households/{householdId}/integrations/calendar/sync",
       "/households/{householdId}/integrations/email/sync",
+      "/households/{householdId}/integrations/school/sync",
       "/households/{householdId}/meals",
       "/households/{householdId}/school",
       "/households/{householdId}/shopping",

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [School connector wired to a real sync (story 17-004)](2026-09-19-school-connector-sync.md) |
 | 2026-09-19 | [Email connector (story 17-003)](2026-09-19-email-connector.md) |
 | 2026-09-18 | [Design principles in CLAUDE.md, and the handwritten accent](2026-09-18-design-principles-and-handwritten-accent.md) |
 | 2026-09-18 | [Household setup guidance for the first week](2026-09-18-household-setup-guidance.md) |

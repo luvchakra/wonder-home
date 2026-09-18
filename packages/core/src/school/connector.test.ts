@@ -61,6 +61,24 @@ describe("translating what a portal sent", () => {
     expect(items[0]).toMatchObject({ estimatedMinutes: 40, estimateSource: "provider" });
   });
 
+  it("carries the record's content hash, for a reconciler to tell unchanged from corrected", () => {
+    const { items } = translate([record()], mappings, "example_school");
+
+    expect(items[0]?.contentHash).toBe("a".repeat(64));
+  });
+
+  it("flags a provider's own cancellation signal without deciding what to do about it", () => {
+    const { items } = translate([record({ status: "cancelled" })], mappings, "example_school");
+
+    expect(items[0]?.providerCancelled).toBe(true);
+  });
+
+  it("leaves providerCancelled false for ordinary work", () => {
+    const { items } = translate([record()], mappings, "example_school");
+
+    expect(items[0]?.providerCancelled).toBe(false);
+  });
+
   it("drops a malformed date rather than inventing a deadline", () => {
     const { items } = translate([record({ dueAt: "not a date" })], mappings, "example_school");
 

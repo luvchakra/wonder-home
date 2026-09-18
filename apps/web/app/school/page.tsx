@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 import { BookOpen, CalendarDays, GraduationCap, MessageSquareText, Plug } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
-import { listMembers } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { describeSchoolHealth } from "@wonderhome/core/school/connector";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
+import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
@@ -48,12 +50,22 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, items, communications, members] = await Promise.all([
+  const [agenda, items, communications, members, integrations] = await Promise.all([
     schoolAgenda(supabase, householdId).catch(() => null),
     listSchoolItems(supabase, householdId, child ? { childMemberId: child } : {}).catch(() => []),
     listCommunications(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    listIntegrations(supabase, householdId).catch(() => []),
   ]);
+
+  // A stale portal and "no homework" must never look alike (17-004): if a
+  // connected school portal is not working, the screen says so up front.
+  const portalHealth =
+    integrations
+      .filter((integration) => integration.kind === "school")
+      .map((integration) => describeSchoolHealth({ status: integration.status, lastSuccessAt: integration.lastSuccessAt }))
+      .find((health) => health.tone !== "silent") ?? null;
+  const admin = isHouseholdAdmin(membership);
 
   const children = members.filter((member) => member.memberType === "child");
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? "School";
@@ -67,6 +79,20 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Kids &amp; School</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">All school info in one place — and only what needs you up front.</p>
         </header>
+
+        {portalHealth ? (
+          <Card className="flex items-start gap-3 p-4">
+            <Plug aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-foreground-muted)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm">{portalHealth.message}</p>
+              {portalHealth.tone === "needs_action" && admin ? (
+                <div className="mt-2">
+                  <PillLink href="/household/integrations" tone="primary">Fix the connection</PillLink>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
 
         {children.length > 1 ? (
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
