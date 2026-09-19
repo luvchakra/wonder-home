@@ -3,15 +3,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { recordAuditEvent, type AuditEventType } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
+import { listMembers } from "../identity/households";
 import type { AutonomyMode } from "./autonomy";
 import type { ResolvedChange } from "./configuration-intent";
 import {
   canDependOn,
+  detectConflicts,
   downstreamOf,
   nextPolicyVersion,
   validatePlaybookItem,
   validateResponsibility,
   type ConfigMember,
+  type ConfigurationConflict,
   type PlaybookInput,
   type PolicyCategory,
   type ResponsibilityInput,
@@ -317,6 +320,33 @@ export async function listResponsibilities(
     aiMode: row.ai_mode as AutonomyMode,
     priority: Number(row.priority),
   }));
+}
+
+/**
+ * Contradictions in the household's current responsibilities that nothing
+ * caught at write time, because nothing was just written (story 02-007).
+ *
+ * Reads the same two things `saveResponsibility` validates against — the
+ * current responsibilities and the household's currently active members —
+ * and runs `detectConflicts` over them. A member who has left since an
+ * outcome was assigned to them, or an outcome that has since become
+ * adult-only, would otherwise sit unnoticed until somebody happened to
+ * resave that exact row.
+ */
+export async function listConfigurationConflicts(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<ConfigurationConflict[]> {
+  const [responsibilities, members] = await Promise.all([
+    listResponsibilities(supabase, householdId),
+    listMembers(supabase, householdId, null),
+  ]);
+
+  const active = members
+    .filter((member) => member.status === "active")
+    .map((member) => ({ id: member.id, displayName: member.displayName, memberType: member.memberType }));
+
+  return detectConflicts(responsibilities, active);
 }
 
 /**

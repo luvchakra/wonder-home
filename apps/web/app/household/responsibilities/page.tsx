@@ -1,6 +1,8 @@
 import { GraduationCap, HandHeart, ListChecks, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet, Wrench } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType } from "react";
 
+import { listConfigurationConflicts } from "@wonderhome/core/household/configuration-repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
@@ -63,9 +65,10 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
     );
   }
 
-  const [members, { data }] = await Promise.all([
+  const [members, { data }, conflicts] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     supabase.from("responsibilities").select("id, outcome_key, primary_member_id, backup_member_id, ai_mode, priority, playbook_items(name, outcome_definition, cadence)").eq("household_id", householdId).order("priority"),
+    listConfigurationConflicts(supabase, householdId).catch(() => []),
   ]);
 
   const rows = (data as Row[] | null) ?? [];
@@ -94,6 +97,41 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
             { key: "family", label: "Family", href: "/household/responsibilities?tab=family" },
           ]}
         />
+
+        {conflicts.length > 0 && active === "all" ? (
+          <Card className="space-y-2 bg-[var(--wh-attention-soft)]/60 p-4">
+            <div className="flex items-center gap-3">
+              <Badge tone="attention">{conflicts.length} to fix</Badge>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">
+                The household has changed since these were set. Each needs one decision.
+              </p>
+            </div>
+            <ul className="divide-y divide-[var(--wh-border-strong)]/40">
+              {conflicts.map((conflict) => (
+                <li key={conflict.id}>
+                  {admin ? (
+                    <Link
+                      href="/household/setup?step=responsibilities"
+                      className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-1 py-2 transition-colors hover:bg-[var(--wh-surface)]/60"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{conflict.message}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-muted)]">{conflict.resolution}</span>
+                      </span>
+                    </Link>
+                  ) : (
+                    <div className="flex min-h-14 items-center gap-3 px-1 py-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{conflict.message}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-muted)]">{conflict.resolution}</span>
+                      </span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         {gaps.length > 0 && active === "all" ? (
           <Card className="flex items-center gap-3 bg-[var(--wh-attention-soft)]/60 p-4">

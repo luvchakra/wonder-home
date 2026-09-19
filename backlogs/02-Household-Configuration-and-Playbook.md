@@ -10,7 +10,7 @@
 | 4 | P0 | 02-004 | Policies | Done | Versioned; one active version per policy name |
 | 5 | P0 | 02-005 | AI autonomy | Done | decideAutonomy at execution time; unconfigured means observe |
 | 6 | P0 | 02-006 | Configure by conversation | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
-| 7 | P1 | 02-007 | Conflict detection | Not Started | |
+| 7 | P1 | 02-007 | Conflict detection | Done | `detectConflicts` over the household's current responsibilities and active members; orphaned owner/backup, a backup who is the owner, a child now on an adult-only outcome — each names the outcome, the member(s) and one resolution |
 | 8 | P2 | 02-008 | Advanced rule builder | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
