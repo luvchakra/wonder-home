@@ -11,21 +11,21 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**143 of 170 stories done — 84.1%**
+**144 of 170 stories done — 84.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 143 |
+| Done | 144 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 27 |
+| Not Started | 26 |
 
 ## By module
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
-| 01 Identity & Family Accounts | `███████░░░` | 6 | 8 | 2 not started |
+| 01 Identity & Family Accounts | `████████░░` | 7 | 8 | 1 not started |
 | 02 Household Configuration & Playbook | `███████░░░` | 6 | 8 | 2 not started |
 | 03 Outcome & Routine Engine | `██████░░░░` | 5 | 8 | 3 not started |
 | 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
@@ -50,7 +50,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
-| `01-007` Preferences | 01 Identity & Family Accounts | P1 | Not Started |
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
 | `02-007` Conflict detection | 02 Household Configuration & Playbook | P1 | Not Started |
 | `02-008` Advanced rule builder | 02 Household Configuration & Playbook | P2 | Not Started |
@@ -99,7 +98,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -109,7 +108,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-004` Child profiles | P0 | Done | No account needed; guardianship links; age bands derived on read |
 | `01-005` Personalized views | P0 | Done | Permission-filtered on the server, not hidden in the client |
 | `01-006` Availability | P1 | Done | Pattern plus exceptions; an absence never rewrites a schedule |
-| `01-007` Preferences | P1 | Not Started | — |
+| `01-007` Preferences | P1 | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | `01-008` Helper/service identity | P2 | Not Started | — |
 
 ### 02 — Household Configuration & Playbook
