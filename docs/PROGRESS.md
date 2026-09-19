@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**142 of 170 stories done — 83.5%**
+**143 of 170 stories done — 84.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 142 |
-| In Progress | 1 |
+| Done | 143 |
+| In Progress | 0 |
 | Blocked | 0 |
 | Not Started | 27 |
 
@@ -43,7 +43,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 16 Platform Admin & Operations | `███████░░░` | 6 | 8 | 2 not started |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
-| 19 Testing, Observability & Production | `███████░░░` | 6 | 8 | 1 in progress, 1 not started |
+| 19 Testing, Observability & Production | `████████░░` | 7 | 8 | 1 not started |
 | 20 Subscriptions, Entitlements & Usage | `█████░░░░░` | 4 | 8 | 4 not started |
 
 ## What is left
@@ -72,7 +72,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-007` Webhooks/events | 18 API & Developer Platform | P1 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
-| `19-007` Performance | 19 Testing, Observability & Production | P1 | In Progress |
 | `19-008` Recovery/runbook | 19 Testing, Observability & Production | P1 | Not Started |
 | `20-005` Usage UI | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
@@ -370,7 +369,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 19 — Testing, Observability & Production
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -380,7 +379,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `19-004` Health checks | P0 | Done | Liveness and readiness separated; probes time out |
 | `19-005` Safe logging | P0 | Done | Structured logs, redaction, correlation ids |
 | `19-006` Error monitoring | P0 | Done | Reporting seam; failures never silently dropped |
-| `19-007` Performance | P1 | In Progress | Region co-location, local JWT verification, request-scoped dedup, prefetching, streaming; p95 measurement against the live project still to do |
+| `19-007` Performance | P1 | Done | Region co-location, local JWT verification, request-scoped dedup, prefetching, streaming; live p95 measured against production (see docs/progress) |
 | `19-008` Recovery/runbook | P1 | Not Started | — |
 
 ### 20 — Subscriptions, Entitlements & Usage
