@@ -120,7 +120,9 @@ This is P0.1's foundation only. Still open, in the document's own order:
   undo, the household timeline** (P0.3, P0.5) — all still ahead.
 - **Google/OpenAI clients** — `resolveModelKey` and the routing gate already
   treat all three providers uniformly; only Anthropic has a real
-  `createClaudeUnderstanding`-equivalent today.
+  `createClaudeUnderstanding`-equivalent today. (Update: Google gained one
+  the same day — see `2026-09-19-gemini-understanding.md`. OpenAI remains
+  open.)
 
 ## Where
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
-import { createClaudeUnderstanding } from "@wonderhome/core/ai/model-client";
+import { createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { minimiseContext, routeToProvider, type ContextCandidate } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
@@ -202,12 +202,10 @@ export async function POST(request: Request, { params }: Params) {
  * What is recorded is a code and a count, never the utterance's content — it
  * is already stored as the member's own message under RLS, and repeating any
  * of it here would put household content into a metadata column that nothing
- * filters. Anthropic is the only provider with a real client wired up today;
- * a household or platform key for Google or OpenAI still resolves and is
- * still respected by the consent decision, but falls back to the
- * deterministic rules until those providers' own clients exist — the same
- * "never claim a call that did not happen" rule that held before any client
- * existed at all.
+ * filters. Anthropic, Google and OpenAI all have a real client wired up
+ * today — the same "never claim a call that did not happen" rule that held
+ * before any client existed still applies to whichever one a household or
+ * the platform is actually configured for.
  */
 async function decideProviderRouting(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -255,16 +253,34 @@ async function decideProviderRouting(
     return { code: decision.code, itemsSent: 0, disclosure: [decision.reason] };
   }
 
-  // A provider is configured and permitted. Only Anthropic has a real client
-  // behind it today (`ai/model-client.ts`); every other provider still falls
-  // back to the deterministic rules, exactly as every provider did before
-  // this client existed.
+  // A provider is configured and permitted. All three `ModelProvider`s have
+  // a real client behind them today (`ai/model-client.ts`); the fallback
+  // below is only for a decision that names a provider without a resolved
+  // key, which `routeToProvider` does not produce.
   if (decision.provider === "anthropic" && key.key) {
     return {
       code: "transmitted",
       itemsSent: minimised.included.length,
       disclosure: ["What you said was sent to Anthropic Claude to understand your request."],
       understand: createClaudeUnderstanding(key.key),
+    };
+  }
+
+  if (decision.provider === "google" && key.key) {
+    return {
+      code: "transmitted",
+      itemsSent: minimised.included.length,
+      disclosure: ["What you said was sent to Google Gemini to understand your request."],
+      understand: createGeminiUnderstanding(key.key),
+    };
+  }
+
+  if (decision.provider === "openai" && key.key) {
+    return {
+      code: "transmitted",
+      itemsSent: minimised.included.length,
+      disclosure: ["What you said was sent to OpenAI to understand your request."],
+      understand: createOpenAIUnderstanding(key.key),
     };
   }
 
