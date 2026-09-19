@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**138 of 170 stories done — 81.2%**
+**139 of 170 stories done — 81.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 138 |
+| Done | 139 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 31 |
+| Not Started | 30 |
 
 ## By module
 
@@ -41,7 +41,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 14 AI Orchestration & Learning | `███████░░░` | 6 | 8 | 2 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `█████░░░░░` | 4 | 8 | 4 not started |
-| 17 External Integrations | `█████░░░░░` | 4 | 8 | 4 not started |
+| 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
 | 19 Testing, Observability & Production | `███████░░░` | 6 | 8 | 1 in progress, 1 not started |
 | 20 Subscriptions, Entitlements & Usage | `███░░░░░░░` | 3 | 8 | 5 not started |
@@ -69,7 +69,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `16-006` AI operations | 16 Platform Admin & Operations | P0 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
 | `16-008` Feature flags/audit | 16 Platform Admin & Operations | P1 | Not Started |
-| `17-005` Commerce | 17 External Integrations | P0 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-007` Weather | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
@@ -344,7 +343,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 17 — External Integrations
 
-4 of 8 done `█████░░░░░`
+5 of 8 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -352,7 +351,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-002` Calendar | P0 | Done | canonical payload → family_events by provider identity; never protected/confirmed; private = time only; partial sync never cancels; POST integrations/calendar/sync (409 until a provider is live) |
 | `17-003` Email | P0 | Done | recognised bills → obligations by provider identity + content hash; status never touched by a sync; POST integrations/email/sync (409 until a provider is live) |
 | `17-004` School | P0 | Done | translate() extended with contentHash + provider-cancellation signal; reconciled onto school_items by identity; cancel never overrides done/submitted; POST integrations/school/sync (409 until a provider is live) |
-| `17-005` Commerce | P0 | Not Started | — |
+| `17-005` Commerce | P0 | Done | Merchant reports reconciled by identity + hash; lifecycle refuses a rewind, a reprice never overwrites the approved figure; POST integrations/commerce/sync (409 until a merchant is live) |
 | `17-006` WhatsApp | P1 | Not Started | — |
 | `17-007` Weather | P1 | Not Started | — |
 | `17-008` Smart home | P2 | Not Started | — |

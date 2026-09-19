@@ -299,6 +299,31 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/commerce/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Ask the merchant where the household's orders are",
+          description:
+            "Runs the commerce connector for an administrator and reconciles what it returns onto orders by provider identity and content hash. Unlike the other connectors, a merchant is reporting on something this household created with money already committed: so the household's lifecycle governs, and a record moving an order backwards or out of a terminal state is refused rather than applied. A total that no longer matches what was agreed is reported as a reprice and never written over the approved figure. An order the household does not have is reported unmatched, never inserted — it has no approval behind it. Responds with counts, the refusals, the reprices and the connection's health, never a merchant payload. 409 while no merchant is live.",
+          parameters: [
+            {
+              name: "provider",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Which merchant, when more than one is connected.",
+            },
+          ],
+          responses: {
+            "200": { description: "Counts of what changed, what was refused, what was repriced, and the connection's state" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "No merchant is live yet" },
+          },
+        },
+      },
       "/households/{householdId}/integrations/school/sync": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

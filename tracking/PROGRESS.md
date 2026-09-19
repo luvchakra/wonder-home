@@ -35,7 +35,7 @@
 | 14 | AI Orchestration & Learning | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 4 | In Progress |
-| 17 | External Integrations | 8 | 5 | 2 | 1 | 4 | In Progress |
+| 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 3 | In Progress |
