@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
+import { createClaudeUnderstanding } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { minimiseContext, routeToProvider, type ContextCandidate } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
@@ -9,7 +10,7 @@ import { ApiError } from "@wonderhome/core/api/errors";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
-import { converse, pendingFrom, previewOf } from "@wonderhome/core/conversation/engine";
+import { converse, pendingFrom, previewOf, type Understanding } from "@wonderhome/core/conversation/engine";
 import type { HouseholdIntent } from "@wonderhome/core/conversation/intent";
 import {
   currentSessionId,
@@ -122,7 +123,7 @@ export async function POST(request: Request, { params }: Params) {
       metadata: { channel: body.channel },
     });
 
-    const result = converse({
+    const result = await converse({
       utterance: body.utterance,
       channel: body.channel,
       transcriptConfidence: body.transcriptConfidence,
@@ -134,6 +135,7 @@ export async function POST(request: Request, { params }: Params) {
         return needed ? entitled[needed] : true;
       },
       sessionId,
+      understand: routing.understand,
     });
 
     await consume(supabase, householdId, feature).catch(() => undefined);
@@ -187,33 +189,37 @@ export async function POST(request: Request, { params }: Params) {
 
 
 /**
- * Whether this turn may reach a model provider, and with how little (15-005).
+ * Whether this turn may reach a model provider, and with how little (15-005,
+ * and — once a client exists behind the gate — the product-direction
+ * update's "Priority A: make the brain real").
  *
- * The gate runs on every turn, before anything is understood, and it runs
- * even though nothing is transmitted today: understanding is deterministic
- * while no provider is configured with credentials. Building the gate now and
- * the provider call behind it later is the order that keeps the promise. The
+ * The gate runs on every turn, before anything is understood, exactly as it
+ * did while no provider was configured: building the consent check first and
+ * the provider call behind it second is the order that keeps the promise. The
  * reverse order is how a product ships a provider integration and adds the
  * consent check in the release after.
  *
- * What is recorded is a code and a count. The utterance itself is already
- * stored as the member's own message under RLS; repeating any of it here
- * would put household content into a metadata column that nothing filters.
+ * What is recorded is a code and a count, never the utterance's content — it
+ * is already stored as the member's own message under RLS, and repeating any
+ * of it here would put household content into a metadata column that nothing
+ * filters. Anthropic is the only provider with a real client wired up today;
+ * a household or platform key for Google or OpenAI still resolves and is
+ * still respected by the consent decision, but falls back to the
+ * deterministic rules until those providers' own clients exist — the same
+ * "never claim a call that did not happen" rule that held before any client
+ * existed at all.
  */
 async function decideProviderRouting(
   supabase: Awaited<ReturnType<typeof createClient>>,
   householdId: string,
   utterance: string,
-): Promise<{ code: string; itemsSent: number; disclosure: string[] }> {
-  const [policy, credential] = await Promise.all([
+): Promise<{ code: string; itemsSent: number; disclosure: string[]; understand?: Understanding }> {
+  const [policy, householdKey] = await Promise.all([
     loadDataUse(supabase, householdId),
-    credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
+    readHouseholdKey(householdId).catch(() => null),
   ]);
 
-  const key = resolveModelKey(
-    credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null,
-    platformKey(),
-  );
+  const key = resolveModelKey(householdKey, platformKey());
 
   const { data: memberRows } = await supabase
     .from("household_members")
@@ -249,13 +255,25 @@ async function decideProviderRouting(
     return { code: decision.code, itemsSent: 0, disclosure: [decision.reason] };
   }
 
-  // A provider is configured and permitted — but no provider client exists
-  // yet, so this turn was still answered from the deterministic rules. Saying
-  // "sent" here would be the one lie this product must never tell.
+  // A provider is configured and permitted. Only Anthropic has a real client
+  // behind it today (`ai/model-client.ts`); every other provider still falls
+  // back to the deterministic rules, exactly as every provider did before
+  // this client existed.
+  if (decision.provider === "anthropic" && key.key) {
+    return {
+      code: "transmitted",
+      itemsSent: minimised.included.length,
+      disclosure: ["What you said was sent to Anthropic Claude to understand your request."],
+      understand: createClaudeUnderstanding(key.key),
+    };
+  }
+
   return {
     code: "not_transmitted_no_client",
     itemsSent: 0,
-    disclosure: ["Nothing about your home was sent. The assistant answered from its own rules."],
+    disclosure: [
+      `No ${decision.provider} client is wired up yet. Nothing about your home was sent, and the assistant answered from its own rules.`,
+    ],
   };
 }
 

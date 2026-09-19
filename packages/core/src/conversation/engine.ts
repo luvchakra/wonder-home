@@ -18,11 +18,14 @@ import { needsRecording, proposeFromIntent, type ActionPreview, type Proposal } 
  * evaluation and give the same answer. The route around it does the reading
  * and writing.
  *
- * Understanding is deterministic today — `resolveFixtureIntent` — because no
- * language-model provider is configured with credentials, and CLAUDE.md is
- * explicit that a provider is live only once it is. The seam is `understand`:
- * a live provider slots in there and nothing downstream changes, because
- * nothing downstream ever trusted the model with a decision.
+ * Understanding defaults to `resolveFixtureIntent` — deterministic, and still
+ * exactly right for a household with no model provider configured, per
+ * CLAUDE.md's rule that a provider is live only once it is. The seam is
+ * `understand`: a live provider (`ai/model-client.ts`'s
+ * `createClaudeUnderstanding`) slots in there and nothing downstream changes,
+ * because nothing downstream ever trusted the model with a decision — hence
+ * `Understanding` may return a promise, but every gate after it still runs on
+ * the plain `HouseholdIntent` it resolves to.
  */
 
 /** Below this, a voice transcript is read back before it is acted on. */
@@ -34,7 +37,7 @@ export const PROPOSAL_TTL_MINUTES = 10;
 export type Understanding = (
   utterance: string,
   context: { actorMemberId: string; channel: "text" | "voice" },
-) => HouseholdIntent;
+) => HouseholdIntent | Promise<HouseholdIntent>;
 
 export type TurnInput = {
   utterance: string;
@@ -74,7 +77,7 @@ export type TurnResult =
       memory: Memory | null;
     };
 
-export function converse(input: TurnInput): TurnResult {
+export async function converse(input: TurnInput): Promise<TurnResult> {
   const now = input.now ?? new Date();
 
   // "Yes", "no" and "do it" only mean something against what was just proposed.
@@ -107,7 +110,7 @@ export function converse(input: TurnInput): TurnResult {
   }
 
   const understand = input.understand ?? resolveFixtureIntent;
-  const intent = understand(input.utterance, { actorMemberId: input.actor.memberId, channel: input.channel });
+  const intent = await understand(input.utterance, { actorMemberId: input.actor.memberId, channel: input.channel });
 
   // A shaky transcript of something consequential is read back, never acted on.
   if (

@@ -10,7 +10,8 @@ Build **WonderHome** from this package as an AI-driven Household Operating Syste
 3. Read `tracking/PROGRESS.md` and `tracking/IMPLEMENTATION-ORDER.md`.
 4. Read `architecture/API-ARCHITECTURE.md`, `architecture/SECURITY-BASELINE.md` and `database/SUPABASE-DATABASE.md`.
 5. For any UI work, read `design/UI-UX-REQUIREMENTS-v3.md` (the UI/UX contract) and `design/DESIGN-NOTES.md` (the rules the components encode).
-6. Pick the first dependency-ready incomplete story.
+6. Read `design/PRODUCT-DIRECTION-v4-talk-to-wonderhome.md`. It is an authoritative product-direction update: real LLM reasoning behind the conversation engine and "Talk to WonderHome" as a P0 primary control surface take priority over chasing full backlog-story coverage. It does not replace the backlogs below — it reprioritizes work within them.
+7. Pick the first dependency-ready incomplete story, weighted by that reprioritization.
 
 ## Autonomous execution
 For each story: mark In Progress → inspect existing code → implement → test → typecheck/lint/build → fix → update docs/migrations/contracts → mark Done → update overall/module trackers → continue automatically.
