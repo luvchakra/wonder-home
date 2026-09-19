@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
 
+import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import type {
   CreateHouseholdInput,
@@ -245,6 +246,18 @@ export async function setMemberRole(
       .eq("role", input.role);
     if (error) throw new Error(`revoking role failed: ${error.code ?? "unknown"}`);
   }
+
+  // Who may do what, and when it changed (story 15-006). The person it
+  // happened to is the one most likely to ask, and the role name is the whole
+  // of what is recorded — no names, no reason text, nothing private.
+  await auditChange({
+    householdId,
+    actorMemberId: actor.memberId,
+    eventType: input.granted ? "member.role_granted" : "member.role_revoked",
+    targetTable: "household_roles",
+    targetId: input.memberId,
+    metadata: { role: input.role },
+  });
 }
 
 /** The most recent grant of head or administrator: when this person's setup week begins. */

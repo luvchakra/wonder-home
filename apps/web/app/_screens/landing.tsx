@@ -31,7 +31,7 @@ import type { ComponentType } from "react";
 import { FEATURES } from "@wonderhome/core/billing/entitlements";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { cn } from "@wonderhome/core/lib/cn";
-import { BrandMark, Wordmark } from "@wonderhome/core/ui/brand";
+import { Wordmark } from "@wonderhome/core/ui/brand";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
 import { contactEmail } from "@wonderhome/core/config/contact";
@@ -639,7 +639,10 @@ function StoryCard({ icon, tone, title, copy, index }: { icon: ComponentType<{ c
         <div className="absolute inset-0 grid place-items-center">
           <IconTile icon={icon} tone={tone} size="lg" className="size-16 rounded-full [&_svg]:size-8" />
         </div>
-        <BrandMark size={18} className="absolute right-3 bottom-3 opacity-40" />
+        {/* Greenery, not the logo. The mark is full colour now, and a colour
+            logo faded to 40% over a gradient reads as a printing mistake —
+            botanical framing is what this surface is supposed to carry. */}
+        <LeafDecor corner="bottom-right" size={96} opacity={0.35} />
       </div>
       <div className="p-5">
         <h3 className="text-base font-semibold">{title}</h3>

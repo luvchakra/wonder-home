@@ -299,6 +299,31 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/commerce/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Ask the merchant where the household's orders are",
+          description:
+            "Runs the commerce connector for an administrator and reconciles what it returns onto orders by provider identity and content hash. Unlike the other connectors, a merchant is reporting on something this household created with money already committed: so the household's lifecycle governs, and a record moving an order backwards or out of a terminal state is refused rather than applied. A total that no longer matches what was agreed is reported as a reprice and never written over the approved figure. An order the household does not have is reported unmatched, never inserted — it has no approval behind it. Responds with counts, the refusals, the reprices and the connection's health, never a merchant payload. 409 while no merchant is live.",
+          parameters: [
+            {
+              name: "provider",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Which merchant, when more than one is connected.",
+            },
+          ],
+          responses: {
+            "200": { description: "Counts of what changed, what was refused, what was repriced, and the connection's state" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "No merchant is live yet" },
+          },
+        },
+      },
       "/households/{householdId}/integrations/school/sync": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
@@ -570,6 +595,69 @@ export function buildOpenApiDocument(): Json {
             "400": { $ref: "#/components/responses/BadRequest" },
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/households/{householdId}/plan": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "The household's plan, and what changing it would do",
+          description:
+            "Any member may read the plan and what is available. With `to`, returns exactly what moving to that plan would do — computed here from plan data and real usage, so the sentences somebody reads are the same facts the change is made against.",
+          parameters: [
+            {
+              name: "to",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Preview moving to this plan.",
+            },
+          ],
+          responses: {
+            "200": { description: "The current plan, the plans available, and a preview when one was asked for" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        post: {
+          summary: "Change the household's plan",
+          description:
+            "An administrator's action. Only ever writes the row saying which plan the household is on: a plan change never touches a household's own records, not to tidy them and not to bring them under a new limit. A change that takes a capability away must carry back what the person was shown, which is re-derived and compared — a browser that skipped the preview cannot skip the consequence, and a change that moved while somebody read it is refused. Audited as subscription.changed.",
+          responses: {
+            "200": { description: "The new plan and what the change did" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "Already on that plan, or the consequences moved since they were shown" },
+          },
+        },
+      },
+      "/households/{householdId}/privacy/export": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "A copy of the caller's own data",
+          description:
+            "Returns the file itself rather than a link to one: a link is a second way to reach the data, outliving the session that proved itself for it. Requires a step-up verification, which is spent before a single row is read. Contains only what this member could already see on screen, narrowed by RLS and again by permission.",
+          responses: {
+            "200": { description: "The export, as a JSON attachment" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/platform/retention": {
+        post: {
+          summary: "Apply the retention schedule",
+          description:
+            "Deletes everything past its keeping, across every household, on the schedule the Privacy Centre publishes — a published policy nothing applies is a promise rather than a policy. Authorised by a shared secret rather than a session, because there is no person here; it is deliberately unreachable from a household's own session. Reports counts per table, never what was removed.",
+          responses: {
+            "200": { description: "Every table swept" },
+            "207": { description: "Swept, with at least one table that could not be" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
           },
         },
       },

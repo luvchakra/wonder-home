@@ -8,10 +8,10 @@
 | 2 | P0 | 15-002 | Tenant isolation | Done | Catalogue-driven coverage test; proven to detect violations |
 | 3 | P0 | 15-003 | RBAC/privacy scopes | Done | Permission catalogue plus server-side view filtering |
 | 4 | P0 | 15-004 | Encryption/secrets | Done | Secret lint; redaction; HSTS and secure cookies |
-| 5 | P0 | 15-005 | AI privacy | Not Started | |
-| 6 | P0 | 15-006 | Audit | Not Started | |
-| 7 | P0 | 15-007 | Privacy Center | Not Started | |
-| 8 | P0 | 15-008 | Security testing | Not Started | |
+| 5 | P0 | 15-005 | AI privacy | Done | Consent gate before assembly; context minimised and pseudonymised; retry is idempotent |
+| 6 | P0 | 15-006 | Audit | Done | Catalogue with a coverage test; nine unrecorded actions closed; household-facing trail |
+| 7 | P0 | 15-007 | Privacy Center | Done | Step-up that actually verifies; export, deletion with a grace window, retention applied by a nightly sweep |
+| 8 | P0 | 15-008 | Security testing | Done | Nine-area suite with a deterministic signal; SSRF guard, prompt-injection and session-abuse coverage |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

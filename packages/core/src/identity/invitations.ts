@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import type { HouseholdRole, MemberType } from "./schemas";
 
@@ -85,6 +86,19 @@ export async function createInvitation(
     throw new Error(`createInvitation failed: ${error.code ?? "unknown"}`);
   }
 
+  // An outstanding invitation is a way into the household, so it is recorded
+  // like one (story 15-006). The role and member type are the whole of it:
+  // the email is the invitee's, not the household's to keep in a trail its
+  // administrators read, and the token is a credential.
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: invitedByMemberId,
+    eventType: "invitation.created",
+    targetTable: "household_invitations",
+    targetId: data.id as string,
+    metadata: { role: input.role, memberType: input.memberType },
+  });
+
   return { id: data.id as string, expiresAt: data.expires_at as string, token };
 }
 
@@ -108,13 +122,34 @@ export async function revokeInvitation(
   supabase: SupabaseClient,
   invitationId: string,
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("household_invitations")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", invitationId)
-    .is("accepted_at", null);
+    .is("accepted_at", null)
+    .select("household_id")
+    .maybeSingle();
 
   if (error) throw new Error(`revokeInvitation failed: ${error.code ?? "unknown"}`);
+
+  // Nothing was revoked when the row was already accepted or is not this
+  // caller's to see, and there is nothing to record either way.
+  const householdId = (data as { household_id?: string } | null)?.household_id;
+  if (!householdId) return;
+
+  // Closing a way into the household is as worth recording as opening one —
+  // and the revoker is whoever is signed in, resolved here rather than passed
+  // in, so no caller can file the entry under somebody else.
+  const { listMemberships } = await import("./households");
+  const actor = (await listMemberships(supabase)).find((entry) => entry.household.id === householdId);
+
+  await auditChange({
+    householdId,
+    actorMemberId: actor?.memberId ?? null,
+    eventType: "invitation.revoked",
+    targetTable: "household_invitations",
+    targetId: invitationId,
+  });
 }
 
 /**
@@ -142,6 +177,19 @@ export async function acceptInvitation(
   }
 
   const row = data as { household_id: string; member_id: string };
+
+  // The SQL function records `invitation.accepted`; this is the other half of
+  // the same moment, and the one an administrator actually looks for: one more
+  // person can now see the household (story 15-006).
+  await auditChange({
+    householdId: row.household_id,
+    actorMemberId: row.member_id,
+    eventType: "member.added",
+    targetTable: "household_members",
+    targetId: row.member_id,
+    metadata: { via: "invitation" },
+  });
+
   return { householdId: row.household_id, memberId: row.member_id };
 }
 

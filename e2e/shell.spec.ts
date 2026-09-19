@@ -17,6 +17,8 @@ const GATED_AREAS = [
   "/household/home",
   "/household/members",
   "/household/responsibilities",
+  "/household/setup",
+  "/household/activity",
   "/household/integrations",
   "/school",
   "/groceries",
@@ -26,7 +28,7 @@ const GATED_AREAS = [
   "/notifications",
   "/certification",
   "/settings",
-  "/help",
+  "/settings/privacy",
 ];
 
 test("a personal area sends an anonymous visitor to sign in, remembering the destination", async ({ page }) => {

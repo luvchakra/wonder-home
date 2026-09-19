@@ -1,7 +1,12 @@
 import { z } from "zod";
 
+import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { minimiseContext, routeToProvider, type ContextCandidate } from "@wonderhome/core/ai/privacy";
+import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
+import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
 import { converse, pendingFrom, previewOf } from "@wonderhome/core/conversation/engine";
@@ -70,7 +75,15 @@ export async function GET(request: Request, { params }: Params) {
 export async function POST(request: Request, { params }: Params) {
   const { householdId } = await params;
 
-  return defineRoute({ input: bodySchema, authenticate: requireUser }, async ({ body }) => {
+  return defineRoute({
+    input: bodySchema,
+    authenticate: requireUser,
+    // A turn writes messages, may record a proposal and consumes usage, so a
+    // retry that reran it would leave the household with two of each. The
+    // composer resends the same key, and the recorded response comes back
+    // (story 15-005: retry without duplicating the underlying action).
+    idempotency: async () => supabaseIdempotencyStore(await createClient(), householdId),
+  }, async ({ body }) => {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
     const actor = { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType };
@@ -92,10 +105,11 @@ export async function POST(request: Request, { params }: Params) {
     const entitlement = await may(supabase, householdId, feature);
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
 
-    const [entitled, sessionId, autonomyFor] = await Promise.all([
+    const [entitled, sessionId, autonomyFor, routing] = await Promise.all([
       consequentialEntitlements(supabase, householdId),
       openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel }),
       autonomyLookup(supabase, householdId),
+      decideProviderRouting(supabase, householdId, body.utterance),
     ]);
     const pending = await pendingAction(admin, sessionId);
 
@@ -130,7 +144,15 @@ export async function POST(request: Request, { params }: Params) {
       sessionId,
       role: "assistant",
       content: result.text,
-      metadata: result.kind === "reply" ? { proposal: result.proposal.kind, intent: result.intent.action } : { kind: result.kind },
+      metadata: {
+        ...(result.kind === "reply"
+          ? { proposal: result.proposal.kind, intent: result.intent.action }
+          : { kind: result.kind }),
+        // Why this turn did or did not reach a model provider (15-005). A
+        // code and a count, never the content either way.
+        provider: routing.code,
+        providerItemsSent: routing.itemsSent,
+      },
     });
 
     if (result.kind === "approve" || result.kind === "reject") {
@@ -157,8 +179,84 @@ export async function POST(request: Request, { params }: Params) {
         preview: result.kind === "reply" ? previewOf(result.proposal) : null,
         proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
       },
+      /** What, if anything, left this household this turn (15-005). */
+      privacy: { provider: routing.code, disclosure: routing.disclosure },
     };
   })(request);
+}
+
+
+/**
+ * Whether this turn may reach a model provider, and with how little (15-005).
+ *
+ * The gate runs on every turn, before anything is understood, and it runs
+ * even though nothing is transmitted today: understanding is deterministic
+ * while no provider is configured with credentials. Building the gate now and
+ * the provider call behind it later is the order that keeps the promise. The
+ * reverse order is how a product ships a provider integration and adds the
+ * consent check in the release after.
+ *
+ * What is recorded is a code and a count. The utterance itself is already
+ * stored as the member's own message under RLS; repeating any of it here
+ * would put household content into a metadata column that nothing filters.
+ */
+async function decideProviderRouting(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  householdId: string,
+  utterance: string,
+): Promise<{ code: string; itemsSent: number; disclosure: string[] }> {
+  const [policy, credential] = await Promise.all([
+    loadDataUse(supabase, householdId),
+    credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
+  ]);
+
+  const key = resolveModelKey(
+    credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null,
+    platformKey(),
+  );
+
+  const { data: memberRows } = await supabase
+    .from("household_members")
+    .select("id, display_name, member_type")
+    .eq("household_id", householdId)
+    .eq("status", "active");
+
+  const people = ((memberRows as { id: string; display_name: string; member_type: "adult" | "child" | "helper" }[] | null) ?? []).map(
+    (row) => ({ id: row.id, displayName: row.display_name, memberType: row.member_type }),
+  );
+
+  // One candidate today: what the person said. Everything else the assistant
+  // knows is reached by deterministic rules that never leave this server.
+  const candidates: ContextCandidate[] = [
+    {
+      id: "utterance",
+      contentClass: "general",
+      need: "what was asked",
+      text: utterance,
+      relevant: true,
+    },
+  ];
+
+  const minimised = minimiseContext(candidates, { policy, people });
+  const decision = routeToProvider({
+    provider: key.provider,
+    keySource: key.source,
+    policy,
+    hasContent: minimised.included.length > 0,
+  });
+
+  if (!decision.ok) {
+    return { code: decision.code, itemsSent: 0, disclosure: [decision.reason] };
+  }
+
+  // A provider is configured and permitted — but no provider client exists
+  // yet, so this turn was still answered from the deterministic rules. Saying
+  // "sent" here would be the one lie this product must never tell.
+  return {
+    code: "not_transmitted_no_client",
+    itemsSent: 0,
+    disclosure: ["Nothing about your home was sent. The assistant answered from its own rules."],
+  };
 }
 
 /** Autonomy per outcome, from the responsibilities matrix; "approve" if unset. */

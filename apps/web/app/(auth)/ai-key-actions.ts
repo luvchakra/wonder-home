@@ -56,8 +56,8 @@ export async function removeAiKey(_previous: ActionState, formData: FormData): P
   try {
     const supabase = await createClient();
     const householdId = String(formData.get("householdId") ?? "");
-    await requireHouseholdAdmin(supabase, householdId);
-    await clearHouseholdKey(supabase, householdId);
+    const membership = await requireHouseholdAdmin(supabase, householdId);
+    await clearHouseholdKey(supabase, householdId, membership.memberId);
   } catch (thrown) {
     return { error: toErrorBody(thrown, "ai-key").body.error.message };
   }

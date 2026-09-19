@@ -11,6 +11,17 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [Help, added to the landing page's own navigation](2026-09-19-landing-help-link.md) |
+| 2026-09-19 | [The help guide no longer needs a login](2026-09-19-help-public.md) |
+| 2026-09-19 | [Changing plans without losing anything (20-004)](2026-09-19-plan-change.md) |
+| 2026-09-19 | [The commerce connector (story 17-005)](2026-09-19-commerce-connector.md) |
+| 2026-09-19 | [The P0 security suite (15-008) — module 15 complete](2026-09-19-security-suite.md) |
+| 2026-09-19 | [The Privacy Centre, and the step-up that was never there (15-007)](2026-09-19-privacy-centre.md) |
+| 2026-09-19 | [The real logo, everywhere (brand mark)](2026-09-19-brand-mark.md) |
+| 2026-09-19 | [The audit trail, and the nine things it was not recording (15-006)](2026-09-19-audit-trail.md) |
+| 2026-09-19 | [The AI privacy gate (story 15-005)](2026-09-19-ai-privacy-gate.md) |
+| 2026-09-19 | [Configure by conversation (story 02-006)](2026-09-19-configure-by-conversation.md) |
+| 2026-09-19 | [The setup wizard (story 02-001)](2026-09-19-setup-wizard.md) |
 | 2026-09-19 | [Landing: no video, contact, and a real footer](2026-09-19-landing-contact-footer.md) |
 | 2026-09-19 | [Get Help: user guide, FAQ, and searching them](2026-09-19-help-centre.md) |
 | 2026-09-19 | [The platform's model key, and bring your own](2026-09-19-platform-ai-key-and-byok.md) |

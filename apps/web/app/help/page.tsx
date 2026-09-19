@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FAQ, guideByGroup } from "@wonderhome/core/help/guide";
 import { SUGGESTED_QUESTIONS } from "@wonderhome/core/help/search";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { Wordmark } from "@wonderhome/core/ui/brand";
+import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { PillLink } from "@wonderhome/core/ui/pill";
@@ -11,7 +13,7 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 
 import { GuideAssistant } from "../_components/guide-assistant";
-import { requireSession } from "../_lib/session";
+import { optionalSession } from "../_lib/session";
 import { askTheGuide } from "./help-actions";
 
 export const metadata = { title: "Get help" };
@@ -24,21 +26,20 @@ export const dynamic = "force-dynamic";
  * Everything here describes what WonderHome does today. Where something is
  * not built, the guide says so and says what happens instead — a guide that
  * describes the roadmap makes working software feel broken.
+ *
+ * **Readable signed out.** Somebody deciding whether to trust a product with
+ * their home should be able to read what it will and will not do first, and
+ * somebody who cannot get in is exactly the person who needs the help page.
+ * A guide behind a login answers neither. So the session is optional: signed
+ * in it sits in the app shell, signed out it gets its own frame and a way in
+ * at the end. Nothing in the guide is about a particular household, so there
+ * is nothing here to protect.
  */
 export default async function HelpPage() {
-  const session = await requireSession("/help");
-  const { viewer, secondary } = session;
+  const session = await optionalSession();
   const groups = guideByGroup();
 
-  return (
-    <AppShell
-      active="more"
-      viewer={viewer}
-      secondary={secondary}
-      pathname="/help"
-      back={{ href: "/more", label: "Back" }}
-      title="Get help"
-    >
+  const body = (
       <div className="space-y-6">
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Get help</h1>
@@ -134,29 +135,69 @@ export default async function HelpPage() {
           </section>
         ))}
 
+        {/* The two calls below reach into a household, so a signed-out reader
+            is offered the way in rather than a link that would bounce them to
+            sign-in and lose their place in the guide. */}
         <Card className="flex items-start gap-3 bg-[var(--wh-primary-soft)]/50 p-4">
           <LifeBuoy aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-primary)]" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Still stuck?</p>
+            <p className="text-sm font-medium">{session ? "Still stuck?" : "Want this for your home?"}</p>
             <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-              Ask WonderHome directly — it can act on your household, which this guide cannot.
+              {session
+                ? "Ask WonderHome directly — it can act on your household, which this guide cannot."
+                : "The guide describes what WonderHome does. Signing in is where it starts doing it."}
             </p>
-            <div className="mt-2">
-              <PillLink href="/ai" tone="primary">Talk to WonderHome</PillLink>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {session ? (
+                <PillLink href="/ai" tone="primary">Talk to WonderHome</PillLink>
+              ) : (
+                <>
+                  <PillLink href="/sign-up" tone="primary">Get started</PillLink>
+                  <PillLink href="/sign-in" tone="quiet">Sign in</PillLink>
+                </>
+              )}
             </div>
           </div>
         </Card>
 
-        <p className="text-center text-xs text-[var(--wh-foreground-subtle)]">
-          Something here wrong or missing?{" "}
-          <Link href="/certification" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-            Check what WonderHome believes
-          </Link>{" "}
-          about your household and correct it.
-        </p>
+        {session ? (
+          <p className="text-center text-xs text-[var(--wh-foreground-subtle)]">
+            Something here wrong or missing?{" "}
+            <Link href="/certification" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+              Check what WonderHome believes
+            </Link>{" "}
+            about your household and correct it.
+          </p>
+        ) : null}
 
         <QuoteCard>Every home is different. Yours should feel like it.</QuoteCard>
       </div>
-    </AppShell>
+  );
+
+  if (session) {
+    return (
+      <AppShell
+        active="more"
+        viewer={session.viewer}
+        secondary={session.secondary}
+        pathname="/help"
+        back={{ href: "/more", label: "Back" }}
+        title="Get help"
+      >
+        {body}
+      </AppShell>
+    );
+  }
+
+  return (
+    <main className="relative min-h-dvh overflow-hidden px-4 py-10 lg:px-8">
+      <LeafDecor corner="top-right" size={280} opacity={0.22} />
+      <div className="relative mx-auto max-w-3xl space-y-6">
+        <Link href="/" aria-label="WonderHome home" className="inline-block">
+          <Wordmark tagline size={32} />
+        </Link>
+        {body}
+      </div>
+    </main>
   );
 }

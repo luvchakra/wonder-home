@@ -63,6 +63,13 @@ export function Assistant({
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * The turn that did not get through, kept so it can be sent again — with
+   * the same idempotency key (story 15-005). A retry after a request that
+   * actually reached the server must not leave the household with the turn
+   * recorded twice, so the key belongs to the attempt rather than the click.
+   */
+  const [failed, setFailed] = useState<{ utterance: string; channel: "text" | "voice"; transcriptConfidence?: number; key: string } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
 
@@ -75,10 +82,13 @@ export function Assistant({
   }, [messages.length, scrollToEnd]);
 
   const send = useCallback(
-    async (utterance: string, channel: "text" | "voice", transcriptConfidence?: number) => {
+    async (utterance: string, channel: "text" | "voice", transcriptConfidence?: number, retryKey?: string) => {
       if (busy) return;
       setBusy(true);
       setError(null);
+      setFailed(null);
+
+      const idempotencyKey = retryKey ?? newIdempotencyKey();
 
       const optimisticId = `local-${Date.now()}`;
       setMessages((current) => [
@@ -90,7 +100,7 @@ export function Assistant({
       try {
         const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
           body: JSON.stringify({ utterance, channel, transcriptConfidence }),
         });
         const payload = await response.json();
@@ -115,6 +125,7 @@ export function Assistant({
       } catch (caught) {
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
         setError(caught instanceof Error ? caught.message : "WonderHome could not answer just now.");
+        setFailed({ utterance, channel, transcriptConfidence, key: idempotencyKey });
       } finally {
         setBusy(false);
       }
@@ -223,9 +234,19 @@ export function Assistant({
       )}
 
       {error ? (
-        <p role="alert" className="mb-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-risk-soft)] px-3 py-2 text-sm text-[var(--wh-risk)]">
-          {error}
-        </p>
+        <div role="alert" className="mb-2 flex flex-wrap items-center gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-risk-soft)] px-3 py-2 text-sm text-[var(--wh-risk)]">
+          <span className="min-w-0 flex-1">{error}</span>
+          {failed ? (
+            <Pill
+              type="button"
+              tone="quiet"
+              disabled={busy}
+              onClick={() => void send(failed.utterance, failed.channel, failed.transcriptConfidence, failed.key)}
+            >
+              Try again
+            </Pill>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="sticky bottom-[calc(var(--wh-tabbar-height)+0.75rem)] z-20 pt-2 lg:bottom-4">
@@ -265,4 +286,18 @@ function stateOf(message: AssistantMessage): "prepared" | "needs_approval" | "ap
   if (message.proposal === "executed") return "executed";
   if (message.proposal === "refused") return "refused";
   return "needs_approval";
+}
+
+/**
+ * One key per attempt at a turn.
+ *
+ * `crypto.randomUUID` needs a secure context, which every page this runs on
+ * is; the fallback keeps a retry working rather than silently becoming a
+ * second turn if it is ever absent.
+ */
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `turn-${crypto.randomUUID()}`;
+  }
+  return `turn-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }

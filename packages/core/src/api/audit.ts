@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { createAdminClient } from "../db/admin";
 import { redact } from "../security/redact";
 import { log } from "../observability/logger";
 
@@ -28,10 +29,17 @@ export const AUDIT_EVENTS = [
   "invitation.accepted",
   "child.created",
   "child.updated",
+  "playbook.updated",
+  "responsibility.updated",
+  "policy.updated",
   "integration.connected",
   "integration.disconnected",
+  "ai.key_set",
+  "ai.key_removed",
   "privacy.export_requested",
   "privacy.deletion_requested",
+  "privacy.deletion_cancelled",
+  "subscription.changed",
   "support.access_granted",
 ] as const;
 
@@ -81,24 +89,32 @@ export async function recordAuditEvent(
   }
 }
 
-/** Reads the household's trail. Restricted to administrators by RLS. */
+export type AuditRow = {
+  id: string;
+  eventType: string;
+  actorMemberId: string | null;
+  targetTable: string | null;
+  targetId: string | null;
+  /** Already redacted on the way in; safe to render. */
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+/**
+ * Reads the household's trail. Restricted to administrators by RLS.
+ *
+ * Metadata comes back because the screen phrases each entry from it, and it
+ * is safe to: `recordAuditEvent` redacts before writing, so nothing here ever
+ * held a secret or raw private content to begin with.
+ */
 export async function listAuditEvents(
   supabase: SupabaseClient,
   householdId: string,
   limit = 50,
-): Promise<
-  {
-    id: string;
-    eventType: string;
-    actorMemberId: string | null;
-    targetTable: string | null;
-    targetId: string | null;
-    createdAt: string;
-  }[]
-> {
+): Promise<AuditRow[]> {
   const { data, error } = await supabase
     .from("audit_events")
-    .select("id, event_type, actor_member_id, target_table, target_id, created_at")
+    .select("id, event_type, actor_member_id, target_table, target_id, metadata, created_at")
     .eq("household_id", householdId)
     .order("created_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200));
@@ -111,6 +127,31 @@ export async function listAuditEvents(
     actorMemberId: (row.actor_member_id as string | null) ?? null,
     targetTable: (row.target_table as string | null) ?? null,
     targetId: (row.target_id as string | null) ?? null,
+    metadata: (row.metadata as Record<string, unknown> | null) ?? {},
     createdAt: row.created_at as string,
   }));
+}
+
+/**
+ * Records a sensitive change from a domain function (story 15-006).
+ *
+ * Two things every caller would otherwise have to remember, and one of them
+ * eventually would not.
+ *
+ * It uses the service-role client, because `audit_events` has no INSERT
+ * policy: a member must not be able to forge or suppress their own trail, so
+ * the household's own client cannot write one.
+ *
+ * It swallows its own failure. A change that completed must not be reported
+ * as an error because the note about it did not save — a caller that retried
+ * on that would make the real change twice. The failure is logged by
+ * `recordAuditEvent`, and `sensitive-actions.test.ts` is what keeps the gaps
+ * from being silent ones.
+ */
+export async function auditChange(entry: AuditEntry): Promise<void> {
+  try {
+    await recordAuditEvent(createAdminClient(), entry);
+  } catch {
+    // Already logged. A trail gap must not fail the change it describes.
+  }
 }

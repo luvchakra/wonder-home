@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
 import { MODEL_PROVIDERS, type HouseholdKey, type ModelProvider } from "./model-key";
@@ -69,11 +70,25 @@ export async function setHouseholdKey(
     }
     throw new Error(`setHouseholdKey failed: ${error.code ?? "unknown"}`);
   }
+
+  // Which company's servers answer for this household is a household decision
+  // worth a trail entry (story 15-006). The provider name only — the key
+  // itself is the one thing in this file that must never appear anywhere else,
+  // and `recordAuditEvent` would redact it even if it were passed by mistake.
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.memberId,
+    eventType: "ai.key_set",
+    targetTable: "household_ai_credentials",
+    targetId: input.householdId,
+    metadata: { provider: input.provider },
+  });
 }
 
 export async function clearHouseholdKey(
   supabase: SupabaseClient,
   householdId: string,
+  actorMemberId?: string,
 ): Promise<void> {
   const { error } = await supabase
     .from("household_ai_credentials")
@@ -86,6 +101,16 @@ export async function clearHouseholdKey(
     }
     throw new Error(`clearHouseholdKey failed: ${error.code ?? "unknown"}`);
   }
+
+  // Removing the household's own key sends them back to the platform key,
+  // under a different agreement with the provider. Worth knowing afterwards.
+  await auditChange({
+    householdId,
+    actorMemberId: actorMemberId ?? null,
+    eventType: "ai.key_removed",
+    targetTable: "household_ai_credentials",
+    targetId: householdId,
+  });
 }
 
 /**

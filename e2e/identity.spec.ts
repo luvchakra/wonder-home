@@ -21,7 +21,9 @@ test("the sign-in form is labelled and reachable by keyboard", async ({ page }) 
   await page.goto("/sign-in");
 
   await expect(page.getByLabel("Email")).toBeVisible();
-  await expect(page.getByLabel("Password")).toBeVisible();
+  // Exact, because the reveal toggle beside it is also labelled "…password".
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show password" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
@@ -32,7 +34,7 @@ test("sign-up asks for a name, so the household has something to call the person
 
   await expect(page.getByLabel("Full name")).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
-  await expect(page.getByLabel("Password")).toBeVisible();
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
 });
 
 test("onboarding is gated and remembers where the visitor was going", async ({ page }) => {

@@ -8,7 +8,7 @@
 | 2 | P0 | 17-002 | Calendar | Done | canonical payload → family_events by provider identity; never protected/confirmed; private = time only; partial sync never cancels; POST integrations/calendar/sync (409 until a provider is live) |
 | 3 | P0 | 17-003 | Email | Done | recognised bills → obligations by provider identity + content hash; status never touched by a sync; POST integrations/email/sync (409 until a provider is live) |
 | 4 | P0 | 17-004 | School | Done | translate() extended with contentHash + provider-cancellation signal; reconciled onto school_items by identity; cancel never overrides done/submitted; POST integrations/school/sync (409 until a provider is live) |
-| 5 | P0 | 17-005 | Commerce | Not Started | |
+| 5 | P0 | 17-005 | Commerce | Done | Merchant reports reconciled by identity + hash; lifecycle refuses a rewind, a reprice never overwrites the approved figure; POST integrations/commerce/sync (409 until a merchant is live) |
 | 6 | P1 | 17-006 | WhatsApp | Not Started | |
 | 7 | P1 | 17-007 | Weather | Not Started | |
 | 8 | P2 | 17-008 | Smart home | Not Started | |

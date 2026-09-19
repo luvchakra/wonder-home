@@ -54,7 +54,7 @@ export function SetupProgressCard({
   assessment,
   variant,
   daysLeft,
-  manageHref = "/household",
+  manageHref = "/household/setup",
   className,
 }: {
   assessment: SetupAssessment;

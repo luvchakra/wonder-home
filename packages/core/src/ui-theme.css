@@ -53,6 +53,15 @@
   --wh-foreground-muted: oklch(0.5 0.035 250);
   --wh-foreground-subtle: oklch(0.62 0.025 250);
 
+  /* Brand — the mark takes its halo from whatever it sits on, so the mark in
+     a header and the mark in a card both keep clean separations where the
+     leaf, the stem and the wave cross the roof. `Card` redeclares the surface
+     for anything inside it; everything else inherits the page. */
+  --wh-brand-surface: var(--wh-background);
+  --wh-brand-window: #0e6aa1;
+  --wh-brand-home-from: #0f83be;
+  --wh-brand-home-to: #3fb897;
+
   /* Primary action — the teal the mockups use for every committing action */
   --wh-primary: oklch(0.49 0.09 190);
   --wh-primary-hover: oklch(0.43 0.09 190);
@@ -151,6 +160,13 @@
   --wh-foreground: oklch(0.96 0.008 85);
   --wh-foreground-muted: oklch(0.78 0.015 250);
   --wh-foreground-subtle: oklch(0.65 0.015 250);
+
+  /* The window is the one part of the mark that cannot keep its colour here:
+     a deep blue pane on a dark surface is a hole, not a window. */
+  --wh-brand-surface: var(--wh-background);
+  --wh-brand-window: #35beec;
+  --wh-brand-home-from: #4cb8ec;
+  --wh-brand-home-to: #63d4a8;
 
   --wh-primary: oklch(0.72 0.11 190);
   --wh-primary-hover: oklch(0.78 0.11 190);

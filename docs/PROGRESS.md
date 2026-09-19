@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**132 of 170 stories done — 77.6%**
+**140 of 170 stories done — 82.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 132 |
+| Done | 140 |
 | In Progress | 1 |
-| Blocked | 1 |
-| Not Started | 36 |
+| Blocked | 0 |
+| Not Started | 29 |
 
 ## By module
 
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `███████░░░` | 6 | 8 | 2 not started |
-| 02 Household Configuration & Playbook | `█████░░░░░` | 4 | 8 | 1 blocked, 3 not started |
+| 02 Household Configuration & Playbook | `███████░░░` | 6 | 8 | 2 not started |
 | 03 Outcome & Routine Engine | `██████░░░░` | 5 | 8 | 3 not started |
 | 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
 | 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
@@ -39,12 +39,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `███████░░░` | 6 | 8 | 2 not started |
-| 15 Privacy, Security & Governance | `█████░░░░░` | 4 | 8 | 4 not started |
+| 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `█████░░░░░` | 4 | 8 | 4 not started |
-| 17 External Integrations | `█████░░░░░` | 4 | 8 | 4 not started |
+| 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
 | 19 Testing, Observability & Production | `███████░░░` | 6 | 8 | 1 in progress, 1 not started |
-| 20 Subscriptions, Entitlements & Usage | `███░░░░░░░` | 3 | 8 | 5 not started |
+| 20 Subscriptions, Entitlements & Usage | `█████░░░░░` | 4 | 8 | 4 not started |
 
 ## What is left
 
@@ -52,8 +52,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `01-007` Preferences | 01 Identity & Family Accounts | P1 | Not Started |
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
-| `02-001` Setup wizard | 02 Household Configuration & Playbook | P0 | Not Started |
-| `02-006` Configure by conversation | 02 Household Configuration & Playbook | P0 | Blocked |
 | `02-007` Conflict detection | 02 Household Configuration & Playbook | P1 | Not Started |
 | `02-008` Advanced rule builder | 02 Household Configuration & Playbook | P2 | Not Started |
 | `03-006` Dependency graph | 03 Outcome & Routine Engine | P1 | Not Started |
@@ -67,15 +65,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-007` Multi-agent coordination | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
-| `15-005` AI privacy | 15 Privacy, Security & Governance | P0 | Not Started |
-| `15-006` Audit | 15 Privacy, Security & Governance | P0 | Not Started |
-| `15-007` Privacy Center | 15 Privacy, Security & Governance | P0 | Not Started |
-| `15-008` Security testing | 15 Privacy, Security & Governance | P0 | Not Started |
 | `16-005` Subscription administration | 16 Platform Admin & Operations | P0 | Not Started |
 | `16-006` AI operations | 16 Platform Admin & Operations | P0 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
 | `16-008` Feature flags/audit | 16 Platform Admin & Operations | P1 | Not Started |
-| `17-005` Commerce | 17 External Integrations | P0 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-007` Weather | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
@@ -83,7 +76,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `19-007` Performance | 19 Testing, Observability & Production | P1 | In Progress |
 | `19-008` Recovery/runbook | 19 Testing, Observability & Production | P1 | Not Started |
-| `20-004` Upgrade/downgrade | 20 Subscriptions, Entitlements & Usage | P0 | Not Started |
 | `20-005` Usage UI | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
@@ -125,16 +117,16 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 02 — Household Configuration & Playbook
 
-4 of 8 done `█████░░░░░`
+6 of 8 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
-| `02-001` Setup wizard | P0 | Not Started | — |
+| `02-001` Setup wizard | P0 | Done | Five resumable steps reading real config; dependency cycles refused; every change audited |
 | `02-002` Responsibility matrix | P0 | Done | Canonical data; inactive and cross-household targets refused |
 | `02-003` Household playbook | P0 | Done | Outcome keys, cadence, verification, escalation, dependencies |
 | `02-004` Policies | P0 | Done | Versioned; one active version per policy name |
 | `02-005` AI autonomy | P0 | Done | decideAutonomy at execution time; unconfigured means observe |
-| `02-006` Configure by conversation | P0 | Blocked | Needs the conversation engine (module 04) |
+| `02-006` Configure by conversation | P0 | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
 | `02-007` Conflict detection | P1 | Not Started | — |
 | `02-008` Advanced rule builder | P2 | Not Started | — |
 
@@ -320,7 +312,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 15 — Privacy, Security & Governance
 
-4 of 8 done `█████░░░░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -328,10 +320,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `15-002` Tenant isolation | P0 | Done | Catalogue-driven coverage test; proven to detect violations |
 | `15-003` RBAC/privacy scopes | P0 | Done | Permission catalogue plus server-side view filtering |
 | `15-004` Encryption/secrets | P0 | Done | Secret lint; redaction; HSTS and secure cookies |
-| `15-005` AI privacy | P0 | Not Started | — |
-| `15-006` Audit | P0 | Not Started | — |
-| `15-007` Privacy Center | P0 | Not Started | — |
-| `15-008` Security testing | P0 | Not Started | — |
+| `15-005` AI privacy | P0 | Done | Consent gate before assembly; context minimised and pseudonymised; retry is idempotent |
+| `15-006` Audit | P0 | Done | Catalogue with a coverage test; nine unrecorded actions closed; household-facing trail |
+| `15-007` Privacy Center | P0 | Done | Step-up that actually verifies; export, deletion with a grace window, retention applied by a nightly sweep |
+| `15-008` Security testing | P0 | Done | Nine-area suite with a deterministic signal; SSRF guard, prompt-injection and session-abuse coverage |
 
 ### 16 — Platform Admin & Operations
 
@@ -350,7 +342,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 17 — External Integrations
 
-4 of 8 done `█████░░░░░`
+5 of 8 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -358,7 +350,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-002` Calendar | P0 | Done | canonical payload → family_events by provider identity; never protected/confirmed; private = time only; partial sync never cancels; POST integrations/calendar/sync (409 until a provider is live) |
 | `17-003` Email | P0 | Done | recognised bills → obligations by provider identity + content hash; status never touched by a sync; POST integrations/email/sync (409 until a provider is live) |
 | `17-004` School | P0 | Done | translate() extended with contentHash + provider-cancellation signal; reconciled onto school_items by identity; cancel never overrides done/submitted; POST integrations/school/sync (409 until a provider is live) |
-| `17-005` Commerce | P0 | Not Started | — |
+| `17-005` Commerce | P0 | Done | Merchant reports reconciled by identity + hash; lifecycle refuses a rewind, a reprice never overwrites the approved figure; POST integrations/commerce/sync (409 until a merchant is live) |
 | `17-006` WhatsApp | P1 | Not Started | — |
 | `17-007` Weather | P1 | Not Started | — |
 | `17-008` Smart home | P2 | Not Started | — |
@@ -395,17 +387,17 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 20 — Subscriptions, Entitlements & Usage
 
-3 of 8 done `███░░░░░░░`
+4 of 8 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `20-001` Plan model | P0 | Done | free/pro/max seeded as data; changing a plan is a migration |
 | `20-002` Entitlements | P0 | Done | one server-side entitlement service; hiding a feature is never the control |
 | `20-003` Usage metering | P0 | Done | atomic counters proven against 20 concurrent sessions |
-| `20-004` Upgrade/downgrade | P0 | Not Started | — |
+| `20-004` Upgrade/downgrade | P0 | Done | A change writes one row and never a household record; consequences shown and re-derived before applying; audited |
 | `20-005` Usage UI | P1 | Not Started | — |
 | `20-006` Billing abstraction | P1 | Not Started | — |
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |
 
-_Generated 2026-09-18 from 21 backlog files._
+_Generated 2026-09-19 from 21 backlog files._

@@ -4,6 +4,10 @@ import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { describeDataUse } from "@wonderhome/core/ai/privacy";
+import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
+import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
@@ -17,7 +21,10 @@ import { getVerifiedUser } from "@wonderhome/core/db/server";
 
 import { signOut } from "../(auth)/actions";
 import { removeAiKey, saveAiKey } from "../(auth)/ai-key-actions";
+import { saveDataUseAction } from "../(auth)/privacy-actions";
 import { AiKeyForm } from "../_components/ai-key-form";
+import { DataUseForm } from "../_components/data-use-form";
+import { PlanForm } from "../_components/plan-form";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Settings & profile" };
@@ -34,10 +41,16 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
 export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const [user, { data: preferenceRows }, credential] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, dataUse] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
+    loadDataUse(supabase, membership.household.id),
+  ]);
+
+  const [subscription, plans] = await Promise.all([
+    loadSubscription(supabase, membership.household.id).catch(() => null),
+    listPlans(supabase).catch(() => []),
   ]);
 
   // Which key actually answers for this household, decided in one place so
@@ -53,11 +66,11 @@ export default async function SettingsPage() {
 
   const rows: { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href?: string; badge?: string }[] = [
     { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/notifications" },
-    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "Sessions verified on every request · sensitive actions ask again" },
+    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "What is shared, how long it is kept, and taking your data with you", href: "/settings/privacy" },
     { icon: KeyRound, tone: "neutral", title: "Two-factor authentication", meta: "Coming — not switched on for this account yet", badge: "Soon" },
     { icon: Link2, tone: "care", title: "Connected accounts", meta: "School, calendar, shopping, weather", href: view.permissions.includes("integrations.manage") ? "/household/integrations" : undefined },
-    { icon: Database, tone: "home", title: "Export my data", meta: "Coming — a copy of everything WonderHome holds about you", badge: "Soon" },
-    { icon: Trash2, tone: "risk", title: "Delete my account", meta: "Coming — removes you and what only you can see", badge: "Soon" },
+    { icon: Database, tone: "home", title: "Export my data", meta: "A copy of what WonderHome holds about you", href: "/settings/privacy" },
+    { icon: Trash2, tone: "risk", title: "Delete my data", meta: `Removes what is yours, after ${DELETION_GRACE_DAYS} days to change your mind`, href: "/settings/privacy" },
     { icon: HelpCircle, tone: "ai", title: "Get Help", meta: "User guide, common questions, and a way to search them", href: "/help" },
   ];
 
@@ -126,6 +139,54 @@ export default async function SettingsPage() {
                 ) : null}
               </>
             ) : null}
+          </Card>
+        </section>
+
+        {plans.length > 0 ? (
+          <section>
+            <SectionHeader title="Your plan" />
+            <Card className="space-y-3 p-4">
+              {manages ? (
+                <PlanForm
+                  householdId={membership.household.id}
+                  currentPlanKey={subscription?.planKey ?? null}
+                  plans={plans.map(({ key, name, description }) => ({ key, name, description }))}
+                />
+              ) : (
+                <p className="text-sm text-[var(--wh-foreground-muted)]">
+                  This household is on the {plans.find((plan) => plan.key === subscription?.planKey)?.name ?? "free"} plan.
+                  The Head of Family and administrators can change it.
+                </p>
+              )}
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">
+                Changing plans never removes anything your household has. A smaller plan stops some things from
+                growing; nothing already recorded is deleted.
+              </p>
+            </Card>
+          </section>
+        ) : null}
+
+        <section>
+          <SectionHeader title="What the assistant may share" />
+          <Card className="space-y-4 p-4">
+            {/* Read on the server every time. A screen cannot cache its way
+                into a more permissive answer (story 15-005). */}
+            <ul className="space-y-1.5">
+              {describeDataUse(dataUse).map((line) => (
+                <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
+              ))}
+            </ul>
+            {manages ? (
+              <DataUseForm
+                action={saveDataUseAction}
+                householdId={membership.household.id}
+                policy={dataUse}
+              />
+            ) : (
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">
+                The Head of Family and administrators decide this for the household.
+              </p>
+            )}
           </Card>
         </section>
 
