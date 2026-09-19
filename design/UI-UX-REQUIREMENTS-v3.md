@@ -61,7 +61,7 @@ Use shared design tokens across the app and landing page.
 
 ### Typography
 
-Use Inter/system font.
+Use Sora/system font (brand guidelines, design/WonderHome-brand-guidelines.png).
 
 Suggested: - Desktop hero: 56--80px - Mobile hero: 36--46px - Page
 title: 26--30px - Section heading: 32--52px - Card heading: 15--18px -
@@ -149,7 +149,7 @@ All of these screens are required:
 Create an emotional first impression.
 
 Include: - WonderHome logo - beautiful modern family/home visual -
-`Happier Homes. Brighter Tomorrows.` - Less mental load - More family
+`A happier home. Everyday.` - Less mental load - More family
 time - A brighter tomorrow - `Get Started Free` -
 `I already have an account`
 
@@ -908,7 +908,7 @@ WonderHome logo.
 
 Tagline:
 
-`Happier Homes. Brighter Tomorrows.`
+`A happier home. Everyday.`
 
 Links: - Home - Features - Pricing - Security - Privacy - Help - Sign In
 

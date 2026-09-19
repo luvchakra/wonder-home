@@ -47,8 +47,8 @@ work, and hold new work against these:
    "Less mental load. More family time.", "Home runs smoother. Together." Use
    `ScriptAccent` or `QuoteCard`, once per screen, always decoration and never
    a control. Nothing a household must read is said only in the script face.
-3. **Teal commits, domains colour, state speaks in words.** The teal is for
-   every committing action and the active nav state. Each household domain
+3. **Blue commits, domains colour, state speaks in words.** The brand's
+   Primary Blue is for every committing action and the active nav state. Each household domain
    keeps its own colour, used on the icon tile and never on text. Amber is
    attention, red is only for the genuinely critical, green is handled. Colour
    alone never carries a meaning — the wording and the offered action do.
