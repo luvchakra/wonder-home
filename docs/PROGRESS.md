@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**146 of 170 stories done — 85.9%**
+**147 of 170 stories done — 86.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 146 |
+| Done | 147 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 24 |
+| Not Started | 23 |
 
 ## By module
 
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `████████░░` | 7 | 8 | 1 not started |
-| 02 Household Configuration & Playbook | `████████░░` | 7 | 8 | 1 not started |
+| 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
 | 03 Outcome & Routine Engine | `██████░░░░` | 5 | 8 | 3 not started |
 | 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
 | 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
@@ -51,7 +51,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
-| `02-008` Advanced rule builder | 02 Household Configuration & Playbook | P2 | Not Started |
 | `03-006` Dependency graph | 03 Outcome & Routine Engine | P1 | Not Started |
 | `03-007` Pattern learning | 03 Outcome & Routine Engine | P1 | Not Started |
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
@@ -111,7 +110,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 02 — Household Configuration & Playbook
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -122,7 +121,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `02-005` AI autonomy | P0 | Done | decideAutonomy at execution time; unconfigured means observe |
 | `02-006` Configure by conversation | P0 | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
 | `02-007` Conflict detection | P1 | Done | `detectConflicts` over the household's current responsibilities and active members; orphaned owner/backup, a backup who is the owner, a child now on an adult-only outcome — each names the outcome, the member(s) and one resolution |
-| `02-008` Advanced rule builder | P2 | Not Started | — |
+| `02-008` Advanced rule builder | P2 | Done | A policy can carry one condition (member type, or an hour window) narrowing it to a specific case; `selectApplicablePolicy` picks the most specific match, falling back to the household's unconditional default |
 
 ### 03 — Outcome & Routine Engine
 
