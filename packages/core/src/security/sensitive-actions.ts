@@ -119,6 +119,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/privacy/repository.ts",
   },
   {
+    event: "subscription.changed",
+    because: "Changes what the household may do. Somebody will ask when a capability stopped, and why.",
+    recordedIn: "packages/core/src/billing/repository.ts",
+  },
+  {
     event: "support.access_granted",
     because: "Somebody outside the family was allowed in. The family can read this row.",
     recordedIn: "packages/core/src/platform/admin.ts",
@@ -201,6 +206,11 @@ export function describeAuditEvent(
       };
     case "privacy.deletion_cancelled":
       return { title: "A deletion was called off", detail: null };
+    case "subscription.changed":
+      return {
+        title: "The household's plan changed",
+        detail: [stringOr(metadata.from, null), stringOr(metadata.to, null)].filter(Boolean).join(" → ") || null,
+      };
     case "support.access_granted":
       return {
         title: "Support was given access",

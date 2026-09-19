@@ -6,6 +6,7 @@ import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
 import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -23,6 +24,7 @@ import { removeAiKey, saveAiKey } from "../(auth)/ai-key-actions";
 import { saveDataUseAction } from "../(auth)/privacy-actions";
 import { AiKeyForm } from "../_components/ai-key-form";
 import { DataUseForm } from "../_components/data-use-form";
+import { PlanForm } from "../_components/plan-form";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Settings & profile" };
@@ -44,6 +46,11 @@ export default async function SettingsPage() {
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, membership.household.id),
+  ]);
+
+  const [subscription, plans] = await Promise.all([
+    loadSubscription(supabase, membership.household.id).catch(() => null),
+    listPlans(supabase).catch(() => []),
   ]);
 
   // Which key actually answers for this household, decided in one place so
@@ -134,6 +141,30 @@ export default async function SettingsPage() {
             ) : null}
           </Card>
         </section>
+
+        {plans.length > 0 ? (
+          <section>
+            <SectionHeader title="Your plan" />
+            <Card className="space-y-3 p-4">
+              {manages ? (
+                <PlanForm
+                  householdId={membership.household.id}
+                  currentPlanKey={subscription?.planKey ?? null}
+                  plans={plans.map(({ key, name, description }) => ({ key, name, description }))}
+                />
+              ) : (
+                <p className="text-sm text-[var(--wh-foreground-muted)]">
+                  This household is on the {plans.find((plan) => plan.key === subscription?.planKey)?.name ?? "free"} plan.
+                  The Head of Family and administrators can change it.
+                </p>
+              )}
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">
+                Changing plans never removes anything your household has. A smaller plan stops some things from
+                growing; nothing already recorded is deleted.
+              </p>
+            </Card>
+          </section>
+        ) : null}
 
         <section>
           <SectionHeader title="What the assistant may share" />

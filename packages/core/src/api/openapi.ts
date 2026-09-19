@@ -598,6 +598,42 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/plan": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "The household's plan, and what changing it would do",
+          description:
+            "Any member may read the plan and what is available. With `to`, returns exactly what moving to that plan would do — computed here from plan data and real usage, so the sentences somebody reads are the same facts the change is made against.",
+          parameters: [
+            {
+              name: "to",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Preview moving to this plan.",
+            },
+          ],
+          responses: {
+            "200": { description: "The current plan, the plans available, and a preview when one was asked for" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        post: {
+          summary: "Change the household's plan",
+          description:
+            "An administrator's action. Only ever writes the row saying which plan the household is on: a plan change never touches a household's own records, not to tidy them and not to bring them under a new limit. A change that takes a capability away must carry back what the person was shown, which is re-derived and compared — a browser that skipped the preview cannot skip the consequence, and a change that moved while somebody read it is refused. Audited as subscription.changed.",
+          responses: {
+            "200": { description: "The new plan and what the change did" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "Already on that plan, or the consequences moved since they were shown" },
+          },
+        },
+      },
       "/households/{householdId}/privacy/export": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

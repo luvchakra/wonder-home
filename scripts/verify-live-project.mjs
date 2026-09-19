@@ -261,6 +261,20 @@ async function main() {
     forgedRequest.error?.code ?? "no error",
   );
 
+  // Plan changes (story 20-004). Administrators only, and the application
+  // checks first — this is the second line that still holds if a route is ever
+  // added that forgets.
+  const forgedPlan = await anon.from("household_subscriptions").upsert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    plan_key: "max",
+    status: "active",
+  });
+  check(
+    "anonymous cannot put a household on another plan",
+    Boolean(forgedPlan.error),
+    forgedPlan.error?.code ?? "no error",
+  );
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [Changing plans without losing anything (20-004)](2026-09-19-plan-change.md) |
 | 2026-09-19 | [The commerce connector (story 17-005)](2026-09-19-commerce-connector.md) |
 | 2026-09-19 | [The P0 security suite (15-008) — module 15 complete](2026-09-19-security-suite.md) |
 | 2026-09-19 | [The Privacy Centre, and the step-up that was never there (15-007)](2026-09-19-privacy-centre.md) |

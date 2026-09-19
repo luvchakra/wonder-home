@@ -39,6 +39,7 @@ export const AUDIT_EVENTS = [
   "privacy.export_requested",
   "privacy.deletion_requested",
   "privacy.deletion_cancelled",
+  "subscription.changed",
   "support.access_granted",
 ] as const;
 
