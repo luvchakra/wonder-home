@@ -5,6 +5,7 @@ import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import {
   checkEntitlement,
+  describe,
   periodStart,
   type EntitlementDecision,
   type FeatureKey,
@@ -97,6 +98,52 @@ export async function usedThisPeriod(
 
   if (error) throw new Error(`usedThisPeriod failed: ${error.code ?? "unknown"}`);
   return Number(data?.used ?? 0);
+}
+
+export type FeatureUsage = {
+  featureKey: string;
+  label: string;
+  /** Null for a feature this plan does not meter — nothing to show against. */
+  limit: number | null;
+  period: PlanFeature["period"];
+  /** Null alongside a null limit; otherwise what has actually been spent this period. */
+  used: number | null;
+};
+
+/**
+ * What the household has used, against what its plan allows (story 20-005).
+ *
+ * The same counters `consume` increments and `may` checks — a screen showing
+ * "140 of 500" is reading the number the quota is actually enforced against,
+ * not a second copy of it that could drift.
+ */
+export async function usageSummary(
+  supabase: SupabaseClient,
+  householdId: string,
+  now: Date = new Date(),
+): Promise<{ planKey: string | null; features: FeatureUsage[] }> {
+  const subscription = await loadSubscription(supabase, householdId);
+  if (!subscription) return { planKey: null, features: [] };
+
+  const features: FeatureUsage[] = [];
+  for (const feature of subscription.features) {
+    if (!feature.enabled) continue;
+
+    const used =
+      feature.limitPerPeriod !== null
+        ? await usedThisPeriod(supabase, householdId, feature.featureKey, feature.period, now)
+        : null;
+
+    features.push({
+      featureKey: feature.featureKey,
+      label: describe(feature.featureKey),
+      limit: feature.limitPerPeriod,
+      period: feature.period,
+      used,
+    });
+  }
+
+  return { planKey: subscription.planKey, features };
 }
 
 /**

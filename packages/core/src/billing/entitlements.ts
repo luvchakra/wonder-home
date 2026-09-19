@@ -127,7 +127,7 @@ export function checkEntitlement(input: {
   };
 }
 
-function describe(feature: string): string {
+export function describe(feature: string): string {
   return (FEATURES as Record<string, string>)[feature] ?? feature;
 }
 

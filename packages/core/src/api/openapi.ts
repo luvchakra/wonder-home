@@ -226,11 +226,11 @@ export function buildOpenApiDocument(): Json {
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
         ],
         get: {
-          summary: "What this household's plan allows",
+          summary: "What this household's plan allows, and what it has used",
           description:
-            "The same data the server enforces with. Rendering is not authorization: every guarded path re-asks the entitlement service regardless of this response.",
+            "The same counters the entitlement service enforces against, so a client can show usage without a second copy of the number. Rendering is not authorization: every guarded path re-asks the entitlement service regardless of this response.",
           responses: {
-            "200": { description: "Plan key and enabled features with their limits" },
+            "200": { description: "Plan key and enabled features with their limits and usage this period" },
             "403": { $ref: "#/components/responses/Forbidden" },
           },
         },

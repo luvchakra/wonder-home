@@ -8,7 +8,7 @@
 | 2 | P0 | 20-002 | Entitlements | Done | one server-side entitlement service; hiding a feature is never the control |
 | 3 | P0 | 20-003 | Usage metering | Done | atomic counters proven against 20 concurrent sessions |
 | 4 | P0 | 20-004 | Upgrade/downgrade | Done | A change writes one row and never a household record; consequences shown and re-derived before applying; audited |
-| 5 | P1 | 20-005 | Usage UI | Not Started | |
+| 5 | P1 | 20-005 | Usage UI | Done | Settings shows used/limit per metered feature, from the same counter `consume` enforces against |
 | 6 | P1 | 20-006 | Billing abstraction | Not Started | |
 | 7 | P2 | 20-007 | Quota automation | Not Started | |
 | 8 | P2 | 20-008 | Plan experiments | Not Started | |
