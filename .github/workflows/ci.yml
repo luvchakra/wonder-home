@@ -72,6 +72,9 @@ jobs:
       - name: Brand assets match the mark
         run: npm run brand -- --check
 
+      - name: P0 security suite
+        run: npm run security
+
       - name: Unit tests
         run: npm run test
 
