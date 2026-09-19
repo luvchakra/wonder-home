@@ -113,6 +113,106 @@ function isAdultOnly(outcomeKey: string): boolean {
   return ADULT_ONLY_PREFIXES.some((prefix) => outcomeKey.startsWith(prefix));
 }
 
+export type ConflictKind = "orphaned_owner" | "orphaned_backup" | "same_backup_as_owner" | "child_owns_adult_only";
+
+export type ConfigurationConflict = {
+  /** Stable across a call for the same input, so a screen can key a list on it. */
+  id: string;
+  kind: ConflictKind;
+  outcomeKey: string;
+  /** The member(s) the contradiction is about. */
+  memberIds: string[];
+  message: string;
+  /** The one thing that resolves it — never a second problem to diagnose. */
+  resolution: string;
+};
+
+/**
+ * Contradictions `validateResponsibility` cannot see, because nothing was
+ * just written (story 02-007).
+ *
+ * Every rule below is already refused at the moment somebody saves a
+ * responsibility — a backup who is also the owner, a child put in charge of
+ * the money, an owner who is not in the household. What none of that catches
+ * is the household changing shape *underneath* an assignment that was fine
+ * when it was made: a member leaves and the outcome they owned still points
+ * at them, or an outcome not adult-only when it was assigned later becomes
+ * one. This runs over the household's current rules exactly as they stand
+ * today and says which of them no longer hold together — and, for each one,
+ * the one thing that fixes it, never a diagnosis to work out for yourself.
+ */
+export function detectConflicts(
+  responsibilities: readonly ResponsibilityInput[],
+  members: readonly ConfigMember[],
+): ConfigurationConflict[] {
+  const byId = new Map(members.map((member) => [member.id, member]));
+  const conflicts: ConfigurationConflict[] = [];
+
+  for (const responsibility of responsibilities) {
+    const { outcomeKey, primaryMemberId, backupMemberId } = responsibility;
+    const primary = primaryMemberId ? byId.get(primaryMemberId) : undefined;
+    const backup = backupMemberId ? byId.get(backupMemberId) : undefined;
+
+    if (primaryMemberId && !primary) {
+      conflicts.push({
+        id: `${outcomeKey}:orphaned_owner`,
+        kind: "orphaned_owner",
+        outcomeKey,
+        memberIds: [primaryMemberId],
+        message: `Whoever owned "${outcomeKey}" is no longer part of this household.`,
+        resolution: "Give this outcome a new owner.",
+      });
+    }
+
+    if (backupMemberId && !backup) {
+      conflicts.push({
+        id: `${outcomeKey}:orphaned_backup`,
+        kind: "orphaned_backup",
+        outcomeKey,
+        memberIds: [backupMemberId],
+        message: `Whoever backed up "${outcomeKey}" is no longer part of this household.`,
+        resolution: "Choose a different backup, or leave it without one.",
+      });
+    }
+
+    if (primaryMemberId && backupMemberId && primaryMemberId === backupMemberId) {
+      conflicts.push({
+        id: `${outcomeKey}:same_backup_as_owner`,
+        kind: "same_backup_as_owner",
+        outcomeKey,
+        memberIds: [primaryMemberId],
+        message: `${primary?.displayName ?? "The same person"} is set as both owner and backup for "${outcomeKey}".`,
+        resolution: "Choose somebody else as backup, or remove the backup.",
+      });
+    }
+
+    if (isAdultOnly(outcomeKey)) {
+      if (primary && primary.memberType === "child") {
+        conflicts.push({
+          id: `${outcomeKey}:child_owns_adult_only:primary`,
+          kind: "child_owns_adult_only",
+          outcomeKey,
+          memberIds: [primary.id],
+          message: `${primary.displayName} is a child, and "${outcomeKey}" is not a child's to carry.`,
+          resolution: "Hand this to an adult.",
+        });
+      }
+      if (backup && backup.memberType === "child") {
+        conflicts.push({
+          id: `${outcomeKey}:child_owns_adult_only:backup`,
+          kind: "child_owns_adult_only",
+          outcomeKey,
+          memberIds: [backup.id],
+          message: `${backup.displayName} is a child, and "${outcomeKey}" is not a child's to carry as backup either.`,
+          resolution: "Choose an adult backup.",
+        });
+      }
+    }
+  }
+
+  return conflicts;
+}
+
 export type PlaybookInput = {
   outcomeKey: string;
   name: string;

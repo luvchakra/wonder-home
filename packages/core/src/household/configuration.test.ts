@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canDependOn,
+  detectConflicts,
   downstreamOf,
   nextPolicyVersion,
   slugifyOutcomeKey,
@@ -293,6 +294,90 @@ describe("what a change will actually do", () => {
 
     for (const change of changes) {
       expect(downstreamOf(change).length, change.kind).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("conflicts nothing catches at write time (02-007)", () => {
+  it("finds nothing wrong with an assignment that still holds together", () => {
+    expect(detectConflicts([responsibility()], members)).toEqual([]);
+  });
+
+  it("catches an owner who has since left the household", () => {
+    const conflicts = detectConflicts([responsibility({ primaryMemberId: "ravi" })], members);
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({ kind: "orphaned_owner", outcomeKey: "laundry.ready", memberIds: ["ravi"] });
+  });
+
+  it("catches a backup who has since left the household", () => {
+    const conflicts = detectConflicts([responsibility({ backupMemberId: "ravi" })], members);
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({ kind: "orphaned_backup", outcomeKey: "laundry.ready", memberIds: ["ravi"] });
+  });
+
+  it("catches a backup who is also the owner, even though a fresh save would refuse it", () => {
+    // validateResponsibility blocks this at write time; this checks the
+    // state as it stands, however it came to be that way.
+    const conflicts = detectConflicts([responsibility({ backupMemberId: "kunal" })], members);
+
+    expect(conflicts.some((c) => c.kind === "same_backup_as_owner")).toBe(true);
+  });
+
+  it("catches a child now owning what is not a child's to carry", () => {
+    const conflicts = detectConflicts(
+      [responsibility({ outcomeKey: "finance.bills_paid", primaryMemberId: "anaya", backupMemberId: null })],
+      members,
+    );
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({ kind: "child_owns_adult_only", memberIds: ["anaya"] });
+  });
+
+  it("catches a child backing up an adult-only outcome too", () => {
+    const conflicts = detectConflicts(
+      [responsibility({ outcomeKey: "finance.bills_paid", primaryMemberId: "kunal", backupMemberId: "anaya" })],
+      members,
+    );
+
+    expect(conflicts.some((c) => c.kind === "child_owns_adult_only" && c.memberIds[0] === "anaya")).toBe(true);
+  });
+
+  it("never flags a child on an outcome that is a child's to carry", () => {
+    const conflicts = detectConflicts(
+      [responsibility({ outcomeKey: "school.homework_done", primaryMemberId: "anaya", backupMemberId: null })],
+      members,
+    );
+
+    expect(conflicts).toEqual([]);
+  });
+
+  it("reports one conflict per outcome independently, across the whole household", () => {
+    const conflicts = detectConflicts(
+      [
+        responsibility({ outcomeKey: "laundry.ready", primaryMemberId: "ravi" }),
+        responsibility({ outcomeKey: "groceries.stocked" }),
+        responsibility({ outcomeKey: "meals.dinner_ready", backupMemberId: "ravi" }),
+      ],
+      members,
+    );
+
+    expect(conflicts.map((c) => c.outcomeKey).sort()).toEqual(["laundry.ready", "meals.dinner_ready"]);
+  });
+
+  it("never reports a conflict with no resolution to offer", () => {
+    const conflicts = detectConflicts(
+      [
+        responsibility({ primaryMemberId: "ravi" }),
+        responsibility({ outcomeKey: "finance.bills_paid", primaryMemberId: "anaya", backupMemberId: null }),
+      ],
+      members,
+    );
+
+    expect(conflicts.length).toBeGreaterThan(0);
+    for (const conflict of conflicts) {
+      expect(conflict.resolution.length, conflict.kind).toBeGreaterThan(0);
     }
   });
 });
