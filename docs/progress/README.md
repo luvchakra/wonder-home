@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [Production was 11 commits behind — merged and closed the gap](2026-09-19-main-deployment-gap.md) |
 | 2026-09-19 | [Help, added to the landing page's own navigation](2026-09-19-landing-help-link.md) |
 | 2026-09-19 | [The help guide no longer needs a login](2026-09-19-help-public.md) |
 | 2026-09-19 | [Changing plans without losing anything (20-004)](2026-09-19-plan-change.md) |
