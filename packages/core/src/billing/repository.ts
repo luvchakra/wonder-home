@@ -281,10 +281,25 @@ export async function changePlan(
   supabase: SupabaseClient,
   input: {
     householdId: string;
-    actorMemberId: string;
+    /**
+     * The household's own administrator, changing their own plan. Exactly one
+     * of `actorMemberId` / `actorProfileId` is set — a household member has no
+     * platform-profile-only identity, and platform staff changing a household's
+     * plan (16-005) has no membership in it.
+     */
+    actorMemberId?: string;
+    /** Platform staff acting through the admin surface, never a household session. */
+    actorProfileId?: string;
     toPlanKey: string;
     /** What the person was shown. Compared against a fresh assessment. */
     acknowledged?: { stopping: number; exceeded: number };
+    /**
+     * Staff's own reason, for a platform-initiated change. Never asked of a
+     * household. A code rather than free text: `redact()` scrubs anything
+     * that looks like a note before it reaches `audit_events`, and a code is
+     * exactly what "countable and reviewable" needs anyway.
+     */
+    reasonCode?: string;
   },
   now: Date = new Date(),
 ): Promise<{ assessment: PlanChangeAssessment; planKey: string }> {
@@ -330,7 +345,8 @@ export async function changePlan(
 
   await auditChange({
     householdId: input.householdId,
-    actorMemberId: input.actorMemberId,
+    actorMemberId: input.actorMemberId ?? null,
+    actorProfileId: input.actorProfileId ?? null,
     eventType: "subscription.changed",
     targetTable: "household_subscriptions",
     targetId: input.householdId,
@@ -342,6 +358,7 @@ export async function changePlan(
       direction: assessment.direction,
       stopping: assessment.stopping.map((entry) => entry.featureKey),
       exceeded: assessment.exceeded.map((entry) => entry.featureKey),
+      ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
     },
   });
 

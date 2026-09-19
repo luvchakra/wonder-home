@@ -8,8 +8,8 @@
 | 2 | P0 | 16-002 | Admin roles | Done | Platform capabilities per role, tested |
 | 3 | P0 | 16-003 | Operations dashboard | Done | Aggregate counts behind the boundary |
 | 4 | P0 | 16-004 | Support access | Done | Grants bounded to 24h; household can read them |
-| 5 | P0 | 16-005 | Subscription administration | Not Started | |
-| 6 | P0 | 16-006 | AI operations | Not Started | |
+| 5 | P0 | 16-005 | Subscription administration | Done | operator/owner only; reason-coded, audited, reuses 20-004's changePlan |
+| 6 | P0 | 16-006 | AI operations | Done | Failed-run + tool-call monitoring; reuses module 14's prompt-free schema |
 | 7 | P1 | 16-007 | Privacy requests | Not Started | |
 | 8 | P1 | 16-008 | Feature flags/audit | Not Started | |
 

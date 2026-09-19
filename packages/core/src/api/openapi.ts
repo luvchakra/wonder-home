@@ -457,6 +457,66 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/subscriptions/{householdId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's plan, from the platform side",
+          description:
+            "Staff's own view of the same facts the household's own plan endpoint reads from — the current plan, the catalogue, and (with `to`) a preview. Requires `subscription.manage`; a caller who is not staff receives 404 rather than 403.",
+          parameters: [
+            {
+              name: "to",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Preview moving this household to this plan.",
+            },
+          ],
+          responses: {
+            "200": { description: "The current plan, the plans available, and a preview when one was asked for" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        post: {
+          summary: "Change a household's plan on staff's behalf",
+          description:
+            "The household's own change path (`changePlan`), unmodified — the same re-derived assessment, the same single row that changes, no shortcut for staff around what a household would also have to face. Requires a reason code rather than free text, because a note is redacted out of the audit trail before it is written. Requires `subscription.manage`, which `support` does not hold.",
+          responses: {
+            "200": { description: "The new plan and what the change did" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "Already on that plan, or the consequences moved since they were shown" },
+          },
+        },
+      },
+      "/platform-admin/ai-operations": {
+        get: {
+          summary: "AI operations overview",
+          description:
+            "Platform-wide run counts and the recent failures behind them — the tool names and outcomes `agent_tool_calls` was built to hold, never a raw prompt. Requires `ai_operations.read` (`operator`/`owner`; `support` does not hold it, since this is fleet-wide rather than one reason-coded household).",
+          responses: {
+            "200": { description: "Run counts and recent failed runs, each with its tool calls" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/platform-admin/ai-operations/runs/{runId}": {
+        parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        get: {
+          summary: "One agent run, in full",
+          description: "The drill-down from the overview: one run and every tool call it made, in order.",
+          responses: {
+            "200": { description: "The run and its tool calls" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/openapi": {
         get: {
           summary: "This document",

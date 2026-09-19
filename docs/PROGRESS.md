@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**140 of 170 stories done — 82.4%**
+**142 of 170 stories done — 83.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 140 |
+| Done | 142 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 29 |
+| Not Started | 27 |
 
 ## By module
 
@@ -40,7 +40,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `███████░░░` | 6 | 8 | 2 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
-| 16 Platform Admin & Operations | `█████░░░░░` | 4 | 8 | 4 not started |
+| 16 Platform Admin & Operations | `███████░░░` | 6 | 8 | 2 not started |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
 | 19 Testing, Observability & Production | `███████░░░` | 6 | 8 | 1 in progress, 1 not started |
@@ -65,8 +65,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-007` Multi-agent coordination | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
-| `16-005` Subscription administration | 16 Platform Admin & Operations | P0 | Not Started |
-| `16-006` AI operations | 16 Platform Admin & Operations | P0 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
 | `16-008` Feature flags/audit | 16 Platform Admin & Operations | P1 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
@@ -327,7 +325,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 16 — Platform Admin & Operations
 
-4 of 8 done `█████░░░░░`
+6 of 8 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -335,8 +333,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `16-002` Admin roles | P0 | Done | Platform capabilities per role, tested |
 | `16-003` Operations dashboard | P0 | Done | Aggregate counts behind the boundary |
 | `16-004` Support access | P0 | Done | Grants bounded to 24h; household can read them |
-| `16-005` Subscription administration | P0 | Not Started | — |
-| `16-006` AI operations | P0 | Not Started | — |
+| `16-005` Subscription administration | P0 | Done | operator/owner only; reason-coded, audited, reuses 20-004's changePlan |
+| `16-006` AI operations | P0 | Done | Failed-run + tool-call monitoring; reuses module 14's prompt-free schema |
 | `16-007` Privacy requests | P1 | Not Started | — |
 | `16-008` Feature flags/audit | P1 | Not Started | — |
 

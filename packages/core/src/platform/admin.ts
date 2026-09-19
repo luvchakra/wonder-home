@@ -26,11 +26,19 @@ export type PlatformAdmin = {
 /** What each platform role may do. Support deliberately cannot grant itself access. */
 const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
   support: ["household.read_with_grant", "operations.read"],
-  operator: ["household.read_with_grant", "operations.read", "support_access.grant"],
+  operator: [
+    "household.read_with_grant",
+    "operations.read",
+    "ai_operations.read",
+    "support_access.grant",
+    "subscription.manage",
+  ],
   owner: [
     "household.read_with_grant",
     "operations.read",
+    "ai_operations.read",
     "support_access.grant",
+    "subscription.manage",
     "platform_admin.manage",
   ],
 };
