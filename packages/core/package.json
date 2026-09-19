@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",
+    "@google/genai": "^2.23.0",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
     "clsx": "^2.1.1",

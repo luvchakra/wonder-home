@@ -4,15 +4,16 @@ import { INTENT_ACTIONS } from "../conversation/intent";
 import { intentFromModelOutput } from "./model-client";
 
 /**
- * The Claude-backed `Understanding` (product-direction update, "Priority A —
- * make the brain real").
+ * The Claude- and Gemini-backed `Understanding`s (product-direction update,
+ * "Priority A — make the brain real").
  *
- * `createClaudeUnderstanding` itself makes a real network call and is not
- * unit tested, matching this codebase's convention for `SupabaseClient`-
- * composing functions elsewhere in `packages/core` (`previewPlanChange`,
- * `usageSummary`): verified by typecheck and build, not a mocked boundary.
- * What belongs here is what is pure — the mapping from a parsed model output
- * (or a miss) to the same `HouseholdIntent` shape the deterministic fixtures
+ * `createClaudeUnderstanding` and `createGeminiUnderstanding` each make a
+ * real network call and are not unit tested, matching this codebase's
+ * convention for `SupabaseClient`-composing functions elsewhere in
+ * `packages/core` (`previewPlanChange`, `usageSummary`): verified by
+ * typecheck and build, not a mocked boundary. What belongs here is what is
+ * pure and shared by both — the mapping from a parsed model output (or a
+ * miss) to the same `HouseholdIntent` shape the deterministic fixtures
  * already produce, and the one security property that actually matters: the
  * model never gets a field to say who is asking.
  */
