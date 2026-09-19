@@ -7,7 +7,7 @@ Reference image: `WonderHome-Approved-UI-Mockup-Reference.png`
 
 ## Visual language
 - Clean, elegant, family-oriented visual system.
-- Warm/light neutral surfaces with deep navy typography and restrained teal/green primary actions.
+- Warm/light neutral surfaces with deep navy typography and restrained blue/green primary actions.
 - Rounded cards, soft elevation, generous spacing and clear hierarchy.
 - Avoid enterprise-ERP density; the family should immediately see what needs attention.
 - Mobile-first responsive design, with desktop layouts derived from the same information hierarchy.

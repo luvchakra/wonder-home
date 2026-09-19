@@ -2,11 +2,12 @@
  * WonderHome design tokens.
  *
  * The single source for the product and the landing page. Derived from
- * design/UI-UX-REQUIREMENTS-v3.md and the approved mockup sheets: warm cream
- * surfaces, deep navy typography, a restrained teal for every committing
- * action, soft green for handled, amber for attention, red kept for the
- * genuinely critical. Rounded cards, soft shadows, subtle gradients, and
- * generous whitespace — premium and family-friendly, never a dashboard.
+ * design/UI-UX-REQUIREMENTS-v3.md, the approved mockup sheets, and the brand
+ * guidelines at design/WonderHome-brand-guidelines.png: warm cream surfaces,
+ * deep navy typography, a restrained blue for every committing action, soft
+ * green for handled, warm yellow for attention, red kept for the genuinely
+ * critical. Rounded cards, soft shadows, subtle gradients, and generous
+ * whitespace — premium and family-friendly, never a dashboard.
  *
  * Every screen shares this one system; a module never brings its own look.
  */
@@ -19,15 +20,15 @@
    */
   color-scheme: light;
 
-  /* Typography — Inter, wired in by the app through next/font */
+  /* Typography — Sora, wired in by the app through next/font (brand guidelines) */
   --wh-font-sans:
-    var(--font-inter, "Inter"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    var(--font-sora, "Sora"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 
   /*
    * The handwritten accent. Every mockup sheet carries one line in it, and it
    * is the one place WonderHome speaks in its own hand. Self-hosted through
-   * next/font like Inter, because the CSP allows font-src 'self' only.
+   * next/font like Sora, because the CSP allows font-src 'self' only.
    */
   --wh-font-script:
     var(--font-caveat, "Caveat"), "Segoe Script", "Bradley Hand", cursive;
@@ -49,7 +50,7 @@
   --wh-border-strong: oklch(0.86 0.014 75);
 
   /* Typography colours — deep navy, softened for secondary copy */
-  --wh-foreground: oklch(0.27 0.05 255);
+  --wh-foreground: oklch(0.25 0.05 262);
   --wh-foreground-muted: oklch(0.5 0.035 250);
   --wh-foreground-subtle: oklch(0.62 0.025 250);
 
@@ -62,12 +63,12 @@
   --wh-brand-home-from: #0f83be;
   --wh-brand-home-to: #3fb897;
 
-  /* Primary action — the teal the mockups use for every committing action */
-  --wh-primary: oklch(0.49 0.09 190);
-  --wh-primary-hover: oklch(0.43 0.09 190);
+  /* Primary action — the brand's Primary Blue, for every committing action */
+  --wh-primary: oklch(0.5 0.12 237);
+  --wh-primary-hover: oklch(0.44 0.12 237);
   --wh-primary-foreground: oklch(0.995 0 0);
-  --wh-primary-soft: oklch(0.955 0.03 185);
-  --wh-primary-glow: oklch(0.49 0.09 190 / 0.28);
+  --wh-primary-soft: oklch(0.955 0.03 237);
+  --wh-primary-glow: oklch(0.5 0.12 237 / 0.28);
 
   /* The botanical decoration that frames the warm surfaces in the mockups */
   --wh-leaf: oklch(0.72 0.11 145);
@@ -76,12 +77,12 @@
   --wh-leaf-vein: oklch(0.95 0.03 140);
 
   /* Outcome and risk states */
-  --wh-attention: oklch(0.72 0.16 60);
-  --wh-attention-soft: oklch(0.965 0.04 75);
+  --wh-attention: oklch(0.72 0.16 82);
+  --wh-attention-soft: oklch(0.965 0.04 82);
   --wh-risk: oklch(0.58 0.2 25);
   --wh-risk-soft: oklch(0.965 0.03 25);
-  --wh-handled: oklch(0.62 0.13 155);
-  --wh-handled-soft: oklch(0.955 0.04 155);
+  --wh-handled: oklch(0.62 0.13 150);
+  --wh-handled-soft: oklch(0.955 0.04 150);
   --wh-info: oklch(0.55 0.13 250);
   --wh-info-soft: oklch(0.955 0.03 250);
 
@@ -110,10 +111,10 @@
   /* Gradients — subtle, warm, and the only place colour is allowed to bloom */
   --wh-gradient-page:
     radial-gradient(60rem 30rem at 15% -10%, oklch(0.965 0.035 60 / 0.9), transparent 60%),
-    radial-gradient(50rem 28rem at 110% 10%, oklch(0.955 0.035 185 / 0.9), transparent 55%);
+    radial-gradient(50rem 28rem at 110% 10%, oklch(0.955 0.035 237 / 0.9), transparent 55%);
   --wh-gradient-hero:
-    linear-gradient(160deg, oklch(0.985 0.012 70) 0%, oklch(0.975 0.02 60) 45%, oklch(0.965 0.028 180) 100%);
-  --wh-gradient-primary: linear-gradient(135deg, oklch(0.55 0.1 190) 0%, oklch(0.45 0.09 200) 100%);
+    linear-gradient(160deg, oklch(0.985 0.012 70) 0%, oklch(0.975 0.02 60) 45%, oklch(0.965 0.028 237) 100%);
+  --wh-gradient-primary: linear-gradient(135deg, oklch(0.55 0.1 237) 0%, oklch(0.45 0.09 247) 100%);
   --wh-gradient-orb:
     radial-gradient(circle at 30% 30%, oklch(0.9 0.06 240), oklch(0.7 0.14 265) 45%, oklch(0.5 0.16 285) 100%);
   --wh-gradient-sunset:
@@ -168,18 +169,18 @@
   --wh-brand-home-from: #4cb8ec;
   --wh-brand-home-to: #63d4a8;
 
-  --wh-primary: oklch(0.72 0.11 190);
-  --wh-primary-hover: oklch(0.78 0.11 190);
+  --wh-primary: oklch(0.73 0.11 237);
+  --wh-primary-hover: oklch(0.79 0.11 237);
   --wh-primary-foreground: oklch(0.18 0.02 255);
-  --wh-primary-soft: oklch(0.32 0.05 190);
-  --wh-primary-glow: oklch(0.72 0.11 190 / 0.3);
+  --wh-primary-soft: oklch(0.32 0.05 237);
+  --wh-primary-glow: oklch(0.73 0.11 237 / 0.3);
 
-  --wh-attention: oklch(0.78 0.15 60);
-  --wh-attention-soft: oklch(0.33 0.05 60);
+  --wh-attention: oklch(0.78 0.15 82);
+  --wh-attention-soft: oklch(0.33 0.05 82);
   --wh-risk: oklch(0.7 0.17 25);
   --wh-risk-soft: oklch(0.32 0.06 25);
-  --wh-handled: oklch(0.72 0.13 155);
-  --wh-handled-soft: oklch(0.3 0.05 155);
+  --wh-handled: oklch(0.72 0.13 150);
+  --wh-handled-soft: oklch(0.3 0.05 150);
   --wh-info: oklch(0.72 0.11 250);
   --wh-info-soft: oklch(0.31 0.05 250);
 
@@ -200,8 +201,8 @@
 
   --wh-gradient-page:
     radial-gradient(60rem 30rem at 15% -10%, oklch(0.3 0.04 60 / 0.6), transparent 60%),
-    radial-gradient(50rem 28rem at 110% 10%, oklch(0.3 0.04 185 / 0.6), transparent 55%);
-  --wh-gradient-hero: linear-gradient(160deg, oklch(0.24 0.02 255) 0%, oklch(0.27 0.03 200) 100%);
+    radial-gradient(50rem 28rem at 110% 10%, oklch(0.3 0.04 237 / 0.6), transparent 55%);
+  --wh-gradient-hero: linear-gradient(160deg, oklch(0.24 0.02 255) 0%, oklch(0.27 0.03 247) 100%);
   --wh-gradient-sunset: linear-gradient(180deg, oklch(0.28 0.03 60) 0%, oklch(0.24 0.04 40) 100%);
 
   --wh-shadow-card: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -8px oklch(0 0 0 / 0.35);

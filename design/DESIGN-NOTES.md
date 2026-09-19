@@ -24,9 +24,9 @@ because the provider behind it is not live, it is wrong.
 | Token family | Decision |
 |---|---|
 | Surfaces | Warm cream page (`--wh-background`), white cards, a fixed radial page gradient behind everything |
-| Type | Inter via `next/font` (self-hosted; CSP allows `font-src 'self'` only), deep navy, fluid hero/display/title sizes (`--wh-text-*`) |
-| Primary | Teal for every committing action and the active nav state |
-| States | Green handled · amber attention · red only for the genuinely critical · blue informational |
+| Type | Sora via `next/font` (self-hosted; CSP allows `font-src 'self'` only), deep navy, fluid hero/display/title sizes (`--wh-text-*`) — brand guidelines, `design/WonderHome-brand-guidelines.png` |
+| Primary | Blue (the brand's Primary Blue) for every committing action and the active nav state |
+| States | Green handled · warm yellow attention · red only for the genuinely critical · blue informational |
 | Domains | One colour per household domain (`--wh-tone-*`), used for the icon tile, never for text |
 | Shape | 1.25rem cards, pill actions, three shadow depths (card / raised / float) |
 | Motion | One easing, three durations, transform+opacity only, all removed under `prefers-reduced-motion` |
@@ -105,12 +105,49 @@ gradient reads as a printing mistake. Where a warm surface wants decoration,
 that is `LeafDecor`'s job (rule 5), which is what the landing feature cards now
 use.
 
+## The brand guidelines refresh
+
+A full brand-guidelines sheet was supplied — logo, app icon, colour palette
+(Primary Blue `#0EA5E9`, Accent Green `#22C55E`, Warm Yellow `#FBBF24`, Navy
+`#0F172A`, Light Gray `#E5E7EB`), typography (Sora, for every type role) and
+mockups — and is kept at `design/WonderHome-brand-guidelines.png` for the same
+reason the logo source is: so a value here can be checked against it or
+redone. Three deliberate scoping decisions, so the next session does not
+re-litigate them:
+
+- **The semantic tokens moved to the new palette; the mark's own geometry and
+  gradients did not.** `--wh-primary` (Primary Blue), `--wh-attention` (Warm
+  Yellow) and `--wh-handled` (Accent Green) in `ui-theme.css` now derive from
+  the supplied hues — converted to OKLCH and checked for contrast against
+  white/cream rather than lifted as literal swatch lightness, which is a
+  marketing lightness, not a button-fill or body-text one. The mark's own
+  traced gradients (`brand/mark.ts`) are untouched: they were pixel-measured
+  from actual artwork already, this sheet's logo renditions are smaller and
+  more compressed than that source, and a re-trace without a cleaner source
+  risks a *worse* mark, not a more faithful one.
+- **The Light Gray swatch was not adopted for surfaces.** Rule 1 is explicit —
+  warm cream, never grey — and the sheet's own mockups render on a warm cream
+  background too. A brand board's neutral swatch is for print and UI chrome in
+  general, not a licence to cool down the one thing this product is
+  deliberately warm about.
+- **Domain accents (`--wh-tone-*`) are unchanged.** They are WonderHome's own
+  internal categorisation, not part of this brand identity, and the sheet
+  does not speak to them.
+
+Typography moved from Inter to Sora everywhere `--wh-font-sans` reaches,
+wired the same way Inter was (self-hosted via `next/font`, one variable, no
+external font request). The tagline changed too — `Happier Homes. Brighter
+Tomorrows.` is `A happier home. Everyday.` now, since the sheet shows it
+under the lockup and again in the footer mockup: `brand/mark.ts`'s
+`TAGLINE`, the manifest, the root layout's description and both places
+`UI-UX-REQUIREMENTS-v3.md` names it.
+
 ## The handwritten line, and the greenery
 
 Two things carry the mockups' warmth, and they are easy to lose in a refactor
 because neither is information.
 
-- **`ScriptAccent`** is Caveat, self-hosted through `next/font` like Inter so
+- **`ScriptAccent`** is Caveat, self-hosted through `next/font` like Sora so
   the CSP's `font-src 'self'` still holds. One line per screen, marked
   decorative, never a control, never the only place something is said. The
   sheets put it on the splash, under the sign up form, beside the landing hero

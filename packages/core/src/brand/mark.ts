@@ -137,4 +137,4 @@ export const TILE = { light: "#ffffff", dark: "#16243a" } as const;
 export const BRAND_INK = "#182638";
 export const BRAND_HOME_GRADIENT = { light: ["#0f83be", "#3fb897"], dark: ["#4cb8ec", "#63d4a8"] } as const;
 
-export const TAGLINE = "Happier Homes. Brighter Tomorrows.";
+export const TAGLINE = "A happier home. Everyday.";

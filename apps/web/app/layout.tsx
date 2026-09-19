@@ -1,17 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Caveat, Inter } from "next/font/google";
+import { Caveat, Sora } from "next/font/google";
 
 import "./globals.css";
 
 /**
- * Inter, self-hosted by next/font so no request ever leaves for a font CDN —
- * the CSP allows fonts from 'self' only, on purpose. `display: swap` keeps text
+ * Sora, the brand's own typeface (design/WonderHome-brand-guidelines.png),
+ * self-hosted by next/font so no request ever leaves for a font CDN — the CSP
+ * allows fonts from 'self' only, on purpose. `display: swap` keeps text
  * readable in the system face while the file arrives.
  */
-const inter = Inter({
+const sora = Sora({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-sora",
 });
 
 /**
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
     default: "WonderHome",
     template: "%s · WonderHome",
   },
-  description: "Happier Homes. Brighter Tomorrows. Less mental load. More family time.",
+  description: "A happier home. Everyday. Less mental load. More family time.",
   applicationName: "WonderHome",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "WonderHome", statusBarStyle: "default" },
@@ -59,7 +60,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${caveat.variable}`}>
+    <html lang="en" className={`${sora.variable} ${caveat.variable}`}>
       <body>{children}</body>
     </html>
   );

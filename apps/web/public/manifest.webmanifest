@@ -1,7 +1,7 @@
 {
   "name": "WonderHome",
   "short_name": "WonderHome",
-  "description": "Happier Homes. Brighter Tomorrows.",
+  "description": "A happier home. Everyday.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fbf8f3",
