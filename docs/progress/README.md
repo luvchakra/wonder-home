@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-19 | [Usage this period, in Settings (story 20-005)](2026-09-19-usage-ui.md) |
 | 2026-09-19 | [01-007 was already built, under a different story number](2026-09-19-preferences-already-built.md) |
 | 2026-09-19 | [Closing 19-007: p95 measured against the live deployment](2026-09-19-performance-p95-closed.md) |
 | 2026-09-19 | [Subscription administration and AI operations monitoring (16-005, 16-006)](2026-09-19-subscription-admin-and-ai-operations.md) |

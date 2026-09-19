@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**144 of 170 stories done — 84.7%**
+**145 of 170 stories done — 85.3%**
 
 | Status | Stories |
 |---|---:|
-| Done | 144 |
+| Done | 145 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 26 |
+| Not Started | 25 |
 
 ## By module
 
@@ -44,7 +44,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
 | 19 Testing, Observability & Production | `████████░░` | 7 | 8 | 1 not started |
-| 20 Subscriptions, Entitlements & Usage | `█████░░░░░` | 4 | 8 | 4 not started |
+| 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
 
 ## What is left
 
@@ -72,7 +72,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `18-007` Webhooks/events | 18 API & Developer Platform | P1 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `19-008` Recovery/runbook | 19 Testing, Observability & Production | P1 | Not Started |
-| `20-005` Usage UI | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
@@ -383,7 +382,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 20 — Subscriptions, Entitlements & Usage
 
-4 of 8 done `█████░░░░░`
+5 of 8 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -391,7 +390,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-002` Entitlements | P0 | Done | one server-side entitlement service; hiding a feature is never the control |
 | `20-003` Usage metering | P0 | Done | atomic counters proven against 20 concurrent sessions |
 | `20-004` Upgrade/downgrade | P0 | Done | A change writes one row and never a household record; consequences shown and re-derived before applying; audited |
-| `20-005` Usage UI | P1 | Not Started | — |
+| `20-005` Usage UI | P1 | Done | Settings shows used/limit per metered feature, from the same counter `consume` enforces against |
 | `20-006` Billing abstraction | P1 | Not Started | — |
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |

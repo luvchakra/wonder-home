@@ -6,13 +6,14 @@ import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
-import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
+import { listPlans, loadSubscription, usageSummary } from "@wonderhome/core/billing/repository";
 import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
+import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -48,10 +49,14 @@ export default async function SettingsPage() {
     loadDataUse(supabase, membership.household.id),
   ]);
 
-  const [subscription, plans] = await Promise.all([
+  const [subscription, plans, usage] = await Promise.all([
     loadSubscription(supabase, membership.household.id).catch(() => null),
     listPlans(supabase).catch(() => []),
+    usageSummary(supabase, membership.household.id).catch(() => ({ planKey: null, features: [] })),
   ]);
+  // Only what is actually metered — an unlimited feature has no "used of"
+  // to show, and "used of unlimited" is not arithmetic anybody asked for.
+  const metered = usage.features.filter((feature) => feature.limit !== null && feature.used !== null);
 
   // Which key actually answers for this household, decided in one place so
   // the screen can never disagree with the server about it.
@@ -141,6 +146,18 @@ export default async function SettingsPage() {
             ) : null}
           </Card>
         </section>
+
+        {metered.length > 0 ? (
+          <section>
+            <SectionHeader title="Usage this period" />
+            <MetricGrid
+              metrics={metered.map((feature) => ({
+                label: `${feature.label} this period`,
+                value: `${feature.used} / ${feature.limit}`,
+              }))}
+            />
+          </section>
+        ) : null}
 
         {plans.length > 0 ? (
           <section>
