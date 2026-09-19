@@ -12,11 +12,14 @@ import {
   downstreamOf,
   nextPolicyVersion,
   validatePlaybookItem,
+  validatePolicyCondition,
   validateResponsibility,
+  type ConditionalPolicy,
   type ConfigMember,
   type ConfigurationConflict,
   type PlaybookInput,
   type PolicyCategory,
+  type PolicyCondition,
   type ResponsibilityInput,
 } from "./configuration";
 
@@ -240,10 +243,18 @@ export async function savePolicy(
     category: PolicyCategory;
     name: string;
     rule: Record<string, unknown>;
+    /** Narrows this policy to a specific case (02-008); omit for the household's unconditional default. */
+    condition?: PolicyCondition | null;
   },
 ): Promise<SavedChange> {
   const name = input.name.trim();
   if (name.length === 0) throw ApiError.badRequest("Give the policy a name.");
+
+  const condition = input.condition ?? null;
+  if (condition) {
+    const validation = validatePolicyCondition(condition);
+    if (!validation.ok) throw ApiError.badRequest(validation.problems[0]!.message, { problems: validation.problems });
+  }
 
   const { data: existing, error: readError } = await supabase
     .from("policies")
@@ -271,7 +282,7 @@ export async function savePolicy(
       household_id: input.householdId,
       category: input.category,
       name,
-      rule: input.rule,
+      rule: condition ? { ...input.rule, condition } : input.rule,
       version,
       active: true,
     })
@@ -285,12 +296,46 @@ export async function savePolicy(
     category: input.category,
     version,
     supersededVersions: inForce.length,
+    conditional: condition !== null,
   });
 
   return {
     id,
-    downstream: downstreamOf({ kind: "policy", category: input.category, name, version }),
+    downstream: downstreamOf({ kind: "policy", category: input.category, name, version, condition }),
   };
+}
+
+/**
+ * A category's active policies, ready for `selectApplicablePolicy` (02-008).
+ *
+ * More than one policy can be active in the same category at once — an
+ * unconditional default and any number of conditional ones narrowing it —
+ * because each has its own name and `savePolicy` only deactivates other
+ * versions of the *same* name.
+ */
+export async function activePolicies(
+  supabase: SupabaseClient,
+  householdId: string,
+  category: PolicyCategory,
+): Promise<ConditionalPolicy[]> {
+  const { data, error } = await supabase
+    .from("policies")
+    .select("name, rule")
+    .eq("household_id", householdId)
+    .eq("category", category)
+    .eq("active", true);
+
+  if (error) throw new Error(`activePolicies failed: ${error.code ?? "unknown"}`);
+
+  return ((data as Row[] | null) ?? []).map((row) => {
+    const rule = (row.rule as Record<string, unknown> | null) ?? {};
+    const { condition, ...rest } = rule;
+    return {
+      name: row.name as string,
+      rule: rest,
+      condition: (condition as PolicyCondition | undefined) ?? null,
+    };
+  });
 }
 
 export type ResponsibilityRow = {

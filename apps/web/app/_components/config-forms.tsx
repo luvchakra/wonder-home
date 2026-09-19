@@ -214,6 +214,29 @@ export function PolicyForm({
         hint="₹2,000 is 200000. Above this, WonderHome asks."
       />
       <Field label="Note" name="note" maxLength={300} placeholder="Why this rule exists." />
+
+      <details className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
+        <summary className="cursor-pointer text-sm font-medium">Narrow this to a specific case (optional)</summary>
+        <div className="mt-3 space-y-3">
+          <Select
+            label="Applies only to"
+            name="conditionMemberType"
+            defaultValue=""
+            options={[
+              { value: "", label: "Everyone" },
+              { value: "adult", label: "Adults" },
+              { value: "child", label: "Children" },
+              { value: "helper", label: "Househelpers" },
+            ]}
+            hint="A stricter version of the policy above, for one kind of person. Pick this or a time, not both."
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="From (hour)" name="conditionStartHour" type="number" min={0} max={23} placeholder="21" />
+            <Field label="To (hour)" name="conditionEndHour" type="number" min={0} max={23} placeholder="7" />
+          </div>
+        </div>
+      </details>
+
       <Submit label="Save policy" />
     </form>
   );

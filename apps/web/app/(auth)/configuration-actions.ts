@@ -6,7 +6,7 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { AUTONOMY_MODES } from "@wonderhome/core/household/autonomy";
-import { POLICY_CATEGORIES, slugifyOutcomeKey } from "@wonderhome/core/household/configuration";
+import { POLICY_CATEGORIES, slugifyOutcomeKey, type PolicyCondition } from "@wonderhome/core/household/configuration";
 import { proposeConfiguration } from "@wonderhome/core/household/configuration-intent";
 import {
   applyConfigurationChange,
@@ -17,6 +17,7 @@ import {
   saveResponsibility,
 } from "@wonderhome/core/household/configuration-repository";
 import { listMembers, requireHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { MEMBER_TYPES } from "@wonderhome/core/identity/schemas";
 
 import type { ActionState } from "./actions";
 
@@ -127,6 +128,10 @@ const policySchema = z.object({
   /** The one rule the wizard collects today: an amount WonderHome may not pass. */
   limitMinor: z.union([z.coerce.number().int().min(0), z.literal("")]).optional(),
   note: z.string().trim().max(300).optional(),
+  /** Narrows this policy to a specific case (02-008); a household picks at most one. */
+  conditionMemberType: z.union([z.enum(MEMBER_TYPES), z.literal("")]).optional(),
+  conditionStartHour: z.union([z.coerce.number().int().min(0).max(23), z.literal("")]).optional(),
+  conditionEndHour: z.union([z.coerce.number().int().min(0).max(23), z.literal("")]).optional(),
 });
 
 export async function savePolicyAction(
@@ -138,7 +143,17 @@ export async function savePolicyAction(
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   }
 
-  const { householdId, category, name, limitMinor, note } = parsed.data;
+  const { householdId, category, name, limitMinor, note, conditionMemberType, conditionStartHour, conditionEndHour } =
+    parsed.data;
+
+  // A household names one thing this policy is narrowed to. Member type is
+  // asked first and wins if both were somehow submitted, rather than
+  // refusing the save over an unlikely double-fill.
+  const condition: PolicyCondition | null = conditionMemberType
+    ? { kind: "member_type", memberType: conditionMemberType }
+    : typeof conditionStartHour === "number" && typeof conditionEndHour === "number"
+      ? { kind: "hour_range", startHour: conditionStartHour, endHour: conditionEndHour }
+      : null;
 
   try {
     const supabase = await createClient();
@@ -153,6 +168,7 @@ export async function savePolicyAction(
         ...(typeof limitMinor === "number" ? { limitMinor } : {}),
         ...(note ? { note } : {}),
       },
+      condition,
     });
 
     revalidatePath("/household/setup");

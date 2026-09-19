@@ -363,9 +363,115 @@ export function nextPolicyVersion(existingVersions: readonly number[]): number {
   return existingVersions.length === 0 ? 1 : Math.max(...existingVersions) + 1;
 }
 
+export const POLICY_CONDITION_KINDS = ["member_type", "hour_range"] as const;
+export type PolicyConditionKind = (typeof POLICY_CONDITION_KINDS)[number];
+
+/**
+ * What narrows a policy to a specific case (story 02-008) — a stricter
+ * spending limit for children, a notifications rule that only holds during
+ * quiet hours. `null` (no condition) is the household's unconditional
+ * default for that category.
+ */
+export type PolicyCondition =
+  | { kind: "member_type"; memberType: MemberType }
+  | { kind: "hour_range"; startHour: number; endHour: number };
+
+/** What a moment looks like, for deciding which policy applies to it. */
+export type PolicyContext = {
+  memberType?: MemberType;
+  hour?: number;
+};
+
+export function validatePolicyCondition(condition: PolicyCondition): Validation {
+  const problems: Problem[] = [];
+
+  if (condition.kind === "hour_range") {
+    const bounded = [condition.startHour, condition.endHour].every(
+      (hour) => Number.isInteger(hour) && hour >= 0 && hour <= 23,
+    );
+    if (!bounded) {
+      problems.push({ field: "hourRange", message: "Hours run from 0 to 23." });
+    } else if (condition.startHour === condition.endHour) {
+      problems.push({
+        field: "hourRange",
+        message: "That is not a window — it starts and ends at the same hour.",
+      });
+    }
+  }
+
+  return { ok: problems.length === 0, problems };
+}
+
+function hourWithin(hour: number, startHour: number, endHour: number): boolean {
+  return startHour <= endHour ? hour >= startHour && hour < endHour : hour >= startHour || hour < endHour;
+}
+
+/**
+ * Whether a condition holds for a given moment. No condition always
+ * matches, which is what makes an unconditional policy the fallback every
+ * conditional one narrows.
+ */
+export function conditionMatches(condition: PolicyCondition | null, context: PolicyContext): boolean {
+  if (!condition) return true;
+
+  switch (condition.kind) {
+    case "member_type":
+      return context.memberType === condition.memberType;
+    case "hour_range":
+      return context.hour !== undefined && hourWithin(context.hour, condition.startHour, condition.endHour);
+  }
+}
+
+export type ConditionalPolicy = {
+  name: string;
+  rule: Record<string, unknown>;
+  condition: PolicyCondition | null;
+};
+
+/**
+ * Which of a household's active policies in one category actually applies,
+ * when a household has set more than one (story 02-008).
+ *
+ * A household's default is unconditional — "Everyday spending", say — and a
+ * conditional policy exists to narrow it for a specific case. Whichever
+ * conditional policy matches wins over the unconditional default, the same
+ * way a purchase policy's narrower scope already wins over "any" in
+ * `commerce/policy.ts`. Two conditional policies that both match resolve by
+ * name, so the answer is deterministic rather than depending on the order
+ * rows came back from the database.
+ */
+export function selectApplicablePolicy(
+  policies: readonly ConditionalPolicy[],
+  context: PolicyContext,
+): ConditionalPolicy | null {
+  const matching = policies.filter((policy) => conditionMatches(policy.condition, context));
+
+  return (
+    [...matching].sort((a, b) => {
+      const specificity = Number(a.condition === null) - Number(b.condition === null);
+      return specificity !== 0 ? specificity : a.name.localeCompare(b.name);
+    })[0] ?? null
+  );
+}
+
+function describeCondition(condition: PolicyCondition): string {
+  switch (condition.kind) {
+    case "member_type":
+      return `only for ${MEMBER_TYPE_PLURAL[condition.memberType]}`;
+    case "hour_range":
+      return `only from ${formatHour(condition.startHour)} to ${formatHour(condition.endHour)}`;
+  }
+}
+
+const MEMBER_TYPE_PLURAL: Record<MemberType, string> = {
+  adult: "adults",
+  child: "children",
+  helper: "househelpers",
+};
+
 export type ConfigChange =
   | { kind: "responsibility"; outcomeKey: string; aiMode: AutonomyMode; owned: boolean }
-  | { kind: "policy"; category: PolicyCategory; name: string; version: number }
+  | { kind: "policy"; category: PolicyCategory; name: string; version: number; condition?: PolicyCondition | null }
   | { kind: "playbook"; name: string; window: { startHour: number; endHour: number } | null };
 
 /**
@@ -392,6 +498,11 @@ export function downstreamOf(change: ConfigChange): string[] {
         ...policyEffects(change.category),
         `Saved as version ${change.version}. The previous version stays on record, so what was in force before is still knowable.`,
         "Checked on the server every time, so neither a screen nor the assistant can go around it.",
+        ...(change.condition
+          ? [
+              `Applies ${describeCondition(change.condition)}. Anything else follows the household's unconditional policy for this, if one exists.`,
+            ]
+          : []),
       ];
 
     case "playbook":

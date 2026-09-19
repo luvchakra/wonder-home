@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   canDependOn,
+  conditionMatches,
   detectConflicts,
   downstreamOf,
   nextPolicyVersion,
+  selectApplicablePolicy,
   slugifyOutcomeKey,
   validatePlaybookItem,
+  validatePolicyCondition,
   validateResponsibility,
+  type ConditionalPolicy,
   type ConfigMember,
   type ResponsibilityInput,
 } from "./configuration";
@@ -379,5 +383,111 @@ describe("conflicts nothing catches at write time (02-007)", () => {
     for (const conflict of conflicts) {
       expect(conflict.resolution.length, conflict.kind).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("narrowing a policy to a specific case (02-008)", () => {
+  it("accepts a well-formed hour window", () => {
+    expect(validatePolicyCondition({ kind: "hour_range", startHour: 21, endHour: 7 }).ok).toBe(true);
+  });
+
+  it("refuses an hour outside the day", () => {
+    expect(validatePolicyCondition({ kind: "hour_range", startHour: 21, endHour: 24 }).ok).toBe(false);
+  });
+
+  it("refuses a window that starts and ends at the same hour", () => {
+    expect(validatePolicyCondition({ kind: "hour_range", startHour: 9, endHour: 9 }).ok).toBe(false);
+  });
+
+  it("accepts a member-type condition without complaint", () => {
+    expect(validatePolicyCondition({ kind: "member_type", memberType: "child" }).ok).toBe(true);
+  });
+
+  describe("whether a condition holds for a moment", () => {
+    it("has no condition always match, so an unconditional policy is always in play", () => {
+      expect(conditionMatches(null, {})).toBe(true);
+    });
+
+    it("matches a member-type condition only for that exact type", () => {
+      const condition = { kind: "member_type", memberType: "child" } as const;
+
+      expect(conditionMatches(condition, { memberType: "child" })).toBe(true);
+      expect(conditionMatches(condition, { memberType: "adult" })).toBe(false);
+      expect(conditionMatches(condition, {})).toBe(false);
+    });
+
+    it("matches an hour window within the same day", () => {
+      const condition = { kind: "hour_range", startHour: 9, endHour: 17 } as const;
+
+      expect(conditionMatches(condition, { hour: 12 })).toBe(true);
+      expect(conditionMatches(condition, { hour: 8 })).toBe(false);
+      expect(conditionMatches(condition, { hour: 17 })).toBe(false);
+    });
+
+    it("matches an hour window that wraps past midnight", () => {
+      // Quiet hours, 9pm to 7am.
+      const condition = { kind: "hour_range", startHour: 21, endHour: 7 } as const;
+
+      expect(conditionMatches(condition, { hour: 23 })).toBe(true);
+      expect(conditionMatches(condition, { hour: 3 })).toBe(true);
+      expect(conditionMatches(condition, { hour: 12 })).toBe(false);
+    });
+
+    it("never matches an hour window with no hour given", () => {
+      expect(conditionMatches({ kind: "hour_range", startHour: 21, endHour: 7 }, {})).toBe(false);
+    });
+  });
+
+  describe("choosing which policy applies", () => {
+    const unconditional: ConditionalPolicy = { name: "Everyday spending", rule: { limitMinor: 200000 }, condition: null };
+    const forChildren: ConditionalPolicy = {
+      name: "Children's spending",
+      rule: { limitMinor: 20000 },
+      condition: { kind: "member_type", memberType: "child" },
+    };
+
+    it("falls back to the unconditional default when nothing more specific matches", () => {
+      expect(selectApplicablePolicy([unconditional, forChildren], { memberType: "adult" })).toEqual(unconditional);
+    });
+
+    it("prefers the conditional policy that matches over the household's default", () => {
+      expect(selectApplicablePolicy([unconditional, forChildren], { memberType: "child" })).toEqual(forChildren);
+    });
+
+    it("returns nothing when the household has set no policy in this category", () => {
+      expect(selectApplicablePolicy([], { memberType: "adult" })).toBeNull();
+    });
+
+    it("resolves two matching conditional policies by name, so the answer never depends on array order", () => {
+      const forHelpers: ConditionalPolicy = {
+        name: "Aardvark's exception",
+        rule: { limitMinor: 50000 },
+        condition: { kind: "member_type", memberType: "child" },
+      };
+
+      const forward = selectApplicablePolicy([forChildren, forHelpers], { memberType: "child" });
+      const backward = selectApplicablePolicy([forHelpers, forChildren], { memberType: "child" });
+
+      expect(forward).toEqual(forHelpers);
+      expect(backward).toEqual(forHelpers);
+    });
+  });
+
+  it("says what a conditional policy is narrowed to, in the downstream effects", () => {
+    const lines = downstreamOf({
+      kind: "policy",
+      category: "spending",
+      name: "Children's spending",
+      version: 1,
+      condition: { kind: "member_type", memberType: "child" },
+    });
+
+    expect(lines.join(" ")).toContain("only for children");
+  });
+
+  it("says nothing extra about a condition when a policy has none", () => {
+    const lines = downstreamOf({ kind: "policy", category: "spending", name: "Everyday spending", version: 1 });
+
+    expect(lines.join(" ")).not.toContain("Applies only");
   });
 });
