@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { cn } from "@wonderhome/core/lib/cn";
@@ -15,6 +16,17 @@ const NAV = [
   { href: "#security", label: "Security" },
   { href: "#stories", label: "Stories" },
 ];
+
+/**
+ * The guide, kept apart from the list above.
+ *
+ * Every other item here is an anchor down this page; this one leaves it. It is
+ * in the header at all because the guide is the honest answer to most of what
+ * a landing page is being asked — what does it actually do, what will it never
+ * do without asking — and somebody who wants that should not have to create an
+ * account or scroll to the footer to find it. It needs no login.
+ */
+const GUIDE = { href: "/help", label: "Help" };
 
 /** Translucent, blurred and sticky once the page scrolls (requirements §26). */
 export function LandingHeader() {
@@ -49,6 +61,14 @@ export function LandingHeader() {
                 </a>
               </li>
             ))}
+            <li>
+              <Link
+                href={GUIDE.href}
+                className="font-semibold text-[var(--wh-primary)] transition-colors hover:text-[var(--wh-primary-hover)]"
+              >
+                {GUIDE.label}
+              </Link>
+            </li>
           </ul>
         </nav>
 
@@ -82,6 +102,15 @@ export function LandingHeader() {
                 </a>
               </li>
             ))}
+            <li>
+              <Link
+                href={GUIDE.href}
+                onClick={() => setOpen(false)}
+                className="block min-h-11 rounded-[var(--wh-radius-sm)] px-3 py-2.5 text-sm font-semibold text-[var(--wh-primary)] hover:bg-[var(--wh-surface-muted)]"
+              >
+                {GUIDE.label}
+              </Link>
+            </li>
             <li className="pt-2">
               <ButtonLink href="/sign-in" variant="secondary" className="w-full">Sign In</ButtonLink>
             </li>
