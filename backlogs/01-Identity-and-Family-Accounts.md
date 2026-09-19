@@ -10,7 +10,7 @@
 | 4 | P0 | 01-004 | Child profiles | Done | No account needed; guardianship links; age bands derived on read |
 | 5 | P0 | 01-005 | Personalized views | Done | Permission-filtered on the server, not hidden in the client |
 | 6 | P1 | 01-006 | Availability | Done | Pattern plus exceptions; an absence never rewrites a schedule |
-| 7 | P1 | 01-007 | Preferences | Not Started | |
+| 7 | P1 | 01-007 | Preferences | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | 8 | P2 | 01-008 | Helper/service identity | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
@@ -169,6 +169,19 @@ Implement Identity & Family Accounts as a first-class WonderHome domain. The mod
 **Epic:** Personalization, Availability & Delegated Access
 **Priority:** P1
 **Goal:** Capture member and household preferences.
+
+**Where this actually lives.** Module 04 built the mechanism this story asks
+for, under its own story numbers: `memories` (`packages/core/src/conversation/memory.ts`,
+`conversation/repository.ts`) holds every preference with a `scope`
+(`household` | `member`), a `source_type` (`setup` | `conversation` |
+`integration` | `observed`) and a `status` that keeps an inference from
+overwriting something a person confirmed — exactly the "source and scope"
+distinction below. A member states a preference to the assistant (the
+product's one conversation engine, not a form); Certification (module 05)
+is where the household reads and corrects what was captured. Tested at both
+the pure-function level (`memory.test.ts`, 14 cases covering scope and
+reconciliation) and against real Postgres (`scripts/test-conversation-rls.mjs`).
+This row was closed to reflect that, not to duplicate it.
 
 **Acceptance criteria**
 - Given the household state described by the story, capture member and household preferences .
