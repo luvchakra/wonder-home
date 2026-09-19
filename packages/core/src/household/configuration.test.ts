@@ -4,6 +4,7 @@ import {
   canDependOn,
   downstreamOf,
   nextPolicyVersion,
+  slugifyOutcomeKey,
   validatePlaybookItem,
   validateResponsibility,
   type ConfigMember,
@@ -147,6 +148,32 @@ describe("a playbook entry", () => {
 
   it("accepts no window and no escalation at all", () => {
     expect(validatePlaybookItem({ ...item, operatingWindow: null, escalateAfterHours: null }).ok).toBe(true);
+  });
+});
+
+describe("naming an outcome without also having to key it", () => {
+  const key = /^[a-z][a-z0-9_.]{1,60}$/;
+
+  it("turns a plain household name into the same shape a hand-typed key had", () => {
+    expect(slugifyOutcomeKey("Laundry ready")).toBe("laundry.ready");
+  });
+
+  it("collapses punctuation and repeated spaces into single dots", () => {
+    expect(slugifyOutcomeKey("Mom's chores!!  done")).toBe("mom.s.chores.done");
+  });
+
+  it("never produces something the planner would refuse", () => {
+    for (const name of ["Laundry ready", "Mom's chores!!  done", "123", "A", "   ", "🎉🎉🎉"]) {
+      expect(slugifyOutcomeKey(name)).toMatch(key);
+    }
+  });
+
+  it("gives two different names two different keys", () => {
+    expect(slugifyOutcomeKey("Laundry ready")).not.toBe(slugifyOutcomeKey("Dinner ready"));
+  });
+
+  it("gives the same name back the same key, so re-saving it updates rather than duplicates", () => {
+    expect(slugifyOutcomeKey("Laundry ready")).toBe(slugifyOutcomeKey("Laundry ready"));
   });
 });
 

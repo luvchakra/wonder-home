@@ -6,7 +6,7 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { AUTONOMY_MODES } from "@wonderhome/core/household/autonomy";
-import { POLICY_CATEGORIES } from "@wonderhome/core/household/configuration";
+import { POLICY_CATEGORIES, slugifyOutcomeKey } from "@wonderhome/core/household/configuration";
 import { proposeConfiguration } from "@wonderhome/core/household/configuration-intent";
 import {
   applyConfigurationChange,
@@ -73,7 +73,6 @@ export async function saveResponsibilityAction(
 
 const playbookSchema = z.object({
   householdId: z.uuid(),
-  outcomeKey: z.string().min(1),
   name: z.string().trim().min(1).max(120),
   outcomeDefinition: z.string().trim().min(1).max(500),
   startHour: z.union([z.coerce.number().int().min(0).max(23), z.literal("")]).optional(),
@@ -91,7 +90,7 @@ export async function savePlaybookAction(
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   }
 
-  const { householdId, startHour, endHour, escalateAfterHours, dependsOnKey, ...rest } = parsed.data;
+  const { householdId, name, startHour, endHour, escalateAfterHours, dependsOnKey, ...rest } = parsed.data;
   const hasWindow = typeof startHour === "number" && typeof endHour === "number";
 
   try {
@@ -103,6 +102,10 @@ export async function savePlaybookAction(
       actorMemberId: membership.memberId,
       item: {
         ...rest,
+        name,
+        // The household names it once; the planner's own reference is
+        // derived from that name rather than asked for a second time.
+        outcomeKey: slugifyOutcomeKey(name),
         operatingWindow: hasWindow ? { startHour, endHour } : null,
         escalateAfterHours: typeof escalateAfterHours === "number" ? escalateAfterHours : null,
       },
