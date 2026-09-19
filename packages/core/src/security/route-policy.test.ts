@@ -64,4 +64,12 @@ describe("route policy", () => {
   it("does not match a prefix that is only part of a segment", () => {
     expect(routeRequirement("/families")).toBe("public");
   });
+
+  it("lets anybody read the help guide", () => {
+    // Somebody who cannot get in is exactly the person who needs it, and
+    // nothing in the guide is about a particular household.
+    expect(routeRequirement("/help")).toBe("public");
+    expect(redirectFor("/help", false)).toBeNull();
+    expect(redirectFor("/help", true)).toBeNull();
+  });
 });

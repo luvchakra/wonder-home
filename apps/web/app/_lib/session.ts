@@ -39,6 +39,24 @@ export async function requireSession(nextPath: string): Promise<Session> {
   return buildSession(supabase, memberships[0]!);
 }
 
+/**
+ * The session if there is one, and nothing if there is not.
+ *
+ * For a page that is worth reading signed out — the help guide — but is
+ * better with the shell around it when somebody is signed in. Deliberately
+ * never redirects: a public page that bounces a visitor to sign-in is not a
+ * public page, and the whole point of this helper is the one that does not.
+ */
+export async function optionalSession(): Promise<Session | null> {
+  const [supabase, user] = await Promise.all([createClient(), getVerifiedUser()]);
+  if (!user) return null;
+
+  const memberships = await listMemberships(supabase).catch(() => []);
+  if (memberships.length === 0) return null;
+
+  return buildSession(supabase, memberships[0]!).catch(() => null);
+}
+
 /** The same, for a screen that has already established there is a user. */
 export async function buildSession(
   supabase: SupabaseClient,

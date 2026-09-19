@@ -23,12 +23,21 @@ const AUTHENTICATED_PREFIXES = [
   "/notifications",
   "/certification",
   "/settings",
-  "/help",
   "/welcome",
   // Accepting an invitation needs an account, so an invitee is sent to sign in
   // and returned to the link afterwards.
   "/invite",
 ] as const;
+
+/**
+ * `/help` is deliberately absent from the list above.
+ *
+ * Somebody deciding whether to trust a product with their home should be able
+ * to read what it will and will not do first, and somebody who cannot get in
+ * is exactly the person who needs the help page. Nothing in the guide is about
+ * a particular household, so there is nothing there to protect — and a guide
+ * behind a login answers neither of those people.
+ */
 
 /** Surfaces only for a signed-out visitor; a signed-in member is sent home. */
 const ANONYMOUS_ONLY = new Set(["/sign-in", "/sign-up", "/forgot-password"]);

@@ -6,12 +6,32 @@ import { answerQuestion } from "../packages/core/src/help/search";
 /**
  * The help centre.
  *
- * Signed out, it is gated like every other personal surface — checked in
- * shell.spec.ts along with the rest. What is worth proving here is that the
- * guide's own links are sound: every anchor an answer or an FAQ entry can
- * produce must land on a section that exists, because a help page whose
- * links go nowhere is worse than no help page.
+ * Deliberately readable signed out: somebody who cannot get in is exactly the
+ * person who needs it, and nothing in the guide is about a particular
+ * household. That is asserted here rather than assumed, because "the help page
+ * needs a login" is the kind of regression a route-policy edit makes quietly.
+ *
+ * The rest is about the guide's own links being sound: every anchor an answer
+ * or an FAQ entry can produce must land on a section that exists, because a
+ * help page whose links go nowhere is worse than no help page.
  */
+
+test("an anonymous visitor can read the whole guide", async ({ page }) => {
+  await page.goto("/help");
+
+  await expect(page).toHaveURL(/\/help$/);
+  await expect(page.getByRole("heading", { name: "Get help", level: 1 })).toBeVisible();
+  // A section from the guide itself, so this fails if the page renders a
+  // frame with nothing in it.
+  await expect(page.getByText(FAQ[0]!.question).first()).toBeVisible();
+});
+
+test("a signed-out reader is offered the way in, not a link that bounces them", async ({ page }) => {
+  await page.goto("/help");
+
+  await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Talk to WonderHome" })).toHaveCount(0);
+});
 
 test("every FAQ entry links to a section the guide actually has", () => {
   const ids = new Set(GUIDE.map((section) => section.id));

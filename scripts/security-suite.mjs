@@ -93,7 +93,7 @@ const AREAS = [
     why: "A forged, stale or planted cookie is the cheapest way into somebody's home.",
     unit: ["packages/core/src/security/route-policy.test.ts"],
     e2e: ["e2e/session.spec.ts", "e2e/auth.spec.ts"],
-    expected: 11,
+    expected: 12,
   },
   {
     key: "prompt-injection",
