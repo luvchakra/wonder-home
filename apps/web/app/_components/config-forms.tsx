@@ -134,13 +134,6 @@ export function PlaybookForm({
       <input type="hidden" name="householdId" value={householdId} />
       <Field label="Name" name="name" required maxLength={120} placeholder="Laundry ready" hint="What your family would call it." />
       <Field
-        label="Key"
-        name="outcomeKey"
-        required
-        placeholder="laundry.ready"
-        hint="Lowercase, with dots — how the planner refers to it."
-      />
-      <Field
         label="What good looks like"
         name="outcomeDefinition"
         required
@@ -148,29 +141,38 @@ export function PlaybookForm({
         placeholder="Clean uniforms ready by Sunday evening."
         hint="The state you want, in your own words — not the steps."
       />
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="From (hour)" name="startHour" type="number" min={0} max={23} placeholder="8" />
-        <Field label="To (hour)" name="endHour" type="number" min={0} max={23} placeholder="20" />
-      </div>
-      <Field
-        label="Escalate after (hours)"
-        name="escalateAfterHours"
-        type="number"
-        min={1}
-        placeholder="12"
-        hint="How long it may be at risk before somebody is told. Leave empty for never."
-      />
-      {existing.length > 0 ? (
-        <Select
-          label="What has to happen first"
-          name="dependsOnKey"
-          options={[
-            { value: "", label: "Nothing — it stands alone" },
-            ...existing.map((outcome) => ({ value: outcome.key, label: outcome.label })),
-          ]}
-          hint="Planning waits for this one. A loop between two outcomes is refused."
-        />
-      ) : null}
+
+      <details className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          More detail, if it matters here (optional)
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="From (hour)" name="startHour" type="number" min={0} max={23} placeholder="8" />
+            <Field label="To (hour)" name="endHour" type="number" min={0} max={23} placeholder="20" />
+          </div>
+          <Field
+            label="Escalate after (hours)"
+            name="escalateAfterHours"
+            type="number"
+            min={1}
+            placeholder="12"
+            hint="How long it may be at risk before somebody is told. Leave empty for never."
+          />
+          {existing.length > 0 ? (
+            <Select
+              label="What has to happen first"
+              name="dependsOnKey"
+              options={[
+                { value: "", label: "Nothing — it stands alone" },
+                ...existing.map((outcome) => ({ value: outcome.key, label: outcome.label })),
+              ]}
+              hint="Planning waits for this one. A loop between two outcomes is refused."
+            />
+          ) : null}
+        </div>
+      </details>
+
       <Submit label="Save playbook entry" />
     </form>
   );

@@ -122,6 +122,31 @@ export type PlaybookInput = {
   escalateAfterHours: number | null;
 };
 
+/**
+ * Turns a household's own name for an outcome into the lowercase, dotted key
+ * the planner refers to it by — "Laundry ready" becomes "laundry.ready" — so
+ * a household names an outcome once, in their own words, rather than naming
+ * it twice for a form that only one of those names is actually theirs.
+ *
+ * Always produces something `validatePlaybookItem` accepts, whatever the
+ * input: a name with no letters gets an `outcome.` prefix, and a result too
+ * short to match on its own gets `.outcome` appended, so the one caller of
+ * this (the setup wizard, when nobody typed a key by hand) never has to
+ * re-validate what it derived.
+ */
+export function slugifyOutcomeKey(name: string): string {
+  const cleaned = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+
+  const lettered = /^[a-z]/.test(cleaned) ? cleaned : `outcome.${cleaned}`.replace(/\.+$/, "");
+  const key = lettered.length >= 2 ? lettered : `${lettered}.outcome`;
+
+  return key.slice(0, 61);
+}
+
 export function validatePlaybookItem(input: PlaybookInput): Validation {
   const problems: Problem[] = [];
 
