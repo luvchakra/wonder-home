@@ -23,6 +23,7 @@ const options = { database: DB };
 
 const HEAD = "11111111-1111-4111-8111-111111111111";
 const OUTSIDER = "22222222-2222-4222-8222-222222222222";
+const ADULT = "33333333-3333-4333-8333-333333333333";
 
 let household = "";
 let otherHousehold = "";
@@ -31,7 +32,8 @@ before(() => {
   buildTestDatabase(DB);
   psql(
     `insert into auth.users (id, email) values
-       ('${HEAD}', 'kunal@example.test'), ('${OUTSIDER}', 'outsider@example.test');`,
+       ('${HEAD}', 'kunal@example.test'), ('${OUTSIDER}', 'outsider@example.test'),
+       ('${ADULT}', 'priya@example.test');`,
     options,
   );
 
@@ -45,6 +47,15 @@ before(() => {
     `select household_id || ' ' || member_id from wh.create_household('Outsider Home', 'Outsider');`,
     options,
   ).split(" ");
+
+  // A member with no role: present in the household, but not an administrator
+  // — the party story 20-004's admin-only write policy exists to stop.
+  psql(
+    `insert into public.profiles (id, display_name) values ('${ADULT}', 'Priya') on conflict (id) do nothing;
+     insert into public.household_members (household_id, profile_id, member_type, display_name, status)
+     values ('${household}', '${ADULT}', 'adult', 'Priya', 'active');`,
+    options,
+  );
 });
 
 after(() => {
@@ -86,21 +97,41 @@ test("a household reads the catalogue but cannot edit it", () => {
   );
 });
 
-test("a household cannot put itself on a plan", () => {
+test("an ordinary member cannot put the household on a plan", () => {
+  // Story 20-004 lets an *administrator* change the plan, through the
+  // governed route that re-derives the change server-side before writing —
+  // the invariant this guards is narrower than it used to be, not gone: a
+  // member holding no role still cannot grant the household a plan directly.
   assert.ok(
     deniedForProfile(
-      HEAD,
+      ADULT,
       `insert into public.household_subscriptions (household_id, plan_key) values ('${household}', 'max');`,
       options,
     ),
-    "a household granted itself a plan",
+    "a non-administrator granted the household a plan",
+  );
+});
+
+test("an administrator can put the household on a plan", () => {
+  // The positive case for the same policy: this is what the plan-change route
+  // (story 20-004) relies on to write through the household's own session.
+  asProfile(
+    HEAD,
+    `insert into public.household_subscriptions (household_id, plan_key) values ('${household}', 'free')
+     on conflict (household_id) do update set plan_key = excluded.plan_key;`,
+    options,
+  );
+  assert.equal(
+    psql(`select plan_key from public.household_subscriptions where household_id = '${household}';`, options),
+    "free",
   );
 });
 
 test("a household sees its own subscription and not another's", () => {
   psql(
     `insert into public.household_subscriptions (household_id, plan_key) values
-       ('${household}', 'pro'), ('${otherHousehold}', 'max');`,
+       ('${household}', 'pro'), ('${otherHousehold}', 'max')
+     on conflict (household_id) do update set plan_key = excluded.plan_key;`,
     options,
   );
 
