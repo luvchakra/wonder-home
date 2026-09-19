@@ -106,7 +106,8 @@ bad-key case, which is still the tested case.
 - **OpenAI** — the last of the three `ModelProvider`s in v4's own list still
   has no real client; `resolveModelKey` and the routing gate already treat
   it uniformly with the other two, same as they did for Google before this
-  change.
+  change. (Update: closed the same day — see
+  `2026-09-19-openai-understanding.md`.)
 - Everything the Anthropic note's "still open" section already listed and
   did not name a provider (entity resolution against real household data,
   real household mutations behind the intent, cross-domain orchestration,

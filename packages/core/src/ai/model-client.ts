@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
+import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
 import type { Understanding } from "../conversation/engine";
@@ -13,10 +15,10 @@ import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget } from "../conv
  * `conversation/engine.ts` already says exactly where this belongs: "the seam
  * is `understand`: a live provider slots in there and nothing downstream
  * changes, because nothing downstream ever trusted the model with a
- * decision." This is that provider — for Anthropic and for Google Gemini,
- * the two `ModelProvider`s with a real client today — and the constraint that
- * sentence describes is enforced by what the model is and is not allowed to
- * set, whichever one answers:
+ * decision." This is that provider — for all three `ModelProvider`s (Anthropic,
+ * Google and OpenAI) — and the constraint that sentence describes is
+ * enforced by what the model is and is not allowed to set, whichever one
+ * answers:
  *
  * - It never sees or sets `actorMemberId`. That comes from the caller's own
  *   authenticated session, always. A household member's own message could
@@ -32,10 +34,11 @@ import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget } from "../conv
  *   authorization boundary refuses regardless.
  *
  * `intentFromModelOutput` and the schema/prompt below are pure, provider-
- * agnostic, and unit tested directly — both `createClaudeUnderstanding` and
- * `createGeminiUnderstanding` are built on the same schema and the same
- * mapping, so a household sees the same shape of intent whichever provider
- * answers. Each `create*Understanding` is itself the thin call to the
+ * agnostic, and unit tested directly — `createClaudeUnderstanding`,
+ * `createGeminiUnderstanding` and `createOpenAIUnderstanding` are all built
+ * on the same schema and the same mapping, so a household sees the same
+ * shape of intent whichever provider answers. Each `create*Understanding` is
+ * itself the thin call to the
  * network and is not — consistent with this codebase's own convention for
  * `SupabaseClient`-composing functions (`previewPlanChange`, `usageSummary`):
  * verified by typecheck and build, not a mocked network boundary.
@@ -91,6 +94,9 @@ export const CLAUDE_MODEL = process.env.WONDERHOME_AI_MODEL?.trim() || "claude-o
 /** Same override, for a deployment whose configured provider is Google instead. */
 export const GEMINI_MODEL = process.env.WONDERHOME_AI_MODEL?.trim() || "gemini-flash-latest";
 
+/** Same override, for a deployment whose configured provider is OpenAI instead. */
+export const OPENAI_MODEL = process.env.WONDERHOME_AI_MODEL?.trim() || "gpt-5.6";
+
 /**
  * The same `IntentOutputSchema` as a JSON Schema, for Gemini's
  * `responseJsonSchema` (there is no Zod-native helper for Gemini the way
@@ -123,8 +129,8 @@ const INTENT_JSON_SCHEMA = {
 /**
  * Turns what the model extracted (or nothing, on a miss or a failure) into
  * the same `HouseholdIntent` shape `resolveFixtureIntent` produces — pure,
- * and the reason `createClaudeUnderstanding` itself does not need its own
- * mapping test.
+ * and the reason none of the three `create*Understanding` functions below
+ * need their own mapping test.
  */
 export function intentFromModelOutput(
   parsed: IntentOutput | null,
@@ -215,6 +221,39 @@ export function createGeminiUnderstanding(apiKey: string): Understanding {
       });
 
       const parsed = response.text ? IntentOutputSchema.parse(JSON.parse(response.text)) : null;
+      return intentFromModelOutput(parsed, { ...context, utterance });
+    } catch {
+      return intentFromModelOutput(null, { ...context, utterance });
+    }
+  };
+}
+
+/**
+ * A real `Understanding` backed by the OpenAI API, for a household or
+ * platform key configured for OpenAI instead of Anthropic or Google.
+ *
+ * Everything the Anthropic doc comment above says about the security
+ * boundary applies unchanged here too. Like Anthropic — and unlike
+ * Gemini — the OpenAI SDK has its own Zod-native structured-output helper
+ * (`zodResponseFormat`, from `openai/helpers/zod`), so this path never
+ * hand-parses JSON either: `chat.completions.parse` returns an already
+ * schema-validated `.parsed` value directly.
+ */
+export function createOpenAIUnderstanding(apiKey: string): Understanding {
+  const client = new OpenAI({ apiKey });
+
+  return async (utterance, context) => {
+    try {
+      const completion = await client.chat.completions.parse({
+        model: OPENAI_MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: utterance },
+        ],
+        response_format: zodResponseFormat(IntentOutputSchema, "household_intent"),
+      });
+
+      const parsed = completion.choices[0]?.message.parsed ?? null;
       return intentFromModelOutput(parsed, { ...context, utterance });
     } catch {
       return intentFromModelOutput(null, { ...context, utterance });
