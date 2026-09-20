@@ -12,6 +12,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
+import { cadenceLabel } from "../../_lib/cadence";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession, type Session } from "../../_lib/session";
 
@@ -253,8 +254,3 @@ function renderResponsibilities({
   );
 }
 
-function cadenceLabel(cadence: Record<string, unknown> | undefined): string | undefined {
-  if (!cadence) return undefined;
-  const unit = cadence.unit ?? cadence.frequency ?? cadence.every;
-  return typeof unit === "string" ? unit : undefined;
-}
