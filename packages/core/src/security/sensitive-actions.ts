@@ -104,6 +104,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/ai/credentials.ts",
   },
   {
+    event: "voice.key_set",
+    because: "Starts sending what the household says out loud to an outside speech service.",
+    recordedIn: "packages/core/src/voice/repository.ts",
+  },
+  {
+    event: "voice.key_removed",
+    because: "Stops that, and quietly changes the voice everybody in the home hears.",
+    recordedIn: "packages/core/src/voice/repository.ts",
+  },
+  {
+    event: "voice.settings_changed",
+    because: "Decides which language the home is heard in, and so what it understands.",
+    recordedIn: "packages/core/src/voice/repository.ts",
+  },
+  {
     event: "privacy.export_requested",
     because: "A copy of household data left the household. Somebody will ask when, and who asked for it.",
     recordedIn: "packages/core/src/privacy/repository.ts",
@@ -197,6 +212,12 @@ export function describeAuditEvent(
       return { title: "The household's own AI key was set", detail: stringOr(metadata.provider, null) };
     case "ai.key_removed":
       return { title: "The household's own AI key was removed", detail: "Back to the included assistant." };
+    case "voice.key_set":
+      return { title: "A speech service was set up", detail: stringOr(metadata.provider, null) };
+    case "voice.key_removed":
+      return { title: "The speech service was removed", detail: "Back to the browser's own voice." };
+    case "voice.settings_changed":
+      return { title: "The household's voice was changed", detail: stringOr(metadata.language, null) };
     case "privacy.export_requested":
       return { title: "A copy of the data was requested", detail: null };
     case "privacy.deletion_requested":

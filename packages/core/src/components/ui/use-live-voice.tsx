@@ -2,30 +2,32 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { captureUtterance, microphoneAvailable, playClip } from "../../voice/capture";
 import { recognitionConstructor, type RecognitionLike } from "./voice-input-button";
 
 /**
  * A sustained, hands-free exchange: WonderHome listens, answers out loud,
  * and listens again — the "toggle it on and just talk" mode.
  *
- * Built entirely on the browser's own Web Speech APIs (the same recogniser
- * `VoiceInputButton` uses, plus `speechSynthesis` for the reply), because
- * that is what exists without inventing a credentialed voice provider
- * (CLAUDE.md: no live integration is claimed until one is actually
- * configured). That has real, honest limits worth stating rather than
- * hiding: browser support for continuous recognition varies (Safari's is
- * poor to absent), and a "male voice" is a best-effort pick from whatever
- * voices the device happens to expose — many platforms do not label voices
- * by gender at all, in which case this falls back to the device's own
- * default. `available` reflects exactly what this browser can do; the
- * caller never offers the toggle when it is false.
+ * There are two ways to do that, and this hook runs whichever the
+ * household has actually configured:
  *
- * One turn at a time, never overlapping: the microphone is off whenever
- * WonderHome is thinking or speaking, so it never hears its own reply and
- * a hands-free session never talks over itself. `onUtterance` does the
- * actual work — sending what was heard through the same governed endpoint
- * typing does — and must resolve with what to say back rather than throw;
- * this hook only owns the listen/think/speak cycle around it.
+ *   - **The browser's own** Web Speech APIs. Free, needs nothing set up,
+ *     and genuinely limited: continuous recognition is poor to absent in
+ *     Safari, and a "male voice" is a best-effort pick from whatever the
+ *     device exposes, since many platforms do not label voices by gender
+ *     at all.
+ *   - **The household's speech provider** (Google Cloud Speech today),
+ *     reached through our own server so the key never touches the page.
+ *     Better recognition, a voice the household actually chose, and the
+ *     same behaviour in every browser.
+ *
+ * One turn at a time either way, never overlapping: the microphone is off
+ * whenever WonderHome is thinking or speaking, so it never hears its own
+ * reply. `onUtterance` does the real work — sending what was heard through
+ * the same governed endpoint typing uses — and must resolve with what to
+ * say back rather than throw; this hook only owns the listen/think/speak
+ * cycle around it.
  */
 
 export type LiveVoiceState = "idle" | "listening" | "thinking" | "speaking" | "denied" | "unsupported";
@@ -33,7 +35,11 @@ export type LiveVoiceState = "idle" | "listening" | "thinking" | "speaking" | "d
 const MALE_NAME = /\b(male|david|daniel|alex|fred|george|mark|james|oliver|arthur|guy|ryan|rishi|aaron)\b/i;
 const FEMALE_NAME = /\b(female|samantha|victoria|zira|susan|karen|moira|tessa|fiona|kate|amelia|salli|joanna|veena)\b/i;
 
-/** Best-effort only — see the module doc comment. Exported for its own test. */
+/**
+ * Best-effort only, and only for the browser's own voices — a household
+ * using a real provider picks a named voice instead of hoping. Exported
+ * for its own test.
+ */
 export function pickVoice<V extends { name: string; lang: string }>(voices: readonly V[], lang: string): V | null {
   if (voices.length === 0) return null;
   const prefix = lang.slice(0, 2).toLowerCase();
@@ -44,21 +50,29 @@ export function pickVoice<V extends { name: string; lang: string }>(voices: read
 
 export function useLiveVoice(input: {
   lang?: string;
+  /**
+   * The household whose configured provider should do the speaking and
+   * listening. Null keeps everything in the browser, which is what a
+   * household that has configured nothing gets.
+   */
+  server?: { householdId: string } | null;
   /** What was heard, and how sure the recogniser was; resolves with what to say back. */
   onUtterance: (transcript: string, confidence: number) => Promise<string>;
   /** A fatal problem (denied microphone, unsupported browser) — never thrown. */
   onError?: (message: string) => void;
 }): { state: LiveVoiceState; active: boolean; start: () => void; stop: () => void } {
-  const { lang = "en-IN", onUtterance, onError } = input;
+  const { lang = "en-IN", server = null, onUtterance, onError } = input;
   const [state, setState] = useState<LiveVoiceState>("idle");
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const onUtteranceRef = useRef(onUtterance);
   onUtteranceRef.current = onUtterance;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+  const householdId = server?.householdId ?? null;
 
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -70,7 +84,15 @@ export function useLiveVoice(input: {
     return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
   }, []);
 
-  const speak = useCallback(
+  const halt = useCallback((next: LiveVoiceState, message?: string) => {
+    activeRef.current = false;
+    setActive(false);
+    setState(next);
+    if (message) onErrorRef.current?.(message);
+  }, []);
+
+  /** The browser's own voice, used when no provider is configured. */
+  const speakHere = useCallback(
     (text: string) =>
       new Promise<void>((resolve) => {
         if (typeof window === "undefined" || !("speechSynthesis" in window) || !text.trim()) {
@@ -90,14 +112,69 @@ export function useLiveVoice(input: {
     [lang],
   );
 
-  const listenOnce = useCallback(() => {
+  /**
+   * The provider's loop, which is a plain sequence because it can be:
+   * record, transcribe, answer, play, again. The browser recogniser below
+   * cannot be written this way — it hands control back through callbacks —
+   * which is most of why the two are separate.
+   */
+  const runWithProvider = useCallback(async () => {
+    if (!householdId) return;
+
+    const speak = async (text: string): Promise<void> => {
+      const response = await fetch(`/api/v1/households/${householdId}/voice`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ speak: text }),
+      });
+      const payload = await response.json();
+      // Spoken replies being switched off is a setting, not a failure: the
+      // conversation carries on in text and listens again.
+      if (!response.ok) {
+        if (response.status === 400) return;
+        throw new Error(payload?.error?.message ?? "That reply could not be spoken.");
+      }
+      await playClip({ base64: payload.audio, mimeType: payload.mimeType }, abortRef.current?.signal);
+    };
+
+    while (activeRef.current) {
+      setState("listening");
+      const heard = await captureUtterance({ signal: abortRef.current?.signal });
+      if (!activeRef.current) break;
+      // Nothing was said. Listen again rather than send silence to a
+      // provider that would charge for it.
+      if (!heard) continue;
+
+      setState("thinking");
+      const response = await fetch(`/api/v1/households/${householdId}/voice`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ audio: heard.clip.base64, mimeType: heard.clip.mimeType }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "That could not be heard.");
+      if (!activeRef.current) break;
+
+      const transcript = String(payload.transcript ?? "").trim();
+      if (!transcript) continue;
+
+      let reply = "";
+      try {
+        reply = await onUtteranceRef.current(transcript, Number(payload.confidence) || 0.5);
+      } catch {
+        reply = "";
+      }
+      if (!activeRef.current) break;
+      if (reply) await speak(reply);
+    }
+  }, [householdId]);
+
+  /** The browser's own recogniser, one utterance at a time. */
+  const listenHere = useCallback(() => {
     if (!activeRef.current) return;
     const Recognition = recognitionConstructor();
     if (!Recognition) {
-      activeRef.current = false;
-      setActive(false);
-      setState("unsupported");
-      onErrorRef.current?.("This browser cannot listen continuously, so live conversation is not available.");
+      halt("unsupported", "This browser cannot listen continuously, so live conversation is not available.");
       return;
     }
 
@@ -110,23 +187,20 @@ export function useLiveVoice(input: {
     recognition.onresult = (event) => {
       const best = event.results[0]?.[0];
       if (best?.transcript?.trim()) {
-        void handleUtterance(best.transcript.trim(), Number.isFinite(best.confidence) ? best.confidence : 0.5);
+        void handle(best.transcript.trim(), Number.isFinite(best.confidence) ? best.confidence : 0.5);
       } else if (activeRef.current) {
-        listenOnce();
+        listenHere();
       }
     };
     recognition.onerror = (event) => {
       recognitionRef.current = null;
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        activeRef.current = false;
-        setActive(false);
-        setState("denied");
-        onErrorRef.current?.("Microphone access was refused, so live conversation stopped.");
+        halt("denied", "Microphone access was refused, so live conversation stopped.");
         return;
       }
       // Silence ("no-speech") and our own abort() are ordinary pauses in a
       // hands-free conversation, not failures — just listen again.
-      if (activeRef.current) listenOnce();
+      if (activeRef.current) listenHere();
       else setState("idle");
     };
     recognition.onend = () => {
@@ -138,10 +212,10 @@ export function useLiveVoice(input: {
     try {
       recognition.start();
     } catch {
-      if (activeRef.current) listenOnce();
+      if (activeRef.current) listenHere();
     }
 
-    async function handleUtterance(transcript: string, confidence: number): Promise<void> {
+    async function handle(transcript: string, confidence: number): Promise<void> {
       setState("thinking");
       let reply = "";
       try {
@@ -150,26 +224,54 @@ export function useLiveVoice(input: {
         reply = "";
       }
       if (!activeRef.current) return;
-      await speak(reply);
-      if (activeRef.current) listenOnce();
+      await speakHere(reply);
+      if (activeRef.current) listenHere();
       else setState("idle");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang, speak]);
+  }, [lang, speakHere, halt]);
 
   const start = useCallback(() => {
-    if (typeof window === "undefined" || !recognitionConstructor() || !("speechSynthesis" in window)) {
+    if (typeof window === "undefined") return;
+
+    if (householdId) {
+      if (!microphoneAvailable()) {
+        halt("unsupported", "This browser cannot record audio, so live conversation is not available.");
+        return;
+      }
+
+      activeRef.current = true;
+      setActive(true);
+      abortRef.current = new AbortController();
+
+      void runWithProvider()
+        .catch((thrown: unknown) => {
+          const message = thrown instanceof Error ? thrown.message : "Live conversation stopped.";
+          // A refused microphone reads as a permission problem however the
+          // browser words it, and is worth naming as one.
+          const denied = /permission|denied|notallowed/i.test(message);
+          halt(denied ? "denied" : "idle", message);
+        })
+        .then(() => {
+          if (!activeRef.current) setState((current) => (current === "denied" || current === "unsupported" ? current : "idle"));
+        });
+      return;
+    }
+
+    if (!recognitionConstructor() || !("speechSynthesis" in window)) {
       setState("unsupported");
       return;
     }
     activeRef.current = true;
     setActive(true);
-    listenOnce();
-  }, [listenOnce]);
+    listenHere();
+  }, [householdId, halt, listenHere, runWithProvider]);
 
   const stop = useCallback(() => {
     activeRef.current = false;
     setActive(false);
+    abortRef.current?.abort();
+    abortRef.current = null;
     recognitionRef.current?.abort();
     recognitionRef.current = null;
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
@@ -179,6 +281,7 @@ export function useLiveVoice(input: {
   useEffect(
     () => () => {
       activeRef.current = false;
+      abortRef.current?.abort();
       recognitionRef.current?.abort();
       if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
     },

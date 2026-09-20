@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**148 of 170 stories done — 87.1%**
+**149 of 171 stories done — 87.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 148 |
+| Done | 149 |
 | In Progress | 0 |
 | Blocked | 0 |
 | Not Started | 22 |
@@ -28,7 +28,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `████████░░` | 7 | 8 | 1 not started |
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
 | 03 Outcome & Routine Engine | `███████░░░` | 6 | 8 | 2 not started |
-| 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
+| 04 Conversation, Voice & Text | `██████████` | 9 | 9 | — |
 | 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
 | 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
 | 07 Househelper & Home Operations | `██████░░░░` | 5 | 8 | 3 not started |
@@ -139,7 +139,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -151,6 +151,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-006` Text | P0 | Done | Same engine as voice |
 | `04-007` Memory extraction | P0 | Done | Source, confidence and status on every belief |
 | `04-008` Conversation corrections | P1 | Done | Reconciliation built and tested; corrections flow through the assistant and are written server-side |
+| `04-009` A voice the household chooses | P1 | Done | Google Cloud Speech behind a provider contract; every voice and recognition control, with the browser as the free fallback |
 
 ### 05 — Household Certification & Understanding
 
