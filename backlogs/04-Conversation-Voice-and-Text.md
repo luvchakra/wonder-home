@@ -13,6 +13,7 @@
 | 7 | P0 | 04-007 | Memory extraction | Done | Source, confidence and status on every belief |
 | 8 | P1 | 04-008 | Conversation corrections | Done | Reconciliation built and tested; corrections flow through the assistant and are written server-side |
 | 9 | P1 | 04-009 | A voice the household chooses | Done | Google Cloud Speech behind a provider contract; every voice and recognition control, with the browser as the free fallback |
+| 10 | P0 | 04-010 | One composer, four states | Done | Speak-to-text and live conversation as separate, adjacent controls; explicit state machine with its own test |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -228,6 +229,30 @@ responsibilities .
 - Every provider failure becomes something the household can act on, and never passes the provider's own prose through.
 - Setting, replacing and removing the credential, and changing the voice, are each written to the audit trail without the credential itself.
 - Whether voice runs at all remains the `conversation.voice` entitlement and the rollout flag, checked server-side; the settings are preferences and never authorization.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-010 — One composer, four states
+**Epic:** Voice & Text Experience
+**Priority:** P0
+**Goal:** Make the difference between "transcribe what I say" and "let's have a conversation" obvious at a glance, in one control.
+
+**Acceptance criteria**
+- The composer has exactly four states a household can be in — typing, speaking to text, a live conversation, and nothing at all — and which one it is in is never ambiguous.
+- Tapping the microphone transcribes into the field for review and never starts a conversation; the person can edit what was heard before sending it.
+- Tapping the conversation control starts a real back-and-forth and never silently sends a single transcribed message.
+- A spoken message shows where it has got to — listening, transcribing, ready to send — rather than a spinner.
+- A live conversation can be paused and resumed without ending it, and ending it still produces the recap.
+- Illegal combinations are impossible by construction: no Send button while the microphone is open, and no live session left running behind a composer that looks idle.
+- Escape leaves any voice state; every control carries an accessible name and a tooltip.
+- Nothing is offered that cannot work: the conversation control is absent without the entitlement and flag, and the microphone is absent where the browser cannot listen.
+- Every state works at 360px with no horizontal scroll and nothing clipped.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.
