@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [Talk: a faster turn, and replies that actually use bullets](2026-09-20-talk-faster-turns-and-real-bullets.md) |
 | 2026-09-20 | [Replies that read well and take you there](2026-09-20-formatted-replies-with-links.md) |
 | 2026-09-20 | [The Household Brain: a question answered from everything the home holds](2026-09-20-household-brain-answers.md) |
 | 2026-09-20 | [Talk to WonderHome: the model was never being asked](2026-09-20-talk-provider-gate-and-wider-rules.md) |

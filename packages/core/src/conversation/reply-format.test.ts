@@ -33,9 +33,10 @@ describe("the reply format", () => {
     expect(blocks).toEqual([{ kind: "paragraph", inlines: [{ kind: "text", text: "<b>hi</b> & <script>alert(1)</script>" }] }]);
   });
 
-  it("joins wrapped lines of one paragraph and keeps numbered items as a list", () => {
+  it("treats every line as its own paragraph and keeps numbered items as a list", () => {
     expect(parseReply("one\ntwo\n\n1. a\n2) b")).toEqual([
-      { kind: "paragraph", inlines: [{ kind: "text", text: "one two" }] },
+      { kind: "paragraph", inlines: [{ kind: "text", text: "one" }] },
+      { kind: "paragraph", inlines: [{ kind: "text", text: "two" }] },
       { kind: "list", items: [[{ kind: "text", text: "a" }], [{ kind: "text", text: "b" }]] },
     ]);
   });

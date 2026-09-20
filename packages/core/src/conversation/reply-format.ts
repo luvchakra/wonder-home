@@ -53,7 +53,8 @@ export function linkTo(href: string, label?: string): string {
 /** The grammar, for a model that is asked to write in it. */
 export function describeReplyFormat(): string {
   return [
-    "Formatting: write short paragraphs separated by a blank line. When you list three or more things, use a bullet list with one item per line starting with \"- \". Use **bold** for a name or the single thing that matters most, never for whole sentences. No headings, no tables, no other markdown.",
+    "Formatting: one short sentence of the overall picture first, on its own line. Then, whenever you mention two or more separate things — bills, events, meals, items, people, tasks — put them in a bullet list: one per line, each starting with \"- \", each naming the thing in **bold**, its detail, and its link at the end. Never fold several things into one sentence when a list would do. A closing line only if it adds something. Use **bold** for names and the single thing that matters most, never for whole sentences. No headings, no tables, no other markdown.",
+    "Example shape:\nAll fine tonight, with two things coming up.\n- **Electricity bill** — ₹3,800, due 30 Sep → [Bills](/bills)\n- **Dinner** — dal, rice and sabzi at 8pm, cooked by Adult B → [Meals](/meals)",
     "Links: point the person to the screen where they can see or do something by writing [label](path), using ONLY these paths:",
     ...APP_PLACES.map((place) => `- ${place.href} — ${place.label}: ${place.what}`),
     "Never link anywhere else and never invent a path. A link belongs at the end of the sentence it helps, not on its own line.",
@@ -90,8 +91,12 @@ export function parseReply(text: string): Block[] {
       flushList();
       continue;
     }
+    // A line is a paragraph. Models separate thoughts with single newlines
+    // as often as with blank ones, and a reply that reads as one block on a
+    // phone is the thing this format exists to prevent.
     flushList();
     paragraph.push(line);
+    flushParagraph();
   }
   flushParagraph();
   flushList();

@@ -255,6 +255,9 @@ export function createGeminiUnderstanding(apiKey: string): Understanding {
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
           responseJsonSchema: INTENT_JSON_SCHEMA,
+          // Flash models "think" before answering by default, which adds
+          // seconds to a turn; translating one sentence needs none of it.
+          thinkingConfig: { thinkingBudget: 0 },
         },
       });
 
@@ -404,7 +407,7 @@ export function createAnswerComposer(provider: ModelProvider, apiKey: string): A
           const response = await client.models.generateContent({
             model: GEMINI_MODEL,
             contents: answerMessages(input).map((message) => ({ role: message.role === "user" ? "user" : "model", parts: [{ text: message.content }] })),
-            config: { systemInstruction: ANSWER_SYSTEM_PROMPT, responseMimeType: "application/json", responseJsonSchema: ANSWER_JSON_SCHEMA },
+            config: { systemInstruction: ANSWER_SYSTEM_PROMPT, responseMimeType: "application/json", responseJsonSchema: ANSWER_JSON_SCHEMA, thinkingConfig: { thinkingBudget: 0 } },
           });
           const parsed = response.text ? AnswerOutputSchema.safeParse(JSON.parse(response.text)) : null;
           return parsed?.success ? answerFromModelOutput(parsed.data) : null;
