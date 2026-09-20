@@ -218,7 +218,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
           icon={Clock3}
           title={someDataMissing ? "Couldn't confirm your day is clear" : active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
           description={someDataMissing ? "Some information didn’t load, so this may not be the whole picture." : "Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."}
-          action={<PillLink href="/ai">Plan something</PillLink>}
+          action={<PillLink href="/family">Plan something</PillLink>}
         />
       ) : (
         <Timeline items={shown} />

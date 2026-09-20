@@ -49,7 +49,7 @@ export default async function MembersPage() {
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar name={member.displayName} badge={member.memberType === "child" ? "🧒" : member.memberType === "helper" ? "🤝" : undefined} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{member.displayName}</p>
+                    <p className="text-sm font-medium">{member.displayName}</p>
                     <p className="text-xs text-[var(--wh-foreground-subtle)]">
                       {describeRoles(member.roles, member.isOwner)}
                     </p>

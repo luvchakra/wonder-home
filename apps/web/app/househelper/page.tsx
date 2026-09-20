@@ -88,7 +88,6 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
           {helpers.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               <RecordLeaveButton householdId={householdId} helpers={helperOptions} />
-              <PillLink href="/ai?q=Sunita%20won%27t%20be%20here%20tomorrow." tone="primary">Tell WonderHome</PillLink>
             </div>
           ) : null}
         </header>

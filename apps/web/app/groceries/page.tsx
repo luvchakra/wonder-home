@@ -91,7 +91,6 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="flex flex-wrap gap-2">
             <AddConsumableButton householdId={householdId} />
-            <PillLink href="/ai" tone="primary">Tell WonderHome</PillLink>
           </div>
         </header>
 
@@ -110,7 +109,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
             <section>
               <SectionHeader title="Suggested order" count={suggestions.length} />
               {suggestions.length === 0 ? (
-                <EmptyState icon={ShoppingBasket} tone="care" title="Nothing to order yet" description="WonderHome suggests an order once it can see what you use and how fast — from purchases, your pantry, or what you tell it." action={<PillLink href="/ai">Add something</PillLink>} />
+                <EmptyState icon={ShoppingBasket} tone="care" title="Nothing to order yet" description="WonderHome suggests an order once it can see what you use and how fast — from purchases, your pantry, or what you tell it." action={<AddConsumableButton householdId={householdId} />} />
               ) : (
                 <Card className="space-y-3">
                   <ul className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none]">

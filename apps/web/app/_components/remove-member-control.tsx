@@ -1,5 +1,6 @@
 "use client";
 
+import { UserRoundX } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -36,8 +37,8 @@ export function RemoveMemberControl({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)}>
-        Remove
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Remove ${displayName}`} title={`Remove ${displayName}`}>
+        <UserRoundX aria-hidden className="size-3.5" />
       </Pill>
 
       <ConfirmationSheet

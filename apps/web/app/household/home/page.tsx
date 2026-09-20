@@ -5,7 +5,6 @@ import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
-import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
@@ -66,7 +65,6 @@ export default async function HomeUpkeepPage() {
           <div className="flex flex-wrap gap-2">
             {admin ? <AddAssetButton householdId={membership.household.id} /> : null}
             <RaiseServiceRequestButton householdId={membership.household.id} />
-            <PillLink href="/ai" tone="primary">Tell WonderHome</PillLink>
           </div>
         </header>
 

@@ -119,7 +119,6 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
             <p className="text-sm font-semibold">Stuck on something?</p>
             <p className="text-xs text-[var(--wh-foreground-muted)]">Ask WonderHome to help plan your study time.</p>
           </div>
-          <PillLink href="/ai" tone="primary">Ask</PillLink>
         </Card>
 
         <QuoteCard>You can do it. I&apos;m here to help anytime.</QuoteCard>

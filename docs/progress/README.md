@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [Seven new UI rules, and the four fixes they came with](2026-09-20-ui-rules-swipe-nav-and-duplicate-buttons.md) |
 | 2026-09-20 | [The actual root cause of the Responsibilities crash, found and fixed](2026-09-20-responsibilities-root-cause-found.md) |
 | 2026-09-20 | [A real household seed exposed three add/update/delete gaps — fixed](2026-09-20-member-and-consumable-add-update-delete.md) |
 | 2026-09-20 | [Talk to WonderHome: real answers, real actions, and the truth when there aren't any](2026-09-20-talk-to-wonderhome-real-answers.md) |

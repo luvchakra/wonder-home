@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus } from "lucide-react";
+import { Archive, Pencil, Plus } from "lucide-react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -118,13 +118,13 @@ export function ConsumableRowControls({ householdId, item }: { householdId: stri
 
   return (
     <div className="flex items-center gap-1.5">
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="gap-1">
-        <Pencil aria-hidden className="size-3.5" /> Edit
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
+        <Pencil aria-hidden className="size-3.5" />
       </Pill>
       <form action={retireAction}>
         <input type="hidden" name="id" value={item.id} />
         <input type="hidden" name="householdId" value={householdId} />
-        <RetireSubmit />
+        <RetireSubmit name={item.name} />
       </form>
       {retireState.error ? <p className="text-xs text-[var(--wh-risk)]">{retireState.error}</p> : null}
 
@@ -138,11 +138,12 @@ export function ConsumableRowControls({ householdId, item }: { householdId: stri
   );
 }
 
-function RetireSubmit() {
+function RetireSubmit({ name }: { name: string }) {
   const { pending } = useFormStatus();
+  const label = `Stop tracking ${name}`;
   return (
-    <Pill type="submit" tone="quiet" disabled={pending}>
-      {pending ? "…" : "Stop tracking"}
+    <Pill type="submit" tone="quiet" disabled={pending} aria-label={label} title={label}>
+      {pending ? "…" : <Archive aria-hidden className="size-3.5" />}
     </Pill>
   );
 }

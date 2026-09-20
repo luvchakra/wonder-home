@@ -6,6 +6,7 @@ import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { MobileHeader, type ShellViewer } from "./mobile-header";
 import { NavDrawerProvider } from "./nav-drawer";
 import { PrimaryNav } from "./primary-nav";
+import { SwipeMain } from "./swipe-main";
 
 export type AppShellProps = {
   active: PrimaryNavKey;
@@ -63,16 +64,16 @@ export function AppShell({
             <MobileHeader viewer={viewer} back={back} title={title} />
 
             <div className="lg:flex lg:justify-center">
-              <main
-                id="wh-main"
-                aria-label={activeItem?.purpose}
+              <SwipeMain
+                active={active}
+                ariaLabel={activeItem?.purpose}
                 className={cn(
-                  "mx-auto w-full px-4 pt-4 pb-[calc(var(--wh-tabbar-height)+1.5rem)] lg:px-8 lg:pt-6 lg:pb-12",
+                  "mx-auto w-full px-4 pt-4 pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance))] lg:px-8 lg:pt-6 lg:pb-12",
                   wide ? "max-w-[var(--wh-content-wide)]" : "max-w-[var(--wh-content-max)]",
                 )}
               >
                 {children}
-              </main>
+              </SwipeMain>
 
               {contextPanel ? (
                 <aside

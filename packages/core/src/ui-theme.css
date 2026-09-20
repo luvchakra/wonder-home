@@ -143,6 +143,13 @@
 
   /* Layout */
   --wh-tabbar-height: 4.25rem;
+  /* The assistant tab's raised button (-mt-5, size-12, ring-4) pokes above
+     the flat bar's own top edge — this is the extra clearance anything
+     stacked against the bar (page content, a toast) needs to add on top of
+     --wh-tabbar-height so that button never sits over real content. Change
+     this if the button's offset or size change; nothing should hardcode its
+     own guess at the gap. */
+  --wh-tabbar-raised-clearance: 2.75rem;
   --wh-header-height: 3.5rem;
   --wh-sidebar-width: 16.5rem;
   --wh-content-max: 42rem;

@@ -1,4 +1,4 @@
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import Link from "next/link";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
@@ -142,9 +142,6 @@ function renderResponsibilities({
               {addable.length > 0 ? (
                 <AddResponsibilityButton householdId={householdId} members={memberOptions} outcomes={addable} />
               ) : null}
-              <PillLink href="/ai?q=Priya%20handles%20the%20school%20run%20from%20now%20on." tone="primary">
-                <Sparkles aria-hidden className="size-3.5" /> Assign with AI
-              </PillLink>
             </div>
           ) : null}
         </header>

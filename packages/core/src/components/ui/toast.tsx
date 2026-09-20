@@ -65,7 +65,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </RadixToast.Root>
           );
         })}
-        <RadixToast.Viewport className="fixed inset-x-4 bottom-[calc(var(--wh-tabbar-height)+1rem)] z-50 mx-auto flex max-w-sm flex-col gap-2 outline-none lg:right-6 lg:bottom-6 lg:left-auto" />
+        <RadixToast.Viewport className="fixed inset-x-4 bottom-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance))] z-50 mx-auto flex max-w-sm flex-col gap-2 outline-none lg:right-6 lg:bottom-6 lg:left-auto" />
       </RadixToast.Provider>
     </ToastContext.Provider>
   );

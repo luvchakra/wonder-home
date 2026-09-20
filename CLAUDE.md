@@ -73,6 +73,65 @@ work, and hold new work against these:
     scroll, honours `prefers-reduced-motion`, keeps the three states
     (empty, error, loading), and never offers a button that does nothing
     because the provider behind it is not live.
+11. **A name is never truncated.** A person's, a household's, a grocery
+    item's, an outcome's — never `truncate`/ellipsis a name to make a row
+    fit. Give it the room instead: a row's actions are icons with an
+    accessible label (`aria-label`, not just a tooltip), not full-width text
+    buttons, and the space that frees belongs to the name and the one line
+    of reason beside it, not to more chrome. Wrap to a second line before
+    you ever cut a name short.
+12. **Every entity can be added, updated and removed.** If a household can
+    create something — a member, a helper, a grocery item, a
+    responsibility, a bill, a meal — it can also change what it said and
+    undo having added it. What "removed" means is whatever fits that
+    entity (retire, deactivate, stand down, cancel) and is never a hard
+    delete that orphans something else's history, but the option itself is
+    never missing. A create-only screen is a half-built feature, not a
+    smaller one.
+13. **One door to the assistant, not one per screen.** The assistant is
+    already a primary tab, raised in the middle of the phone bar (rule 6)
+    and reachable everywhere the mic icon is. A screen never adds its own
+    "Ask AI" / "Talk to WonderHome" / "Assign with AI" shortcut next to an
+    entity — that duplicates the one door with a second, inconsistent one.
+    Manual add/update/remove (rule 12) is a screen's own job; talking to
+    WonderHome about the same thing happens through the assistant tab, not
+    a pill bolted onto a row or a header.
+14. **No two buttons for the same job.** Before a header or an empty state
+    ships with more than one action, ask what each one actually does. Two
+    pills that both amount to "add this" — one manual, one routed through
+    `/ai` — are a duplicate, not a choice, and the AI-routed one is the one
+    that goes (rule 13 already says a screen doesn't get its own "Ask AI"
+    button). A screen keeps one path per job; a second control only earns
+    its place when it truly does something different a reader would ask
+    for by name.
+15. **Show the whole thing, don't clip it.** A name, an amount, a date, a
+    status word — the layout bends around the content, the content never
+    gets cut to fit a layout that was sized for something shorter (rule 11
+    already says this for names specifically; it holds for every value a
+    row shows). This includes vertical space: fixed chrome — the tab bar,
+    its raised assistant button, a sticky header — reserves real clearance
+    for what sits below or above it, so scrolled-to-the-end content (the
+    closing `QuoteCard`, a last list row) never sits half behind it. When
+    you add or resize any fixed element, re-check what the page's own
+    padding assumes about its size.
+16. **A swipe moves between the five primary areas.** Home, Today, AI,
+    Family, More (`PRIMARY_NAVIGATION`, rule 6's order) are a sequence, not
+    just five taps — a full-width horizontal swipe on a primary screen
+    moves to the next or previous one in that order, the same motion a
+    phone user already reaches for. It's additive to the tab bar and the
+    sidebar, never a replacement: every area stays directly tappable, the
+    gesture is ignored the moment a horizontal scroller, carousel or
+    swipeable row underneath it wants the gesture instead, and it never
+    fires from inside a sheet, dialog or form. Respects
+    `prefers-reduced-motion` for the transition itself.
+17. **Group by what the reader is deciding, not by when it was built.**
+    A screen's actions and sections read top to bottom in the order a
+    person actually thinks: the one thing most likely to need them first,
+    the thing they'd do next, the record of what already happened last.
+    Don't bolt a new control onto the end of a header or the top of a list
+    because that's where there was room — place it where it belongs next
+    to the thing it acts on, even if that means moving what's already
+    there.
 
 Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card,
 row, pill or tile. A new pattern belongs in the kit, with a note in
