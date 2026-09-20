@@ -7,9 +7,9 @@ import {
   HandHeart,
   House,
   ListChecks,
+  Mic,
   Settings2,
   ShoppingBasket,
-  Sparkles,
   UserRoundCog,
   Users,
   Utensils,
@@ -32,7 +32,7 @@ import { MoreTabButton } from "./nav-drawer";
 export const ICONS: Record<PrimaryNavItem["icon"], ComponentType<{ className?: string }>> = {
   house: House,
   "calendar-check": CalendarCheck,
-  sparkles: Sparkles,
+  mic: Mic,
   users: Users,
   ellipsis: Ellipsis,
 };

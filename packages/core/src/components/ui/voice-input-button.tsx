@@ -163,9 +163,6 @@ export function VoiceInputButton({
           <span aria-hidden className="absolute top-[16%] left-[20%] h-[26%] w-[32%] rounded-full bg-white/55 blur-[3px]" />
         </>
       ) : null}
-      {retro && !listening && !disabled ? (
-        <span aria-hidden className="wh-mic-halo absolute inset-0 rounded-full bg-[var(--wh-primary)]/30" />
-      ) : null}
       {listening ? (
         <>
           <span aria-hidden className="absolute inset-0 rounded-full bg-[var(--wh-tone-ai)]/30 [animation:wh-pulse-ring_1.4s_ease-out_infinite]" />
