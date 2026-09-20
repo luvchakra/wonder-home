@@ -133,7 +133,14 @@ export function ResponsibilityForm({
         label="Priority"
         name="priority"
         defaultValue={String(initial?.priority ?? 3)}
-        options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}` }))}
+        options={[
+          { value: "1", label: "1 — Most important" },
+          { value: "2", label: "2" },
+          { value: "3", label: "3 — Typical" },
+          { value: "4", label: "4" },
+          { value: "5", label: "5 — Least important" },
+        ]}
+        hint="Where this outcome sits against the household's others when more than one needs attention at once."
       />
       <Submit label={initial ? "Save changes" : "Save responsibility"} />
     </form>

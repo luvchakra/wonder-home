@@ -22,6 +22,7 @@ export default function ResetPasswordPage() {
     <AuthLayout
       title="Choose a new password"
       lede="Make it something you'll remember. At least 8 characters."
+      footer={{ prompt: "Link expired or already used?", href: "/forgot-password", label: "Request a new one" }}
       accent="Almost there."
       promise={{
         headline: "One last step.",

@@ -9,6 +9,8 @@ import { applyReview, type CertificationItem } from "@wonderhome/core/household/
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 
+import type { ActionState } from "./actions";
+
 /**
  * Reviewing what WonderHome believes: confirm, correct, remove or defer.
  *
@@ -23,20 +25,24 @@ const schema = z.object({
   correction: z.string().trim().max(300).optional(),
 });
 
-export async function reviewCertificationAction(formData: FormData): Promise<void> {
+export async function reviewCertificationAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = schema.safeParse({
     householdId: formData.get("householdId"),
     itemId: formData.get("itemId"),
     decision: formData.get("decision"),
     correction: formData.get("correction") || undefined,
   });
-  if (!parsed.success) return;
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "That review could not be read. Please try again." };
+  }
 
   const supabase = await createClient();
   try {
     const membership = await requireMembership(supabase, parsed.data.householdId);
     // Children read their own items; changing what the household believes is an adult's call.
-    if (membership.memberType === "child") return;
+    if (membership.memberType === "child") {
+      return { error: "Only an adult in the household can review what WonderHome believes." };
+    }
 
     const { data: row } = await supabase
       .from("certification_items")
@@ -44,7 +50,9 @@ export async function reviewCertificationAction(formData: FormData): Promise<voi
       .eq("id", parsed.data.itemId)
       .eq("household_id", parsed.data.householdId)
       .maybeSingle();
-    if (!row) return;
+    if (!row) {
+      return { error: "That item is no longer there — it may already have been reviewed." };
+    }
 
     const item: CertificationItem = {
       id: row.id as string,
@@ -77,9 +85,20 @@ export async function reviewCertificationAction(formData: FormData): Promise<voi
       previous_value: { claim: item.claim, status: item.status },
       new_value: { claim: parsed.data.correction ?? item.claim, status: updated.status },
     });
+
+    revalidatePath("/certification");
+    return {
+      notice:
+        parsed.data.decision === "confirmed"
+          ? "Confirmed."
+          : parsed.data.decision === "removed"
+            ? "Removed."
+            : parsed.data.decision === "corrected"
+              ? "Correction saved."
+              : "Left for later.",
+    };
   } catch (error) {
     log.warn("certification review failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { error: "That review didn’t go through. Please try again." };
   }
-
-  revalidatePath("/certification");
 }

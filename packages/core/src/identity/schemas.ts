@@ -8,11 +8,18 @@ import { z } from "zod";
  * sees and the rule the server actually enforces.
  */
 
-const trimmedName = z
+/** Each field names itself in its own message — a shared "is required" leaves a two-field form unable to say which one. */
+const householdNameSchema = z
   .string()
   .trim()
-  .min(1, { error: "is required" })
-  .max(80, { error: "must be 80 characters or fewer" });
+  .min(1, { error: "Enter a name for your household." })
+  .max(80, { error: "Keep the household name to 80 characters or fewer." });
+
+const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1, { error: "Tell us what to call you." })
+  .max(80, { error: "Keep your name to 80 characters or fewer." });
 
 /**
  * IANA zone. Validated against the runtime's own tz database rather than a
@@ -35,8 +42,8 @@ export const timezoneSchema = z
   );
 
 export const createHouseholdSchema = z.object({
-  householdName: trimmedName,
-  displayName: trimmedName,
+  householdName: householdNameSchema,
+  displayName: displayNameSchema,
   timezone: timezoneSchema.default("Asia/Kolkata"),
 });
 

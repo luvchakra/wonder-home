@@ -5,14 +5,14 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { CertificationItem } from "@wonderhome/core/ui/certification-item";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
-import { Pill, PillLink } from "@wonderhome/core/ui/pill";
+import { PillLink } from "@wonderhome/core/ui/pill";
 import { ProgressRing } from "@wonderhome/core/ui/progress-ring";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { reviewCertificationAction } from "../(auth)/certification-actions";
+import { CertificationControls } from "../_components/certification-controls";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Household Certification" };
@@ -127,26 +127,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
                     status={alert ? "needs_review" : item.status}
                     source={`${SOURCE_LABEL[item.sourceType]}${item.sourceDetail ? ` (${item.sourceDetail})` : ""} · ${CATEGORY_LABEL[item.category]}${alert ? ` · ${alert.reason}` : ""}`}
                     risk={item.riskLevel}
-                    controls={canReview ? (
-                      <>
-                        {(["confirmed", "removed", "deferred"] as const).map((decision) => (
-                          <form key={decision} action={reviewCertificationAction}>
-                            <input type="hidden" name="householdId" value={householdId} />
-                            <input type="hidden" name="itemId" value={item.id} />
-                            <input type="hidden" name="decision" value={decision} />
-                            <Pill type="submit" tone={decision === "confirmed" ? "primary" : "quiet"}>{decision === "confirmed" ? "Confirm" : decision === "removed" ? "Remove" : "Later"}</Pill>
-                          </form>
-                        ))}
-                        <form action={reviewCertificationAction} className="flex w-full gap-1.5 pt-1">
-                          <input type="hidden" name="householdId" value={householdId} />
-                          <input type="hidden" name="itemId" value={item.id} />
-                          <input type="hidden" name="decision" value="corrected" />
-                          <label htmlFor={`correct-${item.id}`} className="sr-only">Correction</label>
-                          <input id={`correct-${item.id}`} name="correction" placeholder="Correct it: what's actually true?" maxLength={300} className="min-h-9 min-w-0 flex-1 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-xs" />
-                          <Pill type="submit" tone="soft">Correct</Pill>
-                        </form>
-                      </>
-                    ) : undefined}
+                    controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} /> : undefined}
                   />
                 );
               })}

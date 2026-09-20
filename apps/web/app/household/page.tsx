@@ -9,7 +9,7 @@ import Link from "next/link";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
-import { Badge } from "@wonderhome/core/ui/pill";
+import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
@@ -103,7 +103,13 @@ export default async function ManageHouseholdPage() {
         <section id="playbook">
           <SectionHeader title="Household playbook" count={items.length} />
           {items.length === 0 ? (
-            <EmptyState icon={BookOpen} tone="home" title="No playbook yet" description="The playbook is the desired state of the home in your own words — “laundry ready by Sunday evening”, not the steps. WonderHome plans around it." />
+            <EmptyState
+              icon={BookOpen}
+              tone="home"
+              title="No playbook yet"
+              description="The playbook is the desired state of the home in your own words — “laundry ready by Sunday evening”, not the steps. WonderHome plans around it."
+              action={<PillLink href="/household/setup?step=playbook" tone="primary">Write the playbook</PillLink>}
+            />
           ) : (
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
@@ -125,7 +131,13 @@ export default async function ManageHouseholdPage() {
         <section id="policies">
           <SectionHeader title="Policies" count={rules.length} />
           {rules.length === 0 ? (
-            <EmptyState icon={ShieldCheck} tone="money" title="No policies set" description="Spending limits, who approves what, quiet hours and privacy scopes. Until set, WonderHome asks before anything consequential." />
+            <EmptyState
+              icon={ShieldCheck}
+              tone="money"
+              title="No policies set"
+              description="Spending limits, who approves what, quiet hours and privacy scopes. Until set, WonderHome asks before anything consequential."
+              action={<PillLink href="/household/setup?step=policies" tone="primary">Set a policy</PillLink>}
+            />
           ) : (
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
