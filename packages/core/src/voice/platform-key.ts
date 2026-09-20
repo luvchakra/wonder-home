@@ -1,35 +1,78 @@
 /**
- * The speech key, which belongs to the deployment rather than to a family.
+ * Which speech key answers for a household, and whose it is.
  *
- * Speech is infrastructure: one Google Cloud project, one bill, one set of
- * quotas, configured once by whoever runs WonderHome. Asking every
- * household to go and create their own API key was the wrong shape for it
- * — that is a developer's errand, not something a family should have to do
- * to be understood when they talk.
+ * The same bargain `ai/model-key.ts` strikes for the model, for the same
+ * reasons. WonderHome runs speech on its own Google Cloud project by
+ * default, so a family gets a voice that understands them without holding
+ * a cloud account, enabling APIs or pasting a credential — that is a
+ * developer's errand, not something anybody should do to be heard in their
+ * own home.
  *
- * So this mirrors `ai/model-key.ts`'s platform half exactly: an
- * environment variable, read on the server, never rendered and never sent
- * to a browser. There is no platform administration screen to set it on,
- * because the platform boundary here is API routes only, and the settings
- * screen says so plainly rather than pointing at a page that does not
- * exist.
+ * A household that would rather use their own — their own billing, their
+ * own quotas, their own agreement with Google, their own data-handling
+ * terms — sets one, and theirs wins.
  *
- * What stays with the household is everything about *how* it sounds —
- * language, voice, rate, pitch, the words to expect. Those are
- * preferences, they differ per home, and they live in
- * `household_voice_settings`.
+ * The order is the whole of the policy:
+ *
+ *   1. The household's own key, if they have configured one.
+ *   2. WonderHome's platform key, from the deployment's environment.
+ *   3. Neither — and then nothing pretends otherwise. Speech falls back to
+ *      whatever the browser can do on its own, and the settings screen says
+ *      exactly that.
+ *
+ * Resolution is a pure function of its two inputs, so the precedence can be
+ * tested without a database or an environment.
  */
 
-export type SpeechKey = { provider: "google"; key: string } | null;
+export type SpeechKeySource = "household" | "platform" | "none";
 
-/** The deployment's own speech key, or null when none is configured. */
-export function platformSpeechKey(env: Record<string, string | undefined> = process.env): SpeechKey {
+export type SpeechKey =
+  | { source: "household"; provider: "google"; key: string }
+  | { source: "platform"; provider: "google"; key: string }
+  | { source: "none"; provider: null; key: null };
+
+/** WonderHome's own speech key, from the deployment's environment. */
+export function platformSpeechKey(env: Record<string, string | undefined> = process.env): string | null {
   const key = env.WONDERHOME_SPEECH_KEY?.trim();
-  if (!key) return null;
-  return { provider: "google", key };
+  return key ? key : null;
 }
 
-/** Whether this deployment can speak and listen at all, for a screen to say out loud. */
-export function speechConfigured(env: Record<string, string | undefined> = process.env): boolean {
-  return platformSpeechKey(env) !== null;
+export function resolveSpeechKey(household: string | null, platform: string | null): SpeechKey {
+  if (household && household.trim().length > 0) {
+    return { source: "household", provider: "google", key: household.trim() };
+  }
+  if (platform && platform.trim().length > 0) {
+    return { source: "platform", provider: "google", key: platform.trim() };
+  }
+  return { source: "none", provider: null, key: null };
+}
+
+/** What a household is told about whose servers hear them. */
+export function describeSpeechSource(source: SpeechKeySource): {
+  title: string;
+  detail: string;
+  tone: "handled" | "attention";
+} {
+  switch (source) {
+    case "household":
+      return {
+        title: "Your household's own Google key",
+        detail:
+          "Speech is billed to your Google Cloud account and covered by your agreement with them, not ours. Your allowances are your own.",
+        tone: "handled",
+      };
+    case "platform":
+      return {
+        title: "WonderHome's speech service",
+        detail: "Included with your plan. Nothing to set up, and no Google account of your own.",
+        tone: "handled",
+      };
+    case "none":
+      return {
+        title: "No speech service configured",
+        detail:
+          "WonderHome still listens and answers using whatever your browser provides. That is free, varies by device, and barely works in Safari.",
+        tone: "attention",
+      };
+  }
 }

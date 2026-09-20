@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PendingClarification } from "./clarify";
 
 import { ApiError } from "../api/errors";
 import type { HouseholdIntent } from "./intent";
@@ -123,6 +124,37 @@ export async function recentTurns(
   return (((data as Row[] | null) ?? []) as { role: "member" | "assistant"; content: string }[])
     .map((row) => ({ role: row.role, text: row.content }))
     .reverse();
+}
+
+/**
+ * The question WonderHome asked last, if the last thing it said was one.
+ *
+ * Stored on the assistant message that asked it rather than in a table of
+ * its own: a clarification only matters until the next turn answers it, so
+ * it belongs to the message, and reading it back is one query the turn was
+ * making anyway.
+ *
+ * Deliberately only the *last* message. A question two turns ago has been
+ * overtaken by whatever happened since, and treating it as still open is
+ * how an assistant ends up answering something nobody is asking any more.
+ */
+export async function pendingClarification(
+  admin: SupabaseClient,
+  sessionId: string,
+): Promise<PendingClarification | null> {
+  const { data } = await admin
+    .from("conversation_messages")
+    .select("role, metadata")
+    .eq("session_id", sessionId)
+    .in("role", ["member", "assistant"])
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const row = ((data as Row[] | null) ?? [])[0];
+  if (!row || row.role !== "assistant") return null;
+
+  const clarify = (row.metadata as Record<string, unknown> | null)?.clarify;
+  return clarify ? (clarify as PendingClarification) : null;
 }
 
 /** A recorded proposal, with enough of what was asked to carry it out once approved. */

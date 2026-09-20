@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
-import { saveVoiceSettings } from "@wonderhome/core/voice/repository";
+import { clearVoiceKey, saveVoiceSettings, setVoiceKey } from "@wonderhome/core/voice/repository";
 import { voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "./actions";
@@ -18,9 +18,10 @@ import type { ActionState } from "./actions";
  * be refused by Google is refused here, in words, before anybody hears the
  * difference.
  *
- * There is no key to set here. Speech runs on the deployment's own key
- * (`voice/platform-key.ts`), so what a household chooses is whether to use
- * it and how it should sound — never a credential.
+ * Speech runs on the deployment's key by default. A household may set
+ * their own instead, and that key takes the `ai-key-actions.ts` path
+ * exactly: straight to the database, never echoed back, never re-rendered
+ * into the field, because it cannot be read out again at all.
  */
 
 function readSettings(formData: FormData) {
@@ -90,3 +91,34 @@ export async function saveVoice(_previous: ActionState, formData: FormData): Pro
   return { notice: "Saved. That is how WonderHome sounds from now on." };
 }
 
+
+export async function saveVoiceKeyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const apiKey = String(formData.get("apiKey") ?? "").trim();
+  if (apiKey.length < 20) return { error: "That does not look like a Google API key." };
+
+  try {
+    const supabase = await createClient();
+    const householdId = String(formData.get("householdId") ?? "");
+    const membership = await requireHouseholdAdmin(supabase, householdId);
+    await setVoiceKey(supabase, { householdId, memberId: membership.memberId, apiKey });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "voice").body.error.message };
+  }
+
+  revalidatePath("/settings/voice");
+  return { notice: "Saved. Speech runs on your household's own Google key from now on." };
+}
+
+export async function removeVoiceKeyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const supabase = await createClient();
+    const householdId = String(formData.get("householdId") ?? "");
+    const membership = await requireHouseholdAdmin(supabase, householdId);
+    await clearVoiceKey(supabase, householdId, membership.memberId);
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "voice").body.error.message };
+  }
+
+  revalidatePath("/settings/voice");
+  return { notice: "Removed. WonderHome's own speech service takes over again." };
+}

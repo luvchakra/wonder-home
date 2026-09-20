@@ -23,6 +23,7 @@ import {
   markActionResult,
   openSession,
   pendingAction,
+  pendingClarification,
   recentTurns,
   recordMessage,
   recordProposal,
@@ -181,7 +182,14 @@ export async function POST(request: Request, { params }: Params) {
       await beginEditMessage(admin, { householdId, sessionId, messageId: body.editMessageId });
     }
 
-    const [pending, history] = await Promise.all([pendingAction(admin, sessionId), recentTurns(admin, sessionId, 6)]);
+    // The question asked last turn, if there was one: this turn is read as
+    // its answer before anything else, which is what stops the same
+    // question coming back however clearly it is answered (story 04-011).
+    const [pending, history, clarifying] = await Promise.all([
+      pendingAction(admin, sessionId),
+      recentTurns(admin, sessionId, 6),
+      pendingClarification(admin, sessionId),
+    ]);
     const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, membership.household.timezone);
     const startedAt = Date.now();
 
@@ -237,6 +245,7 @@ export async function POST(request: Request, { params }: Params) {
       sessionId,
       understand: plainQuestion ? undefined : routing.understand,
       history: routing.history,
+      clarifying,
     });
     const understoodAt = Date.now();
 
@@ -312,7 +321,16 @@ export async function POST(request: Request, { params }: Params) {
       content: text,
       metadata: {
         ...(result.kind === "reply"
-          ? { proposal: result.proposal.kind, intent: result.intent.action, understanding: result.intent.understanding?.source ?? null, understandingFailure: result.intent.understanding?.failure ?? null }
+          ? {
+              proposal: result.proposal.kind,
+              intent: result.intent.action,
+              understanding: result.intent.understanding?.source ?? null,
+              understandingFailure: result.intent.understanding?.failure ?? null,
+              // What this turn asked, for the next one to answer. Absent
+              // whenever the turn did not ask anything, which is what
+              // closes the question rather than leaving it open forever.
+              ...(result.clarification ? { clarify: result.clarification } : {}),
+            }
           : { kind: result.kind }),
         // Why this turn did or did not reach a model provider (15-005). A
         // code and a count, never the content either way.

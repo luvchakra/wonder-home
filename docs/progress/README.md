@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [The assistant asked the same question four times (04-011)](2026-09-20-never-ask-the-same-question-twice.md) |
 | 2026-09-20 | [Home, rebuilt to the sheet — and a hard two-card rule](2026-09-20-home-redesign-and-the-two-card-rule.md) |
 | 2026-09-20 | [The speech key belongs to the deployment, not to a family](2026-09-20-speech-key-moves-to-the-platform.md) |
 | 2026-09-20 | [One composer, four states (04-010)](2026-09-20-talk-composer-four-states.md) |

@@ -6,14 +6,14 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
-import { speechConfigured } from "@wonderhome/core/voice/platform-key";
-import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
+import { describeSpeechSource, platformSpeechKey, resolveSpeechKey } from "@wonderhome/core/voice/platform-key";
+import { loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
 import { MicVocal, Sparkles } from "lucide-react";
 
-import { saveVoice } from "../../(auth)/voice-actions";
+import { removeVoiceKeyAction, saveVoice, saveVoiceKeyAction } from "../../(auth)/voice-actions";
 import { VoiceSettingsForm } from "../../_components/voice-forms";
-import { requireSession } from "../../_lib/session";
+import { formatDate, requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Voice" };
 export const dynamic = "force-dynamic";
@@ -25,24 +25,31 @@ export const dynamic = "force-dynamic";
  * offering controls that quietly do nothing (design rule 10):
  *
  *   - No plan for voice → say so, and offer nothing else.
- *   - No speech service on this deployment → the browser's own voice, and
- *     every control below it dimmed with the reason given.
- *   - A speech service → every control, and a button that plays the result.
+ *   - No key anywhere → the browser's own voice, and the controls below
+ *     dimmed with the reason given.
+ *   - A key → every control, and a button that plays the result.
  *
- * There is no key on this page. Speech runs on the deployment's own key
- * (`WONDERHOME_SPEECH_KEY`), because it is infrastructure with one bill and
- * one set of quotas — not an errand for a family.
+ * Speech runs on WonderHome's own key by default, so a household needs no
+ * Google account to be understood. The toggle is for the households that
+ * want their own project behind it instead — their billing, their quotas,
+ * their agreement with Google — and theirs wins when it is set.
  */
 export default async function VoiceSettingsPage() {
   const session = await requireSession("/settings/voice");
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
 
-  const [settings, entitlement] = await Promise.all([
+  const [settings, entitlement, credential] = await Promise.all([
     loadVoiceSettings(supabase, householdId),
     may(supabase, householdId, "conversation.voice"),
+    voiceCredentialStatus(supabase, householdId),
   ]);
-  const speechAvailable = speechConfigured();
+
+  // Whose key would answer, without reading either of them here: the
+  // household's own if they set one, otherwise the deployment's.
+  const keySource = resolveSpeechKey(credential.configured ? "configured" : null, platformSpeechKey()).source;
+  const speechAvailable = keySource !== "none";
+  const source = describeSpeechSource(keySource);
 
   const isAdmin = membership.roles.includes("head") || membership.roles.includes("administrator");
   const liveConversation = flags().voice_conversation;
@@ -84,9 +91,9 @@ export default async function VoiceSettingsPage() {
                   </p>
                 ) : null}
               </div>
-              <Badge tone={settings.provider === "google" && speechAvailable ? "handled" : "neutral"}>
-                {settings.provider === "google" && speechAvailable ? "Google" : "Browser"}
-              </Badge>
+            <Badge tone={settings.provider === "google" && speechAvailable ? "handled" : "neutral"}>
+              {settings.provider === "google" && speechAvailable ? (keySource === "household" ? "Your key" : "Included") : "Browser"}
+            </Badge>
             </Card>
 
             {isAdmin ? (
@@ -94,7 +101,13 @@ export default async function VoiceSettingsPage() {
                 householdId={householdId}
                 settings={settings}
                 save={saveVoice}
+                saveKey={saveVoiceKeyAction}
+                removeKey={removeVoiceKeyAction}
                 speechAvailable={speechAvailable}
+                ownKey={credential.configured}
+                ownKeySetOn={credential.updatedAt ? formatDate(membership.household.timezone, credential.updatedAt) : null}
+                sourceTitle={source.title}
+                sourceDetail={source.detail}
               />
             ) : (
               <Card>

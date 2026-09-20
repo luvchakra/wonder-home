@@ -9,18 +9,17 @@ import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { resolveVoiceName } from "@wonderhome/core/voice/google";
 import { VoiceError } from "@wonderhome/core/voice/provider";
-import { speechConfigured } from "@wonderhome/core/voice/platform-key";
-import { loadVoiceSettings, resolveProvider } from "@wonderhome/core/voice/repository";
+import { loadVoiceSettings, resolveProvider, speechKeySource } from "@wonderhome/core/voice/repository";
 import { describeVoice, listeningLanguage, voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 /**
  * Speaking and listening, on the server (story 04-009).
  *
- * The deployment's Google key is an environment variable the browser can
- * never see, so the page cannot call Google directly. It posts here
- * instead: this route reads the key on the server, calls the provider, and
- * returns audio or a transcript. The key is never in a response, a log or
- * a rendered page.
+ * The key — the deployment's, or the household's own where they set one —
+ * is read on the server only, so the page cannot call Google directly. It
+ * posts here instead: this route resolves the key, calls the provider, and
+ * returns audio or a transcript. No key is ever in a response, a log or a
+ * rendered page.
  *
  * Entitlement is checked here and not taken on trust from the page that
  * called — the same rule every other guarded path follows. Usage is
@@ -61,7 +60,8 @@ export async function GET(request: Request, { params }: Params) {
       loadVoiceSettings(supabase, householdId),
       may(supabase, householdId, "conversation.voice"),
     ]);
-    const configured = speechConfigured();
+    const keySource = await speechKeySource(householdId);
+    const configured = keySource !== "none";
 
     // Whether the browser should hand speech to this server at all. All
     // three have to be true, and the page asks rather than assuming, so a
@@ -74,7 +74,7 @@ export async function GET(request: Request, { params }: Params) {
     const asked = new URL(request.url).searchParams.get("language");
     const voices =
       asked && configured
-        ? await resolveProvider({ ...settings, provider: "google" }).voices(asked).catch(() => [])
+        ? await (await resolveProvider({ ...settings, provider: "google" }, householdId)).voices(asked).catch(() => [])
         : [];
 
     return {
@@ -82,6 +82,7 @@ export async function GET(request: Request, { params }: Params) {
       description: describeVoice(settings),
       listeningLanguage: listeningLanguage(settings),
       speechConfigured: configured,
+      keySource,
       entitled: entitlement.allowed,
       voiceEnabled: flags().voice_conversation,
       serverVoice,
@@ -108,11 +109,11 @@ export async function POST(request: Request, { params }: Params) {
       "speak" in body && body.preview
         ? voiceSettingsSchema.parse({ ...saved, ...body.preview, provider: saved.provider })
         : saved;
-    const provider = resolveProvider(saved);
+    const provider = await resolveProvider(saved, householdId);
 
     if (!provider.live) {
       throw ApiError.badRequest(
-        "No speech service is configured for this deployment, so speaking and listening happen in the browser.",
+        "No speech service is configured, so speaking and listening happen in the browser.",
       );
     }
 

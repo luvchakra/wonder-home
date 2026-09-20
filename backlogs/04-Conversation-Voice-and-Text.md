@@ -14,6 +14,7 @@
 | 8 | P1 | 04-008 | Conversation corrections | Done | Reconciliation built and tested; corrections flow through the assistant and are written server-side |
 | 9 | P1 | 04-009 | A voice the household chooses | Done | Google Cloud Speech behind a provider contract, on the deployment's own key; every voice and recognition control, with the browser as the free fallback |
 | 10 | P0 | 04-010 | One composer, four states | Done | Speak-to-text and live conversation as separate, adjacent controls; explicit state machine with its own test |
+| 11 | P0 | 04-011 | Never ask the same question twice | Done | A clarifying question is answered by the next turn, and never repeated verbatim |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -254,6 +255,31 @@ responsibilities .
 - Escape leaves any voice state; every control carries an accessible name and a tooltip.
 - Nothing is offered that cannot work: the conversation control is absent without the entitlement and flag, and the microphone is absent where the browser cannot listen.
 - Every state works at 360px with no horizontal scroll and nothing clipped.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-011 — Never ask the same question twice
+**Epic:** Memory & Conversational Configuration
+**Priority:** P0
+**Goal:** Make a clarifying question a promise to use the answer, so a household never has to repeat itself to be understood.
+
+**Acceptance criteria**
+- When WonderHome asks a clarifying question, the next turn is read as the answer to it before it is read as anything else.
+- The answer is folded into what was already understood, rather than parsed as a fresh, unrelated request.
+- The same question is never asked twice: a second attempt says what was understood, names exactly what is missing, and shows the shape of an answer that would work.
+- A second attempt always offers a way forward that is not talking to the assistant again.
+- Conversational filler somebody uses when frustrated ("I just said", "I already told you") is never mistaken for content.
+- A destination ("for order", "to the shopping list") is never mistaken for the thing being ordered.
+- Changing the subject instead of answering is allowed, and the new request is not swallowed as an answer.
+- Only the most recent question is treated as open; an older one has been overtaken.
+- An answer that resolves a clarification is treated as confident — somebody who has said a thing twice has been clear.
+- A resolved intent still passes every entitlement, autonomy and approval gate; nothing here shortcuts consent.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.
