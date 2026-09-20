@@ -84,6 +84,19 @@ place of a summary that was never about the question.
   invented). Production's next question is the test; its reply metadata
   (`brain`, `providerItemsSent`) says whether the model composed it.
 
+## Follow-up, same day
+
+Production's first brain-composed answers landed ("Everything is running
+smoothly this evening. Tonight's dinner is dal, rice, and sabzi, planned
+for 8:00pm and cooked by Rekha…", `brain: model`, 25 facts). The next
+question — "based on my current grocery what should I order next" — was
+declined honestly but blindly, because the grocery fact was a bare list of
+names. Each tracked item now carries what WonderHome knows about it: the
+same assessment the Groceries screen shows when there is a purchase to
+count down from, and otherwise the rate and "no purchase has been recorded
+yet, so when it runs out is unknown" — so the model can say what would
+help rather than only that it cannot.
+
 ## Still open
 
 - Per-domain deep questions ("how much did we spend on groceries last
