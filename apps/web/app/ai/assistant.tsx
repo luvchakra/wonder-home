@@ -8,7 +8,7 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
@@ -70,50 +70,22 @@ export function Assistant({
    * recorded twice, so the key belongs to the attempt rather than the click.
    */
   const [failed, setFailed] = useState<{ utterance: string; channel: "text" | "voice"; transcriptConfidence?: number; key: string } | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
-  const footerRef = useRef<HTMLDivElement>(null);
-  /**
-   * The sticky footer (composer, its disclaimer, sometimes an error banner)
-   * varies in height, so the scrolling message list needs to know it to
-   * reserve real clearance — otherwise the newest message can render
-   * partly behind it (design principle 15, already applied to the tab bar).
-   */
-  const [footerHeight, setFooterHeight] = useState(0);
-
-  // Layout effect, not a plain effect: it has to land before the browser
-  // paints, or the first frame renders with no clearance and then snaps to
-  // the right padding once this runs — which reads as the page "scrolling
-  // into place" on its own.
-  useLayoutEffect(() => {
-    const node = footerRef.current;
-    if (!node) return;
-    setFooterHeight(node.getBoundingClientRect().height);
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setFooterHeight(entry.contentRect.height);
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Straight to the end, no animation — a conversation reopened with a long
-   * history should already be there on the first frame, not visibly scroll
-   * down to it. `"instant"` (not `"auto"`) is what actually guarantees this:
-   * `"auto"` would still animate because of the page's own
-   * `scroll-behavior: smooth`.
+   * Nothing scrolls the page here. The message list is its own scroll
+   * container laid out bottom-up (`flex-col-reverse`), so it opens already at
+   * the newest message on the very first server-rendered paint — no
+   * scrollIntoView, and no jump when hydration lands a moment later, which
+   * is what every earlier "scroll to the end" attempt could not avoid. This
+   * only re-pins it after a new turn, in case the reader had scrolled up.
+   * In a column-reverse scroller the end is scrollTop 0.
    */
-  const scrollToEnd = useCallback(() => {
-    endRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
-  }, []);
-
-  // Also a layout effect: reopening a conversation with history already in
-  // it has to land already scrolled to the end on the very first paint, not
-  // paint at the top and then jump — that jump is the "scrolling effect".
-  useLayoutEffect(() => {
-    if (messages.length > 0) scrollToEnd();
-  }, [messages.length, scrollToEnd]);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (scroller) scroller.scrollTop = 0;
+  }, [messages.length]);
 
   const send = useCallback(
     async (utterance: string, channel: "text" | "voice", transcriptConfidence?: number, retryKey?: string) => {
@@ -207,7 +179,10 @@ export function Assistant({
   const quiet = messages.length === 0;
 
   return (
-    <div className="flex min-h-[calc(100dvh-var(--wh-header-height)-var(--wh-tabbar-height)-2rem)] flex-col lg:min-h-[calc(100dvh-var(--wh-header-height)-3rem)]">
+    // Exactly the space between the header and main's own bottom padding (which
+    // already clears the tab bar and its raised button), so the page itself
+    // never scrolls: the conversation does, inside.
+    <div className="flex h-[calc(100dvh-var(--wh-header-height)-env(safe-area-inset-top)-var(--wh-tabbar-height)-var(--wh-tabbar-raised-clearance)-1rem)] min-h-0 flex-col lg:h-[calc(100dvh-var(--wh-header-height)-4.5rem)]">
       {quiet ? (
         <div className="wh-rise flex flex-1 flex-col items-center justify-center px-2 py-8 text-center">
           <AiOrb size={88} />
@@ -226,7 +201,12 @@ export function Assistant({
           <SuggestionChips suggestions={SUGGESTIONS} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
         </div>
       ) : (
-        <div className="flex-1 space-y-4 py-2" style={{ paddingBottom: footerHeight }} aria-live="polite">
+        <div
+          ref={scrollerRef}
+          className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+          aria-live="polite"
+        >
+          <div className="space-y-4 py-2">
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -263,7 +243,7 @@ export function Assistant({
               {message.text}
             </ChatMessage>
           ))}
-          <div ref={endRef} />
+          </div>
         </div>
       )}
 
@@ -283,19 +263,8 @@ export function Assistant({
         </div>
       ) : null}
 
-      {/*
-        A real backdrop, not just the composer's own white pill floating over
-        nothing — without it, the gap above the pill and the disclaimer line
-        below it sit on a transparent background, so a scrolled message can
-        show straight through them (rule 15's "reserves real clearance"
-        applies to what's drawn there, not only the space reserved for it).
-        `.wh-glass` is the same translucent-blur treatment the header and
-        tab bar already use for exactly this.
-      */}
-      <div
-        ref={footerRef}
-        className="wh-glass sticky bottom-[calc(var(--wh-tabbar-height)+0.75rem)] z-20 rounded-[var(--wh-radius-lg)] px-1 pt-3 pb-1.5 lg:bottom-4"
-      >
+      {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
+      <div className="shrink-0 pt-2">
         <ChatComposer onSend={send} disabled={busy} placeholder="Type a message, or tap the mic to speak…" />
         <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
