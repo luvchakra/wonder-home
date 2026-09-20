@@ -213,6 +213,47 @@ export function detectException(
   }
 }
 
+/** An outcome and what it waits for — the same shape `configuration.ts`'s own dependency graph already uses. */
+export type DependencyEdge = { itemKey: string; dependsOnKey: string };
+
+/**
+ * Connects upstream and downstream outcomes (story 03-006).
+ *
+ * `evaluateOutcome`, `detectException` and `planReplan` above all already
+ * consume an outcome's `dependencies` — the graph itself was never the gap.
+ * What was missing is turning a household's actual dependency edges (the
+ * same ones `configuration.ts`'s `canDependOn` already validates, set once
+ * in the playbook) into that field, carrying each upstream outcome's
+ * *current* status rather than just its key. Building the graph here from
+ * the same edges the playbook validates means there is one dependency
+ * graph a household sets, not two that could quietly disagree — a cycle is
+ * already refused where the edge is created, so this never needs to check
+ * for one again.
+ *
+ * An upstream outcome with no live instance yet (its routine has not fired
+ * this cycle) is treated as `"pending"` — not yet met, which is the honest
+ * reading of "nothing is known to have happened."
+ */
+export function attachDependencies(
+  outcomes: readonly Omit<Outcome, "dependencies">[],
+  edges: readonly DependencyEdge[],
+): Outcome[] {
+  const statusByKey = new Map(outcomes.map((outcome) => [outcome.outcomeKey, outcome.status]));
+
+  const dependsOnByKey = new Map<string, string[]>();
+  for (const edge of edges) {
+    dependsOnByKey.set(edge.itemKey, [...(dependsOnByKey.get(edge.itemKey) ?? []), edge.dependsOnKey]);
+  }
+
+  return outcomes.map((outcome) => ({
+    ...outcome,
+    dependencies: (dependsOnByKey.get(outcome.outcomeKey) ?? []).map((dependsOnKey) => ({
+      outcomeKey: dependsOnKey,
+      status: statusByKey.get(dependsOnKey) ?? "pending",
+    })),
+  }));
+}
+
 export type ReplanInput = {
   outcomes: Outcome[];
   /** Outcome keys whose circumstances changed — a dependency, an absence. */

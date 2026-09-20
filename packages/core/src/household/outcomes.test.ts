@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  attachDependencies,
   detectException,
   evaluateOutcome,
   planReplan,
@@ -184,5 +185,71 @@ describe("replanning", () => {
     ];
     const { affected } = planReplan({ outcomes: cyclic, changedKeys: ["a"] });
     expect(affected.map((o) => o.outcomeKey).sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("connecting upstream and downstream outcomes (03-006)", () => {
+  it("gives an outcome with no edges an empty dependency list, not nothing", () => {
+    const [result] = attachDependencies([outcome({ outcomeKey: "dinner.served" })], []);
+    expect(result!.dependencies).toEqual([]);
+  });
+
+  it("attaches an upstream outcome's current status", () => {
+    const outcomes = [
+      outcome({ outcomeKey: "laundry.washed", status: "missed" }),
+      outcome({ outcomeKey: "laundry.dried" }),
+    ];
+    const edges = [{ itemKey: "laundry.dried", dependsOnKey: "laundry.washed" }];
+
+    const [, dried] = attachDependencies(outcomes, edges);
+
+    expect(dried!.dependencies).toEqual([{ outcomeKey: "laundry.washed", status: "missed" }]);
+  });
+
+  it("treats an upstream outcome with no live instance as pending, not met", () => {
+    const [result] = attachDependencies(
+      [outcome({ outcomeKey: "dinner.served" })],
+      [{ itemKey: "dinner.served", dependsOnKey: "groceries.stocked" }],
+    );
+
+    expect(result!.dependencies).toEqual([{ outcomeKey: "groceries.stocked", status: "pending" }]);
+  });
+
+  it("attaches every edge for an outcome that waits on more than one thing", () => {
+    const outcomes = [
+      outcome({ outcomeKey: "groceries.stocked", status: "on_track" }),
+      outcome({ outcomeKey: "cook.available", status: "met" }),
+      outcome({ outcomeKey: "dinner.served" }),
+    ];
+    const edges = [
+      { itemKey: "dinner.served", dependsOnKey: "groceries.stocked" },
+      { itemKey: "dinner.served", dependsOnKey: "cook.available" },
+    ];
+
+    const [, , dinner] = attachDependencies(outcomes, edges);
+
+    expect(dinner!.dependencies?.map((d) => d.outcomeKey).sort()).toEqual(["cook.available", "groceries.stocked"]);
+  });
+
+  it("never attaches an edge belonging to a different outcome", () => {
+    const outcomes = [outcome({ outcomeKey: "laundry.washed" }), outcome({ outcomeKey: "dinner.served" })];
+    const edges = [{ itemKey: "dinner.served", dependsOnKey: "groceries.stocked" }];
+
+    const [washed] = attachDependencies(outcomes, edges);
+
+    expect(washed!.dependencies).toEqual([]);
+  });
+
+  it("feeds straight into evaluation the same way a hand-built dependency list already did", () => {
+    const outcomes = [
+      outcome({ outcomeKey: "laundry.washed", status: "missed" }),
+      outcome({ outcomeKey: "laundry.dried", dueAt: at("22:00") }),
+    ];
+    const [, dried] = attachDependencies(outcomes, [{ itemKey: "laundry.dried", dependsOnKey: "laundry.washed" }]);
+
+    const evaluation = evaluateOutcome(dried!, at("10:00"));
+
+    expect(evaluation.status).toBe("blocked");
+    expect(evaluation.reason).toContain("laundry.washed");
   });
 });

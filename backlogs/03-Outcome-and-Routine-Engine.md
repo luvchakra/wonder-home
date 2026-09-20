@@ -9,7 +9,7 @@
 | 3 | P0 | 03-003 | Monitoring | Done | Pure evaluation; normal operation is silent |
 | 4 | P0 | 03-004 | Exception detection | Done | Impact and recommended action are NOT NULL by design |
 | 5 | P0 | 03-005 | Replanning | Done | Downstream reachability computed, unaffected plans preserved |
-| 6 | P1 | 03-006 | Dependency graph | Not Started | |
+| 6 | P1 | 03-006 | Dependency graph | Done | `attachDependencies` turns the household's real dependency edges (the same ones `configuration.ts`'s `canDependOn` validates) into each outcome's own `dependencies`, carrying the upstream outcome's current status, feeding straight into the evaluation and replanning already built for 03-003/03-005 |
 | 7 | P1 | 03-007 | Pattern learning | Not Started | |
 | 8 | P2 | 03-008 | Optimization | Not Started | |
 

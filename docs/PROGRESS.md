@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**147 of 170 stories done — 86.5%**
+**148 of 170 stories done — 87.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 147 |
+| Done | 148 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 23 |
+| Not Started | 22 |
 
 ## By module
 
@@ -27,7 +27,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `████████░░` | 7 | 8 | 1 not started |
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
-| 03 Outcome & Routine Engine | `██████░░░░` | 5 | 8 | 3 not started |
+| 03 Outcome & Routine Engine | `███████░░░` | 6 | 8 | 2 not started |
 | 04 Conversation, Voice & Text | `██████████` | 8 | 8 | — |
 | 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
 | 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
@@ -51,7 +51,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
-| `03-006` Dependency graph | 03 Outcome & Routine Engine | P1 | Not Started |
 | `03-007` Pattern learning | 03 Outcome & Routine Engine | P1 | Not Started |
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `05-007` Certification history | 05 Household Certification & Understanding | P1 | Not Started |
@@ -125,7 +124,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 03 — Outcome & Routine Engine
 
-5 of 8 done `██████░░░░`
+6 of 8 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -134,7 +133,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `03-003` Monitoring | P0 | Done | Pure evaluation; normal operation is silent |
 | `03-004` Exception detection | P0 | Done | Impact and recommended action are NOT NULL by design |
 | `03-005` Replanning | P0 | Done | Downstream reachability computed, unaffected plans preserved |
-| `03-006` Dependency graph | P1 | Not Started | — |
+| `03-006` Dependency graph | P1 | Done | `attachDependencies` turns the household's real dependency edges (the same ones `configuration.ts`'s `canDependOn` validates) into each outcome's own `dependencies`, carrying the upstream outcome's current status, feeding straight into the evaluation and replanning already built for 03-003/03-005 |
 | `03-007` Pattern learning | P1 | Not Started | — |
 | `03-008` Optimization | P2 | Not Started | — |
 

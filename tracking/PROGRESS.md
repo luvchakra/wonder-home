@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 147 |
+| Done | 148 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 23 |
-| Completion | 86.5% |
+| Not Started | 22 |
+| Completion | 87.1% |
 | Current module | 03 Outcome & Routine Engine |
-| Current story | 03-006 Dependency graph |
+| Current story | 03-007 Pattern learning |
 | Last updated | 2026-09-19 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -27,7 +27,7 @@ disagree again.)
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 7 | In Progress |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 8 | Done |
-| 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 5 | In Progress |
+| 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 6 | In Progress |
 | 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 8 | Done |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 7 | In Progress |
@@ -182,3 +182,4 @@ disagree again.)
 | 2026-09-18 | UI | Household setup | Done | 19 unit | First-week setup guidance for head/admin: weighted progress ring, next steps with a reason each, achievement at 100%; first sign-in recorded once per member (mark_member_seen) |
 | 2026-09-19 | 02 | 02-007 | Done | 9 unit | Conflict detection: `detectConflicts` over current responsibilities and active members finds what write-time validation cannot — an owner or backup no longer in the household, a backup who is the owner, a child now on an adult-only outcome; each names the outcome, the member(s) and one resolution; surfaced on the Responsibilities screen |
 | 2026-09-19 | 02 | 02-008 | Done | 15 unit | Advanced rule builder: a policy can carry one condition (member type, or an hour window that wraps past midnight) narrowing it to a specific case; `selectApplicablePolicy` picks the most specific match, most-specific-first, ties by name, falling back to the household's unconditional default; wired through savePolicy/PolicyForm — module 02 complete |
+| 2026-09-19 | 03 | 03-006 | Done | 6 unit | Dependency graph: `attachDependencies` turns the household's real dependency edges (the same ones `configuration.ts`'s `canDependOn` validates in the playbook) into each outcome's own `dependencies`, carrying the upstream outcome's current status — one dependency graph instead of two that could disagree; feeds straight into evaluateOutcome/planReplan, already built for 03-003/03-005 |
