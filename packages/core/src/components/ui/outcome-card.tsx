@@ -13,9 +13,15 @@ import { IconTile, type IconTone } from "./icon-tile";
  */
 export type HandledItem = { key: string; title: string; meta?: string };
 
+/**
+ * Two to a row, including on a phone (rule 19's pair layout). These are
+ * short — a domain and a few words about it — and they wrap rather than
+ * truncate, so half width costs nothing and the quiet good news stays
+ * compact instead of running down the screen.
+ */
 export function HandledList({ items, className }: { items: readonly HandledItem[]; className?: string }) {
   return (
-    <ul className={cn("grid gap-2 sm:grid-cols-2", className)}>
+    <ul className={cn("grid grid-cols-2 gap-2", className)}>
       {items.map((item) => (
         <li
           key={item.key}
