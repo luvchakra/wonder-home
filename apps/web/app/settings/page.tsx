@@ -1,4 +1,4 @@
-import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Link2, LogOut, Moon, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Link2, LogOut, MicVocal, Moon, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -6,6 +6,8 @@ import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
+import { describeVoice } from "@wonderhome/core/voice/settings";
 import { listPlans, loadSubscription, usageSummary } from "@wonderhome/core/billing/repository";
 import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -42,11 +44,12 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
 export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const [user, { data: preferenceRows }, credential, dataUse] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, dataUse, voiceSettings] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, membership.household.id),
+    loadVoiceSettings(supabase, membership.household.id),
   ]);
 
   const [subscription, plans, usage] = await Promise.all([
@@ -66,11 +69,13 @@ export default async function SettingsPage() {
   );
   const keyNote = describeKeySource(key.source);
   const manages = view.permissions.includes("household.manage");
+  const voiceNote = describeVoice(voiceSettings);
   const preferences = (preferenceRows as PreferenceRow[] | null) ?? [];
   const inApp = preferences.find((p) => p.channel === "in_app");
 
   const rows: { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href?: string; badge?: string }[] = [
     { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/notifications" },
+    { icon: MicVocal, tone: "ai", title: "Voice", meta: voiceNote, href: "/settings/voice" },
     { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "What is shared, how long it is kept, and taking your data with you", href: "/settings/privacy" },
     { icon: KeyRound, tone: "neutral", title: "Two-factor authentication", meta: "Coming — not switched on for this account yet", badge: "Soon" },
     { icon: Link2, tone: "care", title: "Connected accounts", meta: "School, calendar, shopping, weather", href: view.permissions.includes("integrations.manage") ? "/household/integrations" : undefined },

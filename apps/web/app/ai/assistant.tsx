@@ -62,6 +62,8 @@ export function Assistant({
   initialMessages,
   initialQuery,
   liveConversationAvailable = false,
+  serverVoice = false,
+  voiceLanguage = "en-IN",
 }: {
   householdId: string;
   memberName: string;
@@ -70,6 +72,9 @@ export function Assistant({
   initialQuery?: string;
   /** The deployment's rollout flag and this household's plan both say yes. */
   liveConversationAvailable?: boolean;
+  /** This household has a speech provider configured, so the server does the listening. */
+  serverVoice?: boolean;
+  voiceLanguage?: string;
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
@@ -206,7 +211,12 @@ export function Assistant({
     }
   }, [householdId]);
 
-  const live = useLiveVoice({ onUtterance: handleLiveUtterance, onError: (message) => setError(message) });
+  const live = useLiveVoice({
+    lang: voiceLanguage,
+    server: serverVoice ? { householdId } : null,
+    onUtterance: handleLiveUtterance,
+    onError: (message) => setError(message),
+  });
 
   /** The composer's own toggle: on starts listening, off stops and recaps what was said (item 6). */
   const toggleLive = useCallback(

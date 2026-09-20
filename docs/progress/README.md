@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [A voice the household chooses: Google Cloud Speech (04-009)](2026-09-20-google-cloud-speech-voice.md) |
 | 2026-09-20 | [A sustained, hands-free conversation with WonderHome](2026-09-20-live-voice-conversation.md) |
 | 2026-09-20 | [Edit the last thing you said to WonderHome](2026-09-20-edit-your-last-message.md) |
 | 2026-09-20 | [Talk: a faster turn, and replies that actually use bullets](2026-09-20-talk-faster-turns-and-real-bullets.md) |

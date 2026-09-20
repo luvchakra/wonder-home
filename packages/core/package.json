@@ -24,6 +24,7 @@
     "./family/*": "./src/family/*.ts",
     "./integrations/*": "./src/integrations/*.ts",
     "./ai/*": "./src/ai/*.ts",
+    "./voice/*": "./src/voice/*.ts",
     "./identity/*": "./src/identity/*.ts",
     "./db/*": "./src/db/*.ts",
     "./observability/*": "./src/observability/*.ts",

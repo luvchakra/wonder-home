@@ -658,6 +658,30 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/voice": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "How this household speaks and listens",
+          description:
+            "The household's voice settings, whether a speech key is configured (never the key), and whether the server should be doing the speaking at all. A client reads this to know which path to take; it is not authorization, which is re-checked on every call.",
+          responses: {
+            "200": { description: "Voice settings, credential status and what is available" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Say a reply aloud, or hear what was said",
+          description:
+            "With `speak`, returns audio for that text in the household's chosen voice. With `audio` and `mimeType`, returns what was heard. The provider key is read server-side and never leaves it. Entitlement is checked here; usage is metered once by the conversation turn these legs belong to, not again per leg.",
+          responses: {
+            "200": { description: "Audio to play, or the transcript of what was said" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/households/{householdId}/plan": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
