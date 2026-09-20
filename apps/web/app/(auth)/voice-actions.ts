@@ -5,12 +5,7 @@ import { revalidatePath } from "next/cache";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
-import {
-  clearVoiceKey,
-  loadVoiceSettings,
-  saveVoiceSettings,
-  setVoiceKey,
-} from "@wonderhome/core/voice/repository";
+import { saveVoiceSettings } from "@wonderhome/core/voice/repository";
 import { voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "./actions";
@@ -21,8 +16,11 @@ import type { ActionState } from "./actions";
  * The form posts every field at once and this parses the lot through the
  * same Zod schema the API and the database agree on, so a value that would
  * be refused by Google is refused here, in words, before anybody hears the
- * difference. The key takes the `ai-key-actions.ts` path exactly: straight
- * to the database, never echoed back, never re-rendered into the field.
+ * difference.
+ *
+ * There is no key to set here. Speech runs on the deployment's own key
+ * (`voice/platform-key.ts`), so what a household chooses is whether to use
+ * it and how it should sound — never a credential.
  */
 
 function readSettings(formData: FormData) {
@@ -92,59 +90,3 @@ export async function saveVoice(_previous: ActionState, formData: FormData): Pro
   return { notice: "Saved. That is how WonderHome sounds from now on." };
 }
 
-export async function saveVoiceKeyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const apiKey = String(formData.get("apiKey") ?? "").trim();
-  if (apiKey.length < 20) return { error: "That does not look like a Google API key." };
-
-  try {
-    const supabase = await createClient();
-    const householdId = String(formData.get("householdId") ?? "");
-    const membership = await requireHouseholdAdmin(supabase, householdId);
-
-    await setVoiceKey(supabase, { householdId, memberId: membership.memberId, apiKey });
-
-    // Setting a key is what a household does in order to use it, so the
-    // provider follows the key rather than needing a second save nobody
-    // would guess was required.
-    const settings = await loadVoiceSettings(supabase, householdId);
-    if (settings.provider !== "google") {
-      await saveVoiceSettings(supabase, {
-        householdId,
-        memberId: membership.memberId,
-        settings: { ...settings, provider: "google" },
-      });
-    }
-  } catch (thrown) {
-    return { error: toErrorBody(thrown, "voice").body.error.message };
-  }
-
-  revalidatePath("/settings/voice");
-  return { notice: "Saved. WonderHome will use Google for speech from now on." };
-}
-
-export async function removeVoiceKeyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  try {
-    const supabase = await createClient();
-    const householdId = String(formData.get("householdId") ?? "");
-    const membership = await requireHouseholdAdmin(supabase, householdId);
-
-    await clearVoiceKey(supabase, householdId, membership.memberId);
-
-    // Without a key there is nothing for Google to answer with, so the
-    // household goes back to the browser's own voice rather than to a
-    // setting that silently does nothing.
-    const settings = await loadVoiceSettings(supabase, householdId);
-    if (settings.provider === "google") {
-      await saveVoiceSettings(supabase, {
-        householdId,
-        memberId: membership.memberId,
-        settings: { ...settings, provider: "browser" },
-      });
-    }
-  } catch (thrown) {
-    return { error: toErrorBody(thrown, "voice").body.error.message };
-  }
-
-  revalidatePath("/settings/voice");
-  return { notice: "Removed. Your browser's own voice takes over again." };
-}

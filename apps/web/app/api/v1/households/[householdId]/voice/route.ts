@@ -9,17 +9,18 @@ import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { resolveVoiceName } from "@wonderhome/core/voice/google";
 import { VoiceError } from "@wonderhome/core/voice/provider";
-import { loadVoiceSettings, resolveProvider, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { speechConfigured } from "@wonderhome/core/voice/platform-key";
+import { loadVoiceSettings, resolveProvider } from "@wonderhome/core/voice/repository";
 import { describeVoice, listeningLanguage, voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 /**
  * Speaking and listening, on the server (story 04-009).
  *
- * The household's Google key lives in a table with no SELECT policy, so the
- * browser cannot hold it and cannot call Google directly. It posts here
- * instead: this route reads the key with the service role, calls the
- * provider, and returns audio or a transcript. The key is never in a
- * response, a log or a rendered page.
+ * The deployment's Google key is an environment variable the browser can
+ * never see, so the page cannot call Google directly. It posts here
+ * instead: this route reads the key on the server, calls the provider, and
+ * returns audio or a transcript. The key is never in a response, a log or
+ * a rendered page.
  *
  * Entitlement is checked here and not taken on trust from the page that
  * called — the same rule every other guarded path follows. Usage is
@@ -56,33 +57,31 @@ export async function GET(request: Request, { params }: Params) {
     const supabase = await createClient();
     await requireMembership(supabase, householdId);
 
-    const [settings, credential, entitlement] = await Promise.all([
+    const [settings, entitlement] = await Promise.all([
       loadVoiceSettings(supabase, householdId),
-      voiceCredentialStatus(supabase, householdId),
       may(supabase, householdId, "conversation.voice"),
     ]);
+    const configured = speechConfigured();
 
-    // Whether the browser should hand speech to this server at all. Both
-    // have to be true, and the page asks rather than assuming, so a key
-    // removed in another tab stops being used on the next turn.
-    const serverVoice = settings.provider === "google" && credential.configured && entitlement.allowed;
+    // Whether the browser should hand speech to this server at all. All
+    // three have to be true, and the page asks rather than assuming, so a
+    // setting changed in another tab stops being used on the next turn.
+    const serverVoice = settings.provider === "google" && configured && entitlement.allowed;
 
     // The settings screen asks for one language's voices at a time, because
     // the full catalogue is several hundred entries in languages nobody on
     // this screen is choosing between.
     const asked = new URL(request.url).searchParams.get("language");
     const voices =
-      asked && credential.configured
-        ? await (await resolveProvider({ ...settings, provider: "google" }, householdId))
-            .voices(asked)
-            .catch(() => [])
+      asked && configured
+        ? await resolveProvider({ ...settings, provider: "google" }).voices(asked).catch(() => [])
         : [];
 
     return {
       settings,
       description: describeVoice(settings),
       listeningLanguage: listeningLanguage(settings),
-      credential: { configured: credential.configured, updatedAt: credential.updatedAt },
+      speechConfigured: configured,
       entitled: entitlement.allowed,
       voiceEnabled: flags().voice_conversation,
       serverVoice,
@@ -109,11 +108,11 @@ export async function POST(request: Request, { params }: Params) {
       "speak" in body && body.preview
         ? voiceSettingsSchema.parse({ ...saved, ...body.preview, provider: saved.provider })
         : saved;
-    const provider = await resolveProvider(saved, householdId);
+    const provider = resolveProvider(saved);
 
     if (!provider.live) {
       throw ApiError.badRequest(
-        "This household has not set up a speech provider, so speaking and listening happen in the browser.",
+        "No speech service is configured for this deployment, so speaking and listening happen in the browser.",
       );
     }
 
