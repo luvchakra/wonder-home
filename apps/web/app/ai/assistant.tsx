@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDown,
   CalendarHeart,
   GraduationCap,
   ListChecks,
@@ -43,6 +44,9 @@ export type AssistantMessage = {
   /** Who said this, spelled out — set only for a live conversation's turns. */
   speaker?: string;
 };
+
+/** Far enough back to be deliberate rather than a stray touch. */
+const BACK_AT_LEAST = 120;
 
 const SUGGESTIONS = [
   { label: "Plan a family outing this weekend", utterance: "Plan a family outing this weekend.", icon: <CalendarHeart aria-hidden className="size-4 text-[var(--wh-tone-people)]" /> },
@@ -90,6 +94,14 @@ export function Assistant({
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const sentInitial = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  /**
+   * Whether the reader has scrolled back through the conversation.
+   *
+   * In a `flex-col-reverse` scroller the newest message sits at scrollTop 0
+   * and scrolling back moves away from it — negative in most engines,
+   * positive in some — so the distance is what matters, never the sign.
+   */
+  const [scrolledBack, setScrolledBack] = useState(false);
   /** The first member message of the live session in progress, for the recap once it ends. */
   const liveStartMessageId = useRef<string | null>(null);
 
@@ -104,8 +116,23 @@ export function Assistant({
    */
   useEffect(() => {
     const scroller = scrollerRef.current;
-    if (scroller) scroller.scrollTop = 0;
-  }, [messages.length]);
+    // Only re-pin a reader who was already at the newest message. Yanking
+    // somebody back down mid-sentence because a reply arrived is the thing
+    // the arrow below exists to let them choose instead.
+    if (scroller && !scrolledBack) scroller.scrollTop = 0;
+  }, [messages.length, scrolledBack]);
+
+  const onScroll = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (scroller) setScrolledBack(Math.abs(scroller.scrollTop) > BACK_AT_LEAST);
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    scroller.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+  }, []);
 
   const send = useCallback(
     async (
@@ -324,6 +351,7 @@ export function Assistant({
       ) : (
         <div
           ref={scrollerRef}
+          onScroll={onScroll}
           className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain [scrollbar-width:thin]"
           aria-live="polite"
         >
@@ -398,7 +426,21 @@ export function Assistant({
       ) : null}
 
       {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
-      <div className="shrink-0 pt-1.5">
+      <div className="relative shrink-0 pt-1.5">
+        {/* Only while the reader is actually back up the conversation —
+            otherwise it is a button that does nothing, over the one thing
+            on this screen somebody came to use. */}
+        {scrolledBack ? (
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            aria-label="Jump to the latest message"
+            title="Jump to the latest message"
+            className="wh-rise absolute -top-11 left-1/2 z-10 grid size-10 -translate-x-1/2 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)] shadow-[var(--wh-shadow-float)] transition-colors hover:border-[var(--wh-primary)] hover:text-[var(--wh-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+          >
+            <ArrowDown aria-hidden className="size-5" />
+          </button>
+        ) : null}
         {editing ? (
           <div className="mb-2 flex items-center justify-between rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--wh-primary)]">
             <span>Editing your message</span>
