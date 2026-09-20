@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarHeart, Heart, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, HandHeart, Heart, Sun, UserPlus, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
@@ -10,9 +10,11 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
+import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { PersonCard } from "@wonderhome/core/ui/person-card";
 import { PillLink } from "@wonderhome/core/ui/pill";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
+import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
@@ -68,13 +70,26 @@ export default async function FamilyPage() {
   return (
     <AppShell active="family" viewer={viewer} secondary={secondary} pathname="/family">
       <div className="space-y-6">
-        <header className="wh-rise flex items-end justify-between gap-3">
-          <div>
+        <header className="wh-rise relative flex items-start justify-between gap-3 overflow-hidden">
+          <div className="min-w-0">
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Our Family</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">Everyone, together.</p>
           </div>
-          {admin ? <PillLink href="/household/members" tone="quiet"><Users aria-hidden className="size-3.5" /> Invite member</PillLink> : null}
+          {/* Decoration only — every fact on this screen is still said in
+              words below, never only in the picture (rule 8). */}
+          <HomeIllustration className="w-24 shrink-0 sm:w-36" />
         </header>
+
+        <Card className="wh-rise flex items-center gap-3 bg-[var(--wh-handled-soft)] p-4" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
+          <IconTile icon={Sun} tone="money" />
+          <p className="min-w-0 flex-1 text-sm font-semibold">A happier home starts with all of us!</p>
+          {/* The one handwritten line this screen gets (rule 2) — the
+              closing note lives here instead of a second script accent
+              further down the page. */}
+          <ScriptAccent tone="primary" size="sm" heart tilt={false} className="hidden max-w-[9rem] text-right sm:block">
+            Together Brighter Days!
+          </ScriptAccent>
+        </Card>
 
         {calendarHealth ? (
           <Card className="flex items-start gap-3 p-4">
@@ -91,18 +106,35 @@ export default async function FamilyPage() {
         ) : null}
 
         <section className="wh-rise" style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}>
-          <SectionHeader title="Family members" count={familyMembers.length} action={admin ? <PillLink href="/household/members" tone="quiet">Manage</PillLink> : null} />
+          <SectionHeader
+            title="Family members"
+            count={familyMembers.length}
+            action={
+              admin ? (
+                <div className="flex gap-2">
+                  <PillLink href="/household/members" tone="quiet">
+                    Manage
+                  </PillLink>
+                  <PillLink href="/household/members" tone="primary">
+                    <Users aria-hidden className="size-3.5" /> Invite member
+                  </PillLink>
+                </div>
+              ) : null
+            }
+          />
           {familyMembers.length === 0 ? (
             <EmptyState icon={Users} tone="people" title="Just you so far" description="Invite the family so everyone gets their own view of the home." action={admin ? <ButtonLink href="/household/members">Invite someone</ButtonLink> : null} />
           ) : (
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
+            // Two to a row, and never three, on a phone (rule 19) — a third
+            // or fifth member wraps to its own row rather than squeezing in.
+            <div className="grid grid-cols-2 gap-3">
               {familyMembers.map((member) => (
                 <PersonCard
                   key={member.id}
                   name={member.displayName}
                   role={roleLabel(member)}
                   now={member.status === "invited" ? "Invited" : member.id === membership.memberId ? "You" : null}
-                  badge={member.memberType === "child" ? "🧒" : undefined}
+                  badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined}
                   href={member.memberType === "child" && view.permissions.includes("school.manage") ? `/school?child=${member.id}` : undefined}
                 />
               ))}
@@ -110,23 +142,38 @@ export default async function FamilyPage() {
           )}
         </section>
 
-        {helpers.length > 0 ? (
+        {helpers.length > 0 || admin ? (
           <section className="wh-rise" style={{ "--wh-rise-delay": "90ms" } as React.CSSProperties}>
-            <SectionHeader title="Household help" count={helpers.length} />
+            <SectionHeader
+              title="Household help"
+              count={helpers.length}
+              action={admin ? <PillLink href="/household/members" tone="quiet"><UserPlus aria-hidden className="size-3.5" /> Add helper</PillLink> : null}
+            />
             <p className="mb-2 text-sm text-[var(--wh-foreground-muted)]">
               Who keeps the home running day to day — not family, but part of how it works.
             </p>
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
-              {helpers.map((member) => (
-                <PersonCard
-                  key={member.id}
-                  name={member.displayName}
-                  role={roleLabel(member)}
-                  now={member.status === "invited" ? "Invited" : null}
-                  badge="🤝"
-                />
-              ))}
-            </div>
+            {helpers.length === 0 ? (
+              <EmptyState icon={Users} tone="people" title="No househelp yet" description="Add the people who help at home, so WonderHome can coordinate around them too." />
+            ) : (
+              <Card className="p-2">
+                <ul className="divide-y divide-[var(--wh-border)]">
+                  {helpers.map((member) => (
+                    <ActionRow
+                      key={member.id}
+                      icon={HandHeart}
+                      tone="people"
+                      title={member.displayName}
+                      meta={member.status === "invited" ? "Invited · Househelper" : "Househelper"}
+                      action={
+                        <PillLink href="/househelper" tone="quiet">
+                          View
+                        </PillLink>
+                      }
+                    />
+                  ))}
+                </ul>
+              </Card>
+            )}
           </section>
         ) : null}
 
@@ -135,24 +182,36 @@ export default async function FamilyPage() {
         ) : (
           <>
             <section className="wh-rise" style={{ "--wh-rise-delay": "120ms" } as React.CSSProperties}>
-              <SectionHeader title="Family moment" />
               {moment ? (
-                <Card className="overflow-hidden p-0">
-                  <div className="h-28 w-full" style={{ background: "var(--wh-gradient-sunset)" }} aria-hidden>
-                    <div className="flex h-full items-end px-5 pb-3">
-                      <Heart className="size-6 text-[var(--wh-tone-people)]" fill="currentColor" />
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-base font-semibold">{moment.title}</p>
-                    <p className="text-sm text-[var(--wh-foreground-muted)]">
+                // Not a link: nothing on this screen goes deeper than what
+                // is already said here, and a chevron with nowhere to go
+                // would be exactly the dead control rule 10 forbids.
+                <div className="flex items-start gap-3 rounded-[var(--wh-radius)] bg-[var(--wh-tone-people-soft)] p-4">
+                  <IconTile icon={Heart} tone="people" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold">Family moment</p>
+                    <p className="text-sm text-[var(--wh-foreground-muted)]">{moment.title}</p>
+                    <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">
                       {formatDate(timezone, moment.startsAt, "long")} · {formatTime(timezone, moment.startsAt)} – {formatTime(timezone, moment.endsAt)}
                     </p>
-                    {moment.protected ? <p className="mt-2 text-xs font-medium text-[var(--wh-tone-people)]">Protected — nothing gets scheduled over this.</p> : null}
+                    {moment.protected ? (
+                      <p className="mt-2 text-xs font-medium text-[var(--wh-tone-people)]">Protected — nothing gets scheduled over this.</p>
+                    ) : null}
                   </div>
-                </Card>
+                </div>
               ) : (
-                <EmptyState icon={Heart} tone="people" title="Nothing protected yet" description="Keep an evening or a Sunday for the family. WonderHome plans everything else around it." />
+                <div className="rounded-[var(--wh-radius)] bg-[var(--wh-tone-people-soft)] p-4">
+                  <div className="flex items-start gap-3">
+                    <IconTile icon={Heart} tone="people" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-semibold">Family moment</p>
+                      <p className="text-sm text-[var(--wh-foreground-muted)]">Small moments. A happier home.</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/70 px-3 py-2 text-center text-sm text-[var(--wh-tone-people)] italic">
+                    &ldquo;Keep an evening for the family — WonderHome plans everything else around it.&rdquo;
+                  </p>
+                </div>
               )}
             </section>
 
@@ -204,8 +263,6 @@ export default async function FamilyPage() {
             </section>
           </>
         )}
-
-        <QuoteCard>A happy family is a well-managed adventure.</QuoteCard>
       </div>
     </AppShell>
   );

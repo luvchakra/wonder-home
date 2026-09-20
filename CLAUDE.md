@@ -163,15 +163,20 @@ work, and hold new work against these:
       If it would have to, it was not a two-up row.
 
 **The brand is the sheet at `design/WonderHome-brand-guidelines.png`.** The
-name is WonderHome, one word, "Wonder" in navy and "Home" in blue; the mark is
-the two-tone house — blue left, warm yellow right, a four-pane window, a leaf
-over the corner — and its geometry lives once in `packages/core/src/brand/mark.ts`
-(the header renders it, `npm run brand` writes the icons from it, CI checks
-they match). The tagline is "Less mental load. More family time." The palette is
-Primary Blue `#0EA5E9`, Accent Green `#22C55E`, Warm Yellow `#FBBF24`, Navy
-`#0F172A`, expressed as the tokens in `packages/core/src/ui-theme.css`; the
-typeface is Sora. Never hand-draw a second logo, paste a raster of it, or
-reach for a hex the tokens don't carry.
+name is WonderHome, one word, its wordmark a rainbow running letter to
+letter — blue, warm yellow, blue, green, blue, warm yellow, then "Home"'s H
+and final e pulled to a deeper navy so the word still reads as one name
+(`WORDMARK_LETTERS` in `packages/core/src/brand/mark.ts` is the one source
+for this, read by both the live wordmark and the generated share card). The
+mark beside it is the two-tone house — blue left, warm yellow right, a
+four-pane window, a leaf over the corner — and its geometry lives in the same
+module (the header renders it, `npm run brand` writes the icons from it, CI
+checks they match). The tagline is "Less mental load. More family time!" The
+palette is Primary Blue `#0EA5E9`, Accent Green `#22C55E`, Warm Yellow
+`#FBBF24`, Ink Navy `#0F172A` (body text) and Deep Navy `#0F2D6B` (the
+wordmark's own accent, never used as a UI colour), expressed as the tokens in
+`packages/core/src/ui-theme.css`; the typeface is Sora. Never hand-draw a
+second logo, paste a raster of it, or reach for a hex the tokens don't carry.
 
 Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card,
 row, pill or tile. A new pattern belongs in the kit, with a note in

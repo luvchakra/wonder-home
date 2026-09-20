@@ -23,7 +23,7 @@ import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
 
-import { HomeIllustration } from "../_components/home-illustration";
+import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { NewEventForm } from "../_components/new-event-form";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
@@ -125,28 +125,31 @@ export function HomeDashboard({ session }: { session: Session }) {
   return (
     <AppShell active="home" viewer={viewer} secondary={secondary} pathname="/">
       <div className="space-y-6">
-        <header className="wh-rise flex items-start justify-between gap-4">
-          <div className="min-w-0 space-y-1">
-            <h1 className="text-[1.625rem] font-bold tracking-tight text-balance sm:text-3xl">
+        <header className="wh-rise space-y-2">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="min-w-0 text-[1.625rem] font-bold tracking-tight text-balance sm:text-3xl">
               {greetingFor(timezone, now)}, {firstName}! <span aria-hidden>👋</span>
             </h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
+            {/* The sheet puts the weather here. WonderHome has no weather
+                provider, and a temperature nobody measured is exactly the
+                invented number rule 9 forbids — so this says the true thing
+                it does know, and goes somewhere useful. */}
+            <Link
+              href="/today"
+              className="flex shrink-0 items-center gap-2 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-2 pr-2 pl-3 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
+            >
+              <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
+              <span className="min-w-0 text-left">
+                <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
+                <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
+              </span>
+              <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+            </Link>
           </div>
-          {/* The sheet puts the weather here. WonderHome has no weather
-              provider, and a temperature nobody measured is exactly the
-              invented number rule 9 forbids — so this says the true thing
-              it does know, and goes somewhere useful. */}
-          <Link
-            href="/today"
-            className="flex shrink-0 items-center gap-2 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-2 pr-2 pl-3 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
-          >
-            <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
-            <span className="min-w-0 text-left">
-              <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
-              <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
-            </span>
-            <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
-          </Link>
+          {/* Its own row, full width, rather than squeezed into a column
+              beside the date pill — which is what was forcing this one
+              short sentence onto three lines instead of one. */}
+          <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
         </header>
 
         <Suspense fallback={<LoadingState rows={4} label="Checking on the household" />}>

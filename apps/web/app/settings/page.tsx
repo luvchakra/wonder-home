@@ -30,7 +30,7 @@ import { DataUseForm } from "../_components/data-use-form";
 import { PlanForm } from "../_components/plan-form";
 import { formatDate, requireSession } from "../_lib/session";
 
-export const metadata = { title: "Settings & profile" };
+export const metadata = { title: "Settings & Profile" };
 export const dynamic = "force-dynamic";
 
 type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | null; quiet_until: number | null };
@@ -85,7 +85,7 @@ export default async function SettingsPage() {
   ];
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: "Back" }} title="Settings & profile">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: "Back" }} title="Settings & Profile">
       <div className="space-y-6">
         <Card className="flex items-center gap-4 p-5">
           <Avatar name={view.displayName} size="xl" />

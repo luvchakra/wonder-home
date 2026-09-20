@@ -44,7 +44,7 @@ import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 
 import { unstable_cache } from "next/cache";
 
-import { HomeIllustration } from "../_components/home-illustration";
+import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { LandingHeader } from "./landing/header";
 import { AssistantMock, DashboardMock, DesktopMock, FloatingCard, LaptopFrame, PhoneFrame } from "./landing/mockups";
 import { Reveal } from "./landing/reveal";
@@ -139,7 +139,7 @@ export async function Landing() {
                 No credit card required · Works on all your devices · Made for families
               </p>
               <ScriptAccent tone="people" size="md" heart className="mt-7">
-                Less mental load.<br />More family time.
+                Less mental load.<br />More family time!
               </ScriptAccent>
             </div>
 

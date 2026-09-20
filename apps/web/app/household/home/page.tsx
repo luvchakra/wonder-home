@@ -13,7 +13,7 @@ import { AgendaRow } from "../../_components/agenda-row";
 import { AddAssetButton, RaiseServiceRequestButton } from "../../_components/home-forms";
 import { requireSession } from "../../_lib/session";
 
-export const metadata = { title: "Home & upkeep" };
+export const metadata = { title: "Home & Upkeep" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export default async function HomeUpkeepPage() {
   const session = await requireSession("/household/home");
   const { supabase, membership, view, viewer, secondary } = session;
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/home", back: { href: "/more", label: "Back" }, title: "Home & upkeep" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/home", back: { href: "/more", label: "Back" }, title: "Home & Upkeep" };
 
   if (view.tone === "child") {
     return (

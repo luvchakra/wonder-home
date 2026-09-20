@@ -11,7 +11,9 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [The rainbow wordmark, a pictorial bottom bar, a colour-coded sidebar, and Family redone](2026-09-20-brand-refresh-nav-and-family.md) |
 | 2026-09-20 | [Home's family and househelp rows open in place, and say more](2026-09-20-home-rows-expand-in-place.md) |
+| 2026-09-20 | [Home's lede fits on one line instead of wrapping to three](2026-09-20-home-lede-single-line.md) |
 | 2026-09-20 | [Jump back to the latest message](2026-09-20-jump-to-latest-message.md) |
 | 2026-09-20 | [A link that unfurls, and a Home you can actually tap](2026-09-20-share-card-and-a-tappable-home.md) |
 | 2026-09-20 | [The assistant asked the same question four times (04-011)](2026-09-20-never-ask-the-same-question-twice.md) |

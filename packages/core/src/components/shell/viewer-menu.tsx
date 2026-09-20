@@ -31,7 +31,7 @@ import type { ShellViewer } from "./mobile-header";
  * browser's own steps are spelled out. Gone once the app is installed.
  */
 const ITEMS = [
-  { href: "/settings", label: "Settings & profile", icon: Settings2 },
+  { href: "/settings", label: "Settings & Profile", icon: Settings2 },
   { href: "/help", label: "Get Help", icon: LifeBuoy },
   { href: "/certification", label: "What WonderHome believes", icon: ShieldCheck },
 ] as const;

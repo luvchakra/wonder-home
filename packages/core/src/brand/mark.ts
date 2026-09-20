@@ -111,10 +111,46 @@ export const WINDOW_COLOR = { light: "#0ea5e9", dark: "#38bdf8" } as const;
 export const TILE = { light: "#ffffff", dark: "#0f172a" } as const;
 
 /**
- * The brand's own colours, for the wordmark and for anywhere a screen needs
- * to reach for the palette deliberately.
+ * The wordmark, one letter at a time.
+ *
+ * The brand sheet's lockup is not two blocks of colour ("Wonder" in ink,
+ * "Home" in blue, the old design) but a rainbow running letter to letter,
+ * with the two letters that spell "H[ome]"'s bookends — the H and the final
+ * e — pulled to a deeper navy so the word still reads as one name and not
+ * a scattershot of colour. `WORDMARK_LETTERS` is read by both the live
+ * `Wordmark` component and the share-card generator, so a change here is a
+ * change everywhere the name is drawn, the same discipline the house mark
+ * itself already has.
  */
-export const BRAND_INK = "#0f172a";
-export const BRAND_HOME_GRADIENT = { light: ["#0284c7", "#0ea5e9"], dark: ["#38bdf8", "#7dd3fc"] } as const;
+export type WordmarkTone = "blue" | "yellow" | "green" | "navy";
 
-export const TAGLINE = "Less mental load. More family time.";
+/** Values for each tone above. `dark` lightens what would otherwise vanish on a dark surface — the same reason `WINDOW_COLOR` lifts a step. */
+export const WORDMARK_COLORS: Record<"light" | "dark", Record<WordmarkTone, string>> = {
+  light: {
+    blue: "#0ea5e9",
+    yellow: "#fbbf24",
+    green: "#22c55e",
+    navy: "#0f2d6b",
+  },
+  dark: {
+    blue: "#38bdf8",
+    yellow: "#fbbf24",
+    green: "#4ade80",
+    navy: "#bfe0ff",
+  },
+};
+
+export const WORDMARK_LETTERS: readonly { char: string; tone: WordmarkTone }[] = [
+  { char: "W", tone: "blue" },
+  { char: "o", tone: "yellow" },
+  { char: "n", tone: "blue" },
+  { char: "d", tone: "green" },
+  { char: "e", tone: "blue" },
+  { char: "r", tone: "yellow" },
+  { char: "H", tone: "navy" },
+  { char: "o", tone: "blue" },
+  { char: "m", tone: "green" },
+  { char: "e", tone: "navy" },
+] as const;
+
+export const TAGLINE = "Less mental load. More family time!";

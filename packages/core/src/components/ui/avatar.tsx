@@ -29,6 +29,21 @@ const TINTS = [
   "bg-[var(--wh-tone-money-soft)] text-[var(--wh-tone-money)]",
 ] as const;
 
+/** Just the background half of the same five tints, for a card that wants colour behind the whole row rather than only the avatar. Indexed identically to `TINTS`, so a person is the same colour whichever of the two they're drawn with. */
+const CARD_TINTS = [
+  "bg-[var(--wh-tone-people-soft)]",
+  "bg-[var(--wh-tone-school-soft)]",
+  "bg-[var(--wh-tone-home-soft)]",
+  "bg-[var(--wh-tone-care-soft)]",
+  "bg-[var(--wh-tone-money-soft)]",
+] as const;
+
+function tintIndexFor(name: string): number {
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return hash % TINTS.length;
+}
+
 export function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -37,9 +52,11 @@ export function initialsOf(name: string): string {
 }
 
 export function tintFor(name: string): string {
-  let hash = 0;
-  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return TINTS[hash % TINTS.length]!;
+  return TINTS[tintIndexFor(name)]!;
+}
+
+export function cardTintFor(name: string): string {
+  return CARD_TINTS[tintIndexFor(name)]!;
 }
 
 export type AvatarProps = {

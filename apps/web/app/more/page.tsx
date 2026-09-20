@@ -111,7 +111,7 @@ export default async function MorePage() {
           </Button>
         </form>
 
-        <QuoteCard>Less mental load. More family time.</QuoteCard>
+        <QuoteCard>Less mental load. More family time!</QuoteCard>
       </div>
     </AppShell>
   );

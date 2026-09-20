@@ -1,17 +1,19 @@
 import {
   BadgeCheck,
   Bell,
-  CalendarCheck,
-  Ellipsis,
+  Calendar,
+  Check,
   GraduationCap,
   HandHeart,
+  Heart,
   House,
+  LayoutGrid,
   ListChecks,
   Mic,
   Settings2,
   ShoppingBasket,
+  User,
   UserRoundCog,
-  Users,
   Utensils,
   Wallet,
   Wrench,
@@ -27,14 +29,46 @@ import {
 } from "../../navigation/primary-navigation";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
+import { IconTile, type IconTone } from "../ui/icon-tile";
 import { MoreTabButton } from "./nav-drawer";
+
+/**
+ * Today: a calendar in whatever colour the tab itself is (grey resting, blue
+ * active — the same rule every other tab icon follows), with a checkmark
+ * that stays handled-green regardless, because "the day is planned" is a
+ * fact independent of which tab you're looking at.
+ */
+function TodayTabIcon({ className }: { className?: string }) {
+  return (
+    <span className={cn("relative inline-grid size-5 shrink-0 place-items-center", className)}>
+      <Calendar aria-hidden className="size-5" />
+      <Check aria-hidden strokeWidth={3.5} className="absolute top-[52%] left-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 text-[var(--wh-handled)]" />
+    </span>
+  );
+}
+
+/**
+ * Family: two people and the heart between them, rather than Lucide's own
+ * flat two-tone `Users` glyph — the front figure follows the tab's own
+ * colour, the one behind keeps the household's warm tone, and the heart is
+ * the same pink already used for "family" everywhere else in the app.
+ */
+function FamilyTabIcon({ className }: { className?: string }) {
+  return (
+    <span className={cn("relative inline-block size-5 shrink-0", className)}>
+      <User aria-hidden fill="currentColor" strokeWidth={0} className="absolute right-0 bottom-0 size-3.5 text-[var(--wh-tone-money)]" />
+      <User aria-hidden fill="currentColor" strokeWidth={0} className="absolute bottom-0 left-0 size-4" />
+      <Heart aria-hidden fill="currentColor" strokeWidth={0} className="absolute -top-0.5 left-2.5 size-2.5 text-[var(--wh-tone-people)]" />
+    </span>
+  );
+}
 
 export const ICONS: Record<PrimaryNavItem["icon"], ComponentType<{ className?: string }>> = {
   house: House,
-  "calendar-check": CalendarCheck,
+  "calendar-check": TodayTabIcon,
   mic: Mic,
-  users: Users,
-  ellipsis: Ellipsis,
+  users: FamilyTabIcon,
+  grid: LayoutGrid,
 };
 
 export const SECONDARY_ICONS: Record<SecondaryNavItem["icon"], ComponentType<{ className?: string }>> = {
@@ -98,6 +132,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
                     href={item.href}
                     icon={SECONDARY_ICONS[item.icon]}
                     label={item.label}
+                    tone={item.tone}
                     active={Boolean(pathname && (pathname === item.href || pathname.startsWith(`${item.href}/`)))}
                   />
                 </li>
@@ -130,23 +165,33 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
           const Icon = ICONS[item.icon];
           const isActive = item.key === active;
           const isAi = item.key === "ai";
-          const content = (
+          const content = isAi ? (
             <>
-              {isAi ? (
-                <span
-                  className={cn(
-                    "-mt-5 grid size-12 place-items-center rounded-full text-[var(--wh-primary-foreground)] shadow-[var(--wh-shadow-primary)] ring-4 ring-[var(--wh-background)] transition-transform",
-                    isActive ? "scale-105" : "",
-                  )}
-                  style={{ background: "var(--wh-gradient-primary)" }}
-                >
-                  <Icon className="size-5" />
-                </span>
-              ) : (
-                <Icon className={cn("size-5", isActive && "fill-[var(--wh-primary-soft)]")} />
-              )}
+              <span
+                className={cn(
+                  "-mt-5 grid size-12 place-items-center rounded-full text-[var(--wh-primary-foreground)] shadow-[var(--wh-shadow-primary)] ring-4 ring-[var(--wh-background)] transition-transform",
+                  isActive ? "scale-105" : "",
+                )}
+                style={{ background: "var(--wh-gradient-primary)" }}
+              >
+                <Icon className="size-5" />
+              </span>
               <span>{item.label}</span>
             </>
+          ) : (
+            // The other four sit in a soft pill when they're the current
+            // area, rather than only the icon and text changing colour —
+            // the same "active means a filled shape, not just a tint" the
+            // sidebar's own current-item row already uses.
+            <span
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-[var(--wh-radius)] px-3 py-1.5 transition-colors",
+                isActive && "bg-[var(--wh-primary-soft)]",
+              )}
+            >
+              <Icon className={cn("size-5", isActive && "fill-[var(--wh-primary-soft)]")} />
+              <span>{item.label}</span>
+            </span>
           );
           const tabClass = cn(
             "flex min-h-[var(--wh-tabbar-height)] w-full flex-col items-center justify-center gap-1 px-1 text-[0.6875rem] font-medium transition-colors",
@@ -179,6 +224,7 @@ export function SidebarLink({
   active,
   onClick,
   size = "sm",
+  tone,
 }: {
   href: string;
   icon: ComponentType<{ className?: string }>;
@@ -188,6 +234,12 @@ export function SidebarLink({
   onClick?: () => void;
   /** "lg" gives a taller, easier-to-tap row for a touch-only drawer. */
   size?: "sm" | "lg";
+  /**
+   * A household domain's own colour (rule 3), shown as a tinted `IconTile`
+   * instead of a bare glyph. Left out for the five primary areas above the
+   * domain list, which have never carried a domain colour of their own.
+   */
+  tone?: IconTone;
 }) {
   return (
     <Link
@@ -195,14 +247,14 @@ export function SidebarLink({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-[var(--wh-radius-sm)] px-3 text-[0.8125rem] font-medium transition-colors",
+        "flex items-center gap-3 rounded-[var(--wh-radius-sm)] border-l-[3px] px-2.5 text-[0.8125rem] font-medium transition-colors",
         size === "lg" ? "min-h-12 text-sm" : "min-h-10",
         active
-          ? "bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]"
-          : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)]",
+          ? "border-[var(--wh-primary)] bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]"
+          : "border-transparent text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)]",
       )}
     >
-      <Icon className="size-[1.125rem] shrink-0" />
+      {tone ? <IconTile icon={Icon} tone={tone} size="sm" /> : <Icon className="size-[1.125rem] shrink-0" />}
       <span className="truncate">{label}</span>
     </Link>
   );
