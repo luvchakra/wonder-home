@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -23,7 +24,12 @@ export type DomainCardProps = {
 export function DomainCard({ href, icon, tone, title, description, meta, className }: DomainCardProps) {
   const inner = (
     <>
-      <IconTile icon={icon} tone={tone} size="lg" />
+      <span className="flex items-start justify-between gap-2">
+        <IconTile icon={icon} tone={tone} size="lg" />
+        {href ? (
+          <ChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+        ) : null}
+      </span>
       <span className="mt-3 block text-sm font-semibold tracking-tight">{title}</span>
       <span className="mt-0.5 block text-xs leading-snug text-[var(--wh-foreground-muted)]">
         {description}
@@ -40,7 +46,14 @@ export function DomainCard({ href, icon, tone, title, description, meta, classNa
   );
 
   return href ? (
-    <Link href={href} className={cn(base, "wh-lift")}>
+    <Link
+      href={href}
+      className={cn(
+        base,
+        "wh-lift transition-colors hover:border-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)]/30",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]",
+      )}
+    >
       {inner}
     </Link>
   ) : (

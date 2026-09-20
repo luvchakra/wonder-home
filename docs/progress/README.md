@@ -11,6 +11,8 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [Jump back to the latest message](2026-09-20-jump-to-latest-message.md) |
+| 2026-09-20 | [A link that unfurls, and a Home you can actually tap](2026-09-20-share-card-and-a-tappable-home.md) |
 | 2026-09-20 | [The assistant asked the same question four times (04-011)](2026-09-20-never-ask-the-same-question-twice.md) |
 | 2026-09-20 | [Home, rebuilt to the sheet — and a hard two-card rule](2026-09-20-home-redesign-and-the-two-card-rule.md) |
 | 2026-09-20 | [The speech key belongs to the deployment, not to a family](2026-09-20-speech-key-moves-to-the-platform.md) |

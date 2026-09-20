@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -24,20 +25,30 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
   const body = (
     <>
       {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block text-xl font-semibold leading-none tracking-tight">{value}</span>
         <span className="mt-1 block text-[0.6875rem] font-medium text-[var(--wh-foreground-muted)]">
           {label}
         </span>
       </span>
+      {/* A card that goes somewhere says so. Without the chevron these read
+          as read-only counts, and nobody discovers they are a way in. */}
+      {href ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}
     </>
   );
 
   const className =
-    "flex items-center gap-3 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]";
+    "flex items-center gap-2.5 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]";
 
   return href ? (
-    <Link href={href} className={cn(className, "wh-lift")}>
+    <Link
+      href={href}
+      className={cn(
+        className,
+        "wh-lift transition-colors hover:border-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)]/30",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]",
+      )}
+    >
       {body}
     </Link>
   ) : (
