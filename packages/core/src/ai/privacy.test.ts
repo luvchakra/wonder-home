@@ -7,6 +7,7 @@ import {
   dataUseFromRule,
   describeDataUse,
   minimiseContext,
+  restoreNames,
   routeToProvider,
   type ContextCandidate,
   type DataUsePolicy,
@@ -298,5 +299,20 @@ describe("telling a household what they have agreed to", () => {
     const said = describeDataUse(policy({ allowedClasses: ["general", "child", "health"] })).join(" ");
     expect(said).toContain("information about your children");
     expect(said).toContain("health information");
+  });
+});
+
+describe("restoring names in a composed answer", () => {
+  it("puts first names back where the placeholders were, possessives included", () => {
+    const { pseudonyms } = minimiseContext([candidate({ text: "Priya and Aarav." })], { policy: policy(), people: PEOPLE });
+    const priya = pseudonyms.a1!;
+    const aarav = pseudonyms.b2!;
+    expect(restoreNames(`${priya} has a meeting; ${aarav}'s homework is due. ${aarav.toLowerCase()} is free.`, pseudonyms, PEOPLE)).toBe(
+      "Priya has a meeting; Aarav's homework is due. Aarav is free.",
+    );
+  });
+
+  it("leaves a placeholder it does not know alone", () => {
+    expect(restoreNames("Adult Z is away.", { a1: "Adult A" }, PEOPLE)).toBe("Adult Z is away.");
   });
 });

@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import type { ConversationTurn, Understanding } from "../conversation/engine";
 import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget, type UnderstandingTrace } from "../conversation/intent";
+import type { ModelProvider } from "./model-key";
 
 /**
  * A real model behind the `understand` seam (product-direction update,
@@ -297,4 +298,134 @@ export function createOpenAIUnderstanding(apiKey: string): Understanding {
       return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "provider_error" });
     }
   };
+}
+
+// ---------------------------------------------------------------------------
+// Composing an answer from the household's own facts
+// ---------------------------------------------------------------------------
+
+/**
+ * The second thing a model does for the household (product-direction v4 §5,
+ * the Household Brain): answer a question from what the home actually
+ * contains, in plain words.
+ *
+ * Understanding (above) turns a sentence into a request. This turns a
+ * question plus the facts the server gathered — and the consent gate let
+ * through — into a reply. The model is told the facts are the whole world:
+ * it may not invent a bill, a person or a plan that is not listed, may not
+ * claim to have done anything, and must say plainly when the facts do not
+ * cover the question. People appear as placeholders; the server puts the
+ * names back afterwards (`restoreNames`).
+ */
+export type AnswerInput = {
+  question: string;
+  /** Pseudonymised facts, one line each, already past the consent gate. */
+  facts: readonly string[];
+  history?: readonly ConversationTurn[];
+  /** The viewer's role, so the answer can be framed for them. */
+  viewer: string;
+  /** Local date and time in the household's zone, spelled out. */
+  localNow: string;
+};
+
+export type AnswerComposer = (input: AnswerInput) => Promise<{ text: string; grounded: boolean } | null>;
+
+const AnswerOutputSchema = z.object({
+  /** The reply, in plain prose. */
+  answer: z.string().trim().min(1).max(1200),
+  /** Whether the facts actually covered the question. */
+  grounded: z.boolean(),
+});
+
+const ANSWER_JSON_SCHEMA = {
+  type: "object",
+  properties: { answer: { type: "string" }, grounded: { type: "boolean" } },
+  required: ["answer", "grounded"],
+} as const;
+
+const ANSWER_SYSTEM_PROMPT = `You are WonderHome, a household's own assistant, answering one question from a member of the household.
+
+You are given FACTS: everything relevant that WonderHome currently knows about this home, one per line. The facts are the whole world. Never invent a person, a bill, an event, a meal, an item or a plan that is not in them. Never claim that you did, changed, paid, ordered, sent or scheduled anything — you only describe what is known. If the question asks you to do something, say what you can see about it and that the household can ask you to do it as a separate request.
+
+People appear as placeholders such as "Adult A", "Child B" or "Helper A". Use the placeholders exactly as written; the household's own system replaces them with names afterwards.
+
+Answer the question that was actually asked, for the person asking (their role is given). Be warm, specific and brief: plain sentences, no headings, no bullet points, no markdown, at most about 120 words. Lead with what matters most to them. When the facts do not cover the question, say so in one plain sentence and say what would help — never pad with generalities and never repeat the same summary for different questions.
+
+Set grounded to true when the facts answered the question, false when they did not.`;
+
+function answerMessages(input: AnswerInput): { role: "user" | "assistant"; content: string }[] {
+  const facts = input.facts.length > 0 ? input.facts.map((fact) => `- ${fact}`).join("\n") : "- (WonderHome has not been told anything about this home yet.)";
+  const briefing = `Now: ${input.localNow}.\nAsking: ${input.viewer}.\n\nFACTS:\n${facts}`;
+  const turns = conversationMessages(input.history, input.question);
+  const last = turns[turns.length - 1]!;
+  return [...turns.slice(0, -1), { role: "user", content: `${briefing}\n\nQUESTION: ${last.content}` }];
+}
+
+/** Pure mapping from what a model returned to what the route uses. */
+export function answerFromModelOutput(parsed: z.infer<typeof AnswerOutputSchema> | null): { text: string; grounded: boolean } | null {
+  if (!parsed) return null;
+  const text = parsed.answer.replace(/\s+\n/g, "\n").trim();
+  return text ? { text, grounded: parsed.grounded } : null;
+}
+
+/**
+ * An `AnswerComposer` for whichever provider the household's key names.
+ * Every failure resolves to null — the route then answers from its own
+ * deterministic composition, and the log carries the class and status.
+ */
+export function createAnswerComposer(provider: ModelProvider, apiKey: string): AnswerComposer {
+  switch (provider) {
+    case "anthropic": {
+      const client = new Anthropic({ apiKey });
+      return async (input) => {
+        try {
+          const response = await client.messages.parse({
+            model: CLAUDE_MODEL,
+            max_tokens: 1024,
+            system: ANSWER_SYSTEM_PROMPT,
+            messages: answerMessages(input),
+            output_config: { format: zodOutputFormat(AnswerOutputSchema), effort: "low" },
+          });
+          if (response.stop_reason === "refusal" || !response.parsed_output) return null;
+          return answerFromModelOutput(response.parsed_output);
+        } catch (thrown) {
+          logProviderFailure("anthropic", thrown);
+          return null;
+        }
+      };
+    }
+    case "google": {
+      const client = new GoogleGenAI({ apiKey });
+      return async (input) => {
+        try {
+          const response = await client.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: answerMessages(input).map((message) => ({ role: message.role === "user" ? "user" : "model", parts: [{ text: message.content }] })),
+            config: { systemInstruction: ANSWER_SYSTEM_PROMPT, responseMimeType: "application/json", responseJsonSchema: ANSWER_JSON_SCHEMA },
+          });
+          const parsed = response.text ? AnswerOutputSchema.safeParse(JSON.parse(response.text)) : null;
+          return parsed?.success ? answerFromModelOutput(parsed.data) : null;
+        } catch (thrown) {
+          logProviderFailure("google", thrown);
+          return null;
+        }
+      };
+    }
+    case "openai": {
+      const client = new OpenAI({ apiKey });
+      return async (input) => {
+        try {
+          const completion = await client.chat.completions.parse({
+            model: OPENAI_MODEL,
+            messages: [{ role: "system", content: ANSWER_SYSTEM_PROMPT }, ...answerMessages(input)],
+            response_format: zodResponseFormat(AnswerOutputSchema, "household_answer"),
+          });
+          return answerFromModelOutput(completion.choices[0]?.message.parsed ?? null);
+        } catch (thrown) {
+          logProviderFailure("openai", thrown);
+          return null;
+        }
+      };
+    }
+  }
 }

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [The Household Brain: a question answered from everything the home holds](2026-09-20-household-brain-answers.md) |
 | 2026-09-20 | [Talk to WonderHome: the model was never being asked](2026-09-20-talk-provider-gate-and-wider-rules.md) |
 | 2026-09-20 | [The brand sheet, applied: new mark, lockup, palette, landing copy](2026-09-20-rebrand-to-the-brand-sheet.md) |
 | 2026-09-20 | [The Talk page opens at the newest message, with nothing scrolling](2026-09-20-talk-page-bottom-anchored-scroller.md) |

@@ -4,9 +4,9 @@
 
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
-| 1 | P0 | 14-001 | Household orchestrator | Done | Authorization outside the model; approval binds to the exact action |
+| 1 | P0 | 14-001 | Household orchestrator | Done | Authorization outside the model; approval binds to the exact action. 2026-09-20: the Household Brain (`conversation/brain.ts`, v4 §5) gathers every domain into one consented context, and a question is answered from all of it |
 | 2 | P0 | 14-002 | Governed tools | Done | Authorization outside the model; approval binds to the exact action |
-| 3 | P0 | 14-003 | Plan/execute/monitor loop | Done | Authorization outside the model; approval binds to the exact action |
+| 3 | P0 | 14-003 | Plan/execute/monitor loop | Done | Authorization outside the model; approval binds to the exact action. 2026-09-20: "understand" now reads the whole home (v4 §6 context assembly, cross-domain reasoning, result interpretation), not one domain's summary |
 | 4 | P0 | 14-004 | Agent runs | Done | Authorization outside the model; approval binds to the exact action |
 | 5 | P0 | 14-005 | Approval integration | Done | Authorization outside the model; approval binds to the exact action |
 | 6 | P0 | 14-006 | Learning boundaries | Done | Authorization outside the model; approval binds to the exact action |
