@@ -3,39 +3,53 @@ import { z } from "zod";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, routeToProvider, type ContextCandidate } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, routeToProvider, unpseudonymise, type ContextCandidate, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
-import { converse, pendingFrom, previewOf, type Understanding } from "@wonderhome/core/conversation/engine";
-import type { HouseholdIntent } from "@wonderhome/core/conversation/intent";
+import { converse, pendingFrom, previewOf, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
+import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
 import {
   currentSessionId,
   decideAction,
   listMessages,
+  loadAction,
+  markActionResult,
   openSession,
   pendingAction,
+  recentTurns,
   recordMessage,
   recordProposal,
   remember,
   type ConversationAction,
 } from "@wonderhome/core/conversation/repository";
+import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
+import { listEvents } from "@wonderhome/core/family/repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
+import { buildPersonalView } from "@wonderhome/core/identity/views";
+
+import { householdAgenda } from "@/app/_lib/agenda";
 
 /**
- * The conversation: one engine for talk and text (module 04).
+ * The conversation: one engine for talk and text (module 04), made real
+ * (product-direction update §6–§8).
  *
  * POST takes what was said and returns what WonderHome says back, with an
  * action preview when it is prepared to do something. Consent is a separate
  * POST naming the action — or a "yes" that resolves against the last proposal
- * inside its time limit. Nothing here executes a domain effect: an approved
- * action is handed to the governed tools, whose own gate checks again.
+ * inside its time limit. What may be done now is done now, through the same
+ * repositories the forms call and under the member's own RLS; what needs a
+ * yes is done once the yes arrives; what WonderHome cannot do yet is said so,
+ * in those words, never "it is on its way".
  */
 const sayScheme = z.object({
   utterance: z.string().trim().min(1).max(1000),
@@ -51,12 +65,25 @@ const decideScheme = z.object({
 const bodySchema = z.union([sayScheme, decideScheme]);
 
 type Params = { params: Promise<{ householdId: string }> };
+type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Feature keys a consequential intent needs, beyond the conversation itself. */
 const FEATURE_FOR_ACTION: Partial<Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events">> = {
   make_payment: "finance.bills",
   order_items: "commerce.orders",
   plan_event: "family.events",
+};
+
+/** The target kind each recorded action type implies, for carrying an approved proposal out. */
+const TARGET_KIND_FOR_ACTION: Record<string, IntentTarget["kind"]> = {
+  record_absence: "member",
+  assign_responsibility: "member",
+  add_to_list: "list",
+  order_items: "list",
+  make_payment: "bill",
+  plan_event: "event",
+  adjust_schedule: "event",
+  set_preference: "outcome",
 };
 
 export async function GET(request: Request, { params }: Params) {
@@ -95,10 +122,13 @@ export async function POST(request: Request, { params }: Params) {
       if (!action) throw ApiError.notFound("That proposal is no longer waiting for a decision.");
 
       const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: "text" });
-      const text = body.decision === "approved" ? "Done — I have your go-ahead and it is on its way." : "Understood. I have left that alone.";
-      const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { decidedActionId: action.id } });
+      const people = await listPeople(supabase, householdId);
+      const settled = body.decision === "approved"
+        ? await carryOutApproved({ admin, supabase, householdId, membership, action, people })
+        : { text: "Understood. I have left that alone.", action };
+      const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: action.id } });
 
-      return { reply: { id: messageId, text, action } };
+      return { reply: { id: messageId, text: settled.text, action: settled.action } };
     }
 
     // Entitlement first, on the server, before anything is read or written.
@@ -106,13 +136,14 @@ export async function POST(request: Request, { params }: Params) {
     const entitlement = await may(supabase, householdId, feature);
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
 
-    const [entitled, sessionId, autonomyFor, routing] = await Promise.all([
+    const [entitled, sessionId, autonomyFor, people] = await Promise.all([
       consequentialEntitlements(supabase, householdId),
       openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel }),
       autonomyLookup(supabase, householdId),
-      decideProviderRouting(supabase, householdId, body.utterance),
+      listPeople(supabase, householdId),
     ]);
-    const pending = await pendingAction(admin, sessionId);
+    const [pending, history] = await Promise.all([pendingAction(admin, sessionId), recentTurns(admin, sessionId, 6)]);
+    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people);
 
     const memberMessageId = await recordMessage(admin, {
       householdId,
@@ -134,21 +165,48 @@ export async function POST(request: Request, { params }: Params) {
         const needed = FEATURE_FOR_ACTION[intent.action];
         return needed ? entitled[needed] : true;
       },
+      executable: canExecute,
       sessionId,
       understand: routing.understand,
+      history: routing.history,
     });
 
     await consume(supabase, householdId, feature).catch(() => undefined);
+
+    const execution: ExecutionContext = {
+      supabase,
+      householdId,
+      actorMemberId: membership.memberId,
+      members: people,
+      timezone: membership.household.timezone,
+    };
+
+    // What the assistant says: the engine's line, unless something real
+    // happened this turn — a question answered from the household's own
+    // state, or a write that went through (or did not).
+    let text = result.text;
+    let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
+
+    if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
+      text = await answerStatus(supabase, householdId, membership, result.intent);
+    } else if (result.kind === "reply" && result.proposal.kind === "executed") {
+      if (result.memory) await remember(admin, householdId, result.memory);
+      const done = await executeIntent(result.intent, execution);
+      text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+      outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
+    } else if (result.kind === "reply" && result.memory) {
+      await remember(admin, householdId, result.memory);
+    }
 
     let action: ConversationAction | null = null;
     const replyId = await recordMessage(admin, {
       householdId,
       sessionId,
       role: "assistant",
-      content: result.text,
+      content: text,
       metadata: {
         ...(result.kind === "reply"
-          ? { proposal: result.proposal.kind, intent: result.intent.action }
+          ? { proposal: result.proposal.kind, intent: result.intent.action, understanding: result.intent.understanding?.source ?? null, understandingFailure: result.intent.understanding?.failure ?? null }
           : { kind: result.kind }),
         // Why this turn did or did not reach a model provider (15-005). A
         // code and a count, never the content either way.
@@ -164,11 +222,18 @@ export async function POST(request: Request, { params }: Params) {
         memberId: membership.memberId,
         decision: result.kind === "approve" ? "approved" : "rejected",
       });
-    } else if (result.kind === "reply") {
-      if (result.record) {
-        action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal });
+      if (result.kind === "approve" && action) {
+        const settled = await carryOutApproved({ admin, supabase, householdId, membership, action, people });
+        text = settled.text;
+        action = settled.action;
+        await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
       }
-      if (result.memory) await remember(admin, householdId, result.memory);
+    } else if (result.kind === "reply" && result.record) {
+      action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal });
+      if (outcome) {
+        await markActionResult(admin, { actionId: action.id, ...outcome });
+        action = { ...action, status: outcome.status };
+      }
     }
 
     return {
@@ -176,7 +241,7 @@ export async function POST(request: Request, { params }: Params) {
       memberMessageId,
       reply: {
         id: replyId,
-        text: result.text,
+        text,
         action,
         preview: result.kind === "reply" ? previewOf(result.proposal) : null,
         proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
@@ -187,31 +252,137 @@ export async function POST(request: Request, { params }: Params) {
   })(request);
 }
 
+/**
+ * An approved proposal is carried out now, through the same governed write
+ * the turn would have used — and if there is no such write yet, the person
+ * is told exactly that. "It is on its way" was the one sentence this route
+ * must never say about something that did not move.
+ */
+async function carryOutApproved(input: {
+  admin: ReturnType<typeof createAdminClient>;
+  supabase: Supabase;
+  householdId: string;
+  membership: HouseholdMembership;
+  action: ConversationAction;
+  people: Person[];
+}): Promise<{ text: string; action: ConversationAction }> {
+  const stored = await loadAction(input.admin, { householdId: input.householdId, actionId: input.action.id });
+  if (!stored) return { text: "Done — I have your go-ahead.", action: input.action };
+
+  const intent: HouseholdIntent = {
+    action: stored.actionType as HouseholdIntent["action"],
+    actorMemberId: input.membership.memberId,
+    target: { kind: TARGET_KIND_FOR_ACTION[stored.actionType] ?? "unspecified", ...(stored.outcomeKey ? { reference: stored.outcomeKey } : {}) },
+    parameters: stored.parameters,
+    confidence: 1,
+    channel: "text",
+    utterance: input.action.preview?.summary ?? stored.actionType,
+  };
+
+  if (!canExecute(intent)) {
+    return { text: notYetDoable(intent.action), action: input.action };
+  }
+
+  const done = await executeIntent(intent, {
+    supabase: input.supabase,
+    householdId: input.householdId,
+    actorMemberId: input.membership.memberId,
+    members: input.people,
+    timezone: input.membership.household.timezone,
+  });
+  const status = done.ok ? "executed" : "failed";
+  await markActionResult(input.admin, { actionId: input.action.id, status, result: done.ok ? done.result : { reason: done.reason } });
+
+  return {
+    text: done.ok ? done.text : `I have your go-ahead, and it did not go through: ${done.reason}`,
+    action: { ...input.action, status },
+  };
+}
+
+/**
+ * "What's going on?" answered from the household's own state — the same
+ * domain engines the Home screen reads, composed on this server. Nothing
+ * about the household leaves to produce it.
+ */
+async function answerStatus(supabase: Supabase, householdId: string, membership: HouseholdMembership, intent: HouseholdIntent): Promise<string> {
+  const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
+  const when = typeof intent.parameters.when === "string" ? intent.parameters.when : null;
+  const now = new Date();
+
+  const [agenda, events] = await Promise.all([
+    householdAgenda(supabase, householdId, view),
+    when ? listEvents(supabase, householdId, windowFor(when, now)).catch(() => []) : Promise.resolve(null),
+  ]);
+
+  return composeStatusAnswer({
+    needsYou: agenda.needsYou,
+    handled: agenda.handled,
+    checked: agenda.checked,
+    unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label),
+    events: events?.map((event) => ({ title: event.title, startsAt: event.startsAt, cancelled: event.status === "cancelled" })),
+    when,
+    timezone: membership.household.timezone,
+  });
+}
+
+function windowFor(when: string, now: Date): { from: Date; to: Date } {
+  const day = 86_400_000;
+  const startOf = (offsetDays: number) => {
+    const date = new Date(now.getTime() + offsetDays * day);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+  switch (when.toLowerCase()) {
+    case "tomorrow":
+      return { from: startOf(1), to: startOf(2) };
+    case "this week":
+    case "next week":
+      return { from: startOf(when.toLowerCase() === "next week" ? 7 : 0), to: startOf(when.toLowerCase() === "next week" ? 14 : 7) };
+    case "this weekend":
+      return { from: startOf(0), to: startOf(7) };
+    default:
+      return { from: startOf(0), to: startOf(1) };
+  }
+}
+
+async function listPeople(supabase: Supabase, householdId: string): Promise<Person[]> {
+  const { data } = await supabase
+    .from("household_members")
+    .select("id, display_name, member_type")
+    .eq("household_id", householdId)
+    .eq("status", "active");
+
+  return ((data as { id: string; display_name: string; member_type: Person["memberType"] }[] | null) ?? []).map((row) => ({
+    id: row.id,
+    displayName: row.display_name,
+    memberType: row.member_type,
+  }));
+}
 
 /**
  * Whether this turn may reach a model provider, and with how little (15-005,
- * and — once a client exists behind the gate — the product-direction
- * update's "Priority A: make the brain real").
+ * and the product-direction update's "Priority A: make the brain real").
  *
  * The gate runs on every turn, before anything is understood, exactly as it
  * did while no provider was configured: building the consent check first and
- * the provider call behind it second is the order that keeps the promise. The
- * reverse order is how a product ships a provider integration and adds the
- * consent check in the release after.
+ * the provider call behind it second is the order that keeps the promise.
  *
- * What is recorded is a code and a count, never the utterance's content — it
- * is already stored as the member's own message under RLS, and repeating any
- * of it here would put household content into a metadata column that nothing
- * filters. Anthropic, Google and OpenAI all have a real client wired up
- * today — the same "never claim a call that did not happen" rule that held
- * before any client existed still applies to whichever one a household or
- * the platform is actually configured for.
+ * What goes: what the person said, and up to a few earlier turns of the same
+ * conversation so that "actually make it 7" can be understood — each a
+ * candidate that has to pass the household's data-use policy, with names
+ * replaced by placeholders on the way out. What comes back is mapped back
+ * here: a model that answers about "child a" is answering about a
+ * placeholder, and only this server knows who that is.
+ *
+ * What is recorded is a code and a count, never the utterance's content.
  */
 async function decideProviderRouting(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Supabase,
   householdId: string,
   utterance: string,
-): Promise<{ code: string; itemsSent: number; disclosure: string[]; understand?: Understanding }> {
+  history: readonly ConversationTurn[],
+  people: Person[],
+): Promise<{ code: string; itemsSent: number; disclosure: string[]; understand?: Understanding; history?: ConversationTurn[] }> {
   const [policy, householdKey] = await Promise.all([
     loadDataUse(supabase, householdId),
     readHouseholdKey(householdId).catch(() => null),
@@ -219,26 +390,15 @@ async function decideProviderRouting(
 
   const key = resolveModelKey(householdKey, platformKey());
 
-  const { data: memberRows } = await supabase
-    .from("household_members")
-    .select("id, display_name, member_type")
-    .eq("household_id", householdId)
-    .eq("status", "active");
-
-  const people = ((memberRows as { id: string; display_name: string; member_type: "adult" | "child" | "helper" }[] | null) ?? []).map(
-    (row) => ({ id: row.id, displayName: row.display_name, memberType: row.member_type }),
-  );
-
-  // One candidate today: what the person said. Everything else the assistant
-  // knows is reached by deterministic rules that never leave this server.
   const candidates: ContextCandidate[] = [
-    {
-      id: "utterance",
-      contentClass: "general",
-      need: "what was asked",
-      text: utterance,
+    { id: "utterance", contentClass: "general", need: "what was asked", text: utterance, relevant: true },
+    ...history.map((turn, index) => ({
+      id: `history-${index}`,
+      contentClass: "general" as const,
+      need: "what was said just before",
+      text: turn.text,
       relevant: true,
-    },
+    })),
   ];
 
   const minimised = minimiseContext(candidates, { policy, people });
@@ -246,55 +406,64 @@ async function decideProviderRouting(
     provider: key.provider,
     keySource: key.source,
     policy,
-    hasContent: minimised.included.length > 0,
+    hasContent: minimised.included.some((entry) => entry.id === "utterance"),
   });
 
   if (!decision.ok) {
     return { code: decision.code, itemsSent: 0, disclosure: [decision.reason] };
   }
 
-  // A provider is configured and permitted. All three `ModelProvider`s have
-  // a real client behind them today (`ai/model-client.ts`); the fallback
-  // below is only for a decision that names a provider without a resolved
-  // key, which `routeToProvider` does not produce.
-  if (decision.provider === "anthropic" && key.key) {
+  const sentUtterance = minimised.included.find((entry) => entry.id === "utterance")?.text ?? utterance;
+  const sentHistory: ConversationTurn[] = history
+    .map((turn, index) => ({ turn, sent: minimised.included.find((entry) => entry.id === `history-${index}`) }))
+    .filter((entry): entry is { turn: ConversationTurn; sent: { id: string; contentClass: "general"; text: string } } => Boolean(entry.sent))
+    .map((entry) => ({ role: entry.turn.role, text: entry.sent.text }));
+
+  const provider =
+    decision.provider === "anthropic" && key.key
+      ? { name: "Anthropic Claude", understand: createClaudeUnderstanding(key.key) }
+      : decision.provider === "google" && key.key
+        ? { name: "Google Gemini", understand: createGeminiUnderstanding(key.key) }
+        : decision.provider === "openai" && key.key
+          ? { name: "OpenAI", understand: createOpenAIUnderstanding(key.key) }
+          : null;
+
+  if (!provider) {
     return {
-      code: "transmitted",
-      itemsSent: minimised.included.length,
-      disclosure: ["What you said was sent to Anthropic Claude to understand your request."],
-      understand: createClaudeUnderstanding(key.key),
+      code: "not_transmitted_no_client",
+      itemsSent: 0,
+      disclosure: [`No ${decision.provider} client is wired up yet. Nothing about your home was sent, and the assistant answered from its own rules.`],
     };
   }
 
-  if (decision.provider === "google" && key.key) {
-    return {
-      code: "transmitted",
-      itemsSent: minimised.included.length,
-      disclosure: ["What you said was sent to Google Gemini to understand your request."],
-      understand: createGeminiUnderstanding(key.key),
-    };
-  }
-
-  if (decision.provider === "openai" && key.key) {
-    return {
-      code: "transmitted",
-      itemsSent: minimised.included.length,
-      disclosure: ["What you said was sent to OpenAI to understand your request."],
-      understand: createOpenAIUnderstanding(key.key),
-    };
-  }
+  // The model sees the pseudonymised text and answers about placeholders;
+  // what it answers is mapped back to the household here, on this server.
+  const understand: Understanding = async (_utterance, context) => {
+    const intent = await provider.understand(sentUtterance, { ...context, history: sentHistory });
+    if (intent.target.kind === "member" && intent.target.reference) {
+      const mapped = unpseudonymise(intent.target.reference, minimised.pseudonyms, people);
+      return {
+        ...intent,
+        target: { kind: "member", reference: mapped.reference },
+        parameters: mapped.memberId ? { ...intent.parameters, memberId: mapped.memberId } : intent.parameters,
+      };
+    }
+    return intent;
+  };
 
   return {
-    code: "not_transmitted_no_client",
-    itemsSent: 0,
+    code: "transmitted",
+    itemsSent: minimised.included.length,
     disclosure: [
-      `No ${decision.provider} client is wired up yet. Nothing about your home was sent, and the assistant answered from its own rules.`,
+      `What you said${sentHistory.length > 0 ? `, and the last ${sentHistory.length} turn${sentHistory.length === 1 ? "" : "s"} of this conversation,` : ""} went to ${provider.name} to understand your request. Names were replaced with roles first.`,
     ],
+    understand,
+    history: sentHistory,
   };
 }
 
 /** Autonomy per outcome, from the responsibilities matrix; "approve" if unset. */
-async function autonomyLookup(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string) {
+async function autonomyLookup(supabase: Supabase, householdId: string) {
   const { data } = await supabase.from("responsibilities").select("outcome_key, ai_mode").eq("household_id", householdId);
   const modes = new Map<string, AutonomyMode>(((data as { outcome_key: string; ai_mode: AutonomyMode }[] | null) ?? []).map((row) => [row.outcome_key, row.ai_mode]));
   return (outcomeKey: string | null): AutonomyMode => (outcomeKey && modes.get(outcomeKey)) || "approve";
@@ -307,7 +476,7 @@ async function autonomyLookup(supabase: Awaited<ReturnType<typeof createClient>>
  * conversation's own.
  */
 async function consequentialEntitlements(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Supabase,
   householdId: string,
 ): Promise<Record<"finance.bills" | "commerce.orders" | "family.events", boolean>> {
   const [bills, orders, events] = await Promise.all([

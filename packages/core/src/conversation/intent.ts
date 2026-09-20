@@ -22,9 +22,24 @@ export const INTENT_ACTIONS = [
   "make_payment",
   "order_items",
   "assign_responsibility",
+  /** A hello, a thank-you, or "what can you do?" — answered warmly, never as a failure to understand. */
+  "greet",
   "unknown",
 ] as const;
 export type IntentAction = (typeof INTENT_ACTIONS)[number];
+
+/**
+ * How an intent came to be understood. Never a decision input — every gate
+ * downstream runs the same whatever produced the intent — but the honest
+ * reply depends on it: "I did not follow that" and "I could not reach my
+ * model" are different sentences, and only one of them is true at a time.
+ */
+export type UnderstandingTrace = {
+  source: "fixture" | "rules" | "model";
+  provider?: "anthropic" | "google" | "openai";
+  /** Set when a model was asked and did not answer usably. */
+  failure?: "provider_error" | "unparseable";
+};
 
 export type IntentTarget = {
   /** What the request is about: an outcome key, a member, a list. */
@@ -43,6 +58,8 @@ export type HouseholdIntent = {
   channel: "text" | "voice";
   /** What the person actually said, kept for the action preview. */
   utterance: string;
+  /** Where the understanding came from. Informational only. */
+  understanding?: UnderstandingTrace;
 };
 
 /** Actions where guessing wrong costs the household something real. */
@@ -66,11 +83,21 @@ export const CLARIFY_BELOW_CONFIDENCE = 0.75;
 
 export type IntentDisposition = { kind: "clarify"; question: string } | { kind: "proceed" };
 
+/** What the assistant can be asked, in the household's words — offered whenever it did not follow. */
+export const WHAT_I_CAN_DO =
+  "You can ask what needs attention, add something to the groceries, tell me who is away, ask about a bill, or say what the family prefers.";
+
 export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
   if (intent.action === "unknown") {
+    if (intent.understanding?.failure) {
+      return {
+        kind: "clarify",
+        question: "I could not reach my model just now, so I did not understand that. Try again in a moment, or say it another way.",
+      };
+    }
     return {
       kind: "clarify",
-      question: "I did not follow that — what would you like me to do?",
+      question: `I did not follow that. ${WHAT_I_CAN_DO} What would you like?`,
     };
   }
 

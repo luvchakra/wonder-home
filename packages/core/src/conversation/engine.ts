@@ -9,6 +9,7 @@ import {
 } from "./intent";
 import { extractMemory, type Memory } from "./memory";
 import { needsRecording, proposeFromIntent, type ActionPreview, type Proposal } from "./proposal";
+import { resolveRuleIntent } from "./rules";
 
 /**
  * One turn of conversation, from what was said to what WonderHome says back.
@@ -34,10 +35,32 @@ export const CONFIRM_TRANSCRIPT_BELOW = 0.6;
 /** How long a proposal waits for a yes before a stray yes stops counting. */
 export const PROPOSAL_TTL_MINUTES = 10;
 
+/**
+ * One earlier turn of the same conversation, for an understanding that can
+ * use it. Text only, already minimised and pseudonymised by the caller —
+ * this type carries no household identity on purpose.
+ */
+export type ConversationTurn = { role: "member" | "assistant"; text: string };
+
 export type Understanding = (
   utterance: string,
-  context: { actorMemberId: string; channel: "text" | "voice" },
+  context: { actorMemberId: string; channel: "text" | "voice"; history?: readonly ConversationTurn[] },
 ) => HouseholdIntent | Promise<HouseholdIntent>;
+
+/**
+ * Understanding with no model: the taught fixtures first, then the rules.
+ * Deterministic, and still the right answer for a household with no
+ * provider configured, per CLAUDE.md's rule that a provider is live only
+ * once it is.
+ */
+export function resolveDeterministicIntent(
+  utterance: string,
+  context: { actorMemberId: string; channel: "text" | "voice" },
+): HouseholdIntent {
+  const fixture = resolveFixtureIntent(utterance, context);
+  if (fixture.action !== "unknown") return { ...fixture, understanding: { source: "fixture" } };
+  return resolveRuleIntent(utterance, context);
+}
 
 export type TurnInput = {
   utterance: string;
@@ -60,6 +83,8 @@ export type TurnInput = {
   executable?: (intent: HouseholdIntent) => boolean;
   sessionId: string;
   understand?: Understanding;
+  /** Earlier turns of this session, for an understanding that can use them. */
+  history?: readonly ConversationTurn[];
   now?: Date;
 };
 
@@ -109,8 +134,23 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
       break;
   }
 
-  const understand = input.understand ?? resolveFixtureIntent;
-  const intent = await understand(input.utterance, { actorMemberId: input.actor.memberId, channel: input.channel });
+  const understand = input.understand ?? resolveDeterministicIntent;
+  const context = { actorMemberId: input.actor.memberId, channel: input.channel, history: input.history };
+  let intent = await understand(input.utterance, context);
+
+  // A model that did not answer, or answered "unknown" for something the
+  // rules plainly read, is not the last word: the rules are the safety net
+  // under any understanding, so an outage degrades to "works for the
+  // ordinary requests" rather than "understands nothing".
+  if (intent.action === "unknown") {
+    const fallback = resolveRuleIntent(input.utterance, context);
+    if (fallback.action !== "unknown") {
+      intent = fallback;
+    } else if (intent.understanding?.failure) {
+      // Keep the failure on the intent so the reply can say what actually happened.
+      intent = { ...fallback, understanding: intent.understanding };
+    }
+  }
 
   // A shaky transcript of something consequential is read back, never acted on.
   if (
@@ -156,7 +196,7 @@ export function replyFor(proposal: Proposal): string {
     case "answer":
       return proposal.summary;
     case "prepared":
-      return `I have prepared this, and not done it: ${lower(proposal.preview.summary)}. Say the word and I will.`;
+      return `I have prepared this, and not done it: ${lower(proposal.preview.summary)}. It is waiting for you.`;
     case "needs_approval":
       return `Here is what I would do — ${lower(proposal.preview.summary)}. Shall I go ahead?`;
     case "executed":

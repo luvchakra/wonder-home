@@ -100,6 +100,66 @@ export async function listMessages(
     .reverse();
 }
 
+/**
+ * The last few turns of a session, oldest first — what an understanding
+ * needs to resolve "actually make it 7" against what was said before.
+ * Text and role only; the caller minimises and pseudonymises before any of
+ * it leaves the server.
+ */
+export async function recentTurns(
+  admin: SupabaseClient,
+  sessionId: string,
+  limit = 6,
+): Promise<{ role: "member" | "assistant"; text: string }[]> {
+  const { data } = await admin
+    .from("conversation_messages")
+    .select("role, content")
+    .eq("session_id", sessionId)
+    .in("role", ["member", "assistant"])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (((data as Row[] | null) ?? []) as { role: "member" | "assistant"; content: string }[])
+    .map((row) => ({ role: row.role, text: row.content }))
+    .reverse();
+}
+
+/** A recorded proposal, with enough of what was asked to carry it out once approved. */
+export async function loadAction(
+  admin: SupabaseClient,
+  input: { householdId: string; actionId: string },
+): Promise<{ id: string; actionType: string; outcomeKey: string | null; parameters: Record<string, unknown>; status: ConversationAction["status"] } | null> {
+  const { data } = await admin
+    .from("conversation_actions")
+    .select("id, action_type, outcome_key, payload, approval_status")
+    .eq("id", input.actionId)
+    .eq("household_id", input.householdId)
+    .maybeSingle();
+
+  if (!data) return null;
+  const payload = (data.payload as Row | null) ?? {};
+  return {
+    id: data.id as string,
+    actionType: data.action_type as string,
+    outcomeKey: (data.outcome_key as string | null) ?? null,
+    parameters: ((payload.parameters as Record<string, unknown> | undefined) ?? {}),
+    status: data.approval_status as ConversationAction["status"],
+  };
+}
+
+/** What happened when a proposal was carried out — or why it was not. */
+export async function markActionResult(
+  admin: SupabaseClient,
+  input: { actionId: string; status: "executed" | "failed"; result: Record<string, unknown> },
+): Promise<void> {
+  const { error } = await admin
+    .from("conversation_actions")
+    .update({ approval_status: input.status, result: input.result, updated_at: new Date().toISOString() })
+    .eq("id", input.actionId);
+
+  if (error) throw new Error(`markActionResult failed: ${error.code ?? "unknown"}`);
+}
+
 /** The member's most recent open session, if they have one. */
 export async function currentSessionId(
   supabase: SupabaseClient,
