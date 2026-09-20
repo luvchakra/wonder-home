@@ -1,19 +1,19 @@
-import { GraduationCap, HandHeart, ListChecks, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet, Wrench } from "lucide-react";
+import { ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
-import type { ComponentType } from "react";
 
-import { listConfigurationConflicts } from "@wonderhome/core/household/configuration-repository";
+import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
-import type { IconTone } from "@wonderhome/core/ui/icon-tile";
-import { ResponsibilityCard } from "@wonderhome/core/ui/outcome-card";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
+import { iconForOutcome } from "../../_lib/outcome-icons";
+import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Responsibilities" };
@@ -27,22 +27,6 @@ type Row = {
   ai_mode: "observe" | "prepare" | "approve" | "execute";
   priority: number;
   playbook_items: { name: string; outcome_definition: string; cadence: Record<string, unknown> } | { name: string; outcome_definition: string; cadence: Record<string, unknown> }[] | null;
-};
-
-const BY_PREFIX: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
-  school: { icon: GraduationCap, tone: "school" },
-  bills: { icon: Wallet, tone: "money" },
-  finance: { icon: Wallet, tone: "money" },
-  groceries: { icon: ShoppingBasket, tone: "care" },
-  shopping: { icon: ShoppingBasket, tone: "care" },
-  meals: { icon: Utensils, tone: "meals" },
-  kitchen: { icon: Utensils, tone: "meals" },
-  laundry: { icon: Wrench, tone: "home" },
-  home: { icon: Wrench, tone: "home" },
-  cleaning: { icon: Wrench, tone: "home" },
-  pet: { icon: PawPrint, tone: "care" },
-  pets: { icon: PawPrint, tone: "care" },
-  kids: { icon: HandHeart, tone: "people" },
 };
 
 /**
@@ -65,10 +49,11 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
     );
   }
 
-  const [members, { data }, conflicts] = await Promise.all([
+  const [members, { data }, conflicts, playbook] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     supabase.from("responsibilities").select("id, outcome_key, primary_member_id, backup_member_id, ai_mode, priority, playbook_items(name, outcome_definition, cadence)").eq("household_id", householdId).order("priority"),
     listConfigurationConflicts(supabase, householdId).catch(() => []),
+    listPlaybookOutcomes(supabase, householdId).catch(() => []),
   ]);
 
   const rows = (data as Row[] | null) ?? [];
@@ -77,15 +62,34 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
   const gaps = rows.filter((row) => !row.primary_member_id);
   const admin = isHouseholdAdmin(membership);
 
+  // Outcomes the household has already described, plus starters it has not —
+  // minus whatever already has a responsibility, since those are edited from
+  // their own row instead (story: "add" makes new entries, not duplicates).
+  const alreadyAssigned = new Set(rows.map((row) => row.outcome_key));
+  const addable = [
+    ...playbook.map((outcome) => ({ key: outcome.key, label: outcome.name })),
+    ...STARTER_OUTCOMES.filter((starter) => !playbook.some((outcome) => outcome.key === starter.key)),
+  ].filter((outcome) => !alreadyAssigned.has(outcome.key));
+  const memberOptions = members.map((member) => ({ id: member.id, displayName: member.displayName }));
+
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden items-end justify-between gap-3 lg:flex">
-          <div>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Responsibilities</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">Clear roles, less chaos. Outcomes, not checklists.</p>
           </div>
-          {admin ? <PillLink href="/ai?q=Priya%20handles%20the%20school%20run%20from%20now%20on." tone="primary"><Sparkles aria-hidden className="size-3.5" /> Assign with AI</PillLink> : null}
+          {admin ? (
+            <div className="flex flex-wrap gap-2">
+              {addable.length > 0 ? (
+                <AddResponsibilityButton householdId={householdId} members={memberOptions} outcomes={addable} />
+              ) : null}
+              <PillLink href="/ai?q=Priya%20handles%20the%20school%20run%20from%20now%20on." tone="primary">
+                <Sparkles aria-hidden className="size-3.5" /> Assign with AI
+              </PillLink>
+            </div>
+          ) : null}
         </header>
 
         <SegmentedControl
@@ -147,19 +151,33 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
             <ul className="divide-y divide-[var(--wh-border)]">
               {shown.map((row) => {
                 const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
-                const prefix = row.outcome_key.split(".")[0] ?? "";
-                const presentation = BY_PREFIX[prefix] ?? { icon: ListChecks, tone: "primary" as IconTone };
+                const presentation = iconForOutcome(row.outcome_key);
+                const title = item?.name ?? row.outcome_key.replace(/[._]/g, " ");
                 return (
-                  <ResponsibilityCard
+                  <ResponsibilityRow
                     key={row.id}
-                    icon={presentation.icon}
-                    tone={presentation.tone}
-                    title={item?.name ?? row.outcome_key.replace(/[._]/g, " ")}
-                    owner={nameOf(row.primary_member_id) ?? "Nobody yet"}
-                    backup={nameOf(row.backup_member_id)}
-                    frequency={cadenceLabel(item?.cadence)}
-                    aiMode={row.ai_mode}
-                    action={!row.primary_member_id ? <Badge tone="attention">Unowned</Badge> : undefined}
+                    card={{
+                      icon: presentation.icon,
+                      tone: presentation.tone,
+                      title,
+                      owner: nameOf(row.primary_member_id) ?? "Nobody yet",
+                      backup: nameOf(row.backup_member_id),
+                      frequency: cadenceLabel(item?.cadence),
+                      aiMode: row.ai_mode,
+                      action: !row.primary_member_id ? <Badge tone="attention">Unowned</Badge> : undefined,
+                    }}
+                    definition={item?.outcome_definition}
+                    editable={admin}
+                    householdId={householdId}
+                    members={memberOptions}
+                    initial={{
+                      outcomeKey: row.outcome_key,
+                      outcomeLabel: title,
+                      primaryMemberId: row.primary_member_id,
+                      backupMemberId: row.backup_member_id,
+                      aiMode: row.ai_mode,
+                      priority: row.priority,
+                    }}
                   />
                 );
               })}

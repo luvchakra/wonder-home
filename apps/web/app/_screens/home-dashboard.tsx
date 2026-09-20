@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AlertTriangle,
   CalendarHeart,
@@ -13,13 +14,14 @@ import { assessSetup, setupWindow } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { AvatarGroup } from "@wonderhome/core/ui/avatar";
+import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
-import { HandledList } from "@wonderhome/core/ui/outcome-card";
+import { AI_MODE_LABEL, HandledList } from "@wonderhome/core/ui/outcome-card";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -30,7 +32,9 @@ import { Suspense } from "react";
 import { AgendaRow } from "../_components/agenda-row";
 import { householdAgenda } from "../_lib/agenda";
 import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
+import { describeRoles } from "../_lib/member-role";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
+import { iconForOutcome } from "../_lib/outcome-icons";
 
 /**
  * Home: what actually matters right now (requirements §9).
@@ -83,11 +87,12 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   // gone at 100%.
   const manages = view.permissions.includes("household.manage");
 
-  const [agenda, members, upcoming, setupFacts] = await Promise.all([
+  const [agenda, members, upcoming, setupFacts, responsibilityRows] = await Promise.all([
     householdAgenda(supabase, householdId, view),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
     manages ? loadSetupFacts(supabase, membership.household).catch(() => null) : Promise.resolve(null),
+    listResponsibilitySummaries(supabase, householdId),
   ]);
 
   const setup = setupFacts ? assessSetup(setupFacts) : null;
@@ -102,6 +107,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const nextMoment = upcoming.find((event) => event.protected || event.kind === "family_time" || event.kind === "outing") ?? upcoming[0] ?? null;
 
   const domainTiles = secondary.filter((item) => !["manage", "settings", "notifications", "certification"].includes(item.key));
+  const familyStatus = buildFamilyStatus(members, responsibilityRows);
 
   return (
     <>
@@ -119,6 +125,59 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
             { label: "Checked today", value: agenda.checked, icon: Sparkles, tone: "ai" },
           ]}
         />
+
+        {familyStatus.people.length > 0 ? (
+          <section className="wh-rise" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
+            <SectionHeader
+              title="Family status"
+              action={<PillLink href="/household/responsibilities" tone="quiet">Responsibilities</PillLink>}
+            />
+            <p className="mb-2 text-sm text-[var(--wh-foreground-muted)]">
+              Who is covering what, and what still needs someone.
+            </p>
+            <Card className="p-2">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {familyStatus.people.map((person) => (
+                  <li key={person.memberId} className="space-y-3 px-2 py-5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={person.displayName} size="md" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{person.displayName}</p>
+                        <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">{person.roleLabel}</p>
+                      </div>
+                    </div>
+                    {person.owned.length === 0 ? (
+                      <p className="pl-1 text-sm text-[var(--wh-foreground-subtle)]">Nothing assigned yet — on track by default, with nothing to watch.</p>
+                    ) : (
+                      <ul className="space-y-2.5 pl-1">
+                        {person.owned.map((item) => (
+                          <li key={item.key} className="flex items-center gap-3">
+                            <IconTile icon={item.icon} tone={item.tone} size="sm" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm">{item.title}</p>
+                              <p className="truncate text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[item.aiMode]}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
+            {familyStatus.unowned.length > 0 ? (
+              <Card className="mt-2 flex items-center gap-3 bg-[var(--wh-attention-soft)]/60 p-4">
+                <IconTile icon={AlertTriangle} tone="attention" size="sm" />
+                <p className="text-sm text-[var(--wh-foreground-muted)]">
+                  <span className="font-semibold text-[var(--wh-foreground)]">{familyStatus.unowned.length} outcome{familyStatus.unowned.length === 1 ? "" : "s"}</span>{" "}
+                  {familyStatus.unowned.length === 1 ? "has" : "have"} nobody covering{" "}
+                  {familyStatus.unowned.length === 1 ? "it" : "them"} — {familyStatus.unowned.map((item) => item.title).join(", ")}.
+                </p>
+              </Card>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="wh-rise" style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}>
           <SectionHeader
@@ -242,4 +301,67 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         <QuoteCard>Small steps today, happier tomorrows.</QuoteCard>
     </>
   );
+}
+
+type ResponsibilityRow = {
+  outcome_key: string;
+  primary_member_id: string | null;
+  ai_mode: "observe" | "prepare" | "approve" | "execute";
+  playbook_items: { name: string } | { name: string }[] | null;
+};
+
+async function listResponsibilitySummaries(supabase: SupabaseClient, householdId: string): Promise<ResponsibilityRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from("responsibilities")
+      .select("outcome_key, primary_member_id, ai_mode, playbook_items(name)")
+      .eq("household_id", householdId);
+    if (error) return [];
+    return (data as ResponsibilityRow[] | null) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+type FamilyStatusItem = ReturnType<typeof iconForOutcome> & { key: string; title: string; aiMode: ResponsibilityRow["ai_mode"] };
+
+/**
+ * Ownership-based, on purpose: who owns what is real, already-tracked data.
+ * Nobody covering an outcome is a genuine gap; whether a covered one is
+ * currently at risk lives in each domain's own agenda, not here, so this
+ * never guesses at somebody's live status from data that isn't attached to
+ * them.
+ */
+function buildFamilyStatus(
+  members: { id: string; displayName: string; roles: readonly string[]; isOwner: boolean }[],
+  rows: readonly ResponsibilityRow[],
+): { people: { memberId: string; displayName: string; roleLabel: string; owned: FamilyStatusItem[] }[]; unowned: FamilyStatusItem[] } {
+  const byMember = new Map<string, FamilyStatusItem[]>();
+  const unowned: FamilyStatusItem[] = [];
+
+  for (const row of rows) {
+    const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
+    const entry: FamilyStatusItem = {
+      key: row.outcome_key,
+      title: item?.name ?? row.outcome_key.replace(/[._]/g, " "),
+      aiMode: row.ai_mode,
+      ...iconForOutcome(row.outcome_key),
+    };
+    if (row.primary_member_id) {
+      const list = byMember.get(row.primary_member_id) ?? [];
+      list.push(entry);
+      byMember.set(row.primary_member_id, list);
+    } else {
+      unowned.push(entry);
+    }
+  }
+
+  const people = members.map((member) => ({
+    memberId: member.id,
+    displayName: member.displayName,
+    roleLabel: describeRoles(member.roles, member.isOwner),
+    owned: byMember.get(member.id) ?? [],
+  }));
+
+  return { people, unowned };
 }

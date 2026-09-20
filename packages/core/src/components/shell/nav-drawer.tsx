@@ -6,12 +6,11 @@ import { Dialog } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
-import { PRIMARY_NAVIGATION } from "../../navigation/primary-navigation";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Avatar } from "../ui/avatar";
 import { Wordmark } from "../ui/brand";
 import type { ShellViewer } from "./mobile-header";
-import { ICONS, SECONDARY_ICONS, SidebarLink } from "./primary-nav";
+import { SECONDARY_ICONS, SidebarLink } from "./primary-nav";
 
 /**
  * The full menu, as a drawer (rules 4, 6, 10).
@@ -20,11 +19,15 @@ import { ICONS, SECONDARY_ICONS, SidebarLink } from "./primary-nav";
  * domain at once, permanently — there was never a "More" to tap on desktop,
  * because there was nothing left to collapse. A phone has no room for that,
  * so its equivalent has always been a second screen: the bottom bar's "More"
- * tab used to be a plain link to a full `/more` page. This is the same
- * complete menu — every primary area, every domain, Manage, Settings,
- * Notifications, Help — collapsed into an overlay instead, so it opens over
- * whatever a person was already looking at rather than replacing it, and
- * closes the moment they pick something.
+ * tab used to be a plain link to a full `/more` page. This is that same
+ * "everything else" menu — every domain, Manage, Settings, Notifications,
+ * Help — collapsed into an overlay instead, so it opens over whatever a
+ * person was already looking at rather than replacing it, and closes the
+ * moment they pick something.
+ *
+ * Home, Today, AI and Family are deliberately left out: they're already one
+ * tap away, always visible, in the bottom tab bar the drawer opens on top
+ * of — repeating them here would just be the same five destinations twice.
  *
  * Radix owns focus, escape and scroll locking, same as every other sheet in
  * this kit (rule 6). Closed by default: nothing here calls `setOpen(true)`
@@ -169,22 +172,7 @@ function NavDrawer({
             </span>
           </Link>
 
-          <nav aria-label="All menus" className="mt-2 flex-1 space-y-5 px-2 pb-6">
-            <ul className="space-y-0.5">
-              {PRIMARY_NAVIGATION.filter((item) => item.key !== "more").map((item) => (
-                <li key={item.key}>
-                  <SidebarLink
-                    href={item.href}
-                    icon={ICONS[item.icon]}
-                    label={item.label}
-                    active={isCurrent(item.href)}
-                    onClick={close}
-                    size="lg"
-                  />
-                </li>
-              ))}
-            </ul>
-
+          <nav aria-label="Household menu" className="mt-2 flex-1 space-y-5 px-2 pb-6">
             <DrawerSection title="Household" items={domains} isCurrent={isCurrent} onNavigate={close} />
             <DrawerSection title="Manage" items={manage} isCurrent={isCurrent} onNavigate={close} />
 

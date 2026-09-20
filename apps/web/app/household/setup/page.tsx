@@ -24,6 +24,7 @@ import {
   saveResponsibilityAction,
 } from "../../(auth)/configuration-actions";
 import { PlaybookForm, PolicyForm, ResponsibilityForm, TeachForm } from "../../_components/config-forms";
+import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Set up your household" };
@@ -51,17 +52,6 @@ const STEPS = [
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
-
-/** The outcomes a household is most likely to want owned first. */
-const STARTER_OUTCOMES = [
-  { key: "laundry.ready", label: "Laundry ready" },
-  { key: "meals.dinner_ready", label: "Dinner ready" },
-  { key: "groceries.stocked", label: "Groceries stocked" },
-  { key: "finance.bills_paid", label: "Bills paid on time" },
-  { key: "school.homework_done", label: "Homework done" },
-  { key: "home.maintenance", label: "Home maintenance" },
-  { key: "pets.cared_for", label: "Pets cared for" },
-];
 
 export default async function SetupWizardPage({
   searchParams,

@@ -9,35 +9,18 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Placeholders, not secrets. The build and the E2E smoke run against no
+  # real project: with no session cookie, Supabase reports a missing session
+  # locally, so /api/v1/me answers 401 without ever reaching this host.
+  # Stories that need a live database bring their own service container.
+  NEXT_PUBLIC_SUPABASE_URL: https://ci.placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder_key
+
 jobs:
-  ci:
+  # Fast, no database needed: types, static analysis, and unit tests.
+  lint-and-unit:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      PGHOST: localhost
-      PGPORT: 5432
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      PGDATABASE: postgres
-      # Placeholders, not secrets. The build and the E2E smoke run against no
-      # real project: with no session cookie, Supabase reports a missing session
-      # locally, so /api/v1/me answers 401 without ever reaching this host.
-      # Stories that need a live database bring their own service container.
-      NEXT_PUBLIC_SUPABASE_URL: https://ci.placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder_key
     steps:
       - uses: actions/checkout@v4
 
@@ -78,8 +61,55 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+  # The only job that needs a real database: schema and RLS authorization tests.
+  db-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
       - name: Schema and authorization tests
         run: npm run test:db
+
+  # Build and browser smoke tests run against the placeholder project, no
+  # database needed.
+  build-and-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
 
       - name: Build
         run: npm run build
@@ -97,3 +127,19 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # A single required check name for branch protection, whatever the jobs
+  # above are split into.
+  ci:
+    if: always()
+    needs: [lint-and-unit, db-tests, build-and-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all jobs to have succeeded
+        run: |
+          if [ "${{ needs.lint-and-unit.result }}" != "success" ] || \
+             [ "${{ needs.db-tests.result }}" != "success" ] || \
+             [ "${{ needs.build-and-e2e.result }}" != "success" ]; then
+            echo "One or more required jobs did not succeed."
+            exit 1
+          fi
