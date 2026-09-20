@@ -55,6 +55,44 @@ export async function listConsumables(
   }));
 }
 
+export type CreateConsumableInput = {
+  householdId: string;
+  name: string;
+  category: ConsumableCategory;
+  unit: string;
+  typicalQuantity: number;
+  /** How often the household goes through one typical quantity — telling WonderHome this directly is "member_stated" evidence, same as any other basis. */
+  daysPerUnit?: number | null;
+};
+
+export async function createConsumable(
+  supabase: SupabaseClient,
+  input: CreateConsumableInput,
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("consumables")
+    .insert({
+      household_id: input.householdId,
+      name: input.name,
+      category: input.category,
+      unit: input.unit,
+      typical_quantity: input.typicalQuantity,
+      days_per_unit: input.daysPerUnit ?? null,
+      evidence_basis: input.daysPerUnit ? "member_stated" : null,
+      active: true,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot add items for this household.");
+    if (error.code === "23505") throw ApiError.conflict("WonderHome is already tracking something with that name.");
+    throw new Error(`createConsumable failed: ${error.code ?? "unknown"}`);
+  }
+
+  return { id: (data as Row).id as string };
+}
+
 export async function listPolicies(
   supabase: SupabaseClient,
   householdId: string,

@@ -1,6 +1,7 @@
 import { CircleCheck, PawPrint, Shirt, Wrench } from "lucide-react";
 
 import { homeAgenda } from "@wonderhome/core/home/repository";
+import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
@@ -10,6 +11,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../../_components/agenda-row";
+import { AddAssetButton, RaiseServiceRequestButton } from "../../_components/home-forms";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Home & upkeep" };
@@ -51,13 +53,21 @@ export default async function HomeUpkeepPage() {
     { title: "Pets", items: agenda.pets },
   ].filter((section) => section.items.length > 0);
   const needsYou = sections.reduce((total, section) => total + section.items.length, 0);
+  const admin = isHouseholdAdmin(membership);
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Home &amp; upkeep</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">What {membership.household.name} needs to deal with. Everything else is handled.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Home &amp; upkeep</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">What {membership.household.name} needs to deal with. Everything else is handled.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {admin ? <AddAssetButton householdId={membership.household.id} /> : null}
+            <RaiseServiceRequestButton householdId={membership.household.id} />
+            <PillLink href="/ai" tone="primary">Tell WonderHome</PillLink>
+          </div>
         </header>
 
         <MetricGrid
@@ -74,8 +84,7 @@ export default async function HomeUpkeepPage() {
             icon={CircleCheck}
             tone="handled"
             title="Nothing needs you"
-            description={agenda.checked === 0 ? "Add an appliance, a pet or something that has to be clean by a deadline, and WonderHome will keep an eye on it." : "Everything is serviced, stocked and on schedule. WonderHome will say something when that changes."}
-            action={agenda.checked === 0 ? <PillLink href="/ai">Tell WonderHome about the house</PillLink> : null}
+            description={agenda.checked === 0 ? "Add an appliance or raise a request above, or tell WonderHome about the house — either way, it keeps an eye on it from here." : "Everything is serviced, stocked and on schedule. WonderHome will say something when that changes."}
           />
         ) : (
           sections.map((section) => (

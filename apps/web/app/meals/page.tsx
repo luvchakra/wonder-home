@@ -14,6 +14,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../_components/agenda-row";
+import { PlanMealButton } from "../_components/meal-forms";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Meals & Cooking" };
@@ -73,12 +74,15 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden items-end justify-between gap-3 lg:flex">
-          <div>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Meals &amp; Cooking</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">Healthy meals. Happier moods.</p>
           </div>
-          <PillLink href="/ai?q=Plan%20this%20week%27s%20dinners" tone="primary"><Sparkles aria-hidden className="size-3.5" /> Plan with AI</PillLink>
+          <div className="flex flex-wrap gap-2">
+            <PlanMealButton householdId={householdId} members={members.map((member) => ({ id: member.id, displayName: member.displayName }))} />
+            <PillLink href="/ai?q=Plan%20this%20week%27s%20dinners" tone="primary"><Sparkles aria-hidden className="size-3.5" /> Plan with AI</PillLink>
+          </div>
         </header>
 
         <SegmentedControl

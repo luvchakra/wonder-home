@@ -15,6 +15,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../_components/agenda-row";
+import { AddConsumableButton } from "../_components/commerce-forms";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Groceries" };
@@ -83,9 +84,15 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Groceries</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">Never run out again.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Groceries</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">Never run out again.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <AddConsumableButton householdId={householdId} />
+            <PillLink href="/ai" tone="primary">Tell WonderHome</PillLink>
+          </div>
         </header>
 
         <SegmentedControl

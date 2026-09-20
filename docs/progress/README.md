@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | ["Add something" gets a form, everywhere it only had a chat link](2026-09-20-manual-entry-alongside-ai.md) |
 | 2026-09-20 | [A UX clarity pass across every screen — what was real, and what wasn't](2026-09-20-ux-clarity-pass.md) |
 | 2026-09-20 | [The full menu, as a drawer — a hamburger, and a "More" that no longer leaves the page](2026-09-20-nav-drawer.md) |
 | 2026-09-19 | [Connecting outcomes to their real dependency graph (story 03-006)](2026-09-19-dependency-graph.md) |
