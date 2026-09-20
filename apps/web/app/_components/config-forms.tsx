@@ -67,16 +67,29 @@ function Outcome({ state }: { state: ActionState }) {
 
 export type MemberOption = { id: string; displayName: string };
 
+export type ResponsibilityInitial = {
+  outcomeKey: string;
+  outcomeLabel: string;
+  primaryMemberId: string | null;
+  backupMemberId: string | null;
+  aiMode: "observe" | "prepare" | "approve" | "execute";
+  priority: number;
+};
+
 export function ResponsibilityForm({
   action,
   householdId,
   members,
-  outcomes,
+  outcomes = [],
+  initial,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   members: MemberOption[];
-  outcomes: { key: string; label: string }[];
+  /** Outcomes offered when creating a new responsibility. Unused once `initial` is set. */
+  outcomes?: { key: string; label: string }[];
+  /** Editing an existing responsibility rather than creating one — the outcome is fixed. */
+  initial?: ResponsibilityInitial;
 }) {
   const [state, formAction] = useActionState(action, {});
   const people = [{ value: "", label: "Nobody yet" }, ...members.map((m) => ({ value: m.id, label: m.displayName }))];
@@ -85,18 +98,29 @@ export function ResponsibilityForm({
     <form action={formAction} className="space-y-3">
       <Outcome state={state} />
       <input type="hidden" name="householdId" value={householdId} />
-      <Select label="Outcome" name="outcomeKey" options={outcomes.map((o) => ({ value: o.key, label: o.label }))} />
-      <Select label="Who owns it" name="primaryMemberId" options={people} />
+      {initial ? (
+        <>
+          <input type="hidden" name="outcomeKey" value={initial.outcomeKey} />
+          <div className="space-y-1">
+            <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Outcome</p>
+            <p className="text-sm font-medium">{initial.outcomeLabel}</p>
+          </div>
+        </>
+      ) : (
+        <Select label="Outcome" name="outcomeKey" options={outcomes.map((o) => ({ value: o.key, label: o.label }))} />
+      )}
+      <Select label="Who owns it" name="primaryMemberId" options={people} defaultValue={initial?.primaryMemberId ?? undefined} />
       <Select
         label="Who covers for them"
         name="backupMemberId"
         options={people}
+        defaultValue={initial?.backupMemberId ?? undefined}
         hint="Somebody other than the owner, or nobody."
       />
       <Select
         label="How far WonderHome may go"
         name="aiMode"
-        defaultValue="prepare"
+        defaultValue={initial?.aiMode ?? "prepare"}
         options={[
           { value: "observe", label: "Watch only" },
           { value: "prepare", label: "Prepare, and leave it to me" },
@@ -108,10 +132,10 @@ export function ResponsibilityForm({
       <Select
         label="Priority"
         name="priority"
-        defaultValue="3"
+        defaultValue={String(initial?.priority ?? 3)}
         options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}` }))}
       />
-      <Submit label="Save responsibility" />
+      <Submit label={initial ? "Save changes" : "Save responsibility"} />
     </form>
   );
 }

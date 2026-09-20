@@ -1,4 +1,4 @@
-import { CircleCheck } from "lucide-react";
+import { ChevronRight, CircleCheck } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
@@ -46,6 +46,8 @@ export type ResponsibilityCardProps = {
   frequency?: string;
   aiMode: "observe" | "prepare" | "approve" | "execute";
   action?: ReactNode;
+  /** When present, the whole row opens something — a chevron says so. */
+  onExpand?: () => void;
   className?: string;
 };
 
@@ -56,9 +58,9 @@ const AI_MODE: Record<ResponsibilityCardProps["aiMode"], string> = {
   execute: "WonderHome handles it",
 };
 
-export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency, aiMode, action, className }: ResponsibilityCardProps) {
-  return (
-    <li className={cn("flex items-center gap-3 py-3", className)}>
+export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency, aiMode, action, onExpand, className }: ResponsibilityCardProps) {
+  const body = (
+    <>
       <IconTile icon={icon} tone={tone} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{title}</p>
@@ -70,6 +72,26 @@ export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency
         <p className="mt-0.5 truncate text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE[aiMode]}</p>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
-    </li>
+      {onExpand ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}
+    </>
   );
+
+  if (onExpand) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={onExpand}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-[var(--wh-radius-sm)] py-3 text-left transition-colors hover:bg-[var(--wh-surface-muted)]",
+            className,
+          )}
+        >
+          {body}
+        </button>
+      </li>
+    );
+  }
+
+  return <li className={cn("flex items-center gap-3 py-3", className)}>{body}</li>;
 }
