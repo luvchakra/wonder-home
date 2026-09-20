@@ -1,6 +1,6 @@
 import { decideAutonomy, type AutonomyMode, type ProposedAction } from "../household/autonomy";
 import { can, type Permission, type PermissionContext } from "../identity/permissions";
-import { disposeIntent, isConsequential, type HouseholdIntent } from "./intent";
+import { WHAT_I_CAN_DO, disposeIntent, isConsequential, type HouseholdIntent } from "./intent";
 
 /**
  * From intent to proposal (story 04-004).
@@ -59,10 +59,28 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   make_payment: "payment",
   order_items: "order",
   assign_responsibility: "permission_change",
+  greet: "read",
   unknown: "read",
 };
 
+/** What the assistant says to a hello, a thank-you or "what can you do?". Warm, short, and an invitation. */
+export function greetingFor(intent: HouseholdIntent): string {
+  switch (intent.parameters.kind) {
+    case "thanks":
+      return "Any time. I am here whenever the household needs something.";
+    case "help":
+      return `Here is what I can do today. ${WHAT_I_CAN_DO} Anything that spends money or changes who can act always waits for your OK.`;
+    default:
+      return `Hello! ${WHAT_I_CAN_DO} What would you like?`;
+  }
+}
+
 export function proposeFromIntent(intent: HouseholdIntent, context: ProposalContext): Proposal {
+  // A hello is not a request, and needs no plan, permission or policy.
+  if (intent.action === "greet") {
+    return { kind: "answer", summary: greetingFor(intent) };
+  }
+
   const disposition = disposeIntent(intent);
   if (disposition.kind === "clarify") {
     return { kind: "clarify", question: disposition.question };

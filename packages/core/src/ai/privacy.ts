@@ -386,6 +386,36 @@ function roleWord(memberType: MemberType): string {
   }
 }
 
+/**
+ * The way back from a placeholder (15-005, the other direction).
+ *
+ * A provider that was told "Child A has football" may answer about "child
+ * a". That is the pseudonym, not a person, and only this server holds the
+ * map — so the reference is turned back into the member it stands for here,
+ * before any gate looks at it. A reference that is not a placeholder is
+ * returned unchanged: a person's first name the household member typed
+ * themselves was never replaced on the way out.
+ */
+export function unpseudonymise(
+  reference: string,
+  pseudonyms: Record<string, string>,
+  people: readonly Person[],
+): { reference: string; memberId: string | null } {
+  const wanted = reference.trim().toLowerCase().replace(/\s+/g, " ");
+  for (const [memberId, placeholder] of Object.entries(pseudonyms)) {
+    if (placeholder.toLowerCase() !== wanted) continue;
+    const person = people.find((entry) => entry.id === memberId);
+    const first = person?.displayName.split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return { reference: first || reference, memberId };
+  }
+
+  const byName = people.find((person) => {
+    const first = person.displayName.split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return first === wanted.replace(/[^a-z0-9]/g, "");
+  });
+  return { reference, memberId: byName?.id ?? null };
+}
+
 /** Replaces every household name in the text, longest first so "Ravi Nair" wins over "Ravi". */
 function substitute(
   text: string,
