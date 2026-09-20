@@ -283,7 +283,19 @@ export function Assistant({
         </div>
       ) : null}
 
-      <div ref={footerRef} className="sticky bottom-[calc(var(--wh-tabbar-height)+0.75rem)] z-20 pt-2 lg:bottom-4">
+      {/*
+        A real backdrop, not just the composer's own white pill floating over
+        nothing — without it, the gap above the pill and the disclaimer line
+        below it sit on a transparent background, so a scrolled message can
+        show straight through them (rule 15's "reserves real clearance"
+        applies to what's drawn there, not only the space reserved for it).
+        `.wh-glass` is the same translucent-blur treatment the header and
+        tab bar already use for exactly this.
+      */}
+      <div
+        ref={footerRef}
+        className="wh-glass sticky bottom-[calc(var(--wh-tabbar-height)+0.75rem)] z-20 rounded-[var(--wh-radius-lg)] px-1 pt-3 pb-1.5 lg:bottom-4"
+      >
         <ChatComposer onSend={send} disabled={busy} placeholder="Type a message, or tap the mic to speak…" />
         <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
