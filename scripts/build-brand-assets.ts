@@ -37,6 +37,7 @@ import {
   WINDOW_COLOR,
   WINDOW_PANES,
   YELLOW_PATH,
+  TAGLINE,
 } from "../packages/core/src/brand/mark.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -92,6 +93,94 @@ function markSvg(options: { scheme: Scheme; padding?: number }): string {
 `;
 }
 
+
+/** The page's own background, which the share card brings with it. */
+const CARD_SURFACE = "#fbf8f3";
+const NAVY = "#0f172a";
+const BLUE = "#0ea5e9";
+const MUTED = "#5b6577";
+
+const FONTS = join(ROOT, "assets", "fonts");
+
+/**
+ * The card a link turns into when somebody shares it.
+ *
+ * WhatsApp, iMessage and every group chat that matters show this and
+ * nothing else — no CSS, no fonts of the page's own, one flat image. So it
+ * is rendered here from the same geometry the header draws, against the
+ * product's own cream, with Sora from `assets/fonts` because nothing
+ * outside the browser has the brand's typeface otherwise.
+ *
+ * 1200x630 is the size every platform crops from safely, and the content
+ * sits well inside that so a square crop still contains the whole mark and
+ * the name.
+ */
+async function shareCard(): Promise<Buffer> {
+  const width = 1200;
+  const height = 630;
+
+  const markSize = 200;
+  const mark = await sharp(Buffer.from(markSvg({ scheme: "light" })))
+    .resize(markSize, markSize)
+    .png()
+    .toBuffer();
+
+  // Pango markup, so "Wonder" and "Home" carry the two brand colours in one
+  // laid-out line rather than two images guessed into alignment.
+  const wordmark = await sharp({
+    text: {
+      text: `<span foreground="${NAVY}">Wonder</span><span foreground="${BLUE}">Home</span>`,
+      font: "Sora Bold",
+      fontfile: join(FONTS, "Sora-Bold.ttf"),
+      rgba: true,
+      dpi: 900,
+    },
+  })
+    .png()
+    .toBuffer();
+
+  const tagline = await sharp({
+    text: {
+      text: `<span foreground="${MUTED}">${TAGLINE}</span>`,
+      font: "Sora",
+      fontfile: join(FONTS, "Sora-Regular.ttf"),
+      rgba: true,
+      dpi: 330,
+    },
+  })
+    .png()
+    .toBuffer();
+
+  const wordmarkMeta = await sharp(wordmark).metadata();
+  const taglineMeta = await sharp(tagline).metadata();
+
+  // Laid out as one centred column, measured rather than guessed, so a
+  // longer tagline re-centres itself instead of drifting off the card.
+  const gapAfterMark = 44;
+  const gapAfterWordmark = 28;
+  const block = markSize + gapAfterMark + (wordmarkMeta.height ?? 0) + gapAfterWordmark + (taglineMeta.height ?? 0);
+  const top = Math.round((height - block) / 2);
+
+  return sharp({
+    create: { width, height, channels: 4, background: CARD_SURFACE },
+  })
+    .composite([
+      { input: mark, top, left: Math.round((width - markSize) / 2) },
+      {
+        input: wordmark,
+        top: top + markSize + gapAfterMark,
+        left: Math.round((width - (wordmarkMeta.width ?? 0)) / 2),
+      },
+      {
+        input: tagline,
+        top: top + markSize + gapAfterMark + (wordmarkMeta.height ?? 0) + gapAfterWordmark,
+        left: Math.round((width - (taglineMeta.width ?? 0)) / 2),
+      },
+    ])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
 type Asset = { path: string; bytes: Buffer };
 
 async function png(svg: string, size: number): Promise<Buffer> {
@@ -118,6 +207,9 @@ async function build(): Promise<Asset[]> {
   // Apple ignores the manifest and takes this one flat file, which is always
   // shown on the user's own wallpaper — so it is the light tile, full bleed.
   add("apple-touch-icon.png", await png(markSvg({ scheme: "light" }), 180));
+
+  // What a shared link looks like in a group chat.
+  add("og.png", await shareCard());
 
   return assets;
 }

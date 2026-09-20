@@ -21,15 +21,33 @@ const KINDS = [
   { value: "other", label: "Something else" },
 ];
 
-/** "Add event" as a sheet, so the calendar stays where it was. */
-export function NewEventForm({ householdId, kinds = KINDS }: { householdId: string; kinds?: { value: string; label: string }[] }) {
+/**
+ * "Add event" as a sheet, so the calendar stays where it was.
+ *
+ * `label` exists because Home asks the same thing in its own words — its
+ * family-moment card says "Plan something", and used to link to the Family
+ * screen, which left a person on a page still hunting for the way to plan.
+ * One form, asked for wherever the household is standing (rule 14: one path
+ * per job, not a second button that navigates instead of doing).
+ */
+export function NewEventForm({
+  householdId,
+  kinds = KINDS,
+  label = "Add event",
+  variant = "secondary",
+}: {
+  householdId: string;
+  kinds?: { value: string; label: string }[];
+  label?: string;
+  variant?: "primary" | "secondary";
+}) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createEventAction, {});
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-4" /> Add event
+      <Button variant={variant} onClick={() => setOpen(true)} className="gap-1.5">
+        <Plus aria-hidden className="size-4" /> {label}
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen} title="Add to the family calendar" description="Protected time keeps everything else out of the way.">

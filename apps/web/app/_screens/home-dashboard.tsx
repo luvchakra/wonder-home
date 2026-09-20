@@ -2,7 +2,7 @@ import { AlertTriangle, CalendarHeart, ChevronRight, CircleCheck, Heart, Sparkle
 import Link from "next/link";
 
 import { listEvents } from "@wonderhome/core/family/repository";
-import { assessSetup, setupWindow } from "@wonderhome/core/household/setup";
+import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -22,6 +22,8 @@ import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
 
 import { HomeIllustration } from "../_components/home-illustration";
+import { NewEventForm } from "../_components/new-event-form";
+import { describeRoles } from "../_lib/member-role";
 import { householdAgenda } from "../_lib/agenda";
 import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
@@ -96,7 +98,6 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   ]);
 
   const setup = setupFacts ? assessSetup(setupFacts) : null;
-  const week = setupWindow({ firstSeenAt: membership.firstSeenAt, adminSince: membership.adminSince, now });
 
   const handledCount = Math.max(0, agenda.checked - agenda.needsYou.length);
 
@@ -107,16 +108,16 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
   const domainTiles = secondary.filter((item) => !["manage", "settings", "notifications", "certification"].includes(item.key));
   // Helpers have their own screen and their own relationship to the home;
-  // "your family" means the family.
+  // "family status" means the family, and househelp is its own card below.
   const family = members.filter((member) => member.memberType !== "helper");
+  const helpers = members.filter((member) => member.memberType === "helper");
 
   return (
     <>
-      {setup && week.prominent ? (
-        <SetupProgressCard assessment={setup} variant="prominent" daysLeft={week.daysLeft} />
-      ) : setup && !setup.complete ? (
-        <SetupProgressCard assessment={setup} variant="compact" />
-      ) : null}
+      {/* One row with a chevron, whether it is somebody's first week or not:
+          Home is where the household looks for what needs them today, and
+          setup is a thing to go and finish rather than a block to read. */}
+      {setup && !setup.complete ? <SetupProgressCard assessment={setup} variant="compact" /> : null}
 
       {/* Four counts, two to a row on a phone (rule 19). Every label is one
           word so it fits at half width — that is the test the `pairs`
@@ -124,30 +125,72 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       <MetricGrid
         pairs
         metrics={[
-          { label: "Need you", value: agenda.needsYou.length, icon: AlertTriangle, tone: "attention" },
-          { label: "Handled", value: handledCount, icon: CircleCheck, tone: "handled" },
-          { label: "Upcoming", value: upcoming.length, icon: CalendarHeart, tone: "people" },
-          { label: "Checked", value: agenda.checked, icon: Sparkles, tone: "ai" },
+          { label: "Need you", value: agenda.needsYou.length, icon: AlertTriangle, tone: "attention", href: "/notifications" },
+          { label: "Handled", value: handledCount, icon: CircleCheck, tone: "handled", href: "/today" },
+          { label: "Upcoming", value: upcoming.length, icon: CalendarHeart, tone: "people", href: "/family" },
+          { label: "Checked", value: agenda.checked, icon: Sparkles, tone: "ai", href: "/certification" },
         ]}
       />
 
       {family.length > 0 ? (
-        <Card className="wh-rise p-4" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold tracking-tight">Your family</h2>
+        <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
+          <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
+            <h2 className="text-base font-semibold tracking-tight">Family status</h2>
             <PillLink href="/family" tone="quiet">
               See all
             </PillLink>
           </div>
-          {/* A scroller rather than a grid: these are people, and a row of
-              faces reads as a family in a way a two-column list does not.
-              It is the one horizontal scroller on the screen, and rule 16's
-              swipe yields to it. */}
-          <ul className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* A row each, because a person is somewhere to go: their own
+              view, what they cover, what is waiting on them. An avatar in a
+              scroller was a picture of the family rather than a way into
+              it. */}
+          <ul className="divide-y divide-[var(--wh-border)]">
             {family.map((member) => (
-              <li key={member.id} className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
-                <Avatar name={member.displayName} size="lg" />
-                <span className="text-xs leading-tight font-medium break-words">{member.displayName.split(" ")[0]}</span>
+              <li key={member.id}>
+                <Link
+                  href={`/family?member=${encodeURIComponent(member.id)}`}
+                  className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-primary-soft)]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                >
+                  <Avatar name={member.displayName} size="md" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{member.displayName}</span>
+                    <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                      {describeRoles(member.roles, member.isOwner)}
+                    </span>
+                  </span>
+                  <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
+      {/* Helpers below the family, and separate from it: they are part of
+          how the home runs without being part of the family (the same
+          separation the Family screen makes). */}
+      {helpers.length > 0 ? (
+        <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "45ms" } as React.CSSProperties}>
+          <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
+            <h2 className="text-base font-semibold tracking-tight">Househelp</h2>
+            <PillLink href="/househelper" tone="quiet">
+              Manage
+            </PillLink>
+          </div>
+          <ul className="divide-y divide-[var(--wh-border)]">
+            {helpers.map((helper) => (
+              <li key={helper.id}>
+                <Link
+                  href="/househelper"
+                  className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-primary-soft)]/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                >
+                  <Avatar name={helper.displayName} size="md" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{helper.displayName}</span>
+                    <span className="block text-xs text-[var(--wh-foreground-subtle)]">Househelp</span>
+                  </span>
+                  <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+                </Link>
               </li>
             ))}
           </ul>
@@ -250,8 +293,11 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               <p className="mt-1 text-center text-xs text-[var(--wh-foreground-muted)]">
                 Protect a slot for the family and WonderHome keeps everything else out of it.
               </p>
+              {/* The real form, here. This used to link to the Family
+                  screen, which is not planning anything — it is moving the
+                  person somewhere they then have to find it. */}
               <div className="mt-3 flex justify-center">
-                <PillLink href="/family">Plan something</PillLink>
+                <NewEventForm householdId={householdId} label="Plan something" />
               </div>
             </div>
           )}

@@ -184,7 +184,7 @@ re-litigate them:
 Typography moved from Inter to Sora everywhere `--wh-font-sans` reaches,
 wired the same way Inter was (self-hosted via `next/font`, one variable, no
 external font request). The tagline changed too — `Happier Homes. Brighter
-Tomorrows.` is `A happier home. Everyday.` now, since the sheet shows it
+Tomorrows.` is `Less mental load. More family time.` now, since the sheet shows it
 under the lockup and again in the footer mockup: `brand/mark.ts`'s
 `TAGLINE`, the manifest, the root layout's description and both places
 `UI-UX-REQUIREMENTS-v3.md` names it.
