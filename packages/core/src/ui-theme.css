@@ -239,6 +239,15 @@
   }
 }
 
+@keyframes wh-slide-in-left {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @keyframes wh-pulse-ring {
   0% {
     transform: scale(0.9);
@@ -306,6 +315,11 @@
   animation-delay: var(--wh-rise-delay, 0ms);
 }
 
+/* The nav drawer's own entrance — the sheet family's speed, not the slower content reveal. */
+.wh-slide-in-left {
+  animation: wh-slide-in-left var(--wh-duration) var(--wh-ease) both;
+}
+
 .wh-skeleton {
   background:
     linear-gradient(90deg, var(--wh-surface-muted) 0%, var(--wh-surface) 50%, var(--wh-surface-muted) 100%)
@@ -342,10 +356,12 @@
   }
   .wh-float,
   .wh-rise,
-  .wh-skeleton {
+  .wh-skeleton,
+  .wh-slide-in-left {
     animation: none;
   }
-  .wh-rise {
+  .wh-rise,
+  .wh-slide-in-left {
     opacity: 1;
     transform: none;
   }
