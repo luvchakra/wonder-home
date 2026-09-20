@@ -1,6 +1,6 @@
 import { CalendarDays, CalendarOff, HandHeart, ListChecks, ShieldOff, UserPlus } from "lucide-react";
 
-import { listMembers } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -11,6 +11,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { HelperProfileButton, RecordLeaveButton, WeeklyPatternButton } from "../_components/helper-forms";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Househelper" };
@@ -65,6 +66,10 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
   const helperIds = new Set(helpers.map((helper) => helper.id));
   const todayDow = now.getDay();
+  const admin = isHouseholdAdmin(membership);
+  const helperOptions = helpers.map((helper) => ({ id: helper.id, displayName: helper.displayName }));
+  // Admins set anyone's arrangement; a helper with an account may set their own days and leave.
+  const mayEdit = (memberId: string) => admin || memberId === membership.memberId;
 
   const expectedToday = (memberId: string) => {
     const exception = exceptions.find((e) => e.member_id === memberId && e.on_date === today);
@@ -75,9 +80,17 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Househelper</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">Support that keeps home running — coordinated, never surveilled.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Househelper</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">Support that keeps home running — coordinated, never surveilled.</p>
+          </div>
+          {helpers.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              <RecordLeaveButton householdId={householdId} helpers={helperOptions} />
+              <PillLink href="/ai?q=Sunita%20won%27t%20be%20here%20tomorrow." tone="primary">Tell WonderHome</PillLink>
+            </div>
+          ) : null}
         </header>
 
         <SegmentedControl
@@ -129,6 +142,12 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
                 )}
               </div>
               {nextAbsence ? <p className="flex items-center gap-2 text-xs text-[var(--wh-foreground-muted)]"><CalendarOff aria-hidden className="size-3.5" /> Away {formatDate(timezone, new Date(nextAbsence.on_date), "long")}{nextAbsence.reason ? ` — ${nextAbsence.reason}` : ""}</p> : null}
+              {mayEdit(helper.id) ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {admin ? <HelperProfileButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={profile ? { engagement: profile.engagement, startedOn: profile.started_on, notes: profile.notes } : null} /> : null}
+                  <WeeklyPatternButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={windows.filter((w) => w.member_id === helper.id).map((w) => ({ dayOfWeek: w.day_of_week, startTime: w.start_time, endTime: w.end_time }))} />
+                </div>
+              ) : null}
             </Card>
           );
         }) : null}
@@ -138,7 +157,7 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
             <section>
               <SectionHeader title="Leave and changes" count={exceptions.length} />
               {exceptions.length === 0 ? (
-                <EmptyState icon={CalendarDays} tone="people" title="No changes coming up" description="Days off and extra days appear here. Tell WonderHome — “Sunita won't be here tomorrow” — and it re-checks what she normally handles." action={<PillLink href="/ai?q=Sunita%20won%27t%20be%20here%20tomorrow.">Record leave</PillLink>} />
+                <EmptyState icon={CalendarDays} tone="people" title="No changes coming up" description="Days off and extra days go here. Record one and WonderHome re-checks what they normally handle that day." action={helpers.length > 0 ? <RecordLeaveButton householdId={householdId} helpers={helperOptions} tone="primary" /> : null} />
               ) : (
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
@@ -155,7 +174,16 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {helpers.map((helper) => {
                     const own = windows.filter((w) => w.member_id === helper.id).sort((a, b) => a.day_of_week - b.day_of_week);
-                    return <ActionRow key={helper.id} icon={CalendarDays} tone="people" title={helper.displayName} meta={own.length === 0 ? "No pattern recorded" : own.map((w) => `${DAYS[w.day_of_week]} ${w.start_time.slice(0, 5)}–${w.end_time.slice(0, 5)}`).join(" · ")} />;
+                    return (
+                      <ActionRow
+                        key={helper.id}
+                        icon={CalendarDays}
+                        tone="people"
+                        title={helper.displayName}
+                        meta={own.length === 0 ? "No pattern recorded yet" : own.map((w) => `${DAYS[w.day_of_week]} ${w.start_time.slice(0, 5)}–${w.end_time.slice(0, 5)}`).join(" · ")}
+                        action={mayEdit(helper.id) ? <WeeklyPatternButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={own.map((w) => ({ dayOfWeek: w.day_of_week, startTime: w.start_time, endTime: w.end_time }))} /> : undefined}
+                      />
+                    );
                   })}
                 </ul>
               </Card>
@@ -175,7 +203,7 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {responsibilities.filter((r) => r.primary_member_id && helperIds.has(r.primary_member_id)).map((r) => (
-                    <ActionRow key={r.outcome_key} icon={ListChecks} tone="primary" title={nameOfOutcome(r)} meta={`${nameOf(r.primary_member_id) ?? "Helper"}${r.backup_member_id ? ` · backup ${nameOf(r.backup_member_id)}` : " · no backup yet"}`} action={r.backup_member_id ? undefined : <Badge tone="attention">Needs backup</Badge>} />
+                    <ActionRow key={r.outcome_key} icon={ListChecks} tone="primary" title={nameOfOutcome(r)} meta={`${nameOf(r.primary_member_id) ?? "Helper"}${r.backup_member_id ? ` · backup ${nameOf(r.backup_member_id)}` : " · no backup yet"}`} action={r.backup_member_id ? undefined : <PillLink href="/household/responsibilities" tone="soft">Add backup</PillLink>} />
                   ))}
                 </ul>
               </Card>

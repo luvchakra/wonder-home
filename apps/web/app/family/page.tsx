@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarHeart, Gift, Heart, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, Heart, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
@@ -16,7 +16,10 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AgendaRow } from "../_components/agenda-row";
+import { ActionRow } from "@wonderhome/core/ui/action-row";
+
+import { presentationFor } from "../_components/agenda-row";
+import { FamilyNeedAction, SettleEventPill } from "../_components/family-need-action";
 import { NewEventForm } from "../_components/new-event-form";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
@@ -136,9 +139,19 @@ export default async function FamilyPage() {
                 <SectionHeader title="Needs a reply" count={needs.length} />
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
-                    {needs.map((item) => (
-                      <AgendaRow key={item.subjectKey} item={item} href="/family" />
-                    ))}
+                    {needs.map((item) => {
+                      const presentation = presentationFor(item.subjectKey);
+                      return (
+                        <ActionRow
+                          key={item.subjectKey}
+                          icon={presentation.icon}
+                          tone={presentation.tone}
+                          title={item.title}
+                          meta={item.reason}
+                          action={<FamilyNeedAction householdId={householdId} item={item} />}
+                        />
+                      );
+                    })}
                   </ul>
                 </Card>
               </section>
@@ -160,7 +173,7 @@ export default async function FamilyPage() {
                         day={formatDate(timezone, event.startsAt).split(" ")[0] ?? ""}
                         month={formatDate(timezone, event.startsAt).split(" ")[1] ?? ""}
                         when={`${formatDate(timezone, event.startsAt, "long")} · ${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}`}
-                        action={event.actionState === "needs_gift" ? <PillLink href="/family"><Gift aria-hidden className="size-3.5" /> Gift</PillLink> : undefined}
+                        action={event.actionState === "needs_gift" ? <SettleEventPill householdId={householdId} eventId={event.id} label="Gift sorted" /> : undefined}
                       />
                     ))}
                   </ul>

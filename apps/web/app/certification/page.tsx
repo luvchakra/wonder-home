@@ -1,6 +1,6 @@
 import { BadgeCheck, CircleCheck, Sparkles, TriangleAlert } from "lucide-react";
 
-import { alertsFor, CERTIFICATION_CATEGORIES, summarize, type CertificationItem as Item } from "@wonderhome/core/household/certification";
+import { alertsFor, CERTIFICATION_CATEGORIES, summarize, type CertificationAlert, type CertificationItem as Item } from "@wonderhome/core/household/certification";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { CertificationItem } from "@wonderhome/core/ui/certification-item";
@@ -25,6 +25,14 @@ const CATEGORY_LABEL: Record<(typeof CERTIFICATION_CATEGORIES)[number], string> 
   finance: "Finance",
   lifestyle: "Lifestyle preferences",
   safety: "Safety",
+};
+
+/** The alert's one-word action, as the badge — so "Needs review" says which kind of look. */
+const ALERT_ACTION_LABEL: Record<CertificationAlert["action"], string> = {
+  fix: "Needs fixing",
+  confirm: "Confirm this",
+  review: "Needs review",
+  set_up: "Set this up",
 };
 
 const SOURCE_LABEL: Record<Item["sourceType"], string> = {
@@ -76,9 +84,16 @@ export default async function CertificationPage({ searchParams }: { searchParams
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Household Certification</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Household Certification</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
+          </div>
+          {canReview ? (
+            <PillLink href="/ai?q=We%20prefer%20dinner%20at%208." tone="primary">
+              <Sparkles aria-hidden className="size-3.5" /> Tell WonderHome something
+            </PillLink>
+          ) : null}
         </header>
 
         <Card className="flex items-center gap-5 p-5">
@@ -125,6 +140,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
                     key={item.id}
                     claim={item.claim}
                     status={alert ? "needs_review" : item.status}
+                    badgeLabel={alert ? ALERT_ACTION_LABEL[alert.action] : undefined}
                     source={`${SOURCE_LABEL[item.sourceType]}${item.sourceDetail ? ` (${item.sourceDetail})` : ""} · ${CATEGORY_LABEL[item.category]}${alert ? ` · ${alert.reason}` : ""}`}
                     risk={item.riskLevel}
                     controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} /> : undefined}

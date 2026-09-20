@@ -147,23 +147,37 @@ export function ResponsibilityForm({
   );
 }
 
+export type PlaybookInitial = {
+  outcomeKey: string;
+  name: string;
+  outcomeDefinition: string;
+  startHour: number | null;
+  endHour: number | null;
+  escalateAfterHours: number | null;
+};
+
 export function PlaybookForm({
   action,
   householdId,
   existing,
+  initial,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   /** Outcomes already in this household's playbook, offered as dependencies. */
   existing: { key: string; label: string }[];
+  /** Editing an existing entry: its key stays put even if the name is reworded. */
+  initial?: PlaybookInitial;
 }) {
   const [state, formAction] = useActionState(action, {});
+  const dependencies = existing.filter((outcome) => outcome.key !== initial?.outcomeKey);
 
   return (
     <form action={formAction} className="space-y-3">
       <Outcome state={state} />
       <input type="hidden" name="householdId" value={householdId} />
-      <Field label="Name" name="name" required maxLength={120} placeholder="Laundry ready" hint="What your family would call it." />
+      {initial ? <input type="hidden" name="outcomeKey" value={initial.outcomeKey} /> : null}
+      <Field label="Name" name="name" required maxLength={120} placeholder="Laundry ready" hint="What your family would call it." defaultValue={initial?.name} />
       <Field
         label="What good looks like"
         name="outcomeDefinition"
@@ -171,16 +185,17 @@ export function PlaybookForm({
         maxLength={500}
         placeholder="Clean uniforms ready by Sunday evening."
         hint="The state you want, in your own words — not the steps."
+        defaultValue={initial?.outcomeDefinition}
       />
 
-      <details className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
+      <details open={Boolean(initial && (initial.startHour !== null || initial.escalateAfterHours !== null))} className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
         <summary className="cursor-pointer text-sm font-medium">
           More detail, if it matters here (optional)
         </summary>
         <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="From (hour)" name="startHour" type="number" min={0} max={23} placeholder="8" />
-            <Field label="To (hour)" name="endHour" type="number" min={0} max={23} placeholder="20" />
+            <Field label="From (hour)" name="startHour" type="number" min={0} max={23} placeholder="8" defaultValue={initial?.startHour ?? undefined} />
+            <Field label="To (hour)" name="endHour" type="number" min={0} max={23} placeholder="20" defaultValue={initial?.endHour ?? undefined} />
           </div>
           <Field
             label="Escalate after (hours)"
@@ -189,14 +204,15 @@ export function PlaybookForm({
             min={1}
             placeholder="12"
             hint="How long it may be at risk before somebody is told. Leave empty for never."
+            defaultValue={initial?.escalateAfterHours ?? undefined}
           />
-          {existing.length > 0 ? (
+          {dependencies.length > 0 ? (
             <Select
               label="What has to happen first"
               name="dependsOnKey"
               options={[
                 { value: "", label: "Nothing — it stands alone" },
-                ...existing.map((outcome) => ({ value: outcome.key, label: outcome.label })),
+                ...dependencies.map((outcome) => ({ value: outcome.key, label: outcome.label })),
               ]}
               hint="Planning waits for this one. A loop between two outcomes is refused."
             />
@@ -204,38 +220,66 @@ export function PlaybookForm({
         </div>
       </details>
 
-      <Submit label="Save playbook entry" />
+      <Submit label={initial ? "Save changes" : "Save playbook entry"} />
     </form>
   );
 }
 
+export type PolicyInitial = {
+  category: string;
+  name: string;
+  limitMinor: number | null;
+  note: string | null;
+  conditionMemberType: string | null;
+  conditionStartHour: number | null;
+  conditionEndHour: number | null;
+};
+
 export function PolicyForm({
   action,
   householdId,
+  initial,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
+  /** Editing: a policy is never edited in place, so this saves the next version under the same name and category. */
+  initial?: PolicyInitial;
 }) {
   const [state, formAction] = useActionState(action, {});
+  const hasCondition = Boolean(initial && (initial.conditionMemberType || initial.conditionStartHour !== null));
 
   return (
     <form action={formAction} className="space-y-3">
       <Outcome state={state} />
       <input type="hidden" name="householdId" value={householdId} />
-      <Select
-        label="What it governs"
-        name="category"
-        defaultValue="spending"
-        options={[
-          { value: "spending", label: "Spending" },
-          { value: "privacy", label: "Privacy" },
-          { value: "family_time", label: "Family time" },
-          { value: "notifications", label: "Notifications" },
-          { value: "ai_autonomy", label: "AI autonomy" },
-          { value: "safety", label: "Safety" },
-        ]}
-      />
-      <Field label="Name" name="name" required maxLength={120} placeholder="Everyday spending" />
+      {initial ? (
+        <>
+          <input type="hidden" name="category" value={initial.category} />
+          <input type="hidden" name="name" value={initial.name} />
+          <div className="space-y-1">
+            <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{initial.category.replace(/_/g, " ")}</p>
+            <p className="text-sm font-medium">{initial.name}</p>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">Saving writes the next version; the one in force now stays on record.</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <Select
+            label="What it governs"
+            name="category"
+            defaultValue="spending"
+            options={[
+              { value: "spending", label: "Spending" },
+              { value: "privacy", label: "Privacy" },
+              { value: "family_time", label: "Family time" },
+              { value: "notifications", label: "Notifications" },
+              { value: "ai_autonomy", label: "AI autonomy" },
+              { value: "safety", label: "Safety" },
+            ]}
+          />
+          <Field label="Name" name="name" required maxLength={120} placeholder="Everyday spending" />
+        </>
+      )}
       <Field
         label="Limit (in paise, optional)"
         name="limitMinor"
@@ -243,16 +287,17 @@ export function PolicyForm({
         min={0}
         placeholder="200000"
         hint="₹2,000 is 200000. Above this, WonderHome asks."
+        defaultValue={initial?.limitMinor ?? undefined}
       />
-      <Field label="Note" name="note" maxLength={300} placeholder="Why this rule exists." />
+      <Field label="Note" name="note" maxLength={300} placeholder="Why this rule exists." defaultValue={initial?.note ?? undefined} />
 
-      <details className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
+      <details open={hasCondition} className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
         <summary className="cursor-pointer text-sm font-medium">Narrow this to a specific case (optional)</summary>
         <div className="mt-3 space-y-3">
           <Select
             label="Applies only to"
             name="conditionMemberType"
-            defaultValue=""
+            defaultValue={initial?.conditionMemberType ?? ""}
             options={[
               { value: "", label: "Everyone" },
               { value: "adult", label: "Adults" },
@@ -262,13 +307,13 @@ export function PolicyForm({
             hint="A stricter version of the policy above, for one kind of person. Pick this or a time, not both."
           />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="From (hour)" name="conditionStartHour" type="number" min={0} max={23} placeholder="21" />
-            <Field label="To (hour)" name="conditionEndHour" type="number" min={0} max={23} placeholder="7" />
+            <Field label="From (hour)" name="conditionStartHour" type="number" min={0} max={23} placeholder="21" defaultValue={initial?.conditionStartHour ?? undefined} />
+            <Field label="To (hour)" name="conditionEndHour" type="number" min={0} max={23} placeholder="7" defaultValue={initial?.conditionEndHour ?? undefined} />
           </div>
         </div>
       </details>
 
-      <Submit label="Save policy" />
+      <Submit label={initial ? "Save new version" : "Save policy"} />
     </form>
   );
 }

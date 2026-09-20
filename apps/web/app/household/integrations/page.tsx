@@ -5,7 +5,7 @@ import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
-import { Badge } from "@wonderhome/core/ui/pill";
+import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -69,9 +69,9 @@ export default async function IntegrationsPage() {
                       <IconTile icon={kind?.icon ?? Plug} tone={kind?.tone ?? "neutral"} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{kind?.label ?? integration.kind} · {integration.provider}</p>
-                        <p className="text-xs text-[var(--wh-foreground-muted)]">{integration.statusLabel}</p>
+                        <p className="text-xs text-[var(--wh-foreground-muted)]">{integration.statusLabel} — reconnecting means going through the provider’s own connect flow again, which isn’t live yet.</p>
                       </div>
-                      <Badge tone="attention">Needs reconnecting</Badge>
+                      <PillLink href="#providers" tone="soft">See provider</PillLink>
                     </li>
                   );
                 })}
@@ -80,7 +80,7 @@ export default async function IntegrationsPage() {
           </section>
         ) : null}
 
-        <section>
+        <section id="providers">
           <SectionHeader title="Providers" />
           <div className="grid gap-3 sm:grid-cols-2">
             {KINDS.map((kind) => {

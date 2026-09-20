@@ -15,13 +15,14 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { PlaybookRowControls, PolicyRowControls } from "../_components/playbook-controls";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Manage household" };
 export const dynamic = "force-dynamic";
 
-type PlaybookRow = { id: string; name: string; outcome_definition: string; active: boolean };
-type PolicyRow = { id: string; category: string; name: string; active: boolean };
+type PlaybookRow = { id: string; outcome_key: string; name: string; outcome_definition: string; operating_window: { startHour?: number; endHour?: number } | null; escalation: { afterHours?: number } | null; active: boolean };
+type PolicyRow = { id: string; category: string; name: string; active: boolean; rule: { limitMinor?: number; note?: string; condition?: { kind: "member_type"; memberType: string } | { kind: "hour_range"; startHour: number; endHour: number } } | null };
 type ResponsibilityRow = { ai_mode: AutonomyMode };
 
 /**
@@ -46,8 +47,8 @@ export default async function ManageHouseholdPage() {
 
   const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts] = await Promise.all([
     supabase.from("household_members").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "active"),
-    supabase.from("playbook_items").select("id, name, outcome_definition, active").eq("household_id", householdId).order("name"),
-    supabase.from("policies").select("id, category, name, active").eq("household_id", householdId).eq("active", true).order("category"),
+    supabase.from("playbook_items").select("id, outcome_key, name, outcome_definition, operating_window, escalation, active").eq("household_id", householdId).order("name"),
+    supabase.from("policies").select("id, category, name, active, rule").eq("household_id", householdId).eq("active", true).order("category"),
     supabase.from("responsibilities").select("ai_mode").eq("household_id", householdId),
     listIntegrations(supabase, householdId).catch(() => []),
     loadSetupFacts(supabase, membership.household).catch(() => null),
@@ -55,6 +56,7 @@ export default async function ManageHouseholdPage() {
   const setup = setupFacts ? assessSetup(setupFacts) : null;
 
   const items = (playbook.data as PlaybookRow[] | null) ?? [];
+  const playbookOptions = items.map((item) => ({ key: item.outcome_key, label: item.name }));
   const rules = (policies.data as PolicyRow[] | null) ?? [];
   const modes = ((responsibilities.data as ResponsibilityRow[] | null) ?? []).map((row) => row.ai_mode);
   const modeCounts = (["observe", "prepare", "approve", "execute"] as const).map((mode) => ({ mode, count: modes.filter((m) => m === mode).length }));
@@ -114,13 +116,25 @@ export default async function ManageHouseholdPage() {
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {items.map((item) => (
-                  <li key={item.id} className="flex items-start gap-3 px-2 py-3">
+                  <li key={item.id} className="flex flex-wrap items-start gap-3 px-2 py-3">
                     <IconTile icon={BookOpen} tone="home" size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-sm font-medium">{item.name}{!item.active ? <Badge className="ml-2">paused</Badge> : null}</p>
                       <p className="text-xs text-[var(--wh-foreground-muted)]">{item.outcome_definition}</p>
                     </div>
-                    {!item.active ? <Badge>paused</Badge> : null}
+                    <PlaybookRowControls
+                      householdId={householdId}
+                      active={item.active}
+                      existing={playbookOptions}
+                      item={{
+                        outcomeKey: item.outcome_key,
+                        name: item.name,
+                        outcomeDefinition: item.outcome_definition,
+                        startHour: item.operating_window?.startHour ?? null,
+                        endHour: item.operating_window?.endHour ?? null,
+                        escalateAfterHours: item.escalation?.afterHours ?? null,
+                      }}
+                    />
                   </li>
                 ))}
               </ul>
@@ -142,10 +156,23 @@ export default async function ManageHouseholdPage() {
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {rules.map((rule) => (
-                  <li key={rule.id} className="flex items-center gap-3 px-2 py-3">
+                  <li key={rule.id} className="flex flex-wrap items-center gap-3 px-2 py-3">
                     <IconTile icon={ShieldCheck} tone="money" size="sm" />
                     <p className="min-w-0 flex-1 truncate text-sm font-medium">{rule.name}</p>
                     <Badge>{rule.category.replace(/_/g, " ")}</Badge>
+                    <PolicyRowControls
+                      householdId={householdId}
+                      policyId={rule.id}
+                      policy={{
+                        category: rule.category,
+                        name: rule.name,
+                        limitMinor: rule.rule?.limitMinor ?? null,
+                        note: rule.rule?.note ?? null,
+                        conditionMemberType: rule.rule?.condition?.kind === "member_type" ? rule.rule.condition.memberType : null,
+                        conditionStartHour: rule.rule?.condition?.kind === "hour_range" ? rule.rule.condition.startHour : null,
+                        conditionEndHour: rule.rule?.condition?.kind === "hour_range" ? rule.rule.condition.endHour : null,
+                      }}
+                    />
                   </li>
                 ))}
               </ul>

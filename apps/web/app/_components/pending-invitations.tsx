@@ -1,8 +1,8 @@
 import type { PendingInvitation } from "@wonderhome/core/identity/invitations";
-import { Button } from "@wonderhome/core/ui/button";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 
 import { revokeInvitationAction } from "../(auth)/household-actions";
+import { SubmitButton } from "./submit-pill";
 
 export function PendingInvitations({ invitations }: { invitations: PendingInvitation[] }) {
   return (
@@ -30,9 +30,9 @@ export function PendingInvitations({ invitations }: { invitations: PendingInvita
               </div>
               <form action={revokeInvitationAction}>
                 <input type="hidden" name="invitationId" value={invitation.id} />
-                <Button type="submit" variant="secondary">
+                <SubmitButton variant="secondary" pendingLabel="Revoking…">
                   Revoke
-                </Button>
+                </SubmitButton>
               </form>
             </li>
           ))}

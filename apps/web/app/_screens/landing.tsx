@@ -300,8 +300,8 @@ export async function Landing() {
                 At home.<br />On the go.<br />Always with you.
               </h2>
               <p className="mt-5 max-w-md text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
-                The same household, shaped for where you are. These are the real screens, not
-                pictures of them.
+                The same household, shaped for where you are. Drawn with the app’s own
+                components, with an illustrative family in them.
               </p>
 
               {/* Each frame gets a number and a sentence, so the devices inform

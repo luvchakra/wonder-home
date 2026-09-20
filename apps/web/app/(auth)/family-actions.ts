@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { toErrorBody } from "@wonderhome/core/api/errors";
 import { may } from "@wonderhome/core/billing/repository";
 import { createClient } from "@wonderhome/core/db/server";
-import { createEvent } from "@wonderhome/core/family/repository";
+import { advanceGift, createEvent, GIFT_STEPS, resolveConflict, settleEventAction as settleEvent } from "@wonderhome/core/family/repository";
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
@@ -71,4 +72,68 @@ export async function createEventAction(_previous: ActionState, formData: FormDa
   revalidatePath("/today");
   revalidatePath("/");
   return {};
+}
+
+/**
+ * The "Reply", "Gift", "Prepare", "Plan" pills, made real. None of these do
+ * the replying or the buying — the household does that. They record that it
+ * has been done, so the row stops asking.
+ */
+const settleSchema = z.object({ householdId: z.uuid(), eventId: z.uuid() });
+
+export async function settleEventAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = settleSchema.safeParse({ householdId: formData.get("householdId"), eventId: formData.get("eventId") });
+  if (!parsed.success) return { error: "That event could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await settleEvent(supabase, parsed.data);
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "family").body.error.message };
+  }
+
+  revalidatePath("/family");
+  revalidatePath("/today");
+  revalidatePath("/");
+  return { notice: "Noted — nothing more to do on this one." };
+}
+
+const giftSchema = z.object({ householdId: z.uuid(), giftId: z.uuid(), step: z.enum(GIFT_STEPS) });
+
+export async function advanceGiftAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = giftSchema.safeParse({ householdId: formData.get("householdId"), giftId: formData.get("giftId"), step: formData.get("step") });
+  if (!parsed.success) return { error: "That gift could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await advanceGift(supabase, parsed.data);
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "family").body.error.message };
+  }
+
+  revalidatePath("/family");
+  revalidatePath("/");
+  return { notice: parsed.data.step === "given" ? "Given. Off the list." : `Marked ${parsed.data.step}.` };
+}
+
+const conflictSchema = z.object({ householdId: z.uuid(), conflictId: z.uuid(), outcome: z.enum(["resolved", "declined"]) });
+
+export async function resolveConflictAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = conflictSchema.safeParse({ householdId: formData.get("householdId"), conflictId: formData.get("conflictId"), outcome: formData.get("outcome") });
+  if (!parsed.success) return { error: "That clash could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    await resolveConflict(supabase, { ...parsed.data, memberId: membership.memberId });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "family").body.error.message };
+  }
+
+  revalidatePath("/family");
+  revalidatePath("/today");
+  revalidatePath("/");
+  return { notice: parsed.data.outcome === "resolved" ? "Sorted." : "Left as it is." };
 }

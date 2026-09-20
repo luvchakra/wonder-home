@@ -2,11 +2,12 @@ import { BellOff } from "lucide-react";
 
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { NotificationCard } from "@wonderhome/core/ui/notification-card";
-import { Pill, PillLink } from "@wonderhome/core/ui/pill";
+import { PillLink } from "@wonderhome/core/ui/pill";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { updateNotificationAction } from "../(auth)/notification-actions";
+import { SubmitPill } from "../_components/submit-pill";
 import { actionLabelFor, presentationFor } from "../_components/agenda-row";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
@@ -105,7 +106,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                         <form action={updateNotificationAction}>
                           <input type="hidden" name="notificationId" value={row.id} />
                           <input type="hidden" name="status" value={row.type === "completion" ? "resolved" : "acted"} />
-                          <Pill type="submit" tone="quiet">{row.type === "completion" ? "Got it" : "Done"}</Pill>
+                          <SubmitPill tone="quiet" pendingLabel="…">{row.type === "completion" ? "Got it" : "Done"}</SubmitPill>
                         </form>
                       </div>
                     }
