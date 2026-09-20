@@ -63,6 +63,30 @@ reviewed dark design yet.
    secondary navigation are presentation; every page and every API route asks
    the server again, and RLS asks a third time.
 
+### Two voice intentions, two buttons (rule 14, read the other way)
+
+Rule 14 says no two buttons for the same job. `TalkComposer` is the case
+that clarifies the opposite: **speaking and conversing are not the same
+job**, and for a while they shared one microphone plus a toggle bolted
+under the Send button, which is why nobody could tell what a tap would do.
+
+- The **microphone** means "put what I said in the box so I can check it".
+  It ends at a transcript the person edits and sends. It never starts a
+  conversation.
+- The **waveform** means "let's talk". WonderHome answers out loud and
+  keeps listening until it is paused or ended.
+
+They are adjacent, the same size, and differently coloured, because they
+are siblings rather than a primary and its variant. The state machine is
+explicit (`talkComposerState`, and it has its own test) because the
+failures here are illegal *combinations* — a Send button appearing while
+the microphone is open would commit words somebody is still saying.
+
+The brand mark sits inside this one control, which nothing else in the
+product does. The exception is deliberate and narrow: the composer is the
+door to WonderHome itself rather than a row about something else, and the
+approved sheet draws it that way.
+
 ## The brand mark (rules 1, 3, 5)
 
 The mark is the supplied logo: a house drawn in two strokes — a roof chevron
@@ -74,7 +98,8 @@ It is the one place in the product where colour is not doing a job. Everywhere
 else, teal commits, amber is attention, red is critical and green is handled;
 the mark uses the whole spectrum at once because it is an identity rather than
 a signal. That is why it appears only as identity — in the header, on the
-signed-out frame, on the landing page and as the app icon — and never inside a
+signed-out frame, on the landing page, as the app icon, and at the left of
+`TalkComposer`, which is the door to the assistant itself — and never inside a
 row, a tile or a state.
 
 **One geometry, three consumers.** `packages/core/src/brand/mark.ts` holds
@@ -328,7 +353,8 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `Sheet`, `ConfirmationSheet`, `ToastProvider` | Radix dialog and toast |
 | `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton` | The three states |
 | `ScriptAccent`, `LeafDecor` | The handwritten line and the botanical corner |
-| `AiOrb`, `ChatMessage`, `SuggestionChips`, `ChatComposer`, `VoiceInputButton`, `Waveform` | The conversation |
+| `AiOrb`, `ChatMessage`, `SuggestionChips` | The conversation |
+| `TalkComposer` | The one way into the assistant, with four states: type, speak-to-text, send, and a live voice conversation. Replaced `ChatComposer` + `VoiceInputButton` + a toggle, which between them could not say which of two voice intentions a tap meant |
 | `Switch` | An on/off setting, not a choice among options (`SegmentedControl` is that) — first used for the live-conversation toggle below the composer's Send button |
 | `Select` | A labelled choice among a fixed list. Deliberately the browser's own `select`, because on a phone that opens the OS picker — reachable and thumb-scrollable, which a hand-built dropdown has to re-earn and usually does not at 360px |
 | `Slider` | A value on a scale with the value always visible beside the label, in the unit a household reads ("1.15×", "-2 semitones"), and both ends of the scale named underneath. A bare range input says something changed but never what it changed *to*, which rule 15 does not allow |

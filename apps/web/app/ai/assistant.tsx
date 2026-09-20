@@ -17,11 +17,9 @@ import { plainText } from "@wonderhome/core/conversation/reply-format";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { AiOrb, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
-import { ChatComposer } from "@wonderhome/core/ui/chat-composer";
+import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-composer";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
-import { Switch } from "@wonderhome/core/ui/switch";
-import { useLiveVoice, type LiveVoiceState } from "@wonderhome/core/ui/use-live-voice";
 
 /**
  * The conversation itself.
@@ -211,28 +209,23 @@ export function Assistant({
     }
   }, [householdId]);
 
-  const live = useLiveVoice({
-    lang: voiceLanguage,
-    server: serverVoice ? { householdId } : null,
-    onUtterance: handleLiveUtterance,
-    onError: (message) => setError(message),
-  });
+  /**
+   * What the composer is doing. The screen only needs this for one
+   * decision — whether the Edit pill makes sense — so it is a single
+   * piece of state rather than the whole voice machine repeated up here.
+   */
+  const [composerState, setComposerState] = useState<TalkComposerState>("idle");
+  const voiceInProgress = composerState !== "idle" && composerState !== "typing";
 
-  /** The composer's own toggle: on starts listening, off stops and recaps what was said (item 6). */
-  const toggleLive = useCallback(
-    (checked: boolean) => {
-      if (checked) {
-        liveStartMessageId.current = null;
-        setError(null);
-        setEditing(null);
-        live.start();
-      } else {
-        live.stop();
-        void endLiveSession();
-      }
-    },
-    [live, endLiveSession],
-  );
+  const onComposerState = useCallback((next: TalkComposerState) => {
+    setComposerState(next);
+    // Starting to talk clears a half-finished reword: the two are
+    // different intentions and one should not silently ride on the other.
+    if (next === "live") {
+      setEditing(null);
+      setError(null);
+    }
+  }, []);
 
   /** The composer's own submit — routed through whichever message, if any, is being reworded. */
   const handleComposerSend = useCallback(
@@ -301,10 +294,10 @@ export function Assistant({
   const editLocked = messages
     .slice(lastMemberIndex + 1)
     .some((message) => message.action?.status === "approved" || message.action?.status === "executed");
-  // A structural edit mid-hands-free-session would confuse a conversation
-  // that is otherwise flowing by voice, so the pill only appears once live
-  // conversation is off.
-  const editableMessageId = lastMemberIndex !== -1 && !editLocked && !live.active ? messages[lastMemberIndex]!.id : null;
+  // A structural edit part-way through speaking would confuse a
+  // conversation that is otherwise flowing by voice, so the pill only
+  // appears while the composer is back to typing.
+  const editableMessageId = lastMemberIndex !== -1 && !editLocked && !voiceInProgress ? messages[lastMemberIndex]!.id : null;
 
   return (
     // Exactly the space between the header and main's own bottom padding (which
@@ -419,30 +412,21 @@ export function Assistant({
             </button>
           </div>
         ) : null}
-        {live.active ? (
-          <div className="flex items-center gap-3 rounded-[var(--wh-radius-lg)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-2.5 shadow-[var(--wh-shadow-raised)]">
-            <AiOrb size={40} thinking={live.state === "thinking"} listening={live.state === "listening"} />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">{liveStatusLabel(live.state)}</p>
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">Talk naturally — WonderHome answers out loud.</p>
-            </div>
-            <Switch checked onCheckedChange={() => toggleLive(false)} label="Turn off live conversation" />
-          </div>
-        ) : (
-          <ChatComposer
-            key={editing?.id ?? "compose"}
-            onSend={handleComposerSend}
-            disabled={busy}
-            placeholder="Type a message, or tap the mic to speak…"
-            initialValue={editing?.text ?? ""}
-            autoFocus={Boolean(editing)}
-            belowSend={
-              liveConversationAvailable ? (
-                <Switch checked={false} onCheckedChange={() => toggleLive(true)} label="Turn on live conversation" disabled={busy} />
-              ) : undefined
-            }
-          />
-        )}
+        <TalkComposer
+          key={editing?.id ?? "compose"}
+          householdId={householdId}
+          onSend={handleComposerSend}
+          onLiveTurn={handleLiveUtterance}
+          onLiveEnd={() => void endLiveSession()}
+          onError={(message) => setError(message)}
+          onStateChange={onComposerState}
+          disabled={busy}
+          initialValue={editing?.text ?? ""}
+          autoFocus={Boolean(editing)}
+          liveConversationAvailable={liveConversationAvailable}
+          serverVoice={serverVoice}
+          voiceLanguage={voiceLanguage}
+        />
         <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
         </p>
@@ -451,22 +435,6 @@ export function Assistant({
   );
 }
 
-function liveStatusLabel(state: LiveVoiceState): string {
-  switch (state) {
-    case "listening":
-      return "Listening…";
-    case "thinking":
-      return "Thinking…";
-    case "speaking":
-      return "Speaking…";
-    case "denied":
-      return "Microphone access was refused";
-    case "unsupported":
-      return "Live conversation is not supported here";
-    default:
-      return "Live conversation is on";
-  }
-}
 
 function stateOf(message: AssistantMessage): "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "refused" {
   if (message.action) {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { captureUtterance, microphoneAvailable, playClip } from "../../voice/capture";
-import { recognitionConstructor, type RecognitionLike } from "./voice-input-button";
+import { recognitionConstructor, type RecognitionLike } from "../../voice/recognition";
 
 /**
  * A sustained, hands-free exchange: WonderHome listens, answers out loud,
@@ -60,11 +60,27 @@ export function useLiveVoice(input: {
   onUtterance: (transcript: string, confidence: number) => Promise<string>;
   /** A fatal problem (denied microphone, unsupported browser) — never thrown. */
   onError?: (message: string) => void;
-}): { state: LiveVoiceState; active: boolean; start: () => void; stop: () => void } {
+}): {
+  state: LiveVoiceState;
+  active: boolean;
+  /** On, but not listening — the session is still open and still gets its recap. */
+  paused: boolean;
+  start: () => void;
+  pause: () => void;
+  resume: () => void;
+  stop: () => void;
+} {
   const { lang = "en-IN", server = null, onUtterance, onError } = input;
   const [state, setState] = useState<LiveVoiceState>("idle");
   const [active, setActive] = useState(false);
+  const [paused, setPaused] = useState(false);
   const activeRef = useRef(false);
+  /**
+   * Paused is not stopped. `activeRef` stays true so the assistant keeps
+   * the session — and the message the recap will be measured from — while
+   * both loops below simply stop taking turns.
+   */
+  const pausedRef = useRef(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
@@ -86,7 +102,9 @@ export function useLiveVoice(input: {
 
   const halt = useCallback((next: LiveVoiceState, message?: string) => {
     activeRef.current = false;
+    pausedRef.current = false;
     setActive(false);
+    setPaused(false);
     setState(next);
     if (message) onErrorRef.current?.(message);
   }, []);
@@ -137,7 +155,7 @@ export function useLiveVoice(input: {
       await playClip({ base64: payload.audio, mimeType: payload.mimeType }, abortRef.current?.signal);
     };
 
-    while (activeRef.current) {
+    while (activeRef.current && !pausedRef.current) {
       setState("listening");
       const heard = await captureUtterance({ signal: abortRef.current?.signal });
       if (!activeRef.current) break;
@@ -171,7 +189,7 @@ export function useLiveVoice(input: {
 
   /** The browser's own recogniser, one utterance at a time. */
   const listenHere = useCallback(() => {
-    if (!activeRef.current) return;
+    if (!activeRef.current || pausedRef.current) return;
     const Recognition = recognitionConstructor();
     if (!Recognition) {
       halt("unsupported", "This browser cannot listen continuously, so live conversation is not available.");
@@ -188,7 +206,7 @@ export function useLiveVoice(input: {
       const best = event.results[0]?.[0];
       if (best?.transcript?.trim()) {
         void handle(best.transcript.trim(), Number.isFinite(best.confidence) ? best.confidence : 0.5);
-      } else if (activeRef.current) {
+      } else if (activeRef.current && !pausedRef.current) {
         listenHere();
       }
     };
@@ -200,8 +218,8 @@ export function useLiveVoice(input: {
       }
       // Silence ("no-speech") and our own abort() are ordinary pauses in a
       // hands-free conversation, not failures — just listen again.
-      if (activeRef.current) listenHere();
-      else setState("idle");
+      if (activeRef.current && !pausedRef.current) listenHere();
+      else if (!activeRef.current) setState("idle");
     };
     recognition.onend = () => {
       recognitionRef.current = null;
@@ -225,23 +243,14 @@ export function useLiveVoice(input: {
       }
       if (!activeRef.current) return;
       await speakHere(reply);
-      if (activeRef.current) listenHere();
-      else setState("idle");
+      if (activeRef.current && !pausedRef.current) listenHere();
+      else if (!activeRef.current) setState("idle");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, speakHere, halt]);
 
-  const start = useCallback(() => {
-    if (typeof window === "undefined") return;
-
-    if (householdId) {
-      if (!microphoneAvailable()) {
-        halt("unsupported", "This browser cannot record audio, so live conversation is not available.");
-        return;
-      }
-
-      activeRef.current = true;
-      setActive(true);
+  /** Runs the provider loop until it is paused, stopped or fails. */
+  const launchProvider = useCallback(() => {
       abortRef.current = new AbortController();
 
       void runWithProvider()
@@ -255,6 +264,22 @@ export function useLiveVoice(input: {
         .then(() => {
           if (!activeRef.current) setState((current) => (current === "denied" || current === "unsupported" ? current : "idle"));
         });
+  }, [halt, runWithProvider]);
+
+  const start = useCallback(() => {
+    if (typeof window === "undefined") return;
+    pausedRef.current = false;
+    setPaused(false);
+
+    if (householdId) {
+      if (!microphoneAvailable()) {
+        halt("unsupported", "This browser cannot record audio, so live conversation is not available.");
+        return;
+      }
+
+      activeRef.current = true;
+      setActive(true);
+      launchProvider();
       return;
     }
 
@@ -265,11 +290,41 @@ export function useLiveVoice(input: {
     activeRef.current = true;
     setActive(true);
     listenHere();
-  }, [householdId, halt, listenHere, runWithProvider]);
+  }, [householdId, halt, launchProvider, listenHere]);
+
+  /**
+   * Stops taking turns without ending the session.
+   *
+   * The microphone closes and anything mid-sentence is cut off, because
+   * "pause" has to actually stop listening to mean anything — but the
+   * session stays open, so resuming continues the same conversation and
+   * the recap at the end still covers all of it.
+   */
+  const pause = useCallback(() => {
+    if (!activeRef.current) return;
+    pausedRef.current = true;
+    setPaused(true);
+    abortRef.current?.abort();
+    abortRef.current = null;
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    setState("idle");
+  }, []);
+
+  const resume = useCallback(() => {
+    if (!activeRef.current || !pausedRef.current) return;
+    pausedRef.current = false;
+    setPaused(false);
+    if (householdId) launchProvider();
+    else listenHere();
+  }, [householdId, launchProvider, listenHere]);
 
   const stop = useCallback(() => {
     activeRef.current = false;
+    pausedRef.current = false;
     setActive(false);
+    setPaused(false);
     abortRef.current?.abort();
     abortRef.current = null;
     recognitionRef.current?.abort();
@@ -288,5 +343,5 @@ export function useLiveVoice(input: {
     [],
   );
 
-  return { state, active, start, stop };
+  return { state, active, paused, start, pause, resume, stop };
 }
