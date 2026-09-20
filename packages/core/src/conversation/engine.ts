@@ -147,8 +147,12 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
     if (fallback.action !== "unknown") {
       intent = fallback;
     } else if (intent.understanding?.failure) {
-      // Keep the failure on the intent so the reply can say what actually happened.
-      intent = { ...fallback, understanding: intent.understanding };
+      // Keep the failure on the intent so the reply can say what actually
+      // happened — unless the rules have a specific question to ask, which
+      // is more useful than "I could not reach my model".
+      intent = { ...fallback, understanding: fallback.parameters.clarify ? fallback.understanding : intent.understanding };
+    } else if (fallback.parameters.clarify) {
+      intent = fallback;
     }
   }
 

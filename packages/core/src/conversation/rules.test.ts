@@ -26,6 +26,29 @@ describe("what's going on", () => {
     expect(intent.understanding).toEqual({ source: "rules" });
   });
 
+  it.each([
+    "what needs attention right now",
+    "what is the current situation",
+    "what is going on in my family right now",
+    "What's the situation at home?",
+    "anything I should know about today",
+    "give me an overview of the house",
+    "how's everything at home these days",
+    "is there anything urgent",
+    "what's on my to-do",
+  ])("reads the wider phrasing %j as a status question too", (utterance) => {
+    const intent = read(utterance);
+    expect(intent.action).toBe("ask_status");
+    expect(intent.understanding).toEqual({ source: "rules" });
+  });
+
+  it("keeps a request a request even when it mentions the home", () => {
+    expect(read("add milk to the list").action).toBe("add_to_list");
+    expect(read("put eggs on the shopping list for tomorrow").action).not.toBe("ask_status");
+    expect(read("we need bread today").action).toBe("add_to_list");
+    expect(read("pay the electricity bill now").action).toBe("make_payment");
+  });
+
   it("keeps the day when one was named", () => {
     expect(read("what's on tomorrow").parameters).toMatchObject({ when: "tomorrow" });
     expect(read("show me tomorrow's schedule").parameters).toMatchObject({ when: "tomorrow", scope: "schedule" });
@@ -171,5 +194,25 @@ describe("what it does not know", () => {
       ].map((utterance) => read(utterance).action),
     );
     for (const action of RULE_ACTIONS) expect(seen.has(action)).toBe(true);
+  });
+});
+
+describe("changing a meal", () => {
+  it("asks for the dish when the Meals screen's link says only which meal", () => {
+    const intent = read("Change dinner on 2026-09-20");
+    expect(intent.action).toBe("unknown");
+    expect(intent.target).toEqual({ kind: "outcome", reference: "meals.dinner" });
+    expect(intent.parameters.clarify).toBe("What would you like for dinner on Sun 20 Sep? Tell me the dish and I will note the change.");
+    expect(proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "approve", entitled: true })).toEqual({
+      kind: "clarify",
+      question: "What would you like for dinner on Sun 20 Sep? Tell me the dish and I will note the change.",
+    });
+  });
+
+  it("remembers the plan when the dish was said", () => {
+    const intent = read("change dinner on friday to paneer pulao");
+    expect(intent.action).toBe("set_preference");
+    expect(intent.target).toEqual({ kind: "outcome", reference: "meals.dinner" });
+    expect(intent.parameters).toMatchObject({ statement: "dinner friday: paneer pulao" });
   });
 });

@@ -225,12 +225,12 @@ describe("content claiming consent does not create consent", () => {
     expect(result.withheld[0]).toMatchObject({ reason: "class_not_permitted" });
   });
 
-  it("does not route to a provider the household never agreed to", () => {
+  it("does not route the platform to a provider the household explicitly excluded", () => {
     expect(
       routeToProvider({
         provider: "openai",
-        keySource: "household",
-        policy: DEFAULT_DATA_USE,
+        keySource: "platform",
+        policy: { ...DEFAULT_DATA_USE, allowedProviders: ["anthropic"] },
         hasContent: true,
       }),
     ).toMatchObject({ ok: false, code: "provider_not_allowed" });
