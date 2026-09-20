@@ -4,6 +4,7 @@ import { ApiError } from "../api/errors";
 import { createConsumable } from "../commerce/repository";
 import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
+import { linkTo } from "./reply-format";
 
 /**
  * Carrying an understood request out (product-direction update §7: the
@@ -54,15 +55,15 @@ export function canExecute(intent: HouseholdIntent): boolean {
 export function notYetDoable(action: HouseholdIntent["action"]): string {
   switch (action) {
     case "make_payment":
-      return "Approved — and paying it myself needs a payment provider connected, which is not live yet. It stays with you for now, and I will not mark it paid until it is.";
+      return `Approved — and paying it myself needs a payment provider connected, which is not live yet. It stays with you under ${linkTo("/bills", "Bills")} for now, and I will not mark it paid until it is.`;
     case "order_items":
-      return "Approved — and placing the order myself needs a shop connected, which is not live yet. The list is ready under Groceries whenever you order.";
+      return `Approved — and placing the order myself needs a shop connected, which is not live yet. The list is ready under ${linkTo("/groceries", "Groceries")} whenever you order.`;
     case "assign_responsibility":
-      return "Approved. Changing who owns an outcome is done under Manage household → Responsibilities, so it is exactly what you intend — I have not changed it on my own.";
+      return `Approved. Changing who owns an outcome is done under ${linkTo("/household/responsibilities", "Responsibilities")}, so it is exactly what you intend — I have not changed it on my own.`;
     case "adjust_schedule":
-      return "Approved. Moving it on the family calendar is done under Family for now — I have not moved anything myself.";
+      return `Approved. Moving it on the family calendar is done under ${linkTo("/family", "Family")} for now — I have not moved anything myself.`;
     case "plan_event":
-      return "Approved. I have not put anything on the calendar myself yet — add it under Family and I will keep an eye on it.";
+      return `Approved. I have not put anything on the calendar myself yet — add it under ${linkTo("/family", "Family")} and I will keep an eye on it.`;
     default:
       return "Approved — noted, though there is nothing I can do about this on my own yet.";
   }
@@ -78,7 +79,7 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
       case "set_preference":
         return {
           ok: true,
-          text: `Remembered: ${String(intent.parameters.statement ?? intent.utterance).replace(/[.!]+$/, "")}. You can correct me any time.`,
+          text: `Remembered: **${String(intent.parameters.statement ?? intent.utterance).replace(/[.!]+$/, "")}**. You can correct me any time, or under ${linkTo("/certification", "What WonderHome believes")}.`,
           result: { remembered: intent.target.reference },
         };
       default:
@@ -106,12 +107,12 @@ async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext
     });
     return {
       ok: true,
-      text: `Added ${name} to the groceries. It is under what WonderHome tracks; once I see it bought a few times I will work out how often you need it.`,
+      text: `Added **${name}** to the ${linkTo("/groceries", "groceries")}. Once I see it bought a few times I will work out how often you need it.`,
       result: { consumableId: id, name },
     };
   } catch (thrown) {
     if (thrown instanceof ApiError && thrown.code === "conflict") {
-      return { ok: true, text: `${name} is already on the groceries, so there was nothing to add.`, result: { name, alreadyTracked: true } };
+      return { ok: true, text: `**${name}** is already on the ${linkTo("/groceries", "groceries")}, so there was nothing to add.`, result: { name, alreadyTracked: true } };
     }
     throw thrown;
   }
@@ -141,7 +142,7 @@ async function recordAbsence(intent: HouseholdIntent, context: ExecutionContext)
 
   return {
     ok: true,
-    text: `Noted — ${member.displayName} is away ${describeDate(onDate, when, context.timezone)}. I will re-check what they usually handle that day.`,
+    text: `Noted — **${member.displayName}** is away ${describeDate(onDate, when, context.timezone)}. I will re-check what they usually handle that day; see ${linkTo("/family", "Family")}.`,
     result: { memberId: member.id, onDate },
   };
 }

@@ -1,4 +1,5 @@
 import type { HomeAssessment } from "../home/assessment";
+import { linkTo } from "./reply-format";
 
 /**
  * The answer to "what's going on in my home?" (product-direction update §7:
@@ -11,9 +12,12 @@ import type { HomeAssessment } from "../home/assessment";
  * Nothing about the household leaves the server to produce it.
  */
 
+/** A place in the app where the thing can be seen or done. */
+export type Place = { label: string; href: string };
+
 export type StatusFacts = {
-  /** What currently needs a person, most urgent first. */
-  needsYou: readonly HomeAssessment[];
+  /** What currently needs a person, most urgent first, each with where to go for it. */
+  needsYou: readonly (HomeAssessment & { place?: Place })[];
   /** Domains that were checked and found fine. */
   handled: readonly { title: string; meta?: string }[];
   /** Everything evaluated, across every domain this person may see. */
@@ -49,14 +53,14 @@ export function composeStatusAnswer(facts: StatusFacts): string {
   const needs = [...facts.needsYou];
   if (needs.length === 0) {
     parts.push(
-      `All quiet. I checked ${count(facts.checked, "thing")}${describeHandled(facts.handled)} and nothing needs you right now.`,
+      `All quiet. I checked ${count(facts.checked, "thing")}${describeHandled(facts.handled)} and nothing needs you right now. ${linkTo("/today", "Today")} has the day's plan.`,
     );
   } else {
-    const listed = needs.slice(0, MAX_LISTED).map((need) => `${need.title} — ${trimReason(need.reason)}`);
+    const listed = needs.slice(0, MAX_LISTED).map((need) => `- **${need.title}** — ${trimReason(need.reason)}${need.place ? ` → ${linkTo(need.place.href, need.place.label)}` : ""}`);
     const rest = needs.length - listed.length;
     const urgent = needs.filter((need) => need.riskLevel === "high").length;
     parts.push(
-      `${count(needs.length, "thing")} need${needs.length === 1 ? "s" : ""} you${urgent > 0 ? ` (${urgent} urgent)` : ""}: ${listed.join("; ")}${rest > 0 ? `; and ${rest} more` : ""}.`,
+      `**${count(needs.length, "thing")} need${needs.length === 1 ? "s" : ""} you**${urgent > 0 ? ` (${urgent} urgent)` : ""}:\n${listed.join("\n")}${rest > 0 ? `\n- and ${rest} more on ${linkTo("/", "Home")}` : ""}`,
     );
     const quiet = Math.max(0, facts.checked - needs.length);
     if (quiet > 0) {
@@ -68,7 +72,7 @@ export function composeStatusAnswer(facts: StatusFacts): string {
     parts.push(`I could not read ${facts.unavailable.join(" or ")} just now, so that part is missing.`);
   }
 
-  return parts.join(" ");
+  return parts.join("\n\n");
 }
 
 function describeEvents(events: StatusFacts["events"], when: string, timezone?: string): string {
@@ -79,7 +83,7 @@ function describeEvents(events: StatusFacts["events"], when: string, timezone?: 
   const formatter = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: timezone });
   const listed = live.slice(0, MAX_LISTED).map((event) => `${event.title} at ${formatter.format(event.startsAt).replace(/\s?(am|pm)/i, (m) => m.trim())}`);
   const rest = live.length - listed.length;
-  return `${label}: ${listed.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}.`;
+  return `${label}: ${listed.join(", ")}${rest > 0 ? `, and ${rest} more` : ""} — see ${linkTo("/family", "Family")}.`;
 }
 
 function describeHandled(handled: StatusFacts["handled"]): string {

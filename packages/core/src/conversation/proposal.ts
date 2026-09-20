@@ -1,6 +1,7 @@
 import { decideAutonomy, type AutonomyMode, type ProposedAction } from "../household/autonomy";
 import { can, type Permission, type PermissionContext } from "../identity/permissions";
 import { WHAT_I_CAN_DO, disposeIntent, isConsequential, type HouseholdIntent } from "./intent";
+import { linkTo } from "./reply-format";
 
 /**
  * From intent to proposal (story 04-004).
@@ -69,7 +70,7 @@ export function greetingFor(intent: HouseholdIntent): string {
     case "thanks":
       return "Any time. I am here whenever the household needs something.";
     case "help":
-      return `Here is what I can do today. ${WHAT_I_CAN_DO} Anything that spends money or changes who can act always waits for your OK.`;
+      return `Here is what I can do today. ${WHAT_I_CAN_DO} Anything that spends money or changes who can act always waits for your OK. The ${linkTo("/help", "user guide")} has the longer version.`;
     default:
       return `Hello! ${WHAT_I_CAN_DO} What would you like?`;
   }
