@@ -1,4 +1,5 @@
 import type { HouseholdIntent, IntentAction } from "./intent";
+import { extractItems } from "./clarify";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -224,6 +225,23 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:order|reorder)\s+(.+)$/i,
     read: (match) => ({ action: "order_items", target: { kind: "list", reference: "groceries" }, parameters: { items: item(match[1]!) }, confidence: 0.82 }),
+  },
+  {
+    /**
+     * The way people actually ask, which is rarely a command starting with
+     * the verb: "I want you to add 3 eggs for order and a packet of milk
+     * for order". Anchoring on "order"/"reorder" at the start missed all of
+     * it, and the household then got asked what to order — by a product
+     * that had just been told (story 04-011).
+     */
+    pattern:
+      /^(?:i\s+(?:just\s+|already\s+)?(?:want|need|would like|said|told you)(?:\s+you)?(?:\s+to)?\s+)?(?:please\s+)?(?:can you\s+|could you\s+)?(?:add|order|reorder|buy|get|purchase|put)\s+(.+?)\s+(?:for|to|on|into)\s+(?:the\s+)?(?:order|orders|shopping(?:\s+list)?|grocery(?:\s+list)?|groceries|list|basket|cart)\b.*$/i,
+    read: (match) => ({
+      action: "order_items",
+      target: { kind: "list", reference: "groceries" },
+      parameters: { items: extractItems(match[0]!) },
+      confidence: 0.86,
+    }),
   },
 
   // --- Planning and schedule --------------------------------------------------

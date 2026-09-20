@@ -1,5 +1,6 @@
 import type { AutonomyMode } from "../household/autonomy";
 import type { PermissionContext } from "../identity/permissions";
+import { answerClarification, clarificationFrom, escalatedQuestion, type PendingClarification } from "./clarify";
 import { resolveFixtureIntent } from "./fixtures";
 import {
   isConsequential,
@@ -85,6 +86,12 @@ export type TurnInput = {
   understand?: Understanding;
   /** Earlier turns of this session, for an understanding that can use them. */
   history?: readonly ConversationTurn[];
+  /**
+   * The question WonderHome asked last turn, if it asked one. This turn is
+   * read as the answer to it before it is read as anything else, and the
+   * same question is never asked twice (story 04-011).
+   */
+  clarifying?: PendingClarification | null;
   now?: Date;
 };
 
@@ -100,6 +107,8 @@ export type TurnResult =
       /** A proposal to write down for a later yes or no. */
       record: boolean;
       memory: Memory | null;
+      /** Set when this turn asked a question, for the next turn to answer. */
+      clarification?: PendingClarification | null;
     };
 
 export async function converse(input: TurnInput): Promise<TurnResult> {
@@ -136,13 +145,23 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
 
   const understand = input.understand ?? resolveDeterministicIntent;
   const context = { actorMemberId: input.actor.memberId, channel: input.channel, history: input.history };
-  let intent = await understand(input.utterance, context);
+
+  // A question WonderHome asked is a promise to use the answer. Reading
+  // this turn against it first is what stops the loop where the same
+  // question comes back however clearly somebody answers it.
+  const answered = input.clarifying
+    ? answerClarification(input.clarifying, input.utterance, {
+        actorMemberId: input.actor.memberId,
+        channel: input.channel,
+      })
+    : null;
+  let intent = answered ?? (await understand(input.utterance, context));
 
   // A model that did not answer, or answered "unknown" for something the
   // rules plainly read, is not the last word: the rules are the safety net
   // under any understanding, so an outage degrades to "works for the
   // ordinary requests" rather than "understands nothing".
-  if (intent.action === "unknown") {
+  if (!answered && intent.action === "unknown") {
     const fallback = resolveRuleIntent(input.utterance, context);
     if (fallback.action !== "unknown") {
       intent = fallback;
@@ -180,14 +199,42 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
       ? { kind: "prepared", preview: proposed.preview }
       : proposed;
 
+  // Never the same question twice. If this turn would ask again what the
+  // last one asked, it says instead what was understood, what is missing,
+  // and the shape of an answer that works.
+  let settled = proposal;
+  if (proposal.kind === "clarify" && input.clarifying && sameQuestion(proposal.question, input.clarifying)) {
+    settled = { kind: "clarify", question: escalatedQuestion(input.clarifying) };
+  }
+
   return {
     kind: "reply",
     intent,
-    proposal,
-    text: replyFor(proposal),
-    record: needsRecording(intent, proposal),
+    proposal: settled,
+    text: replyFor(settled),
+    record: needsRecording(intent, settled),
     memory: extractMemory(intent, { sessionId: input.sessionId }),
+    clarification:
+      settled.kind === "clarify"
+        ? clarificationFrom({
+            intent,
+            question: settled.question,
+            utterance: input.utterance,
+            previous: input.clarifying ?? null,
+          })
+        : null,
   };
+}
+
+/**
+ * Whether this is the question that was just asked.
+ *
+ * Matched on the subject rather than the wording, because the point is not
+ * to repeat the *ask* — re-phrasing the identical request for the identical
+ * missing detail is the same failure with different words.
+ */
+function sameQuestion(question: string, pending: PendingClarification): boolean {
+  return question.trim() === pending.question.trim() || pending.action !== "unknown";
 }
 
 /** What the assistant says, by what it is prepared to do. Short on purpose. */
