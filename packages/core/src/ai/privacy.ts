@@ -427,6 +427,31 @@ export function unpseudonymise(
   return { reference, memberId: byName?.id ?? null };
 }
 
+/**
+ * The way back for prose (the other direction of `substitute`).
+ *
+ * A model that composed an answer about "Adult A" and "Child B" wrote about
+ * placeholders; the household reads about people. Only this server holds the
+ * map, so the names go back in here, after the answer has arrived and before
+ * anybody sees it. A placeholder the map does not know is left as it is.
+ */
+export function restoreNames(
+  text: string,
+  pseudonyms: Record<string, string>,
+  people: readonly Person[],
+): string {
+  let out = text;
+  for (const [memberId, placeholder] of Object.entries(pseudonyms)) {
+    const person = people.find((entry) => entry.id === memberId);
+    if (!person) continue;
+    const first = person.displayName.split(/\s+/)[0] ?? person.displayName;
+    out = out.replace(new RegExp(`\\b${escapeRegExp(placeholder)}(?:'s)?\\b`, "gi"), (match) =>
+      /'s$/i.test(match) ? `${first}'s` : first,
+    );
+  }
+  return out;
+}
+
 /** Replaces every household name in the text, longest first so "Ravi Nair" wins over "Ravi". */
 function substitute(
   text: string,

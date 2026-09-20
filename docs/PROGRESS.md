@@ -293,9 +293,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
-| `14-001` Household orchestrator | P0 | Done | Authorization outside the model; approval binds to the exact action |
+| `14-001` Household orchestrator | P0 | Done | Authorization outside the model; approval binds to the exact action. 2026-09-20: the Household Brain (`conversation/brain.ts`, v4 §5) gathers every domain into one consented context, and a question is answered from all of it |
 | `14-002` Governed tools | P0 | Done | Authorization outside the model; approval binds to the exact action |
-| `14-003` Plan/execute/monitor loop | P0 | Done | Authorization outside the model; approval binds to the exact action |
+| `14-003` Plan/execute/monitor loop | P0 | Done | Authorization outside the model; approval binds to the exact action. 2026-09-20: "understand" now reads the whole home (v4 §6 context assembly, cross-domain reasoning, result interpretation), not one domain's summary |
 | `14-004` Agent runs | P0 | Done | Authorization outside the model; approval binds to the exact action |
 | `14-005` Approval integration | P0 | Done | Authorization outside the model; approval binds to the exact action |
 | `14-006` Learning boundaries | P0 | Done | Authorization outside the model; approval binds to the exact action |
@@ -392,4 +392,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |
 
-_Generated 2026-09-19 from 21 backlog files._
+_Generated 2026-09-20 from 21 backlog files._

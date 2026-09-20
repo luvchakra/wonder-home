@@ -1,15 +1,16 @@
 import { z } from "zod";
 
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
-import { createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding } from "@wonderhome/core/ai/model-client";
+import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, routeToProvider, unpseudonymise, type ContextCandidate, type Person } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, restoreNames, routeToProvider, unpseudonymise, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
+import { describeLocalNow, forgetHouseholdContext, householdContext } from "@wonderhome/core/conversation/brain";
 import { converse, pendingFrom, previewOf, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
@@ -35,9 +36,9 @@ import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
-import { buildPersonalView } from "@wonderhome/core/identity/views";
+import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 
-import { householdAgenda } from "@/app/_lib/agenda";
+import { householdAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
 
 /**
  * The conversation: one engine for talk and text (module 04), made real
@@ -143,7 +144,7 @@ export async function POST(request: Request, { params }: Params) {
       listPeople(supabase, householdId),
     ]);
     const [pending, history] = await Promise.all([pendingAction(admin, sessionId), recentTurns(admin, sessionId, 6)]);
-    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people);
+    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, membership.household.timezone);
 
     const memberMessageId = await recordMessage(admin, {
       householdId,
@@ -186,16 +187,48 @@ export async function POST(request: Request, { params }: Params) {
     // state, or a write that went through (or did not).
     let text = result.text;
     let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
+    let brain: { source: "model" | "deterministic" | "none"; factsSent: number } = { source: "none", factsSent: 0 };
 
     if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
-      text = await answerStatus(supabase, householdId, membership, result.intent);
+      // A question about the home: answered from everything the home holds
+      // (the Household Brain), composed by the model where the household's
+      // consent lets the facts go; otherwise from the deterministic summary.
+      const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
+      const agenda = await householdAgenda(supabase, householdId, view);
+      text = await answerStatus(supabase, householdId, membership, result.intent, agenda);
+      const composed = await answerFromBrain({ supabase, householdId, membership, view, agenda, routing, question: body.utterance });
+      if (composed) {
+        text = composed.text;
+        brain = { source: "model", factsSent: composed.factsSent };
+      } else {
+        brain = { source: "deterministic", factsSent: 0 };
+      }
+    } else if (
+      result.kind === "reply" &&
+      result.intent.action === "unknown" &&
+      result.proposal.kind === "clarify" &&
+      !result.intent.understanding?.failure &&
+      typeof result.intent.parameters.clarify !== "string" &&
+      routing.answer
+    ) {
+      // Not a request the engine knows, and not a model outage: before saying
+      // "I did not follow that", see whether the home's own facts answer it.
+      const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
+      const agenda = await householdAgenda(supabase, householdId, view);
+      const composed = await answerFromBrain({ supabase, householdId, membership, view, agenda, routing, question: body.utterance });
+      if (composed?.grounded) {
+        text = composed.text;
+        brain = { source: "model", factsSent: composed.factsSent };
+      }
     } else if (result.kind === "reply" && result.proposal.kind === "executed") {
       if (result.memory) await remember(admin, householdId, result.memory);
       const done = await executeIntent(result.intent, execution);
       text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
       outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
+      if (done.ok) forgetHouseholdContext(householdId);
     } else if (result.kind === "reply" && result.memory) {
       await remember(admin, householdId, result.memory);
+      forgetHouseholdContext(householdId);
     }
 
     let action: ConversationAction | null = null;
@@ -211,7 +244,8 @@ export async function POST(request: Request, { params }: Params) {
         // Why this turn did or did not reach a model provider (15-005). A
         // code and a count, never the content either way.
         provider: routing.code,
-        providerItemsSent: routing.itemsSent,
+        providerItemsSent: routing.itemsSent + brain.factsSent,
+        brain: brain.source,
       },
     });
 
@@ -247,7 +281,10 @@ export async function POST(request: Request, { params }: Params) {
         proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
       },
       /** What, if anything, left this household this turn (15-005). */
-      privacy: { provider: routing.code, disclosure: routing.disclosure },
+      privacy: {
+        provider: routing.code,
+        disclosure: brain.factsSent > 0 ? [...routing.disclosure, `${brain.factsSent} facts about the home went with it, to answer from what WonderHome knows. Names were replaced with roles first.`] : routing.disclosure,
+      },
     };
   })(request);
 }
@@ -292,6 +329,7 @@ async function carryOutApproved(input: {
   });
   const status = done.ok ? "executed" : "failed";
   await markActionResult(input.admin, { actionId: input.action.id, status, result: done.ok ? done.result : { reason: done.reason } });
+  if (done.ok) forgetHouseholdContext(input.householdId);
 
   return {
     text: done.ok ? done.text : `I have your go-ahead, and it did not go through: ${done.reason}`,
@@ -304,15 +342,11 @@ async function carryOutApproved(input: {
  * domain engines the Home screen reads, composed on this server. Nothing
  * about the household leaves to produce it.
  */
-async function answerStatus(supabase: Supabase, householdId: string, membership: HouseholdMembership, intent: HouseholdIntent): Promise<string> {
-  const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
+async function answerStatus(supabase: Supabase, householdId: string, membership: HouseholdMembership, intent: HouseholdIntent, agenda: HouseholdAgenda): Promise<string> {
   const when = typeof intent.parameters.when === "string" ? intent.parameters.when : null;
   const now = new Date();
 
-  const [agenda, events] = await Promise.all([
-    householdAgenda(supabase, householdId, view),
-    when ? listEvents(supabase, householdId, windowFor(when, now)).catch(() => []) : Promise.resolve(null),
-  ]);
+  const events = when ? await listEvents(supabase, householdId, windowFor(when, now)).catch(() => []) : null;
 
   return composeStatusAnswer({
     needsYou: agenda.needsYou,
@@ -323,6 +357,46 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
     when,
     timezone: membership.household.timezone,
   });
+}
+
+/**
+ * A question answered from the Household Brain (product-direction v4 §5).
+ *
+ * Every domain this member may see is read into plain facts, each carrying
+ * its consent class; the gate keeps only what the household has agreed may
+ * leave and replaces names with roles; the model composes an answer from
+ * those facts alone; the names go back in here. Null when the household's
+ * policy lets nothing go, no provider is configured, or the model did not
+ * answer — the caller keeps its deterministic line in every such case.
+ */
+async function answerFromBrain(input: {
+  supabase: Supabase;
+  householdId: string;
+  membership: HouseholdMembership;
+  view: PersonalView;
+  agenda: HouseholdAgenda;
+  routing: Awaited<ReturnType<typeof decideProviderRouting>>;
+  question: string;
+}): Promise<{ text: string; grounded: boolean; factsSent: number } | null> {
+  if (!input.routing.answer) return null;
+  try {
+    const context = await householdContext(input.supabase, {
+      householdId: input.householdId,
+      householdName: input.membership.household.name,
+      timezone: input.membership.household.timezone,
+      viewer: input.view,
+      agenda: {
+        needsYou: input.agenda.needsYou,
+        handled: input.agenda.handled,
+        checked: input.agenda.checked,
+        unavailable: input.agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label),
+      },
+    });
+    return await input.routing.answer(input.question, context.facts, input.view.roleLabel);
+  } catch (thrown) {
+    console.error("[conversation] household brain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
+    return null;
+  }
 }
 
 function windowFor(when: string, now: Date): { from: Date; to: Date } {
@@ -382,7 +456,16 @@ async function decideProviderRouting(
   utterance: string,
   history: readonly ConversationTurn[],
   people: Person[],
-): Promise<{ code: string; itemsSent: number; disclosure: string[]; understand?: Understanding; history?: ConversationTurn[] }> {
+  timezone: string,
+): Promise<{
+  code: string;
+  itemsSent: number;
+  disclosure: string[];
+  understand?: Understanding;
+  history?: ConversationTurn[];
+  /** Answers a question from the home's facts, through the same gate, with names restored. */
+  answer?: (question: string, facts: readonly ContextCandidate[], viewer: string) => Promise<{ text: string; grounded: boolean; factsSent: number } | null>;
+}> {
   const [policy, householdKey] = await Promise.all([
     loadDataUse(supabase, householdId),
     readHouseholdKey(householdId).catch(() => null),
@@ -421,11 +504,11 @@ async function decideProviderRouting(
 
   const provider =
     decision.provider === "anthropic" && key.key
-      ? { name: "Anthropic Claude", understand: createClaudeUnderstanding(key.key) }
+      ? { name: "Anthropic Claude", understand: createClaudeUnderstanding(key.key), compose: createAnswerComposer("anthropic", key.key) }
       : decision.provider === "google" && key.key
-        ? { name: "Google Gemini", understand: createGeminiUnderstanding(key.key) }
+        ? { name: "Google Gemini", understand: createGeminiUnderstanding(key.key), compose: createAnswerComposer("google", key.key) }
         : decision.provider === "openai" && key.key
-          ? { name: "OpenAI", understand: createOpenAIUnderstanding(key.key) }
+          ? { name: "OpenAI", understand: createOpenAIUnderstanding(key.key), compose: createAnswerComposer("openai", key.key) }
           : null;
 
   if (!provider) {
@@ -451,6 +534,8 @@ async function decideProviderRouting(
     return intent;
   };
 
+  const answer = answerThroughGate({ compose: provider.compose, policy, people, question: sentUtterance, history: sentHistory, timezone });
+
   return {
     code: "transmitted",
     itemsSent: minimised.included.length,
@@ -459,8 +544,45 @@ async function decideProviderRouting(
     ],
     understand,
     history: sentHistory,
+    answer,
   };
 }
+
+/**
+ * The Household Brain's facts, through the same consent gate as the
+ * utterance: only the classes the household agreed to, names replaced on the
+ * way out and restored on the way back. The model never sees who anyone is.
+ */
+function answerThroughGate(input: {
+  compose: AnswerComposer;
+  policy: DataUsePolicy;
+  people: Person[];
+  question: string;
+  history: ConversationTurn[];
+  timezone: string;
+}) {
+  return async (_question: string, facts: readonly ContextCandidate[], viewer: string) => {
+    const minimised = minimiseContext(facts, { policy: { ...input.policy, maxItems: Math.max(input.policy.maxItems, FACT_BUDGET) }, people: input.people });
+    if (minimised.included.length === 0) return null;
+    const composed = await input.compose({
+      question: input.question,
+      facts: minimised.included.map((entry) => entry.text),
+      history: input.history,
+      viewer,
+      localNow: describeLocalNow(new Date(), input.timezone),
+    });
+    if (!composed) return null;
+    return { text: restoreNames(composed.text, minimised.pseudonyms, input.people), grounded: composed.grounded, factsSent: minimised.included.length };
+  };
+}
+
+/**
+ * How many facts may go in one answer. The policy's own `maxItems` was set
+ * for a single utterance and a few turns of history; a whole home is more
+ * lines than that, and the classes — not the count — are what the household
+ * consented to.
+ */
+const FACT_BUDGET = 80;
 
 /** Autonomy per outcome, from the responsibilities matrix; "approve" if unset. */
 async function autonomyLookup(supabase: Supabase, householdId: string) {
