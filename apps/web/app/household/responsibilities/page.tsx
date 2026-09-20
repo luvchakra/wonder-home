@@ -49,14 +49,33 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
     );
   }
 
-  const [members, { data }, conflicts, playbook] = await Promise.all([
+  const [members, responsibilityRows, conflicts, playbook] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    supabase.from("responsibilities").select("id, outcome_key, primary_member_id, backup_member_id, ai_mode, priority, playbook_items(name, outcome_definition, cadence)").eq("household_id", householdId).order("priority"),
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("responsibilities")
+          .select("id, outcome_key, primary_member_id, backup_member_id, ai_mode, priority, playbook_items(name, outcome_definition, cadence)")
+          .eq("household_id", householdId)
+          .order("priority");
+        return { data, failed: Boolean(error) };
+      } catch {
+        return { data: null, failed: true };
+      }
+    })(),
     listConfigurationConflicts(supabase, householdId).catch(() => []),
     listPlaybookOutcomes(supabase, householdId).catch(() => []),
   ]);
 
-  const rows = (data as Row[] | null) ?? [];
+  if (responsibilityRows.failed) {
+    return (
+      <AppShell {...shell}>
+        <EmptyState icon={ListChecks} title="Responsibilities could not be loaded" description="Nothing has changed. Try again in a moment." />
+      </AppShell>
+    );
+  }
+
+  const rows = (responsibilityRows.data as Row[] | null) ?? [];
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
   const shown = rows.filter((row) => (active === "mine" ? row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId : active === "family" ? row.primary_member_id !== membership.memberId : true));
   const gaps = rows.filter((row) => !row.primary_member_id);
