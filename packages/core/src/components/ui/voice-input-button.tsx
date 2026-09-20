@@ -41,6 +41,13 @@ function recognitionConstructor(): RecognitionConstructor | null {
 
 export type VoiceState = "unsupported" | "idle" | "listening" | "denied";
 
+const SIZE = {
+  md: { button: "size-11", icon: "size-5", iconListening: "size-4" },
+  lg: { button: "size-16", icon: "size-7", iconListening: "size-6" },
+  /** The composer's own mic — voice is the P0 way into WonderHome, so it is the largest thing in the bar. */
+  xl: { button: "size-[4.75rem]", icon: "size-8", iconListening: "size-7" },
+} as const;
+
 export function VoiceInputButton({
   onResult,
   onStateChange,
@@ -51,7 +58,7 @@ export function VoiceInputButton({
   onResult: (result: VoiceResult) => void;
   onStateChange?: (state: VoiceState) => void;
   lang?: string;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
   className?: string;
 }) {
   const [state, setState] = useState<VoiceState>("idle");
@@ -117,6 +124,8 @@ export function VoiceInputButton({
         : listening
           ? "Stop listening"
           : "Tap to speak";
+  const dims = SIZE[size];
+  const retro = size === "xl";
 
   return (
     <button
@@ -128,21 +137,47 @@ export function VoiceInputButton({
       title={label}
       className={cn(
         "relative grid shrink-0 place-items-center rounded-full text-[var(--wh-primary-foreground)] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:cursor-not-allowed disabled:opacity-50",
-        size === "lg" ? "size-16" : "size-11",
+        dims.button,
         listening ? "scale-105" : "hover:scale-105",
+        retro && !listening && !disabled && "wh-mic-idle",
         className,
       )}
-      style={{ background: listening ? "var(--wh-gradient-orb)" : "var(--wh-gradient-primary)" }}
+      style={{
+        background: listening ? "var(--wh-gradient-orb)" : "var(--wh-gradient-primary)",
+        boxShadow: retro
+          ? "var(--wh-shadow-raised), inset 0 2px 3px oklch(1 0 0 / 0.35), inset 0 -4px 8px oklch(0.2 0.05 262 / 0.3)"
+          : undefined,
+      }}
     >
+      {/* The retro touch: a faint concentric grille, like an old ribbon mic's mesh, and one soft highlight for a glassy dome rather than a flat disc. */}
+      {retro ? (
+        <>
+          <span
+            aria-hidden
+            className="absolute inset-[14%] rounded-full opacity-30"
+            style={{
+              backgroundImage:
+                "repeating-radial-gradient(circle at 50% 50%, transparent 0, transparent 4px, oklch(1 0 0 / 0.6) 4px, oklch(1 0 0 / 0.6) 5px)",
+            }}
+          />
+          <span aria-hidden className="absolute top-[16%] left-[20%] h-[26%] w-[32%] rounded-full bg-white/55 blur-[3px]" />
+        </>
+      ) : null}
+      {retro && !listening && !disabled ? (
+        <span aria-hidden className="wh-mic-halo absolute inset-0 rounded-full bg-[var(--wh-primary)]/30" />
+      ) : null}
       {listening ? (
         <>
           <span aria-hidden className="absolute inset-0 rounded-full bg-[var(--wh-tone-ai)]/30 [animation:wh-pulse-ring_1.4s_ease-out_infinite]" />
-          <Square className={size === "lg" ? "size-6" : "size-4"} fill="currentColor" />
+          {retro ? (
+            <span aria-hidden className="absolute inset-0 rounded-full bg-[var(--wh-tone-ai)]/20 [animation:wh-pulse-ring_1.4s_ease-out_0.4s_infinite]" />
+          ) : null}
+          <Square className={dims.iconListening} fill="currentColor" />
         </>
       ) : disabled ? (
-        <MicOff className={size === "lg" ? "size-7" : "size-5"} />
+        <MicOff className={dims.icon} />
       ) : (
-        <Mic className={size === "lg" ? "size-7" : "size-5"} />
+        <Mic className={dims.icon} />
       )}
     </button>
   );

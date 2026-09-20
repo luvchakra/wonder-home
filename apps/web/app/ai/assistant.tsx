@@ -7,7 +7,6 @@ import {
   ShoppingBasket,
   Sparkles,
   Wallet,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -71,10 +70,26 @@ export function Assistant({
    * recorded twice, so the key belongs to the attempt rather than the click.
    */
   const [failed, setFailed] = useState<{ utterance: string; channel: "text" | "voice"; transcriptConfidence?: number; key: string } | null>(null);
-  /** Whether the "Try asking" strip above the composer is showing — dismissible per conversation, since once you're mid-task the nudge is clutter, not help. */
-  const [showTryAsking, setShowTryAsking] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
+  const footerRef = useRef<HTMLDivElement>(null);
+  /**
+   * The sticky footer (composer, its disclaimer, sometimes an error banner)
+   * varies in height, so the scrolling message list needs to know it to
+   * reserve real clearance — otherwise the newest message can render
+   * partly behind it (design principle 15, already applied to the tab bar).
+   */
+  const [footerHeight, setFooterHeight] = useState(0);
+
+  useEffect(() => {
+    const node = footerRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setFooterHeight(entry.contentRect.height);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const scrollToEnd = useCallback(() => {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
@@ -195,7 +210,7 @@ export function Assistant({
           <SuggestionChips suggestions={SUGGESTIONS} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
         </div>
       ) : (
-        <div className="flex-1 space-y-4 py-2" aria-live="polite">
+        <div className="flex-1 space-y-4 py-2" style={{ paddingBottom: footerHeight }} aria-live="polite">
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
@@ -252,27 +267,7 @@ export function Assistant({
         </div>
       ) : null}
 
-      <div className="sticky bottom-[calc(var(--wh-tabbar-height)+0.75rem)] z-20 pt-2 lg:bottom-4">
-        {!quiet && showTryAsking ? (
-          <div className="mb-2">
-            <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
-              <p className="text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Try asking</p>
-              <button
-                type="button"
-                onClick={() => setShowTryAsking(false)}
-                aria-label="Hide these suggestions"
-                className="-mr-1 rounded-full p-1 text-[var(--wh-foreground-subtle)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)]"
-              >
-                <X aria-hidden className="size-3.5" />
-              </button>
-            </div>
-            <SuggestionChips
-              suggestions={SUGGESTIONS.slice(0, 3)}
-              onPick={(utterance) => void send(utterance, "text")}
-              className="[&_button]:min-h-8 [&_button]:text-xs"
-            />
-          </div>
-        ) : null}
+      <div ref={footerRef} className="sticky bottom-[calc(var(--wh-tabbar-height)+0.75rem)] z-20 pt-2 lg:bottom-4">
         <ChatComposer onSend={send} disabled={busy} placeholder="Type a message, or tap the mic to speak…" />
         <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.

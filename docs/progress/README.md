@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [AI chat: overlap fixed, "Try asking" removed, a bigger retro mic](2026-09-20-ai-chat-cleanup-and-mic-redesign.md) |
 | 2026-09-20 | [Stat tiles stop cramming three into a row, and a wider truncation sweep](2026-09-20-metric-tiles-and-truncation-sweep.md) |
 | 2026-09-20 | [Househelpers get their own section, separate from family](2026-09-20-helpers-separated-from-family.md) |
 | 2026-09-20 | [Seven new UI rules, and the four fixes they came with](2026-09-20-ui-rules-swipe-nav-and-duplicate-buttons.md) |

@@ -72,7 +72,7 @@ export function ChatComposer({
     <form
       onSubmit={onSubmit}
       className={cn(
-        "flex items-end gap-2 rounded-[var(--wh-radius-lg)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1.5 pl-4 shadow-[var(--wh-shadow-raised)] focus-within:border-[var(--wh-primary)]",
+        "flex items-center gap-2 rounded-[var(--wh-radius-lg)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1.5 pl-4 shadow-[var(--wh-shadow-raised)] focus-within:border-[var(--wh-primary)]",
         className,
       )}
     >
@@ -99,7 +99,7 @@ export function ChatComposer({
           className="max-h-40 min-h-11 flex-1 resize-none bg-transparent py-3 text-[0.9375rem] leading-snug outline-none placeholder:text-[var(--wh-foreground-subtle)] disabled:opacity-60"
         />
       )}
-      <VoiceInputButton onResult={onVoice} onStateChange={setVoice} className="mb-0" />
+      <VoiceInputButton onResult={onVoice} onStateChange={setVoice} size="xl" className="mb-0" />
       <button
         type="submit"
         disabled={disabled || value.trim().length === 0}

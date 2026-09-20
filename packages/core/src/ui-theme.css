@@ -327,6 +327,19 @@
   animation: wh-slide-in-left var(--wh-duration) var(--wh-ease) both;
 }
 
+/* The composer's microphone at rest — a slow, quiet "it's listening for you"
+   breathe, nothing like the fast pulse once it is actually recording. */
+.wh-mic-idle {
+  animation: wh-breathe 3.2s ease-in-out infinite;
+}
+
+/* One slow ring drifting outward from the idle mic — the same pulse-ring
+   keyframe the listening state uses, just far slower and dimmer, so it reads
+   as "alive" rather than "recording". */
+.wh-mic-halo {
+  animation: wh-pulse-ring 2.8s ease-out infinite;
+}
+
 .wh-skeleton {
   background:
     linear-gradient(90deg, var(--wh-surface-muted) 0%, var(--wh-surface) 50%, var(--wh-surface-muted) 100%)
@@ -364,7 +377,9 @@
   .wh-float,
   .wh-rise,
   .wh-skeleton,
-  .wh-slide-in-left {
+  .wh-slide-in-left,
+  .wh-mic-idle,
+  .wh-mic-halo {
     animation: none;
   }
   .wh-rise,
