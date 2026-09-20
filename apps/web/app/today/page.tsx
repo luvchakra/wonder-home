@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   CalendarHeart,
   Clock3,
   GraduationCap,
@@ -101,14 +102,23 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
   const seesMoney = view.permissions.includes("finance.view");
   const seesSchool = view.permissions.includes("school.manage") || view.permissions.includes("school.view_own");
 
-  const [events, meals, obligations, schoolItems, members, agenda] = await Promise.all([
-    listEvents(supabase, householdId, { from: dayStart, to: dayEnd }).catch(() => []),
-    isChild ? Promise.resolve([]) : listMeals(supabase, householdId, { from: today, to: today }).catch(() => []),
-    seesMoney ? listObligations(supabase, householdId).catch(() => []) : Promise.resolve([]),
-    seesSchool ? listSchoolItems(supabase, householdId).catch(() => []) : Promise.resolve([]),
+  const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR] = await Promise.all([
+    settle(listEvents(supabase, householdId, { from: dayStart, to: dayEnd }), []),
+    isChild ? ok([]) : settle(listMeals(supabase, householdId, { from: today, to: today }), []),
+    seesMoney ? settle(listObligations(supabase, householdId), []) : ok([]),
+    seesSchool ? settle(listSchoolItems(supabase, householdId), []) : ok([]),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    isChild ? Promise.resolve(null) : householdAgenda(supabase, householdId, view).catch(() => null),
+    isChild ? ok(null) : settle(householdAgenda(supabase, householdId, view), null),
   ]);
+
+  const { data: events } = eventsR;
+  const { data: meals } = mealsR;
+  const { data: obligations } = obligationsR;
+  const { data: schoolItems } = schoolItemsR;
+  const { data: agenda } = agendaR;
+  // Missing data reads as "a quiet day" unless flagged separately — this is
+  // the one thing that must never be silently indistinguishable from that.
+  const someDataMissing = [eventsR, mealsR, obligationsR, schoolItemsR, agendaR].some((result) => result.failed);
 
   const nameOf = (memberId: string | null) => members.find((member) => member.id === memberId)?.displayName ?? null;
   const items: (TimelineItem & { at: Date; mine: boolean; family: boolean; household: boolean })[] = [];
@@ -194,11 +204,20 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
 
   return (
     <>
+      {someDataMissing ? (
+        <Card className="flex items-center gap-3 bg-[var(--wh-attention-soft)]/60 p-3">
+          <AlertTriangle aria-hidden className="size-5 shrink-0 text-[var(--wh-attention)]" />
+          <p className="text-sm text-[var(--wh-foreground-muted)]">
+            WonderHome couldn’t reach part of today’s information just now. What’s shown below may be incomplete — try refreshing in a moment.
+          </p>
+        </Card>
+      ) : null}
+
       {shown.length === 0 ? (
         <EmptyState
           icon={Clock3}
-          title={active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
-          description="Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."
+          title={someDataMissing ? "Couldn't confirm your day is clear" : active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
+          description={someDataMissing ? "Some information didn’t load, so this may not be the whole picture." : "Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."}
           action={<PillLink href="/ai">Plan something</PillLink>}
         />
       ) : (
@@ -219,6 +238,18 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       ) : null}
     </>
   );
+}
+
+async function settle<T>(promise: Promise<T>, fallback: T): Promise<{ data: T; failed: boolean }> {
+  try {
+    return { data: await promise, failed: false };
+  } catch {
+    return { data: fallback, failed: true };
+  }
+}
+
+async function ok<T>(data: T): Promise<{ data: T; failed: boolean }> {
+  return { data, failed: false };
 }
 
 function stateFor(start: Date, end: Date, now: Date, happened: boolean, actionState: string | null): TimelineItem["state"] {

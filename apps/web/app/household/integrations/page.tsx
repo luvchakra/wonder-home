@@ -71,7 +71,7 @@ export default async function IntegrationsPage() {
                         <p className="text-sm font-medium">{kind?.label ?? integration.kind} · {integration.provider}</p>
                         <p className="text-xs text-[var(--wh-foreground-muted)]">{integration.statusLabel}</p>
                       </div>
-                      <Badge tone="attention">Reconnect</Badge>
+                      <Badge tone="attention">Needs reconnecting</Badge>
                     </li>
                   );
                 })}
