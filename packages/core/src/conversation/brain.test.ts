@@ -85,7 +85,7 @@ describe("the facts a household's brain holds", () => {
     expect(text).toContain("School run is looked after by Upasana Chakrabarty (backup: Kunal Chakrabarty); WonderHome may act once approved for it.");
     expect(text).toContain("Karate (school event) is on Mon 21 Sep at 6:30pm, with Anaya.");
     expect(text).toContain("Dinner on 2026-09-20 is Paneer pulao, ready by 8:00pm, cooked by Sunita; status planned; missing paneer.");
-    expect(text).toContain("Groceries tracked (1): Milk.");
+    expect(text).toContain("Milk (grocery): typically 1 litre lasts about 1 day. No purchase has been recorded yet, so when it runs out is unknown.");
     expect(text).toContain("Electricity (utility, BESCOM) is received, ₹1,840, due 2026-09-21, Kunal Chakrabarty's to handle.");
     expect(text).toContain("Anaya has homework: Fractions worksheet (Maths), due Tue 22 Sep, pending, about 30 minutes.");
     expect(text).toContain("Sunita is away on 2026-09-22.");
@@ -101,7 +101,7 @@ describe("the facts a household's brain holds", () => {
     expect(classOf("Karate")).toBe("child");
     expect(classOf("Electricity (utility")).toBe("financial");
     expect(classOf("Sunita is away")).toBe("location");
-    expect(classOf("Groceries tracked")).toBe("general");
+    expect(classOf("Milk (grocery)")).toBe("general");
     expect(classOf("Sunita is a househelper")).toBe("general");
   });
 
@@ -112,7 +112,7 @@ describe("the facts a household's brain holds", () => {
     expect(sent).not.toContain("Fractions worksheet");
     expect(sent).not.toContain("Electricity (utility");
     expect(sent).not.toContain("is away on");
-    expect(sent).toContain("Groceries tracked (1): Milk.");
+    expect(sent).toContain("Milk (grocery): typically 1 litre lasts about 1 day.");
     // Names never leave, whatever the class.
     expect(sent).not.toContain("Kunal");
     expect(sent).toContain("Adult");

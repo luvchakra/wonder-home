@@ -15,7 +15,7 @@ import type { Meal } from "../meals/meals";
 import { listCommunications, listSchoolItems } from "../school/repository";
 import type { SchoolCommunication } from "../school/communications";
 import type { SchoolItem } from "../school/items";
-import type { Consumable } from "../commerce/consumables";
+import { assessConsumable, type Consumable } from "../commerce/consumables";
 import type { Order } from "../commerce/orders";
 
 /**
@@ -158,11 +158,24 @@ export function factsFrom(snapshot: BrainSnapshot): ContextCandidate[] {
   if (meals.length === 0) add("general", "what is planned for meals", "No meals are planned from today onwards.");
 
   // --- Groceries and orders ----------------------------------------------------
-  const groceries = snapshot.consumables.filter((item) => item.category === "grocery");
-  const other = snapshot.consumables.filter((item) => item.category !== "grocery");
-  if (groceries.length > 0) add("general", "what groceries are tracked", `Groceries tracked (${groceries.length}): ${groceries.slice(0, MAX_PER_LIST * 2).map((item) => item.name).join(", ")}${groceries.length > MAX_PER_LIST * 2 ? ", and more" : ""}.`);
-  if (other.length > 0) add("general", "what supplies are tracked", `Other supplies tracked: ${other.slice(0, MAX_PER_LIST).map((item) => `${item.name} (${item.category.replace(/_/g, " ")})`).join(", ")}.`);
-  if (snapshot.consumables.length === 0) add("general", "what groceries are tracked", "No groceries or supplies are tracked yet.");
+  // Each item with what WonderHome actually knows about it — the same
+  // judgement the Groceries screen shows — so "what should I order next" can
+  // be answered, or honestly declined, item by item.
+  const supplies = snapshot.consumables.slice(0, MAX_PER_LIST * 2);
+  for (const item of supplies) {
+    const kind = item.category.replace(/_/g, " ");
+    if (!item.lastPurchasedOn) {
+      // Without a purchase on record there is nothing to count down from,
+      // whatever the rate says — so say that, rather than "should last".
+      const rate = item.daysPerUnit != null ? `typically ${item.typicalQuantity} ${item.unit} lasts about ${item.daysPerUnit} ${item.daysPerUnit === 1 ? "day" : "days"}` : "WonderHome does not know how fast it goes yet";
+      add("general", "what groceries and supplies are tracked", `${item.name} (${kind}): ${rate}. No purchase has been recorded yet, so when it runs out is unknown.`);
+      continue;
+    }
+    const assessment = assessConsumable(item, snapshot.now);
+    add("general", "what groceries and supplies are tracked", `${item.name} (${kind}): ${assessment.reason.replace(/\.$/, "")}. Last bought ${item.lastPurchasedOn}${item.lastPurchasedQuantity ? ` (${item.lastPurchasedQuantity} ${item.unit})` : ""}.`);
+  }
+  if (snapshot.consumables.length > supplies.length) add("general", "what groceries and supplies are tracked", `And ${snapshot.consumables.length - supplies.length} more items are tracked.`);
+  if (snapshot.consumables.length === 0) add("general", "what groceries and supplies are tracked", "No groceries or supplies are tracked yet.");
   const openOrders = snapshot.orders.filter((order) => order.status !== "delivered" && order.status !== "cancelled" && order.status !== "failed");
   for (const order of openOrders.slice(0, MAX_PER_LIST)) {
     add("financial", "what orders are open", `An order with ${order.provider} is ${order.status.replace(/_/g, " ")}${order.totalMinor > 0 ? ` for ${money(order.totalMinor, order.currency)}` : ""}${order.expectedAt ? `, expected ${dateOf(order.expectedAt)}` : ""}.`);
