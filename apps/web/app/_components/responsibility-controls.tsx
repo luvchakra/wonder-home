@@ -8,6 +8,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import { saveResponsibilityAction } from "../(auth)/configuration-actions";
+import { iconForOutcome } from "../_lib/outcome-icons";
 import { ResponsibilityForm, type MemberOption, type ResponsibilityInitial } from "./config-forms";
 
 /** "Add responsibility" as a sheet, so the list stays where it was (rule 6). */
@@ -44,16 +45,28 @@ export function AddResponsibilityButton({
  * A responsibility row that opens on tap — what "expand" means here, since
  * there is nothing behind it but what the sheet already shows: what good
  * looks like, and the same owner/backup/autonomy fields the row summarises.
+ *
+ * Takes `outcomeKey` rather than a resolved `icon`/`tone`, and looks the
+ * presentation up itself, client-side. A React icon component is a function,
+ * and a Server Component cannot hand a function to a Client Component as a
+ * prop value — only through JSX it renders itself. `outcomeKey` is a plain
+ * string, so it survives the crossing; everywhere else that reads
+ * `iconForOutcome` server-side (Family, Notifications, Activity) renders
+ * `IconTile` directly, in the server component's own JSX, and never had this
+ * problem — this was the one place the same icon ended up inside a prop
+ * object handed to a client component instead.
  */
 export function ResponsibilityRow({
   card,
+  outcomeKey,
   definition,
   editable,
   householdId,
   members,
   initial,
 }: {
-  card: Omit<ResponsibilityCardProps, "onExpand">;
+  card: Omit<ResponsibilityCardProps, "onExpand" | "icon" | "tone">;
+  outcomeKey: string;
   /** "What good looks like", from the playbook entry — not shown collapsed. */
   definition?: string;
   /** Whether this viewer may change it (household admins only). */
@@ -63,10 +76,11 @@ export function ResponsibilityRow({
   initial: ResponsibilityInitial;
 }) {
   const [open, setOpen] = useState(false);
+  const presentation = iconForOutcome(outcomeKey);
 
   return (
     <>
-      <ResponsibilityCard {...card} onExpand={() => setOpen(true)} />
+      <ResponsibilityCard {...card} icon={presentation.icon} tone={presentation.tone} onExpand={() => setOpen(true)} />
 
       <Sheet open={open} onOpenChange={setOpen} title={initial.outcomeLabel} description={definition}>
         {editable ? (
@@ -79,7 +93,7 @@ export function ResponsibilityRow({
   );
 }
 
-function ReadOnlyDetail({ card }: { card: Omit<ResponsibilityCardProps, "onExpand"> }) {
+function ReadOnlyDetail({ card }: { card: Omit<ResponsibilityCardProps, "onExpand" | "icon" | "tone"> }) {
   return (
     <dl className="space-y-3 text-sm">
       <div>
