@@ -649,7 +649,7 @@ export function buildOpenApiDocument(): Json {
         post: {
           summary: "Say something, or decide on a proposal",
           description:
-            "Text and voice share this one engine; the channel is metadata. A reply may carry an action preview. Consent is a separate call naming the action, or a yes that resolves against the last proposal inside its time limit. Nothing here executes a domain effect.",
+            "Text and voice share this one engine; the channel is metadata. A reply may carry an action preview. Consent is a separate call naming the action, or a yes that resolves against the last proposal inside its time limit. Nothing here executes a domain effect. `editMessageId` reworks the household's own last message in place of sending a new one, replacing it and its reply — refused once that reply has already led to an approved or executed action.",
           responses: {
             "200": { description: "What WonderHome says back, with an action preview when it is prepared to act" },
             "400": { $ref: "#/components/responses/BadRequest" },

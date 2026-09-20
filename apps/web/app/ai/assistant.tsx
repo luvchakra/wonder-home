@@ -4,9 +4,11 @@ import {
   CalendarHeart,
   GraduationCap,
   ListChecks,
+  Pencil,
   ShoppingBasket,
   Sparkles,
   Wallet,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -70,7 +72,11 @@ export function Assistant({
    * actually reached the server must not leave the household with the turn
    * recorded twice, so the key belongs to the attempt rather than the click.
    */
-  const [failed, setFailed] = useState<{ utterance: string; channel: "text" | "voice"; transcriptConfidence?: number; key: string } | null>(null);
+  const [failed, setFailed] = useState<{ utterance: string; channel: "text" | "voice"; transcriptConfidence?: number; key: string; editMessageId?: string } | null>(
+    null,
+  );
+  /** The household's own message being reworded, and its original text (story 04-003, as a structural edit). */
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const sentInitial = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +95,7 @@ export function Assistant({
   }, [messages.length]);
 
   const send = useCallback(
-    async (utterance: string, channel: "text" | "voice", transcriptConfidence?: number, retryKey?: string) => {
+    async (utterance: string, channel: "text" | "voice", transcriptConfidence?: number, retryKey?: string, editMessageId?: string) => {
       if (busy) return;
       setBusy(true);
       setError(null);
@@ -98,17 +104,24 @@ export function Assistant({
       const idempotencyKey = retryKey ?? newIdempotencyKey();
 
       const optimisticId = `local-${Date.now()}`;
-      setMessages((current) => [
-        ...current,
-        { id: optimisticId, role: "member", text: utterance },
-        { id: `${optimisticId}-pending`, role: "assistant", text: "", pending: true },
-      ]);
+      setMessages((current) => {
+        // Editing replaces the edited message and everything that followed
+        // it — ordinarily just its own reply — with the new turn, the same
+        // truncation the server applies before it regenerates a reply.
+        const editedIndex = editMessageId ? current.findIndex((message) => message.id === editMessageId) : -1;
+        const base = editedIndex === -1 ? current : current.slice(0, editedIndex);
+        return [
+          ...base,
+          { id: optimisticId, role: "member", text: utterance },
+          { id: `${optimisticId}-pending`, role: "assistant", text: "", pending: true },
+        ];
+      });
 
       try {
         const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
           method: "POST",
           headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
-          body: JSON.stringify({ utterance, channel, transcriptConfidence }),
+          body: JSON.stringify({ utterance, channel, transcriptConfidence, editMessageId }),
         });
         const payload = await response.json();
 
@@ -132,13 +145,28 @@ export function Assistant({
       } catch (caught) {
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
         setError(caught instanceof Error ? caught.message : "WonderHome could not answer just now.");
-        setFailed({ utterance, channel, transcriptConfidence, key: idempotencyKey });
+        setFailed({ utterance, channel, transcriptConfidence, key: idempotencyKey, editMessageId });
       } finally {
         setBusy(false);
       }
     },
     [busy, householdId],
   );
+
+  /** The composer's own submit — routed through whichever message, if any, is being reworded. */
+  const handleComposerSend = useCallback(
+    (text: string, channel: "text" | "voice", transcriptConfidence?: number) => {
+      const editMessageId = editing?.id;
+      setEditing(null);
+      void send(text, channel, transcriptConfidence, undefined, editMessageId);
+    },
+    [editing, send],
+  );
+
+  const startEdit = useCallback((message: AssistantMessage) => {
+    setError(null);
+    setEditing({ id: message.id, text: message.text });
+  }, []);
 
   const decide = useCallback(
     async (actionId: string, decision: "approved" | "rejected") => {
@@ -178,6 +206,21 @@ export function Assistant({
   }, [initialQuery, send]);
 
   const quiet = messages.length === 0;
+
+  // The one message that may still be reworded: the household's own last
+  // word, and only while nothing has come of it yet — an approved or
+  // executed action is a thing that happened, not a draft.
+  let lastMemberIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]!.role === "member") {
+      lastMemberIndex = index;
+      break;
+    }
+  }
+  const editLocked = messages
+    .slice(lastMemberIndex + 1)
+    .some((message) => message.action?.status === "approved" || message.action?.status === "executed");
+  const editableMessageId = lastMemberIndex !== -1 && !editLocked ? messages[lastMemberIndex]!.id : null;
 
   return (
     // Exactly the space between the header and main's own bottom padding (which
@@ -238,6 +281,18 @@ export function Assistant({
                       ) : null
                     }
                   />
+                ) : message.id === editableMessageId ? (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(message)}
+                      disabled={busy || editing?.id === message.id}
+                      aria-label="Edit your last message"
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-[var(--wh-foreground-subtle)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-40"
+                    >
+                      <Pencil aria-hidden className="size-3" /> Edit
+                    </button>
+                  </div>
                 ) : null
               }
             >
@@ -256,7 +311,7 @@ export function Assistant({
               type="button"
               tone="quiet"
               disabled={busy}
-              onClick={() => void send(failed.utterance, failed.channel, failed.transcriptConfidence, failed.key)}
+              onClick={() => void send(failed.utterance, failed.channel, failed.transcriptConfidence, failed.key, failed.editMessageId)}
             >
               Try again
             </Pill>
@@ -266,7 +321,27 @@ export function Assistant({
 
       {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
       <div className="shrink-0 pt-2">
-        <ChatComposer onSend={send} disabled={busy} placeholder="Type a message, or tap the mic to speak…" />
+        {editing ? (
+          <div className="mb-2 flex items-center justify-between rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--wh-primary)]">
+            <span>Editing your message</span>
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              aria-label="Cancel editing"
+              className="grid size-5 place-items-center rounded-full hover:bg-[var(--wh-primary)]/10"
+            >
+              <X aria-hidden className="size-3.5" />
+            </button>
+          </div>
+        ) : null}
+        <ChatComposer
+          key={editing?.id ?? "compose"}
+          onSend={handleComposerSend}
+          disabled={busy}
+          placeholder="Type a message, or tap the mic to speak…"
+          initialValue={editing?.text ?? ""}
+          autoFocus={Boolean(editing)}
+        />
         <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
         </p>

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ApiError } from "../api/errors";
 import type { HouseholdIntent } from "./intent";
 import { reconcileMemory, type Memory } from "./memory";
 import type { ActionPreview, Proposal } from "./proposal";
@@ -196,6 +197,69 @@ export async function pendingAction(
   const payload = (data.payload as Row | null) ?? {};
   const preview = payload.preview as ActionPreview | undefined;
   return { id: data.id as string, summary: preview?.summary ?? "that", createdAt: new Date(data.created_at as string) };
+}
+
+/**
+ * Undoing the last thing a member said, so it can be said again differently
+ * (story 04-003's "actually" — as a structural edit rather than a new turn).
+ *
+ * Only the household's own most recent member message may be edited, and
+ * only while nothing has come of it yet: this deletes that message and
+ * whatever followed it in the session (ordinarily one assistant reply, and
+ * the proposal it may have recorded), so the edited turn regenerates a
+ * fresh reply rather than appending a second answer to a question that no
+ * longer exists. A proposal already approved or executed is a thing that
+ * happened, not a draft, and refuses the edit outright — undo is a
+ * different, explicit action from this one.
+ */
+export async function beginEditMessage(
+  admin: SupabaseClient,
+  input: { householdId: string; sessionId: string; messageId: string },
+): Promise<void> {
+  const { data: target, error: targetError } = await admin
+    .from("conversation_messages")
+    .select("id, role, created_at")
+    .eq("id", input.messageId)
+    .eq("household_id", input.householdId)
+    .eq("session_id", input.sessionId)
+    .maybeSingle();
+
+  if (targetError) throw new Error(`beginEditMessage read failed: ${targetError.code ?? "unknown"}`);
+  if (!target || target.role !== "member") {
+    throw ApiError.notFound("That message is not there to edit.");
+  }
+
+  const { data: after, error: afterError } = await admin
+    .from("conversation_messages")
+    .select("id, role")
+    .eq("session_id", input.sessionId)
+    .gt("created_at", target.created_at as string)
+    .order("created_at", { ascending: true });
+
+  if (afterError) throw new Error(`beginEditMessage read failed: ${afterError.code ?? "unknown"}`);
+  const following = (after as Row[] | null) ?? [];
+
+  if (following.some((row) => row.role === "member")) {
+    throw ApiError.badRequest("That is no longer the last thing you said, so it cannot be edited.");
+  }
+
+  const toRemove = [target.id as string, ...following.map((row) => row.id as string)];
+
+  const { data: actions, error: actionsError } = await admin
+    .from("conversation_actions")
+    .select("id, approval_status")
+    .in("message_id", toRemove);
+
+  if (actionsError) throw new Error(`beginEditMessage read failed: ${actionsError.code ?? "unknown"}`);
+  if ((actions as Row[] | null)?.some((row) => row.approval_status === "approved" || row.approval_status === "executed")) {
+    throw ApiError.badRequest("I already did something because of that, so it cannot be edited. Send a new message instead.");
+  }
+
+  const { error: deleteActionsError } = await admin.from("conversation_actions").delete().in("message_id", toRemove);
+  if (deleteActionsError) throw new Error(`beginEditMessage delete failed: ${deleteActionsError.code ?? "unknown"}`);
+
+  const { error: deleteMessagesError } = await admin.from("conversation_messages").delete().in("id", toRemove);
+  if (deleteMessagesError) throw new Error(`beginEditMessage delete failed: ${deleteMessagesError.code ?? "unknown"}`);
 }
 
 export async function recordMessage(
