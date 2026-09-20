@@ -142,6 +142,17 @@ work, and hold new work against these:
     new row of small cards: if fitting them side by side on a phone means
     cutting a label, they are not side by side on a phone.
 
+**The brand is the sheet at `design/WonderHome-brand-guidelines.png`.** The
+name is WonderHome, one word, "Wonder" in navy and "Home" in blue; the mark is
+the two-tone house — blue left, warm yellow right, a four-pane window, a leaf
+over the corner — and its geometry lives once in `packages/core/src/brand/mark.ts`
+(the header renders it, `npm run brand` writes the icons from it, CI checks
+they match). The tagline is "A happier home. Everyday." The palette is
+Primary Blue `#0EA5E9`, Accent Green `#22C55E`, Warm Yellow `#FBBF24`, Navy
+`#0F172A`, expressed as the tokens in `packages/core/src/ui-theme.css`; the
+typeface is Sora. Never hand-draw a second logo, paste a raster of it, or
+reach for a hex the tokens don't carry.
+
 Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card,
 row, pill or tile. A new pattern belongs in the kit, with a note in
 `design/DESIGN-NOTES.md` saying which rule it encodes.

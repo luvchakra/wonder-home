@@ -8,7 +8,7 @@ import { expect, test } from "@playwright/test";
 test("the hero says what WonderHome is and offers the way in", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Home runs smoother.");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("WonderHome takes care");
   await expect(page.getByRole("link", { name: /Get Started Free/ }).first()).toBeVisible();
   await expect(page.getByText("No credit card required").first()).toBeVisible();
 });

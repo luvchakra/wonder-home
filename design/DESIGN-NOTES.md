@@ -86,19 +86,20 @@ far from the component they should match, and nobody notices a stale one until
 it is on somebody's home screen — so `npm run brand -- --check` runs in CI and
 fails when what is on disk no longer matches the mark.
 
-**The mark must be told what it is sitting on.** Three of its shapes carry a
-halo, which is what produces the clean separations where the leaf, the stem and
-the wave cross the roof. The halo reads `--wh-brand-surface`: the page
-background by default, and `Card` re-declares it as the card's own surface, so
-a mark inside a card gets the right halo through inheritance rather than a prop
-threaded through every screen. Get this wrong and the mark grows white seams on
-a coloured surface.
+**The mark must be told what it is sitting on.** The house body is filled
+with, and the leaf is haloed in, the surface colour — the halo is what keeps
+the leaf cleanly separate from the yellow wall it grows over. Both read
+`--wh-brand-surface`: the page background by default, and `Card` re-declares
+it as the card's own surface, so a mark inside a card gets the right surface
+through inheritance rather than a prop threaded through every screen. Get this
+wrong and the mark grows white seams on a coloured surface.
 
-**Two things flip with the theme, and only two.** The halo, as above; and the
-window, because a deep blue pane on a dark background is a hole rather than a
-window — on dark it becomes the light blue the supplied dark tile uses. Every
-gradient stays exactly as supplied: they were chosen to hold up against cream
-and against navy alike.
+**Two things flip with the theme, and only two.** The surface, as above; and
+the window, whose Primary Blue panes lift a step on navy so they still read
+as glass rather than as holes. The three gradients — blue into green up the
+left, yellow into orange down the right, the leaf's green — stay exactly as
+the brand sheet has them: they were chosen to hold up against white, cream
+and navy alike.
 
 **The mark is not a watermark.** A full-colour logo faded to 40% over a
 gradient reads as a printing mistake. Where a warm surface wants decoration,
@@ -115,16 +116,19 @@ reason the logo source is: so a value here can be checked against it or
 redone. Three deliberate scoping decisions, so the next session does not
 re-litigate them:
 
-- **The semantic tokens moved to the new palette; the mark's own geometry and
-  gradients did not.** `--wh-primary` (Primary Blue), `--wh-attention` (Warm
-  Yellow) and `--wh-handled` (Accent Green) in `ui-theme.css` now derive from
-  the supplied hues — converted to OKLCH and checked for contrast against
-  white/cream rather than lifted as literal swatch lightness, which is a
-  marketing lightness, not a button-fill or body-text one. The mark's own
-  traced gradients (`brand/mark.ts`) are untouched: they were pixel-measured
-  from actual artwork already, this sheet's logo renditions are smaller and
-  more compressed than that source, and a re-trace without a cleaner source
-  risks a *worse* mark, not a more faithful one.
+- **The semantic tokens moved to the new palette, and so did the mark.**
+  `--wh-primary` (Primary Blue), `--wh-attention` (Warm Yellow),
+  `--wh-handled` (Accent Green) and `--wh-foreground` (Navy) in
+  `ui-theme.css` derive from the supplied hues — converted to OKLCH and
+  checked for contrast against white/cream rather than lifted as literal
+  swatch lightness, which is a marketing lightness, not a button-fill or
+  body-text one. The mark (`brand/mark.ts`) was redrawn to the sheet's logo
+  when the sheet was confirmed as the direction: the earlier two-stroke
+  roof-and-wave mark is gone, replaced by the two-tone house (blue left, warm
+  yellow right, a four-pane window, a leaf over the bottom-right corner)
+  described at the top of that module. The wordmark lockup follows the sheet
+  too — "Wonder" in navy, "Home" in blue, the tagline small, upper-case and
+  letter-spaced beneath.
 - **The Light Gray swatch was not adopted for surfaces.** Rule 1 is explicit —
   warm cream, never grey — and the sheet's own mockups render on a warm cream
   background too. A brand board's neutral swatch is for print and UI chrome in
@@ -306,7 +310,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 
 | Part | What it is |
 |---|---|
-| `BrandMark`, `Wordmark` | The house-with-a-heart mark, inline SVG |
+| `BrandMark`, `Wordmark` | The two-tone house-and-leaf mark, inline SVG |
 | `Avatar`, `AvatarGroup` | Initials on a name-stable tint; a role glyph, never colour alone |
 | `IconTile` | The tinted glyph square every row begins with; tone by domain |
 | `ActionRow` / `NavRow` | Name, one line of reason, one action or a chevron |

@@ -24,19 +24,19 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import {
+  BLUE_PATH,
   GRADIENTS,
   HALO,
   HOUSE_PATH,
   LEAF_PATH,
+  LEAF_VEIN_PATH,
   PANE,
-  ROOF_PATH,
-  STEM_PATH,
   STROKE,
   TILE,
   VIEW_BOX,
-  WAVE_PATH,
   WINDOW_COLOR,
   WINDOW_PANES,
+  YELLOW_PATH,
 } from "../packages/core/src/brand/mark.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -48,8 +48,8 @@ type Scheme = "light" | "dark";
  * The mark on its own rounded tile.
  *
  * Every asset here is tiled: a file on disk cannot adapt to what it lands on,
- * so it brings its own surface, and that surface is also what the halos are
- * cut out of. The bare, surface-aware mark is the React component's job.
+ * so it brings its own surface, and that surface is also what fills the house
+ * body and cuts the leaf's halo. The bare, surface-aware mark is the React component's job.
  *
  * `padding` is in viewBox units, and is the only difference between an icon
  * meant to be shown whole and a maskable one a launcher may crop.
@@ -82,14 +82,12 @@ function markSvg(options: { scheme: Scheme; padding?: number }): string {
   </defs>
   ${background}
   <path d="${HOUSE_PATH}" fill="${surface}"/>
-  <path d="${ROOF_PATH}" fill="none" stroke="url(#roof)" stroke-width="${STROKE.roof}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${YELLOW_PATH}" fill="none" stroke="url(#yellow)" stroke-width="${STROKE.house}" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="${BLUE_PATH}" fill="none" stroke="url(#blue)" stroke-width="${STROKE.house}" stroke-linecap="butt" stroke-linejoin="round"/>
   <g fill="${WINDOW_COLOR[scheme]}">${panes}</g>
-  <path d="${STEM_PATH}" fill="none" stroke="${surface}" stroke-width="${HALO.stem}" stroke-linecap="round"/>
-  <path d="${STEM_PATH}" fill="none" stroke="url(#stem)" stroke-width="${STROKE.stem}" stroke-linecap="round"/>
   <path d="${LEAF_PATH}" fill="none" stroke="${surface}" stroke-width="${HALO.leaf}" stroke-linejoin="round"/>
   <path d="${LEAF_PATH}" fill="url(#leaf)"/>
-  <path d="${WAVE_PATH}" fill="none" stroke="${surface}" stroke-width="${HALO.wave}" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="${WAVE_PATH}" fill="none" stroke="url(#wave)" stroke-width="${STROKE.wave}" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${LEAF_VEIN_PATH}" fill="none" stroke="${surface}" stroke-width="${STROKE.vein}" stroke-linecap="round"/>
 </svg>
 `;
 }

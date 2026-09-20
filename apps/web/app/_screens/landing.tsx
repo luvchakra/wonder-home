@@ -4,6 +4,7 @@ import {
   Bell,
   BookOpen,
   Brain,
+  CalendarDays,
   CalendarHeart,
   CircleCheck,
   Clock3,
@@ -11,6 +12,7 @@ import {
   GraduationCap,
   HandHeart,
   Heart,
+  House,
   Compass,
   Laptop,
   Leaf,
@@ -24,6 +26,7 @@ import {
   Users,
   Utensils,
   Wallet,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
@@ -116,12 +119,10 @@ export async function Landing() {
           <div className="relative mx-auto grid max-w-[var(--wh-content-wide)] items-center gap-10 px-4 pt-12 pb-16 lg:grid-cols-[1fr_1.1fr] lg:px-8 lg:pt-20 lg:pb-28">
             <div className="wh-rise max-w-xl">
               <span className="inline-flex items-center gap-1.5 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)]/80 px-3 py-1 text-xs font-semibold text-[var(--wh-primary)]">
-                <Leaf aria-hidden className="size-3.5" /> A calmer home is possible
+                <Leaf aria-hidden className="size-3.5" /> Smarter homes · Happier families
               </span>
-              <h1 className="mt-5 text-[var(--wh-text-hero)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
-                Home runs smoother.
-                <br />
-                <span className="text-[var(--wh-primary)]">Together.</span>
+              <h1 className="mt-5 text-[length:var(--wh-text-hero)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
+                WonderHome takes care, so you can <span className="text-[var(--wh-handled)]">live more.</span>
               </h1>
               <p className="mt-6 max-w-md text-lg leading-relaxed text-[var(--wh-foreground-muted)]">
                 WonderHome helps your family stay organized, reduce mental load, and focus on what truly matters — more time together.
@@ -180,27 +181,30 @@ export async function Landing() {
           <div className="mx-auto grid max-w-[var(--wh-content-wide)] items-center gap-12 px-4 lg:grid-cols-2 lg:px-8">
             <div className="wh-reveal">
               <Eyebrow>The solution</Eyebrow>
-              <h2 className="mt-3 text-[var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">
+              <h2 className="mt-3 text-[length:var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">
                 Meet <span className="text-[var(--wh-primary)]">WonderHome.</span>
               </h2>
               <p className="mt-2 text-xl font-semibold tracking-tight">Your AI partner for a happier home.</p>
               <p className="mt-5 max-w-lg text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
-                WonderHome brings everything your family needs into one simple, beautiful app. It helps you plan, coordinate, simplify and act — so you can spend less time managing, and more time living.
+                WonderHome brings everything your family needs into one simple, beautiful app. It helps you manage, plan, care and save time — so you can spend less time managing, and more time living.
               </p>
               <blockquote className="mt-6 rounded-[var(--wh-radius)] border-l-4 border-[var(--wh-primary)] bg-[var(--wh-primary-soft)]/60 px-5 py-4 text-[0.9375rem] font-medium">
                 WonderHome doesn&apos;t give your family more things to manage. It manages the management.
               </blockquote>
-              <ul className="mt-8 grid grid-cols-5 gap-2 text-center">
+              <ul className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 {[
-                  { icon: ListChecks, label: "Plan", tone: "people" },
-                  { icon: Users, label: "Coordinate", tone: "care" },
-                  { icon: Leaf, label: "Simplify", tone: "money" },
-                  { icon: Sparkles, label: "Act", tone: "ai" },
-                  { icon: Brain, label: "Learn", tone: "school" },
+                  { icon: House, label: "Manage households", copy: "One home, every member, every routine.", tone: "care" },
+                  { icon: CalendarDays, label: "Plan & organize", copy: "Days, meals and schedules, already sorted.", tone: "primary" },
+                  { icon: Heart, label: "Care for family", copy: "School, health and helpers, looked after.", tone: "people" },
+                  { icon: Zap, label: "Save time", copy: "Groceries ordered, bills paid, reminders handled.", tone: "school" },
+                  { icon: Leaf, label: "Live better", copy: "Less stress. More life.", tone: "home" },
                 ].map((item) => (
-                  <li key={item.label} className="flex flex-col items-center gap-2">
-                    <IconTile icon={item.icon} tone={item.tone as IconTone} size="lg" className="rounded-full" />
-                    <span className="text-xs font-semibold">{item.label}</span>
+                  <li key={item.label} className="flex items-center gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)]/70 px-3 py-2">
+                    <IconTile icon={item.icon} tone={item.tone as IconTone} size="md" className="rounded-full" />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{item.label}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-muted)]">{item.copy}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -253,7 +257,7 @@ export async function Landing() {
             </div>
             <div className="wh-reveal order-1 lg:order-2">
               <Eyebrow>Talk to your home</Eyebrow>
-              <h2 className="mt-3 text-[var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">
+              <h2 className="mt-3 text-[length:var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">
                 You don&apos;t have to tell WonderHome everything. It learns the rhythm of your home.
               </h2>
               <p className="mt-5 max-w-lg text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
@@ -296,7 +300,7 @@ export async function Landing() {
             </div>
             <div className="wh-reveal">
               <Eyebrow>Beautiful. On all your devices.</Eyebrow>
-              <h2 className="mt-3 text-[var(--wh-text-display)] leading-[1.05] font-bold tracking-tight">
+              <h2 className="mt-3 text-[length:var(--wh-text-display)] leading-[1.05] font-bold tracking-tight">
                 At home.<br />On the go.<br />Always with you.
               </h2>
               <p className="mt-5 max-w-md text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
@@ -440,7 +444,7 @@ export async function Landing() {
           </div>
           <div className="relative mx-auto max-w-[var(--wh-content-wide)] px-4 lg:px-8">
             <div className="wh-reveal max-w-xl">
-              <h2 className="text-[var(--wh-text-hero)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
+              <h2 className="text-[length:var(--wh-text-hero)] leading-[0.98] font-bold tracking-[-0.03em] text-balance">
                 A brighter tomorrow<br />starts at home.
               </h2>
               <p className="mt-5 text-lg text-[var(--wh-foreground-muted)]">Join families building happier, calmer homes with WonderHome.</p>
@@ -511,6 +515,24 @@ export async function Landing() {
 
       <footer className="border-t border-[var(--wh-border)] bg-[var(--wh-surface)]/70">
         <div className="mx-auto max-w-[var(--wh-content-wide)] px-4 py-12 lg:px-8">
+          {/* The brand's four promises, as the guidelines sheet closes with them. */}
+          <ul aria-label="What WonderHome stands for" className="mb-10 grid gap-4 border-b border-[var(--wh-border)] pb-10 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: House, tone: "primary", title: "Simple", copy: "Easy to use. Always." },
+              { icon: ShieldCheck, tone: "care", title: "Secure", copy: "Your home. Your data." },
+              { icon: Heart, tone: "people", title: "Thoughtful", copy: "Built around your family." },
+              { icon: Leaf, tone: "home", title: "Sustainable", copy: "Less stress. More life." },
+            ].map((item) => (
+              <li key={item.title} className="flex items-center gap-3">
+                <IconTile icon={item.icon} tone={item.tone as IconTone} size="md" />
+                <span>
+                  <span className="block text-sm font-semibold">{item.title}</span>
+                  <span className="block text-xs text-[var(--wh-foreground-muted)]">{item.copy}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+
           <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <div className="max-w-xs">
               <Wordmark tagline size={32} />
@@ -623,7 +645,7 @@ function Section({ id, eyebrow, title, lede, children }: { id: string; eyebrow: 
       <div className="mx-auto max-w-[var(--wh-content-wide)] px-4 lg:px-8">
         <div className="wh-reveal mx-auto max-w-2xl text-center">
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 className="mt-4 text-[var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">{title}</h2>
+          <h2 className="mt-4 text-[length:var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">{title}</h2>
           <p className="mt-4 text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">{lede}</p>
         </div>
         <div className="mt-12">{children}</div>

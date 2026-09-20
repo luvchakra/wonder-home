@@ -145,7 +145,7 @@ function NavDrawer({
 
           <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-1">
             <Link href="/" onClick={close} className="min-w-0">
-              <Wordmark />
+              <Wordmark tagline />
             </Link>
             <Dialog.Close asChild>
               <button

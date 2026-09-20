@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BLUE_PATH,
   GRADIENTS,
   HALO,
   HOUSE_PATH,
   LEAF_PATH,
+  LEAF_VEIN_PATH,
   PANE,
-  ROOF_PATH,
-  STEM_PATH,
   STROKE,
   VIEW_BOX,
-  WAVE_PATH,
   WINDOW_PANES,
+  YELLOW_PATH,
 } from "./mark";
 
 /**
@@ -22,49 +22,73 @@ import {
  * a mark that still renders and still looks wrong.
  */
 
-describe("the halos that separate the shapes", () => {
-  it("are wider than the strokes they sit behind", () => {
-    // A halo narrower than its stroke draws nothing. The leaf's is a stroke
-    // around a filled shape, so it is compared against nothing here.
-    expect(HALO.wave).toBeGreaterThan(STROKE.wave);
-    expect(HALO.stem).toBeGreaterThan(STROKE.stem);
-    expect(HALO.leaf).toBeGreaterThan(0);
+const coords = (path: string) => (path.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+const points = (path: string) => {
+  const values = coords(path);
+  const out: [number, number][] = [];
+  for (let index = 0; index + 1 < values.length; index += 2) out.push([values[index]!, values[index + 1]!]);
+  return out;
+};
+
+describe("the two strokes that make the house", () => {
+  it("meet at a seam on the right slope, blue over yellow", () => {
+    // The blue tip must reach past where the yellow starts, or a sliver of
+    // surface shows through at the apex; and the yellow must start after the
+    // apex, or it paints over the roof's blue peak.
+    const apex = points(HOUSE_PATH)[2]!;
+    const blueTip = points(BLUE_PATH).at(-1)!;
+    const yellowStart = points(YELLOW_PATH)[0]!;
+    expect(yellowStart[0]).toBeGreaterThan(apex[0]);
+    expect(blueTip[0]).toBeGreaterThan(yellowStart[0]);
   });
 
-  it("leave a gap wide enough to see at a favicon's size", () => {
-    // At 16px one viewBox unit is a quarter of a pixel; the gap either side
-    // is (halo - stroke) / 2, and below about 1 unit it closes up entirely.
-    expect((HALO.wave - STROKE.wave) / 2).toBeGreaterThanOrEqual(1);
-    expect((HALO.stem - STROKE.stem) / 2).toBeGreaterThanOrEqual(1);
+  it("stand with both feet flat on the same ground line", () => {
+    const blueFoot = points(BLUE_PATH)[0]!;
+    const yellowFoot = points(YELLOW_PATH).at(-1)!;
+    const bodyFeet = points(HOUSE_PATH).filter(([, y]) => y === blueFoot[1]);
+    expect(yellowFoot[1]).toBe(blueFoot[1]);
+    expect(bodyFeet).toHaveLength(2);
+  });
+});
+
+describe("the halo that separates the leaf from the wall", () => {
+  it("leaves a gap wide enough to see at a favicon's size", () => {
+    // At 16px one viewBox unit is a quarter of a pixel; the halo is a stroke
+    // around the filled leaf, so the gap is half of it, and below about one
+    // unit it closes up entirely.
+    expect(HALO.leaf / 2).toBeGreaterThanOrEqual(1);
+  });
+
+  it("keeps the vein thinner than the halo, so it reads as a line inside the leaf", () => {
+    expect(STROKE.vein).toBeLessThan(HALO.leaf);
   });
 });
 
 describe("everything stays inside the box", () => {
-  const coords = (path: string) =>
-    (path.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
-
   it("keeps every path within the viewBox, allowing for stroke width", () => {
     const widest = Math.max(...Object.values(HALO), ...Object.values(STROKE));
     for (const [name, path] of Object.entries({
       HOUSE_PATH,
-      ROOF_PATH,
-      WAVE_PATH,
-      STEM_PATH,
+      BLUE_PATH,
+      YELLOW_PATH,
       LEAF_PATH,
+      LEAF_VEIN_PATH,
     })) {
       for (const value of coords(path)) {
-        expect(value, `${name} has ${value}`).toBeGreaterThanOrEqual(widest / 2 - VIEW_BOX);
-        expect(value, `${name} has ${value}`).toBeLessThanOrEqual(VIEW_BOX - widest / 2 + 8);
+        expect(value, `${name} has ${value}`).toBeGreaterThanOrEqual(widest / 2);
+        expect(value, `${name} has ${value}`).toBeLessThanOrEqual(VIEW_BOX - widest / 2 + 4);
       }
     }
   });
 
-  it("keeps the window panes inside the house", () => {
+  it("keeps the window panes inside the house body, clear of the walls", () => {
+    const [foot, leftEave, apex, rightEave] = points(HOUSE_PATH) as [number, number][];
+    const inset = STROKE.house / 2;
     for (const pane of WINDOW_PANES) {
-      expect(pane.x).toBeGreaterThan(14.5);
-      expect(pane.x + PANE.width).toBeLessThan(45.6);
-      expect(pane.y).toBeGreaterThan(20.6);
-      expect(pane.y + PANE.height).toBeLessThan(44);
+      expect(pane.x).toBeGreaterThan(leftEave![0] + inset);
+      expect(pane.x + PANE.width).toBeLessThan(rightEave![0] - inset);
+      expect(pane.y).toBeGreaterThan(apex![1] + inset);
+      expect(pane.y + PANE.height).toBeLessThan(foot![1]);
     }
   });
 
