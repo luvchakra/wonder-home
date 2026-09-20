@@ -1,46 +1,48 @@
 import {
+  BLUE_PATH,
   GRADIENTS,
   HALO,
   HOUSE_PATH,
   LEAF_PATH,
+  LEAF_VEIN_PATH,
   PANE,
-  ROOF_PATH,
-  STEM_PATH,
   STROKE,
   TAGLINE,
   VIEW_BOX,
-  WAVE_PATH,
   WINDOW_PANES,
+  YELLOW_PATH,
 } from "../../brand/mark";
+import { useId } from "react";
+
 import { cn } from "../../lib/cn";
 
 /**
- * The WonderHome mark: a house drawn in two strokes, with a leaf growing past
- * the roofline.
+ * The WonderHome mark: a house drawn in two strokes — blue on the left, warm
+ * yellow on the right — with a leaf growing from its corner.
  *
  * Inline SVG rather than an image so it scales without a second asset, costs
  * no request, and can take its surface colour from the theme. The geometry
  * lives in `brand/mark.ts`, which the icon files on disk are generated from
  * too — the mark in the header and the icon on a home screen cannot drift.
  *
- * **Surface.** Three of the shapes are painted with a halo underneath, which
- * is what produces the clean separations where the leaf, the stem and the
- * wave cross the roof. The halo has to be the colour of whatever the mark is
- * sitting on, so it reads `--wh-brand-surface`: the page background by
- * default, and `Card` re-declares it as the card's own surface, so a mark
- * inside a card gets the right halo through inheritance rather than a prop
- * threaded down through every screen.
+ * **Surface.** The house body is filled with, and the leaf is haloed in, the
+ * colour of whatever the mark is sitting on — the halo is what keeps the leaf
+ * separate from the wall it grows over. It reads `--wh-brand-surface`: the
+ * page background by default, and `Card` re-declares it as the card's own
+ * surface, so a mark inside a card gets the right surface through
+ * inheritance rather than a prop threaded down through every screen.
  *
- * **Gradient ids.** Every instance defines the same four gradients under the
- * same ids, and a duplicate id means the browser resolves `url(#…)` to the
- * first one — which is identical, and expressed in viewBox units, so it
- * renders the same at any size. `idPrefix` exists for the rare case of
- * wanting genuinely separate definitions; it is not needed to be correct.
+ * **Gradient ids.** Every instance gets its own ids. A page often carries the
+ * mark twice with one copy hidden — the sign-in screen's illustrated panel
+ * and its phone header — and a browser resolves `url(#…)` to the first
+ * element with that id in the document, even one inside a `display: none`
+ * subtree, whose gradients then paint nothing: the house vanished and only
+ * the window panes were left. `useId` is stable across server and client.
  */
 export function BrandMark({
   className,
   size = 28,
-  idPrefix = "wh-mark",
+  idPrefix,
   title,
 }: {
   className?: string;
@@ -50,7 +52,9 @@ export function BrandMark({
   title?: string;
 }) {
   const surface = "var(--wh-brand-surface)";
-  const gradient = (name: keyof typeof GRADIENTS) => `${idPrefix}-${name}`;
+  const generated = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const prefix = idPrefix ?? `wh-mark-${generated}`;
+  const gradient = (name: keyof typeof GRADIENTS) => `${prefix}-${name}`;
 
   return (
     <svg
@@ -85,11 +89,19 @@ export function BrandMark({
 
       <path d={HOUSE_PATH} fill={surface} />
       <path
-        d={ROOF_PATH}
+        d={YELLOW_PATH}
         fill="none"
-        stroke={`url(#${gradient("roof")})`}
-        strokeWidth={STROKE.roof}
-        strokeLinecap="round"
+        stroke={`url(#${gradient("yellow")})`}
+        strokeWidth={STROKE.house}
+        strokeLinecap="butt"
+        strokeLinejoin="round"
+      />
+      <path
+        d={BLUE_PATH}
+        fill="none"
+        stroke={`url(#${gradient("blue")})`}
+        strokeWidth={STROKE.house}
+        strokeLinecap="butt"
         strokeLinejoin="round"
       />
 
@@ -106,44 +118,20 @@ export function BrandMark({
         ))}
       </g>
 
-      <path d={STEM_PATH} fill="none" stroke={surface} strokeWidth={HALO.stem} strokeLinecap="round" />
-      <path
-        d={STEM_PATH}
-        fill="none"
-        stroke={`url(#${gradient("stem")})`}
-        strokeWidth={STROKE.stem}
-        strokeLinecap="round"
-      />
-
       <path d={LEAF_PATH} fill="none" stroke={surface} strokeWidth={HALO.leaf} strokeLinejoin="round" />
       <path d={LEAF_PATH} fill={`url(#${gradient("leaf")})`} />
-
-      <path
-        d={WAVE_PATH}
-        fill="none"
-        stroke={surface}
-        strokeWidth={HALO.wave}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d={WAVE_PATH}
-        fill="none"
-        stroke={`url(#${gradient("wave")})`}
-        strokeWidth={STROKE.wave}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d={LEAF_VEIN_PATH} fill="none" stroke={surface} strokeWidth={STROKE.vein} strokeLinecap="round" />
     </svg>
   );
 }
 
 /**
- * The mark with the name beside it.
+ * The mark with the name beside it, as the brand sheet's lockup: "Wonder" in
+ * the page's own ink, "Home" in the brand blue, and the tagline set small,
+ * upper-case and letter-spaced beneath.
  *
- * "Wonder" takes the page's own ink so it stays legible in either theme;
- * "Home" carries the brand gradient, which is decoration on a word that is
- * also spelled out in full — nothing here is the only way to read it.
+ * "Home" carries a blue gradient, which is decoration on a word that is also
+ * spelled out in full — nothing here is the only way to read it.
  */
 export function Wordmark({
   className,
@@ -165,7 +153,9 @@ export function Wordmark({
           </span>
         </span>
         {tagline ? (
-          <span className="block text-[0.6875rem] font-medium text-[var(--wh-primary)]">{TAGLINE}</span>
+          <span className="mt-0.5 block text-[0.5625rem] font-semibold tracking-[0.14em] whitespace-nowrap text-[var(--wh-foreground-muted)] uppercase">
+            {TAGLINE}
+          </span>
         ) : null}
       </span>
     </span>

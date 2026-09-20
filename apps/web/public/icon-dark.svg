@@ -1,18 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
-    <linearGradient id="roof" x1="11" y1="33" x2="47" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0d8cdf"/><stop offset="0.32" stop-color="#2fb3d6"/><stop offset="0.55" stop-color="#56c7c8"/><stop offset="0.78" stop-color="#8ecba3"/><stop offset="1" stop-color="#c8c67b"/></linearGradient>
-    <linearGradient id="wave" x1="13" y1="46" x2="50" y2="46" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2ba5e0"/><stop offset="0.2" stop-color="#0d76c2"/><stop offset="0.42" stop-color="#04497f"/><stop offset="0.58" stop-color="#0d6094"/><stop offset="0.7" stop-color="#f4747f"/><stop offset="0.86" stop-color="#fb9d73"/><stop offset="1" stop-color="#fcbb6a"/></linearGradient>
-    <linearGradient id="leaf" x1="46" y1="23" x2="54" y2="13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2f9e6d"/><stop offset="1" stop-color="#9ccf5c"/></linearGradient>
-    <linearGradient id="stem" x1="50" y1="38.5" x2="50" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1f9f90"/><stop offset="1" stop-color="#45b673"/></linearGradient>
+    <linearGradient id="blue" x1="17.5" y1="50" x2="37" y2="19" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0ea5e9"/><stop offset="0.5" stop-color="#22b4f0"/><stop offset="0.8" stop-color="#1cc0c0"/><stop offset="1" stop-color="#22c55e"/></linearGradient>
+    <linearGradient id="yellow" x1="35" y1="20" x2="46.5" y2="50" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset="0.6" stop-color="#f8b020"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+    <linearGradient id="leaf" x1="43.5" y1="51.5" x2="57.5" y2="34.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#15803d"/><stop offset="0.5" stop-color="#22c55e"/><stop offset="1" stop-color="#4ade80"/></linearGradient>
   </defs>
-  <rect x="0" y="0" width="64" height="64" rx="14.3168" fill="#16243a"/>
-  <path d="M14.5 32.2 L31.55 20.6 L45.6 31.4 L45.6 44 L14.5 44 Z" fill="#16243a"/>
-  <path d="M12.9 32.5 L31.55 18.6 L47.2 32.2" fill="none" stroke="url(#roof)" stroke-width="6.3" stroke-linecap="round" stroke-linejoin="round"/>
-  <g fill="#35beec"><rect x="26.8" y="30.1" width="3.9" height="3.7" rx="1.05"/><rect x="31.7" y="30.1" width="3.9" height="3.7" rx="1.05"/><rect x="26.8" y="35" width="3.9" height="3.7" rx="1.05"/><rect x="31.7" y="35" width="3.9" height="3.7" rx="1.05"/></g>
-  <path d="M50.3 35.3 L50.3 27.3" fill="none" stroke="#16243a" stroke-width="9.2" stroke-linecap="round"/>
-  <path d="M50.3 35.3 L50.3 27.3" fill="none" stroke="url(#stem)" stroke-width="6.1" stroke-linecap="round"/>
-  <path d="M45.7 23.9 C44.8 16.4 49.1 11.8 54.4 11.2 C55.6 18 52.1 23.2 45.7 23.9 Z" fill="none" stroke="#16243a" stroke-width="2.6" stroke-linejoin="round"/>
-  <path d="M45.7 23.9 C44.8 16.4 49.1 11.8 54.4 11.2 C55.6 18 52.1 23.2 45.7 23.9 Z" fill="url(#leaf)"/>
-  <path d="M13.2 41.6 C16.4 45 20.2 50.7 23.9 50.7 C27.4 50.7 28.8 45.5 31.3 45.5 C33.8 45.5 35.2 50.7 38.4 50.7 C42.2 50.7 46 44.8 50.2 41.2" fill="none" stroke="#16243a" stroke-width="9.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M13.2 41.6 C16.4 45 20.2 50.7 23.9 50.7 C27.4 50.7 28.8 45.5 31.3 45.5 C33.8 45.5 35.2 50.7 38.4 50.7 C42.2 50.7 46 44.8 50.2 41.2" fill="none" stroke="url(#wave)" stroke-width="6.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="0" y="0" width="64" height="64" rx="14.3168" fill="#0f172a"/>
+  <path d="M17.5 50 L17.5 29.5 L32 17 L46.5 29.5 L46.5 50 Z" fill="#0f172a"/>
+  <path d="M35.2 19.75 L46.5 29.5 L46.5 50" fill="none" stroke="url(#yellow)" stroke-width="8.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <path d="M17.5 50 L17.5 29.5 L32 17 L36.1 20.5" fill="none" stroke="url(#blue)" stroke-width="8.5" stroke-linecap="butt" stroke-linejoin="round"/>
+  <g fill="#38bdf8"><rect x="26.8" y="30.8" width="4.4" height="4.4" rx="1.1"/><rect x="32.8" y="30.8" width="4.4" height="4.4" rx="1.1"/><rect x="26.8" y="36.8" width="4.4" height="4.4" rx="1.1"/><rect x="32.8" y="36.8" width="4.4" height="4.4" rx="1.1"/></g>
+  <path d="M43.5 51.5 C42.5 42.5 48 35 57.5 34.5 C58.2 44 52.5 51.8 43.5 51.5 Z" fill="none" stroke="#0f172a" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M43.5 51.5 C42.5 42.5 48 35 57.5 34.5 C58.2 44 52.5 51.8 43.5 51.5 Z" fill="url(#leaf)"/>
+  <path d="M45.6 49.4 C48.4 44.6 51.8 40.2 55.6 36.6" fill="none" stroke="#0f172a" stroke-width="1.3" stroke-linecap="round"/>
 </svg>

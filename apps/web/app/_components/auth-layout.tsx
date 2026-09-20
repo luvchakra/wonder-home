@@ -41,7 +41,7 @@ export function AuthLayout({ title, lede, children, footer, step, promise, accen
       >
         <Wordmark tagline size={36} />
         <div className="relative z-10 max-w-md">
-          <h2 className="text-[var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">{pitch.headline}</h2>
+          <h2 className="text-[length:var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">{pitch.headline}</h2>
           <ul className="mt-6 space-y-2">
             {pitch.points.map((point) => (
               <li key={point} className="flex items-center gap-2.5 text-[0.9375rem] text-[var(--wh-foreground-muted)]">
@@ -81,7 +81,7 @@ export function AuthLayout({ title, lede, children, footer, step, promise, accen
               </div>
             </div>
           ) : null}
-          <h1 className="text-[var(--wh-text-title)] font-bold tracking-tight">{title}</h1>
+          <h1 className="text-[length:var(--wh-text-title)] font-bold tracking-tight">{title}</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{lede}</p>
         </header>
 

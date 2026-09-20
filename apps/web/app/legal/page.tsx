@@ -24,7 +24,7 @@ export default function LegalPage() {
         </Link>
 
         <header className="space-y-2">
-          <h1 className="text-[var(--wh-text-title)] font-bold tracking-tight">Terms and privacy</h1>
+          <h1 className="text-[length:var(--wh-text-title)] font-bold tracking-tight">Terms and privacy</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">
             WonderHome is in active development. Formal terms of service and a privacy policy have
             not been published yet, and we would rather say so than show you a document that has
