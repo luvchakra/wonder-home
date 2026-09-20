@@ -142,6 +142,46 @@ under the lockup and again in the footer mockup: `brand/mark.ts`'s
 `TAGLINE`, the manifest, the root layout's description and both places
 `UI-UX-REQUIREMENTS-v3.md` names it.
 
+## The nav drawer (rules 4, 6, 10)
+
+The phone's bottom bar has always had five destinations, and "More" was
+always a real fifth one — a full page listing every household domain, Manage,
+Settings, Notifications and Help. That page still exists and is still a real
+route, but tapping "More" no longer means leaving the screen you were on to
+reach it: it opens the same full menu as a drawer over whatever you were
+already looking at, and picking anything in it closes the drawer and takes
+you there. A new hamburger trigger at the top left of the mobile header does
+the same thing, so a person is never more than one tap from the whole menu
+regardless of which primary area they are in.
+
+**Radix owns the drawer**, the same way it owns `Sheet` (rule 6) — `Dialog`
+gives it focus trapping, escape, scroll locking and the accessible naming a
+hand-rolled panel gets wrong. It differs from `Sheet` only in shape: a sheet
+rises from the bottom (or centres on desktop) and always names itself in a
+visible title; a drawer is anchored to the left edge, full height, and
+carries a `sr-only` title instead, because the brand wordmark at its own top
+already identifies it visually. `wh-slide-in-left` is a new keyframe for
+exactly this — every other entrance in this kit either rises or fades, and a
+left-anchored panel sliding up instead of in reads wrong — defined next to
+`wh-rise` in `ui-theme.css` and included in the same `prefers-reduced-motion`
+block.
+
+**Collapsed by default, everywhere.** The state a viewer is in before any tap
+is always closed — nothing calls `setOpen(true)` on mount. This only changes
+the phone experience: the desktop sidebar already shows every primary area
+and every domain at once, permanently, so there was never anything on desktop
+for a hamburger to collapse, and the trigger is `lg:hidden` for exactly that
+reason.
+
+**One nav tree, filtered once.** The drawer's content is not a second copy of
+the household's permissions logic — it renders the same `secondary` list
+`AppShell` already receives (filtered server-side, per rule 9), grouped the
+same way `/more` already groups it: primary areas, then Household, then
+Manage. A `NavDrawerProvider` context is what lets the header's trigger and
+the tab bar's "More" button open one shared drawer instance without prop-
+drilling open state through every intermediate server component in the
+shell.
+
 ## The handwritten line, and the greenery
 
 Two things carry the mockups' warmth, and they are easy to lose in a refactor
@@ -283,7 +323,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton` | The three states |
 | `ScriptAccent`, `LeafDecor` | The handwritten line and the botanical corner |
 | `AiOrb`, `ChatMessage`, `SuggestionChips`, `ChatComposer`, `VoiceInputButton`, `Waveform` | The conversation |
-| `AppShell`, `MobileHeader`, `PrimaryNav` | The shell |
+| `AppShell`, `MobileHeader`, `PrimaryNav`, `NavDrawer` | The shell |
 
 ### Tailwind has to be told about the shared package
 

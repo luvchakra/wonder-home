@@ -4,6 +4,7 @@ import { cn } from "../../lib/cn";
 import { PRIMARY_NAVIGATION, type PrimaryNavKey } from "../../navigation/primary-navigation";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { MobileHeader, type ShellViewer } from "./mobile-header";
+import { NavDrawerProvider } from "./nav-drawer";
 import { PrimaryNav } from "./primary-nav";
 
 export type AppShellProps = {
@@ -54,37 +55,39 @@ export function AppShell({
         Skip to main content
       </a>
 
-      <div className="lg:flex">
-        <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} />
+      <NavDrawerProvider viewer={viewer} secondary={secondary} pathname={pathname}>
+        <div className="lg:flex">
+          <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} />
 
-        <div className="min-w-0 flex-1">
-          <MobileHeader viewer={viewer} back={back} title={title} />
+          <div className="min-w-0 flex-1">
+            <MobileHeader viewer={viewer} back={back} title={title} />
 
-          <div className="lg:flex lg:justify-center">
-            <main
-              id="wh-main"
-              aria-label={activeItem?.purpose}
-              className={cn(
-                "mx-auto w-full px-4 pt-4 pb-[calc(var(--wh-tabbar-height)+1.5rem)] lg:px-8 lg:pt-6 lg:pb-12",
-                wide ? "max-w-[var(--wh-content-wide)]" : "max-w-[var(--wh-content-max)]",
-              )}
-            >
-              {children}
-            </main>
-
-            {contextPanel ? (
-              <aside
-                aria-label="Household context"
-                className="hidden w-80 shrink-0 border-l border-[var(--wh-border)] px-6 py-6 xl:block"
+            <div className="lg:flex lg:justify-center">
+              <main
+                id="wh-main"
+                aria-label={activeItem?.purpose}
+                className={cn(
+                  "mx-auto w-full px-4 pt-4 pb-[calc(var(--wh-tabbar-height)+1.5rem)] lg:px-8 lg:pt-6 lg:pb-12",
+                  wide ? "max-w-[var(--wh-content-wide)]" : "max-w-[var(--wh-content-max)]",
+                )}
               >
-                {contextPanel}
-              </aside>
-            ) : null}
+                {children}
+              </main>
+
+              {contextPanel ? (
+                <aside
+                  aria-label="Household context"
+                  className="hidden w-80 shrink-0 border-l border-[var(--wh-border)] px-6 py-6 xl:block"
+                >
+                  {contextPanel}
+                </aside>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
 
-      <PrimaryNav active={active} variant="tabbar" />
+        <PrimaryNav active={active} variant="tabbar" />
+      </NavDrawerProvider>
     </div>
   );
 }

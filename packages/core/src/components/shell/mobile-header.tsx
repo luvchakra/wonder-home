@@ -3,8 +3,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
-import { BrandMark, Wordmark } from "../ui/brand";
+import { Wordmark } from "../ui/brand";
 import { SearchBar } from "../ui/search-bar";
+import { NavDrawerTrigger } from "./nav-drawer";
 import { ViewerMenu } from "./viewer-menu";
 
 /**
@@ -51,9 +52,7 @@ export function MobileHeader({
             <ChevronLeft className="size-5" />
           </Link>
         ) : (
-          <Link href="/" aria-label="WonderHome home" className="shrink-0 lg:hidden">
-            <BrandMark size={30} />
-          </Link>
+          <NavDrawerTrigger className="-ml-2 shrink-0 lg:hidden" />
         )}
 
         {title ? (

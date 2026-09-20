@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [The full menu, as a drawer — a hamburger, and a "More" that no longer leaves the page](2026-09-20-nav-drawer.md) |
 | 2026-09-19 | [Connecting outcomes to their real dependency graph (story 03-006)](2026-09-19-dependency-graph.md) |
 | 2026-09-19 | [Conditional policies (story 02-008) — module 02 complete](2026-09-19-conditional-policies.md) |
 | 2026-09-19 | [Conflict detection (story 02-007) — module 02 done bar one story](2026-09-19-conflict-detection.md) |
