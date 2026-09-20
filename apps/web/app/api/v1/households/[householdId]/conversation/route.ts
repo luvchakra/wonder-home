@@ -15,6 +15,7 @@ import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type Conv
 import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
 import {
+  beginEditMessage,
   currentSessionId,
   decideAction,
   listMessages,
@@ -56,6 +57,8 @@ const sayScheme = z.object({
   utterance: z.string().trim().min(1).max(1000),
   channel: z.enum(["text", "voice"]).default("text"),
   transcriptConfidence: z.number().min(0).max(1).optional(),
+  /** Editing the household's own last message (story 04-003), rather than a fresh turn. */
+  editMessageId: z.uuid().optional(),
 });
 
 const decideScheme = z.object({
@@ -143,6 +146,14 @@ export async function POST(request: Request, { params }: Params) {
       autonomyLookup(supabase, householdId),
       listPeople(supabase, householdId),
     ]);
+
+    // An edit removes the old message and whatever came of it before
+    // anything downstream reads the session, so the regenerated reply is
+    // the only one and the model never sees the question it is replacing.
+    if (body.editMessageId) {
+      await beginEditMessage(admin, { householdId, sessionId, messageId: body.editMessageId });
+    }
+
     const [pending, history] = await Promise.all([pendingAction(admin, sessionId), recentTurns(admin, sessionId, 6)]);
     const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, membership.household.timezone);
     const startedAt = Date.now();
