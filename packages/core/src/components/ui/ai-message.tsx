@@ -55,6 +55,7 @@ export type MessageRole = "assistant" | "member";
 export function ChatMessage({
   role,
   name,
+  speaker,
   children,
   aside,
   pending = false,
@@ -63,6 +64,15 @@ export function ChatMessage({
   role: MessageRole;
   /** The member's name, for the avatar. */
   name?: string;
+  /**
+   * Who said this, spelled out above the bubble — a live conversation's own
+   * transcript convention (product-direction v4 §7), where a back-and-forth
+   * exchange benefits from reading like one even after the fact. Ordinary
+   * turns leave this unset: colour, alignment and the avatar already say
+   * who is speaking, and repeating a name inside every bubble would be
+   * noise on a normal conversation.
+   */
+  speaker?: string;
   children: ReactNode;
   /** Something attached beneath the bubble: an action preview, suggestions. */
   aside?: ReactNode;
@@ -83,6 +93,11 @@ export function ChatMessage({
               : "rounded-tr-[var(--wh-radius-xs)] bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]",
           )}
         >
+          {speaker ? (
+            <p className={cn("mb-0.5 text-[0.6875rem] font-semibold", fromAssistant ? "text-[var(--wh-foreground-subtle)]" : "text-[var(--wh-primary-foreground)]/75")}>
+              {speaker}
+            </p>
+          ) : null}
           {pending ? <ThinkingDots /> : children}
         </div>
         {aside ? <div className="w-full">{aside}</div> : null}

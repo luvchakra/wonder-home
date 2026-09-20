@@ -12,6 +12,13 @@ import { ViewerMenu } from "./viewer-menu";
  * The top of every signed-in screen: the mark, search, notifications and the
  * person. On a phone it is compact and sticky; on desktop the same bar spans
  * the content column and grows a full search field.
+ *
+ * On a phone, the mark is centred on the bar itself — not in whatever space
+ * is left after the hamburger and the notification/avatar cluster, which
+ * are different widths and would pull an ordinary flex-1 slot off-centre.
+ * It is positioned absolutely within the row for exactly that reason: taken
+ * out of flow, it centres on the row's own box regardless of what its
+ * neighbours weigh, and a `min-w-0 flex-1` spacer still holds their place.
  */
 export type ShellViewer = {
   displayName: string;
@@ -42,7 +49,7 @@ export function MobileHeader({
         className,
       )}
     >
-      <div className="mx-auto flex h-[var(--wh-header-height)] max-w-[var(--wh-content-wide)] items-center gap-3 px-4 lg:px-8">
+      <div className="relative mx-auto flex h-[var(--wh-header-height)] max-w-[var(--wh-content-wide)] items-center gap-3 px-4 lg:px-8">
         {back ? (
           <Link
             href={back.href}
@@ -58,9 +65,16 @@ export function MobileHeader({
         {title ? (
           <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight lg:hidden">{title}</h1>
         ) : (
-          <span className="min-w-0 flex-1 lg:hidden">
-            <Wordmark size={0} className="[&_svg]:hidden" />
-          </span>
+          <>
+            <span className="min-w-0 flex-1 lg:hidden" aria-hidden />
+            <Link
+              href="/"
+              aria-label="WonderHome home"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 lg:hidden"
+            >
+              <Wordmark size={26} />
+            </Link>
+          </>
         )}
 
         <div className="hidden min-w-0 flex-1 lg:block">

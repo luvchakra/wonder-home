@@ -30,6 +30,7 @@ import {
   type ConversationAction,
 } from "@wonderhome/core/conversation/repository";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
+import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
@@ -66,7 +67,12 @@ const decideScheme = z.object({
   decision: z.enum(["approved", "rejected"]),
 });
 
-const bodySchema = z.union([sayScheme, decideScheme]);
+/** Ending a live conversation (item 6): recap what was said and what it led to. */
+const summarizeScheme = z.object({
+  summarizeSince: z.uuid(),
+});
+
+const bodySchema = z.union([sayScheme, decideScheme, summarizeScheme]);
 
 type Params = { params: Promise<{ householdId: string }> };
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -133,6 +139,27 @@ export async function POST(request: Request, { params }: Params) {
       const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: action.id } });
 
       return { reply: { id: messageId, text: settled.text, action: settled.action } };
+    }
+
+    if ("summarizeSince" in body) {
+      const entitlement = await may(supabase, householdId, "conversation.text");
+      if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
+
+      const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: "text" });
+      const history = await listMessages(admin, householdId, sessionId, 200);
+      const sinceIndex = history.findIndex((message) => message.id === body.summarizeSince);
+      if (sinceIndex === -1) throw ApiError.notFound("That conversation could not be found to summarise.");
+
+      const text = summarizeConversation(
+        history.slice(sinceIndex).map((message) => ({
+          role: message.role,
+          text: message.content,
+          action: message.action ? { status: message.action.status, preview: message.action.preview } : null,
+        })),
+      );
+      const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { kind: "summary" } });
+
+      return { reply: { id: messageId, text, action: null } };
     }
 
     // Entitlement first, on the server, before anything is read or written.

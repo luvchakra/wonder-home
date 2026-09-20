@@ -1,4 +1,5 @@
 import { may } from "@wonderhome/core/billing/repository";
+import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -20,7 +21,14 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const [{ q }, session] = await Promise.all([searchParams, requireSession("/ai")]);
   const { supabase, membership, viewer, secondary } = session;
 
-  const entitlement = await may(supabase, membership.household.id, "conversation.text");
+  const [entitlement, voiceEntitlement] = await Promise.all([
+    may(supabase, membership.household.id, "conversation.text"),
+    may(supabase, membership.household.id, "conversation.voice"),
+  ]);
+  // A sustained, hands-free exchange is still voice underneath — gated the
+  // same way tap-to-speak already is, and by the deployment's own rollout
+  // flag (config/flags.ts: "flags gate rollout, never authorization").
+  const liveConversationAvailable = flags().voice_conversation && voiceEntitlement.allowed;
 
   let initialMessages: AssistantMessage[] = [];
   if (entitlement.allowed) {
@@ -47,6 +55,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           firstName={viewer.displayName.split(" ")[0] ?? viewer.displayName}
           initialMessages={initialMessages}
           initialQuery={typeof q === "string" && q.trim() ? q.trim().slice(0, 500) : undefined}
+          liveConversationAvailable={liveConversationAvailable}
         />
       ) : (
         <EmptyState

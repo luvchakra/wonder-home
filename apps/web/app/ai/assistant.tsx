@@ -13,12 +13,15 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
+import { plainText } from "@wonderhome/core/conversation/reply-format";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { AiOrb, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
 import { ChatComposer } from "@wonderhome/core/ui/chat-composer";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
+import { Switch } from "@wonderhome/core/ui/switch";
+import { useLiveVoice, type LiveVoiceState } from "@wonderhome/core/ui/use-live-voice";
 
 /**
  * The conversation itself.
@@ -39,6 +42,8 @@ export type AssistantMessage = {
   /** A preview WonderHome showed without recording an action (e.g. prepared). */
   preview?: ActionPreviewShape | null;
   proposal?: string;
+  /** Who said this, spelled out — set only for a live conversation's turns. */
+  speaker?: string;
 };
 
 const SUGGESTIONS = [
@@ -56,12 +61,15 @@ export function Assistant({
   firstName,
   initialMessages,
   initialQuery,
+  liveConversationAvailable = false,
 }: {
   householdId: string;
   memberName: string;
   firstName: string;
   initialMessages: AssistantMessage[];
   initialQuery?: string;
+  /** The deployment's rollout flag and this household's plan both say yes. */
+  liveConversationAvailable?: boolean;
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
@@ -79,6 +87,8 @@ export function Assistant({
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const sentInitial = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  /** The first member message of the live session in progress, for the recap once it ends. */
+  const liveStartMessageId = useRef<string | null>(null);
 
   /**
    * Nothing scrolls the page here. The message list is its own scroll
@@ -95,8 +105,15 @@ export function Assistant({
   }, [messages.length]);
 
   const send = useCallback(
-    async (utterance: string, channel: "text" | "voice", transcriptConfidence?: number, retryKey?: string, editMessageId?: string) => {
-      if (busy) return;
+    async (
+      utterance: string,
+      channel: "text" | "voice",
+      transcriptConfidence?: number,
+      retryKey?: string,
+      editMessageId?: string,
+      live?: boolean,
+    ): Promise<string> => {
+      if (busy) return "";
       setBusy(true);
       setError(null);
       setFailed(null);
@@ -104,6 +121,7 @@ export function Assistant({
       const idempotencyKey = retryKey ?? newIdempotencyKey();
 
       const optimisticId = `local-${Date.now()}`;
+      const speaker = live ? { member: firstName, assistant: "WonderHome" } : null;
       setMessages((current) => {
         // Editing replaces the edited message and everything that followed
         // it — ordinarily just its own reply — with the new turn, the same
@@ -112,7 +130,7 @@ export function Assistant({
         const base = editedIndex === -1 ? current : current.slice(0, editedIndex);
         return [
           ...base,
-          { id: optimisticId, role: "member", text: utterance },
+          { id: optimisticId, role: "member", text: utterance, speaker: speaker?.member },
           { id: `${optimisticId}-pending`, role: "assistant", text: "", pending: true },
         ];
       });
@@ -129,6 +147,10 @@ export function Assistant({
           throw new Error(payload?.error?.message ?? "WonderHome could not answer just now.");
         }
 
+        if (live && payload.memberMessageId && !liveStartMessageId.current) {
+          liveStartMessageId.current = payload.memberMessageId;
+        }
+
         setMessages((current) =>
           current
             .filter((message) => message.id !== `${optimisticId}-pending`)
@@ -140,17 +162,66 @@ export function Assistant({
               action: payload.reply.action ?? null,
               preview: payload.reply.preview ?? null,
               proposal: payload.reply.proposal,
+              speaker: speaker?.assistant,
             }),
         );
+        return payload.reply.text as string;
       } catch (caught) {
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
         setError(caught instanceof Error ? caught.message : "WonderHome could not answer just now.");
         setFailed({ utterance, channel, transcriptConfidence, key: idempotencyKey, editMessageId });
+        return "";
       } finally {
         setBusy(false);
       }
     },
-    [busy, householdId],
+    [busy, householdId, firstName],
+  );
+
+  /** A live turn: send what was heard, and read back what to say (never throws — the hook's own contract). */
+  const handleLiveUtterance = useCallback(
+    async (transcript: string, confidence: number): Promise<string> => {
+      const replyText = await send(transcript, "voice", confidence, undefined, undefined, true);
+      return replyText ? plainText(replyText) : "";
+    },
+    [send],
+  );
+
+  /** Ends a live session: fetches the recap for everything said since it began, and posts it as a message. */
+  const endLiveSession = useCallback(async () => {
+    const startId = liveStartMessageId.current;
+    liveStartMessageId.current = null;
+    if (!startId) return;
+    try {
+      const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ summarizeSince: startId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not summarise that conversation.");
+      setMessages((current) => current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not summarise that conversation.");
+    }
+  }, [householdId]);
+
+  const live = useLiveVoice({ onUtterance: handleLiveUtterance, onError: (message) => setError(message) });
+
+  /** The composer's own toggle: on starts listening, off stops and recaps what was said (item 6). */
+  const toggleLive = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        liveStartMessageId.current = null;
+        setError(null);
+        setEditing(null);
+        live.start();
+      } else {
+        live.stop();
+        void endLiveSession();
+      }
+    },
+    [live, endLiveSession],
   );
 
   /** The composer's own submit — routed through whichever message, if any, is being reworded. */
@@ -220,7 +291,10 @@ export function Assistant({
   const editLocked = messages
     .slice(lastMemberIndex + 1)
     .some((message) => message.action?.status === "approved" || message.action?.status === "executed");
-  const editableMessageId = lastMemberIndex !== -1 && !editLocked ? messages[lastMemberIndex]!.id : null;
+  // A structural edit mid-hands-free-session would confuse a conversation
+  // that is otherwise flowing by voice, so the pill only appears once live
+  // conversation is off.
+  const editableMessageId = lastMemberIndex !== -1 && !editLocked && !live.active ? messages[lastMemberIndex]!.id : null;
 
   return (
     // Exactly the space between the header and main's own bottom padding (which
@@ -256,6 +330,7 @@ export function Assistant({
               key={message.id}
               role={message.role}
               name={memberName}
+              speaker={message.speaker}
               pending={message.pending}
               aside={
                 message.action?.preview || message.preview ? (
@@ -334,20 +409,53 @@ export function Assistant({
             </button>
           </div>
         ) : null}
-        <ChatComposer
-          key={editing?.id ?? "compose"}
-          onSend={handleComposerSend}
-          disabled={busy}
-          placeholder="Type a message, or tap the mic to speak…"
-          initialValue={editing?.text ?? ""}
-          autoFocus={Boolean(editing)}
-        />
+        {live.active ? (
+          <div className="flex items-center gap-3 rounded-[var(--wh-radius-lg)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-2.5 shadow-[var(--wh-shadow-raised)]">
+            <AiOrb size={40} thinking={live.state === "thinking"} listening={live.state === "listening"} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">{liveStatusLabel(live.state)}</p>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">Talk naturally — WonderHome answers out loud.</p>
+            </div>
+            <Switch checked onCheckedChange={() => toggleLive(false)} label="Turn off live conversation" />
+          </div>
+        ) : (
+          <ChatComposer
+            key={editing?.id ?? "compose"}
+            onSend={handleComposerSend}
+            disabled={busy}
+            placeholder="Type a message, or tap the mic to speak…"
+            initialValue={editing?.text ?? ""}
+            autoFocus={Boolean(editing)}
+            belowSend={
+              liveConversationAvailable ? (
+                <Switch checked={false} onCheckedChange={() => toggleLive(true)} label="Turn on live conversation" disabled={busy} />
+              ) : undefined
+            }
+          />
+        )}
         <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
         </p>
       </div>
     </div>
   );
+}
+
+function liveStatusLabel(state: LiveVoiceState): string {
+  switch (state) {
+    case "listening":
+      return "Listening…";
+    case "thinking":
+      return "Thinking…";
+    case "speaking":
+      return "Speaking…";
+    case "denied":
+      return "Microphone access was refused";
+    case "unsupported":
+      return "Live conversation is not supported here";
+    default:
+      return "Live conversation is on";
+  }
 }
 
 function stateOf(message: AssistantMessage): "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "refused" {
