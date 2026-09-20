@@ -21,11 +21,9 @@ const TONE = {
 
 export type PillTone = keyof typeof TONE;
 
-export function Pill({
-  tone = "soft",
-  className,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { tone?: PillTone }) {
+export type PillProps = ButtonHTMLAttributes<HTMLButtonElement> & { tone?: PillTone };
+
+export function Pill({ tone = "soft", className, ...props }: PillProps) {
   return <button {...props} className={cn(BASE, TONE[tone], className)} />;
 }
 

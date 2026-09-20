@@ -1,4 +1,4 @@
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import Link from "next/link";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
@@ -12,7 +12,6 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
-import { iconForOutcome } from "../../_lib/outcome-icons";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession, type Session } from "../../_lib/session";
 
@@ -143,9 +142,6 @@ function renderResponsibilities({
               {addable.length > 0 ? (
                 <AddResponsibilityButton householdId={householdId} members={memberOptions} outcomes={addable} />
               ) : null}
-              <PillLink href="/ai?q=Priya%20handles%20the%20school%20run%20from%20now%20on." tone="primary">
-                <Sparkles aria-hidden className="size-3.5" /> Assign with AI
-              </PillLink>
             </div>
           ) : null}
         </header>
@@ -209,14 +205,12 @@ function renderResponsibilities({
             <ul className="divide-y divide-[var(--wh-border)]">
               {shown.map((row) => {
                 const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
-                const presentation = iconForOutcome(row.outcome_key);
                 const title = item?.name ?? row.outcome_key.replace(/[._]/g, " ");
                 return (
                   <ResponsibilityRow
                     key={row.id}
+                    outcomeKey={row.outcome_key}
                     card={{
-                      icon: presentation.icon,
-                      tone: presentation.tone,
                       title,
                       owner: nameOf(row.primary_member_id) ?? "Nobody yet",
                       backup: nameOf(row.backup_member_id),

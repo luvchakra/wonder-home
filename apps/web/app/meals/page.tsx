@@ -1,4 +1,4 @@
-import { ChefHat, CookingPot, Heart, ShoppingBasket, Sparkles, Utensils } from "lucide-react";
+import { ChefHat, CookingPot, Heart, ShoppingBasket, Utensils } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
@@ -81,7 +81,6 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
           </div>
           <div className="flex flex-wrap gap-2">
             <PlanMealButton householdId={householdId} members={members.map((member) => ({ id: member.id, displayName: member.displayName }))} />
-            <PillLink href="/ai?q=Plan%20this%20week%27s%20dinners" tone="primary"><Sparkles aria-hidden className="size-3.5" /> Plan with AI</PillLink>
           </div>
         </header>
 
@@ -105,7 +104,7 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
             ) : null}
 
             {meals.length === 0 ? (
-              <EmptyState icon={Utensils} tone="meals" title="Nothing planned this week" description="Plan a meal and WonderHome checks the ingredients, the cook's time and everyone's preferences — then tells you what's missing." action={<PillLink href="/ai?q=Plan%20this%20week%27s%20dinners" tone="primary">Plan with AI</PillLink>} />
+              <EmptyState icon={Utensils} tone="meals" title="Nothing planned this week" description="Plan a meal and WonderHome checks the ingredients, the cook's time and everyone's preferences — then tells you what's missing." action={<PlanMealButton householdId={householdId} members={members.map((member) => ({ id: member.id, displayName: member.displayName }))} />} />
             ) : (
               <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {days.filter((day) => day.meals.length > 0 || day.key === today).map((day) => (

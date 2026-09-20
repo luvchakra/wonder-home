@@ -30,9 +30,9 @@ export function ActionRow({ icon, tone = "primary", title, meta, action, classNa
       <IconTile icon={icon} tone={tone} />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{title}</p>
+        <p className="text-sm font-medium">{title}</p>
         {meta ? (
-          <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">{meta}</p>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{meta}</p>
         ) : null}
       </div>
 
@@ -57,9 +57,9 @@ export function NavRow({
       >
         <IconTile icon={icon} tone={tone} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{title}</span>
+          <span className="block text-sm font-medium">{title}</span>
           {meta ? (
-            <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{meta}</span>
+            <span className="block text-xs text-[var(--wh-foreground-subtle)]">{meta}</span>
           ) : null}
         </span>
         <span aria-hidden className="shrink-0 text-[var(--wh-foreground-subtle)]">

@@ -5,14 +5,13 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { CertificationItem } from "@wonderhome/core/ui/certification-item";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
-import { PillLink } from "@wonderhome/core/ui/pill";
 import { ProgressRing } from "@wonderhome/core/ui/progress-ring";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { CertificationControls } from "../_components/certification-controls";
+import { AddBeliefButton, CertificationControls } from "../_components/certification-controls";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Household Certification" };
@@ -89,11 +88,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Household Certification</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
           </div>
-          {canReview ? (
-            <PillLink href="/ai?q=We%20prefer%20dinner%20at%208." tone="primary">
-              <Sparkles aria-hidden className="size-3.5" /> Tell WonderHome something
-            </PillLink>
-          ) : null}
+          {canReview ? <AddBeliefButton householdId={householdId} /> : null}
         </header>
 
         <Card className="flex items-center gap-5 p-5">
@@ -128,7 +123,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
             tone="ai"
             title={live.length === 0 ? "WonderHome has nothing recorded yet" : active === "review" ? "Nothing needs your review" : "Nothing here yet"}
             description={live.length === 0 ? "As you set things up and talk to WonderHome, what it learns appears here for you to confirm or correct." : active === "review" ? "Every belief has been checked recently enough for how much it matters." : "Beliefs move here as they are learned and confirmed."}
-            action={live.length === 0 ? <PillLink href="/ai?q=We%20prefer%20dinner%20at%208.">Tell WonderHome something</PillLink> : null}
+            action={live.length === 0 && canReview ? <AddBeliefButton householdId={householdId} /> : null}
           />
         ) : (
           <Card className="p-2">

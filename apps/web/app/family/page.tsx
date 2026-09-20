@@ -58,6 +58,8 @@ export default async function FamilyPage() {
       ])
     : [[], null];
 
+  const familyMembers = members.filter((member) => member.memberType !== "helper");
+  const helpers = members.filter((member) => member.memberType === "helper");
   const needs = agenda ? [...agenda.events, ...agenda.conflicts, ...agenda.gifts] : [];
   const moment = events.find((event) => event.protected) ?? events.find((event) => event.kind === "family_time" || event.kind === "outing") ?? null;
   const admin = isHouseholdAdmin(membership);
@@ -89,24 +91,44 @@ export default async function FamilyPage() {
         ) : null}
 
         <section className="wh-rise" style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}>
-          <SectionHeader title="Family members" count={members.length} action={admin ? <PillLink href="/household/members" tone="quiet">Manage</PillLink> : null} />
-          {members.length === 0 ? (
+          <SectionHeader title="Family members" count={familyMembers.length} action={admin ? <PillLink href="/household/members" tone="quiet">Manage</PillLink> : null} />
+          {familyMembers.length === 0 ? (
             <EmptyState icon={Users} tone="people" title="Just you so far" description="Invite the family so everyone gets their own view of the home." action={admin ? <ButtonLink href="/household/members">Invite someone</ButtonLink> : null} />
           ) : (
             <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
-              {members.map((member) => (
+              {familyMembers.map((member) => (
                 <PersonCard
                   key={member.id}
                   name={member.displayName}
                   role={roleLabel(member)}
                   now={member.status === "invited" ? "Invited" : member.id === membership.memberId ? "You" : null}
-                  badge={member.memberType === "child" ? "🧒" : member.memberType === "helper" ? "🤝" : undefined}
+                  badge={member.memberType === "child" ? "🧒" : undefined}
                   href={member.memberType === "child" && view.permissions.includes("school.manage") ? `/school?child=${member.id}` : undefined}
                 />
               ))}
             </div>
           )}
         </section>
+
+        {helpers.length > 0 ? (
+          <section className="wh-rise" style={{ "--wh-rise-delay": "90ms" } as React.CSSProperties}>
+            <SectionHeader title="Household help" count={helpers.length} />
+            <p className="mb-2 text-sm text-[var(--wh-foreground-muted)]">
+              Who keeps the home running day to day — not family, but part of how it works.
+            </p>
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
+              {helpers.map((member) => (
+                <PersonCard
+                  key={member.id}
+                  name={member.displayName}
+                  role={roleLabel(member)}
+                  now={member.status === "invited" ? "Invited" : null}
+                  badge="🤝"
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {!entitlement.allowed ? (
           <EmptyState icon={CalendarHeart} tone="people" title="Family time is not part of this plan" description={entitlement.reason} />

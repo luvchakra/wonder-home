@@ -30,6 +30,62 @@ const schema = z
     path: ["correction"],
   });
 
+const addBeliefSchema = z.object({
+  householdId: z.uuid(),
+  category: z.enum(["family_roles", "home_routines", "education", "finance", "lifestyle", "safety"]),
+  claim: z.string().trim().min(1, { error: "Say what's true." }).max(300),
+});
+
+/**
+ * Telling WonderHome something directly — the manual half of Certification's
+ * "add a belief", which previously only opened the AI chat (rule 3: one door
+ * to the assistant, not a shortcut duplicated on every screen; rule 2: an
+ * entity a household can create must have a manual path too).
+ *
+ * Written straight to `confirmed`: a household member typing this in has
+ * stated it, the same standing a correction already gets in
+ * `reviewCertificationAction`.
+ */
+export async function addBeliefAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = addBeliefSchema.safeParse({
+    householdId: formData.get("householdId"),
+    category: formData.get("category"),
+    claim: formData.get("claim"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+
+  const supabase = await createClient();
+  try {
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    if (membership.memberType === "child") {
+      return { error: "Only an adult in the household can tell WonderHome something new." };
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("certification_items").insert({
+      household_id: parsed.data.householdId,
+      category: parsed.data.category,
+      claim: parsed.data.claim,
+      scope: "household",
+      source_type: "setup",
+      source_detail: `added by ${membership.displayName}`,
+      status: "confirmed",
+      risk_level: "low",
+      last_reviewed_at: now,
+      last_reviewed_by: membership.memberId,
+    });
+    if (error) throw new Error(`addBelief failed: ${error.code ?? "unknown"}`);
+
+    revalidatePath("/certification");
+    return { notice: "Added, and confirmed — it's your own household saying so." };
+  } catch (error) {
+    log.warn("adding a belief failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { error: "That didn't go through. Please try again." };
+  }
+}
+
 export async function reviewCertificationAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = schema.safeParse({
     householdId: formData.get("householdId"),

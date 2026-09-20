@@ -104,7 +104,6 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
           {admin ? (
             <div className="flex flex-wrap gap-2">
               <AddBillButton householdId={householdId} />
-              <PillLink href="/ai?q=Pay%20the%20electricity%20bill." tone="primary">Tell WonderHome</PillLink>
             </div>
           ) : null}
         </header>
@@ -145,7 +144,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
             <section>
               <SectionHeader title="Upcoming bills" count={upcoming.length} />
               {upcoming.length === 0 ? (
-                <EmptyState icon={Receipt} tone="money" title="Nothing due" description="Add the bills the household pays — electricity, internet, school fees — and WonderHome raises each one with the right amount of notice." action={<PillLink href="/ai?q=Pay%20the%20electricity%20bill.">Tell WonderHome</PillLink>} />
+                <EmptyState icon={Receipt} tone="money" title="Nothing due" description="Add the bills the household pays — electricity, internet, school fees — and WonderHome raises each one with the right amount of notice." action={<AddBillButton householdId={householdId} />} />
               ) : (
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">

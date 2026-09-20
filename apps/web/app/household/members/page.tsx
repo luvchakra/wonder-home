@@ -1,5 +1,6 @@
-import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
 import { listInvitations } from "@wonderhome/core/identity/invitations";
+import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Badge } from "@wonderhome/core/ui/pill";
@@ -27,6 +28,8 @@ export default async function MembersPage() {
     membership.household.id,
     membership.household.ownerMemberId,
   );
+  const familyMembers = members.filter((member) => member.memberType !== "helper");
+  const helpers = members.filter((member) => member.memberType === "helper");
   const invitations = admin ? await listInvitations(supabase, membership.household.id) : [];
 
   return (
@@ -41,41 +44,30 @@ export default async function MembersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Everyone plays a part</CardTitle>
+            <CardTitle>Family</CardTitle>
           </CardHeader>
           <ul className="divide-y divide-[var(--wh-border)]">
-            {members.map((member) => (
-              <li key={member.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <Avatar name={member.displayName} badge={member.memberType === "child" ? "🧒" : member.memberType === "helper" ? "🤝" : undefined} />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{member.displayName}</p>
-                    <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                      {describeRoles(member.roles, member.isOwner)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {member.status !== "active" ? <Badge>{member.status}</Badge> : null}
-                  {membership.roles.includes("head") && !member.isOwner ? (
-                    <MemberRoleControl
-                      householdId={membership.household.id}
-                      memberId={member.id}
-                      isAdministrator={member.roles.includes("administrator")}
-                    />
-                  ) : null}
-                  {admin && !member.isOwner && member.id !== membership.memberId && member.status === "active" ? (
-                    <RemoveMemberControl
-                      householdId={membership.household.id}
-                      memberId={member.id}
-                      displayName={member.displayName}
-                    />
-                  ) : null}
-                </div>
-              </li>
+            {familyMembers.map((member) => (
+              <MemberRow key={member.id} member={member} membership={membership} admin={admin} />
             ))}
           </ul>
         </Card>
+
+        {helpers.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Household help</CardTitle>
+            </CardHeader>
+            <p className="px-1 pb-2 text-xs text-[var(--wh-foreground-subtle)]">
+              Not family — the people who help keep the home running.
+            </p>
+            <ul className="divide-y divide-[var(--wh-border)]">
+              {helpers.map((member) => (
+                <MemberRow key={member.id} member={member} membership={membership} admin={admin} />
+              ))}
+            </ul>
+          </Card>
+        ) : null}
 
         {admin ? (
           <>
@@ -99,5 +91,46 @@ export default async function MembersPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function MemberRow({
+  member,
+  membership,
+  admin,
+}: {
+  member: HouseholdMember;
+  membership: HouseholdMembership;
+  admin: boolean;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar name={member.displayName} badge={member.memberType === "child" ? "🧒" : member.memberType === "helper" ? "🤝" : undefined} />
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{member.displayName}</p>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">
+            {describeRoles(member.roles, member.isOwner)}
+          </p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {member.status !== "active" ? <Badge>{member.status}</Badge> : null}
+        {membership.roles.includes("head") && !member.isOwner ? (
+          <MemberRoleControl
+            householdId={membership.household.id}
+            memberId={member.id}
+            isAdministrator={member.roles.includes("administrator")}
+          />
+        ) : null}
+        {admin && !member.isOwner && member.id !== membership.memberId && member.status === "active" ? (
+          <RemoveMemberControl
+            householdId={membership.household.id}
+            memberId={member.id}
+            displayName={member.displayName}
+          />
+        ) : null}
+      </div>
+    </li>
   );
 }
