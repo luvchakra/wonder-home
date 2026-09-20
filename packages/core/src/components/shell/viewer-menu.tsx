@@ -1,10 +1,14 @@
 "use client";
 
-import { CircleUserRound, LifeBuoy, Settings2, ShieldCheck } from "lucide-react";
+import { CircleUserRound, Download, LifeBuoy, Settings2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
+import { useState } from "react";
 
+import { installInstructions, useInstallPrompt } from "../../pwa/use-install-prompt";
 import { Avatar } from "../ui/avatar";
+import { Button } from "../ui/button";
+import { Sheet } from "../ui/sheet";
 import type { ShellViewer } from "./mobile-header";
 
 /**
@@ -20,6 +24,11 @@ import type { ShellViewer } from "./mobile-header";
  * to get wrong — focus moving into and back out of the menu, escape, the
  * outside click, arrow keys, and announcing that the trigger opens something
  * — are the parts Radix has already got right.
+ *
+ * "Install app" lives here too: the product is a PWA, and the one place a
+ * person looks for "put this on my phone" is their own account menu. Where
+ * the browser offers a native prompt it is shown; where it does not, the
+ * browser's own steps are spelled out. Gone once the app is installed.
  */
 const ITEMS = [
   { href: "/settings", label: "Settings & profile", icon: Settings2 },
@@ -27,8 +36,15 @@ const ITEMS = [
   { href: "/certification", label: "What WonderHome believes", icon: ShieldCheck },
 ] as const;
 
+const ITEM_CLASS =
+  "flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-[var(--wh-radius-sm)] px-2 text-left text-sm outline-none data-[highlighted]:bg-[var(--wh-surface-muted)]";
+
 export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
+  const install = useInstallPrompt();
+  const [guide, setGuide] = useState(false);
+
   return (
+    <>
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         aria-label={`${viewer.displayName}, ${viewer.roleLabel}. Account menu`}
@@ -67,6 +83,19 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
             </DropdownMenu.Item>
           ))}
 
+          {install.installed ? null : (
+            <DropdownMenu.Item
+              className={ITEM_CLASS}
+              onSelect={() => {
+                if (install.canPrompt) void install.prompt();
+                else setGuide(true);
+              }}
+            >
+              <Download aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+              Install app
+            </DropdownMenu.Item>
+          )}
+
           <DropdownMenu.Separator className="my-1 h-px bg-[var(--wh-border)]" />
 
           <DropdownMenu.Item asChild>
@@ -81,5 +110,22 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+
+    <Sheet
+      open={guide}
+      onOpenChange={setGuide}
+      title="Install WonderHome"
+      description="Put it on your home screen and it opens like an app — full screen, no address bar."
+    >
+      <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--wh-foreground-muted)]">
+        {installInstructions(install.platform).map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+      <Button type="button" className="mt-5 w-full" onClick={() => setGuide(false)}>
+        Got it
+      </Button>
+    </Sheet>
+    </>
   );
 }

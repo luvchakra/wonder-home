@@ -119,10 +119,10 @@ describe("routing to a provider", () => {
     expect(decision).toMatchObject({ ok: false, code: "provider_content_not_allowed" });
   });
 
-  it("refuses a provider the household has not agreed to, even with a key for it", () => {
+  it("refuses a platform provider the household has explicitly not agreed to", () => {
     const decision = routeToProvider({
       provider: "openai",
-      keySource: "household",
+      keySource: "platform",
       policy: policy({ allowedProviders: ["anthropic"] }),
       hasContent: true,
     });
@@ -130,6 +130,20 @@ describe("routing to a provider", () => {
     expect(decision).toMatchObject({ ok: false, code: "provider_not_allowed" });
     if (decision.ok) return;
     expect(decision.reason).toContain("openai");
+  });
+
+  it("treats a household's own key as its choice of provider, whatever the list says", () => {
+    // The list was written by a form that never offered a provider choice;
+    // the key was set by an administrator and audited. The key is the consent.
+    expect(
+      routeToProvider({ provider: "google", keySource: "household", policy: policy({ allowedProviders: ["anthropic"] }), hasContent: true }),
+    ).toMatchObject({ ok: true, provider: "google", keySource: "household" });
+  });
+
+  it("lets the default consent cover whichever provider the platform runs on", () => {
+    for (const provider of ["anthropic", "google", "openai"] as const) {
+      expect(routeToProvider({ provider, keySource: "platform", policy: DEFAULT_DATA_USE, hasContent: true })).toMatchObject({ ok: true, provider });
+    }
   });
 
   it("refuses when no provider is configured", () => {

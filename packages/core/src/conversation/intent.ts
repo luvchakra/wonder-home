@@ -89,6 +89,12 @@ export const WHAT_I_CAN_DO =
 
 export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
   if (intent.action === "unknown") {
+    // The rules understood the topic but not the one detail that makes it
+    // actionable ("change dinner on Saturday" — to what?). A specific question
+    // beats "I did not follow that", which is not true.
+    if (typeof intent.parameters.clarify === "string" && intent.parameters.clarify.trim()) {
+      return { kind: "clarify", question: intent.parameters.clarify };
+    }
     if (intent.understanding?.failure) {
       return {
         kind: "clarify",

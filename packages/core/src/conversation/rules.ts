@@ -40,6 +40,7 @@ function core(utterance: string): string {
     .replace(/^(?:can|could|would|will) you (?:please )?/i, "")
     .replace(/^(?:please )?/i, "")
     .replace(/\s+please$/i, "")
+    .replace(/\s+(?:right now|now|at the moment|at present|currently|for me|for us|these days)$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -111,6 +112,48 @@ const RULES: readonly Rule[] = [
       parameters: { subject: match[2]!.trim() },
       confidence: 0.85,
     }),
+  },
+
+  {
+    // The many other ways of asking the same thing — "what is the current
+    // situation", "what needs attention right now", "what's going on in my
+    // family right now". A question about the home, with none of the verbs
+    // that would make it a request, is a status question; the day word and
+    // the schedule scope are kept when they were said.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      if (!looksLikeStatusQuestion(utterance)) return null;
+      const when = utterance.match(new RegExp(`\\b(${WHEN_WORDS})\\b`, "i"))?.[1];
+      const scope = /\b(?:schedule|calendar|agenda|plans?)\b/i.test(utterance) ? "schedule" : "home";
+      return { action: "ask_status", target: { kind: "unspecified" }, parameters: withWhen({ scope }, when), confidence: 0.82 };
+    },
+  },
+
+  // --- Meals ---------------------------------------------------------------------
+  {
+    // The Meals screen's own "Change meal" link says exactly this; a person
+    // says it too. With a dish it is a plan to remember; without one it is
+    // a question back — never "I did not follow that".
+    pattern: /^(?:change|swap|replace|update)\s+(?:the |my |our |today'?s |tomorrow'?s )?(breakfast|lunch|dinner|supper|snack)(?: plan| menu)?(?:\s+(?:on|for)\s+([0-9]{4}-[0-9]{2}-[0-9]{2}|today|tonight|tomorrow|\w+day))?(?:\s+(?:to|with|for)\s+(.+))?$/i,
+    read: (match) => {
+      const slot = match[1]!.toLowerCase() === "supper" ? "dinner" : match[1]!.toLowerCase();
+      const day = describeDay(match[2]);
+      const dish = match[3]?.trim().replace(/[.!]+$/, "");
+      if (!dish) {
+        return {
+          action: "unknown",
+          target: { kind: "outcome", reference: `meals.${slot}` },
+          parameters: { clarify: `What would you like for ${slot}${day ? ` ${day}` : ""}? Tell me the dish and I will note the change.` },
+          confidence: 0,
+        };
+      }
+      return {
+        action: "set_preference",
+        target: { kind: "outcome", reference: `meals.${slot}` },
+        parameters: { statement: `${slot}${day ? ` ${day}` : ""}: ${dish}`, ...(match[2] ? { date: match[2].toLowerCase() } : {}) },
+        confidence: 0.86,
+      };
+    },
   },
 
   // --- Lists: add something --------------------------------------------------
@@ -237,6 +280,36 @@ const RULES: readonly Rule[] = [
     read: (match) => preference(`${match[1]} at ${match[2]}`, true),
   },
 ];
+
+/**
+ * A question about how the home is doing, in any of the ways people put it,
+ * that carries none of the verbs that would make it a request. The specific
+ * status rules above read the common phrasings precisely (and set the
+ * schedule scope); this is the wide net under them.
+ */
+export function looksLikeStatusQuestion(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  if (/^(?:add|put|pay|order|buy|get|move|shift|reschedule|plan|remember|note|make|assign|record|mark|change|swap|replace|cancel|remove|delete|schedule|book|send|call|set|turn|remind)\b/.test(t)) return false;
+  if (/^(?:we|i)\s+(?:need|want|prefer|like)\b/.test(t)) return false;
+  const topic =
+    /\b(?:going on|happening|situation|status|state of|overview|summary|latest|update|catch me up|what'?s up|attention|on my plate|to-?do|pending|outstanding|urgent|due|worry about|need(?:s|ed)? (?:me |my |our |us )?(?:to )?(?:do|know|look|handl|sort|attend|deal)|should (?:i|we) (?:know|do|worry|look)|how (?:are|is|'s) (?:things|everything|it going|the (?:house|home|family|household)|my (?:home|house|family)|our (?:home|house|family)|we doing))\b/;
+  if (topic.test(t)) return true;
+  return /^(?:what|how|is there|anything|are there|any)\b/.test(t) && /\b(?:home|house|household|family|today|tonight|now|week|weekend|tomorrow|day)\b/.test(t);
+}
+
+/** "2026-09-20" → "on Sat 20 Sep"; "tomorrow" → "tomorrow"; nothing → "". */
+function describeDay(raw: string | undefined): string {
+  if (!raw) return "";
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!iso) return raw.toLowerCase();
+  const date = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 12));
+  if (Number.isNaN(date.getTime())) return raw;
+  // Fixed names rather than Intl: ICU versions disagree on "Sep" vs "Sept".
+  return `on ${DAY_NAMES[date.getUTCDay()]} ${date.getUTCDate()} ${MONTH_NAMES[date.getUTCMonth()]}`;
+}
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function withWhen(parameters: Record<string, unknown>, when: string | undefined, key = "when"): Record<string, unknown> {
   if (!when) return parameters;

@@ -1,5 +1,5 @@
 import type { MemberType } from "../identity/schemas";
-import type { KeySource, ModelProvider } from "./model-key";
+import { MODEL_PROVIDERS, type KeySource, type ModelProvider } from "./model-key";
 
 /**
  * What may be told to a model provider, and how little of it (story 15-005).
@@ -70,10 +70,18 @@ export type DataUsePolicy = {
  * for an explicit yes. Reading silence as consent is the failure this default
  * exists to prevent, and starting from "nothing at all" would push households
  * to switch the whole thing on without reading it, which is worse.
+ *
+ * The provider list names every provider WonderHome can run on, because the
+ * household is agreeing to *WonderHome's* provider rather than picking one:
+ * which company that is comes from the deployment (or from the household's
+ * own key), and no screen offers a choice. Pinning one name here — as an
+ * earlier version did — meant a deployment or a household key on another
+ * provider was refused on every turn, silently, and the assistant answered
+ * from its rules alone while everybody believed a model was behind it.
  */
 export const DEFAULT_DATA_USE: DataUsePolicy = {
   allowProviderContent: true,
-  allowedProviders: ["anthropic"],
+  allowedProviders: [...MODEL_PROVIDERS],
   allowedClasses: ["general"],
   allowRetention: false,
   maxItems: 12,
@@ -222,7 +230,10 @@ export function routeToProvider(input: {
     };
   }
 
-  if (!policy.allowedProviders.includes(provider)) {
+  // A household's own key *is* its choice of provider — set by an
+  // administrator, audited as such (`ai.key_set`) — so the policy's provider
+  // list only restricts the platform's provider, never the one they chose.
+  if (keySource !== "household" && !policy.allowedProviders.includes(provider)) {
     return {
       ok: false,
       code: "provider_not_allowed",
