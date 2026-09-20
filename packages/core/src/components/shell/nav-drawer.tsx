@@ -165,8 +165,8 @@ function NavDrawer({
           >
             <Avatar name={viewer.displayName} size="md" />
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold">{viewer.displayName}</span>
-              <span className="block truncate text-xs text-[var(--wh-foreground-muted)]">
+              <span className="block text-sm font-semibold">{viewer.displayName}</span>
+              <span className="block text-xs text-[var(--wh-foreground-muted)]">
                 {viewer.roleLabel} · {viewer.householdName}
               </span>
             </span>

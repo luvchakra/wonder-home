@@ -59,11 +59,11 @@ export function Timeline({ items, className }: { items: readonly TimelineItem[];
             >
               <IconTile icon={item.icon} tone={item.tone ?? "primary"} size="sm" />
               <div className="min-w-0 flex-1">
-                <p className={cn("truncate text-sm font-medium", item.state === "done" && "line-through decoration-[var(--wh-foreground-subtle)]")}>
+                <p className={cn("text-sm font-medium", item.state === "done" && "line-through decoration-[var(--wh-foreground-subtle)]")}>
                   {item.title}
                 </p>
                 {item.meta ? (
-                  <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">{item.meta}</p>
+                  <p className="text-xs text-[var(--wh-foreground-subtle)]">{item.meta}</p>
                 ) : null}
               </div>
               {item.action ? <div className="shrink-0">{item.action}</div> : null}

@@ -20,8 +20,8 @@ export function PendingInvitations({ invitations }: { invitations: PendingInvita
           {invitations.map((invitation) => (
             <li key={invitation.id} className="flex items-center justify-between gap-3 py-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{invitation.displayName}</p>
-                <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">
+                <p className="text-sm font-medium">{invitation.displayName}</p>
+                <p className="text-xs text-[var(--wh-foreground-subtle)]">
                   {invitation.email} ·{" "}
                   {invitation.status === "expired"
                     ? "expired"

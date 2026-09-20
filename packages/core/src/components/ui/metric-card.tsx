@@ -26,7 +26,7 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
       {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
       <span className="min-w-0">
         <span className="block text-xl font-semibold leading-none tracking-tight">{value}</span>
-        <span className="mt-1 block truncate text-[0.6875rem] font-medium text-[var(--wh-foreground-muted)]">
+        <span className="mt-1 block text-[0.6875rem] font-medium text-[var(--wh-foreground-muted)]">
           {label}
         </span>
       </span>
@@ -45,12 +45,18 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
   );
 }
 
+/**
+ * A card never gets narrower than its label needs (design principle 18): on a
+ * phone that means one full-width row per metric, not three or four squeezed
+ * into a row that then has to truncate. Widens into the original multi-column
+ * grid once there is room for it at `sm` and up.
+ */
 export function MetricGrid({ metrics, className }: { metrics: readonly Metric[]; className?: string }) {
   return (
     <ul
       className={cn(
-        "grid gap-2.5",
-        metrics.length >= 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3",
+        "grid grid-cols-1 gap-2.5",
+        metrics.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3",
         className,
       )}
     >

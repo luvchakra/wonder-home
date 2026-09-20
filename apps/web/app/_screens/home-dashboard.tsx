@@ -142,8 +142,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                     <div className="flex items-center gap-3">
                       <Avatar name={person.displayName} size="md" />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{person.displayName}</p>
-                        <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">{person.roleLabel}</p>
+                        <p className="text-sm font-semibold">{person.displayName}</p>
+                        <p className="text-xs text-[var(--wh-foreground-subtle)]">{person.roleLabel}</p>
                       </div>
                     </div>
                     {person.owned.length === 0 ? (
@@ -154,8 +154,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                           <li key={item.key} className="flex items-center gap-3">
                             <IconTile icon={item.icon} tone={item.tone} size="sm" />
                             <div className="min-w-0">
-                              <p className="truncate text-sm">{item.title}</p>
-                              <p className="truncate text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[item.aiMode]}</p>
+                              <p className="text-sm">{item.title}</p>
+                              <p className="text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[item.aiMode]}</p>
                             </div>
                           </li>
                         ))}

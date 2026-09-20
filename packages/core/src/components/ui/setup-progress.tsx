@@ -75,8 +75,8 @@ export function SetupProgressCard({
       >
         <ProgressRing value={assessment.percent} label="Household setup" size={44} stroke={5} className="[&>span]:text-[0.625rem]" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">Household setup · {assessment.milestone}</span>
-          <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">
+          <span className="block text-sm font-medium">Household setup · {assessment.milestone}</span>
+          <span className="block text-xs text-[var(--wh-foreground-subtle)]">
             {assessment.next[0] ? `Next: ${assessment.next[0].title}` : `${assessment.done} of ${assessment.total} done`}
           </span>
         </span>
@@ -155,7 +155,7 @@ function StepRow({ step }: { step: SetupStep }) {
           <CircleCheck aria-hidden className="size-5 text-[var(--wh-handled)]" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm text-[var(--wh-foreground-muted)] line-through decoration-[var(--wh-border-strong)]">
+          <span className="block text-sm text-[var(--wh-foreground-muted)] line-through decoration-[var(--wh-border-strong)]">
             {step.title}
           </span>
         </span>

@@ -132,6 +132,15 @@ work, and hold new work against these:
     because that's where there was room — place it where it belongs next
     to the thing it acts on, even if that means moving what's already
     there.
+18. **A stat tile takes the width its label needs.** `MetricGrid`/`StatChips`
+    never force three or four tiles into one cramped row on a phone just
+    because that is the desktop layout — that is what truncated "Need you"
+    into "Nee…" (rule 15 already forbids the clipping; this is the layout
+    decision that was causing it). On a narrow screen each tile is a
+    full-width row; it widens into a multi-column grid only once there is
+    real room for every label at `sm` and up. The same test applies to any
+    new row of small cards: if fitting them side by side on a phone means
+    cutting a label, they are not side by side on a phone.
 
 Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card,
 row, pill or tile. A new pattern belongs in the kit, with a note in

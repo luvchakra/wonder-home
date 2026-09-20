@@ -40,8 +40,8 @@ export default async function MorePage() {
         >
           <Avatar name={viewer.displayName} size="lg" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-base font-semibold">{viewer.displayName}</span>
-            <span className="block truncate text-xs text-[var(--wh-foreground-muted)]">
+            <span className="block text-base font-semibold">{viewer.displayName}</span>
+            <span className="block text-xs text-[var(--wh-foreground-muted)]">
               {viewer.roleLabel} · {viewer.householdName}
             </span>
           </span>
@@ -71,8 +71,8 @@ export default async function MorePage() {
                           <Icon className="size-5" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{item.label}</span>
-                          <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{item.purpose}</span>
+                          <span className="block text-sm font-medium">{item.label}</span>
+                          <span className="block text-xs text-[var(--wh-foreground-subtle)]">{item.purpose}</span>
                         </span>
                         <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
                       </Link>
@@ -95,8 +95,8 @@ export default async function MorePage() {
                 <LifeBuoy className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">Get Help</span>
-                <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">
+                <span className="block text-sm font-medium">Get Help</span>
+                <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                   User guide, common questions, and a way to search them
                 </span>
               </span>
