@@ -333,13 +333,6 @@
   animation: wh-breathe 3.2s ease-in-out infinite;
 }
 
-/* One slow ring drifting outward from the idle mic — the same pulse-ring
-   keyframe the listening state uses, just far slower and dimmer, so it reads
-   as "alive" rather than "recording". */
-.wh-mic-halo {
-  animation: wh-pulse-ring 2.8s ease-out infinite;
-}
-
 .wh-skeleton {
   background:
     linear-gradient(90deg, var(--wh-surface-muted) 0%, var(--wh-surface) 50%, var(--wh-surface-muted) 100%)
@@ -378,8 +371,7 @@
   .wh-rise,
   .wh-skeleton,
   .wh-slide-in-left,
-  .wh-mic-idle,
-  .wh-mic-halo {
+  .wh-mic-idle {
     animation: none;
   }
   .wh-rise,

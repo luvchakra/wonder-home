@@ -12,7 +12,7 @@ export type PrimaryNavItem = {
   label: string;
   href: string;
   /** Lucide icon name, resolved by the rendering component. */
-  icon: "house" | "calendar-check" | "sparkles" | "users" | "ellipsis";
+  icon: "house" | "calendar-check" | "mic" | "users" | "ellipsis";
   /** Short description of what the area answers, used for a11y and empty states. */
   purpose: string;
 };
@@ -34,9 +34,9 @@ export const PRIMARY_NAVIGATION: readonly PrimaryNavItem[] = [
   },
   {
     key: "ai",
-    label: "AI",
+    label: "Talk",
     href: "/ai",
-    icon: "sparkles",
+    icon: "mic",
     purpose: "Talk or text with WonderHome",
   },
   {

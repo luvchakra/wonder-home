@@ -8,7 +8,7 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
@@ -81,9 +81,15 @@ export function Assistant({
    */
   const [footerHeight, setFooterHeight] = useState(0);
 
-  useEffect(() => {
+  // Layout effect, not a plain effect: it has to land before the browser
+  // paints, or the first frame renders with no clearance and then snaps to
+  // the right padding once this runs — which reads as the page "scrolling
+  // into place" on its own.
+  useLayoutEffect(() => {
     const node = footerRef.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
+    if (!node) return;
+    setFooterHeight(node.getBoundingClientRect().height);
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(([entry]) => {
       if (entry) setFooterHeight(entry.contentRect.height);
     });
@@ -91,11 +97,21 @@ export function Assistant({
     return () => observer.disconnect();
   }, []);
 
+  /**
+   * Straight to the end, no animation — a conversation reopened with a long
+   * history should already be there on the first frame, not visibly scroll
+   * down to it. `"instant"` (not `"auto"`) is what actually guarantees this:
+   * `"auto"` would still animate because of the page's own
+   * `scroll-behavior: smooth`.
+   */
   const scrollToEnd = useCallback(() => {
-    endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    endRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
   }, []);
 
-  useEffect(() => {
+  // Also a layout effect: reopening a conversation with history already in
+  // it has to land already scrolled to the end on the very first paint, not
+  // paint at the top and then jump — that jump is the "scrolling effect".
+  useLayoutEffect(() => {
     if (messages.length > 0) scrollToEnd();
   }, [messages.length, scrollToEnd]);
 
