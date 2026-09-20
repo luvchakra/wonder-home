@@ -154,6 +154,49 @@ export async function savePlaybookItem(
   return { id, downstream };
 }
 
+/** Pauses or resumes a playbook item. Paused stays on record; the planner just stops planning around it. */
+export async function setPlaybookItemActive(
+  supabase: SupabaseClient,
+  input: { householdId: string; actorMemberId: string; outcomeKey: string; active: boolean },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("playbook_items")
+    .update({ active: input.active })
+    .eq("household_id", input.householdId)
+    .eq("outcome_key", input.outcomeKey)
+    .select("id");
+
+  if (error) throw writeFailure("playbook item", error);
+  if (!data || data.length === 0) throw ApiError.notFound("That playbook entry is not in this household.");
+
+  await audit(input.householdId, input.actorMemberId, "playbook.updated", "playbook_items", (data[0] as Row).id as string, {
+    outcomeKey: input.outcomeKey,
+    active: input.active,
+  });
+}
+
+/** Stands a policy down. Its versions stay on record; nothing is in force under that name afterwards. */
+export async function retirePolicy(
+  supabase: SupabaseClient,
+  input: { householdId: string; actorMemberId: string; policyId: string },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("policies")
+    .update({ active: false })
+    .eq("household_id", input.householdId)
+    .eq("id", input.policyId)
+    .eq("active", true)
+    .select("id, name, category");
+
+  if (error) throw writeFailure("policy", error);
+  if (!data || data.length === 0) throw ApiError.notFound("That policy is not in force.");
+
+  await audit(input.householdId, input.actorMemberId, "policy.updated", "policies", input.policyId, {
+    category: (data[0] as Row).category,
+    retired: true,
+  });
+}
+
 /**
  * Records that one outcome waits for another.
  *

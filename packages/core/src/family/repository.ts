@@ -154,6 +154,72 @@ export async function createEvent(
   return { id };
 }
 
+/**
+ * Records that whatever an event was waiting on — a reply, a gift, some
+ * preparation, travel — has been dealt with. The household does the replying
+ * or the buying; WonderHome only stops asking.
+ */
+export async function settleEventAction(
+  supabase: SupabaseClient,
+  input: { householdId: string; eventId: string },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("family_events")
+    .update({ action_state: "ready" })
+    .eq("id", input.eventId)
+    .eq("household_id", input.householdId)
+    .select("id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only the event's owner or a household administrator can settle this.");
+    throw new Error(`settleEventAction failed: ${error.code ?? "unknown"}`);
+  }
+  // RLS filters rather than refuses an update it will not allow: no row back
+  // means the caller may not change this event, or it is gone.
+  if (!data || data.length === 0) throw ApiError.forbidden("Only the event's owner or a household administrator can settle this.");
+}
+
+export const GIFT_STEPS = ["chosen", "ordered", "given"] as const;
+export type GiftStep = (typeof GIFT_STEPS)[number];
+
+/** Moves a gift along: needed → chosen → ordered → given. Wrapped is skipped on purpose — nobody wants to be asked about wrapping paper. */
+export async function advanceGift(
+  supabase: SupabaseClient,
+  input: { householdId: string; giftId: string; step: GiftStep },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("gift_plans")
+    .update({ status: input.step })
+    .eq("id", input.giftId)
+    .eq("household_id", input.householdId)
+    .select("id");
+
+  if (error) throw new Error(`advanceGift failed: ${error.code ?? "unknown"}`);
+  if (!data || data.length === 0) throw ApiError.notFound("That gift is no longer on the list.");
+}
+
+/**
+ * Closes a schedule conflict. "Resolved" means the household sorted it out
+ * (moved something, dropped something); "declined" means they looked and
+ * decided it is not a problem. Neither moves a commitment on its own — the
+ * proposal was always a suggestion somebody accepts, never an automatic edit.
+ */
+export async function resolveConflict(
+  supabase: SupabaseClient,
+  input: { householdId: string; conflictId: string; memberId: string; outcome: "resolved" | "declined" },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("schedule_conflicts")
+    .update({ status: input.outcome, resolved_by_member_id: input.memberId, resolved_at: new Date().toISOString() })
+    .eq("id", input.conflictId)
+    .eq("household_id", input.householdId)
+    .eq("status", "open")
+    .select("id");
+
+  if (error) throw new Error(`resolveConflict failed: ${error.code ?? "unknown"}`);
+  if (!data || data.length === 0) throw ApiError.notFound("That clash has already been dealt with.");
+}
+
 export type FamilyAgenda = {
   events: HomeAssessment[];
   gifts: HomeAssessment[];

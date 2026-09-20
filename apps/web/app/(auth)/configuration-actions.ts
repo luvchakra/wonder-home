@@ -12,9 +12,11 @@ import {
   applyConfigurationChange,
   listResponsibilities,
   policyVersions,
+  retirePolicy,
   savePlaybookItem,
   savePolicy,
   saveResponsibility,
+  setPlaybookItemActive,
 } from "@wonderhome/core/household/configuration-repository";
 import { listMembers, requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { MEMBER_TYPES } from "@wonderhome/core/identity/schemas";
@@ -80,6 +82,8 @@ const playbookSchema = z.object({
   endHour: z.union([z.coerce.number().int().min(0).max(23), z.literal("")]).optional(),
   escalateAfterHours: z.union([z.coerce.number().int(), z.literal("")]).optional(),
   dependsOnKey: z.string().optional(),
+  /** Set when editing: the planner's key stays put even if the name is reworded. */
+  outcomeKey: z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/).optional(),
 });
 
 export async function savePlaybookAction(
@@ -91,7 +95,7 @@ export async function savePlaybookAction(
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   }
 
-  const { householdId, name, startHour, endHour, escalateAfterHours, dependsOnKey, ...rest } = parsed.data;
+  const { householdId, name, startHour, endHour, escalateAfterHours, dependsOnKey, outcomeKey, ...rest } = parsed.data;
   const hasWindow = typeof startHour === "number" && typeof endHour === "number";
 
   try {
@@ -106,7 +110,7 @@ export async function savePlaybookAction(
         name,
         // The household names it once; the planner's own reference is
         // derived from that name rather than asked for a second time.
-        outcomeKey: slugifyOutcomeKey(name),
+        outcomeKey: outcomeKey ?? slugifyOutcomeKey(name),
         operatingWindow: hasWindow ? { startHour, endHour } : null,
         escalateAfterHours: typeof escalateAfterHours === "number" ? escalateAfterHours : null,
       },
@@ -298,6 +302,56 @@ export async function applyConfigurationAction(
     revalidatePath("/household/responsibilities");
 
     return { notice: proposal.summary, downstream: saved.downstream };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+/**
+ * Pausing and resuming a playbook entry, and standing a policy down. Both
+ * statuses were on screen before ("paused", "active") with nothing anywhere
+ * that could set them.
+ */
+const playbookActiveSchema = z.object({ householdId: z.uuid(), outcomeKey: z.string().min(2), active: z.enum(["true", "false"]) });
+
+export async function setPlaybookActiveAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = playbookActiveSchema.safeParse({
+    householdId: formData.get("householdId"),
+    outcomeKey: formData.get("outcomeKey"),
+    active: formData.get("active"),
+  });
+  if (!parsed.success) return { error: "That entry could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await setPlaybookItemActive(supabase, {
+      householdId: parsed.data.householdId,
+      actorMemberId: membership.memberId,
+      outcomeKey: parsed.data.outcomeKey,
+      active: parsed.data.active === "true",
+    });
+    revalidatePath("/household");
+    revalidatePath("/household/setup");
+    return { notice: parsed.data.active === "true" ? "Resumed. WonderHome plans around it again." : "Paused. It stays on record; WonderHome just stops planning around it." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+const retirePolicySchema = z.object({ householdId: z.uuid(), policyId: z.uuid() });
+
+export async function retirePolicyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = retirePolicySchema.safeParse({ householdId: formData.get("householdId"), policyId: formData.get("policyId") });
+  if (!parsed.success) return { error: "That policy could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await retirePolicy(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, policyId: parsed.data.policyId });
+    revalidatePath("/household");
+    revalidatePath("/household/setup");
+    return { notice: "Stood down. Until you set another, WonderHome asks before anything this covered." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
   }

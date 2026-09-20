@@ -19,6 +19,8 @@ export type CertificationItemProps = {
   risk: "low" | "medium" | "high" | "critical";
   /** Review controls: Confirm, Correct, Remove. */
   controls?: ReactNode;
+  /** Overrides the status word on the badge — "Needs fixing" rather than "Needs review" when the alert says what kind of look it needs. */
+  badgeLabel?: string;
   className?: string;
 };
 
@@ -33,7 +35,7 @@ const STATUS: Record<
   removed: { label: "Removed", tone: "neutral", badge: "neutral", icon: CircleCheck },
 };
 
-export function CertificationItem({ claim, status, source, risk, controls, className }: CertificationItemProps) {
+export function CertificationItem({ claim, status, source, risk, controls, badgeLabel, className }: CertificationItemProps) {
   const presentation = STATUS[status];
 
   return (
@@ -48,7 +50,7 @@ export function CertificationItem({ claim, status, source, risk, controls, class
         {controls ? <div className="mt-2 flex flex-wrap gap-1.5">{controls}</div> : null}
       </div>
       <Badge tone={presentation.badge} className="shrink-0 self-start">
-        {presentation.label}
+        {badgeLabel ?? presentation.label}
       </Badge>
     </li>
   );

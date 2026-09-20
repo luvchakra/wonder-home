@@ -18,12 +18,17 @@ import type { ActionState } from "./actions";
  * member rather than whoever the request claimed, and the item's status
  * follows the domain rule in `applyReview` rather than a free-text update.
  */
-const schema = z.object({
-  householdId: z.uuid(),
-  itemId: z.uuid(),
-  decision: z.enum(["confirmed", "corrected", "removed", "deferred"]),
-  correction: z.string().trim().max(300).optional(),
-});
+const schema = z
+  .object({
+    householdId: z.uuid(),
+    itemId: z.uuid(),
+    decision: z.enum(["confirmed", "corrected", "removed", "deferred"]),
+    correction: z.string().trim().max(300).optional(),
+  })
+  .refine((value) => value.decision !== "corrected" || Boolean(value.correction), {
+    error: "Say what’s actually true before correcting it.",
+    path: ["correction"],
+  });
 
 export async function reviewCertificationAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = schema.safeParse({
@@ -46,7 +51,7 @@ export async function reviewCertificationAction(_previous: ActionState, formData
 
     const { data: row } = await supabase
       .from("certification_items")
-      .select("id, category, claim, source_type, source_detail, status, risk_level, last_reviewed_at")
+      .select("id, category, claim, scope, member_id, source_type, source_detail, status, risk_level, last_reviewed_at")
       .eq("id", parsed.data.itemId)
       .eq("household_id", parsed.data.householdId)
       .maybeSingle();
@@ -66,24 +71,45 @@ export async function reviewCertificationAction(_previous: ActionState, formData
     };
     const now = new Date();
     const updated = applyReview(item, parsed.data.decision, now);
+    const correction = parsed.data.decision === "corrected" ? parsed.data.correction ?? null : null;
 
     const admin = createAdminClient();
+    // The retired item keeps the claim it had: the correction is a new item
+    // (below), so what was believed and what replaced it are both on record.
     await admin
       .from("certification_items")
       .update({
         status: updated.status,
-        claim: parsed.data.decision === "corrected" && parsed.data.correction ? parsed.data.correction : item.claim,
         last_reviewed_at: now.toISOString(),
         last_reviewed_by: membership.memberId,
       })
       .eq("id", item.id);
+
+    if (correction) {
+      const { error: insertError } = await admin.from("certification_items").insert({
+        household_id: parsed.data.householdId,
+        category: item.category,
+        claim: correction,
+        scope: row.scope,
+        member_id: row.member_id,
+        source_type: "conversation",
+        source_detail: `corrected by ${membership.displayName}`,
+        // A person just stated it, so it is confirmed by the family from the start.
+        status: "confirmed",
+        risk_level: item.riskLevel,
+        last_reviewed_at: now.toISOString(),
+        last_reviewed_by: membership.memberId,
+      });
+      if (insertError) throw new Error(`replacement insert failed: ${insertError.code ?? "unknown"}`);
+    }
+
     await admin.from("certification_reviews").insert({
       household_id: parsed.data.householdId,
       item_id: item.id,
       reviewer_member_id: membership.memberId,
       decision: parsed.data.decision,
       previous_value: { claim: item.claim, status: item.status },
-      new_value: { claim: parsed.data.correction ?? item.claim, status: updated.status },
+      new_value: { claim: correction ?? item.claim, status: updated.status },
     });
 
     revalidatePath("/certification");
@@ -94,7 +120,7 @@ export async function reviewCertificationAction(_previous: ActionState, formData
           : parsed.data.decision === "removed"
             ? "Removed."
             : parsed.data.decision === "corrected"
-              ? "Correction saved."
+              ? `Corrected. WonderHome now believes: “${correction}” — it’s under Confirmed.`
               : "Left for later.",
     };
   } catch (error) {

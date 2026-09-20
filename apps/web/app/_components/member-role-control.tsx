@@ -1,6 +1,5 @@
-import { Button } from "@wonderhome/core/ui/button";
-
 import { setMemberRoleAction } from "../(auth)/household-actions";
+import { SubmitButton } from "./submit-pill";
 
 export type MemberRoleControlProps = {
   householdId: string;
@@ -25,9 +24,9 @@ export function MemberRoleControl({
       <input type="hidden" name="memberId" value={memberId} />
       <input type="hidden" name="role" value="administrator" />
       <input type="hidden" name="granted" value={isAdministrator ? "false" : "true"} />
-      <Button type="submit" variant="quiet">
+      <SubmitButton variant="quiet" pendingLabel={isAdministrator ? "Removing…" : "Making admin…"}>
         {isAdministrator ? "Remove admin" : "Make admin"}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

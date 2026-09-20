@@ -42,6 +42,7 @@ export function CertificationControls({ householdId, itemId }: { householdId: st
   return (
     <div className="flex w-full flex-col gap-1.5">
       {state.error ? <Alert className="py-1 text-xs">{state.error}</Alert> : null}
+      {state.notice ? <Alert tone="info" className="py-1 text-xs">{state.notice}</Alert> : null}
       <div className="flex flex-wrap gap-1.5">
         {(["confirmed", "removed", "deferred"] as const).map((decision) => (
           <form key={decision} action={formAction}>
@@ -60,7 +61,9 @@ export function CertificationControls({ householdId, itemId }: { householdId: st
         <input
           id={`correct-${itemId}`}
           name="correction"
-          placeholder="Correct it: what's actually true?"
+          placeholder="Correct it: what’s actually true?"
+          required
+          minLength={1}
           maxLength={300}
           className="min-h-9 min-w-0 flex-1 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-xs"
         />
