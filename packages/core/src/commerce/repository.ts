@@ -93,6 +93,63 @@ export async function createConsumable(
   return { id: (data as Row).id as string };
 }
 
+export type UpdateConsumableInput = {
+  id: string;
+  householdId: string;
+  name: string;
+  category: ConsumableCategory;
+  unit: string;
+  typicalQuantity: number;
+  daysPerUnit?: number | null;
+};
+
+/** Changing what was told about something already tracked — never touches purchase history. */
+export async function updateConsumable(
+  supabase: SupabaseClient,
+  input: UpdateConsumableInput,
+): Promise<void> {
+  const { error } = await supabase
+    .from("consumables")
+    .update({
+      name: input.name,
+      category: input.category,
+      unit: input.unit,
+      typical_quantity: input.typicalQuantity,
+      days_per_unit: input.daysPerUnit ?? null,
+      evidence_basis: input.daysPerUnit ? "member_stated" : null,
+    })
+    .eq("id", input.id)
+    .eq("household_id", input.householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change items for this household.");
+    if (error.code === "23505") throw ApiError.conflict("WonderHome is already tracking something with that name.");
+    throw new Error(`updateConsumable failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/**
+ * "Stop tracking" — `active = false`, never a delete. A retired item's own
+ * purchase and order history stays intact and readable, and the name frees
+ * up for the same reason a stood-down policy's name does
+ * (`consumables_active_name_unique`, a partial index like the policy's own).
+ */
+export async function retireConsumable(
+  supabase: SupabaseClient,
+  input: { id: string; householdId: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("consumables")
+    .update({ active: false })
+    .eq("id", input.id)
+    .eq("household_id", input.householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change items for this household.");
+    throw new Error(`retireConsumable failed: ${error.code ?? "unknown"}`);
+  }
+}
+
 export async function listPolicies(
   supabase: SupabaseClient,
   householdId: string,

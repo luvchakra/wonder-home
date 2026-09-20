@@ -15,7 +15,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../_components/agenda-row";
-import { AddConsumableButton } from "../_components/commerce-forms";
+import { AddConsumableButton, ConsumableRowControls } from "../_components/commerce-forms";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Groceries" };
@@ -182,7 +182,28 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {consumables.slice(0, 20).map((item) => {
                       const runsOut = expectedDepletion(item, now);
-                      return <ActionRow key={item.id} icon={PackageCheck} tone="care" title={item.name} meta={runsOut ? `Likely to run out ${formatDate(timezone, runsOut, "long")}` : "Not enough history to predict yet"} />;
+                      return (
+                        <ActionRow
+                          key={item.id}
+                          icon={PackageCheck}
+                          tone="care"
+                          title={item.name}
+                          meta={runsOut ? `Likely to run out ${formatDate(timezone, runsOut, "long")}` : "Not enough history to predict yet"}
+                          action={
+                            <ConsumableRowControls
+                              householdId={householdId}
+                              item={{
+                                id: item.id,
+                                name: item.name,
+                                category: item.category,
+                                unit: item.unit,
+                                typicalQuantity: item.typicalQuantity,
+                                daysPerUnit: item.daysPerUnit,
+                              }}
+                            />
+                          }
+                        />
+                      );
                     })}
                   </ul>
                 </Card>

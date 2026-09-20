@@ -191,3 +191,75 @@ export async function addChildAction(
   revalidatePath("/household/members");
   return {};
 }
+
+const addHelperSchema = z.object({
+  householdId: z.uuid(),
+  displayName: z.string().trim().min(1, { error: "Give them a name." }).max(80),
+});
+
+/**
+ * Adds a helper the household manages directly rather than inviting by
+ * email — the accountless case `createHelperMember` exists for, same as a
+ * child.
+ */
+export async function addHelperAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = addHelperSchema.safeParse({
+    householdId: formData.get("householdId"),
+    displayName: formData.get("displayName"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+
+  const supabase = await createClient();
+  const { createHelperMember, requireHouseholdAdmin } = await import(
+    "@wonderhome/core/identity/households"
+  );
+
+  try {
+    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await createHelperMember(supabase, actor, { displayName: parsed.data.displayName });
+  } catch (error) {
+    log.warn("adding a helper failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { error: "We could not add that helper. Please try again." };
+  }
+
+  revalidatePath("/household/members");
+  return {};
+}
+
+const removeMemberSchema = z.object({
+  householdId: z.uuid(),
+  memberId: z.uuid(),
+});
+
+/** Removes someone from the household. The Head of Family cannot be removed this way. */
+export async function removeMemberAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = removeMemberSchema.safeParse({
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId"),
+  });
+  if (!parsed.success) return { error: "Please try again." };
+
+  const supabase = await createClient();
+  const { deactivateMember, requireMembership } = await import(
+    "@wonderhome/core/identity/households"
+  );
+
+  try {
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    await deactivateMember(supabase, actor, { memberId: parsed.data.memberId });
+  } catch (error) {
+    const { toErrorBody } = await import("@wonderhome/core/api/errors");
+    return { error: toErrorBody(error, "household").body.error.message };
+  }
+
+  revalidatePath("/household/members");
+  return {};
+}

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [A real household seed exposed three add/update/delete gaps — fixed](2026-09-20-member-and-consumable-add-update-delete.md) |
 | 2026-09-20 | [Talk to WonderHome: real answers, real actions, and the truth when there aren't any](2026-09-20-talk-to-wonderhome-real-answers.md) |
 | 2026-09-20 | [Root cause of the recurring Responsibilities crash, and a dismissible "Try asking" strip](2026-09-20-error-boundaries-and-assistant-suggestions.md) |
 | 2026-09-20 | [Twelve dead ends, fixed — where a screen said something it could not do](2026-09-20-twelve-dead-ends-fixed.md) |
