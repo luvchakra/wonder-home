@@ -14,7 +14,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
 import { iconForOutcome } from "../../_lib/outcome-icons";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
-import { requireSession } from "../../_lib/session";
+import { requireSession, type Session } from "../../_lib/session";
 
 export const metadata = { title: "Responsibilities" };
 export const dynamic = "force-dynamic";
@@ -75,11 +75,50 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
     );
   }
 
+  // Everything from here on is pure computation and JSX over data that has
+  // already been fetched (no further await below) — so a defensive try/catch
+  // is cheap insurance: a bug in a join's shape or in one card's rendering
+  // degrades to the same honest "could not be loaded" message the query
+  // failure above already gives, instead of an unhandled exception reaching
+  // the platform's own bare error page (requirements §49: error is always
+  // one of the three states a screen shows, never a raw crash).
+  try {
+    return renderResponsibilities({ shell, membership, active, responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId });
+  } catch (thrown) {
+    console.error("Responsibilities page failed to render", thrown);
+    return (
+      <AppShell {...shell}>
+        <EmptyState icon={ListChecks} title="Responsibilities could not be loaded" description="Nothing has changed. Try again in a moment." />
+      </AppShell>
+    );
+  }
+}
+
+function renderResponsibilities({
+  shell,
+  membership,
+  active,
+  responsibilityRows,
+  members,
+  conflicts,
+  playbook,
+  admin,
+  householdId,
+}: {
+  shell: { active: "more"; viewer: Session["viewer"]; secondary: Session["secondary"]; pathname: string; back: { href: string; label: string }; title: string };
+  membership: Session["membership"];
+  active: "all" | "mine" | "family";
+  responsibilityRows: { data: unknown; failed: boolean };
+  members: Awaited<ReturnType<typeof listMembers>>;
+  conflicts: Awaited<ReturnType<typeof listConfigurationConflicts>>;
+  playbook: Awaited<ReturnType<typeof listPlaybookOutcomes>>;
+  admin: boolean;
+  householdId: string;
+}) {
   const rows = (responsibilityRows.data as Row[] | null) ?? [];
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
   const shown = rows.filter((row) => (active === "mine" ? row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId : active === "family" ? row.primary_member_id !== membership.memberId : true));
   const gaps = rows.filter((row) => !row.primary_member_id);
-  const admin = isHouseholdAdmin(membership);
 
   // Outcomes the household has already described, plus starters it has not —
   // minus whatever already has a responsibility, since those are edited from
