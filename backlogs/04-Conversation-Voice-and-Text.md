@@ -12,7 +12,7 @@
 | 6 | P0 | 04-006 | Text | Done | Same engine as voice |
 | 7 | P0 | 04-007 | Memory extraction | Done | Source, confidence and status on every belief |
 | 8 | P1 | 04-008 | Conversation corrections | Done | Reconciliation built and tested; corrections flow through the assistant and are written server-side |
-| 9 | P1 | 04-009 | A voice the household chooses | Done | Google Cloud Speech behind a provider contract; every voice and recognition control, with the browser as the free fallback |
+| 9 | P1 | 04-009 | A voice the household chooses | Done | Google Cloud Speech behind a provider contract, on the deployment's own key; every voice and recognition control, with the browser as the free fallback |
 | 10 | P0 | 04-010 | One composer, four states | Done | Speak-to-text and live conversation as separate, adjacent controls; explicit state machine with its own test |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
@@ -219,15 +219,16 @@ responsibilities .
 **Goal:** Let a household pick how WonderHome sounds and how carefully it listens, on a real speech provider rather than whatever the browser happens to offer.
 
 **Acceptance criteria**
-- A household can configure a speech provider with its own credential, and that credential can be replaced but never read back out of the database.
+- The deployment configures one speech credential for everybody, as an environment variable; no household is asked for a key of its own.
 - Speech reaches the provider through the server only; the key is never sent to a browser, a log or a rendered page.
+- A household chooses whether to use that service at all, or keep speech inside its own browser, and the choice is a visible control rather than a side effect of configuring something else.
 - Voice, language, accent, gender, voice family, speaking rate, pitch, volume and the listening device are each settable, and a change is audible on the next thing WonderHome says.
 - Recognition language, additional languages for a household that switches mid-sentence, the recognition model, punctuation, profanity masking and expected words are each settable.
 - The household's own member names are sent as recognition hints without anybody configuring them.
 - A household with no provider configured keeps working on the browser's own speech, and the screen says which of the two is in use.
 - Combinations a provider rejects — pitch on a voice family that synthesises its own — are dropped before the request rather than surfaced as a provider error.
 - Every provider failure becomes something the household can act on, and never passes the provider's own prose through.
-- Setting, replacing and removing the credential, and changing the voice, are each written to the audit trail without the credential itself.
+- Changing the voice — including whether speech leaves the browser — is written to the audit trail.
 - Whether voice runs at all remains the `conversation.voice` entitlement and the rollout flag, checked server-side; the settings are preferences and never authorization.
 
 **Definition of Done**

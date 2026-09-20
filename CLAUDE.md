@@ -136,11 +136,31 @@ work, and hold new work against these:
     never force three or four tiles into one cramped row on a phone just
     because that is the desktop layout — that is what truncated "Need you"
     into "Nee…" (rule 15 already forbids the clipping; this is the layout
-    decision that was causing it). On a narrow screen each tile is a
-    full-width row; it widens into a multi-column grid only once there is
-    real room for every label at `sm` and up. The same test applies to any
-    new row of small cards: if fitting them side by side on a phone means
-    cutting a label, they are not side by side on a phone.
+    decision that was causing it). On a narrow screen a tile is a
+    full-width row, or at most one of two (rule 19), and it widens further
+    only once there is real room for every label at `sm` and up. The same
+    test applies to any new row of small cards: if fitting them side by
+    side on a phone means cutting a label, they are not side by side on a
+    phone.
+19. **Two cards to a row on a phone, never three.** This is a hard
+    constraint, not a preference, and it applies to every grid of cards on
+    every screen:
+    - **Maximum two cards per row** on a phone. Three or more is never
+      correct, whatever the desktop layout does and however short the
+      labels look in a mockup.
+    - **Roughly 48% width each**, with one consistent gap between them, so
+      a two-up row reads as a pair rather than as two things that happen
+      to be adjacent.
+    - **Stack vertically the moment the content needs more width.** A card
+      whose label, number or name would be cut at half width is a
+      full-width card instead — rule 15 decides, and it always wins.
+    - **Primary information is a full-width card.** The thing a person
+      came to the screen for is never one of a pair.
+    - **Secondary shortcuts use the two-column grid.** Domain tiles, quick
+      links and at-a-glance counts are what the pair layout is for.
+    - **Touch targets stay comfortable and text stays readable** at that
+      width: nothing shrinks its type or its tap area to make a row fit.
+      If it would have to, it was not a two-up row.
 
 **The brand is the sheet at `design/WonderHome-brand-guidelines.png`.** The
 name is WonderHome, one word, "Wonder" in navy and "Home" in blue; the mark is

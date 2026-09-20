@@ -5,15 +5,15 @@ import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
-import { loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { speechConfigured } from "@wonderhome/core/voice/platform-key";
+import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
-import { KeyRound, MicVocal, Sparkles } from "lucide-react";
+import { MicVocal, Sparkles } from "lucide-react";
 
-import { removeVoiceKeyAction, saveVoice, saveVoiceKeyAction } from "../../(auth)/voice-actions";
-import { VoiceKeyForm, VoiceSettingsForm } from "../../_components/voice-forms";
-import { formatDate, requireSession } from "../../_lib/session";
+import { saveVoice } from "../../(auth)/voice-actions";
+import { VoiceSettingsForm } from "../../_components/voice-forms";
+import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Voice" };
 export const dynamic = "force-dynamic";
@@ -25,20 +25,24 @@ export const dynamic = "force-dynamic";
  * offering controls that quietly do nothing (design rule 10):
  *
  *   - No plan for voice → say so, and offer nothing else.
- *   - No key → the browser's own voice, which is free and limited, and the
- *     one field that changes that.
- *   - A key → every control, and a button that plays the result.
+ *   - No speech service on this deployment → the browser's own voice, and
+ *     every control below it dimmed with the reason given.
+ *   - A speech service → every control, and a button that plays the result.
+ *
+ * There is no key on this page. Speech runs on the deployment's own key
+ * (`WONDERHOME_SPEECH_KEY`), because it is infrastructure with one bill and
+ * one set of quotas — not an errand for a family.
  */
 export default async function VoiceSettingsPage() {
   const session = await requireSession("/settings/voice");
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
 
-  const [settings, credential, entitlement] = await Promise.all([
+  const [settings, entitlement] = await Promise.all([
     loadVoiceSettings(supabase, householdId),
-    voiceCredentialStatus(supabase, householdId),
     may(supabase, householdId, "conversation.voice"),
   ]);
+  const speechAvailable = speechConfigured();
 
   const isAdmin = membership.roles.includes("head") || membership.roles.includes("administrator");
   const liveConversation = flags().voice_conversation;
@@ -80,41 +84,18 @@ export default async function VoiceSettingsPage() {
                   </p>
                 ) : null}
               </div>
-              <Badge tone={credential.configured ? "handled" : "neutral"}>
-                {credential.configured ? "Google" : "Browser"}
+              <Badge tone={settings.provider === "google" && speechAvailable ? "handled" : "neutral"}>
+                {settings.provider === "google" && speechAvailable ? "Google" : "Browser"}
               </Badge>
             </Card>
 
             {isAdmin ? (
-              <>
-                <section className="space-y-3">
-                  <SectionHeader title="Who does the speaking" />
-                  <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
-                    Google Cloud Speech is far better than any browser at this, and has a free monthly allowance.
-                  </p>
-                  <Card>
-                    <div className="flex items-start gap-3">
-                      <IconTile icon={KeyRound} tone="primary" />
-                      <div className="min-w-0 flex-1">
-                        <VoiceKeyForm
-                          householdId={householdId}
-                          save={saveVoiceKeyAction}
-                          remove={removeVoiceKeyAction}
-                          configured={credential.configured}
-                          setOn={credential.updatedAt ? formatDate(membership.household.timezone, credential.updatedAt) : null}
-                        />
-                      </div>
-                    </div>
-                  </Card>
-                </section>
-
-                <VoiceSettingsForm
-                  householdId={householdId}
-                  settings={settings}
-                  save={saveVoice}
-                  canPreview={credential.configured}
-                />
-              </>
+              <VoiceSettingsForm
+                householdId={householdId}
+                settings={settings}
+                save={saveVoice}
+                speechAvailable={speechAvailable}
+              />
             ) : (
               <Card>
                 <p className="text-sm text-[var(--wh-foreground-muted)]">

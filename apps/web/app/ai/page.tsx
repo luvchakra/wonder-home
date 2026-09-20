@@ -2,7 +2,8 @@ import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { speechConfigured } from "@wonderhome/core/voice/platform-key";
+import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { Sparkles } from "lucide-react";
 
@@ -22,20 +23,19 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const [{ q }, session] = await Promise.all([searchParams, requireSession("/ai")]);
   const { supabase, membership, viewer, secondary } = session;
 
-  const [entitlement, voiceEntitlement, voiceSettings, voiceCredential] = await Promise.all([
+  const [entitlement, voiceEntitlement, voiceSettings] = await Promise.all([
     may(supabase, membership.household.id, "conversation.text"),
     may(supabase, membership.household.id, "conversation.voice"),
     loadVoiceSettings(supabase, membership.household.id),
-    voiceCredentialStatus(supabase, membership.household.id),
   ]);
   // A sustained, hands-free exchange is still voice underneath — gated the
   // same way tap-to-speak already is, and by the deployment's own rollout
   // flag (config/flags.ts: "flags gate rollout, never authorization").
   const liveConversationAvailable = flags().voice_conversation && voiceEntitlement.allowed;
-  // Whether speech goes through the household's own provider or stays in
-  // the browser. Both have to be true: a provider chosen with no key
-  // behind it would be a control that does nothing.
-  const serverVoice = voiceSettings.provider === "google" && voiceCredential.configured;
+  // Whether speech goes through the deployment's provider or stays in the
+  // browser. Both have to be true: a provider chosen on a deployment with
+  // no key behind it would be a control that does nothing.
+  const serverVoice = voiceSettings.provider === "google" && speechConfigured();
 
   let initialMessages: AssistantMessage[] = [];
   if (entitlement.allowed) {

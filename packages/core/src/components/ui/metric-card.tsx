@@ -46,16 +46,31 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
 }
 
 /**
- * A card never gets narrower than its label needs (design principle 18): on a
- * phone that means one full-width row per metric, not three or four squeezed
- * into a row that then has to truncate. Widens into the original multi-column
- * grid once there is room for it at `sm` and up.
+ * A card never gets narrower than its label needs (design principles 18 and
+ * 19): on a phone that means one full-width row per metric, not three or
+ * four squeezed into a row that then has to truncate. Widens into the
+ * original multi-column grid once there is room for it at `sm` and up.
+ *
+ * `pairs` allows the one exception rule 19 permits — two to a row on a
+ * phone, never three — and is for short labels only, the one-word kind a
+ * caller has checked fits at half width. It is opt-in precisely so that
+ * adding a longer label somewhere else cannot quietly re-create the
+ * truncation this layout exists to prevent.
  */
-export function MetricGrid({ metrics, className }: { metrics: readonly Metric[]; className?: string }) {
+export function MetricGrid({
+  metrics,
+  pairs = false,
+  className,
+}: {
+  metrics: readonly Metric[];
+  pairs?: boolean;
+  className?: string;
+}) {
   return (
     <ul
       className={cn(
-        "grid grid-cols-1 gap-2.5",
+        "grid gap-2.5",
+        pairs ? "grid-cols-2" : "grid-cols-1",
         metrics.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3",
         className,
       )}

@@ -4,10 +4,10 @@ import { Play, Volume2 } from "lucide-react";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { cn } from "@wonderhome/core/lib/cn";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
-import { PasswordField } from "@wonderhome/core/ui/password-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { Select } from "@wonderhome/core/ui/select";
@@ -38,73 +38,6 @@ function Submit({ label }: { label: string }) {
 }
 
 /**
- * Setting up Google Cloud Speech for a household.
- *
- * The key is a password field and is never pre-filled, for the same reason
- * `AiKeyForm` does it that way: it cannot be read back out of the database
- * at all, so there would be nothing honest to put in the box.
- */
-export function VoiceKeyForm({
-  householdId,
-  save,
-  remove,
-  configured,
-  setOn,
-}: {
-  householdId: string;
-  save: (state: ActionState, formData: FormData) => Promise<ActionState>;
-  remove: (state: ActionState, formData: FormData) => Promise<ActionState>;
-  configured: boolean;
-  setOn: string | null;
-}) {
-  const [saveState, saveAction] = useActionState(save, {});
-  const [removeState, removeAction] = useActionState(remove, {});
-  const state = saveState.error || saveState.notice ? saveState : removeState;
-
-  return (
-    <div className="space-y-3">
-      {state.error ? <Alert>{state.error}</Alert> : null}
-      {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
-
-      {configured ? (
-        <p className="text-sm text-[var(--wh-foreground-muted)]">
-          Your household&apos;s own Google key is in use{setOn ? `, set on ${setOn}` : ""}. It cannot be read back
-          — you can replace it, but not view it.
-        </p>
-      ) : (
-        <p className="text-sm text-[var(--wh-foreground-muted)]">
-          Without a key, WonderHome speaks and listens with whatever your browser provides. That is free and needs
-          no setup, but it varies by device and barely works in Safari.
-        </p>
-      )}
-
-      <form action={saveAction} className="space-y-3">
-        <input type="hidden" name="householdId" value={householdId} />
-        <PasswordField
-          label="Google Cloud API key"
-          name="apiKey"
-          required
-          minLength={20}
-          autoComplete="off"
-          placeholder="AIza…"
-          hint="From Google Cloud, with Text-to-Speech and Speech-to-Text switched on. Stored for this household only."
-        />
-        <Submit label={configured ? "Replace key" : "Use Google for speech"} />
-      </form>
-
-      {configured ? (
-        <form action={removeAction}>
-          <input type="hidden" name="householdId" value={householdId} />
-          <Button type="submit" variant="secondary">
-            Remove the key and go back to the browser&apos;s voice
-          </Button>
-        </form>
-      ) : null}
-    </div>
-  );
-}
-
-/**
  * Everything about how WonderHome sounds and listens, on one screen.
  *
  * The voice list is fetched for whichever language is selected, so the
@@ -117,23 +50,26 @@ export function VoiceSettingsForm({
   householdId,
   settings,
   save,
-  canPreview,
+  speechAvailable,
 }: {
   householdId: string;
   settings: VoiceSettings;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
-  canPreview: boolean;
+  /** The deployment has a speech service configured. */
+  speechAvailable: boolean;
 }) {
   const [state, action] = useActionState(save, {});
+  const [provider, setProvider] = useState(settings.provider);
   const [language, setLanguage] = useState(settings.language);
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const usingGoogle = speechAvailable && provider === "google";
 
   useEffect(() => {
-    if (!canPreview) return;
+    if (!usingGoogle) return;
     let cancelled = false;
 
     fetch(`/api/v1/households/${householdId}/voice?language=${encodeURIComponent(language)}`)
@@ -146,7 +82,7 @@ export function VoiceSettingsForm({
     return () => {
       cancelled = true;
     };
-  }, [householdId, language, canPreview]);
+  }, [householdId, language, usingGoogle]);
 
   const preview = useCallback(async () => {
     const form = formRef.current;
@@ -193,15 +129,43 @@ export function VoiceSettingsForm({
   return (
     <form ref={formRef} action={action} className="space-y-6">
       <input type="hidden" name="householdId" value={householdId} />
-      <input type="hidden" name="provider" value={settings.provider} />
 
       {state.error ? <Alert>{state.error}</Alert> : null}
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       {previewError ? <Alert>{previewError}</Alert> : null}
 
       <section className="space-y-4">
+        <SectionHeader title="Who does the speaking" />
+        <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
+          {speechAvailable
+            ? "Google Cloud Speech is set up on this deployment and included in your plan — no key or billing of your own."
+            : "No speech service is set up on this deployment yet, so WonderHome uses whatever voice your browser provides."}
+        </p>
+
+        <Select
+          label="Speech service"
+          name="provider"
+          defaultValue={settings.provider}
+          disabled={!speechAvailable}
+          onChange={(event) => setProvider(event.target.value as VoiceSettings["provider"])}
+          hint={
+            speechAvailable
+              ? "Google understands far more of what is said, and sounds the same on every device. Your browser's own voice sends nothing out of it."
+              : "Ask whoever runs this WonderHome to configure a speech service."
+          }
+        >
+          <option value="browser">My browser (free, varies by device)</option>
+          {speechAvailable ? <option value="google">Google Cloud Speech (recommended)</option> : null}
+        </Select>
+      </section>
+
+      <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>
         <SectionHeader title="How it sounds" />
-        <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">The voice that reads replies aloud.</p>
+        <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
+          {usingGoogle
+            ? "The voice that reads replies aloud."
+            : "These apply once a speech service is doing the speaking. Your browser picks its own voice."}
+        </p>
 
         <Select
           label="Language and accent"
@@ -242,9 +206,9 @@ export function VoiceSettingsForm({
           name="voiceName"
           defaultValue={settings.voiceName ?? ""}
           hint={
-            canPreview
+            usingGoogle
               ? "Google's own names. Leaving this on “Choose for me” follows the family and voice above."
-              : "Set a Google key above to see the voices your household can choose from."
+              : "Choose Google above to see the voices your household can pick from."
           }
         >
           <option value="">Choose for me</option>
@@ -321,7 +285,7 @@ export function VoiceSettingsForm({
           </span>
         </label>
 
-        {canPreview ? (
+        {usingGoogle ? (
           <Pill type="button" tone="quiet" onClick={() => void preview()} disabled={previewing}>
             {previewing ? <Volume2 aria-hidden className="size-4" /> : <Play aria-hidden className="size-4" />}
             {previewing ? "Playing…" : "Hear it"}
@@ -329,7 +293,7 @@ export function VoiceSettingsForm({
         ) : null}
       </section>
 
-      <section className="space-y-4">
+      <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>
         <SectionHeader title="How it listens" />
         <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">What WonderHome does with what you say.</p>
 

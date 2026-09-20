@@ -151,7 +151,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-006` Text | P0 | Done | Same engine as voice |
 | `04-007` Memory extraction | P0 | Done | Source, confidence and status on every belief |
 | `04-008` Conversation corrections | P1 | Done | Reconciliation built and tested; corrections flow through the assistant and are written server-side |
-| `04-009` A voice the household chooses | P1 | Done | Google Cloud Speech behind a provider contract; every voice and recognition control, with the browser as the free fallback |
+| `04-009` A voice the household chooses | P1 | Done | Google Cloud Speech behind a provider contract, on the deployment's own key; every voice and recognition control, with the browser as the free fallback |
 | `04-010` One composer, four states | P0 | Done | Speak-to-text and live conversation as separate, adjacent controls; explicit state machine with its own test |
 
 ### 05 — Household Certification & Understanding

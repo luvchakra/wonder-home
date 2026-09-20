@@ -87,6 +87,24 @@ product does. The exception is deliberate and narrow: the composer is the
 door to WonderHome itself rather than a row about something else, and the
 approved sheet draws it that way.
 
+### Two cards to a row, never three (rule 19)
+
+The phone layout has one hard ceiling: **two cards per row, ~48% each,
+never three.** `DomainGrid` and `HandledList` are already pairs;
+`MetricGrid` stacks full-width by default and takes `pairs` to opt in.
+
+The opt-in is the point. Rule 18 exists because four stat tiles crammed
+into one phone row truncated "Need you" into "Nee…", so the default has to
+stay full-width — a screen that adds a longer label later must not quietly
+re-create that. `pairs` says "I have checked these labels fit at half
+width", which on Home means four one-word counts. Where content would be
+*cut* at half width it goes full-width instead; wrapping is fine, cutting
+is not (rule 15 decides, and it wins).
+
+Primary reading is never half a row. Today's focus and the family moment
+stack on a phone and only pair from `sm`; the two-up grid is for
+shortcuts and at-a-glance counts.
+
 ## The brand mark (rules 1, 3, 5)
 
 The mark is the supplied logo: a house drawn in two strokes — a roof chevron

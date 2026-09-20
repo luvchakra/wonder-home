@@ -2,27 +2,26 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
-import { createAdminClient } from "../db/admin";
 import { googleProvider } from "./google";
+import { platformSpeechKey } from "./platform-key";
 import { browserProvider, type SpeechProvider } from "./provider";
 import { DEFAULT_VOICE_SETTINGS, voiceSettingsSchema, type VoiceSettings } from "./settings";
 
 /**
  * Where a household's voice lives (story 04-009).
  *
- * Note which client each function takes — the same split as
- * `ai/credentials.ts`, for the same reason. Settings are read and written
- * through the caller's own session so RLS decides who may change them. The
- * key is read only by `resolveProvider`, on the admin client, because the
- * credentials table has no SELECT policy at all.
+ * Only preferences live here. The key that makes speech work belongs to
+ * the deployment, not to a family (`voice/platform-key.ts`), so there is
+ * no credential table to read and nothing here that must never be
+ * rendered.
+ *
+ * Settings are read and written through the caller's own session, so RLS
+ * decides who may change them: any member may read the voice, because the
+ * assistant needs it to speak at all, and an administrator changes it,
+ * because a household hears one voice.
  */
 
 type Row = Record<string, unknown>;
-
-export type VoiceCredentialStatus = {
-  configured: boolean;
-  updatedAt: Date | null;
-};
 
 /** The household's voice, or the defaults. Never throws: a voice is not worth a broken page. */
 export async function loadVoiceSettings(
@@ -67,111 +66,21 @@ export async function saveVoiceSettings(
   });
 }
 
-/** Whether a household has a speech key, and since when. Never the key itself. */
-export async function voiceCredentialStatus(
-  supabase: SupabaseClient,
-  householdId: string,
-): Promise<VoiceCredentialStatus> {
-  const { data, error } = await supabase.rpc("voice_credential_status", { p_household_id: householdId });
-  if (error) return { configured: false, updatedAt: null };
-
-  const row = ((data as Row[] | null) ?? [])[0];
-  if (!row) return { configured: false, updatedAt: null };
-
-  return { configured: true, updatedAt: row.updated_at ? new Date(row.updated_at as string) : null };
-}
-
-export async function setVoiceKey(
-  supabase: SupabaseClient,
-  input: { householdId: string; memberId: string; apiKey: string },
-): Promise<void> {
-  const apiKey = input.apiKey.trim();
-  if (apiKey.length < 20) throw ApiError.badRequest("That does not look like a Google API key.");
-
-  const { error } = await supabase.from("household_voice_credentials").upsert(
-    { household_id: input.householdId, provider: "google", api_key: apiKey, set_by_member_id: input.memberId },
-    { onConflict: "household_id" },
-  );
-
-  if (error) {
-    if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can set the speech key.");
-    }
-    throw new Error(`setVoiceKey failed: ${error.code ?? "unknown"}`);
-  }
-
-  // The provider name only. The key is the one thing in this file that must
-  // never appear anywhere else, audit metadata included.
-  await auditChange({
-    householdId: input.householdId,
-    actorMemberId: input.memberId,
-    eventType: "voice.key_set",
-    targetTable: "household_voice_credentials",
-    targetId: input.householdId,
-    metadata: { provider: "google" },
-  });
-}
-
-export async function clearVoiceKey(
-  supabase: SupabaseClient,
-  householdId: string,
-  actorMemberId?: string,
-): Promise<void> {
-  const { error } = await supabase.from("household_voice_credentials").delete().eq("household_id", householdId);
-
-  if (error) {
-    if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can remove the speech key.");
-    }
-    throw new Error(`clearVoiceKey failed: ${error.code ?? "unknown"}`);
-  }
-
-  await auditChange({
-    householdId,
-    actorMemberId: actorMemberId ?? null,
-    eventType: "voice.key_removed",
-    targetTable: "household_voice_credentials",
-    targetId: householdId,
-  });
-}
-
 /**
  * The provider that will actually answer for this household.
  *
- * Settings ask for one; this decides whether they can have it. A household
- * that chose Google but has no key gets the browser back rather than an
- * error, because the browser still works and a silent downgrade to
- * something that speaks beats a dead button (design rule 10). The screen
- * reads `live` to say which one it got.
+ * The household's settings ask for one; the deployment decides whether
+ * they can have it. A household that chose Google on a deployment with no
+ * speech key configured gets the browser back rather than an error,
+ * because the browser still works and a quiet downgrade to something that
+ * speaks beats a dead button (design rule 10). The screen reads `live` to
+ * say which one it got.
  */
-export async function resolveProvider(
-  settings: VoiceSettings,
-  householdId: string,
-): Promise<SpeechProvider> {
+export function resolveProvider(settings: VoiceSettings): SpeechProvider {
   if (settings.provider !== "google") return browserProvider;
 
-  const key = await readVoiceKey(householdId);
-  return key ? googleProvider(key) : browserProvider;
-}
-
-/**
- * The household's speech key, for the server that is about to call Google.
- *
- * Deliberately the only reader, and deliberately on the admin client: the
- * table has no SELECT policy, so this is the single path by which the key
- * leaves the database. The result must never reach a response, a log or a
- * rendered page.
- */
-async function readVoiceKey(householdId: string): Promise<string | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("household_voice_credentials")
-    .select("api_key")
-    .eq("household_id", householdId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return ((data as Row).api_key as string) ?? null;
+  const platform = platformSpeechKey();
+  return platform ? googleProvider(platform.key) : browserProvider;
 }
 
 function fromRow(row: Row): Record<string, unknown> {
