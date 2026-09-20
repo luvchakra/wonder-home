@@ -348,8 +348,13 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
 
   const events = when ? await listEvents(supabase, householdId, windowFor(when, now)).catch(() => []) : null;
 
+  const placeOf = (need: { subjectKey: string }) => {
+    const domain = agenda.domains.find((entry) => entry.needs.some((candidate) => candidate.subjectKey === need.subjectKey));
+    return domain ? { label: domain.label, href: domain.href } : undefined;
+  };
+
   return composeStatusAnswer({
-    needsYou: agenda.needsYou,
+    needsYou: agenda.needsYou.map((need) => ({ ...need, place: placeOf(need) })),
     handled: agenda.handled,
     checked: agenda.checked,
     unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label),

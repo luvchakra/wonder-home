@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import type { ConversationTurn, Understanding } from "../conversation/engine";
 import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget, type UnderstandingTrace } from "../conversation/intent";
+import { describeReplyFormat } from "../conversation/reply-format";
 import type { ModelProvider } from "./model-key";
 
 /**
@@ -349,7 +350,9 @@ You are given FACTS: everything relevant that WonderHome currently knows about t
 
 People appear as placeholders such as "Adult A", "Child B" or "Helper A". Use the placeholders exactly as written; the household's own system replaces them with names afterwards.
 
-Answer the question that was actually asked, for the person asking (their role is given). Be warm, specific and brief: plain sentences, no headings, no bullet points, no markdown, at most about 120 words. Lead with what matters most to them. When the facts do not cover the question, say so in one plain sentence and say what would help — never pad with generalities and never repeat the same summary for different questions.
+Answer the question that was actually asked, for the person asking (their role is given). Be warm, specific and brief: at most about 120 words. Lead with what matters most to them. When the facts do not cover the question, say so in one plain sentence and say what would help — never pad with generalities and never repeat the same summary for different questions.
+
+${describeReplyFormat()}
 
 Set grounded to true when the facts answered the question, false when they did not.`;
 

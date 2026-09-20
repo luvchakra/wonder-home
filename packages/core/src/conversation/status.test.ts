@@ -33,7 +33,7 @@ describe("what's going on, answered from the household's own state", () => {
       handled: [{ title: "Meals" }],
       checked: 6,
     });
-    expect(text).toMatch(/^2 things need you \(1 urgent\): Electricity bill — Due on Friday and not yet paid; Milk — Running low\./);
+    expect(text).toMatch(/^\*\*2 things need you\*\* \(1 urgent\):\n- \*\*Electricity bill\*\* — Due on Friday and not yet paid\n- \*\*Milk\*\* — Running low/);
     expect(text).toMatch(/Everything else — 4 things — is handled across meals\./);
   });
 
@@ -51,7 +51,7 @@ describe("what's going on, answered from the household's own state", () => {
       timezone: "Asia/Kolkata",
       events: [{ title: "Karate", startsAt: new Date("2026-09-21T12:30:00.000Z") }],
     });
-    expect(text).toMatch(/^Tomorrow: Karate at 6:00pm\./);
+    expect(text).toMatch(/^Tomorrow: Karate at 6:00pm — see \[Family\]\(\/family\)\./);
     expect(text).toMatch(/All quiet/);
   });
 

@@ -16,6 +16,7 @@ import { AiOrb, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-mess
 import { Button } from "@wonderhome/core/ui/button";
 import { ChatComposer } from "@wonderhome/core/ui/chat-composer";
 import { Pill } from "@wonderhome/core/ui/pill";
+import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
 /**
  * The conversation itself.
@@ -240,7 +241,7 @@ export function Assistant({
                 ) : null
               }
             >
-              {message.text}
+              {message.role === "assistant" ? <ReplyText text={message.text} /> : message.text}
             </ChatMessage>
           ))}
           </div>
