@@ -260,6 +260,126 @@ export async function setMemberRole(
   });
 }
 
+/**
+ * Adds a household helper with no account of their own (story 01-002, and
+ * the same reasoning `identity/children.ts` states for a child: nothing here
+ * should require a person the household is only tracking to hold an email
+ * address or a session).
+ *
+ * `createInvitation`'s helper path assumes the helper has an email and will
+ * accept for themselves; this is the other case — a helper the household
+ * manages directly, the same way it already manages a child.
+ */
+export async function createHelperMember(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  input: { displayName: string },
+): Promise<{ memberId: string }> {
+  if (!isHouseholdAdmin(actor)) {
+    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can add a helper.");
+  }
+
+  const householdId = actor.household.id;
+
+  const { data, error } = await supabase
+    .from("household_members")
+    .insert({ household_id: householdId, profile_id: null, member_type: "helper", display_name: input.displayName })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only the Head of Family or a Household Administrator can add a helper.");
+    throw new Error(`createHelperMember failed: ${error.code ?? "unknown"}`);
+  }
+
+  const memberId = (data as { id: string }).id;
+
+  const { error: roleError } = await supabase
+    .from("household_roles")
+    .insert({ household_id: householdId, member_id: memberId, role: "helper" });
+  if (roleError) throw new Error(`createHelperMember role failed: ${roleError.code ?? "unknown"}`);
+
+  await auditChange({
+    householdId,
+    actorMemberId: actor.memberId,
+    eventType: "member.added",
+    targetTable: "household_members",
+    targetId: memberId,
+    metadata: { memberType: "helper" },
+  });
+
+  return { memberId };
+}
+
+/**
+ * Removes someone from the household (the other half of `createHelperMember`
+ * and `createChildMember`, and of inviting someone in the first place — a
+ * household that can add a person could not otherwise undo it).
+ *
+ * The Head of Family cannot be removed this way: ownership transfer is its
+ * own operation, and a household is never left without one. Removing
+ * yourself is not this control either — leaving a household you belong to is
+ * a different action from removing someone else from it.
+ *
+ * A removed member's status becomes 'inactive' rather than the row being
+ * deleted: everything that already references them (a past responsibility,
+ * an audit entry, a certification item) stays readable, exactly as
+ * `member_type` and the rest of this schema already assume.
+ */
+export async function deactivateMember(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  input: { memberId: string },
+): Promise<void> {
+  if (!isHouseholdAdmin(actor)) {
+    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can remove a member.");
+  }
+  if (input.memberId === actor.memberId) {
+    throw ApiError.badRequest("You cannot remove yourself this way.");
+  }
+
+  const householdId = actor.household.id;
+
+  const { data: target, error: lookupError } = await supabase
+    .from("household_members")
+    .select("id, household_roles(role)")
+    .eq("id", input.memberId)
+    .eq("household_id", householdId)
+    .maybeSingle();
+
+  if (lookupError) throw new Error(`deactivateMember lookup failed: ${lookupError.code ?? "unknown"}`);
+  if (!target) throw ApiError.notFound("That member is not part of this household.");
+
+  const roles = ((target as { household_roles: { role: HouseholdRole }[] | null }).household_roles ?? []).map((entry) => entry.role);
+  if (roles.includes("head")) {
+    throw ApiError.badRequest("The Head of Family cannot be removed. Transferring headship is a separate decision.");
+  }
+
+  const { error } = await supabase
+    .from("household_members")
+    .update({ status: "inactive" })
+    .eq("id", input.memberId)
+    .eq("household_id", householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only the Head of Family or a Household Administrator can remove a member.");
+    throw new Error(`deactivateMember failed: ${error.code ?? "unknown"}`);
+  }
+
+  // Roles lapse with membership — an inactive member holding "administrator"
+  // would be a permission nobody meant to leave granted.
+  await supabase.from("household_roles").delete().eq("household_id", householdId).eq("member_id", input.memberId);
+
+  await auditChange({
+    householdId,
+    actorMemberId: actor.memberId,
+    eventType: "member.removed",
+    targetTable: "household_members",
+    targetId: input.memberId,
+    metadata: { previousRoles: roles },
+  });
+}
+
 /** The most recent grant of head or administrator: when this person's setup week begins. */
 function adminSince(roles: readonly { role: HouseholdRole; created_at?: string | null }[]): string | null {
   const grants = roles

@@ -9,9 +9,11 @@ import { describeRoles } from "../../_lib/member-role";
 import { requireSession } from "../../_lib/session";
 
 import { AddChildForm } from "../../_components/add-child-form";
+import { AddHelperForm } from "../../_components/add-helper-form";
 import { InviteMemberForm } from "../../_components/invite-member-form";
 import { MemberRoleControl } from "../../_components/member-role-control";
 import { PendingInvitations } from "../../_components/pending-invitations";
+import { RemoveMemberControl } from "../../_components/remove-member-control";
 
 export const metadata = { title: "Members & roles" };
 export const dynamic = "force-dynamic";
@@ -62,6 +64,13 @@ export default async function MembersPage() {
                       isAdministrator={member.roles.includes("administrator")}
                     />
                   ) : null}
+                  {admin && !member.isOwner && member.id !== membership.memberId && member.status === "active" ? (
+                    <RemoveMemberControl
+                      householdId={membership.household.id}
+                      memberId={member.id}
+                      displayName={member.displayName}
+                    />
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -76,6 +85,7 @@ export default async function MembersPage() {
             />
             <PendingInvitations invitations={invitations} />
             <AddChildForm householdId={membership.household.id} />
+            <AddHelperForm householdId={membership.household.id} />
           </>
         ) : (
           <Card>
