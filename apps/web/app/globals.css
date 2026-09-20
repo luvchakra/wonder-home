@@ -58,9 +58,19 @@ body::before {
   color: var(--wh-foreground);
 }
 
-:focus-visible {
-  outline: 2px solid var(--wh-primary);
-  outline-offset: 2px;
+/*
+ * In @layer base so a component's own focus-ring utility (e.g. the chat
+ * composer's `outline-none`, which relies on its own `focus-within` border
+ * instead) can actually win. Un-layered CSS always beats Tailwind's layered
+ * utilities regardless of source order, so writing this outside a layer
+ * made it override every focus style in the app, no matter what a
+ * component asked for.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--wh-primary);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

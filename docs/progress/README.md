@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-20 | [The blue focus box, and the message showing through the composer](2026-09-20-focus-ring-layer-bug-and-opaque-composer-footer.md) |
 | 2026-09-20 | [The AI tab becomes "Talk", the chat stops jumping, and the mic loses its halo](2026-09-20-talk-tab-instant-scroll-and-mic-halo-removed.md) |
 | 2026-09-20 | [AI chat: overlap fixed, "Try asking" removed, a bigger retro mic](2026-09-20-ai-chat-cleanup-and-mic-redesign.md) |
 | 2026-09-20 | [Stat tiles stop cramming three into a row, and a wider truncation sweep](2026-09-20-metric-tiles-and-truncation-sweep.md) |
