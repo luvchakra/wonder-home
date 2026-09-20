@@ -51,7 +51,8 @@ export type ResponsibilityCardProps = {
   className?: string;
 };
 
-const AI_MODE: Record<ResponsibilityCardProps["aiMode"], string> = {
+/** The same wording wherever an autonomy level is shown, not one phrasing per screen. */
+export const AI_MODE_LABEL: Record<ResponsibilityCardProps["aiMode"], string> = {
   observe: "WonderHome watches",
   prepare: "WonderHome prepares",
   approve: "WonderHome asks first",
@@ -69,7 +70,7 @@ export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency
           {backup ? ` · backup ${backup}` : ""}
           {frequency ? ` · ${frequency}` : ""}
         </p>
-        <p className="mt-0.5 truncate text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE[aiMode]}</p>
+        <p className="mt-0.5 truncate text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[aiMode]}</p>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
       {onExpand ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}

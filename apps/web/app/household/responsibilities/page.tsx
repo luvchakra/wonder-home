@@ -1,12 +1,10 @@
-import { GraduationCap, HandHeart, ListChecks, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet, Wrench } from "lucide-react";
+import { ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
-import type { ComponentType } from "react";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
-import type { IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -14,6 +12,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
+import { iconForOutcome } from "../../_lib/outcome-icons";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
 
@@ -28,22 +27,6 @@ type Row = {
   ai_mode: "observe" | "prepare" | "approve" | "execute";
   priority: number;
   playbook_items: { name: string; outcome_definition: string; cadence: Record<string, unknown> } | { name: string; outcome_definition: string; cadence: Record<string, unknown> }[] | null;
-};
-
-const BY_PREFIX: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
-  school: { icon: GraduationCap, tone: "school" },
-  bills: { icon: Wallet, tone: "money" },
-  finance: { icon: Wallet, tone: "money" },
-  groceries: { icon: ShoppingBasket, tone: "care" },
-  shopping: { icon: ShoppingBasket, tone: "care" },
-  meals: { icon: Utensils, tone: "meals" },
-  kitchen: { icon: Utensils, tone: "meals" },
-  laundry: { icon: Wrench, tone: "home" },
-  home: { icon: Wrench, tone: "home" },
-  cleaning: { icon: Wrench, tone: "home" },
-  pet: { icon: PawPrint, tone: "care" },
-  pets: { icon: PawPrint, tone: "care" },
-  kids: { icon: HandHeart, tone: "people" },
 };
 
 /**
@@ -168,8 +151,7 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
             <ul className="divide-y divide-[var(--wh-border)]">
               {shown.map((row) => {
                 const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
-                const prefix = row.outcome_key.split(".")[0] ?? "";
-                const presentation = BY_PREFIX[prefix] ?? { icon: ListChecks, tone: "primary" as IconTone };
+                const presentation = iconForOutcome(row.outcome_key);
                 const title = item?.name ?? row.outcome_key.replace(/[._]/g, " ");
                 return (
                   <ResponsibilityRow

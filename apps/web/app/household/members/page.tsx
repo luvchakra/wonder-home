@@ -5,6 +5,7 @@ import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 
+import { describeRoles } from "../../_lib/member-role";
 import { requireSession } from "../../_lib/session";
 
 import { AddChildForm } from "../../_components/add-child-form";
@@ -89,12 +90,4 @@ export default async function MembersPage() {
       </div>
     </AppShell>
   );
-}
-
-function describeRoles(roles: readonly string[], isOwner: boolean): string {
-  if (isOwner || roles.includes("head")) return "Head of Family";
-  if (roles.includes("administrator")) return "Household Administrator";
-  if (roles.includes("helper")) return "Househelper";
-  if (roles.includes("child")) return "Child";
-  return "Adult";
 }
