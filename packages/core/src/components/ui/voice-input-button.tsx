@@ -18,7 +18,7 @@ import { cn } from "../../lib/cn";
  */
 export type VoiceResult = { transcript: string; confidence: number };
 
-type RecognitionLike = {
+export type RecognitionLike = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
@@ -31,9 +31,9 @@ type RecognitionLike = {
   abort: () => void;
 };
 
-type RecognitionConstructor = new () => RecognitionLike;
+export type RecognitionConstructor = new () => RecognitionLike;
 
-function recognitionConstructor(): RecognitionConstructor | null {
+export function recognitionConstructor(): RecognitionConstructor | null {
   if (typeof window === "undefined") return null;
   const candidate = (window as unknown as { SpeechRecognition?: RecognitionConstructor; webkitSpeechRecognition?: RecognitionConstructor });
   return candidate.SpeechRecognition ?? candidate.webkitSpeechRecognition ?? null;
