@@ -376,6 +376,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `Switch` | An on/off setting, not a choice among options (`SegmentedControl` is that) — first used for the live-conversation toggle below the composer's Send button |
 | `Select` | A labelled choice among a fixed list. Deliberately the browser's own `select`, because on a phone that opens the OS picker — reachable and thumb-scrollable, which a hand-built dropdown has to re-earn and usually does not at 360px |
 | `Slider` | A value on a scale with the value always visible beside the label, in the unit a household reads ("1.15×", "-2 semitones"), and both ends of the scale named underneath. A bare range input says something changed but never what it changed *to*, which rule 15 does not allow |
+| `ExpandableRow` | A row that opens in place instead of leaving the page: a downward chevron that turns to face up, revealing already-rendered content below it. Built to replace Home's family and househelp rows, which linked to `/family?member=…` — a query the Family screen does not read, so the chevron promised navigation it did not deliver (rule 10). First used to show a member's or a helper's own responsibilities inline |
 | `AppShell`, `MobileHeader`, `PrimaryNav`, `NavDrawer` | The shell |
 
 ### Tailwind has to be told about the shared package
