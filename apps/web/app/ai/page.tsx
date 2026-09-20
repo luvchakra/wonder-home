@@ -7,7 +7,7 @@ import { Sparkles } from "lucide-react";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
 
-export const metadata = { title: "WonderHome AI" };
+export const metadata = { title: "Talk to WonderHome" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -39,7 +39,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   }
 
   return (
-    <AppShell active="ai" viewer={viewer} secondary={secondary} pathname="/ai" title="WonderHome AI">
+    <AppShell active="ai" viewer={viewer} secondary={secondary} pathname="/ai" title="Talk to WonderHome">
       {entitlement.allowed ? (
         <Assistant
           householdId={membership.household.id}
