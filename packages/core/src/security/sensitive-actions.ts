@@ -104,6 +104,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/ai/credentials.ts",
   },
   {
+    event: "voice.key_set",
+    because: "Moves who hears this household from WonderHome's speech service to the family's own Google account.",
+    recordedIn: "packages/core/src/voice/repository.ts",
+  },
+  {
+    event: "voice.key_removed",
+    because: "Moves it back again, under different terms with the provider.",
+    recordedIn: "packages/core/src/voice/repository.ts",
+  },
+  {
     event: "voice.settings_changed",
     because: "Decides whether what is said out loud leaves the browser at all, and in which language.",
     recordedIn: "packages/core/src/voice/repository.ts",
@@ -202,6 +212,10 @@ export function describeAuditEvent(
       return { title: "The household's own AI key was set", detail: stringOr(metadata.provider, null) };
     case "ai.key_removed":
       return { title: "The household's own AI key was removed", detail: "Back to the included assistant." };
+    case "voice.key_set":
+      return { title: "The household's own speech key was set", detail: stringOr(metadata.provider, null) };
+    case "voice.key_removed":
+      return { title: "The household's own speech key was removed", detail: "Back to WonderHome's speech service." };
     case "voice.settings_changed":
       return { title: "The household's voice was changed", detail: stringOr(metadata.language, null) };
     case "privacy.export_requested":

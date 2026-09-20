@@ -131,7 +131,13 @@ const languageTag = z
   .max(20);
 
 export const voiceSettingsSchema = z.object({
-  provider: z.enum(VOICE_PROVIDERS).default("browser"),
+  /**
+   * Google by default: the deployment has a key, so a household gets a
+   * voice that understands them without configuring anything. Resolution
+   * falls back to the browser where no key exists anywhere, so this
+   * default can never be a control that does nothing.
+   */
+  provider: z.enum(VOICE_PROVIDERS).default("google"),
 
   // What it sounds like.
   /** Spoken language and accent. */

@@ -309,13 +309,6 @@ export function TalkComposer({
 
       {state === "listening" || state === "transcribing" ? <Steps transcribing={state === "transcribing"} /> : null}
 
-      {state === "live" || state === "paused" ? (
-        <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-          {state === "paused"
-            ? "Paused. Tap the waveform to carry on, or the cross to end and get a summary."
-            : "Live voice conversation — tap the waveform to pause, or the cross to end."}
-        </p>
-      ) : null}
     </form>
   );
 }
@@ -382,7 +375,7 @@ function Steps({ transcribing }: { transcribing: boolean }) {
   ];
 
   return (
-    <ol className="mt-2 flex items-center justify-between gap-1 px-2 text-[0.6875rem]">
+    <ol className="mt-1.5 flex items-center justify-between gap-1 px-2 text-[0.6875rem]">
       {steps.map((step, index) => (
         <li key={step.label} className="flex min-w-0 flex-1 items-center gap-1 last:flex-none">
           <span

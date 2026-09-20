@@ -2,8 +2,7 @@ import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { speechConfigured } from "@wonderhome/core/voice/platform-key";
-import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
+import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { Sparkles } from "lucide-react";
 
@@ -32,10 +31,10 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // same way tap-to-speak already is, and by the deployment's own rollout
   // flag (config/flags.ts: "flags gate rollout, never authorization").
   const liveConversationAvailable = flags().voice_conversation && voiceEntitlement.allowed;
-  // Whether speech goes through the deployment's provider or stays in the
-  // browser. Both have to be true: a provider chosen on a deployment with
-  // no key behind it would be a control that does nothing.
-  const serverVoice = voiceSettings.provider === "google" && speechConfigured();
+  // Whether speech goes through a provider or stays in the browser. Both
+  // have to be true: Google chosen with no key anywhere behind it would be
+  // a control that does nothing.
+  const serverVoice = voiceSettings.provider === "google" && (await speechKeySource(membership.household.id)) !== "none";
 
   let initialMessages: AssistantMessage[] = [];
   if (entitlement.allowed) {

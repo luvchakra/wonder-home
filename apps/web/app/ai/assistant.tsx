@@ -398,7 +398,7 @@ export function Assistant({
       ) : null}
 
       {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
-      <div className="shrink-0 pt-2">
+      <div className="shrink-0 pt-1.5">
         {editing ? (
           <div className="mb-2 flex items-center justify-between rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--wh-primary)]">
             <span>Editing your message</span>
@@ -427,7 +427,7 @@ export function Assistant({
           serverVoice={serverVoice}
           voiceLanguage={voiceLanguage}
         />
-        <p className="mt-2 text-center text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+        <p className="mt-1.5 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
         </p>
       </div>

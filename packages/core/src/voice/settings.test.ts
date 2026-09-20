@@ -10,16 +10,18 @@ import {
 
 describe("what a household starts with", () => {
   it("speaks Indian English in a male voice, and listens in the same language", () => {
-    expect(DEFAULT_VOICE_SETTINGS.provider).toBe("browser");
     expect(DEFAULT_VOICE_SETTINGS.language).toBe("en-IN");
     expect(DEFAULT_VOICE_SETTINGS.gender).toBe("male");
     expect(listeningLanguage(DEFAULT_VOICE_SETTINGS)).toBe("en-IN");
   });
 
-  it("costs nothing until a household chooses otherwise", () => {
-    // The default must never be a paid provider: a household that has
-    // configured nothing should not be able to run up a bill.
-    expect(DEFAULT_VOICE_SETTINGS.provider).toBe("browser");
+  it("uses the speech service included with the plan, with nothing to set up", () => {
+    // The deployment holds a key, so a household is understood properly
+    // without creating a Google account. Where no key exists anywhere,
+    // `resolveProvider` hands back the browser — so this default can never
+    // become a control that does nothing, and never reaches a provider
+    // that would bill somebody who configured nothing.
+    expect(DEFAULT_VOICE_SETTINGS.provider).toBe("google");
   });
 });
 
@@ -58,7 +60,7 @@ describe("what the household is allowed to ask for", () => {
 
 describe("saying what the voice is, in a sentence", () => {
   it("says plainly that the browser's own voice is whatever the device has", () => {
-    expect(describeVoice(DEFAULT_VOICE_SETTINGS)).toContain("browser");
+    expect(describeVoice(voiceSettingsSchema.parse({ provider: "browser" }))).toContain("browser");
   });
 
   it("names the family, the language and anything moved off its default", () => {
