@@ -216,11 +216,30 @@ export function factsFrom(snapshot: BrainSnapshot): ContextCandidate[] {
 // Gathering, with a short memory
 // ---------------------------------------------------------------------------
 
-type CacheEntry = { at: number; value: Promise<HouseholdContext> };
+type CacheEntry = { at: number; value: Promise<unknown> };
 const cache = new Map<string, CacheEntry>();
 
 export function forgetHouseholdContext(householdId: string): void {
   for (const key of cache.keys()) if (key.startsWith(`${householdId}:`)) cache.delete(key);
+}
+
+/**
+ * Anything read about a household that a conversation asks for again a
+ * moment later — the context below, the agenda the route computes — kept
+ * for `CONTEXT_TTL_MS` and forgotten together the moment the conversation
+ * changes something. A failed read is not kept.
+ */
+export function householdMemory<T>(householdId: string, key: string, load: () => Promise<T>): Promise<T> {
+  const full = `${householdId}:${key}`;
+  const now = Date.now();
+  const hit = cache.get(full);
+  if (hit && now - hit.at < CONTEXT_TTL_MS) return hit.value as Promise<T>;
+  const value = load().catch((thrown) => {
+    cache.delete(full);
+    throw thrown;
+  });
+  cache.set(full, { at: now, value });
+  return value;
 }
 
 export type BrainInput = {
@@ -234,17 +253,7 @@ export type BrainInput = {
 
 /** Everything this member may know about the home, as facts for the gate — read once, kept briefly. */
 export function householdContext(supabase: SupabaseClient, input: BrainInput): Promise<HouseholdContext> {
-  const key = `${input.householdId}:${input.viewer.memberId}`;
-  const now = Date.now();
-  const hit = cache.get(key);
-  if (hit && now - hit.at < CONTEXT_TTL_MS) return hit.value;
-
-  const value = gather(supabase, input).catch((thrown) => {
-    cache.delete(key);
-    throw thrown;
-  });
-  cache.set(key, { at: now, value });
-  return value;
+  return householdMemory(input.householdId, `context:${input.viewer.memberId}`, () => gather(supabase, input));
 }
 
 async function gather(supabase: SupabaseClient, input: BrainInput): Promise<HouseholdContext> {

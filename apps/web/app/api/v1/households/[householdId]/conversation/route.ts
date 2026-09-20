@@ -10,8 +10,8 @@ import { ApiError } from "@wonderhome/core/api/errors";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
-import { describeLocalNow, forgetHouseholdContext, householdContext } from "@wonderhome/core/conversation/brain";
-import { converse, pendingFrom, previewOf, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
+import { describeLocalNow, forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
+import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
 import {
@@ -145,8 +145,11 @@ export async function POST(request: Request, { params }: Params) {
     ]);
     const [pending, history] = await Promise.all([pendingAction(admin, sessionId), recentTurns(admin, sessionId, 6)]);
     const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, membership.household.timezone);
+    const startedAt = Date.now();
 
-    const memberMessageId = await recordMessage(admin, {
+    // Recording what was said and metering it need nothing from the answer,
+    // so they run alongside it rather than ahead of it.
+    const memberMessageWrite = recordMessage(admin, {
       householdId,
       sessionId,
       role: "member",
@@ -154,6 +157,32 @@ export async function POST(request: Request, { params }: Params) {
       transcriptConfidence: body.transcriptConfidence,
       metadata: { channel: body.channel },
     });
+    const metering = consume(supabase, householdId, feature).catch(() => undefined);
+
+    // A plain question about the home, or a hello, is read by the rules with
+    // certainty; asking a model to confirm it is a round trip that changes
+    // nothing downstream, because the answer comes from the Household Brain
+    // either way. Everything else still goes to the model to be understood.
+    const quick = resolveDeterministicIntent(body.utterance, { actorMemberId: membership.memberId, channel: body.channel });
+    const plainQuestion = (quick.action === "ask_status" || quick.action === "greet") && quick.confidence >= 0.8;
+
+    // The Household Brain reads the home while the request is being
+    // understood — the two need nothing from each other, and together they
+    // are most of a turn.
+    const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
+    const brainRead = routing.answer
+      ? householdMemory(householdId, `agenda:${membership.memberId}`, () => householdAgenda(supabase, householdId, view)).then(async (agenda) => ({
+          agenda,
+          context: await householdContext(supabase, {
+            householdId,
+            householdName: membership.household.name,
+            timezone: membership.household.timezone,
+            viewer: view,
+            agenda: { needsYou: agenda.needsYou, handled: agenda.handled, checked: agenda.checked, unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label) },
+          }),
+        }))
+      : null;
+    brainRead?.catch(() => undefined);
 
     const result = await converse({
       utterance: body.utterance,
@@ -168,11 +197,10 @@ export async function POST(request: Request, { params }: Params) {
       },
       executable: canExecute,
       sessionId,
-      understand: routing.understand,
+      understand: plainQuestion ? undefined : routing.understand,
       history: routing.history,
     });
-
-    await consume(supabase, householdId, feature).catch(() => undefined);
+    const understoodAt = Date.now();
 
     const execution: ExecutionContext = {
       supabase,
@@ -189,14 +217,19 @@ export async function POST(request: Request, { params }: Params) {
     let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
     let brain: { source: "model" | "deterministic" | "none"; factsSent: number } = { source: "none", factsSent: 0 };
 
+    let composedAt = understoodAt;
+
     if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
       // A question about the home: answered from everything the home holds
       // (the Household Brain), composed by the model where the household's
       // consent lets the facts go; otherwise from the deterministic summary.
-      const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
-      const agenda = await householdAgenda(supabase, householdId, view);
-      text = await answerStatus(supabase, householdId, membership, result.intent, agenda);
-      const composed = await answerFromBrain({ supabase, householdId, membership, view, agenda, routing, question: body.utterance });
+      const agenda = brainRead ? (await brainRead.catch(() => null))?.agenda ?? (await householdAgenda(supabase, householdId, view)) : await householdAgenda(supabase, householdId, view);
+      const [fallback, composed] = await Promise.all([
+        answerStatus(supabase, householdId, membership, result.intent, agenda),
+        answerFromBrain({ routing, question: body.utterance, view, read: brainRead }),
+      ]);
+      composedAt = Date.now();
+      text = fallback;
       if (composed) {
         text = composed.text;
         brain = { source: "model", factsSent: composed.factsSent };
@@ -213,9 +246,8 @@ export async function POST(request: Request, { params }: Params) {
     ) {
       // Not a request the engine knows, and not a model outage: before saying
       // "I did not follow that", see whether the home's own facts answer it.
-      const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
-      const agenda = await householdAgenda(supabase, householdId, view);
-      const composed = await answerFromBrain({ supabase, householdId, membership, view, agenda, routing, question: body.utterance });
+      const composed = await answerFromBrain({ routing, question: body.utterance, view, read: brainRead });
+      composedAt = Date.now();
       if (composed?.grounded) {
         text = composed.text;
         brain = { source: "model", factsSent: composed.factsSent };
@@ -230,6 +262,9 @@ export async function POST(request: Request, { params }: Params) {
       await remember(admin, householdId, result.memory);
       forgetHouseholdContext(householdId);
     }
+
+    const memberMessageId = await memberMessageWrite;
+    await metering;
 
     let action: ConversationAction | null = null;
     const replyId = await recordMessage(admin, {
@@ -246,6 +281,10 @@ export async function POST(request: Request, { params }: Params) {
         provider: routing.code,
         providerItemsSent: routing.itemsSent + brain.factsSent,
         brain: brain.source,
+        // Where the time went, in milliseconds: understanding (the first
+        // model call, or none), composing (the brain read plus the second
+        // call), and the whole turn so far. Numbers only.
+        timings: { understand: understoodAt - startedAt, compose: composedAt - understoodAt, total: Date.now() - startedAt, quick: plainQuestion },
       },
     });
 
@@ -375,28 +414,15 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
  * answer — the caller keeps its deterministic line in every such case.
  */
 async function answerFromBrain(input: {
-  supabase: Supabase;
-  householdId: string;
-  membership: HouseholdMembership;
-  view: PersonalView;
-  agenda: HouseholdAgenda;
   routing: Awaited<ReturnType<typeof decideProviderRouting>>;
   question: string;
+  view: PersonalView;
+  /** The read that started while the request was being understood. */
+  read: Promise<{ agenda: HouseholdAgenda; context: HouseholdContext }> | null;
 }): Promise<{ text: string; grounded: boolean; factsSent: number } | null> {
-  if (!input.routing.answer) return null;
+  if (!input.routing.answer || !input.read) return null;
   try {
-    const context = await householdContext(input.supabase, {
-      householdId: input.householdId,
-      householdName: input.membership.household.name,
-      timezone: input.membership.household.timezone,
-      viewer: input.view,
-      agenda: {
-        needsYou: input.agenda.needsYou,
-        handled: input.agenda.handled,
-        checked: input.agenda.checked,
-        unavailable: input.agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label),
-      },
-    });
+    const { context } = await input.read;
     return await input.routing.answer(input.question, context.facts, input.view.roleLabel);
   } catch (thrown) {
     console.error("[conversation] household brain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
