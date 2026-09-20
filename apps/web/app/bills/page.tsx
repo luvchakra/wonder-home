@@ -17,6 +17,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../_components/agenda-row";
+import { AddBillButton } from "../_components/finance-forms";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Bills & Finance" };
@@ -95,9 +96,17 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Bills &amp; Finance</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top. Stress less.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Bills &amp; Finance</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top. Stress less.</p>
+          </div>
+          {admin ? (
+            <div className="flex flex-wrap gap-2">
+              <AddBillButton householdId={householdId} />
+              <PillLink href="/ai?q=Pay%20the%20electricity%20bill." tone="primary">Tell WonderHome</PillLink>
+            </div>
+          ) : null}
         </header>
 
         {mailHealth ? (

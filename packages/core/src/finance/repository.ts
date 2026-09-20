@@ -50,6 +50,52 @@ export async function listObligations(
   }));
 }
 
+export type CreateObligationInput = {
+  householdId: string;
+  name: string;
+  kind: ObligationKind;
+  payee?: string | null;
+  amountMinor?: number | null;
+  currency?: string | null;
+  dueOn?: string | null;
+  recurrence?: "monthly" | "quarterly" | "yearly" | "one_off" | null;
+  responsibleMemberId?: string | null;
+};
+
+/**
+ * A bill typed in by hand — "member_stated", the table's own default source,
+ * same standing as the email connector's "imported" or a provider's own feed.
+ */
+export async function createObligation(
+  supabase: SupabaseClient,
+  input: CreateObligationInput,
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("obligations")
+    .insert({
+      household_id: input.householdId,
+      name: input.name,
+      kind: input.kind,
+      payee: input.payee ?? null,
+      amount_minor: input.amountMinor ?? null,
+      currency: input.currency ?? null,
+      due_on: input.dueOn ?? null,
+      recurrence: input.recurrence ?? null,
+      responsible_member_id: input.responsibleMemberId ?? null,
+      status: "received",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can add a bill.");
+    if (error.code === "23503") throw ApiError.badRequest("That member is not part of this household.");
+    throw new Error(`createObligation failed: ${error.code ?? "unknown"}`);
+  }
+
+  return { id: (data as Row).id as string };
+}
+
 /** Intents that are approved or in flight, so a settled bill stays quiet. */
 async function arrangedObligationIds(
   supabase: SupabaseClient,

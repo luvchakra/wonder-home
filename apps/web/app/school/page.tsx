@@ -17,6 +17,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../_components/agenda-row";
+import { AddHomeworkButton } from "../_components/school-forms";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
@@ -75,9 +76,15 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Kids &amp; School</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">All school info in one place — and only what needs you up front.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Kids &amp; School</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">All school info in one place — and only what needs you up front.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {children.length > 0 ? <AddHomeworkButton householdId={householdId} kids={children.map((kid) => ({ id: kid.id, displayName: kid.displayName }))} /> : null}
+            <PillLink href="/household/integrations" tone="quiet"><Plug aria-hidden className="size-3.5" /> Connect school</PillLink>
+          </div>
         </header>
 
         {portalHealth ? (
