@@ -23,7 +23,7 @@ import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
 
-import { HomeIllustration } from "../_components/home-illustration";
+import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { NewEventForm } from "../_components/new-event-form";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";

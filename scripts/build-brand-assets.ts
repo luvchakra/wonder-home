@@ -36,6 +36,8 @@ import {
   VIEW_BOX,
   WINDOW_COLOR,
   WINDOW_PANES,
+  WORDMARK_COLORS,
+  WORDMARK_LETTERS,
   YELLOW_PATH,
   TAGLINE,
 } from "../packages/core/src/brand/mark.ts";
@@ -96,8 +98,6 @@ function markSvg(options: { scheme: Scheme; padding?: number }): string {
 
 /** The page's own background, which the share card brings with it. */
 const CARD_SURFACE = "#fbf8f3";
-const NAVY = "#0f172a";
-const BLUE = "#0ea5e9";
 const MUTED = "#5b6577";
 
 const FONTS = join(ROOT, "assets", "fonts");
@@ -125,11 +125,15 @@ async function shareCard(): Promise<Buffer> {
     .png()
     .toBuffer();
 
-  // Pango markup, so "Wonder" and "Home" carry the two brand colours in one
-  // laid-out line rather than two images guessed into alignment.
+  // Pango markup, one span per letter, so the card's wordmark is the exact
+  // same rainbow WORDMARK_LETTERS draws live rather than a second logo
+  // guessed into alignment by hand.
+  const wordmarkText = WORDMARK_LETTERS.map(
+    (letter) => `<span foreground="${WORDMARK_COLORS.light[letter.tone]}">${letter.char}</span>`,
+  ).join("");
   const wordmark = await sharp({
     text: {
-      text: `<span foreground="${NAVY}">Wonder</span><span foreground="${BLUE}">Home</span>`,
+      text: wordmarkText,
       font: "Sora Bold",
       fontfile: join(FONTS, "Sora-Bold.ttf"),
       rgba: true,

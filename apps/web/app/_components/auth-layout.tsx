@@ -6,7 +6,7 @@ import { Card } from "@wonderhome/core/ui/card";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 
-import { HomeIllustration } from "./home-illustration";
+import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 
 export type AuthLayoutProps = {
   title: string;

@@ -12,7 +12,7 @@ export type PrimaryNavItem = {
   label: string;
   href: string;
   /** Lucide icon name, resolved by the rendering component. */
-  icon: "house" | "calendar-check" | "mic" | "users" | "ellipsis";
+  icon: "house" | "calendar-check" | "mic" | "users" | "grid";
   /** Short description of what the area answers, used for a11y and empty states. */
   purpose: string;
 };
@@ -50,7 +50,7 @@ export const PRIMARY_NAVIGATION: readonly PrimaryNavItem[] = [
     key: "more",
     label: "More",
     href: "/more",
-    icon: "ellipsis",
+    icon: "grid",
     purpose: "Household modules and settings",
   },
 ] as const;

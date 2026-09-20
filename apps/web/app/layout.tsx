@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, Sora } from "next/font/google";
 
+import { TAGLINE } from "@wonderhome/core/brand/mark";
+
 import "./globals.css";
 
 /**
@@ -70,7 +72,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "WonderHome",
-    title: "WonderHome — Less mental load. More family time.",
+    title: `WonderHome — ${TAGLINE}`,
     description: DESCRIPTION,
     url: SITE,
     locale: "en_IN",
@@ -79,14 +81,14 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "WonderHome — Less mental load. More family time.",
+        alt: `WonderHome — ${TAGLINE}`,
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WonderHome — Less mental load. More family time.",
+    title: `WonderHome — ${TAGLINE}`,
     description: DESCRIPTION,
     images: ["/og.png"],
   },

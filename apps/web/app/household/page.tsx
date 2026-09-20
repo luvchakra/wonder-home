@@ -18,7 +18,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { PlaybookRowControls, PolicyRowControls } from "../_components/playbook-controls";
 import { requireSession } from "../_lib/session";
 
-export const metadata = { title: "Manage household" };
+export const metadata = { title: "Manage Household" };
 export const dynamic = "force-dynamic";
 
 type PlaybookRow = { id: string; outcome_key: string; name: string; outcome_definition: string; operating_window: { startHour?: number; endHour?: number } | null; escalation: { afterHours?: number } | null; active: boolean };
@@ -35,7 +35,7 @@ export default async function ManageHouseholdPage() {
   const session = await requireSession("/household");
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/household", back: { href: "/more", label: "Back" }, title: "Manage household" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/household", back: { href: "/more", label: "Back" }, title: "Manage Household" };
 
   if (!view.permissions.includes("household.manage")) {
     return (
@@ -78,7 +78,7 @@ export default async function ManageHouseholdPage() {
     <AppShell {...shell}>
       <div className="space-y-6">
         <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Manage household</h1>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Manage Household</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{membership.household.name} — who does what, how the home runs, and how much WonderHome may do on its own.</p>
         </header>
 

@@ -10,7 +10,9 @@ import {
   TAGLINE,
   VIEW_BOX,
   WINDOW_PANES,
+  WORDMARK_LETTERS,
   YELLOW_PATH,
+  type WordmarkTone,
 } from "../../brand/mark";
 import { useId } from "react";
 
@@ -125,13 +127,23 @@ export function BrandMark({
   );
 }
 
+const LETTER_VAR: Record<WordmarkTone, string> = {
+  blue: "var(--wh-brand-letter-blue)",
+  yellow: "var(--wh-brand-letter-yellow)",
+  green: "var(--wh-brand-letter-green)",
+  navy: "var(--wh-brand-letter-navy)",
+};
+
 /**
- * The mark with the name beside it, as the brand sheet's lockup: "Wonder" in
- * the page's own ink, "Home" in the brand blue, and the tagline set small,
- * upper-case and letter-spaced beneath.
+ * The mark with the name beside it, as the brand sheet's lockup: the house
+ * mark, then "WonderHome" running through the brand's rainbow letter by
+ * letter (`WORDMARK_LETTERS`, the one source this and the share-card
+ * generator both read), and the tagline set small, upper-case and
+ * letter-spaced beneath.
  *
- * "Home" carries a blue gradient, which is decoration on a word that is also
- * spelled out in full — nothing here is the only way to read it.
+ * Colour is decoration on a word that is also spelled out in full — a
+ * visually-hidden "WonderHome" carries the accessible name, and the coloured
+ * letters are `aria-hidden`, so nothing here is the only way to read it.
  */
 export function Wordmark({
   className,
@@ -146,10 +158,14 @@ export function Wordmark({
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <BrandMark size={size} />
       <span className="leading-tight">
-        <span className="block text-[1.0625rem] font-bold tracking-tight text-[var(--wh-foreground)]">
-          Wonder
-          <span className="bg-[linear-gradient(90deg,var(--wh-brand-home-from),var(--wh-brand-home-to))] bg-clip-text text-transparent">
-            Home
+        <span className="block text-[1.0625rem] font-bold tracking-tight">
+          <span className="sr-only">WonderHome</span>
+          <span aria-hidden>
+            {WORDMARK_LETTERS.map((letter, index) => (
+              <span key={index} style={{ color: LETTER_VAR[letter.tone] }}>
+                {letter.char}
+              </span>
+            ))}
           </span>
         </span>
         {tagline ? (

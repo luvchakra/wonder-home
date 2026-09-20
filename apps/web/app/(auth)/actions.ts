@@ -8,6 +8,7 @@ import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { createClient } from "@wonderhome/core/db/server";
 import { createHousehold } from "@wonderhome/core/identity/households";
 import { createHouseholdSchema } from "@wonderhome/core/identity/schemas";
+import { signOut as sharedSignOut } from "@wonderhome/core/identity/session-actions";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -212,11 +213,8 @@ async function siteOrigin(): Promise<string> {
   return `${protocol}://${host}`;
 }
 
-export async function signOut(): Promise<void> {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/");
-}
+/** Now shared, so the nav drawer's own logout row can form-post the same action. */
+export const signOut = sharedSignOut;
 
 export async function createHouseholdAction(
   _previous: ActionState,

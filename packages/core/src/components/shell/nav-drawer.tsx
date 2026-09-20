@@ -1,14 +1,17 @@
 "use client";
 
-import { LifeBuoy, Menu, X } from "lucide-react";
+import { BadgeCheck, ChevronRight, LifeBuoy, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
+import { signOut } from "../../identity/session-actions";
 import { cn } from "../../lib/cn";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Avatar } from "../ui/avatar";
 import { Wordmark } from "../ui/brand";
+import { HomeIllustration } from "../ui/home-illustration";
+import { ScriptAccent } from "../ui/script-accent";
 import type { ShellViewer } from "./mobile-header";
 import { SECONDARY_ICONS, SidebarLink } from "./primary-nav";
 
@@ -164,12 +167,26 @@ function NavDrawer({
             className="mx-2 mt-2 flex items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 hover:bg-[var(--wh-surface-muted)]"
           >
             <Avatar name={viewer.displayName} size="md" />
-            <span className="min-w-0">
+            <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold">{viewer.displayName}</span>
               <span className="block text-xs text-[var(--wh-foreground-muted)]">
                 {viewer.roleLabel} · {viewer.householdName}
               </span>
             </span>
+            <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+          </Link>
+
+          {/* Certification is "what WonderHome believes", the closest thing
+              this menu has to "how the household is doing" — rather than a
+              second, differently-worded way into Manage Household below. */}
+          <Link
+            href="/certification"
+            onClick={close}
+            className="mx-2 mt-2 flex items-center gap-2.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-handled-soft)] px-3 py-2 text-sm font-medium text-[var(--wh-handled)] transition-colors hover:bg-[var(--wh-handled-soft)]/70"
+          >
+            <BadgeCheck aria-hidden className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">A happier home together</span>
+            <ChevronRight aria-hidden className="size-4 shrink-0" />
           </Link>
 
           <nav aria-label="Household menu" className="mt-2 flex-1 space-y-5 px-2 pb-6">
@@ -182,6 +199,27 @@ function NavDrawer({
               </li>
             </ul>
           </nav>
+
+          {/* The same warm close every screen gets (rule 2), and the one
+              place in this menu that is purely decoration. */}
+          <div className="mx-2 mb-3 flex items-center gap-3 overflow-hidden rounded-[var(--wh-radius)] bg-[var(--wh-handled-soft)] p-4">
+            <ScriptAccent tone="primary" size="sm" tilt={false} className="min-w-0 flex-1">
+              Less mental load.<br />More family time!
+            </ScriptAccent>
+            <HomeIllustration className="h-14 w-20 shrink-0" />
+          </div>
+
+          {/* A real sign-out, not a link: this is a POST, so nothing that
+              merely lands on this page can trigger it (rule from the
+              session-cookie tests). */}
+          <form action={signOut} className="border-t border-[var(--wh-border)] px-4 py-3">
+            <button
+              type="submit"
+              className="flex items-center gap-2 text-sm font-medium text-[var(--wh-risk)] hover:underline"
+            >
+              <LogOut aria-hidden className="size-4" /> Log out
+            </button>
+          </form>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -213,6 +251,7 @@ function DrawerSection({
               href={item.href}
               icon={SECONDARY_ICONS[item.icon]}
               label={item.label}
+              tone={item.tone}
               active={isCurrent(item.href)}
               onClick={onNavigate}
               size="lg"
