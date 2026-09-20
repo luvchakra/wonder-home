@@ -23,9 +23,9 @@ export function HandledList({ items, className }: { items: readonly HandledItem[
         >
           <CircleCheck aria-hidden className="size-4 shrink-0 text-[var(--wh-handled)]" />
           <span className="min-w-0">
-            <span className="block truncate text-[0.8125rem] font-medium">{item.title}</span>
+            <span className="block text-[0.8125rem] font-medium">{item.title}</span>
             {item.meta ? (
-              <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-muted)]">{item.meta}</span>
+              <span className="block text-[0.6875rem] text-[var(--wh-foreground-muted)]">{item.meta}</span>
             ) : null}
           </span>
         </li>
@@ -64,13 +64,13 @@ export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency
     <>
       <IconTile icon={icon} tone={tone} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{title}</p>
-        <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-[var(--wh-foreground-subtle)]">
           {owner}
           {backup ? ` · backup ${backup}` : ""}
           {frequency ? ` · ${frequency}` : ""}
         </p>
-        <p className="mt-0.5 truncate text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[aiMode]}</p>
+        <p className="mt-0.5 text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[aiMode]}</p>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
       {onExpand ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}

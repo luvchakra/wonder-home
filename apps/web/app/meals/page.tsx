@@ -132,7 +132,7 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
               {recipes.map((recipe) => (
                 <Card key={recipe.id} className="wh-lift p-3">
                   <div aria-hidden className="grid h-20 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-meals-soft)]"><CookingPot className="size-8 text-[var(--wh-tone-meals)]" /></div>
-                  <p className="mt-2 truncate text-sm font-semibold">{recipe.name}</p>
+                  <p className="mt-2 text-sm font-semibold">{recipe.name}</p>
                   <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{recipe.total_minutes} min · serves {recipe.serves}</p>
                 </Card>
               ))}
@@ -171,7 +171,7 @@ function MealCard({ meal, cook, timezone }: { meal: Meal; cook: string | null; t
         <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-[var(--wh-radius)] bg-[var(--wh-tone-meals-soft)] text-[var(--wh-tone-meals)]"><Utensils className="size-6" /></span>
         <div className="min-w-0 flex-1">
           <p className="text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{meal.slot}</p>
-          <p className="truncate text-sm font-semibold">{meal.name}</p>
+          <p className="text-sm font-semibold">{meal.name}</p>
           <p className="text-xs text-[var(--wh-foreground-muted)]">
             Ready by {formatTime(timezone, meal.readyBy)}{begin ? ` · start ${formatTime(timezone, begin)}` : ""}{cook ? ` · ${cook}` : " · nobody assigned"}
           </p>

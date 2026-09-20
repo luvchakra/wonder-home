@@ -46,8 +46,8 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
           <div className="flex items-center gap-2.5 px-2 py-2">
             <Avatar name={viewer.displayName} size="sm" />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{viewer.displayName}</p>
-              <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">
+              <p className="text-sm font-semibold">{viewer.displayName}</p>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">
                 {viewer.roleLabel} · {viewer.householdName}
               </p>
             </div>

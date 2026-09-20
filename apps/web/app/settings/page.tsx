@@ -87,7 +87,7 @@ export default async function SettingsPage() {
           <div className="min-w-0 flex-1">
             <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{view.roleLabel} · {view.householdName}</p>
-            <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">{user?.email}</p>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{user?.email}</p>
           </div>
           <UserRound aria-hidden className="size-5 text-[var(--wh-foreground-subtle)]" />
         </Card>
@@ -217,7 +217,7 @@ export default async function SettingsPage() {
                     <IconTile icon={row.icon} tone={row.tone} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium">{row.title}</span>
-                      <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
                     </span>
                     {row.badge ? <Badge>{row.badge}</Badge> : row.href ? <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" /> : null}
                   </>

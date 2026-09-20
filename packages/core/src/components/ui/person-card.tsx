@@ -20,8 +20,8 @@ export function PersonCard({ name, role, now, href, badge, className }: PersonCa
   const inner = (
     <>
       <Avatar name={name} size="lg" badge={badge} />
-      <span className="mt-2 block truncate text-sm font-semibold">{name}</span>
-      <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-muted)]">{role}</span>
+      <span className="mt-2 block text-sm font-semibold">{name}</span>
+      <span className="block text-[0.6875rem] text-[var(--wh-foreground-muted)]">{role}</span>
       {now ? (
         <span className="mt-1.5 block truncate rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--wh-foreground-muted)]">
           {now}

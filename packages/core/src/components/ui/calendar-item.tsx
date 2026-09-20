@@ -43,7 +43,7 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
       </span>
       <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">
+        <p className="text-sm font-medium">
           {title}
           {protectedTime ? (
             <span className="ml-1.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-tone-people-soft)] px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--wh-tone-people)]">
@@ -51,7 +51,7 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
             </span>
           ) : null}
         </p>
-        <p className="truncate text-xs text-[var(--wh-foreground-subtle)]">{when}</p>
+        <p className="text-xs text-[var(--wh-foreground-subtle)]">{when}</p>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </li>

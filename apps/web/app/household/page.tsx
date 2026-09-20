@@ -91,8 +91,8 @@ export default async function ManageHouseholdPage() {
                 <Link href={section.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-surface-muted)]">
                   <IconTile icon={section.icon} tone={section.tone} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{section.title}</span>
-                    <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{section.meta}</span>
+                    <span className="block text-sm font-medium">{section.title}</span>
+                    <span className="block text-xs text-[var(--wh-foreground-subtle)]">{section.meta}</span>
                   </span>
                   {section.badge ? <Badge tone={section.badge.tone}>{section.badge.label}</Badge> : null}
                   <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
@@ -158,7 +158,7 @@ export default async function ManageHouseholdPage() {
                 {rules.map((rule) => (
                   <li key={rule.id} className="flex flex-wrap items-center gap-3 px-2 py-3">
                     <IconTile icon={ShieldCheck} tone="money" size="sm" />
-                    <p className="min-w-0 flex-1 truncate text-sm font-medium">{rule.name}</p>
+                    <p className="min-w-0 flex-1 text-sm font-medium">{rule.name}</p>
                     <Badge>{rule.category.replace(/_/g, " ")}</Badge>
                     <PolicyRowControls
                       householdId={householdId}
