@@ -212,6 +212,9 @@ Writing a migration file is not shipping it. This repo's live Supabase project o
 ## Database query permissions
 All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_migration`, and every other Supabase MCP tool — is pre-authorized. Run what the work needs (including destructive statements: dropping a constraint, deleting QA/test rows, correcting bad data) without pausing to ask first. This still means investigate before deleting real household data and keep QA cleanup scoped to what a session's own test account created, per the rest of this file — it removes the confirmation step, not the judgment.
 
+## Merging pull requests
+Once a PR against this repo has CI green on its current head (every required check passing, no merge conflict), merge it — don't wait for a request to do so, and don't ask first. This applies whether the PR was opened this session or found already open and green. Still hold off merging when there's an open review thread that hasn't been addressed, or when the PR is explicitly marked draft/WIP.
+
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 
