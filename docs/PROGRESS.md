@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**158 of 173 stories done — 91.3%**
+**159 of 173 stories done — 91.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 158 |
+| Done | 159 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 15 |
+| Not Started | 14 |
 
 ## By module
 
@@ -43,7 +43,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 16 Platform Admin & Operations | `████████░░` | 7 | 8 | 1 not started |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
-| 19 Testing, Observability & Production | `████████░░` | 7 | 8 | 1 not started |
+| 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
 
 ## What is left
@@ -61,7 +61,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-007` Webhooks/events | 18 API & Developer Platform | P1 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
-| `19-008` Recovery/runbook | 19 Testing, Observability & Production | P1 | Not Started |
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
@@ -360,7 +359,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 19 — Testing, Observability & Production
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -371,7 +370,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `19-005` Safe logging | P0 | Done | Structured logs, redaction, correlation ids |
 | `19-006` Error monitoring | P0 | Done | Reporting seam; failures never silently dropped |
 | `19-007` Performance | P1 | Done | Region co-location, local JWT verification, request-scoped dedup, prefetching, streaming; live p95 measured against production (see docs/progress) |
-| `19-008` Recovery/runbook | P1 | Not Started | — |
+| `19-008` Recovery/runbook | P1 | Done | `docs/RECOVERY-RUNBOOK.md`: RPO/RTO targets, the PITR restore path, the full-rebuild-from-migrations path (already continuously proven by every `test:db` CI run, not a path only exercised in an emergency), and a post-restore verification sequence (`test:db` → `verify:live` → `/health`/`health/ready` → `get_advisors`). This pass also read the live project's real security/performance advisories and found a genuine gap — an `rls_auto_enable()` event trigger live on production with no corresponding migration file — recorded rather than fixed, since closing it is a live production change and this pass could not confirm how migrations actually reach production |
 
 ### 20 — Subscriptions, Entitlements & Usage
 

@@ -11,7 +11,7 @@
 | 5 | P0 | 19-005 | Safe logging | Done | Structured logs, redaction, correlation ids |
 | 6 | P0 | 19-006 | Error monitoring | Done | Reporting seam; failures never silently dropped |
 | 7 | P1 | 19-007 | Performance | Done | Region co-location, local JWT verification, request-scoped dedup, prefetching, streaming; live p95 measured against production (see docs/progress) |
-| 8 | P1 | 19-008 | Recovery/runbook | Not Started | |
+| 8 | P1 | 19-008 | Recovery/runbook | Done | `docs/RECOVERY-RUNBOOK.md`: RPO/RTO targets, the PITR restore path, the full-rebuild-from-migrations path (already continuously proven by every `test:db` CI run, not a path only exercised in an emergency), and a post-restore verification sequence (`test:db` → `verify:live` → `/health`/`health/ready` → `get_advisors`). This pass also read the live project's real security/performance advisories and found a genuine gap — an `rls_auto_enable()` event trigger live on production with no corresponding migration file — recorded rather than fixed, since closing it is a live production change and this pass could not confirm how migrations actually reach production |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
