@@ -9,7 +9,7 @@
 | 3 | P0 | 07-003 | Backup planning | Done | Outcomes and windows, never per-chore status |
 | 4 | P0 | 07-004 | Exception handling | Done | Outcomes and windows, never per-chore status |
 | 5 | P0 | 07-005 | Helper privacy | Done | Outcomes and windows, never per-chore status |
-| 6 | P1 | 07-006 | Optional daily summary | Not Started | |
+| 6 | P1 | 07-006 | Optional daily summary | Done | `buildDailySummary`: one digest of what was unusual, built only from exceptions `handleHelperException` already routed to `tell_household` and an absence left uncovered — a handled exception or a fully-covered absence stays silent, matching the module's own rule that normal work needs no update. Opt-in by construction: nothing depends on anyone reading it, and a quiet day says so in one line rather than nothing |
 | 7 | P1 | 07-007 | Pattern learning | Not Started | |
 | 8 | P2 | 07-008 | Service marketplace | Not Started | |
 
