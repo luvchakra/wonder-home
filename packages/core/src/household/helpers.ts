@@ -2,7 +2,7 @@ import type { Permission, PermissionContext } from "../identity/permissions";
 import { can } from "../identity/permissions";
 
 /**
- * Househelper and home operations (stories 07-001 through 07-005).
+ * Househelper and home operations (stories 07-001 through 07-006).
  *
  * The product rule this module exists to honour: a househelper does not update
  * WonderHome. They do their work; the system notices when something is *not*
@@ -199,4 +199,62 @@ export function helperMaySee(
  */
 export function helperNeedsToRespond(exception: HelperException | null): boolean {
   return exception !== null && exception.kind === "blocked";
+}
+
+export type SummaryEntry = {
+  outcomeKey: string;
+  headline: string;
+};
+
+export type DailySummary = {
+  date: string;
+  entries: SummaryEntry[];
+  /** True when nothing was unusual — showing this summary at all is optional. */
+  quiet: boolean;
+  headline: string;
+};
+
+/**
+ * One unusual-work summary for the day (story 07-006).
+ *
+ * Only entries that actually needed the household's attention appear —
+ * `handleHelperException` already decided which exceptions were handled
+ * silently, and a fully-covered absence is not unusual, it is the backup
+ * plan working. Neither belongs in a summary about what was unusual.
+ *
+ * This is a convenience someone can choose to look at, never a
+ * notification: nothing else in the product depends on anyone reading it,
+ * and a quiet day produces a summary that says so in one line rather than
+ * nothing at all — the difference between "there is nothing to tell you"
+ * and "I have not checked".
+ */
+export function buildDailySummary(input: {
+  date: string;
+  exceptionHandlings: readonly { exception: HelperException; handling: HelperExceptionHandling }[];
+  absenceImpact: AbsenceImpact | null;
+}): DailySummary {
+  const entries: SummaryEntry[] = [];
+
+  for (const { exception, handling } of input.exceptionHandlings) {
+    if (handling.kind === "tell_household") {
+      entries.push({ outcomeKey: exception.outcomeKey, headline: handling.impact });
+    }
+  }
+
+  if (input.absenceImpact?.notable) {
+    entries.push({
+      outcomeKey: `absence.${input.absenceImpact.date}`,
+      headline: input.absenceImpact.summary,
+    });
+  }
+
+  return {
+    date: input.date,
+    entries,
+    quiet: entries.length === 0,
+    headline:
+      entries.length === 0
+        ? "Nothing unusual today — everything ran as expected."
+        : `${entries.length} ${plural(entries.length, "thing", "things")} worth a look today.`,
+  };
 }

@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   assessAbsence,
+  buildDailySummary,
   handleHelperException,
   helperMaySee,
   helperNeedsToRespond,
   isExpectedOn,
+  type HelperException,
+  type HelperExceptionHandling,
   type HelperResponsibility,
 } from "./helpers";
 
@@ -177,5 +180,87 @@ describe("what the helper is asked to do in the app", () => {
     expect(
       helperNeedsToRespond({ kind: "blocked", outcomeKey: "laundry.ready", detail: "no water" }),
     ).toBe(true);
+  });
+});
+
+describe("the daily summary", () => {
+  const handled = (exception: HelperException, because: string): { exception: HelperException; handling: HelperExceptionHandling } => ({
+    exception,
+    handling: { kind: "handle_silently", because },
+  });
+
+  const told = (exception: HelperException, impact: string): { exception: HelperException; handling: HelperExceptionHandling } => ({
+    exception,
+    handling: { kind: "tell_household", impact, action: { action: "unblock", target: exception.outcomeKey } },
+  });
+
+  it("says nothing was unusual when every exception was handled silently and the absence was fully covered", () => {
+    const summary = buildDailySummary({
+      date: "2026-09-21",
+      exceptionHandlings: [
+        handled({ kind: "extra_work", outcomeKey: "home.cleaned", detail: "" }, "Extra work is not a problem."),
+        handled({ kind: "missing_supplies", outcomeKey: "laundry.ready", detail: "" }, "Reordered automatically."),
+      ],
+      absenceImpact: null,
+    });
+
+    expect(summary.quiet).toBe(true);
+    expect(summary.entries).toEqual([]);
+    expect(summary.headline).toMatch(/nothing unusual/i);
+  });
+
+  it("includes only the exceptions that actually needed the household told", () => {
+    const summary = buildDailySummary({
+      date: "2026-09-21",
+      exceptionHandlings: [
+        handled({ kind: "extra_work", outcomeKey: "home.cleaned", detail: "" }, "Fine."),
+        told({ kind: "blocked", outcomeKey: "laundry.ready", detail: "no water" }, "laundry.ready cannot proceed: no water"),
+      ],
+      absenceImpact: null,
+    });
+
+    expect(summary.quiet).toBe(false);
+    expect(summary.entries).toHaveLength(1);
+    expect(summary.entries[0]).toEqual({
+      outcomeKey: "laundry.ready",
+      headline: "laundry.ready cannot proceed: no water",
+    });
+    expect(summary.headline).toMatch(/1 thing/i);
+  });
+
+  it("includes an uncovered absence as unusual, but not a fully-covered one", () => {
+    const coveredAbsence = assessAbsence({
+      date: "2026-09-21",
+      responsibilities: [{ outcomeKey: "home.cleaned", backupMemberId: "m-2", priority: 1 }],
+      scheduledOutcomeKeys: ["home.cleaned"],
+    });
+    const uncoveredAbsence = assessAbsence({
+      date: "2026-09-21",
+      responsibilities: [{ outcomeKey: "home.cleaned", backupMemberId: null, priority: 1 }],
+      scheduledOutcomeKeys: ["home.cleaned"],
+    });
+
+    expect(buildDailySummary({ date: "2026-09-21", exceptionHandlings: [], absenceImpact: coveredAbsence }).quiet).toBe(
+      true,
+    );
+
+    const summary = buildDailySummary({ date: "2026-09-21", exceptionHandlings: [], absenceImpact: uncoveredAbsence });
+    expect(summary.quiet).toBe(false);
+    expect(summary.entries).toHaveLength(1);
+    expect(summary.entries[0]?.outcomeKey).toBe("absence.2026-09-21");
+  });
+
+  it("counts multiple unusual things in its one headline", () => {
+    const summary = buildDailySummary({
+      date: "2026-09-21",
+      exceptionHandlings: [
+        told({ kind: "blocked", outcomeKey: "laundry.ready", detail: "no water" }, "laundry.ready cannot proceed: no water"),
+        told({ kind: "not_arrived", outcomeKey: "home.cleaned", detail: "" }, "Nobody is covering home.cleaned today."),
+      ],
+      absenceImpact: null,
+    });
+
+    expect(summary.entries).toHaveLength(2);
+    expect(summary.headline).toMatch(/2 things/i);
   });
 });
