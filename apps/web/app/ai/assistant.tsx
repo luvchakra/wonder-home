@@ -22,6 +22,8 @@ import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-c
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
+import { HomeSendSheet } from "../_components/home-send-sheet";
+
 /**
  * The conversation itself.
  *
@@ -66,6 +68,7 @@ export function Assistant({
   liveConversationAvailable = false,
   serverVoice = false,
   voiceLanguage = "en-IN",
+  kids = [],
 }: {
   householdId: string;
   memberName: string;
@@ -77,6 +80,8 @@ export function Assistant({
   /** This household has a speech provider configured, so the server does the listening. */
   serverVoice?: boolean;
   voiceLanguage?: string;
+  /** For HomeSend's school-item confirm step ("who is this for"). */
+  kids?: { id: string; displayName: string }[];
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
@@ -92,6 +97,8 @@ export function Assistant({
   );
   /** The household's own message being reworded, and its original text (story 04-003, as a structural edit). */
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  /** HomeSend: a photo, file or pasted forward — the composer's second door (rule 13). */
+  const [homeSendOpen, setHomeSendOpen] = useState(false);
   const sentInitial = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   /**
@@ -462,6 +469,7 @@ export function Assistant({
           onLiveEnd={() => void endLiveSession()}
           onError={(message) => setError(message)}
           onStateChange={onComposerState}
+          onAttach={() => setHomeSendOpen(true)}
           disabled={busy}
           initialValue={editing?.text ?? ""}
           autoFocus={Boolean(editing)}
@@ -473,6 +481,8 @@ export function Assistant({
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
         </p>
       </div>
+
+      <HomeSendSheet householdId={householdId} kids={kids} open={homeSendOpen} onOpenChange={setHomeSendOpen} />
     </div>
   );
 }
