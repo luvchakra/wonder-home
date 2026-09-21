@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Househelper: a scoped empty state, and errors that show instead of hide](2026-09-21-househelper-empty-state-and-error-handling.md) |
 | 2026-09-21 | [Groceries: name/category/unit suggestions, and chevron detail](2026-09-21-groceries-open-fields-and-chevron-detail.md) |
 | 2026-09-21 | [Kids & School: update/remove, chevron detail, and a screenshot import](2026-09-21-kids-school-crud-and-screenshot-import.md) |
 | 2026-09-21 | [Remove a family member from the Family tab, and profile photos](2026-09-21-family-member-remove-and-profile-photos.md) |
