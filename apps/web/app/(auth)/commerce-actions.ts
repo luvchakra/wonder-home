@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
-import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable, updateConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -24,7 +23,7 @@ import type { ActionState } from "./actions";
 const schema = z.object({
   householdId: z.uuid(),
   name: z.string().trim().min(1, { error: "What is it?" }).max(120),
-  category: z.enum(CONSUMABLE_CATEGORIES),
+  category: z.string().trim().min(1, { error: "What kind of thing is it?" }).max(40),
   unit: z.string().trim().min(1, { error: "How is it counted? e.g. bottle, kg, pack." }).max(30),
   typicalQuantity: z.coerce.number().positive().max(1000),
   daysPerUnit: z.union([z.coerce.number().positive().max(3650), z.literal("")]).optional(),
