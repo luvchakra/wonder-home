@@ -1,6 +1,7 @@
 import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
+import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -22,11 +23,13 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const [{ q }, session] = await Promise.all([searchParams, requireSession("/ai")]);
   const { supabase, membership, viewer, secondary } = session;
 
-  const [entitlement, voiceEntitlement, voiceSettings] = await Promise.all([
+  const [entitlement, voiceEntitlement, voiceSettings, members] = await Promise.all([
     may(supabase, membership.household.id, "conversation.text"),
     may(supabase, membership.household.id, "conversation.voice"),
     loadVoiceSettings(supabase, membership.household.id),
+    listMembers(supabase, membership.household.id, membership.household.ownerMemberId).catch(() => []),
   ]);
+  const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   // A sustained, hands-free exchange is still voice underneath — gated the
   // same way tap-to-speak already is, and by the deployment's own rollout
   // flag (config/flags.ts: "flags gate rollout, never authorization").
@@ -64,6 +67,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           liveConversationAvailable={liveConversationAvailable}
           serverVoice={serverVoice}
           voiceLanguage={voiceSettings.language}
+          kids={kids}
         />
       ) : (
         <EmptyState

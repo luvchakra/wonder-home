@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, AudioLines, Mic, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, Mic, Paperclip, Square, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -83,6 +83,7 @@ export function TalkComposer({
   onLiveEnd,
   onError,
   onStateChange,
+  onAttach,
   householdId,
   disabled = false,
   placeholder = "Ask WonderHome anything…",
@@ -102,6 +103,12 @@ export function TalkComposer({
   onError?: (message: string) => void;
   /** What the composer is doing now, so the screen around it can react. */
   onStateChange?: (state: TalkComposerState) => void;
+  /**
+   * A photo, file or pasted forward, as a second way into this same door
+   * (HomeSend) — never a separate "Ask AI" control (rule 13). Omit to leave
+   * the composer exactly as before; the caller owns the sheet this opens.
+   */
+  onAttach?: () => void;
   householdId: string;
   disabled?: boolean;
   placeholder?: string;
@@ -278,6 +285,17 @@ export function TalkComposer({
           </RoundButton>
         ) : (
           <>
+            {onAttach ? (
+              <RoundButton
+                tone="outline"
+                label="Send a photo or paste something — WonderHome reads it and asks you to confirm"
+                onClick={onAttach}
+                disabled={disabled}
+              >
+                <Paperclip className="size-5" />
+              </RoundButton>
+            ) : null}
+
             {speech.available ? (
               <RoundButton
                 tone="outline"
