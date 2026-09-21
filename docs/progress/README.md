@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Responsibilities: remove, group by member, and a miscounted "Mine" tab](2026-09-21-responsibilities-remove-and-mine-count-fix.md) |
 | 2026-09-21 | [A signed-in parent resolved to their child's own view](2026-09-21-session-identity-resolution-bug.md) |
 | 2026-09-21 | [Delivery channels (06-008), and the migrations that never shipped](2026-09-21-delivery-channels-and-a-production-incident.md) |
 | 2026-09-21 | [CI/CD performance pass, and locking in what this session learned the hard way](2026-09-21-ci-performance-and-testing-gotchas.md) |
