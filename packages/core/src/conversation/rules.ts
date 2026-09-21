@@ -115,6 +115,16 @@ const RULES: readonly Rule[] = [
     }),
   },
 
+  // --- Agents: run the specialists for real ----------------------------------
+  {
+    // The literal trigger for 14-007's specialists, made real: unlike
+    // "what's going on" (read from the agenda already gathered for this
+    // reply), this actually runs the household's agents and reports what
+    // they found or did.
+    pattern: /^(?:check on things|check my household|run (?:my |a |the )?agents?(?: check)?|what do my agents see|run a check|check for anything my agents can handle)$/i,
+    read: () => ({ action: "check_agents", target: { kind: "unspecified" }, parameters: {}, confidence: 0.97 }),
+  },
+
   {
     // The many other ways of asking the same thing — "what is the current
     // situation", "what needs attention right now", "what's going on in my
@@ -402,6 +412,7 @@ export function resolveRuleIntent(
 export const RULE_ACTIONS: readonly IntentAction[] = [
   "greet",
   "ask_status",
+  "check_agents",
   "add_to_list",
   "record_absence",
   "make_payment",

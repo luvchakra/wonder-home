@@ -658,6 +658,21 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/agents/run": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Run the household's specialists for real",
+          description:
+            "The literal trigger behind HomeTalk's \"check on things\": gathers the household's current assessed state across every domain, plans against it (14-007), and carries out whatever each proposed step is actually authorized to do — the same tool gate every other write goes through, re-checked per step. Anything left needing a person is recorded as a real notification rather than claimed as done.",
+          responses: {
+            "200": { description: "What ran: how many steps were handled, how many are waiting for approval, how many could not proceed" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/voice": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
