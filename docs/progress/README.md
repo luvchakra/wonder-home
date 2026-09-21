@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [CLAUDE.md now names HomeTalk, HomeBrain and HomeSend as the standing architecture](2026-09-22-hometalk-homebrain-homesend-in-claude-md.md) |
 | 2026-09-21 | [HomeSend v1: a real upload/paste intake channel](2026-09-21-homesend-v1-intake-channel.md) |
 | 2026-09-21 | [A second brand sheet: indigo/emerald palette, a new house-and-heart mark](2026-09-21-second-brand-sheet-indigo-emerald.md) |
 | 2026-09-21 | [The agent pipeline runs for real, triggered from HomeTalk](2026-09-21-agent-pipeline-hometalk-trigger.md) |
