@@ -214,3 +214,28 @@ export function applyReview(
       return { ...item, lastReviewedAt: now };
   }
 }
+
+/** The same wording wherever a review decision is shown (story 05-007). */
+export const DECISION_LABEL: Record<ReviewDecision, string> = {
+  confirmed: "Confirmed",
+  corrected: "Corrected",
+  removed: "Removed",
+  deferred: "Left for later",
+};
+
+/**
+ * Who decided what, and when (story 05-007) — read from `certification_reviews`,
+ * the append-only trail `reviewCertificationAction` already writes to. Every
+ * review here has already passed the same scope check the item itself
+ * carries (`certification_reviews_select_member`), so nothing further needs
+ * filtering once it reaches this shape.
+ */
+export type CertificationHistoryEntry = {
+  id: string;
+  reviewerName: string;
+  decision: ReviewDecision;
+  claim: string;
+  /** The claim as it read before this review, when the row recorded one. */
+  previousClaim: string | null;
+  reviewedAt: Date;
+};

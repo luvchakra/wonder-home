@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**151 of 173 stories done — 87.3%**
+**152 of 173 stories done — 87.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 151 |
+| Done | 152 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 22 |
+| Not Started | 21 |
 
 ## By module
 
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
 | 03 Outcome & Routine Engine | `███████░░░` | 6 | 8 | 2 not started |
 | 04 Conversation, Voice & Text | `██████████` | 11 | 11 | — |
-| 05 Household Certification & Understanding | `███████░░░` | 6 | 8 | 2 not started |
+| 05 Household Certification & Understanding | `████████░░` | 7 | 8 | 1 not started |
 | 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
 | 07 Househelper & Home Operations | `██████░░░░` | 5 | 8 | 3 not started |
 | 08 Kids & School Intelligence | `██████████` | 8 | 8 | — |
@@ -53,7 +53,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
 | `03-007` Pattern learning | 03 Outcome & Routine Engine | P1 | Not Started |
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
-| `05-007` Certification history | 05 Household Certification & Understanding | P1 | Not Started |
 | `05-008` Certification health | 05 Household Certification & Understanding | P2 | Not Started |
 | `06-008` Channels | 06 Actionable Notification Engine | P1 | Not Started |
 | `07-006` Optional daily summary | 07 Househelper & Home Operations | P1 | Not Started |
@@ -157,7 +156,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 05 — Household Certification & Understanding
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -167,7 +166,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-004` Correct/remove | P0 | Done | Source on every claim; coverage counted, never estimated |
 | `05-005` Risk prioritization | P0 | Done | Source on every claim; coverage counted, never estimated |
 | `05-006` Actionable certification alerts | P0 | Done | Source on every claim; coverage counted, never estimated |
-| `05-007` Certification history | P1 | Not Started | — |
+| `05-007` Certification history | P1 | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
 | `05-008` Certification health | P2 | Not Started | — |
 
 ### 06 — Actionable Notification Engine
@@ -395,4 +394,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |
 
-_Generated 2026-09-20 from 21 backlog files._
+_Generated 2026-09-21 from 21 backlog files._
