@@ -8,50 +8,31 @@
  * writes the files — so the icon on a home screen can never quietly drift
  * from the one in the header.
  *
- * The mark follows the brand sheet at `design/WonderHome-brand-guidelines.png`:
- * a house drawn as two thick strokes that meet at the roof. The left wall and
- * left slope are the brand's blue, running into teal and green as they cross
- * the apex; the right slope and right wall are warm yellow deepening to
- * orange at the ground. A four-pane window sits in the body, and a leaf
- * grows out of the bottom-right corner, over the yellow wall.
- *
- * The strokes end in flat cuts (butt caps): flat on the ground at the two
- * wall feet, and a clean diagonal seam where the blue tip overlaps the start
- * of the yellow slope. The leaf carries a halo in the surface colour, which is
- * what keeps it separate from the wall it sits over — so the mark must be told
- * what it is sitting on, which is what `surface` is for everywhere it is drawn.
+ * The mark follows the current brand sheet: a rounded-square tile carrying a
+ * diagonal gradient from the brand's Primary (indigo) to Secondary
+ * (emerald), with a simple white house silhouette centred on it and a heart
+ * cut from the house so the gradient shows through — "the home with heart"
+ * reading the sheet's app icon is built around. No leaf, no two-tone stroke:
+ * the house is one filled shape, and the heart is the only accent inside it.
  */
 
 /** The box every path below is expressed in. */
 export const VIEW_BOX = 64;
 
 /**
- * The house's interior. Filled with the surface colour rather than left
- * transparent, so the body reads as a solid house on any background.
+ * The house, as a single rounded silhouette — a roof running straight into
+ * the walls, with softened corners at the eaves and the base so it reads as
+ * one continuous shape rather than a box with a roof bolted on.
  */
-export const HOUSE_PATH = "M17.5 50 L17.5 29.5 L32 17 L46.5 29.5 L46.5 50 Z";
+export const HOUSE_PATH =
+  "M32 13.5 L47.5 26.5 L47.5 44.5 C47.5 48.09 44.59 51 41 51 L23 51 C19.41 51 16.5 48.09 16.5 44.5 L16.5 26.5 Z";
 
-/** Left foot, up the left wall, over the apex, and a little way down the right slope. */
-export const BLUE_PATH = "M17.5 50 L17.5 29.5 L32 17 L36.1 20.5";
-/** Starts just under the blue tip, down the right slope, and down the right wall to its foot. */
-export const YELLOW_PATH = "M35.2 19.75 L46.5 29.5 L46.5 50";
-
-export const LEAF_PATH = "M43.5 51.5 C42.5 42.5 48 35 57.5 34.5 C58.2 44 52.5 51.8 43.5 51.5 Z";
-export const LEAF_VEIN_PATH = "M45.6 49.4 C48.4 44.6 51.8 40.2 55.6 36.6";
-
-export const STROKE = { house: 8.5, vein: 1.3 } as const;
-
-/** Wide enough to read as a gap at 16px, narrow enough not to eat the wall. */
-export const HALO = { leaf: 2.6 } as const;
-
-export const WINDOW_PANES = [
-  { x: 26.8, y: 30.8 },
-  { x: 32.8, y: 30.8 },
-  { x: 26.8, y: 36.8 },
-  { x: 32.8, y: 36.8 },
-] as const;
-
-export const PANE = { width: 4.4, height: 4.4, radius: 1.1 } as const;
+/**
+ * The heart cut from the house's centre — a standard twin-lobe heart,
+ * sized to sit comfortably inside the body below the roofline.
+ */
+export const HEART_PATH =
+  "M32 43.5 C26.5 38.8 22.5 35.1 22.5 30.6 C22.5 27 25.3 24.3 28.7 24.3 C30.6 24.3 32 25.1 32 25.1 C32 25.1 33.4 24.3 35.3 24.3 C38.7 24.3 41.5 27 41.5 30.6 C41.5 35.1 37.5 38.8 32 43.5 Z";
 
 export type GradientStop = { offset: number; color: string };
 
@@ -63,94 +44,56 @@ export type GradientSpec = {
   stops: readonly GradientStop[];
 };
 
-/** The palette from the brand sheet, as it runs along each shape. */
-export const GRADIENTS: Record<"blue" | "yellow" | "leaf", GradientSpec> = {
-  blue: {
-    x1: 17.5,
-    y1: 50,
-    x2: 37,
-    y2: 19,
+/** The tile's gradient — Primary (indigo) running into Secondary (emerald), top-left to bottom-right. */
+export const GRADIENTS: Record<"tile", GradientSpec> = {
+  tile: {
+    x1: 4,
+    y1: 4,
+    x2: 60,
+    y2: 60,
     stops: [
-      { offset: 0, color: "#0ea5e9" },
-      { offset: 0.5, color: "#22b4f0" },
-      { offset: 0.8, color: "#1cc0c0" },
-      { offset: 1, color: "#22c55e" },
-    ],
-  },
-  yellow: {
-    x1: 35,
-    y1: 20,
-    x2: 46.5,
-    y2: 50,
-    stops: [
-      { offset: 0, color: "#fbbf24" },
-      { offset: 0.6, color: "#f8b020" },
-      { offset: 1, color: "#f59e0b" },
-    ],
-  },
-  leaf: {
-    x1: 43.5,
-    y1: 51.5,
-    x2: 57.5,
-    y2: 34.5,
-    stops: [
-      { offset: 0, color: "#15803d" },
-      { offset: 0.5, color: "#22c55e" },
-      { offset: 1, color: "#4ade80" },
+      { offset: 0, color: "#6366f1" },
+      { offset: 0.55, color: "#34b3a6" },
+      { offset: 1, color: "#10b981" },
     ],
   },
 };
 
-/**
- * The window panes: the brand's Primary Blue, lifted a step on a dark
- * surface so the panes still read as glass rather than as holes.
- */
-export const WINDOW_COLOR = { light: "#0ea5e9", dark: "#38bdf8" } as const;
-
-/** The surfaces the standalone icon files are drawn on: white, and the brand's Navy. */
-export const TILE = { light: "#ffffff", dark: "#0f172a" } as const;
+/** The surfaces the standalone icon files are drawn on: white, and the brand's Neutral. */
+export const TILE = { light: "#ffffff", dark: "#1f2937" } as const;
 
 /**
  * The wordmark, one letter at a time.
  *
- * The brand sheet's lockup is not two blocks of colour ("Wonder" in ink,
- * "Home" in blue, the old design) but a rainbow running letter to letter,
- * with the two letters that spell "H[ome]"'s bookends — the H and the final
- * e — pulled to a deeper navy so the word still reads as one name and not
- * a scattershot of colour. `WORDMARK_LETTERS` is read by both the live
- * `Wordmark` component and the share-card generator, so a change here is a
- * change everywhere the name is drawn, the same discipline the house mark
- * itself already has.
+ * The current sheet's lockup is a solid word — "WonderHome" set once in the
+ * brand's Neutral ink, never a rainbow — but the letter-array shape stays
+ * (every letter tagged `"ink"`) so the live `Wordmark` component and the
+ * share-card generator, which both iterate `WORDMARK_LETTERS`, needed no
+ * structural change to pick up the new look.
  */
-export type WordmarkTone = "blue" | "yellow" | "green" | "navy";
+export type WordmarkTone = "ink";
 
-/** Values for each tone above. `dark` lightens what would otherwise vanish on a dark surface — the same reason `WINDOW_COLOR` lifts a step. */
+/** `dark` lightens what would otherwise vanish on a dark surface. */
 export const WORDMARK_COLORS: Record<"light" | "dark", Record<WordmarkTone, string>> = {
   light: {
-    blue: "#0ea5e9",
-    yellow: "#fbbf24",
-    green: "#22c55e",
-    navy: "#0f2d6b",
+    ink: "#1f2937",
   },
   dark: {
-    blue: "#38bdf8",
-    yellow: "#fbbf24",
-    green: "#4ade80",
-    navy: "#bfe0ff",
+    ink: "#f8fafc",
   },
 };
 
 export const WORDMARK_LETTERS: readonly { char: string; tone: WordmarkTone }[] = [
-  { char: "W", tone: "blue" },
-  { char: "o", tone: "yellow" },
-  { char: "n", tone: "blue" },
-  { char: "d", tone: "green" },
-  { char: "e", tone: "blue" },
-  { char: "r", tone: "yellow" },
-  { char: "H", tone: "navy" },
-  { char: "o", tone: "blue" },
-  { char: "m", tone: "green" },
-  { char: "e", tone: "navy" },
+  { char: "W", tone: "ink" },
+  { char: "o", tone: "ink" },
+  { char: "n", tone: "ink" },
+  { char: "d", tone: "ink" },
+  { char: "e", tone: "ink" },
+  { char: "r", tone: "ink" },
+  { char: "H", tone: "ink" },
+  { char: "o", tone: "ink" },
+  { char: "m", tone: "ink" },
+  { char: "e", tone: "ink" },
 ] as const;
 
 export const TAGLINE = "Less mental load. More family time!";

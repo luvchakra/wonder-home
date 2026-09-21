@@ -56,28 +56,19 @@
   --wh-foreground-muted: oklch(0.48 0.035 258);
   --wh-foreground-subtle: oklch(0.6 0.025 255);
 
-  /* Brand — the mark fills its house body with, and halos its leaf in,
-     whatever it sits on, so the mark in a header and the mark in a card both
-     keep the leaf cleanly separate from the wall it grows over. `Card`
-     redeclares the surface for anything inside it; everything else inherits
-     the page. */
-  --wh-brand-surface: var(--wh-background);
-  --wh-brand-window: #0ea5e9;
+  /* Brand — the wordmark's ink (packages/core/src/brand/mark.ts
+     WORDMARK_LETTERS is the one source this value must keep matching). The
+     mark itself carries its own tile now (gradient + white house + heart),
+     so it no longer reads a surface token the way the old two-tone house did. */
+  --wh-brand-letter-ink: #1f2937;
 
-  /* The wordmark's rainbow, letter by letter (packages/core/src/brand/mark.ts
-     WORDMARK_LETTERS is the one source these values must keep matching). */
-  --wh-brand-letter-blue: #0ea5e9;
-  --wh-brand-letter-yellow: #fbbf24;
-  --wh-brand-letter-green: #22c55e;
-  --wh-brand-letter-navy: #0f2d6b;
-
-  /* Primary action — the brand's Primary Blue (#0EA5E9), taken down to a
+  /* Primary action — the brand's Primary (#6366F1, indigo), taken down to a
      lightness that holds 4.5:1 against white for every committing action */
-  --wh-primary: oklch(0.5 0.148 237);
-  --wh-primary-hover: oklch(0.44 0.148 237);
+  --wh-primary: oklch(0.58 0.216 277);
+  --wh-primary-hover: oklch(0.52 0.216 277);
   --wh-primary-foreground: oklch(0.995 0 0);
-  --wh-primary-soft: oklch(0.955 0.035 237);
-  --wh-primary-glow: oklch(0.5 0.148 237 / 0.28);
+  --wh-primary-soft: oklch(0.955 0.035 277);
+  --wh-primary-glow: oklch(0.58 0.216 277 / 0.28);
 
   /* The botanical decoration that frames the warm surfaces in the mockups */
   --wh-leaf: oklch(0.72 0.11 145);
@@ -85,13 +76,13 @@
   --wh-leaf-stem: oklch(0.66 0.08 145);
   --wh-leaf-vein: oklch(0.95 0.03 140);
 
-  /* Outcome and risk states — Warm Yellow (#FBBF24) and Accent Green (#22C55E) */
-  --wh-attention: oklch(0.74 0.17 84);
-  --wh-attention-soft: oklch(0.965 0.045 84);
+  /* Outcome and risk states — Accent amber (#F59E0B) and Secondary emerald (#10B981) */
+  --wh-attention: oklch(0.555 0.146 49);
+  --wh-attention-soft: oklch(0.965 0.045 49);
   --wh-risk: oklch(0.58 0.2 25);
   --wh-risk-soft: oklch(0.965 0.03 25);
-  --wh-handled: oklch(0.62 0.17 150);
-  --wh-handled-soft: oklch(0.955 0.045 150);
+  --wh-handled: oklch(0.508 0.105 165.6);
+  --wh-handled-soft: oklch(0.955 0.045 165.6);
   --wh-info: oklch(0.55 0.13 250);
   --wh-info-soft: oklch(0.955 0.03 250);
 
@@ -120,12 +111,12 @@
   /* Gradients — subtle, warm, and the only place colour is allowed to bloom */
   --wh-gradient-page:
     radial-gradient(60rem 30rem at 15% -10%, oklch(0.965 0.035 60 / 0.9), transparent 60%),
-    radial-gradient(50rem 28rem at 110% 10%, oklch(0.955 0.035 237 / 0.9), transparent 55%);
+    radial-gradient(50rem 28rem at 110% 10%, oklch(0.955 0.035 277 / 0.9), transparent 55%);
   --wh-gradient-hero:
-    linear-gradient(160deg, oklch(0.985 0.012 70) 0%, oklch(0.975 0.02 60) 45%, oklch(0.965 0.028 237) 100%);
-  --wh-gradient-primary: linear-gradient(135deg, oklch(0.55 0.14 237) 0%, oklch(0.45 0.13 247) 100%);
+    linear-gradient(160deg, oklch(0.985 0.012 70) 0%, oklch(0.975 0.02 60) 45%, oklch(0.965 0.028 277) 100%);
+  --wh-gradient-primary: linear-gradient(135deg, oklch(0.585 0.204 277) 0%, oklch(0.696 0.149 162.5) 100%);
   --wh-gradient-orb:
-    radial-gradient(circle at 30% 30%, oklch(0.9 0.06 240), oklch(0.7 0.14 265) 45%, oklch(0.5 0.16 285) 100%);
+    radial-gradient(circle at 30% 30%, oklch(0.9 0.06 277), oklch(0.7 0.14 285) 45%, oklch(0.541 0.247 293) 100%);
   --wh-gradient-sunset:
     linear-gradient(180deg, oklch(0.97 0.03 70) 0%, oklch(0.93 0.06 55) 55%, oklch(0.9 0.05 40) 100%);
 
@@ -178,28 +169,21 @@
   --wh-foreground-muted: oklch(0.78 0.015 250);
   --wh-foreground-subtle: oklch(0.65 0.015 250);
 
-  /* The window panes lift a step here so they still read as glass on navy. */
-  --wh-brand-surface: var(--wh-background);
-  --wh-brand-window: #38bdf8;
-
   /* Lightened where the light value would vanish on a dark surface. */
-  --wh-brand-letter-blue: #38bdf8;
-  --wh-brand-letter-yellow: #fbbf24;
-  --wh-brand-letter-green: #4ade80;
-  --wh-brand-letter-navy: #bfe0ff;
+  --wh-brand-letter-ink: #f8fafc;
 
-  --wh-primary: oklch(0.73 0.13 237);
-  --wh-primary-hover: oklch(0.79 0.13 237);
+  --wh-primary: oklch(0.73 0.16 277);
+  --wh-primary-hover: oklch(0.79 0.16 277);
   --wh-primary-foreground: oklch(0.18 0.02 255);
-  --wh-primary-soft: oklch(0.32 0.055 237);
-  --wh-primary-glow: oklch(0.73 0.13 237 / 0.3);
+  --wh-primary-soft: oklch(0.32 0.055 277);
+  --wh-primary-glow: oklch(0.73 0.16 277 / 0.3);
 
-  --wh-attention: oklch(0.8 0.16 84);
-  --wh-attention-soft: oklch(0.33 0.05 84);
+  --wh-attention: oklch(0.8 0.16 49);
+  --wh-attention-soft: oklch(0.33 0.05 49);
   --wh-risk: oklch(0.7 0.17 25);
   --wh-risk-soft: oklch(0.32 0.06 25);
-  --wh-handled: oklch(0.72 0.16 150);
-  --wh-handled-soft: oklch(0.3 0.05 150);
+  --wh-handled: oklch(0.72 0.16 165.6);
+  --wh-handled-soft: oklch(0.3 0.05 165.6);
   --wh-info: oklch(0.72 0.11 250);
   --wh-info-soft: oklch(0.31 0.05 250);
 
@@ -220,7 +204,7 @@
 
   --wh-gradient-page:
     radial-gradient(60rem 30rem at 15% -10%, oklch(0.3 0.04 60 / 0.6), transparent 60%),
-    radial-gradient(50rem 28rem at 110% 10%, oklch(0.3 0.04 237 / 0.6), transparent 55%);
+    radial-gradient(50rem 28rem at 110% 10%, oklch(0.3 0.04 277 / 0.6), transparent 55%);
   --wh-gradient-hero: linear-gradient(160deg, oklch(0.24 0.02 255) 0%, oklch(0.27 0.03 247) 100%);
   --wh-gradient-sunset: linear-gradient(180deg, oklch(0.28 0.03 60) 0%, oklch(0.24 0.04 40) 100%);
 
