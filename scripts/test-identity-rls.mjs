@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForAnonymous, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForAnonymous, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_identity_test";
@@ -177,16 +177,16 @@ test("someone outside the household cannot edit a member's profile details", () 
   // STRANGER is still only otherHousehold's own head here — the next test
   // ("an administrator cannot promote themselves to head") is what first
   // makes STRANGER a legitimate administrator of `household`, so this one
-  // has to run before it or the assertion below would no longer be true.
-  //
-  // Not a policy violation an insert/select would raise on — an UPDATE with
-  // no matching row-level policy simply touches zero rows, so this is
-  // asserted by checking nothing changed rather than expecting a thrown error.
-  asProfile(STRANGER, `update public.household_members set nickname = 'Planted' where id = '${headMember}';`, options);
-
-  assert.equal(
-    psql(`select nickname from public.household_members where id = '${headMember}';`, options),
-    "KC",
+  // has to run before it or the assertion below would no longer be true
+  // (see the shared-database gotcha documented in scripts/lib/db.mjs).
+  assert.ok(
+    deniedForUpdate(
+      STRANGER,
+      `update public.household_members set nickname = 'Planted' where id = '${headMember}';`,
+      `select nickname from public.household_members where id = '${headMember}';`,
+      "KC",
+      options,
+    ),
     "an outsider could edit another household's member details",
   );
 });

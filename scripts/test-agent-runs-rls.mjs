@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_agents_test";
@@ -94,29 +94,29 @@ test("a client cannot start an agent run", () => {
 });
 
 test("a client cannot rewrite a run's summary to hide what happened", () => {
-  asProfile(
-    HEAD,
-    `update public.agent_runs set summary = 'nothing to see here' where id = '${run}';`,
-    options,
-  );
-  assert.equal(
-    psql(`select summary from public.agent_runs where id = '${run}';`, options),
-    "Checking outcomes at risk",
+  assert.ok(
+    deniedForUpdate(
+      HEAD,
+      `update public.agent_runs set summary = 'nothing to see here' where id = '${run}';`,
+      `select summary from public.agent_runs where id = '${run}';`,
+      "Checking outcomes at risk",
+      options,
+    ),
+    "a client rewrote a run's summary",
   );
 });
 
 test("a client cannot approve an action by writing to the table", () => {
   const id = approval("bills.pay(amountMinor=284000,bill=electricity)");
 
-  asProfile(
-    HEAD,
-    `update public.approvals set status = 'approved', decided_at = now() where id = '${id}';`,
-    options,
-  );
-
-  assert.equal(
-    psql(`select status from public.approvals where id = '${id}';`, options),
-    "pending",
+  assert.ok(
+    deniedForUpdate(
+      HEAD,
+      `update public.approvals set status = 'approved', decided_at = now() where id = '${id}';`,
+      `select status from public.approvals where id = '${id}';`,
+      "pending",
+      options,
+    ),
     "a member approved an action directly",
   );
 });

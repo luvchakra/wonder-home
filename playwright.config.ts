@@ -60,7 +60,13 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } } },
   ],
   webServer: {
-    command: `npm run build -w apps/web && npm run start -w apps/web -- --port ${PORT}`,
+    // E2E_SKIP_BUILD is set by callers that already ran `npm run build`
+    // themselves (CI's build-and-e2e job, and `npm run verify` locally) —
+    // without it, this command silently rebuilt the whole app a second
+    // time, every run, on top of the build that had just finished.
+    command: process.env.E2E_SKIP_BUILD
+      ? `npm run start -w apps/web -- --port ${PORT}`
+      : `npm run build -w apps/web && npm run start -w apps/web -- --port ${PORT}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
