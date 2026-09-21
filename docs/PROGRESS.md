@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**156 of 173 stories done — 90.2%**
+**157 of 173 stories done — 90.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 156 |
+| Done | 157 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 17 |
+| Not Started | 16 |
 
 ## By module
 
@@ -31,7 +31,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 04 Conversation, Voice & Text | `██████████` | 11 | 11 | — |
 | 05 Household Certification & Understanding | `████████░░` | 7 | 8 | 1 not started |
 | 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
-| 07 Househelper & Home Operations | `███████░░░` | 6 | 8 | 2 not started |
+| 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
 | 08 Kids & School Intelligence | `██████████` | 8 | 8 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 8 | 8 | — |
 | 10 Meals & Cooking | `██████████` | 8 | 8 | — |
@@ -54,7 +54,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `05-008` Certification health | 05 Household Certification & Understanding | P2 | Not Started |
 | `06-008` Channels | 06 Actionable Notification Engine | P1 | Not Started |
-| `07-007` Pattern learning | 07 Househelper & Home Operations | P1 | Not Started |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
@@ -182,7 +181,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 07 — Househelper & Home Operations
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -192,7 +191,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-004` Exception handling | P0 | Done | Outcomes and windows, never per-chore status |
 | `07-005` Helper privacy | P0 | Done | Outcomes and windows, never per-chore status |
 | `07-006` Optional daily summary | P1 | Done | `buildDailySummary`: one digest of what was unusual, built only from exceptions `handleHelperException` already routed to `tell_household` and an absence left uncovered — a handled exception or a fully-covered absence stays silent, matching the module's own rule that normal work needs no update. Opt-in by construction: nothing depends on anyone reading it, and a quiet day says so in one line rather than nothing |
-| `07-007` Pattern learning | P1 | Not Started | — |
+| `07-007` Pattern learning | P1 | Done | Normal timing is already covered by reusing 03-007's `findTimingPattern` directly — it operates on any `Outcome[]`, helper-owned outcomes included. New: `findMissPattern`/`proposeMissPattern` call a recurring miss only when the same exception kind keeps recurring for one outcome (≥3 occurrences, ≥0.6 concentration), and never propose anything once the household has confirmed a fact about it — the same confirmed-rule gate 03-007 uses |
 | `07-008` Service marketplace | P2 | Not Started | — |
 
 ### 08 — Kids & School Intelligence

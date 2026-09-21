@@ -1,8 +1,9 @@
+import { proposeLearning, type LearningProposal } from "../ai/orchestrator";
 import type { Permission, PermissionContext } from "../identity/permissions";
 import { can } from "../identity/permissions";
 
 /**
- * Househelper and home operations (stories 07-001 through 07-006).
+ * Househelper and home operations (stories 07-001 through 07-007).
  *
  * The product rule this module exists to honour: a househelper does not update
  * WonderHome. They do their work; the system notices when something is *not*
@@ -257,4 +258,83 @@ export function buildDailySummary(input: {
         ? "Nothing unusual today — everything ran as expected."
         : `${entries.length} ${plural(entries.length, "thing", "things")} worth a look today.`,
   };
+}
+
+export type MissRecord = {
+  outcomeKey: string;
+  kind: HelperException["kind"];
+};
+
+export type MissPattern = {
+  outcomeKey: string;
+  occurrences: number;
+  /** The exception kind that recurs most often for this outcome. */
+  dominantKind: HelperException["kind"];
+  /** Fraction of occurrences that are the dominant kind: 0 (scattered) to 1 (always the same). */
+  concentration: number;
+};
+
+/** Below this many exceptions for one outcome, there is nothing to call a pattern. */
+const MIN_MISS_SAMPLES = 3;
+/** Below this concentration, the exceptions are varied problems, not a recurring one. */
+const MIN_MISS_CONCENTRATION = 0.6;
+/** Occurrences beyond this many stop raising confidence further. */
+const MISS_CONFIDENCE_CEILING = 8;
+
+/**
+ * Finds a recurring miss for one outcome, if its exception history is
+ * consistent enough to call one (story 07-007).
+ *
+ * One blocked day and one missing-supply day are two different problems, not
+ * a pattern — this only calls something recurring when the same kind of
+ * exception keeps happening to the same outcome, which is the case actually
+ * worth a household reviewing the backup plan for.
+ */
+export function findMissPattern(records: readonly MissRecord[], outcomeKey: string): MissPattern | null {
+  const forOutcome = records.filter((record) => record.outcomeKey === outcomeKey);
+  if (forOutcome.length < MIN_MISS_SAMPLES) return null;
+
+  const counts = new Map<HelperException["kind"], number>();
+  for (const record of forOutcome) {
+    counts.set(record.kind, (counts.get(record.kind) ?? 0) + 1);
+  }
+
+  let dominantKind = forOutcome[0]!.kind;
+  let dominantCount = 0;
+  for (const [kind, count] of counts) {
+    if (count > dominantCount) {
+      dominantKind = kind;
+      dominantCount = count;
+    }
+  }
+
+  const concentration = dominantCount / forOutcome.length;
+  if (concentration < MIN_MISS_CONCENTRATION) return null;
+
+  return {
+    outcomeKey,
+    occurrences: forOutcome.length,
+    dominantKind,
+    concentration: Math.round(concentration * 100) / 100,
+  };
+}
+
+/**
+ * Turns a found miss pattern into the same learning-proposal shape module 14
+ * already uses. Never proposed for an outcome the household has already
+ * confirmed a fact about — the same gate 03-007's timing patterns use, for
+ * the same reason: a household's own confirmation is not something a
+ * pattern noticed afterward should compete with, even as a suggestion.
+ */
+export function proposeMissPattern(pattern: MissPattern, alreadyConfirmed: boolean): LearningProposal | null {
+  if (alreadyConfirmed) return null;
+
+  const sampleFactor = Math.min(1, pattern.occurrences / MISS_CONFIDENCE_CEILING);
+  const confidence = pattern.concentration * sampleFactor;
+
+  return proposeLearning({
+    key: `helper_miss.${pattern.outcomeKey}`,
+    value: { dominantKind: pattern.dominantKind, occurrences: pattern.occurrences },
+    confidence,
+  });
 }
