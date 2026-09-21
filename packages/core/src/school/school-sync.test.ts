@@ -127,6 +127,7 @@ const item = (over: Partial<TranslatedSchoolItem> = {}, externalId = "msg-1", co
   kind: "homework",
   title: "Maths worksheet",
   subject: "Maths",
+  detail: null,
   dueAt: null,
   estimatedMinutes: null,
   estimateSource: null,

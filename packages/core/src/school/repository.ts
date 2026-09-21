@@ -28,7 +28,7 @@ export async function listSchoolItems(
   let query = supabase
     .from("school_items")
     .select(
-      "id, child_member_id, kind, title, subject, due_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id",
+      "id, child_member_id, kind, title, subject, detail, due_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id",
     )
     .eq("household_id", householdId)
     .order("due_at", { ascending: true, nullsFirst: false });
@@ -48,6 +48,7 @@ function toItem(row: Row): SchoolItem {
     kind: row.kind as SchoolItemKind,
     title: row.title as string,
     subject: (row.subject as string | null) ?? null,
+    detail: (row.detail as string | null) ?? null,
     dueAt: row.due_at ? new Date(row.due_at as string) : null,
     estimatedMinutes: (row.estimated_minutes as number | null) ?? null,
     estimateSource: (row.estimate_source as SchoolItem["estimateSource"]) ?? null,
@@ -124,6 +125,82 @@ export async function completeSchoolItem(
     if (error.code === "42501") throw ApiError.forbidden("This is not yours to mark done.");
     throw new Error(`completeSchoolItem failed: ${error.code ?? "unknown"}`);
   }
+}
+
+export type UpdateSchoolItemInput = {
+  childMemberId?: string;
+  kind?: SchoolItemKind;
+  title?: string;
+  subject?: string | null;
+  detail?: string | null;
+  dueAt?: string | null;
+  estimatedMinutes?: number | null;
+};
+
+/**
+ * The other half of adding a piece of school work (CLAUDE.md rule 12): a
+ * household correcting what it already entered, the same way
+ * `updateMemberProfile` lets it correct a person's details.
+ */
+export async function updateSchoolItem(
+  supabase: SupabaseClient,
+  householdId: string,
+  itemId: string,
+  input: UpdateSchoolItemInput,
+): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (input.childMemberId !== undefined) patch.child_member_id = input.childMemberId;
+  if (input.kind !== undefined) patch.kind = input.kind;
+  if (input.title !== undefined) patch.title = input.title;
+  if (input.subject !== undefined) patch.subject = input.subject;
+  if (input.detail !== undefined) patch.detail = input.detail;
+  if (input.dueAt !== undefined) patch.due_at = input.dueAt;
+  if (input.estimatedMinutes !== undefined) {
+    patch.estimated_minutes = input.estimatedMinutes;
+    // A household correcting the estimate is a person confirming it, same as at creation.
+    patch.estimate_source = input.estimatedMinutes == null ? null : "member_confirmed";
+  }
+
+  if (Object.keys(patch).length === 0) return;
+
+  const { data, error } = await supabase
+    .from("school_items")
+    .update(patch)
+    .eq("id", itemId)
+    .eq("household_id", householdId)
+    .select("id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only this child's guardians can change this.");
+    throw new Error(`updateSchoolItem failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.notFound("That is not part of this household.");
+}
+
+/**
+ * Stands a piece of school work down (rule 12's "remove", for a table that
+ * already carries a status rather than a delete: `cancelled` already exists
+ * for exactly this — a provider-cancelled item and a household-withdrawn
+ * one look the same afterwards, which is correct, since neither is live
+ * work anymore).
+ */
+export async function cancelSchoolItem(
+  supabase: SupabaseClient,
+  householdId: string,
+  itemId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("school_items")
+    .update({ status: "cancelled" })
+    .eq("id", itemId)
+    .eq("household_id", householdId)
+    .select("id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only this child's guardians can remove this.");
+    throw new Error(`cancelSchoolItem failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.notFound("That is not part of this household.");
 }
 
 export async function listCommunications(
