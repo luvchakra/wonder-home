@@ -39,13 +39,23 @@ future session doesn't rediscover them from scratch.
   completed. It now runs in parallel with `lint`, `db-tests` and
   `build-and-e2e` rather than serially after `lint`.
 - **Raised `test:db` concurrency from 1 to 4**
-  (`node --test --test-concurrency=4`). De-risked by reading
-  `supabase/tests/supabase-shim.sql`, which already explicitly handles the
-  one real race this could hit — concurrent test-database builds creating
-  the same cluster-wide Postgres roles — via `duplicate_object` exception
-  catching. Verified locally at concurrency 1/4/8: all 235 tests pass at
-  every level; 4 captures nearly all the available speedup on this 4-core
-  sandbox.
+  (`node --test --test-concurrency=4`). Locally de-risked by reading
+  `supabase/tests/supabase-shim.sql`, which handles the one real race this
+  could hit — concurrent test-database builds creating the same
+  cluster-wide Postgres roles — via `duplicate_object` exception catching,
+  and by running it clean at concurrency 1/4/8 in this sandbox. That local
+  verification wasn't the whole story: this PR's own CI run hit the race
+  for real (`db-tests` failed on `duplicate key value violates unique
+  constraint "pg_authid_rolname_index"`, 21 test files' `create role anon`
+  racing on CI's colder, differently-scheduled Postgres container). Under
+  true concurrency, two sessions can both pass `CREATE ROLE`'s existence
+  check before either commits, so the loser hits the raw
+  `unique_violation` from the catalog index instead of the clean
+  `duplicate_object` the check normally produces — the shim's exception
+  handlers only caught the latter. Fixed by catching
+  `duplicate_object or unique_violation` in all three role-creation
+  blocks; re-verified with 5 consecutive local runs at concurrency 8 (235
+  pass each time) before trusting it again.
 - **`ci` gate job** now depends on `[lint, unit-tests, db-tests,
   build-and-e2e]` (previously `[lint-and-unit, db-tests, build-and-e2e]`),
   keeping the single aggregating gate that insulates branch protection from
