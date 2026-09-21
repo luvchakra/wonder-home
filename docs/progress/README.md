@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Certification health: a percentage that can't hide the belief that matters (05-008)](2026-09-21-certification-health.md) |
 | 2026-09-21 | [Feature flags and a platform-wide audit trail (16-008)](2026-09-21-feature-flags-and-platform-audit.md) |
 | 2026-09-21 | [Recurring misses, learned without a person having to notice first (07-007)](2026-09-21-helper-miss-patterns.md) |
 | 2026-09-21 | [A helper's daily summary: one line for a quiet day, one entry for what wasn't (07-006)](2026-09-21-helper-daily-summary.md) |

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**157 of 173 stories done — 90.8%**
+**158 of 173 stories done — 91.3%**
 
 | Status | Stories |
 |---|---:|
-| Done | 157 |
+| Done | 158 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 16 |
+| Not Started | 15 |
 
 ## By module
 
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
 | 03 Outcome & Routine Engine | `████████░░` | 7 | 8 | 1 not started |
 | 04 Conversation, Voice & Text | `██████████` | 11 | 11 | — |
-| 05 Household Certification & Understanding | `████████░░` | 7 | 8 | 1 not started |
+| 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
 | 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
 | 08 Kids & School Intelligence | `██████████` | 8 | 8 | — |
@@ -52,7 +52,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
-| `05-008` Certification health | 05 Household Certification & Understanding | P2 | Not Started |
 | `06-008` Channels | 06 Actionable Notification Engine | P1 | Not Started |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
@@ -151,7 +150,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 05 — Household Certification & Understanding
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -162,7 +161,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-005` Risk prioritization | P0 | Done | Source on every claim; coverage counted, never estimated |
 | `05-006` Actionable certification alerts | P0 | Done | Source on every claim; coverage counted, never estimated |
 | `05-007` Certification history | P1 | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
-| `05-008` Certification health | P2 | Not Started | — |
+| `05-008` Certification health | P2 | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
 
 ### 06 — Actionable Notification Engine
 

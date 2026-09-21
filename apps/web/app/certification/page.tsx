@@ -3,6 +3,7 @@ import { BadgeCheck, CircleCheck, Clock, History, Pencil, Sparkles, TriangleAler
 import {
   alertsFor,
   CERTIFICATION_CATEGORIES,
+  certificationHealth,
   DECISION_LABEL,
   summarize,
   type CertificationAlert,
@@ -124,6 +125,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
 
   const now = new Date();
   const summary = summarize(items, now);
+  const health = certificationHealth(items, now);
   const alerts = alertsFor(items, now, 50);
   const alertIds = new Set(alerts.map((alert) => alert.itemId));
   const live = items.filter((item) => item.status !== "removed" && item.status !== "corrected");
@@ -146,6 +148,9 @@ export default async function CertificationPage({ searchParams }: { searchParams
           <div className="min-w-0">
             <p className="text-base font-semibold">WonderHome understands your household {summary.understanding >= 80 ? "well" : summary.understanding >= 40 ? "partly" : "a little"}</p>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{summary.confirmed} of {live.length} beliefs confirmed by the family. Nothing here is a guess about confidence — it is a count.</p>
+            {health.highRiskGapExists ? (
+              <p className="mt-1 text-sm font-medium text-[var(--wh-attention)]">{health.explanation}</p>
+            ) : null}
           </div>
         </Card>
 

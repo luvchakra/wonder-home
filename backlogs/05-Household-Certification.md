@@ -11,7 +11,7 @@
 | 5 | P0 | 05-005 | Risk prioritization | Done | Source on every claim; coverage counted, never estimated |
 | 6 | P0 | 05-006 | Actionable certification alerts | Done | Source on every claim; coverage counted, never estimated |
 | 7 | P1 | 05-007 | Certification history | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
-| 8 | P2 | 05-008 | Certification health | Not Started | |
+| 8 | P2 | 05-008 | Certification health | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

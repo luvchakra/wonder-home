@@ -5,6 +5,7 @@ import {
   alertsFor,
   applyReview,
   assessRisk,
+  certificationHealth,
   needsReview,
   summarize,
   type CertificationItem,
@@ -168,5 +169,62 @@ describe("reviewing an item", () => {
     const deferred = applyReview(item({ status: "learned" }), "deferred", NOW);
     expect(deferred.status).toBe("learned");
     expect(deferred.lastReviewedAt).toEqual(NOW);
+  });
+});
+
+describe("certification health", () => {
+  it("matches summarize()'s own understanding percentage", () => {
+    const items = [item({ riskLevel: "low" }), item({ riskLevel: "high", status: "learned" })];
+    expect(certificationHealth(items, NOW).understanding).toBe(summarize(items, NOW).understanding);
+  });
+
+  it("flags a high-risk gap even when the overall percentage looks healthy", () => {
+    // Nine confirmed low-risk items and one stale high-risk one reads as
+    // "90% understood" — this is the number that must not hide it.
+    const items = [
+      ...Array.from({ length: 9 }, () => item({ riskLevel: "low" })),
+      item({ riskLevel: "high", lastReviewedAt: daysAgo(500) }),
+    ];
+    const health = certificationHealth(items, NOW);
+
+    expect(health.understanding).toBeGreaterThanOrEqual(80);
+    expect(health.highRiskGapExists).toBe(true);
+    expect(health.byRisk.high.needsReview).toBe(1);
+  });
+
+  it("finds no gap when every high and critical item is current", () => {
+    const items = [item({ riskLevel: "high" }), item({ riskLevel: "critical" })];
+    const health = certificationHealth(items, NOW);
+
+    expect(health.highRiskGapExists).toBe(false);
+    expect(health.explanation).toMatch(/every high-risk belief is reviewed/i);
+  });
+
+  it("counts a needs_review item under its own risk level, not confirmed", () => {
+    const items = [item({ riskLevel: "critical", status: "needs_review" })];
+    const health = certificationHealth(items, NOW);
+
+    expect(health.byRisk.critical.total).toBe(1);
+    expect(health.byRisk.critical.needsReview).toBe(1);
+    expect(health.byRisk.critical.confirmed).toBe(0);
+  });
+
+  it("names how many are critical specifically, not just how many are high risk", () => {
+    const items = [
+      item({ riskLevel: "critical", lastReviewedAt: daysAgo(500) }),
+      item({ riskLevel: "high", lastReviewedAt: daysAgo(500) }),
+    ];
+    const health = certificationHealth(items, NOW);
+
+    expect(health.explanation).toMatch(/2 beliefs/i);
+    expect(health.explanation).toMatch(/1 of them critical/i);
+  });
+
+  it("says a lower-risk gap is not a high-risk one", () => {
+    const items = [item({ riskLevel: "low", lastReviewedAt: daysAgo(500) })];
+    const health = certificationHealth(items, NOW);
+
+    expect(health.highRiskGapExists).toBe(false);
+    expect(health.explanation).toMatch(/none of them high risk/i);
   });
 });
