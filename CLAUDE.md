@@ -91,11 +91,14 @@ work, and hold new work against these:
 13. **One door to the assistant, not one per screen.** The assistant is
     already a primary tab, raised in the middle of the phone bar (rule 6)
     and reachable everywhere the mic icon is. A screen never adds its own
-    "Ask AI" / "Talk to WonderHome" / "Assign with AI" shortcut next to an
+    "Ask AI" / "HomeTalk" / "Assign with AI" shortcut next to an
     entity — that duplicates the one door with a second, inconsistent one.
     Manual add/update/remove (rule 12) is a screen's own job; talking to
     WonderHome about the same thing happens through the assistant tab, not
-    a pill bolted onto a row or a header.
+    a pill bolted onto a row or a header. HomeSend's paperclip beside the
+    mic is not an exception to this — it is a second input *modality* of
+    the same one door (a photo or a paste is content, not a question), not
+    a second door.
 14. **No two buttons for the same job.** Before a header or an empty state
     ships with more than one action, ask what each one actually does. Two
     pills that both amount to "add this" — one manual, one routed through
@@ -187,12 +190,51 @@ Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card
 row, pill or tile. A new pattern belongs in the kit, with a note in
 `design/DESIGN-NOTES.md` saying which rule it encodes.
 
+## The agent platform: HomeTalk, HomeBrain, HomeSend
+WonderHome's AI layer is one pipeline with three named, real surfaces —
+"real" meaning each one is wired end to end, not illustrative:
+
+- **HomeTalk** (`/ai`, `packages/core/src/components/ui/talk-composer.tsx`)
+  is where a household talks or types to WonderHome — the one door (rule
+  13). Every turn goes through the same conversation engine
+  (`conversation/engine.ts`) whether spoken or typed.
+- **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`'s
+  `understand`/answer-composition seam) is the reasoning behind a reply: a
+  real model call, gated by the same consent/minimisation/entitlement
+  checks a fixture-resolved intent already passed through, never trusted
+  with a decision — every downstream authorization gate runs on its output
+  exactly as it runs on a deterministic one.
+- **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
+  the composer's paperclip button) is the inbound intake channel: a photo,
+  a file or a pasted forward, classified and routed into a real domain
+  table only once a person confirms it. v1 is upload/paste from inside the
+  app — no WhatsApp/email webhook exists (no provider credentials, see
+  "External providers" below), but the table is shaped so one can plug in
+  later without a redesign.
+
+Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
+runs the household's actual domains: `ai/gather-assessments.ts` merges
+every domain's `*Agenda()` read into one `HomeAssessment[]`,
+`ai/specialists.ts`'s `coordinate()` turns that into `PlannedStep`s,
+`ai/orchestrator.ts`'s `executeStep()`/`advance()` run each step through
+`ai/tools.ts`'s `authorizeToolCall()` (scope → entitlement → permission →
+autonomy, in that order) and `household/autonomy.ts`'s per-outcome
+autonomy setting, `ai/executors.ts` performs the write for a step that is
+actually authorized to execute, and `ai/run.ts`'s `runHouseholdAgents()`
+ties a run together — triggered today from HomeTalk (a "check on things"
+utterance) or `POST /households/{householdId}/agents/run`, with automatic/
+scheduled runs deliberately not wired up yet (`proactive_agents`, still
+`false`, is the gate for that). This is the same pipeline the diagram
+"Inputs → Intake → Understand → Decide & Plan → Take Action → Outcome"
+describes — HomeSend and manual entry are Inputs, HomeBrain is Understand,
+`coordinate()` is Decide & Plan, the executors are Take Action.
+
 ## Product rules
 - Manage outcomes, not micro-task checklists.
 - Normal household routines are silent.
 - Househelpers do not need to update every chore.
 - Notifications are precise, timely, recipient-specific, actionable, grouped, threaded and automatically resolved.
-- Talk and text share one conversation engine.
+- Talk and text share one conversation engine — HomeTalk, backed by HomeBrain.
 - One household has multiple identities and personalized views.
 - Head of Family can designate Household Administrators.
 - Children have age-appropriate access and privacy.
