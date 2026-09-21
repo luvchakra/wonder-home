@@ -2,7 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import type { HomeAssessment } from "../home/assessment";
-import type { ExistingObligationImport, ImportedObligation, ObligationSyncPlan } from "./email-connector";
+import type {
+  ExistingObligationImport,
+  ImportedObligation,
+  ObligationSyncPlan,
+} from "./email-connector";
 import {
   assessObligation,
   detectAnomaly,
@@ -34,7 +38,8 @@ export async function listObligations(
     .eq("household_id", householdId)
     .order("due_on", { ascending: true, nullsFirst: false });
 
-  if (error) throw new Error(`listObligations failed: ${error.code ?? "unknown"}`);
+  if (error)
+    throw new Error(`listObligations failed: ${error.code ?? "unknown"}`);
 
   return (data ?? []).map((row: Row) => ({
     id: row.id as string,
@@ -88,12 +93,81 @@ export async function createObligation(
     .single();
 
   if (error) {
-    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can add a bill.");
-    if (error.code === "23503") throw ApiError.badRequest("That member is not part of this household.");
+    if (error.code === "42501")
+      throw ApiError.forbidden(
+        "Only a household administrator can add a bill.",
+      );
+    if (error.code === "23503")
+      throw ApiError.badRequest("That member is not part of this household.");
     throw new Error(`createObligation failed: ${error.code ?? "unknown"}`);
   }
 
   return { id: (data as Row).id as string };
+}
+
+export type UpdateObligationInput = {
+  id: string;
+  householdId: string;
+  name?: string;
+  kind?: ObligationKind;
+  payee?: string | null;
+  amountMinor?: number | null;
+  currency?: string | null;
+  dueOn?: string | null;
+  recurrence?: "monthly" | "quarterly" | "yearly" | "one_off" | null;
+};
+
+/** Changing what a hand-typed bill says — the other half of `createObligation` (CLAUDE.md's "every entity can be added, updated and removed"). */
+export async function updateObligation(
+  supabase: SupabaseClient,
+  input: UpdateObligationInput,
+): Promise<void> {
+  const patch: Row = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.kind !== undefined) patch.kind = input.kind;
+  if (input.payee !== undefined) patch.payee = input.payee;
+  if (input.amountMinor !== undefined) patch.amount_minor = input.amountMinor;
+  if (input.currency !== undefined) patch.currency = input.currency;
+  if (input.dueOn !== undefined) patch.due_on = input.dueOn;
+  if (input.recurrence !== undefined) patch.recurrence = input.recurrence;
+
+  const { error } = await supabase
+    .from("obligations")
+    .update(patch)
+    .eq("id", input.id)
+    .eq("household_id", input.householdId);
+
+  if (error) {
+    if (error.code === "42501")
+      throw ApiError.forbidden(
+        "Only a household administrator can change a bill.",
+      );
+    throw new Error(`updateObligation failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/**
+ * Standing down a bill that should not be tracked any more — a status flip,
+ * never a hard delete (CLAUDE.md principle 12): its payment/transaction
+ * history stays intact and explained rather than orphaned.
+ */
+export async function cancelObligation(
+  supabase: SupabaseClient,
+  input: { id: string; householdId: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("obligations")
+    .update({ status: "cancelled" })
+    .eq("id", input.id)
+    .eq("household_id", input.householdId);
+
+  if (error) {
+    if (error.code === "42501")
+      throw ApiError.forbidden(
+        "Only a household administrator can cancel a bill.",
+      );
+    throw new Error(`cancelObligation failed: ${error.code ?? "unknown"}`);
+  }
 }
 
 /** Intents that are approved or in flight, so a settled bill stays quiet. */
@@ -107,11 +181,16 @@ async function arrangedObligationIds(
     .eq("household_id", householdId)
     .in("status", ["approved", "executing", "succeeded"]);
 
-  if (error) throw new Error(`arrangedObligationIds failed: ${error.code ?? "unknown"}`);
+  if (error)
+    throw new Error(`arrangedObligationIds failed: ${error.code ?? "unknown"}`);
   return new Set((data ?? []).map((row: Row) => row.obligation_id as string));
 }
 
-export type FinanceAgenda = { bills: HomeAssessment[]; anomalies: HomeAssessment[]; checked: number };
+export type FinanceAgenda = {
+  bills: HomeAssessment[];
+  anomalies: HomeAssessment[];
+  checked: number;
+};
 
 export async function financeAgenda(
   supabase: SupabaseClient,
@@ -125,14 +204,20 @@ export async function financeAgenda(
     arrangedObligationIds(supabase, householdId),
     supabase
       .from("spend_anomalies")
-      .select("id, obligation_id, amount_minor, currency, baseline_minor, baseline_label, ratio")
+      .select(
+        "id, obligation_id, amount_minor, currency, baseline_minor, baseline_label, ratio",
+      )
       .eq("household_id", householdId)
       .eq("status", "open"),
   ]);
 
-  const byId = new Map(obligations.map((obligation) => [obligation.id, obligation]));
+  const byId = new Map(
+    obligations.map((obligation) => [obligation.id, obligation]),
+  );
 
-  const anomalies: HomeAssessment[] = ((anomalyRows.data as Row[] | null) ?? []).map((row) => {
+  const anomalies: HomeAssessment[] = (
+    (anomalyRows.data as Row[] | null) ?? []
+  ).map((row) => {
     const obligation = byId.get(row.obligation_id as string);
     return {
       subjectKey: `anomaly.${row.id as string}`,
@@ -151,7 +236,10 @@ export async function financeAgenda(
   return {
     bills: obligations
       .map((obligation) =>
-        assessObligation(obligation, { now, hasApprovedIntent: arranged.has(obligation.id) }),
+        assessObligation(obligation, {
+          now,
+          hasApprovedIntent: arranged.has(obligation.id),
+        }),
       )
       .filter((assessment) => assessment.notable),
     anomalies,
@@ -187,7 +275,8 @@ export async function recordAmount(
   );
 
   if (error) {
-    if (error.code === "42501") throw ApiError.forbidden("You cannot record amounts for this household.");
+    if (error.code === "42501")
+      throw ApiError.forbidden("You cannot record amounts for this household.");
     throw new Error(`recordAmount failed: ${error.code ?? "unknown"}`);
   }
 
@@ -197,7 +286,8 @@ export async function recordAmount(
     .eq("obligation_id", input.obligationId)
     .neq("period_label", input.periodLabel);
 
-  if (historyError) throw new Error(`recordAmount failed: ${historyError.code ?? "unknown"}`);
+  if (historyError)
+    throw new Error(`recordAmount failed: ${historyError.code ?? "unknown"}`);
 
   const anomaly = detectAnomaly({
     amountMinor: input.amountMinor,
@@ -261,7 +351,8 @@ export async function prepareIntent(
     .single();
 
   if (error) {
-    if (error.code === "42501") throw ApiError.forbidden("Only an administrator can arrange a payment.");
+    if (error.code === "42501")
+      throw ApiError.forbidden("Only an administrator can arrange a payment.");
     throw new Error(`prepareIntent failed: ${error.code ?? "unknown"}`);
   }
 
@@ -283,7 +374,10 @@ export async function listImportedObligations(
     .select("id, external_id")
     .eq("integration_id", integrationId);
 
-  if (error) throw new Error(`listImportedObligations failed: ${error.code ?? "unknown"}`);
+  if (error)
+    throw new Error(
+      `listImportedObligations failed: ${error.code ?? "unknown"}`,
+    );
 
   return ((data as Row[] | null) ?? []).map((row) => ({
     id: row.id as string,
@@ -304,12 +398,19 @@ export async function listImportedObligations(
  */
 export async function applyObligationSyncPlan(
   supabase: SupabaseClient,
-  input: { householdId: string; integrationId: string; plan: ObligationSyncPlan },
+  input: {
+    householdId: string;
+    integrationId: string;
+    plan: ObligationSyncPlan;
+  },
 ): Promise<void> {
   const { householdId, integrationId, plan } = input;
   const fail = (step: string, error: { code?: string }) => {
-    if (error.code === "42501") throw ApiError.forbidden("You cannot add bills to this household.");
-    return new Error(`applyObligationSyncPlan ${step} failed: ${error.code ?? "unknown"}`);
+    if (error.code === "42501")
+      throw ApiError.forbidden("You cannot add bills to this household.");
+    return new Error(
+      `applyObligationSyncPlan ${step} failed: ${error.code ?? "unknown"}`,
+    );
   };
 
   if (plan.insert.length > 0) {

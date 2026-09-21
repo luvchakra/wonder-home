@@ -17,7 +17,14 @@ import { isoDate, silent, type HomeAssessment } from "../home/assessment";
 export const MEAL_SLOTS = ["breakfast", "lunch", "snack", "dinner"] as const;
 export type MealSlot = (typeof MEAL_SLOTS)[number];
 
-export const MEAL_STATUSES = ["planned", "at_risk", "ready", "eaten", "skipped", "replanned"] as const;
+export const MEAL_STATUSES = [
+  "planned",
+  "at_risk",
+  "ready",
+  "eaten",
+  "skipped",
+  "replanned",
+] as const;
 export type MealStatus = (typeof MEAL_STATUSES)[number];
 
 export type Recipe = {
@@ -28,6 +35,11 @@ export type Recipe = {
   /** Wall-clock time from starting to ready, including anything unattended. */
   totalMinutes: number;
   serves: number;
+  /** Whatever the household recorded — never computed from ingredients. Null means not recorded. */
+  caloriesPerServing?: number | null;
+  proteinGrams?: number | null;
+  carbsGrams?: number | null;
+  fatGrams?: number | null;
 };
 
 export type IngredientNeed = {
@@ -77,16 +89,24 @@ export type MealContext = {
 export function assessMeal(meal: Meal, context: MealContext): HomeAssessment {
   const subjectKey = `meal.${meal.id}`;
 
-  if (meal.status === "eaten" || meal.status === "skipped" || meal.status === "ready") {
+  if (
+    meal.status === "eaten" ||
+    meal.status === "skipped" ||
+    meal.status === "ready"
+  ) {
     return silent(subjectKey, meal.name, "This meal is settled.");
   }
 
   const missing = meal.ingredients.filter(
-    (ingredient) => ingredient.essential && (ingredient.status === "needed" || ingredient.status === "missing"),
+    (ingredient) =>
+      ingredient.essential &&
+      (ingredient.status === "needed" || ingredient.status === "missing"),
   );
 
   if (missing.length > 0) {
-    const shopping = missing.every((ingredient) => ingredient.status === "shopping");
+    const shopping = missing.every(
+      (ingredient) => ingredient.status === "shopping",
+    );
     return {
       subjectKey,
       title: meal.name,
@@ -95,7 +115,10 @@ export function assessMeal(meal: Meal, context: MealContext): HomeAssessment {
       notable: !shopping,
       reason: `${meal.name} needs ${missing.map((ingredient) => ingredient.name).join(", ")}.`,
       // The action is shopping or substituting, never "cook anyway".
-      action: { action: missing.length === 1 ? "substitute" : "shop_for_meal", target: meal.id },
+      action: {
+        action: missing.length === 1 ? "substitute" : "shop_for_meal",
+        target: meal.id,
+      },
       dueOn: isoDate(meal.readyBy),
     };
   }
@@ -141,7 +164,9 @@ export function assessMeal(meal: Meal, context: MealContext): HomeAssessment {
   }
 
   if (context.now > start) {
-    const lateMinutes = Math.round((context.now.getTime() - start.getTime()) / 60_000);
+    const lateMinutes = Math.round(
+      (context.now.getTime() - start.getTime()) / 60_000,
+    );
     return {
       subjectKey,
       title: meal.name,
@@ -157,17 +182,30 @@ export function assessMeal(meal: Meal, context: MealContext): HomeAssessment {
   return silent(subjectKey, meal.name, `${meal.name} is on track.`);
 }
 
+export const PREFERENCE_KINDS = [
+  "allergy",
+  "medical",
+  "ethical",
+  "dislike",
+  "preference",
+] as const;
+
 export type Preference = {
   /** Null for the whole household; a member id for one person only. */
   memberId: string | null;
-  kind: "allergy" | "medical" | "ethical" | "dislike" | "preference";
+  kind: (typeof PREFERENCE_KINDS)[number];
   subject: string;
   source: "member_stated" | "observed" | "imported";
 };
 
 export type PreferenceVerdict =
   | { allowed: true }
-  | { allowed: false; severity: "unsafe" | "unacceptable" | "disliked"; because: string; affects: string[] };
+  | {
+      allowed: false;
+      severity: "unsafe" | "unacceptable" | "disliked";
+      because: string;
+      affects: string[];
+    };
 
 /**
  * Whether a dish suits the people who will eat it (10-002, 10-006).
@@ -185,14 +223,17 @@ export function checkPreferences(
   const names = ingredients.map((ingredient) => ingredient.name.toLowerCase());
 
   const relevant = preferences.filter(
-    (preference) => preference.memberId === null || eating.includes(preference.memberId),
+    (preference) =>
+      preference.memberId === null || eating.includes(preference.memberId),
   );
 
   const hits = relevant.filter((preference) =>
     names.some((name) => name.includes(preference.subject.toLowerCase())),
   );
 
-  const unsafe = hits.filter((hit) => hit.kind === "allergy" || hit.kind === "medical");
+  const unsafe = hits.filter(
+    (hit) => hit.kind === "allergy" || hit.kind === "medical",
+  );
   if (unsafe.length > 0) {
     return {
       allowed: false,
@@ -253,24 +294,37 @@ export function choosePlan(
   options: { minutesAvailable: number; canShopBefore: boolean },
 ): PlanChoice {
   const safe = candidates.filter(
-    (candidate) => candidate.preference.allowed || candidate.preference.severity === "disliked",
+    (candidate) =>
+      candidate.preference.allowed ||
+      candidate.preference.severity === "disliked",
   );
 
   if (safe.length === 0) {
-    return { kind: "defer", because: "Nothing here suits everybody who is eating." };
+    return {
+      kind: "defer",
+      because: "Nothing here suits everybody who is eating.",
+    };
   }
 
-  const inTime = safe.filter((candidate) => candidate.recipe.totalMinutes <= options.minutesAvailable);
+  const inTime = safe.filter(
+    (candidate) => candidate.recipe.totalMinutes <= options.minutesAvailable,
+  );
   if (inTime.length === 0) {
-    return { kind: "defer", because: "Nothing here can be ready in the time available." };
+    return {
+      kind: "defer",
+      because: "Nothing here can be ready in the time available.",
+    };
   }
 
   // Everything to hand and nobody minds: cook it.
   const ready = inTime.filter(
-    (candidate) => candidate.missingEssential.length === 0 && candidate.preference.allowed,
+    (candidate) =>
+      candidate.missingEssential.length === 0 && candidate.preference.allowed,
   );
   if (ready.length > 0) {
-    const quickest = [...ready].sort((a, b) => a.recipe.activeMinutes - b.recipe.activeMinutes)[0]!;
+    const quickest = [...ready].sort(
+      (a, b) => a.recipe.activeMinutes - b.recipe.activeMinutes,
+    )[0]!;
     return {
       kind: "cook",
       recipe: quickest.recipe,
@@ -325,17 +379,26 @@ export type Replan =
 
 export function replanMeal(
   meal: Meal,
-  change: { cookUnavailable?: boolean; readyByMovedTo?: Date | null; protectedTime?: boolean },
+  change: {
+    cookUnavailable?: boolean;
+    readyByMovedTo?: Date | null;
+    protectedTime?: boolean;
+  },
 ): Replan {
   if (change.protectedTime) {
     return {
       kind: "ask",
-      because: "This is protected family time, so WonderHome will not move it on its own.",
+      because:
+        "This is protected family time, so WonderHome will not move it on its own.",
     };
   }
 
   if (change.readyByMovedTo) {
-    return { kind: "move", readyBy: change.readyByMovedTo, because: "The family is eating at a different time." };
+    return {
+      kind: "move",
+      readyBy: change.readyByMovedTo,
+      because: "The family is eating at a different time.",
+    };
   }
 
   if (change.cookUnavailable) {
