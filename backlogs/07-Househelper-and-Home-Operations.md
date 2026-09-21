@@ -10,7 +10,7 @@
 | 4 | P0 | 07-004 | Exception handling | Done | Outcomes and windows, never per-chore status |
 | 5 | P0 | 07-005 | Helper privacy | Done | Outcomes and windows, never per-chore status |
 | 6 | P1 | 07-006 | Optional daily summary | Done | `buildDailySummary`: one digest of what was unusual, built only from exceptions `handleHelperException` already routed to `tell_household` and an absence left uncovered — a handled exception or a fully-covered absence stays silent, matching the module's own rule that normal work needs no update. Opt-in by construction: nothing depends on anyone reading it, and a quiet day says so in one line rather than nothing |
-| 7 | P1 | 07-007 | Pattern learning | Not Started | |
+| 7 | P1 | 07-007 | Pattern learning | Done | Normal timing is already covered by reusing 03-007's `findTimingPattern` directly — it operates on any `Outcome[]`, helper-owned outcomes included. New: `findMissPattern`/`proposeMissPattern` call a recurring miss only when the same exception kind keeps recurring for one outcome (≥3 occurrences, ≥0.6 concentration), and never propose anything once the household has confirmed a fact about it — the same confirmed-rule gate 03-007 uses |
 | 8 | P2 | 07-008 | Service marketplace | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

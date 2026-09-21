@@ -3,13 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   assessAbsence,
   buildDailySummary,
+  findMissPattern,
   handleHelperException,
   helperMaySee,
   helperNeedsToRespond,
   isExpectedOn,
+  proposeMissPattern,
   type HelperException,
   type HelperExceptionHandling,
   type HelperResponsibility,
+  type MissRecord,
 } from "./helpers";
 
 const weekdayMornings = [1, 2, 3, 4, 5].map((dayOfWeek) => ({
@@ -262,5 +265,67 @@ describe("the daily summary", () => {
 
     expect(summary.entries).toHaveLength(2);
     expect(summary.headline).toMatch(/2 things/i);
+  });
+});
+
+describe("finding a recurring miss", () => {
+  const miss = (kind: HelperException["kind"]): MissRecord => ({ outcomeKey: "laundry.ready", kind });
+
+  it("finds nothing with too little history", () => {
+    expect(findMissPattern([miss("blocked"), miss("blocked")], "laundry.ready")).toBeNull();
+  });
+
+  it("finds a pattern when the same exception kind keeps recurring", () => {
+    const records = [miss("missing_supplies"), miss("missing_supplies"), miss("missing_supplies"), miss("blocked")];
+    const pattern = findMissPattern(records, "laundry.ready");
+
+    expect(pattern).not.toBeNull();
+    expect(pattern!.outcomeKey).toBe("laundry.ready");
+    expect(pattern!.occurrences).toBe(4);
+    expect(pattern!.dominantKind).toBe("missing_supplies");
+    expect(pattern!.concentration).toBe(0.75);
+  });
+
+  it("finds nothing when the exceptions are varied problems, not a recurring one", () => {
+    const records = [miss("blocked"), miss("missing_supplies"), miss("not_arrived"), miss("extra_work")];
+    expect(findMissPattern(records, "laundry.ready")).toBeNull();
+  });
+
+  it("ignores another outcome's exceptions entirely", () => {
+    const records = [
+      { outcomeKey: "home.cleaned", kind: "blocked" as const },
+      { outcomeKey: "home.cleaned", kind: "blocked" as const },
+      { outcomeKey: "home.cleaned", kind: "blocked" as const },
+    ];
+    expect(findMissPattern(records, "laundry.ready")).toBeNull();
+  });
+});
+
+describe("proposing a miss pattern", () => {
+  const pattern = { outcomeKey: "laundry.ready", occurrences: 8, dominantKind: "missing_supplies" as const, concentration: 0.9 };
+
+  it("proposes a real learning proposal for a strong pattern", () => {
+    const proposal = proposeMissPattern(pattern, false);
+    expect(proposal).not.toBeNull();
+    expect(proposal!.sourceType).toBe("observed");
+    expect(proposal!.status).toBe("learned");
+    expect(proposal!.key).toBe("helper_miss.laundry.ready");
+  });
+
+  it("never proposes anything once the household has confirmed a fact about it", () => {
+    // The same gate 03-007's timing patterns use: a confirmed fact is not
+    // something a pattern noticed afterward should compete with.
+    expect(proposeMissPattern(pattern, true)).toBeNull();
+  });
+
+  it("gives fewer occurrences less confidence than the same concentration with more", () => {
+    const fewer = proposeMissPattern({ ...pattern, occurrences: 3 }, false);
+    const more = proposeMissPattern({ ...pattern, occurrences: 8 }, false);
+    expect(fewer!.confidence).toBeLessThan(more!.confidence);
+  });
+
+  it("never exceeds the confidence cap module 14 already enforces", () => {
+    const proposal = proposeMissPattern({ ...pattern, concentration: 1, occurrences: 100 }, false);
+    expect(proposal!.confidence).toBeLessThanOrEqual(0.8);
   });
 });
