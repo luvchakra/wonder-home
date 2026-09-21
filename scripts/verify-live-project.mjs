@@ -74,6 +74,22 @@ const SHIPPED_TABLES = [
   "gift_plans",
   "step_up_verifications",
   "privacy_requests",
+  "household_feature_flags",
+];
+
+/**
+ * A column from an `alter table` migration, checked the same way a table is:
+ * a missing table means a migration never landed, and a missing column is
+ * the exact same failure for the migrations that only add to one — nothing
+ * in `SHIPPED_TABLES` would ever catch it, since the table it alters
+ * already existed. Found the hard way: three stories' migrations sat as
+ * files only, `Done` in the trackers, never once applied to this project,
+ * until a fourth story tried to actually use one of them.
+ */
+const SHIPPED_COLUMNS = [
+  { table: "agent_runs", column: "contracts" },
+  { table: "household_members", column: "nickname" },
+  { table: "notification_preferences", column: "target" },
 ];
 
 /**
@@ -184,6 +200,11 @@ async function main() {
   for (const table of SHIPPED_TABLES) {
     const { error } = await admin.from(table).select("*", { head: true, count: "exact" });
     check(`migration landed: ${table}`, !error, error?.message ?? "");
+  }
+
+  for (const { table, column } of SHIPPED_COLUMNS) {
+    const { error } = await admin.from(table).select(column, { head: true, count: "exact" });
+    check(`migration landed: ${table}.${column}`, !error, error?.message ?? "");
   }
 
   for (const read of EMBEDDED_READS) {
