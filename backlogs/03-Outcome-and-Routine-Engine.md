@@ -10,7 +10,7 @@
 | 4 | P0 | 03-004 | Exception detection | Done | Impact and recommended action are NOT NULL by design |
 | 5 | P0 | 03-005 | Replanning | Done | Downstream reachability computed, unaffected plans preserved |
 | 6 | P1 | 03-006 | Dependency graph | Done | `attachDependencies` turns the household's real dependency edges (the same ones `configuration.ts`'s `canDependOn` validates) into each outcome's own `dependencies`, carrying the upstream outcome's current status, feeding straight into the evaluation and replanning already built for 03-003/03-005 |
-| 7 | P1 | 03-007 | Pattern learning | Not Started | |
+| 7 | P1 | 03-007 | Pattern learning | Done | `pattern-learning.ts`: `findTimingPattern` looks at an outcome key's actually-met history and calls a normal timing only when completions cluster tightly enough (consistency ≥0.6, at least 4 samples) — scattered history says nothing. `proposeTimingPattern` turns a found pattern into the same `LearningProposal` shape module 14 uses everywhere (observed, capped confidence, status "learned"), and refuses outright — returns `null`, proposing nothing — once the household has confirmed a fact about that outcome's timing, the goal's own words made a caller-supplied fact so it is testable rather than assumed |
 | 8 | P2 | 03-008 | Optimization | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
