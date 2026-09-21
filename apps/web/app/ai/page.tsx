@@ -9,11 +9,11 @@ import { Sparkles } from "lucide-react";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
 
-export const metadata = { title: "Talk to WonderHome" };
+export const metadata = { title: "HomeTalk" };
 export const dynamic = "force-dynamic";
 
 /**
- * Talk or text — one conversation engine for both (module 04).
+ * HomeTalk — talk or text, one conversation engine for both (module 04).
  *
  * The history is read here with the member's own client, so what reaches the
  * browser is what RLS lets this person see. New turns go through the API.
@@ -53,7 +53,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   }
 
   return (
-    <AppShell active="ai" viewer={viewer} secondary={secondary} pathname="/ai" title="Talk to WonderHome">
+    <AppShell active="ai" viewer={viewer} secondary={secondary} pathname="/ai" title="HomeTalk">
       {entitlement.allowed ? (
         <Assistant
           householdId={membership.household.id}

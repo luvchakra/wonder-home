@@ -4,7 +4,7 @@ import { minimiseContext, DEFAULT_DATA_USE } from "../ai/privacy";
 import { factsFrom, humanKey, type BrainSnapshot } from "./brain";
 
 /**
- * The Household Brain's facts (product-direction v4 §5): what the model is
+ * The HomeBrain's facts (product-direction v4 §5): what the model is
  * told about a home, and which consent class each thing carries.
  */
 const now = new Date("2026-09-20T13:10:00Z");

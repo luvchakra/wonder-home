@@ -17,7 +17,7 @@ import { useLiveVoice } from "./use-live-voice";
 import { useSpeechToText, type SpeechToTextState } from "./use-speech-to-text";
 
 /**
- * Where a household talks to WonderHome — one control, four states.
+ * HomeTalk — where a household talks to WonderHome — one control, four states.
  *
  * The design sheet's point, and the reason this replaced a composer with a
  * toggle bolted under the Send button: **speaking and conversing are two
@@ -341,7 +341,7 @@ function LiveField({
   thinking: boolean;
   onToggle: () => void;
 }) {
-  const status = paused ? "Paused" : thinking ? "Thinking…" : speaking ? "Speaking…" : "Talking with WonderHome…";
+  const status = paused ? "Paused" : thinking ? "Thinking…" : speaking ? "Speaking…" : "HomeTalk is listening…";
 
   return (
     <button
