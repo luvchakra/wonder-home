@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**160 of 173 stories done — 92.5%**
+**161 of 173 stories done — 93.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 160 |
+| Done | 161 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 13 |
+| Not Started | 12 |
 
 ## By module
 
@@ -30,7 +30,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 03 Outcome & Routine Engine | `████████░░` | 7 | 8 | 1 not started |
 | 04 Conversation, Voice & Text | `██████████` | 11 | 11 | — |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
-| 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
+| 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
 | 08 Kids & School Intelligence | `██████████` | 8 | 8 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 8 | 8 | — |
@@ -51,7 +51,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
-| `06-008` Channels | 06 Actionable Notification Engine | P1 | Not Started |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
@@ -163,7 +162,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 06 — Actionable Notification Engine
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -174,7 +173,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `06-005` Escalation | P0 | Done | One recipient, a reason, and something they can do |
 | `06-006` Lifecycle | P0 | Done | One recipient, a reason, and something they can do |
 | `06-007` Threading/grouping | P0 | Done | One recipient, a reason, and something they can do |
-| `06-008` Channels | P1 | Not Started | — |
+| `06-008` Channels | P1 | Done | in_app is live; push/email/whatsapp are fixture adapters + real per-channel preferences UI, honest that they are not connected yet — module 06 complete |
 
 ### 07 — Househelper & Home Operations
 

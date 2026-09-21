@@ -11,7 +11,7 @@
 | 5 | P0 | 06-005 | Escalation | Done | One recipient, a reason, and something they can do |
 | 6 | P0 | 06-006 | Lifecycle | Done | One recipient, a reason, and something they can do |
 | 7 | P0 | 06-007 | Threading/grouping | Done | One recipient, a reason, and something they can do |
-| 8 | P1 | 06-008 | Channels | Not Started | |
+| 8 | P1 | 06-008 | Channels | Done | in_app is live; push/email/whatsapp are fixture adapters + real per-channel preferences UI, honest that they are not connected yet — module 06 complete |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

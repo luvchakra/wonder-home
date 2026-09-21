@@ -226,3 +226,57 @@ test("a member cannot set someone else's quiet hours", () => {
   }
   assert.ok(rejected, "a member changed another member's notification preferences");
 });
+
+test("a member sets their own WhatsApp number (story 06-008)", () => {
+  asProfile(
+    PARTNER,
+    `insert into public.notification_preferences (household_id, member_id, channel, target)
+     values ('${household}', '${partnerMember}', 'whatsapp', '+15551234567');`,
+    options,
+  );
+
+  assert.equal(
+    asProfile(
+      PARTNER,
+      `select target from public.notification_preferences where member_id = '${partnerMember}' and channel = 'whatsapp';`,
+      options,
+    ),
+    "+15551234567",
+  );
+});
+
+test("a target that is not a real phone number is refused for WhatsApp", () => {
+  let rejected = false;
+  try {
+    asProfile(
+      PARTNER,
+      `insert into public.notification_preferences (household_id, member_id, channel, target)
+       values ('${household}', '${partnerMember}', 'whatsapp', 'not-a-number');`,
+      options,
+    );
+  } catch {
+    rejected = true;
+  }
+  assert.ok(rejected, "a malformed WhatsApp target was accepted");
+});
+
+test("a push target is free text — it is an opaque subscription reference, not a phone number", () => {
+  // "a member manages their own quiet hours" above already created this
+  // member's push row — upsert rather than insert, or this collides with it.
+  asProfile(
+    PARTNER,
+    `insert into public.notification_preferences (household_id, member_id, channel, target)
+     values ('${household}', '${partnerMember}', 'push', 'endpoint:abc123')
+     on conflict (member_id, channel) do update set target = excluded.target;`,
+    options,
+  );
+
+  assert.equal(
+    asProfile(
+      PARTNER,
+      `select target from public.notification_preferences where member_id = '${partnerMember}' and channel = 'push';`,
+      options,
+    ),
+    "endpoint:abc123",
+  );
+});

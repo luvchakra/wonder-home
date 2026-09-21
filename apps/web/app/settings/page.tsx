@@ -74,7 +74,7 @@ export default async function SettingsPage() {
   const inApp = preferences.find((p) => p.channel === "in_app");
 
   const rows: { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href?: string; badge?: string }[] = [
-    { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/notifications" },
+    { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/settings/notifications" },
     { icon: MicVocal, tone: "ai", title: "Voice", meta: voiceNote, href: "/settings/voice" },
     { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "What is shared, how long it is kept, and taking your data with you", href: "/settings/privacy" },
     { icon: KeyRound, tone: "neutral", title: "Two-factor authentication", meta: "Coming — not switched on for this account yet", badge: "Soon" },
