@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**153 of 173 stories done — 88.4%**
+**154 of 173 stories done — 89%**
 
 | Status | Stories |
 |---|---:|
-| Done | 153 |
+| Done | 154 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 20 |
+| Not Started | 19 |
 
 ## By module
 
@@ -27,7 +27,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `████████░░` | 7 | 8 | 1 not started |
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
-| 03 Outcome & Routine Engine | `███████░░░` | 6 | 8 | 2 not started |
+| 03 Outcome & Routine Engine | `████████░░` | 7 | 8 | 1 not started |
 | 04 Conversation, Voice & Text | `██████████` | 11 | 11 | — |
 | 05 Household Certification & Understanding | `████████░░` | 7 | 8 | 1 not started |
 | 06 Actionable Notification Engine | `████████░░` | 7 | 8 | 1 not started |
@@ -51,7 +51,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
-| `03-007` Pattern learning | 03 Outcome & Routine Engine | P1 | Not Started |
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `05-008` Certification health | 05 Household Certification & Understanding | P2 | Not Started |
 | `06-008` Channels | 06 Actionable Notification Engine | P1 | Not Started |
@@ -122,7 +121,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 03 — Outcome & Routine Engine
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -132,7 +131,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `03-004` Exception detection | P0 | Done | Impact and recommended action are NOT NULL by design |
 | `03-005` Replanning | P0 | Done | Downstream reachability computed, unaffected plans preserved |
 | `03-006` Dependency graph | P1 | Done | `attachDependencies` turns the household's real dependency edges (the same ones `configuration.ts`'s `canDependOn` validates) into each outcome's own `dependencies`, carrying the upstream outcome's current status, feeding straight into the evaluation and replanning already built for 03-003/03-005 |
-| `03-007` Pattern learning | P1 | Not Started | — |
+| `03-007` Pattern learning | P1 | Done | `pattern-learning.ts`: `findTimingPattern` looks at an outcome key's actually-met history and calls a normal timing only when completions cluster tightly enough (consistency ≥0.6, at least 4 samples) — scattered history says nothing. `proposeTimingPattern` turns a found pattern into the same `LearningProposal` shape module 14 uses everywhere (observed, capped confidence, status "learned"), and refuses outright — returns `null`, proposing nothing — once the household has confirmed a fact about that outcome's timing, the goal's own words made a caller-supplied fact so it is testable rather than assumed |
 | `03-008` Optimization | P2 | Not Started | — |
 
 ### 04 — Conversation, Voice & Text
