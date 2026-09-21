@@ -19,11 +19,13 @@ const options = { database: DB };
 
 const KUNAL = "11111111-1111-4111-8111-111111111111";
 const STRANGER = "22222222-2222-4222-8222-222222222222";
+const PARTNER = "33333333-3333-4333-8333-333333333333";
 
 let household = "";
 let headMember = "";
 let otherHousehold = "";
 let otherMember = "";
+let partnerMember = "";
 
 before(() => {
   buildTestDatabase(DB);
@@ -31,7 +33,8 @@ before(() => {
   psql(
     `insert into auth.users (id, email) values
        ('${KUNAL}', 'kunal@example.test'),
-       ('${STRANGER}', 'stranger@example.test');`,
+       ('${STRANGER}', 'stranger@example.test'),
+       ('${PARTNER}', 'priya@example.test');`,
     options,
   );
 
@@ -46,6 +49,13 @@ before(() => {
     `select household_id || ' ' || member_id from wh.create_household('Someone Else Home', 'Stranger');`,
     options,
   ).split(" ");
+
+  psql(`insert into public.profiles (id, display_name) values ('${PARTNER}', 'Priya');`, options);
+  partnerMember = psql(
+    `insert into public.household_members (household_id, profile_id, member_type, display_name)
+     values ('${household}', '${PARTNER}', 'adult', 'Priya') returning id;`,
+    options,
+  );
 });
 
 after(() => {
@@ -110,6 +120,40 @@ test("a member sees only their own household", () => {
     .split("\n")
     .filter(Boolean);
   assert.deepEqual(ids, [household]);
+});
+
+test("querying by profile_id resolves each account to its own membership row, not a housemate's", () => {
+  // The exact query listMemberships() runs (story 01-001 regression): RLS
+  // correctly lets any household member read every row of their household
+  // for the family list, so an unfiltered query returns everyone in it. The
+  // application layer has to narrow that to "the row that is me" itself —
+  // this is what filtering by profile_id does, and what its absence broke:
+  // a signed-in adult's session could resolve to a housemate's membership
+  // row, showing them a child's personalized view instead of their own.
+  const kunalRow = asProfile(
+    KUNAL,
+    `select id from public.household_members
+     where status = 'active' and profile_id = '${KUNAL}';`,
+    options,
+  );
+  assert.equal(kunalRow, headMember, "Kunal's own-profile query returned someone else's membership");
+
+  const partnerRow = asProfile(
+    PARTNER,
+    `select id from public.household_members
+     where status = 'active' and profile_id = '${PARTNER}';`,
+    options,
+  );
+  assert.equal(partnerRow, partnerMember, "Priya's own-profile query returned someone else's membership");
+
+  // The scenario that actually happened: the household seen without the
+  // filter has two rows, and either could sort first.
+  const wholeHousehold = asProfile(
+    KUNAL,
+    `select count(*) from public.household_members where household_id = '${household}' and status = 'active';`,
+    options,
+  );
+  assert.equal(wholeHousehold, "2", "expected two members sharing the household in this scenario");
 });
 
 test("a member cannot read another household's members", () => {

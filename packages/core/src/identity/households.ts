@@ -77,6 +77,19 @@ export async function createHousehold(
 /**
  * Every household the caller belongs to, with their identity and roles in each.
  *
+ * `profile_id = auth.uid()` is not optional here even though RLS already
+ * scopes the underlying table: `household_members_select_member` lets any
+ * member read *every* row of their own household (the family list needs
+ * that), so an unfiltered query here would return every family member's row,
+ * not just the caller's — one household could produce several entries, and
+ * every caller of this function assumes exactly one per household, their
+ * own. Without this filter, `requireSession`'s `memberships[0]` (and every
+ * other `.find(household.id === x)` downstream) picks whichever member's
+ * row an unordered query happened to return first — which member that is
+ * is undefined behaviour, not necessarily the signed-in person. That is
+ * exactly how one household's parent ended up signed in behind their
+ * child's own personalized view.
+ *
  * The embed names its foreign key explicitly, and has to. Two relationships
  * connect these tables — a member belongs to a household, and a household names
  * one member as its owner — so an unqualified `households(...)` is ambiguous and
@@ -89,12 +102,17 @@ export async function createHousehold(
  * membership, and asking once is the difference between one query and four.
  */
 export const listMemberships = cache(async (supabase: SupabaseClient): Promise<HouseholdMembership[]> => {
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+  if (!userId) return [];
+
   const { data, error } = await supabase
     .from("household_members")
     .select(
       "id, display_name, member_type, date_of_birth, first_seen_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role, created_at)",
     )
-    .eq("status", "active");
+    .eq("status", "active")
+    .eq("profile_id", userId);
 
   if (error) throw new Error(`listMemberships failed: ${error.code ?? "unknown"}`);
 
