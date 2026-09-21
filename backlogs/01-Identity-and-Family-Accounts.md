@@ -11,7 +11,7 @@
 | 5 | P0 | 01-005 | Personalized views | Done | Permission-filtered on the server, not hidden in the client |
 | 6 | P1 | 01-006 | Availability | Done | Pattern plus exceptions; an absence never rewrites a schedule |
 | 7 | P1 | 01-007 | Preferences | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
-| 8 | P2 | 01-008 | Helper/service identity | Not Started | |
+| 8 | P2 | 01-008 | Helper/service identity | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

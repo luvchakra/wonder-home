@@ -11,21 +11,21 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**159 of 173 stories done — 91.9%**
+**160 of 173 stories done — 92.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 159 |
+| Done | 160 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 14 |
+| Not Started | 13 |
 
 ## By module
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
-| 01 Identity & Family Accounts | `████████░░` | 7 | 8 | 1 not started |
+| 01 Identity & Family Accounts | `██████████` | 8 | 8 | — |
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
 | 03 Outcome & Routine Engine | `████████░░` | 7 | 8 | 1 not started |
 | 04 Conversation, Voice & Text | `██████████` | 11 | 11 | — |
@@ -50,7 +50,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
-| `01-008` Helper/service identity | 01 Identity & Family Accounts | P2 | Not Started |
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `06-008` Channels | 06 Actionable Notification Engine | P1 | Not Started |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
@@ -86,7 +85,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -97,7 +96,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-005` Personalized views | P0 | Done | Permission-filtered on the server, not hidden in the client |
 | `01-006` Availability | P1 | Done | Pattern plus exceptions; an absence never rewrites a schedule |
 | `01-007` Preferences | P1 | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
-| `01-008` Helper/service identity | P2 | Not Started | — |
+| `01-008` Helper/service identity | P2 | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 
 ### 02 — Household Configuration & Playbook
 
