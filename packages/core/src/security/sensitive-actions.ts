@@ -143,6 +143,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Somebody outside the family was allowed in. The family can read this row.",
     recordedIn: "packages/core/src/platform/admin.ts",
   },
+  {
+    event: "feature_flag.changed",
+    because: "Staff turned an experimental capability on or off for this household. The family can read this row.",
+    recordedIn: "packages/core/src/platform/feature-flags.ts",
+  },
 ];
 
 /**
@@ -236,6 +241,11 @@ export function describeAuditEvent(
       return {
         title: "Support was given access",
         detail: stringOr(metadata.reasonCode, "Read-only unless stated otherwise."),
+      };
+    case "feature_flag.changed":
+      return {
+        title: "A feature was turned " + (metadata.enabled ? "on" : "off"),
+        detail: stringOr(metadata.flagKey, null),
       };
     default:
       // An event nobody has described is still shown. A trail that hides what

@@ -32,6 +32,8 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "ai_operations.read",
     "support_access.grant",
     "subscription.manage",
+    "feature_flags.manage",
+    "audit.read_platform",
   ],
   owner: [
     "household.read_with_grant",
@@ -39,6 +41,8 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "ai_operations.read",
     "support_access.grant",
     "subscription.manage",
+    "feature_flags.manage",
+    "audit.read_platform",
     "platform_admin.manage",
   ],
 };

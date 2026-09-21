@@ -44,6 +44,7 @@ export const AUDIT_EVENTS = [
   "privacy.deletion_cancelled",
   "subscription.changed",
   "support.access_granted",
+  "feature_flag.changed",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];

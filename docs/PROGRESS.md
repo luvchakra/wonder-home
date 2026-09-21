@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**155 of 173 stories done — 89.6%**
+**156 of 173 stories done — 90.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 155 |
+| Done | 156 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 18 |
+| Not Started | 17 |
 
 ## By module
 
@@ -40,7 +40,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `████████░░` | 7 | 8 | 1 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
-| 16 Platform Admin & Operations | `███████░░░` | 6 | 8 | 2 not started |
+| 16 Platform Admin & Operations | `████████░░` | 7 | 8 | 1 not started |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
 | 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
 | 19 Testing, Observability & Production | `████████░░` | 7 | 8 | 1 not started |
@@ -58,7 +58,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
-| `16-008` Feature flags/audit | 16 Platform Admin & Operations | P1 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-007` Weather | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
@@ -318,7 +317,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 16 — Platform Admin & Operations
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -329,7 +328,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `16-005` Subscription administration | P0 | Done | operator/owner only; reason-coded, audited, reuses 20-004's changePlan |
 | `16-006` AI operations | P0 | Done | Failed-run + tool-call monitoring; reuses module 14's prompt-free schema |
 | `16-007` Privacy requests | P1 | Not Started | — |
-| `16-008` Feature flags/audit | P1 | Not Started | — |
+| `16-008` Feature flags/audit | P1 | Done | `feature-flags.ts`: a reason-coded, audited `setHouseholdFeatureFlag` (operator/owner only, following 16-005's exact shape) turns a staged capability on or off for one household; a household reads its own flags via RLS, matching support-access grants' "the family this concerns can see it" precedent. `audit-log.ts`: `listPlatformAuditEvents` widens who may read the already-redacted `audit_events` rows fleet-wide, never what is safe to show |
 
 ### 17 — External Integrations
 
