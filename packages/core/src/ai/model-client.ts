@@ -310,7 +310,7 @@ export function createOpenAIUnderstanding(apiKey: string): Understanding {
 
 /**
  * The second thing a model does for the household (product-direction v4 §5,
- * the Household Brain): answer a question from what the home actually
+ * the HomeBrain): answer a question from what the home actually
  * contains, in plain words.
  *
  * Understanding (above) turns a sentence into a request. This turns a

@@ -76,12 +76,12 @@ export const GUIDE: GuideSection[] = [
   },
   {
     id: "talk-to-wonderhome",
-    title: "Talking to WonderHome",
+    title: "HomeTalk",
     summary: "Voice and text are the same conversation, and it never claims to have acted.",
     group: "Everyday use",
-    keywords: ["ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command"],
+    keywords: ["ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk"],
     body: [
-      "The assistant takes voice or text, and they are the same conversation — the microphone is just another way in. Speech uses your browser's own recognition, and where that is missing or refused, it says so instead of pretending to listen.",
+      "HomeTalk is the assistant — it takes voice or text, and they are the same conversation, the microphone is just another way in. Speech uses your browser's own recognition, and where that is missing or refused, it says so instead of pretending to listen.",
       "Anything consequential comes back as a plan before it happens: what WonderHome understood, what it intends to do, what that would affect, and Confirm, Change or Cancel. Saying yes approves that specific proposal, and only for ten minutes — a stale yes gets a question rather than an action.",
       "If a request was heard poorly and it matters, the assistant reads it back rather than acting on a guess. And it never says it did something unless a governed tool actually did it; where it only prepared something, it says prepared.",
     ],

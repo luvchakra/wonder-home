@@ -19,7 +19,7 @@ import { assessConsumable, type Consumable } from "../commerce/consumables";
 import type { Order } from "../commerce/orders";
 
 /**
- * The Household Brain's working memory (product-direction v4 §5): everything
+ * HomeBrain's working memory (product-direction v4 §5): everything
  * WonderHome currently knows about a home, gathered in one place so a
  * question can be answered from all of it rather than from one domain's
  * summary line.
