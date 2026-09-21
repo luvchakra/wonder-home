@@ -54,6 +54,9 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   record_absence: "schedule",
   add_to_list: "draft",
   ask_status: "read",
+  // Always allowed to run: what each proposed step inside the run may
+  // actually do is gated per step, by the real tool registry.
+  check_agents: "read",
   plan_event: "schedule",
   adjust_schedule: "schedule",
   set_preference: "draft",

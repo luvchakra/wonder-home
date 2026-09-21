@@ -63,6 +63,27 @@ describe("what's going on", () => {
   });
 });
 
+describe("checking on the agents", () => {
+  it.each([
+    "check on things",
+    "Check my household",
+    "run my agents",
+    "run a check",
+    "what do my agents see",
+    "run agents check",
+  ])("reads %j as check_agents", (utterance) => {
+    const intent = read(utterance);
+    expect(intent.action).toBe("check_agents");
+    expect(intent.confidence).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it("always proposes execute — what each step may actually do is gated per step", () => {
+    const intent = read("check on things");
+    const proposal = proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "observe", entitled: true });
+    expect(proposal.kind).toBe("executed");
+  });
+});
+
 describe("adding to the groceries", () => {
   it.each([
     ["add a grocery item of milk", "milk"],
@@ -183,6 +204,7 @@ describe("what it does not know", () => {
       [
         "hi",
         "what's going on",
+        "check on things",
         "add milk to the list",
         "Sunita is away tomorrow",
         "pay the water bill",
