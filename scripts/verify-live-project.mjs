@@ -91,6 +91,7 @@ const SHIPPED_COLUMNS = [
   { table: "household_members", column: "nickname" },
   { table: "household_members", column: "avatar_path" },
   { table: "notification_preferences", column: "target" },
+  { table: "recipes", column: "calories_per_serving" },
 ];
 
 /**
