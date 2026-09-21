@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Bills & Finance: chevron detail, "Add transaction," and a real RLS gap it uncovered](2026-09-21-bills-chevron-detail-and-add-transaction.md) |
 | 2026-09-21 | [Househelper: a scoped empty state, and errors that show instead of hide](2026-09-21-househelper-empty-state-and-error-handling.md) |
 | 2026-09-21 | [Groceries: name/category/unit suggestions, and chevron detail](2026-09-21-groceries-open-fields-and-chevron-detail.md) |
 | 2026-09-21 | [Kids & School: update/remove, chevron detail, and a screenshot import](2026-09-21-kids-school-crud-and-screenshot-import.md) |
