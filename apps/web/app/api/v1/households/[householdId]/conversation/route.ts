@@ -79,10 +79,11 @@ type Params = { params: Promise<{ householdId: string }> };
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Feature keys a consequential intent needs, beyond the conversation itself. */
-const FEATURE_FOR_ACTION: Partial<Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events">> = {
+const FEATURE_FOR_ACTION: Partial<Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs">> = {
   make_payment: "finance.bills",
   order_items: "commerce.orders",
   plan_event: "family.events",
+  check_agents: "ai.agent_runs",
 };
 
 /** The target kind each recorded action type implies, for carrying an approved proposal out. */
@@ -255,6 +256,7 @@ export async function POST(request: Request, { params }: Params) {
       actorMemberId: membership.memberId,
       members: people,
       timezone: membership.household.timezone,
+      actor: { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType },
     };
 
     // What the assistant says: the engine's line, unless something real
@@ -687,13 +689,19 @@ async function autonomyLookup(supabase: Supabase, householdId: string) {
 async function consequentialEntitlements(
   supabase: Supabase,
   householdId: string,
-): Promise<Record<"finance.bills" | "commerce.orders" | "family.events", boolean>> {
-  const [bills, orders, events] = await Promise.all([
+): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs", boolean>> {
+  const [bills, orders, events, agentRuns] = await Promise.all([
     may(supabase, householdId, "finance.bills"),
     may(supabase, householdId, "commerce.orders"),
     may(supabase, householdId, "family.events"),
+    may(supabase, householdId, "ai.agent_runs"),
   ]);
-  return { "finance.bills": bills.allowed, "commerce.orders": orders.allowed, "family.events": events.allowed };
+  return {
+    "finance.bills": bills.allowed,
+    "commerce.orders": orders.allowed,
+    "family.events": events.allowed,
+    "ai.agent_runs": agentRuns.allowed,
+  };
 }
 
 export const dynamic = "force-dynamic";

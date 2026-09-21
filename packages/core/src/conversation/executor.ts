@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
+import { runHouseholdAgents, type RunActor } from "../ai/run";
 import { createConsumable } from "../commerce/repository";
 import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
@@ -31,6 +32,8 @@ export type ExecutionContext = {
   members: readonly { id: string; displayName: string }[];
   timezone: string;
   now?: Date;
+  /** Only `check_agents` needs these — who is asking, for the tool gate a run checks per step. */
+  actor?: RunActor;
 };
 
 export type ExecutionResult =
@@ -46,6 +49,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return intent.target.kind === "member" && Boolean(intent.target.reference);
     case "set_preference":
       return Boolean(intent.target.reference);
+    case "check_agents":
+      return true;
     default:
       return false;
   }
@@ -76,6 +81,8 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
         return await addToGroceries(intent, context);
       case "record_absence":
         return await recordAbsence(intent, context);
+      case "check_agents":
+        return await runAgentCheck(context);
       case "set_preference":
         return {
           ok: true,
@@ -90,6 +97,13 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
     console.error("[conversation] execution failed", { action: intent.action, error: thrown instanceof Error ? thrown.name : "unknown" });
     return { ok: false, reason: "Something went wrong on my side, and nothing was changed." };
   }
+}
+
+async function runAgentCheck(context: ExecutionContext): Promise<ExecutionResult> {
+  if (!context.actor) return { ok: false, reason: "I could not tell who was asking, so I did not run a check." };
+
+  const summary = await runHouseholdAgents(context.supabase, context.householdId, context.actor);
+  return { ok: true, text: summary.headline, result: { runId: summary.runId, executed: summary.executed, awaitingApproval: summary.awaitingApproval, refused: summary.refused } };
 }
 
 async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {

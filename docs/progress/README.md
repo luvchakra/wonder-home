@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [The agent pipeline runs for real, triggered from HomeTalk](2026-09-21-agent-pipeline-hometalk-trigger.md) |
 | 2026-09-21 | [Meals & Cooking: recipe picker, nutrients, Suggest, and manual preferences](2026-09-21-meals-planning-suggest-recipes-preferences.md) |
 | 2026-09-21 | [Bills & Finance: chevron detail, "Add transaction," and a real RLS gap it uncovered](2026-09-21-bills-chevron-detail-and-add-transaction.md) |
 | 2026-09-21 | [Househelper: a scoped empty state, and errors that show instead of hide](2026-09-21-househelper-empty-state-and-error-handling.md) |

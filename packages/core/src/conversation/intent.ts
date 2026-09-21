@@ -16,6 +16,8 @@ export const INTENT_ACTIONS = [
   "record_absence",
   "add_to_list",
   "ask_status",
+  /** "Check on things" — runs the household's specialists for real (14-007). */
+  "check_agents",
   "plan_event",
   "adjust_schedule",
   "set_preference",
@@ -111,7 +113,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
     return { kind: "clarify", question: clarifyingQuestionFor(intent) };
   }
 
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 
