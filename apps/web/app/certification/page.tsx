@@ -25,7 +25,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AddBeliefButton, CertificationControls } from "../_components/certification-controls";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
-export const metadata = { title: "Household Certification" };
+export const metadata = { title: "Belief Review" };
 export const dynamic = "force-dynamic";
 
 const CATEGORY_LABEL: Record<(typeof CERTIFICATION_CATEGORIES)[number], string> = {
@@ -78,7 +78,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "review";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "Certification" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "Belief Review" };
 
   const [{ data }, { data: historyRows }] = await Promise.all([
     supabase
@@ -137,7 +137,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Household Certification</h1>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Belief Review</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
           </div>
           {canReview ? <AddBeliefButton householdId={householdId} /> : null}

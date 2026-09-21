@@ -112,8 +112,7 @@ export default async function VoiceSettingsPage() {
             ) : (
               <Card>
                 <p className="text-sm text-[var(--wh-foreground-muted)]">
-                  The Head of Family or an administrator sets the voice for everybody, so the whole household hears
-                  the same one.
+                  An Admin sets the voice for everybody, so the whole household hears the same one.
                 </p>
               </Card>
             )}

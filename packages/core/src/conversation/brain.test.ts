@@ -9,16 +9,28 @@ import { factsFrom, humanKey, type BrainSnapshot } from "./brain";
  */
 const now = new Date("2026-09-20T13:10:00Z");
 
+// Every member fixture below carries these — nobody in this test needs the
+// extended profile fields, so they are all unset.
+const NO_PROFILE_DETAILS = {
+  dateOfBirth: null,
+  nickname: null,
+  relationship: null,
+  occupation: null,
+  schoolOrWorkLocation: null,
+  specialOccasionLabel: null,
+  specialOccasionDate: null,
+} as const;
+
 const snapshot: BrainSnapshot = {
   householdName: "Asmi Family",
   timezone: "Asia/Kolkata",
   now,
-  viewer: { memberId: "kunal", roleLabel: "Head of Family", tone: "adult" },
+  viewer: { memberId: "kunal", roleLabel: "Admin", tone: "adult" },
   members: [
-    { id: "kunal", displayName: "Kunal Chakrabarty", memberType: "adult", status: "active", roles: ["head"], isOwner: true },
-    { id: "upasana", displayName: "Upasana Chakrabarty", memberType: "adult", status: "active", roles: [], isOwner: false },
-    { id: "anaya", displayName: "Anaya", memberType: "child", status: "active", roles: [], isOwner: false },
-    { id: "sunita", displayName: "Sunita", memberType: "helper", status: "active", roles: [], isOwner: false },
+    { id: "kunal", displayName: "Kunal Chakrabarty", memberType: "adult", status: "active", roles: ["head"], isOwner: true, ...NO_PROFILE_DETAILS },
+    { id: "upasana", displayName: "Upasana Chakrabarty", memberType: "adult", status: "active", roles: [], isOwner: false, ...NO_PROFILE_DETAILS },
+    { id: "anaya", displayName: "Anaya", memberType: "child", status: "active", roles: [], isOwner: false, ...NO_PROFILE_DETAILS },
+    { id: "sunita", displayName: "Sunita", memberType: "helper", status: "active", roles: [], isOwner: false, ...NO_PROFILE_DETAILS },
   ],
   responsibilities: [{ outcomeKey: "school.run", primaryMemberId: "upasana", backupMemberId: "kunal", aiMode: "approve", priority: 1 }],
   events: [
@@ -76,7 +88,7 @@ describe("the facts a household's brain holds", () => {
   const text = facts.map((fact) => fact.text).join("\n");
 
   it("says who is in the household, and who is asking", () => {
-    expect(text).toContain("Kunal Chakrabarty is an adult and the Head of Family (the person asking).");
+    expect(text).toContain("Kunal Chakrabarty is an adult and an Admin (the person asking).");
     expect(text).toContain("Anaya is a child.");
     expect(text).toContain("Sunita is a househelper.");
   });

@@ -63,7 +63,7 @@ export default async function PrivacyCentrePage() {
   const pendingDeletion = requests.find(
     (request) => request.kind === "deletion" && (request.status === "pending" || request.status === "ready"),
   );
-  const isHead = membership.roles.includes("head");
+  const isOwner = membership.roles.includes("head");
 
   return (
     <AppShell
@@ -95,7 +95,7 @@ export default async function PrivacyCentrePage() {
               </ul>
             </div>
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              Changed on the Settings screen by the Head of Family or an administrator.
+              Changed on the Settings screen by an Admin.
             </p>
           </Card>
         </section>
@@ -174,10 +174,10 @@ export default async function PrivacyCentrePage() {
                   requestId={pendingDeletion.id}
                 />
               </div>
-            ) : isHead ? (
+            ) : isOwner ? (
               <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-sm text-[var(--wh-foreground-muted)]">
-                You are the Head of Family. Deleting your data would leave the household without anyone to run
-                it, so hand that role to another adult first — then this will be here.
+                You are this household&rsquo;s owner. Deleting your data would leave the household without anyone to
+                run it, so hand that role to another adult first — then this will be here.
               </p>
             ) : (
               <>

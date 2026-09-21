@@ -1,7 +1,7 @@
 /**
  * Household setup: how much WonderHome has been told, and what to tell it next.
  *
- * Shown to the Head of Family and administrators, prominently for their first
+ * Shown to Admins, prominently for their first
  * week and quietly afterwards until it reads 100%. The number is arithmetic
  * over facts the household can see — a step is done when the data exists,
  * never when a box was ticked — so reaching 100% is an achievement that means

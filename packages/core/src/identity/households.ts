@@ -45,7 +45,7 @@ type MembershipRow = {
 };
 
 /**
- * Creates a household and makes the caller its Head of Family.
+ * Creates a household and makes the caller its owner and Admin.
  *
  * Delegates to wh.create_household() so the household, its first member, that
  * member's head role and the audit record are one transaction — a half-created
@@ -155,7 +155,7 @@ export async function requireHouseholdAdmin(
 ): Promise<HouseholdMembership> {
   const membership = await requireMembership(supabase, householdId);
   if (!isHouseholdAdmin(membership)) {
-    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can do this.");
+    throw ApiError.forbidden("Only an Admin can do this.");
   }
   return membership;
 }
@@ -167,7 +167,62 @@ export type HouseholdMember = {
   status: "active" | "invited" | "inactive";
   roles: HouseholdRole[];
   isOwner: boolean;
+  dateOfBirth: string | null;
+  nickname: string | null;
+  relationship: string | null;
+  occupation: string | null;
+  schoolOrWorkLocation: string | null;
+  specialOccasionLabel: string | null;
+  specialOccasionDate: string | null;
 };
+
+/** The fields a household can edit about one of its own members, beyond creation. */
+export type MemberProfileUpdate = {
+  displayName?: string;
+  dateOfBirth?: string | null;
+  nickname?: string | null;
+  relationship?: string | null;
+  occupation?: string | null;
+  schoolOrWorkLocation?: string | null;
+  specialOccasionLabel?: string | null;
+  specialOccasionDate?: string | null;
+};
+
+const MEMBER_SELECT =
+  "id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, household_roles(role)";
+
+type MemberRow = {
+  id: string;
+  display_name: string;
+  member_type: string;
+  status: string;
+  date_of_birth: string | null;
+  nickname: string | null;
+  relationship: string | null;
+  occupation: string | null;
+  school_or_work_location: string | null;
+  special_occasion_label: string | null;
+  special_occasion_date: string | null;
+  household_roles: { role: HouseholdRole }[] | null;
+};
+
+function toHouseholdMember(row: MemberRow, ownerMemberId: string | null): HouseholdMember {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    memberType: row.member_type as MemberType,
+    status: row.status as HouseholdMember["status"],
+    roles: (row.household_roles ?? []).map((entry) => entry.role),
+    isOwner: row.id === ownerMemberId,
+    dateOfBirth: row.date_of_birth,
+    nickname: row.nickname,
+    relationship: row.relationship,
+    occupation: row.occupation,
+    schoolOrWorkLocation: row.school_or_work_location,
+    specialOccasionLabel: row.special_occasion_label,
+    specialOccasionDate: row.special_occasion_date,
+  };
+}
 
 /** Everyone in a household, as any member of it may see them. */
 export async function listMembers(
@@ -177,20 +232,95 @@ export async function listMembers(
 ): Promise<HouseholdMember[]> {
   const { data, error } = await supabase
     .from("household_members")
-    .select("id, display_name, member_type, status, household_roles(role)")
+    .select(MEMBER_SELECT)
     .eq("household_id", householdId)
     .order("created_at", { ascending: true });
 
   if (error) throw new Error(`listMembers failed: ${error.code ?? "unknown"}`);
 
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    displayName: row.display_name as string,
-    memberType: row.member_type as MemberType,
-    status: row.status as HouseholdMember["status"],
-    roles: ((row.household_roles ?? []) as { role: HouseholdRole }[]).map((entry) => entry.role),
-    isOwner: row.id === ownerMemberId,
-  }));
+  return ((data ?? []) as MemberRow[]).map((row) => toHouseholdMember(row, ownerMemberId));
+}
+
+/**
+ * Updates the extended details a household keeps about one of its members —
+ * the other half of `createHelperMember`/`createChildMember`/invitation
+ * acceptance, none of which can be revisited once the person exists
+ * (CLAUDE.md's "every entity can be added, updated and removed").
+ *
+ * Admin-gated, same as every other write to this table
+ * (`household_members_update_admin`) — there is no self-edit path yet, so
+ * this does not open one.
+ */
+export async function updateMemberProfile(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  input: { memberId: string } & MemberProfileUpdate,
+): Promise<void> {
+  if (!isHouseholdAdmin(actor)) {
+    throw ApiError.forbidden("Only an Admin can edit a member's details.");
+  }
+
+  const householdId = actor.household.id;
+  const patch: Record<string, unknown> = {};
+  if (input.displayName !== undefined) patch.display_name = input.displayName;
+  if (input.dateOfBirth !== undefined) patch.date_of_birth = input.dateOfBirth;
+  if (input.nickname !== undefined) patch.nickname = input.nickname;
+  if (input.relationship !== undefined) patch.relationship = input.relationship;
+  if (input.occupation !== undefined) patch.occupation = input.occupation;
+  if (input.schoolOrWorkLocation !== undefined) patch.school_or_work_location = input.schoolOrWorkLocation;
+  if (input.specialOccasionLabel !== undefined) patch.special_occasion_label = input.specialOccasionLabel;
+  if (input.specialOccasionDate !== undefined) patch.special_occasion_date = input.specialOccasionDate;
+
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await supabase
+    .from("household_members")
+    .update(patch)
+    .eq("id", input.memberId)
+    .eq("household_id", householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can edit a member's details.");
+    throw new Error(`updateMemberProfile failed: ${error.code ?? "unknown"}`);
+  }
+
+  await auditChange({
+    householdId,
+    actorMemberId: actor.memberId,
+    eventType: "member.profile_updated",
+    targetTable: "household_members",
+    targetId: input.memberId,
+    metadata: { fields: Object.keys(patch) },
+  });
+}
+
+/**
+ * Whether this member is the older or younger sibling among the household's
+ * other children — derived from `date_of_birth`, never stored, so it can
+ * never disagree with the birthdate the household already keeps (design
+ * principle 9: a fact somebody can explain, not a second copy of one).
+ *
+ * Says nothing when there is only one child, or when a birthdate is missing
+ * for this member or every other child — there is nothing true to compare.
+ */
+export function siblingOrder(member: HouseholdMember, allMembers: readonly HouseholdMember[]): string | null {
+  if (!member.dateOfBirth) return null;
+  const ownBirth = Date.parse(member.dateOfBirth);
+
+  const otherSiblings = allMembers
+    .filter((other) => other.id !== member.id && other.memberType === "child" && other.dateOfBirth)
+    .map((other) => ({ name: other.displayName, birth: Date.parse(other.dateOfBirth as string) }))
+    .filter((other) => Number.isFinite(other.birth));
+
+  if (otherSiblings.length === 0) return null;
+
+  const older = otherSiblings.filter((other) => other.birth < ownBirth).map((other) => other.name);
+  const younger = otherSiblings.filter((other) => other.birth > ownBirth).map((other) => other.name);
+
+  const parts: string[] = [];
+  if (younger.length > 0) parts.push(`Older sibling of ${younger.join(", ")}`);
+  if (older.length > 0) parts.push(`Younger sibling of ${older.join(", ")}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 /**
@@ -210,7 +340,7 @@ export async function setMemberRole(
   if (!canAssignRole({ roles: actor.roles }, input.role)) {
     throw ApiError.forbidden(
       input.role === "administrator"
-        ? "Only the Head of Family can change who administers the household."
+        ? "Only the household's owner can change who administers the household."
         : "You do not have permission to change roles.",
     );
   }
@@ -276,7 +406,7 @@ export async function createHelperMember(
   input: { displayName: string },
 ): Promise<{ memberId: string }> {
   if (!isHouseholdAdmin(actor)) {
-    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can add a helper.");
+    throw ApiError.forbidden("Only an Admin can add a helper.");
   }
 
   const householdId = actor.household.id;
@@ -288,7 +418,7 @@ export async function createHelperMember(
     .single();
 
   if (error) {
-    if (error.code === "42501") throw ApiError.forbidden("Only the Head of Family or a Household Administrator can add a helper.");
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can add a helper.");
     throw new Error(`createHelperMember failed: ${error.code ?? "unknown"}`);
   }
 
@@ -316,7 +446,7 @@ export async function createHelperMember(
  * and `createChildMember`, and of inviting someone in the first place — a
  * household that can add a person could not otherwise undo it).
  *
- * The Head of Family cannot be removed this way: ownership transfer is its
+ * The household's owner cannot be removed this way: ownership transfer is its
  * own operation, and a household is never left without one. Removing
  * yourself is not this control either — leaving a household you belong to is
  * a different action from removing someone else from it.
@@ -332,7 +462,7 @@ export async function deactivateMember(
   input: { memberId: string },
 ): Promise<void> {
   if (!isHouseholdAdmin(actor)) {
-    throw ApiError.forbidden("Only the Head of Family or a Household Administrator can remove a member.");
+    throw ApiError.forbidden("Only an Admin can remove a member.");
   }
   if (input.memberId === actor.memberId) {
     throw ApiError.badRequest("You cannot remove yourself this way.");
@@ -352,7 +482,7 @@ export async function deactivateMember(
 
   const roles = ((target as { household_roles: { role: HouseholdRole }[] | null }).household_roles ?? []).map((entry) => entry.role);
   if (roles.includes("head")) {
-    throw ApiError.badRequest("The Head of Family cannot be removed. Transferring headship is a separate decision.");
+    throw ApiError.badRequest("The household's owner cannot be removed. Transferring ownership is a separate decision.");
   }
 
   const { error } = await supabase
@@ -362,7 +492,7 @@ export async function deactivateMember(
     .eq("household_id", householdId);
 
   if (error) {
-    if (error.code === "42501") throw ApiError.forbidden("Only the Head of Family or a Household Administrator can remove a member.");
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can remove a member.");
     throw new Error(`deactivateMember failed: ${error.code ?? "unknown"}`);
   }
 

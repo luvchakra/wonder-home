@@ -49,7 +49,7 @@ export async function inviteMemberAction(
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
     if (parsed.data.role === "administrator" && !membership.roles.includes("head")) {
-      return { error: "Only the Head of Family can invite an administrator." };
+      return { error: "Only the household's owner can invite another Admin." };
     }
 
     const invitation = await createInvitation(supabase, membership.memberId, {
@@ -236,7 +236,7 @@ const removeMemberSchema = z.object({
   memberId: z.uuid(),
 });
 
-/** Removes someone from the household. The Head of Family cannot be removed this way. */
+/** Removes someone from the household. The household's owner cannot be removed this way. */
 export async function removeMemberAction(
   _previous: ActionState,
   formData: FormData,
@@ -261,5 +261,87 @@ export async function removeMemberAction(
   }
 
   revalidatePath("/household/members");
+  return {};
+}
+
+const updateMemberProfileSchema = z.object({
+  householdId: z.uuid(),
+  memberId: z.uuid(),
+  displayName: z.string().trim().min(1, { error: "Give them a name." }).max(80),
+  dateOfBirth: z.string().trim().max(10),
+  nickname: z.string().trim().max(60),
+  relationship: z.string().trim().max(60),
+  occupation: z.string().trim().max(100),
+  schoolOrWorkLocation: z.string().trim().max(120),
+  specialOccasionLabel: z.string().trim().max(80),
+  specialOccasionDate: z.string().trim().max(10),
+});
+
+const DATE_LIKE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Blank means "clear it" here, not "leave unchanged" — the form always shows the current value. */
+function textOrNull(value: string): string | null {
+  return value.length > 0 ? value : null;
+}
+
+/**
+ * The other half of adding a person: everything `createChildMember`,
+ * `createHelperMember` and invitation acceptance can set at creation, plus
+ * the details nobody has anywhere to set at all yet (nickname, relationship,
+ * occupation, where they spend the day, a date worth remembering besides a
+ * birthday) — editable afterwards, the way CLAUDE.md's "every entity can be
+ * added, updated and removed" already expects of everything else.
+ */
+export async function updateMemberProfileAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = updateMemberProfileSchema.safeParse({
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId"),
+    displayName: formData.get("displayName"),
+    dateOfBirth: formData.get("dateOfBirth") ?? "",
+    nickname: formData.get("nickname") ?? "",
+    relationship: formData.get("relationship") ?? "",
+    occupation: formData.get("occupation") ?? "",
+    schoolOrWorkLocation: formData.get("schoolOrWorkLocation") ?? "",
+    specialOccasionLabel: formData.get("specialOccasionLabel") ?? "",
+    specialOccasionDate: formData.get("specialOccasionDate") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+
+  if (parsed.data.dateOfBirth.length > 0 && !DATE_LIKE.test(parsed.data.dateOfBirth)) {
+    return { error: "Use a date like 2016-09-18 for their date of birth." };
+  }
+  if (parsed.data.specialOccasionDate.length > 0 && !DATE_LIKE.test(parsed.data.specialOccasionDate)) {
+    return { error: "Use a date like 2016-09-18 for the special occasion." };
+  }
+
+  const supabase = await createClient();
+  const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
+
+  try {
+    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await updateMemberProfile(supabase, actor, {
+      memberId: parsed.data.memberId,
+      displayName: parsed.data.displayName,
+      dateOfBirth: textOrNull(parsed.data.dateOfBirth),
+      nickname: textOrNull(parsed.data.nickname),
+      relationship: textOrNull(parsed.data.relationship),
+      occupation: textOrNull(parsed.data.occupation),
+      schoolOrWorkLocation: textOrNull(parsed.data.schoolOrWorkLocation),
+      specialOccasionLabel: textOrNull(parsed.data.specialOccasionLabel),
+      specialOccasionDate: textOrNull(parsed.data.specialOccasionDate),
+    });
+  } catch (error) {
+    const { toErrorBody } = await import("@wonderhome/core/api/errors");
+    return { error: toErrorBody(error, "household").body.error.message };
+  }
+
+  revalidatePath("/household/members");
+  revalidatePath("/family");
+  revalidatePath("/househelper");
   return {};
 }

@@ -9,7 +9,7 @@ import {
 /**
  * Teaching the household in plain sentences (story 02-006).
  *
- * The Head of Family says "Priya handles the school run from now on" and the
+ * An Admin says "Priya handles the school run from now on" and the
  * household is configured — the same canonical responsibility row the wizard
  * would have written, validated the same way and audited the same way. The
  * sentence is a faster way to reach the configuration, never a second kind of

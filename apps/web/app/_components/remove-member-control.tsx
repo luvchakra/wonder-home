@@ -11,7 +11,7 @@ import { removeMemberAction } from "../(auth)/household-actions";
 
 /**
  * The other half of adding someone: a household that can add a member could
- * not otherwise undo it. Hidden for the Head of Family and for the acting
+ * not otherwise undo it. Hidden for the household's owner and for the acting
  * member's own row — neither is this control's to remove (see
  * `households.ts`'s `deactivateMember`, which refuses both server-side too).
  */

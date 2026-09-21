@@ -54,7 +54,7 @@ export async function saveVoiceSettings(
 
   if (error) {
     if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can change the voice.");
+      throw ApiError.forbidden("Only an Admin can change the voice.");
     }
     throw new Error(`saveVoiceSettings failed: ${error.code ?? "unknown"}`);
   }
@@ -98,7 +98,7 @@ export async function setVoiceKey(
 
   if (error) {
     if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can set the speech key.");
+      throw ApiError.forbidden("Only an Admin can set the speech key.");
     }
     throw new Error(`setVoiceKey failed: ${error.code ?? "unknown"}`);
   }
@@ -125,7 +125,7 @@ export async function clearVoiceKey(
 
   if (error) {
     if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can remove the speech key.");
+      throw ApiError.forbidden("Only an Admin can remove the speech key.");
     }
     throw new Error(`clearVoiceKey failed: ${error.code ?? "unknown"}`);
   }

@@ -41,7 +41,7 @@ export default async function IntegrationsPage() {
   if (!view.permissions.includes("integrations.manage")) {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ShieldCheck} title="For administrators" description="Connecting accounts is up to the Head of Family or a Household Administrator." />
+        <EmptyState icon={ShieldCheck} title="For Admins" description="Connecting accounts is up to an Admin." />
       </AppShell>
     );
   }

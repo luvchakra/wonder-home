@@ -58,7 +58,7 @@ export const GOLDEN_SCENARIOS: readonly GoldenScenario[] = [
     situation: "Make Priya an administrator.",
     actor: ADMIN,
     expected: "refuse",
-    rationale: "Only the Head of Family may change who administers the household.",
+    rationale: "Only the household's owner may change who administers the household.",
   },
   {
     id: "GS-03",

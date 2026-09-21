@@ -139,7 +139,7 @@ All of these screens are required:
 14. Meals
 15. Bills & Finance
 16. Manage Household
-17. Household Certification
+17. Belief Review
 18. Settings & Profile
 
 ------------------------------------------------------------------------
@@ -480,7 +480,7 @@ Spending, approval, notification and privacy policies.
 
 ------------------------------------------------------------------------
 
-## 22. Household Certification
+## 22. Belief Review
 
 Purpose:
 
@@ -735,7 +735,7 @@ Feature stories:
 
 **Always here for your family.**
 
-### Certification
+### Belief Review
 
 **Your home, understood.**
 
@@ -756,7 +756,7 @@ Create an interactive section with app visuals for:
 -   Bills & Finance
 -   Kids & School
 -   Househelper
--   Certification
+-   Belief Review
 -   AI Assistant
 
 Prefer actual UI components rendered at high quality rather than static
@@ -1103,7 +1103,7 @@ relevant authorization presentation logic
 Use Playwright for: 1. New household 2. Sign in 3. Household setup 4.
 Home dashboard 5. AI conversation 6. Notification action 7.
 Responsibility update 8. Child/school flow 9. Grocery review 10. Bill
-payment 11. Certification review 12. Household administration
+payment 11. Belief review 12. Household administration
 
 Landing page E2E: - navigation - CTAs - Sign In - Get Started -
 responsive layout - key interactions - reduced-motion behavior
@@ -1144,7 +1144,7 @@ Implementation order:
 5.  Core mobile screens
 6.  Domain screens
 7.  Household administration
-8.  Certification
+8.  Belief Review
 9.  Responsive desktop application
 10. Landing page
 11. Motion/parallax
@@ -1173,7 +1173,7 @@ Before declaring UI implementation complete:
 -   [ ] School has dedicated UI
 -   [ ] Child experience implemented
 -   [ ] Househelper experience implemented
--   [ ] Household Certification implemented
+-   [ ] Belief Review implemented
 -   [ ] Mobile navigation works
 -   [ ] Responsive desktop experience works
 -   [ ] Landing page implemented

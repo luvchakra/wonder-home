@@ -11,7 +11,7 @@ export const GET = defineRoute({}, async () => {
   return { memberships: await listMemberships(supabase) };
 });
 
-/** Creates a household and makes the caller its Head of Family. */
+/** Creates a household and makes the caller its owner and Admin. */
 export const POST = defineRoute({ input: createHouseholdSchema, authenticate: requireUser }, async ({ body }) => {
   const supabase = await createClient();
   const created = await createHousehold(supabase, body);

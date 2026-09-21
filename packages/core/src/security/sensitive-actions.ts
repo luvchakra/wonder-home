@@ -54,6 +54,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/identity/households.ts",
   },
   {
+    event: "member.profile_updated",
+    because: "Someone's own details — name, birthdate, relationship — changed on their behalf.",
+    recordedIn: "packages/core/src/identity/households.ts",
+  },
+  {
     event: "invitation.created",
     because: "An outstanding invitation is a way into the household.",
     recordedIn: "packages/core/src/identity/invitations.ts",
@@ -190,6 +195,8 @@ export function describeAuditEvent(
       return { title: "A role was granted", detail: stringOr(metadata.role, null) };
     case "member.role_revoked":
       return { title: "A role was taken away", detail: stringOr(metadata.role, null) };
+    case "member.profile_updated":
+      return { title: "A member's details were updated", detail: null };
     case "invitation.created":
       return { title: "An invitation was sent", detail: stringOr(metadata.role, null) };
     case "invitation.revoked":

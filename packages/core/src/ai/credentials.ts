@@ -66,7 +66,7 @@ export async function setHouseholdKey(
 
   if (error) {
     if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can set a model key.");
+      throw ApiError.forbidden("Only an Admin can set a model key.");
     }
     throw new Error(`setHouseholdKey failed: ${error.code ?? "unknown"}`);
   }
@@ -97,7 +97,7 @@ export async function clearHouseholdKey(
 
   if (error) {
     if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can remove a model key.");
+      throw ApiError.forbidden("Only an Admin can remove a model key.");
     }
     throw new Error(`clearHouseholdKey failed: ${error.code ?? "unknown"}`);
   }

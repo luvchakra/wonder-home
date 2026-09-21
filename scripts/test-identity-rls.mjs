@@ -153,6 +153,44 @@ test("creating a household is audited", () => {
   assert.equal(events, "household.created");
 });
 
+test("an admin can set a member's extended profile details", () => {
+  asProfile(
+    KUNAL,
+    `update public.household_members
+     set nickname = 'KC', relationship = 'Father', occupation = 'Engineer',
+         school_or_work_location = 'WonderHome Inc.',
+         special_occasion_label = 'Wedding anniversary', special_occasion_date = '2010-02-14'
+     where id = '${headMember}';`,
+    options,
+  );
+
+  assert.equal(
+    psql(
+      `select nickname || '|' || relationship || '|' || occupation from public.household_members where id = '${headMember}';`,
+      options,
+    ),
+    "KC|Father|Engineer",
+  );
+});
+
+test("someone outside the household cannot edit a member's profile details", () => {
+  // STRANGER is still only otherHousehold's own head here — the next test
+  // ("an administrator cannot promote themselves to head") is what first
+  // makes STRANGER a legitimate administrator of `household`, so this one
+  // has to run before it or the assertion below would no longer be true.
+  //
+  // Not a policy violation an insert/select would raise on — an UPDATE with
+  // no matching row-level policy simply touches zero rows, so this is
+  // asserted by checking nothing changed rather than expecting a thrown error.
+  asProfile(STRANGER, `update public.household_members set nickname = 'Planted' where id = '${headMember}';`, options);
+
+  assert.equal(
+    psql(`select nickname from public.household_members where id = '${headMember}';`, options),
+    "KC",
+    "an outsider could edit another household's member details",
+  );
+});
+
 test("an administrator cannot promote themselves to head", () => {
   // Kunal adds an adult member and makes them an administrator.
   const adminMember = asProfile(

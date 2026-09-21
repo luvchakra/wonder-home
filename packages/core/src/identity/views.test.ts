@@ -23,7 +23,7 @@ const membership = (over: Partial<HouseholdMembership> = {}): HouseholdMembershi
 describe("personalized views", () => {
   it("gives the head every section", () => {
     const view = buildPersonalView(membership());
-    expect(view.roleLabel).toBe("Head of Family");
+    expect(view.roleLabel).toBe("Admin");
     expect(view.sections.map((s) => s.key)).toContain("manage");
     expect(view.sections.map((s) => s.key)).toContain("bills");
   });
@@ -79,10 +79,8 @@ describe("personalized views", () => {
     expect(view.sections.map((s) => s.key)).toEqual(["family_time"]);
   });
 
-  it("labels an administrator distinctly from the head", () => {
-    expect(buildPersonalView(membership({ roles: ["administrator"] })).roleLabel).toBe(
-      "Household Administrator",
-    );
+  it("labels an administrator the same as the head — both are just Admin", () => {
+    expect(buildPersonalView(membership({ roles: ["administrator"] })).roleLabel).toBe("Admin");
   });
 
   it("reports the derived age band without storing it anywhere", () => {

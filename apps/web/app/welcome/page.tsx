@@ -25,7 +25,7 @@ const COMMON_ZONES = [
 
 /**
  * Household setup (requirements §8), step 2 of 3. Creating it makes this
- * person its Head of Family (story 01-001).
+ * person its owner and Admin (story 01-001).
  *
  * The architecture stays locale-neutral: the time zone is the one household
  * setting that changes behaviour (routines, reminders, quiet hours), so it is
@@ -51,12 +51,12 @@ export default async function WelcomePage() {
       accent="Let's build a happier home together."
       promise={{
         headline: "Let's build a happier home together.",
-        points: ["You become Head of Family", "Invite everyone next", "WonderHome starts learning your rhythm"],
+        points: ["You become the household's Admin", "Invite everyone next", "WonderHome starts learning your rhythm"],
       }}
     >
       <AuthForm action={createHouseholdAction} submitLabel="Create household" pendingLabel="Creating household…">
         <Field label="Household name" name="householdName" required placeholder="Chakraborty Family" hint="What your family calls home." />
-        <Field label="Your name" name="displayName" required defaultValue={suggestedName} hint="You will be the Head of Family." />
+        <Field label="Your name" name="displayName" required defaultValue={suggestedName} hint="You will be the household's Admin." />
         <div className="space-y-1.5">
           <label htmlFor="timezone" className="block text-sm font-medium">Time zone</label>
           <input

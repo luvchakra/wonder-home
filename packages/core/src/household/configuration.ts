@@ -490,7 +490,7 @@ export function downstreamOf(change: ConfigChange): string[] {
         ...autonomyEffects(change.aiMode),
         change.owned
           ? "Anything that needs a person goes to the owner, and to their backup if the owner is away."
-          : "Nobody owns this yet, so anything it raises goes to the Head of Family.",
+          : "Nobody owns this yet, so anything it raises goes to the household's owner.",
       ];
 
     case "policy":

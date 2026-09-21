@@ -10,7 +10,7 @@ export type MemberRoleControlProps = {
 };
 
 /**
- * Designating administrators, shown only to the Head of Family.
+ * Designating Admins, shown only to the household's owner.
  *
  * Hiding it from everyone else is presentation, not protection — the server
  * refuses the change regardless, and the RLS policy refuses it again. An
@@ -22,7 +22,7 @@ export function MemberRoleControl({
   memberId,
   isAdministrator,
 }: MemberRoleControlProps) {
-  const label = isAdministrator ? "Remove administrator" : "Make administrator";
+  const label = isAdministrator ? "Remove Admin" : "Make Admin";
   return (
     <form action={setMemberRoleAction}>
       <input type="hidden" name="householdId" value={householdId} />

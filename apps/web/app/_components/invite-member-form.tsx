@@ -53,11 +53,11 @@ export function InviteMemberForm({ householdId, canInviteAdministrator }: Invite
           >
             <option value="adult">Adult</option>
             <option value="helper">Househelper</option>
-            {canInviteAdministrator ? <option value="administrator">Administrator</option> : null}
+            {canInviteAdministrator ? <option value="administrator">Admin</option> : null}
           </select>
           {canInviteAdministrator ? null : (
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              Only the Head of Family can invite an administrator.
+              Only the household&rsquo;s owner can invite another Admin.
             </p>
           )}
         </div>
