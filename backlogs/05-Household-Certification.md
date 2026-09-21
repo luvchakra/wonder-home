@@ -10,7 +10,7 @@
 | 4 | P0 | 05-004 | Correct/remove | Done | Source on every claim; coverage counted, never estimated |
 | 5 | P0 | 05-005 | Risk prioritization | Done | Source on every claim; coverage counted, never estimated |
 | 6 | P0 | 05-006 | Actionable certification alerts | Done | Source on every claim; coverage counted, never estimated |
-| 7 | P1 | 05-007 | Certification history | Not Started | |
+| 7 | P1 | 05-007 | Certification history | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
 | 8 | P2 | 05-008 | Certification health | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
