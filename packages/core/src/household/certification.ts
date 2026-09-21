@@ -129,6 +129,67 @@ export function summarize(
   };
 }
 
+export type RiskCoverage = { confirmed: number; needsReview: number; total: number };
+
+export type CertificationHealth = {
+  /** Same arithmetic as `summarize().understanding` — confirmed over live. */
+  understanding: number;
+  /** Per-risk counts, so "how understood is this household" can be read by what actually matters most first. */
+  byRisk: Record<CertificationRisk, RiskCoverage>;
+  /** Whether a high or critical risk item is currently unresolved — the case a passive percentage can hide. */
+  highRiskGapExists: boolean;
+  /** One sentence, always traceable to the counts above — never a number nobody can explain. */
+  explanation: string;
+};
+
+/**
+ * An explainable coverage indicator (story 05-008).
+ *
+ * `summarize()`'s single percentage can look healthy while the one belief
+ * that actually matters — a payment limit, a child's access — sits
+ * unreviewed underneath it, because a household with nine confirmed
+ * low-risk trivia and one stale high-risk fact reads as "90% understood".
+ * This breaks the same counts down by risk instead, so the number a
+ * household sees is never separated from what is actually driving it.
+ */
+export function certificationHealth(items: CertificationItem[], now: Date = new Date()): CertificationHealth {
+  const summary = summarize(items, now);
+  const live = items.filter((item) => item.status !== "removed" && item.status !== "corrected");
+
+  const byRisk = Object.fromEntries(
+    (["low", "medium", "high", "critical"] satisfies CertificationRisk[]).map((risk) => [
+      risk,
+      { confirmed: 0, needsReview: 0, total: 0 },
+    ]),
+  ) as CertificationHealth["byRisk"];
+
+  for (const item of live) {
+    byRisk[item.riskLevel].total += 1;
+    if (needsReview(item, now)) {
+      byRisk[item.riskLevel].needsReview += 1;
+    } else if (item.status === "confirmed") {
+      byRisk[item.riskLevel].confirmed += 1;
+    }
+  }
+
+  const highRiskNeedsReview = byRisk.high.needsReview + byRisk.critical.needsReview;
+  const highRiskGapExists = highRiskNeedsReview > 0;
+
+  const explanation = highRiskGapExists
+    ? `${highRiskNeedsReview} ${plural(highRiskNeedsReview, "belief that matters most needs", "beliefs that matter most need")} review${
+        byRisk.critical.needsReview > 0 ? `, ${byRisk.critical.needsReview} of them critical` : ""
+      }.`
+    : summary.needsReview > 0
+      ? `${summary.needsReview} ${plural(summary.needsReview, "belief needs", "beliefs need")} review, none of them high risk.`
+      : "Every high-risk belief is reviewed.";
+
+  return { understanding: summary.understanding, byRisk, highRiskGapExists, explanation };
+}
+
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
+}
+
 export type CertificationAlert = {
   itemId: string;
   claim: string;
