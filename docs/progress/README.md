@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Feature flags and a platform-wide audit trail (16-008)](2026-09-21-feature-flags-and-platform-audit.md) |
 | 2026-09-21 | [A helper's daily summary: one line for a quiet day, one entry for what wasn't (07-006)](2026-09-21-helper-daily-summary.md) |
 | 2026-09-21 | [Pattern learning: normal timing, without touching confirmed rules (03-007)](2026-09-21-pattern-learning.md) |
 | 2026-09-21 | [Multi-agent coordination: specialists that collaborate through contracts (14-007)](2026-09-21-multi-agent-coordination.md) |
