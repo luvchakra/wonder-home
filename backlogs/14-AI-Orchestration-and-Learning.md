@@ -10,7 +10,7 @@
 | 4 | P0 | 14-004 | Agent runs | Done | Authorization outside the model; approval binds to the exact action |
 | 5 | P0 | 14-005 | Approval integration | Done | Authorization outside the model; approval binds to the exact action |
 | 6 | P0 | 14-006 | Learning boundaries | Done | Authorization outside the model; approval binds to the exact action |
-| 7 | P1 | 14-007 | Multi-agent coordination | Not Started | |
+| 7 | P1 | 14-007 | Multi-agent coordination | Done | `specialists.ts`: named specialists (meals, pets, home, bills, groceries) each propose `PlannedStep`s from `HomeAssessment`s for the existing governed tool registry; a contract (`grocery_list`) is how a meal or pet need it cannot itself fulfil is handed to groceries, which consolidates every producer's list into one deduplicated set of steps. `coordinate()` runs them in order and returns one plan; `AgentRun` gained a `contracts` field and `agent_runs.contracts` column to record what was handed off, alongside the plan `authorizeToolCall` still gates step by step |
 | 8 | P2 | 14-008 | Predictive intelligence | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

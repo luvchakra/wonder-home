@@ -23,6 +23,7 @@ const run = (over: Partial<AgentRun> = {}): AgentRun => ({
     { toolName: "outcomes.replan", rationale: "Move laundry later", arguments: { outcomeKey: "laundry.ready" } },
   ],
   completedSteps: 0,
+  contracts: [],
   summary: "",
   ...over,
 });

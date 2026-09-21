@@ -34,6 +34,26 @@ export type PlannedStep = {
   arguments: Record<string, unknown>;
 };
 
+/**
+ * What one specialist hands another (story 14-007).
+ *
+ * A contract is a small, typed payload — never raw model text — stamped with
+ * which specialist produced it and which run it belongs to, so any step it
+ * led to can be traced back to why it exists. `groceries.consolidate` is
+ * deliberately one type serving two producers (meals and pets): a household
+ * has one shopping list, not one per domain that happened to need it.
+ */
+export const CONTRACT_TYPES = ["grocery_list", "service_request"] as const;
+export type ContractType = (typeof CONTRACT_TYPES)[number];
+
+export type Contract = {
+  id: string;
+  type: ContractType;
+  producedBy: string;
+  runId: string;
+  payload: Record<string, unknown>;
+};
+
 export type AgentRun = {
   id: string;
   householdId: string;
@@ -41,6 +61,8 @@ export type AgentRun = {
   status: RunStatus;
   steps: PlannedStep[];
   completedSteps: number;
+  /** What specialists handed each other while planning this run. */
+  contracts: Contract[];
   /** Safe summary only — never raw prompts or household content. */
   summary: string;
 };
