@@ -11,10 +11,14 @@
  * everything into memory and fails if what is on disk differs, which is what
  * CI runs, so an edit to the mark that does not reach the icons cannot merge.
  *
- * Two surfaces, because an icon cannot adapt once it is a PNG on a home
- * screen: a light tile for light contexts and a dark one for dark. The
- * maskable variants carry the extra padding the Android safe zone needs —
- * without them a launcher crops a circle straight through the roof.
+ * Still writes a light and a dark file pair (`icon.svg` / `icon-dark.svg`,
+ * and the PNGs alongside them) because `layout.tsx` picks between them by
+ * `prefers-color-scheme` — the current mark's own gradient tile is opaque
+ * and self-contained, so the two render identically, but the pair stays so
+ * neither this generator nor the metadata that selects between them needs
+ * to change if a future mark goes back to reading its surface. The maskable
+ * variants carry the extra padding the Android safe zone needs — without
+ * them a launcher crops a circle straight through the roof.
  */
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -24,21 +28,12 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import {
-  BLUE_PATH,
   GRADIENTS,
-  HALO,
+  HEART_PATH,
   HOUSE_PATH,
-  LEAF_PATH,
-  LEAF_VEIN_PATH,
-  PANE,
-  STROKE,
-  TILE,
   VIEW_BOX,
-  WINDOW_COLOR,
-  WINDOW_PANES,
   WORDMARK_COLORS,
   WORDMARK_LETTERS,
-  YELLOW_PATH,
   TAGLINE,
 } from "../packages/core/src/brand/mark.ts";
 
@@ -58,39 +53,24 @@ type Scheme = "light" | "dark";
  * meant to be shown whole and a maskable one a launcher may crop.
  */
 function markSvg(options: { scheme: Scheme; padding?: number }): string {
-  const { scheme, padding = 0 } = options;
-  const surface = TILE[scheme];
+  const { padding = 0 } = options;
   const span = VIEW_BOX + padding * 2;
+  const tile = GRADIENTS.tile;
 
-  const defs = (Object.keys(GRADIENTS) as (keyof typeof GRADIENTS)[])
-    .map((name) => {
-      const spec = GRADIENTS[name];
-      const stops = spec.stops
-        .map((stop) => `<stop offset="${stop.offset}" stop-color="${stop.color}"/>`)
-        .join("");
-      return `<linearGradient id="${name}" x1="${spec.x1}" y1="${spec.y1}" x2="${spec.x2}" y2="${spec.y2}" gradientUnits="userSpaceOnUse">${stops}</linearGradient>`;
-    })
-    .join("\n    ");
+  const stops = tile.stops
+    .map((stop) => `<stop offset="${stop.offset}" stop-color="${stop.color}"/>`)
+    .join("");
+  const defs = `<linearGradient id="tile" x1="${tile.x1}" y1="${tile.y1}" x2="${tile.x2}" y2="${tile.y2}" gradientUnits="userSpaceOnUse">${stops}</linearGradient>`;
 
-  const panes = WINDOW_PANES.map(
-    (pane) =>
-      `<rect x="${pane.x}" y="${pane.y}" width="${PANE.width}" height="${PANE.height}" rx="${PANE.radius}"/>`,
-  ).join("");
-
-  const background = `<rect x="${-padding}" y="${-padding}" width="${span}" height="${span}" rx="${span * 0.2237}" fill="${surface}"/>`;
+  const background = `<rect x="${-padding}" y="${-padding}" width="${span}" height="${span}" rx="${span * 0.2237}" fill="url(#tile)"/>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-padding} ${-padding} ${span} ${span}" width="${span}" height="${span}">
   <defs>
     ${defs}
   </defs>
   ${background}
-  <path d="${HOUSE_PATH}" fill="${surface}"/>
-  <path d="${YELLOW_PATH}" fill="none" stroke="url(#yellow)" stroke-width="${STROKE.house}" stroke-linecap="butt" stroke-linejoin="round"/>
-  <path d="${BLUE_PATH}" fill="none" stroke="url(#blue)" stroke-width="${STROKE.house}" stroke-linecap="butt" stroke-linejoin="round"/>
-  <g fill="${WINDOW_COLOR[scheme]}">${panes}</g>
-  <path d="${LEAF_PATH}" fill="none" stroke="${surface}" stroke-width="${HALO.leaf}" stroke-linejoin="round"/>
-  <path d="${LEAF_PATH}" fill="url(#leaf)"/>
-  <path d="${LEAF_VEIN_PATH}" fill="none" stroke="${surface}" stroke-width="${STROKE.vein}" stroke-linecap="round"/>
+  <path d="${HOUSE_PATH}" fill="#ffffff"/>
+  <path d="${HEART_PATH}" fill="url(#tile)"/>
 </svg>
 `;
 }

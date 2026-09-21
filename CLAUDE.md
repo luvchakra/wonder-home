@@ -163,20 +163,25 @@ work, and hold new work against these:
       If it would have to, it was not a two-up row.
 
 **The brand is the sheet at `design/WonderHome-brand-guidelines.png`.** The
-name is WonderHome, one word, its wordmark a rainbow running letter to
-letter — blue, warm yellow, blue, green, blue, warm yellow, then "Home"'s H
-and final e pulled to a deeper navy so the word still reads as one name
-(`WORDMARK_LETTERS` in `packages/core/src/brand/mark.ts` is the one source
-for this, read by both the live wordmark and the generated share card). The
-mark beside it is the two-tone house — blue left, warm yellow right, a
-four-pane window, a leaf over the corner — and its geometry lives in the same
-module (the header renders it, `npm run brand` writes the icons from it, CI
-checks they match). The tagline is "Less mental load. More family time!" The
-palette is Primary Blue `#0EA5E9`, Accent Green `#22C55E`, Warm Yellow
-`#FBBF24`, Ink Navy `#0F172A` (body text) and Deep Navy `#0F2D6B` (the
-wordmark's own accent, never used as a UI colour), expressed as the tokens in
-`packages/core/src/ui-theme.css`; the typeface is Sora. Never hand-draw a
-second logo, paste a raster of it, or reach for a hex the tokens don't carry.
+name is WonderHome, one word, its wordmark set once in the brand's ink —
+solid, not per-letter colour — (`WORDMARK_LETTERS` in
+`packages/core/src/brand/mark.ts` is the one source for this, read by both
+the live wordmark and the generated share card). The mark beside it is a
+rounded-square tile carrying the brand's Primary-to-Secondary gradient
+(indigo into emerald), a white house silhouette, and a heart cut from the
+house's centre so the gradient shows through — its geometry lives in the
+same module (the header renders it, `npm run brand` writes the icons from
+it, CI checks they match). The tagline is "Less mental load. More family
+time!" The palette is Primary `#6366F1` (indigo — every committing action
+and the active nav state), Secondary `#10B981` (emerald — handled/success),
+Accent `#F59E0B` (amber — attention), Warm `#F472B6` (pink, decorative/
+available for a future domain accent), and Neutral `#1F2937` (body text),
+expressed as the tokens in `packages/core/src/ui-theme.css` (the interactive
+tokens use slightly deepened steps of Primary/Accent/Secondary for
+guaranteed contrast against the cream page — the exact sheet hexes are
+reserved for the mark's own gradient); the typeface is Sora. Never hand-draw
+a second logo, paste a raster of it, or reach for a hex the tokens don't
+carry.
 
 Use the shared kit in `@wonderhome/core/ui/*` — no screen invents its own card,
 row, pill or tile. A new pattern belongs in the kit, with a note in

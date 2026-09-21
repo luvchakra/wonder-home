@@ -107,46 +107,45 @@ shortcuts and at-a-glance counts.
 
 ## The brand mark (rules 1, 3, 5)
 
-The mark is the supplied logo: a house drawn in two strokes — a roof chevron
-running blue through teal to a warm green, and a wave beneath it that reads as
-a W, running blue through deep navy to coral and amber — with a four-pane
-window under the apex and a leaf on a short stem growing past the roofline.
+The mark is a rounded-square tile carrying the brand's Primary-to-Secondary
+gradient (indigo `#6366F1` into emerald `#10B981`, diagonal), a white house
+silhouette centred on it, and a heart cut from the house's middle so the
+gradient shows through — "the home with heart" the current brand sheet's app
+icon reads as.
 
-It is the one place in the product where colour is not doing a job. Everywhere
-else, teal commits, amber is attention, red is critical and green is handled;
-the mark uses the whole spectrum at once because it is an identity rather than
-a signal. That is why it appears only as identity — in the header, on the
-signed-out frame, on the landing page, as the app icon, and at the left of
-`TalkComposer`, which is the door to the assistant itself — and never inside a
-row, a tile or a state.
+It is the one place in the product where colour is not doing a job in the
+rule-3 sense — the tile's own two-colour gradient is identity, not a signal —
+but unlike the earlier rainbow mark it now shares its two colours with the
+system: the gradient runs Primary into Secondary, the same pair `--wh-primary`
+and `--wh-handled` are built from. It appears as identity — in the header, on
+the signed-out frame, on the landing page, as the app icon, and at the left of
+`TalkComposer`, the door to the assistant itself — and never inside a row, a
+tile or a state.
 
 **One geometry, three consumers.** `packages/core/src/brand/mark.ts` holds
-every path, width and gradient stop, measured off the supplied artwork rather
-than eyeballed. `components/ui/brand.tsx` renders the JSX from it and
-`scripts/build-brand-assets.ts` writes the `.svg` and `.png` files
-`apps/web/public` serves. Icons are the assets most likely to rot — binary,
-far from the component they should match, and nobody notices a stale one until
-it is on somebody's home screen — so `npm run brand -- --check` runs in CI and
-fails when what is on disk no longer matches the mark.
+the house path, the heart path and the tile gradient. `components/ui/brand.tsx`
+renders the JSX from it and `scripts/build-brand-assets.ts` writes the `.svg`
+and `.png` files `apps/web/public` serves. Icons are the assets most likely to
+rot — binary, far from the component they should match, and nobody notices a
+stale one until it is on somebody's home screen — so `npm run brand -- --check`
+runs in CI and fails when what is on disk no longer matches the mark.
 
-**The mark must be told what it is sitting on.** The house body is filled
-with, and the leaf is haloed in, the surface colour — the halo is what keeps
-the leaf cleanly separate from the yellow wall it grows over. Both read
-`--wh-brand-surface`: the page background by default, and `Card` re-declares
-it as the card's own surface, so a mark inside a card gets the right surface
-through inheritance rather than a prop threaded through every screen. Get this
-wrong and the mark grows white seams on a coloured surface.
+**The mark carries its own surface now, and needs nothing from what it sits
+on.** The previous mark filled its house body with the surface it was drawn
+over, so a card had to redeclare `--wh-brand-surface` for the mark inside it
+to look right. The current mark's tile is opaque top to bottom — gradient,
+house, heart — so it renders identically wherever it appears; `Card` no
+longer redeclares anything for it.
 
-**Two things flip with the theme, and only two.** The surface, as above; and
-the window, whose Primary Blue panes lift a step on navy so they still read
-as glass rather than as holes. The three gradients — blue into green up the
-left, yellow into orange down the right, the leaf's green — stay exactly as
-the brand sheet has them: they were chosen to hold up against white, cream
-and navy alike.
+**The wordmark is solid ink now, not a rainbow.** "WonderHome" is set once in
+the brand's Neutral ink (`--wh-brand-letter-ink`, light and dark variants),
+read from `WORDMARK_LETTERS` exactly as before — every letter is still tagged
+with a tone, so the live `Wordmark` component and the share-card generator
+needed no structural change, only a palette with one entry instead of four.
 
 **The mark is not a watermark.** A full-colour logo faded to 40% over a
 gradient reads as a printing mistake. Where a warm surface wants decoration,
-that is `LeafDecor`'s job (rule 5), which is what the landing feature cards now
+that is `LeafDecor`'s job (rule 5), which is what the landing feature cards
 use.
 
 ## The brand guidelines refresh
@@ -188,6 +187,32 @@ Tomorrows.` is `Less mental load. More family time.` now, since the sheet shows 
 under the lockup and again in the footer mockup: `brand/mark.ts`'s
 `TAGLINE`, the manifest, the root layout's description and both places
 `UI-UX-REQUIREMENTS-v3.md` names it.
+
+## A second brand sheet, and the palette and mark that came with it
+
+A new brand-guidelines image replaced the one above as the base: Primary
+`#6366F1` (indigo), Secondary `#10B981` (emerald), Accent `#F59E0B` (amber),
+Warm `#F472B6` (pink), Neutral `#1F2937`, Light `#F8FAFC` — Tailwind's own
+indigo/emerald/amber/pink/gray/slate-50 swatches, which is what let the soft
+and hover shades below borrow known-contrast steps from those same scales
+rather than being eyeballed. `--wh-primary` moved to indigo (base indigo-600
+`#4F46E5` for guaranteed 4.5:1 against cream, the sheet's own indigo-500
+`#6366F1` reserved for decoration — the mark's gradient and nothing else),
+`--wh-attention` to amber-700, `--wh-handled` to emerald-700; `--wh-tone-ai`
+(the assistant/HomeTalk violet) was already close to this palette's family
+and was left alone. The mark (`brand/mark.ts`) was redrawn to the new app
+icon: the house-and-leaf gradient shape is gone, replaced by the rounded
+gradient tile, white house and heart-cutout described in "The brand mark"
+above, and the wordmark's rainbow letters became one solid ink colour.
+
+Two things this pass deliberately left alone: the tagline's exact wording and
+punctuation (`Less mental load. More family time!` — the new sheet's casing
+differs only trivially and the string is hand-typed in enough screens and
+tests that a punctuation-only sweep was not worth the risk), and the warm
+cream page/surface system (rule 1) — the sheet's "Light" swatch is a UI-chrome
+reference the same way the first sheet's Light Gray was, not a licence to
+cool the page down, and the same reasoning that kept the first sheet's neutral
+off `--wh-background` applies here.
 
 ## The nav drawer (rules 4, 6, 10)
 
@@ -355,7 +380,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 
 | Part | What it is |
 |---|---|
-| `BrandMark`, `Wordmark` | The house-and-leaf mark, inline SVG, and the name beside it running through the brand's rainbow letter by letter (`WORDMARK_LETTERS` in `brand/mark.ts`) rather than the old two-block "Wonder navy / Home blue" split |
+| `BrandMark`, `Wordmark` | The gradient house-and-heart mark, inline SVG, and the name beside it set once in the brand's ink (`WORDMARK_LETTERS` in `brand/mark.ts`) |
 | `Avatar`, `AvatarGroup` | Initials on a name-stable tint; a role glyph, never colour alone. `cardTintFor` gives the same tint as a card background, for a row that wants colour behind the whole thing rather than only the circle |
 | `IconTile` | The tinted glyph square every row begins with; tone by domain |
 | `ActionRow` / `NavRow` | Name, one line of reason, one action or a chevron |
