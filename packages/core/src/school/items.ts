@@ -41,6 +41,7 @@ export type SchoolItem = {
   kind: SchoolItemKind;
   title: string;
   subject: string | null;
+  detail: string | null;
   dueAt: Date | null;
   estimatedMinutes: number | null;
   estimateSource: "provider" | "inferred" | "member_confirmed" | null;

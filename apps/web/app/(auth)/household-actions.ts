@@ -345,3 +345,95 @@ export async function updateMemberProfileAction(
   revalidatePath("/househelper");
   return {};
 }
+
+const avatarIdsSchema = z.object({
+  householdId: z.uuid(),
+  memberId: z.uuid(),
+});
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+/** One object per member, overwritten on every re-upload — never a growing history of old photos. */
+function avatarStoragePath(householdId: string, memberId: string): string {
+  return `${householdId}/${memberId}`;
+}
+
+/**
+ * The photo half of a member's details (rule 1: "for each person, give
+ * option to edit their details, including their profile pictures").
+ *
+ * Uploads to the private `avatars` bucket (never public — these can be
+ * photos of children) at a path keyed by household and member id, which is
+ * also the RLS boundary the storage policies check directly. Only the
+ * storage path is written to `household_members.avatar_path`; the signed,
+ * display-ready URL is minted at read time by `listMembers`, never stored.
+ */
+export async function updateMemberAvatarAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = avatarIdsSchema.safeParse({
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId"),
+  });
+  if (!parsed.success) return { error: "Please try again." };
+
+  const photo = formData.get("photo");
+  if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a photo first." };
+  if (!AVATAR_CONTENT_TYPES.has(photo.type)) return { error: "Photos must be a JPEG, PNG or WebP image." };
+  if (photo.size > AVATAR_MAX_BYTES) return { error: "That photo is too large — please use one under 5MB." };
+
+  const supabase = await createClient();
+  const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
+
+  try {
+    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const path = avatarStoragePath(parsed.data.householdId, parsed.data.memberId);
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, photo, { upsert: true, contentType: photo.type });
+    if (uploadError) throw new Error(`avatar upload failed: ${uploadError.message}`);
+
+    await updateMemberProfile(supabase, actor, { memberId: parsed.data.memberId, avatarPath: path });
+  } catch (error) {
+    const { toErrorBody } = await import("@wonderhome/core/api/errors");
+    return { error: toErrorBody(error, "household").body.error.message };
+  }
+
+  revalidatePath("/household/members");
+  revalidatePath("/family");
+  revalidatePath("/househelper");
+  return { notice: "Photo updated." };
+}
+
+/** The other half of adding a photo (CLAUDE.md rule 12): undoing it. */
+export async function removeMemberAvatarAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = avatarIdsSchema.safeParse({
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId"),
+  });
+  if (!parsed.success) return { error: "Please try again." };
+
+  const supabase = await createClient();
+  const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
+
+  try {
+    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const path = avatarStoragePath(parsed.data.householdId, parsed.data.memberId);
+    await supabase.storage.from("avatars").remove([path]);
+    await updateMemberProfile(supabase, actor, { memberId: parsed.data.memberId, avatarPath: null });
+  } catch (error) {
+    const { toErrorBody } = await import("@wonderhome/core/api/errors");
+    return { error: toErrorBody(error, "household").body.error.message };
+  }
+
+  revalidatePath("/household/members");
+  revalidatePath("/family");
+  revalidatePath("/househelper");
+  return { notice: "Photo removed." };
+}

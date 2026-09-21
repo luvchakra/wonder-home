@@ -122,7 +122,7 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
                     key={helper.id}
                     summary={
                       <>
-                        <Avatar name={helper.displayName} size="md" badge="🤝" />
+                        <Avatar name={helper.displayName} size="md" imageUrl={helper.avatarUrl} badge="🤝" />
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">{helper.displayName}</span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
@@ -143,6 +143,7 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
                         timezone={timezone}
                         editable={admin}
                         householdId={householdId}
+                        currentMemberId={membership.memberId}
                         statusLabel={helper.status === "invited" ? "Invited, hasn't joined yet" : helper.status === "inactive" ? "Inactive" : null}
                       />
 

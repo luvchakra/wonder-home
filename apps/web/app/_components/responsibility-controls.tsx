@@ -1,13 +1,14 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ResponsibilityCard, type ResponsibilityCardProps } from "@wonderhome/core/ui/outcome-card";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { Sheet } from "@wonderhome/core/ui/sheet";
+import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
-import { saveResponsibilityAction } from "../(auth)/configuration-actions";
+import type { ActionState } from "../(auth)/actions";
+import { removeResponsibilityAction, saveResponsibilityAction } from "../(auth)/configuration-actions";
 import { iconForOutcome } from "../_lib/outcome-icons";
 import { ResponsibilityForm, type MemberOption, type ResponsibilityInitial } from "./config-forms";
 
@@ -87,11 +88,69 @@ export function ResponsibilityRow({
 
       <Sheet open={open} onOpenChange={setOpen} title={initial.outcomeLabel} description={definition}>
         {editable ? (
-          <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} initial={initial} />
+          <div className="space-y-4">
+            <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} initial={initial} />
+            <RemoveResponsibilityControl householdId={householdId} outcomeKey={outcomeKey} outcomeLabel={initial.outcomeLabel} onRemoved={() => setOpen(false)} />
+          </div>
         ) : (
           <ReadOnlyDetail card={card} />
         )}
       </Sheet>
+    </>
+  );
+}
+
+/**
+ * The other half of adding a responsibility: once assigned, it can also be
+ * taken off the matrix entirely, not just reassigned to "Nobody yet" (which
+ * leaves a dead row nothing can replace — see `removeResponsibility`).
+ */
+function RemoveResponsibilityControl({
+  householdId,
+  outcomeKey,
+  outcomeLabel,
+  onRemoved,
+}: {
+  householdId: string;
+  outcomeKey: string;
+  outcomeLabel: string;
+  onRemoved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(removeResponsibilityAction, {});
+  const submitted = useRef(false);
+
+  useEffect(() => {
+    if (submitted.current && !pending && !state.error) {
+      setOpen(false);
+      onRemoved();
+    }
+  }, [pending, state.error, onRemoved]);
+
+  return (
+    <>
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="text-[var(--wh-risk)]">
+        <Trash2 aria-hidden className="size-3.5" /> Remove responsibility
+      </Pill>
+
+      <ConfirmationSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={`Remove ${outcomeLabel}?`}
+        description="Nobody will own this outcome anymore, and WonderHome stops planning around it. You can add it again any time — it just starts over, with nobody assigned."
+        confirmLabel="Remove"
+        destructive
+        pending={pending}
+        onConfirm={() => {
+          submitted.current = true;
+          const formData = new FormData();
+          formData.set("householdId", householdId);
+          formData.set("outcomeKey", outcomeKey);
+          formAction(formData);
+        }}
+      >
+        {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}
+      </ConfirmationSheet>
     </>
   );
 }

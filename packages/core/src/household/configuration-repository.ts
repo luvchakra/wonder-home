@@ -175,6 +175,38 @@ export async function setPlaybookItemActive(
   });
 }
 
+/**
+ * Removes a responsibility from the matrix entirely.
+ *
+ * Unlike a playbook entry or a policy, a responsibility has no in-force
+ * history worth preserving under its own row — the outcome's real history
+ * (what happened, when) lives in `outcomes`/`outcome_exceptions`, not here,
+ * and `wh.autonomy_for()` already falls back to `'observe'` the moment no
+ * row exists for an outcome key. So this is a real delete, not a status
+ * flip: RLS already permits it (`responsibilities_write_admin` is `for
+ * all`), and deleting frees the outcome key to be assigned again from
+ * scratch rather than leaving a dead "Nobody yet" row nothing can replace.
+ */
+export async function removeResponsibility(
+  supabase: SupabaseClient,
+  input: { householdId: string; actorMemberId: string; outcomeKey: string },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("responsibilities")
+    .delete()
+    .eq("household_id", input.householdId)
+    .eq("outcome_key", input.outcomeKey)
+    .select("id");
+
+  if (error) throw writeFailure("responsibility", error);
+  if (!data || data.length === 0) throw ApiError.notFound("That responsibility is not in this household.");
+
+  await audit(input.householdId, input.actorMemberId, "responsibility.updated", "responsibilities", (data[0] as Row).id as string, {
+    outcomeKey: input.outcomeKey,
+    removed: true,
+  });
+}
+
 /** Stands a policy down. Its versions stay on record; nothing is in force under that name afterwards. */
 export async function retirePolicy(
   supabase: SupabaseClient,

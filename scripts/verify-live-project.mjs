@@ -89,6 +89,7 @@ const SHIPPED_TABLES = [
 const SHIPPED_COLUMNS = [
   { table: "agent_runs", column: "contracts" },
   { table: "household_members", column: "nickname" },
+  { table: "household_members", column: "avatar_path" },
   { table: "notification_preferences", column: "target" },
 ];
 

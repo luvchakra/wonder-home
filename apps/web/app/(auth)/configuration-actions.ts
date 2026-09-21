@@ -12,6 +12,7 @@ import {
   applyConfigurationChange,
   listResponsibilities,
   policyVersions,
+  removeResponsibility,
   retirePolicy,
   savePlaybookItem,
   savePolicy,
@@ -69,6 +70,34 @@ export async function saveResponsibilityAction(
     revalidatePath("/household/setup");
     revalidatePath("/household/responsibilities");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+const removeResponsibilitySchema = z.object({
+  householdId: z.uuid(),
+  outcomeKey: z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/, { error: "That is not a valid outcome key." }),
+});
+
+export async function removeResponsibilityAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = removeResponsibilitySchema.safeParse({
+    householdId: formData.get("householdId"),
+    outcomeKey: formData.get("outcomeKey"),
+  });
+  if (!parsed.success) return { error: "That responsibility could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await removeResponsibility(supabase, {
+      householdId: parsed.data.householdId,
+      actorMemberId: membership.memberId,
+      outcomeKey: parsed.data.outcomeKey,
+    });
+    revalidatePath("/household/setup");
+    revalidatePath("/household/responsibilities");
+    return { notice: "Removed. Nobody is assigned to this outcome anymore — add it again whenever you're ready." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
   }

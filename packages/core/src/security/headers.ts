@@ -18,6 +18,9 @@ function contentSecurityPolicy({ supabaseOrigin, development }: SecurityHeaderOp
   const connect = ["'self'", supabaseOrigin, development ? "ws: http://localhost:*" : null]
     .filter(Boolean)
     .join(" ");
+  // A member's photo is served from Supabase Storage as a signed URL on the
+  // project's own origin, never a public/unbounded third party.
+  const img = ["'self'", "blob:", "data:", supabaseOrigin].filter(Boolean).join(" ");
 
   const directives: Record<string, string> = {
     "default-src": "'self'",
@@ -25,7 +28,7 @@ function contentSecurityPolicy({ supabaseOrigin, development }: SecurityHeaderOp
     "script-src": development ? "'self' 'unsafe-inline' 'unsafe-eval'" : "'self' 'unsafe-inline'",
     // Tailwind and Radix set inline styles at runtime.
     "style-src": "'self' 'unsafe-inline'",
-    "img-src": "'self' blob: data:",
+    "img-src": img,
     "font-src": "'self' data:",
     "connect-src": connect,
     "media-src": "'self'",

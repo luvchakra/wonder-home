@@ -7,6 +7,8 @@ import { format as formatMoney } from "@wonderhome/core/finance/payments";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -80,6 +82,8 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
   const total = suggestions.reduce((sum, row) => sum + (row.estimated_cost_minor ?? 0), 0);
   const priced = suggestions.filter((row) => row.estimated_cost_minor !== null).length;
   const needs = agenda ? [...agenda.needed, ...agenda.lateOrders] : [];
+  const existingNames = Array.from(new Set(consumables.map((item) => item.name))).sort((a, b) => a.localeCompare(b));
+  const existingCategories = Array.from(new Set(consumables.map((item) => item.category))).sort((a, b) => a.localeCompare(b));
 
   return (
     <AppShell {...shell}>
@@ -90,7 +94,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
             <p className="text-sm text-[var(--wh-foreground-muted)]">Never run out again.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <AddConsumableButton householdId={householdId} />
+            <AddConsumableButton householdId={householdId} existingNames={existingNames} existingCategories={existingCategories} />
           </div>
         </header>
 
@@ -182,13 +186,52 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                     {consumables.slice(0, 20).map((item) => {
                       const runsOut = expectedDepletion(item, now);
                       return (
-                        <ActionRow
+                        <ExpandableRow
                           key={item.id}
-                          icon={PackageCheck}
-                          tone="care"
-                          title={item.name}
-                          meta={runsOut ? `Likely to run out ${formatDate(timezone, runsOut, "long")}` : "Not enough history to predict yet"}
-                          action={
+                          summary={
+                            <>
+                              <IconTile icon={PackageCheck} tone="care" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-medium">{item.name}</span>
+                                <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                                  {runsOut ? `Likely to run out ${formatDate(timezone, runsOut, "long")}` : "Not enough history to predict yet"}
+                                </span>
+                              </span>
+                            </>
+                          }
+                        >
+                          <div className="space-y-3">
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+                              <div>
+                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Category</dt>
+                                <dd>{item.category}</dd>
+                              </div>
+                              <div>
+                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Usual amount</dt>
+                                <dd>{item.typicalQuantity} {item.unit}</dd>
+                              </div>
+                              {item.daysPerUnit ? (
+                                <div>
+                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Lasts about</dt>
+                                  <dd>{item.daysPerUnit} days</dd>
+                                </div>
+                              ) : null}
+                              {item.evidenceBasis ? (
+                                <div>
+                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Based on</dt>
+                                  <dd>{describeBasis(item.evidenceBasis)}</dd>
+                                </div>
+                              ) : null}
+                              {item.lastPurchasedOn ? (
+                                <div>
+                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Last purchased</dt>
+                                  <dd>
+                                    {formatDate(timezone, new Date(item.lastPurchasedOn), "long")}
+                                    {item.lastPurchasedQuantity ? ` · ${item.lastPurchasedQuantity} ${item.unit}` : ""}
+                                  </dd>
+                                </div>
+                              ) : null}
+                            </dl>
                             <ConsumableRowControls
                               householdId={householdId}
                               item={{
@@ -199,9 +242,11 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                                 typicalQuantity: item.typicalQuantity,
                                 daysPerUnit: item.daysPerUnit,
                               }}
+                              existingNames={existingNames}
+                              existingCategories={existingCategories}
                             />
-                          }
-                        />
+                          </div>
+                        </ExpandableRow>
                       );
                     })}
                   </ul>

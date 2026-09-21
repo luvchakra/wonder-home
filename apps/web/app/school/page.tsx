@@ -10,6 +10,8 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { Card } from "@wonderhome/core/ui/card";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -18,6 +20,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaRow } from "../_components/agenda-row";
 import { AddHomeworkButton } from "../_components/school-forms";
+import { SchoolItemDetail } from "../_components/school-item-controls";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
@@ -69,6 +72,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const admin = isHouseholdAdmin(membership);
 
   const children = members.filter((member) => member.memberType === "child");
+  const childOptions = children.map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? "School";
   const live = items.filter((item) => item.status === "pending" || item.status === "in_progress");
   const needsYou = agenda ? agenda.deadlines.length + agenda.messages.length : 0;
@@ -165,14 +169,23 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {live.map((item) => (
-                  <ActionRow
+                  <ExpandableRow
                     key={item.id}
-                    icon={item.kind === "exam" ? CalendarDays : BookOpen}
-                    tone="school"
-                    title={item.title}
-                    meta={[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(timezone, item.dueAt, "long")}` : "no due date", item.estimatedMinutes ? `~${item.estimatedMinutes} min${item.estimateSource === "inferred" ? " (estimated)" : ""}` : null].filter(Boolean).join(" · ")}
-                    action={<Badge tone={item.status === "in_progress" ? "attention" : "neutral"}>{item.status === "in_progress" ? "In progress" : item.kind}</Badge>}
-                  />
+                    summary={
+                      <>
+                        <IconTile icon={item.kind === "exam" ? CalendarDays : BookOpen} tone="school" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium">{item.title}</span>
+                          <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                            {[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(timezone, item.dueAt, "long")}` : "no due date", item.estimatedMinutes ? `~${item.estimatedMinutes} min${item.estimateSource === "inferred" ? " (estimated)" : ""}` : null].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
+                        <Badge tone={item.status === "in_progress" ? "attention" : "neutral"}>{item.status === "in_progress" ? "In progress" : item.kind}</Badge>
+                      </>
+                    }
+                  >
+                    <SchoolItemDetail item={item} householdId={householdId} kids={childOptions} timezone={timezone} editable />
+                  </ExpandableRow>
                 ))}
               </ul>
             </Card>
@@ -189,7 +202,22 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {items.filter((item) => (item.kind === "event" || item.kind === "exam") && item.dueAt && item.status !== "cancelled").map((item) => (
-                      <ActionRow key={item.id} icon={CalendarDays} tone="school" title={item.title} meta={`${nameOf(item.childMemberId)} · ${formatDate(timezone, item.dueAt!, "long")} · ${formatTime(timezone, item.dueAt!)}`} />
+                      <ExpandableRow
+                        key={item.id}
+                        summary={
+                          <>
+                            <IconTile icon={CalendarDays} tone="school" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium">{item.title}</span>
+                              <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                                {nameOf(item.childMemberId)} · {formatDate(timezone, item.dueAt!, "long")} · {formatTime(timezone, item.dueAt!)}
+                              </span>
+                            </span>
+                          </>
+                        }
+                      >
+                        <SchoolItemDetail item={item} householdId={householdId} kids={childOptions} timezone={timezone} editable />
+                      </ExpandableRow>
                     ))}
                   </ul>
                 </Card>

@@ -11,6 +11,10 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Groceries: name/category/unit suggestions, and chevron detail](2026-09-21-groceries-open-fields-and-chevron-detail.md) |
+| 2026-09-21 | [Kids & School: update/remove, chevron detail, and a screenshot import](2026-09-21-kids-school-crud-and-screenshot-import.md) |
+| 2026-09-21 | [Remove a family member from the Family tab, and profile photos](2026-09-21-family-member-remove-and-profile-photos.md) |
+| 2026-09-21 | [Responsibilities: remove, group by member, and a miscounted "Mine" tab](2026-09-21-responsibilities-remove-and-mine-count-fix.md) |
 | 2026-09-21 | [A signed-in parent resolved to their child's own view](2026-09-21-session-identity-resolution-bug.md) |
 | 2026-09-21 | [Delivery channels (06-008), and the migrations that never shipped](2026-09-21-delivery-channels-and-a-production-incident.md) |
 | 2026-09-21 | [CI/CD performance pass, and locking in what this session learned the hard way](2026-09-21-ci-performance-and-testing-gotchas.md) |

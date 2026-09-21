@@ -30,6 +30,35 @@ type Row = {
 };
 
 /**
+ * Groups rows by who owns them, in household-member order, with a final
+ * "Unowned" group for outcomes nobody owns yet — the group the household
+ * most needs to notice, so it goes last rather than getting lost among
+ * named owners (design rule 17: the thing to decide first reads first, and
+ * an unassigned outcome is a decision, not a record of one already made).
+ */
+function groupByOwner(
+  rows: Row[],
+  members: { id: string; displayName: string }[],
+): { ownerId: string | null; ownerName: string; rows: Row[] }[] {
+  const byOwner = new Map<string | null, Row[]>();
+  for (const row of rows) {
+    const key = row.primary_member_id;
+    const existing = byOwner.get(key);
+    if (existing) existing.push(row);
+    else byOwner.set(key, [row]);
+  }
+
+  const groups: { ownerId: string | null; ownerName: string; rows: Row[] }[] = members
+    .map((member) => ({ ownerId: member.id, ownerName: member.displayName, rows: byOwner.get(member.id) ?? [] }))
+    .filter((group) => group.rows.length > 0);
+
+  const unowned = byOwner.get(null) ?? [];
+  if (unowned.length > 0) groups.push({ ownerId: null, ownerName: "Nobody yet", rows: unowned });
+
+  return groups;
+}
+
+/**
  * Responsibilities (requirements §14): outcomes, not micro-task sequences.
  * Each has an owner, a backup, a cadence and an AI involvement level. An
  * unowned outcome is shown as a gap — the most useful thing the matrix can say.
@@ -123,7 +152,8 @@ function renderResponsibilities({
 }) {
   const rows = (responsibilityRows.data as Row[] | null) ?? [];
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
-  const shown = rows.filter((row) => (active === "mine" ? row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId : active === "family" ? row.primary_member_id !== membership.memberId : true));
+  const isMine = (row: Row) => row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId;
+  const shown = rows.filter((row) => (active === "mine" ? isMine(row) : active === "family" ? row.primary_member_id !== membership.memberId : true));
   const gaps = rows.filter((row) => !row.primary_member_id);
 
   // Outcomes the household has already described, plus starters it has not —
@@ -158,7 +188,7 @@ function renderResponsibilities({
           active={active}
           segments={[
             { key: "all", label: "All", href: "/household/responsibilities", count: rows.length },
-            { key: "mine", label: "Mine", href: "/household/responsibilities?tab=mine", count: rows.filter((r) => r.primary_member_id === membership.memberId).length },
+            { key: "mine", label: "Mine", href: "/household/responsibilities?tab=mine", count: rows.filter(isMine).length },
             { key: "family", label: "Family", href: "/household/responsibilities?tab=family" },
           ]}
         />
@@ -208,50 +238,60 @@ function renderResponsibilities({
         {shown.length === 0 ? (
           <EmptyState icon={ListChecks} title={rows.length === 0 ? "No responsibilities defined yet" : "Nothing here"} description={rows.length === 0 ? "Start from the playbook: each outcome gets an owner, a backup and how much WonderHome may do on its own." : "Nothing matches this view."} action={admin && rows.length === 0 ? <PillLink href="/household">Set up the playbook</PillLink> : null} />
         ) : (
-          <Card className="p-2">
-            <ul className="divide-y divide-[var(--wh-border)]">
-              {shown.map((row) => {
-                const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
-                const title = item?.name ?? row.outcome_key.replace(/[._]/g, " ");
-                return (
-                  <ResponsibilityRow
-                    key={row.id}
-                    outcomeKey={row.outcome_key}
-                    autoOpen={row.outcome_key === openOutcomeKey}
-                    card={{
-                      title,
-                      owner: nameOf(row.primary_member_id) ?? "Nobody yet",
-                      backup: nameOf(row.backup_member_id),
-                      frequency: cadenceLabel(item?.cadence),
-                      aiMode: row.ai_mode,
-                      action: !row.primary_member_id ? <Badge tone="attention">Unowned</Badge> : undefined,
-                    }}
-                    definition={item?.outcome_definition}
-                    editable={admin}
-                    householdId={householdId}
-                    members={memberOptions}
-                    initial={{
-                      outcomeKey: row.outcome_key,
-                      outcomeLabel: title,
-                      primaryMemberId: row.primary_member_id,
-                      backupMemberId: row.backup_member_id,
-                      aiMode: row.ai_mode,
-                      priority: row.priority,
-                    }}
-                  />
-                );
-              })}
-            </ul>
-          </Card>
+          <div className="space-y-4">
+            {groupByOwner(shown, members).map((group) => (
+              <div key={group.ownerId ?? "unowned"} className="space-y-2">
+                <p className="px-1 text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+                  {group.ownerName} · {group.rows.length}
+                </p>
+                <Card className="p-2">
+                  <ul className="divide-y divide-[var(--wh-border)]">
+                    {group.rows.map((row) => {
+                      const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
+                      const title = item?.name ?? row.outcome_key.replace(/[._]/g, " ");
+                      return (
+                        <ResponsibilityRow
+                          key={row.id}
+                          outcomeKey={row.outcome_key}
+                          autoOpen={row.outcome_key === openOutcomeKey}
+                          card={{
+                            title,
+                            owner: nameOf(row.primary_member_id) ?? "Nobody yet",
+                            backup: nameOf(row.backup_member_id),
+                            frequency: cadenceLabel(item?.cadence),
+                            aiMode: row.ai_mode,
+                            action: !row.primary_member_id ? <Badge tone="attention">Unowned</Badge> : undefined,
+                          }}
+                          definition={item?.outcome_definition}
+                          editable={admin}
+                          householdId={householdId}
+                          members={memberOptions}
+                          initial={{
+                            outcomeKey: row.outcome_key,
+                            outcomeLabel: title,
+                            primaryMemberId: row.primary_member_id,
+                            backupMemberId: row.backup_member_id,
+                            aiMode: row.ai_mode,
+                            priority: row.priority,
+                          }}
+                        />
+                      );
+                    })}
+                  </ul>
+                </Card>
+              </div>
+            ))}
+          </div>
         )}
 
         <section>
-          <SectionHeader title="How WonderHome helps" />
+          <SectionHeader title="How much WonderHome does on its own" />
           <Card className="space-y-2 text-sm text-[var(--wh-foreground-muted)]">
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Watches</span> — notices and tells you.</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Prepares</span> — drafts the order or the plan and waits.</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Asks first</span> — does the work once you say yes.</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Handles it</span> — acts, and tells you what it did. Payments and access changes always ask.</p>
+            <p>For each outcome above, you choose how far WonderHome may go without asking:</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Watch only</span> — it notices a problem and tells you. It does nothing else.</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Prepare, and leave it to me</span> — it gets everything ready (an order, a plan) and waits for you to send it.</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Ask me before acting</span> — it does the work the moment you say yes.</p>
+            <p><span className="font-semibold text-[var(--wh-foreground)]">Act, and tell me afterwards</span> — it goes ahead on its own and reports back. Payments and access changes always ask first, however you set this.</p>
           </Card>
         </section>
 

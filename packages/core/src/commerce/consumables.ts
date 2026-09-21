@@ -14,8 +14,9 @@ import { addDays, daysBetween, isoDate, parseDate, silent, type HomeAssessment }
  * all rather than a guess with a confident tone.
  */
 
+/** Quick-pick suggestions in the add/edit form's category field — not a closed set. A household may type its own ("baby", "stationery"); the database only requires 1-40 trimmed characters, "pet" is the one value with special meaning (pet-supply consumables must use it exactly). */
 export const CONSUMABLE_CATEGORIES = ["grocery", "household", "pet", "personal", "medical"] as const;
-export type ConsumableCategory = (typeof CONSUMABLE_CATEGORIES)[number];
+export type ConsumableCategory = string;
 
 export const EVIDENCE_BASES = ["purchase_history", "configured_inventory", "member_stated"] as const;
 export type EvidenceBasis = (typeof EVIDENCE_BASES)[number];
@@ -87,13 +88,17 @@ export function expectedDepletion(consumable: Consumable, now: Date = new Date()
  * Medication is not milk. Running out of one is an inconvenience and the other
  * is a health problem, so they get different amounts of warning.
  */
-export const REORDER_LEAD_DAYS: Record<ConsumableCategory, number> = {
+/** Keyed by the five suggested categories; a household's own custom category falls back to `DEFAULT_REORDER_LEAD_DAYS`. */
+export const REORDER_LEAD_DAYS: Record<string, number> = {
   medical: 7,
   pet: 4,
   grocery: 3,
   household: 3,
   personal: 3,
 };
+
+/** Same lead time as the three ordinary defaults, for a category that isn't one of the five suggestions. */
+export const DEFAULT_REORDER_LEAD_DAYS = 3;
 
 export type Suggestion = {
   consumableId: string;
@@ -116,7 +121,7 @@ export function suggestPurchase(consumable: Consumable, now: Date = new Date()):
   if (!depletion || consumable.evidenceBasis === null) return null;
 
   const daysLeft = daysBetween(now, depletion);
-  const lead = REORDER_LEAD_DAYS[consumable.category];
+  const lead = REORDER_LEAD_DAYS[consumable.category] ?? DEFAULT_REORDER_LEAD_DAYS;
   if (daysLeft > lead) return null;
 
   return {

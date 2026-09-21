@@ -209,6 +209,9 @@ For any UI change, actually drive it in a browser at 360px and desktop before ca
 ## Applying a migration to the live project
 Writing a migration file is not shipping it. This repo's live Supabase project only has what actually reached it through the Supabase MCP `apply_migration` tool (`mcp__Supabase__list_projects` finds the project id, `list_migrations` shows what has landed) — a file committed to `supabase/migrations/` with nobody having run that tool is invisible to production no matter what the story tracker says. This bit a real story: three migrations in a row got written, tested locally, committed and marked `Done` without ever being applied, and the gap surfaced only when a fourth story tried to read the column one of them added. Apply every migration to the live project as part of finishing the story that introduces it, in the same session, and run `npm run verify:live` afterward to confirm it landed — never treat a green `test:db` run (a from-scratch local database) as proof that the live project has it too.
 
+## Database query permissions
+All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_migration`, and every other Supabase MCP tool — is pre-authorized. Run what the work needs (including destructive statements: dropping a constraint, deleting QA/test rows, correcting bad data) without pausing to ask first. This still means investigate before deleting real household data and keep QA cleanup scoped to what a session's own test account created, per the rest of this file — it removes the confirmation step, not the judgment.
+
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 

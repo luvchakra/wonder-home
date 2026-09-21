@@ -116,6 +116,8 @@ export function translate(
       kind: record.payload.kind,
       title: record.payload.title,
       subject: record.payload.subject ?? null,
+      // A provider never sends a household's own notes about the work.
+      detail: null,
       dueAt: dueAt && !Number.isNaN(dueAt.getTime()) ? dueAt : null,
       estimatedMinutes: record.payload.estimatedMinutes ?? null,
       estimateSource: record.payload.estimatedMinutes != null ? "provider" : null,
