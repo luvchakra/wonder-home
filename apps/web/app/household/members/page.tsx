@@ -85,7 +85,7 @@ export default async function MembersPage() {
               <CardTitle>Inviting people</CardTitle>
             </CardHeader>
             <p className="text-sm text-[var(--wh-foreground-muted)]">
-              The Head of Family or a Household Administrator can invite new members.
+              An Admin can invite new members.
             </p>
           </Card>
         )}

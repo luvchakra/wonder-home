@@ -309,6 +309,25 @@
   }
 }
 
+/* A hand actually waving hello, not just sitting there (the greeting's 👋). */
+@keyframes wh-hand-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10%,
+  30% {
+    transform: rotate(-14deg);
+  }
+  20%,
+  40% {
+    transform: rotate(14deg);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
+}
+
 /* Scroll reveal: opacity + translateY + subtle scale (requirements §41). */
 .wh-reveal {
   opacity: 0;
@@ -332,6 +351,13 @@
 .wh-rise {
   animation: wh-rise var(--wh-duration-slow) var(--wh-ease) both;
   animation-delay: var(--wh-rise-delay, 0ms);
+}
+
+.wh-hand-wave {
+  display: inline-block;
+  transform-origin: 70% 70%;
+  animation: wh-hand-wave 1.4s ease-in-out 1;
+  animation-delay: 300ms;
 }
 
 /* The nav drawer's own entrance — the sheet family's speed, not the slower content reveal. */
@@ -376,7 +402,8 @@
   .wh-float,
   .wh-rise,
   .wh-skeleton,
-  .wh-slide-in-left {
+  .wh-slide-in-left,
+  .wh-hand-wave {
     animation: none;
   }
   .wh-rise,

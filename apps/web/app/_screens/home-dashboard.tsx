@@ -83,15 +83,24 @@ function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoi
             const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
             const frequency = cadenceLabel(item?.cadence);
             return (
-              <li key={row.outcome_key} className="flex items-center gap-2.5">
-                <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium">{outcomeTitle(row)}</span>
-                  <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                    {AI_MODE_LABEL[row.ai_mode]}
-                    {frequency ? ` · ${frequency}` : ""}
+              <li key={row.outcome_key}>
+                {/* Opens the same detail this outcome shows on its own
+                    screen (rule 13 keeps this from becoming a second, partial
+                    editor here) — never a dead end. */}
+                <Link
+                  href={`/household/responsibilities?outcome=${encodeURIComponent(row.outcome_key)}`}
+                  className="flex items-center gap-2.5 rounded-[var(--wh-radius-sm)] py-0.5 transition-colors hover:bg-[var(--wh-surface-muted)]"
+                >
+                  <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium">{outcomeTitle(row)}</span>
+                    <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+                      {AI_MODE_LABEL[row.ai_mode]}
+                      {frequency ? ` · ${frequency}` : ""}
+                    </span>
                   </span>
-                </span>
+                  <ChevronRight aria-hidden className="size-3.5 shrink-0 text-[var(--wh-foreground-subtle)]" />
+                </Link>
               </li>
             );
           })}
@@ -99,7 +108,18 @@ function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoi
       ) : null}
       {backup.length > 0 ? (
         <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-          Backs up: {backup.map((row) => outcomeTitle(row)).join(", ")}
+          Backs up:{" "}
+          {backup.map((row, index) => (
+            <span key={row.outcome_key}>
+              {index > 0 ? ", " : ""}
+              <Link
+                href={`/household/responsibilities?outcome=${encodeURIComponent(row.outcome_key)}`}
+                className="underline-offset-2 hover:underline"
+              >
+                {outcomeTitle(row)}
+              </Link>
+            </span>
+          ))}
         </p>
       ) : null}
     </div>
@@ -128,7 +148,7 @@ export function HomeDashboard({ session }: { session: Session }) {
         <header className="wh-rise space-y-2">
           <div className="flex items-start justify-between gap-4">
             <h1 className="min-w-0 text-[1.625rem] font-bold tracking-tight text-balance sm:text-3xl">
-              {greetingFor(timezone, now)}, {firstName}! <span aria-hidden>👋</span>
+              {greetingFor(timezone, now)}, {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
             </h1>
             {/* The sheet puts the weather here. WonderHome has no weather
                 provider, and a temperature nobody measured is exactly the
@@ -165,9 +185,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
 
-  // Setup guidance is for the people who can act on it: the Head of Family
-  // and administrators. Prominent for their first week, one quiet row after,
-  // gone at 100%.
+  // Setup guidance is for the people who can act on it: Admins. Prominent
+  // for their first week, one quiet row after, gone at 100%.
   const manages = view.permissions.includes("household.manage");
 
   const todayIso = now.toISOString().slice(0, 10);

@@ -201,12 +201,14 @@ function NavDrawer({
           </nav>
 
           {/* The same warm close every screen gets (rule 2), and the one
-              place in this menu that is purely decoration. */}
-          <div className="mx-2 mb-3 flex items-center gap-3 overflow-hidden rounded-[var(--wh-radius)] bg-[var(--wh-handled-soft)] p-4">
+              place in this menu that is purely decoration. Sized by width
+              only, like every other HomeIllustration call site — a fixed
+              height plus overflow-hidden was cropping it top and bottom. */}
+          <div className="mx-2 mb-3 flex items-center gap-3 rounded-[var(--wh-radius)] bg-[var(--wh-handled-soft)] p-4">
             <ScriptAccent tone="primary" size="sm" tilt={false} className="min-w-0 flex-1">
               Less mental load.<br />More family time!
             </ScriptAccent>
-            <HomeIllustration className="h-14 w-20 shrink-0" />
+            <HomeIllustration className="w-20 shrink-0" />
           </div>
 
           {/* A real sign-out, not a link: this is a POST, so nothing that

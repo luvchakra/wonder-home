@@ -385,7 +385,7 @@ export async function changePlan(
 
   if (error) {
     if (error.code === "42501") {
-      throw ApiError.forbidden("Only the Head of Family or an administrator can change the plan.");
+      throw ApiError.forbidden("Only an Admin can change the plan.");
     }
     throw new Error(`changePlan failed: ${error.code ?? "unknown"}`);
   }

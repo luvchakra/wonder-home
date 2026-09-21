@@ -115,7 +115,7 @@ export function factsFrom(snapshot: BrainSnapshot): ContextCandidate[] {
   const family = active.filter((member) => member.memberType !== "helper");
   const helpers = active.filter((member) => member.memberType === "helper");
   for (const member of family) {
-    const roles = member.roles.map(roleWord).filter(Boolean);
+    const roles = Array.from(new Set(member.roles.map(roleWord).filter(Boolean)));
     const kind = member.memberType === "child" ? "a child" : "an adult";
     add(member.memberType === "child" ? "child" : "general", "who is in the household", `${member.displayName} is ${kind}${roles.length > 0 ? ` and ${roles.join(" and ")}` : ""}${member.id === snapshot.viewer.memberId ? " (the person asking)" : ""}.`, [member.id]);
   }
@@ -358,9 +358,8 @@ function nameLookup(members: readonly HouseholdMember[]): (memberId: string | nu
 function roleWord(role: string): string {
   switch (role) {
     case "head":
-      return "the Head of Family";
     case "administrator":
-      return "a Household Administrator";
+      return "an Admin";
     default:
       return "";
   }

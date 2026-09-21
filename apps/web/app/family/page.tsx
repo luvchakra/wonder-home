@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarHeart, HandHeart, Heart, Sun, UserPlus, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, Sun, UserPlus, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
@@ -7,12 +7,13 @@ import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { Avatar } from "@wonderhome/core/ui/avatar";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { PersonCard } from "@wonderhome/core/ui/person-card";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -22,7 +23,9 @@ import { ActionRow } from "@wonderhome/core/ui/action-row";
 
 import { presentationFor } from "../_components/agenda-row";
 import { FamilyNeedAction, SettleEventPill } from "../_components/family-need-action";
+import { MemberDetail } from "../_components/member-detail";
 import { NewEventForm } from "../_components/new-event-form";
+import { describeRoles } from "../_lib/member-role";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Our Family" };
@@ -125,20 +128,46 @@ export default async function FamilyPage() {
           {familyMembers.length === 0 ? (
             <EmptyState icon={Users} tone="people" title="Just you so far" description="Invite the family so everyone gets their own view of the home." action={admin ? <ButtonLink href="/household/members">Invite someone</ButtonLink> : null} />
           ) : (
-            // Two to a row, and never three, on a phone (rule 19) — a third
-            // or fifth member wraps to its own row rather than squeezing in.
-            <div className="grid grid-cols-2 gap-3">
-              {familyMembers.map((member) => (
-                <PersonCard
-                  key={member.id}
-                  name={member.displayName}
-                  role={roleLabel(member)}
-                  now={member.status === "invited" ? "Invited" : member.id === membership.memberId ? "You" : null}
-                  badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined}
-                  href={member.memberType === "child" && view.permissions.includes("school.manage") ? `/school?child=${member.id}` : undefined}
-                />
-              ))}
-            </div>
+            // Full-width rows that open in place (rule 15, rule 19: primary
+            // information is never squeezed into a half-width card) — the
+            // one thing a person came to this screen for.
+            <Card className="p-2">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {familyMembers.map((member) => (
+                  <ExpandableRow
+                    key={member.id}
+                    summary={
+                      <>
+                        <Avatar name={member.displayName} size="md" badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium">{member.displayName}</span>
+                          <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                            {describeRoles(member.roles, member.isOwner)}
+                            {member.status === "invited" ? " · Invited" : member.id === membership.memberId ? " · You" : ""}
+                          </span>
+                        </span>
+                      </>
+                    }
+                  >
+                    <div className="space-y-3">
+                      <MemberDetail
+                        member={member}
+                        allMembers={familyMembers}
+                        timezone={timezone}
+                        editable={admin}
+                        householdId={householdId}
+                        statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}
+                      />
+                      {member.memberType === "child" && view.permissions.includes("school.manage") ? (
+                        <PillLink href={`/school?child=${member.id}`} tone="quiet">
+                          <GraduationCap aria-hidden className="size-3.5" /> View school
+                        </PillLink>
+                      ) : null}
+                    </div>
+                  </ExpandableRow>
+                ))}
+              </ul>
+            </Card>
           )}
         </section>
 
@@ -158,18 +187,34 @@ export default async function FamilyPage() {
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {helpers.map((member) => (
-                    <ActionRow
+                    <ExpandableRow
                       key={member.id}
-                      icon={HandHeart}
-                      tone="people"
-                      title={member.displayName}
-                      meta={member.status === "invited" ? "Invited · Househelper" : "Househelper"}
-                      action={
-                        <PillLink href="/househelper" tone="quiet">
-                          View
-                        </PillLink>
+                      summary={
+                        <>
+                          <IconTile icon={HandHeart} tone="people" size="sm" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium">{member.displayName}</span>
+                            <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                              {member.status === "invited" ? "Invited · Househelper" : "Househelper"}
+                            </span>
+                          </span>
+                        </>
                       }
-                    />
+                    >
+                      <div className="space-y-3">
+                        <MemberDetail
+                          member={member}
+                          allMembers={helpers}
+                          timezone={timezone}
+                          editable={admin}
+                          householdId={householdId}
+                          statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}
+                        />
+                        <PillLink href="/househelper" tone="quiet">
+                          Full househelp profile
+                        </PillLink>
+                      </div>
+                    </ExpandableRow>
                   ))}
                 </ul>
               </Card>
@@ -266,12 +311,4 @@ export default async function FamilyPage() {
       </div>
     </AppShell>
   );
-}
-
-function roleLabel(member: { roles: readonly string[]; memberType: string; isOwner: boolean }): string {
-  if (member.isOwner || member.roles.includes("head")) return "Head of Family";
-  if (member.roles.includes("administrator")) return "Admin";
-  if (member.memberType === "child") return "Child";
-  if (member.memberType === "helper") return "Househelper";
-  return "Adult";
 }

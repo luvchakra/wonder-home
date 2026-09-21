@@ -26,10 +26,10 @@ type PolicyRow = { id: string; category: string; name: string; active: boolean; 
 type ResponsibilityRow = { ai_mode: AutonomyMode };
 
 /**
- * Manage Household (requirements §21), for the Head of Family and
- * administrators: members, responsibilities, the playbook, policies, AI
- * autonomy, integrations and house settings — each with a live count so the
- * screen tells you the state of things before you tap in.
+ * Manage Household (requirements §21), for Admins: members, responsibilities,
+ * the playbook, policies, AI autonomy, integrations and house settings — each
+ * with a live count so the screen tells you the state of things before you
+ * tap in.
  */
 export default async function ManageHouseholdPage() {
   const session = await requireSession("/household");
@@ -40,7 +40,7 @@ export default async function ManageHouseholdPage() {
   if (!view.permissions.includes("household.manage")) {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ShieldCheck} title="For the Head of Family and administrators" description="Ask them if something about the household needs changing." />
+        <EmptyState icon={ShieldCheck} title="For Admins" description="Ask them if something about the household needs changing." />
       </AppShell>
     );
   }

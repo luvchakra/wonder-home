@@ -262,7 +262,7 @@ describe("what a change will actually do", () => {
       owned: false,
     });
 
-    expect(lines.join(" ")).toContain("Head of Family");
+    expect(lines.join(" ")).toContain("household's owner");
   });
 
   it("tells a household the old version of a policy survives", () => {

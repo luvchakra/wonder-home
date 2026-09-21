@@ -64,6 +64,7 @@ export function ResponsibilityRow({
   householdId,
   members,
   initial,
+  autoOpen,
 }: {
   card: Omit<ResponsibilityCardProps, "onExpand" | "icon" | "tone">;
   outcomeKey: string;
@@ -74,8 +75,10 @@ export function ResponsibilityRow({
   householdId: string;
   members: MemberOption[];
   initial: ResponsibilityInitial;
+  /** A link elsewhere pointed straight at this one — open its detail without making the visitor find and tap it themselves. */
+  autoOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen ?? false);
   const presentation = iconForOutcome(outcomeKey);
 
   return (
@@ -113,7 +116,7 @@ function ReadOnlyDetail({ card }: { card: Omit<ResponsibilityCardProps, "onExpan
         </div>
       ) : null}
       <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        Only the Head of Family and household administrators can change who owns this.
+        Only an Admin can change who owns this.
       </p>
     </dl>
   );

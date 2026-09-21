@@ -71,7 +71,7 @@ export default async function ActivityPage() {
       <AppShell {...shell}>
         <EmptyState
           icon={FileClock}
-          title="For the Head of Family and administrators"
+          title="For Admins"
           description="The activity trail records who changed what. It is theirs to read."
         />
       </AppShell>

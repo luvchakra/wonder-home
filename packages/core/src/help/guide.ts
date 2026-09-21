@@ -56,7 +56,7 @@ export const GUIDE: GuideSection[] = [
     group: "Getting started",
     keywords: ["setup", "onboarding", "get started", "progress", "checklist", "100%"],
     body: [
-      "If you are the Head of Family or an administrator, Home shows a setup card for your first week. It has a progress ring, where your household stands in a word, and the next three steps — each with the reason it is worth doing.",
+      "If you are an Admin, Home shows a setup card for your first week. It has a progress ring, where your household stands in a word, and the next three steps — each with the reason it is worth doing.",
       "The percentage is arithmetic over facts that exist: a bill added, a responsibility assigned, a child's date of birth recorded. It is not a count of ticked boxes, and steps that do not apply to your household are left out of the total. A home with no children or helper can still reach 100%.",
       "After the first week the card shrinks to a single quiet row, and it disappears entirely once you reach 100%. The full checklist always lives on Manage household.",
     ],
@@ -68,7 +68,7 @@ export const GUIDE: GuideSection[] = [
     group: "Your household",
     keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "child", "helper", "guardian"],
     body: [
-      "The person who creates the household is its Head of Family. They can designate Household Administrators, who can do nearly everything they can.",
+      "The person who creates the household is its owner and Admin. They can designate other Admins, who can do nearly everything they can.",
       "Adults, children and househelpers each get their own view. This is not a filter applied in the browser: a section somebody may not see is never sent to their device, and the server and the database both check again independently.",
       "Children get age-appropriate access. A child's school work is visible to that child, to their guardians and to administrators — living in the same house is not by itself enough.",
       "Househelpers are never asked to update chores. Their profile records the hours they normally work, so WonderHome can notice an absence, and holds no productivity data at all.",
@@ -170,12 +170,12 @@ export const GUIDE: GuideSection[] = [
   },
   {
     id: "certification",
-    title: "Certification: what WonderHome believes",
+    title: "Belief Review: what WonderHome believes",
     summary: "Everything it thinks it knows, with where each belief came from.",
     group: "Privacy and trust",
-    keywords: ["certification", "understanding", "belief", "correct", "source", "confidence", "wrong"],
+    keywords: ["belief review", "certification", "understanding", "belief", "correct", "source", "confidence", "wrong"],
     body: [
-      "Certification shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or a provider said so.",
+      "Belief Review shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or a provider said so.",
       "Anything it has wrong, you can correct. The percentage is confirmed beliefs over live ones: arithmetic you can check, not a model's opinion of itself.",
     ],
   },

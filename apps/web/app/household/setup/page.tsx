@@ -78,7 +78,7 @@ export default async function SetupWizardPage({
       <AppShell {...shell}>
         <EmptyState
           icon={ShieldCheck}
-          title="For the Head of Family and administrators"
+          title="For Admins"
           description="Setting up how the household runs is theirs to do. Ask them if something needs changing."
         />
       </AppShell>

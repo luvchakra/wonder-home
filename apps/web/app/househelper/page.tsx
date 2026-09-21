@@ -5,6 +5,7 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Card } from "@wonderhome/core/ui/card";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -12,6 +13,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { HelperProfileButton, RecordLeaveButton, WeeklyPatternButton } from "../_components/helper-forms";
+import { MemberDetail } from "../_components/member-detail";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Househelper" };
@@ -106,50 +108,75 @@ export default async function HousehelperPage({ searchParams }: { searchParams: 
           <EmptyState icon={HandHeart} tone="people" title="No househelper yet" description="Add the people who help at home. WonderHome tracks their days and who covers when they are away — nothing more." action={view.permissions.includes("members.manage") ? <PillLink href="/household/members"><UserPlus aria-hidden className="size-3.5" /> Add someone</PillLink> : null} />
         ) : null}
 
-        {active === "overview" ? helpers.map((helper) => {
-          const profile = profiles.find((p) => p.member_id === helper.id);
-          const todayException = exceptions.find((e) => e.member_id === helper.id && e.on_date === today);
-          const expected = expectedToday(helper.id);
-          const owned = responsibilities.filter((r) => r.primary_member_id === helper.id);
-          const nextAbsence = exceptions.find((e) => e.member_id === helper.id && !e.available && e.on_date > today);
-          return (
-            <Card key={helper.id} className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Avatar name={helper.displayName} size="lg" badge="🤝" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-semibold">{helper.displayName}</p>
-                  <p className="text-xs text-[var(--wh-foreground-muted)]">{profile ? `${profile.engagement} help` : "Househelper"}{profile?.started_on ? ` · since ${formatDate(timezone, new Date(profile.started_on))}` : ""}</p>
-                </div>
-                <Badge tone={expected ? "handled" : "neutral"}>{expected ? "Expected today" : todayException ? "Away today" : "Not today"}</Badge>
-              </div>
-              {todayException?.reason ? <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-3 py-2 text-xs text-[var(--wh-attention)]">{todayException.reason}</p> : null}
-              <div>
-                <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Usual days</p>
-                <ul className="flex gap-1.5">
-                  {DAYS.map((day, index) => {
-                    const on = windows.some((w) => w.member_id === helper.id && w.day_of_week === index);
-                    return <li key={day} className={`grid size-9 place-items-center rounded-full text-[0.6875rem] font-semibold ${on ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]" : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-subtle)]"}`}>{day.slice(0, 2)}</li>;
-                  })}
-                </ul>
-              </div>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Looks after</p>
-                {owned.length === 0 ? <p className="text-sm text-[var(--wh-foreground-muted)]">No responsibilities assigned yet.</p> : (
-                  <ul className="flex flex-wrap gap-1.5">
-                    {owned.map((r) => <li key={r.outcome_key} className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2.5 py-1 text-xs font-medium">{nameOfOutcome(r)}</li>)}
-                  </ul>
-                )}
-              </div>
-              {nextAbsence ? <p className="flex items-center gap-2 text-xs text-[var(--wh-foreground-muted)]"><CalendarOff aria-hidden className="size-3.5" /> Away {formatDate(timezone, new Date(nextAbsence.on_date), "long")}{nextAbsence.reason ? ` — ${nextAbsence.reason}` : ""}</p> : null}
-              {mayEdit(helper.id) ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {admin ? <HelperProfileButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={profile ? { engagement: profile.engagement, startedOn: profile.started_on, notes: profile.notes } : null} /> : null}
-                  <WeeklyPatternButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={windows.filter((w) => w.member_id === helper.id).map((w) => ({ dayOfWeek: w.day_of_week, startTime: w.start_time, endTime: w.end_time }))} />
-                </div>
-              ) : null}
-            </Card>
-          );
-        }) : null}
+        {active === "overview" && helpers.length > 0 ? (
+          <Card className="p-2">
+            <ul className="divide-y divide-[var(--wh-border)]">
+              {helpers.map((helper) => {
+                const profile = profiles.find((p) => p.member_id === helper.id);
+                const todayException = exceptions.find((e) => e.member_id === helper.id && e.on_date === today);
+                const expected = expectedToday(helper.id);
+                const owned = responsibilities.filter((r) => r.primary_member_id === helper.id);
+                const nextAbsence = exceptions.find((e) => e.member_id === helper.id && !e.available && e.on_date > today);
+                return (
+                  <ExpandableRow
+                    key={helper.id}
+                    summary={
+                      <>
+                        <Avatar name={helper.displayName} size="md" badge="🤝" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium">{helper.displayName}</span>
+                          <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                            {profile ? `${profile.engagement} help` : "Househelper"}
+                            {profile?.started_on ? ` · since ${formatDate(timezone, new Date(profile.started_on))}` : ""}
+                          </span>
+                        </span>
+                        <Badge tone={expected ? "handled" : "neutral"}>{expected ? "Expected today" : todayException ? "Away today" : "Not today"}</Badge>
+                      </>
+                    }
+                  >
+                    <div className="space-y-4">
+                      {todayException?.reason ? <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-3 py-2 text-xs text-[var(--wh-attention)]">{todayException.reason}</p> : null}
+
+                      <MemberDetail
+                        member={helper}
+                        allMembers={helpers}
+                        timezone={timezone}
+                        editable={admin}
+                        householdId={householdId}
+                        statusLabel={helper.status === "invited" ? "Invited, hasn't joined yet" : helper.status === "inactive" ? "Inactive" : null}
+                      />
+
+                      <div>
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Usual days</p>
+                        <ul className="flex gap-1.5">
+                          {DAYS.map((day, index) => {
+                            const on = windows.some((w) => w.member_id === helper.id && w.day_of_week === index);
+                            return <li key={day} className={`grid size-9 place-items-center rounded-full text-[0.6875rem] font-semibold ${on ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]" : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-subtle)]"}`}>{day.slice(0, 2)}</li>;
+                          })}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Looks after</p>
+                        {owned.length === 0 ? <p className="text-sm text-[var(--wh-foreground-muted)]">No responsibilities assigned yet.</p> : (
+                          <ul className="flex flex-wrap gap-1.5">
+                            {owned.map((r) => <li key={r.outcome_key} className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2.5 py-1 text-xs font-medium">{nameOfOutcome(r)}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                      {nextAbsence ? <p className="flex items-center gap-2 text-xs text-[var(--wh-foreground-muted)]"><CalendarOff aria-hidden className="size-3.5" /> Away {formatDate(timezone, new Date(nextAbsence.on_date), "long")}{nextAbsence.reason ? ` — ${nextAbsence.reason}` : ""}</p> : null}
+                      {mayEdit(helper.id) ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {admin ? <HelperProfileButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={profile ? { engagement: profile.engagement, startedOn: profile.started_on, notes: profile.notes } : null} /> : null}
+                          <WeeklyPatternButton householdId={householdId} helper={{ id: helper.id, displayName: helper.displayName }} current={windows.filter((w) => w.member_id === helper.id).map((w) => ({ dayOfWeek: w.day_of_week, startTime: w.start_time, endTime: w.end_time }))} />
+                        </div>
+                      ) : null}
+                    </div>
+                  </ExpandableRow>
+                );
+              })}
+            </ul>
+          </Card>
+        ) : null}
 
         {active === "schedule" ? (
           <>

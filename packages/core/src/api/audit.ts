@@ -24,6 +24,7 @@ export const AUDIT_EVENTS = [
   "member.removed",
   "member.role_granted",
   "member.role_revoked",
+  "member.profile_updated",
   "invitation.created",
   "invitation.revoked",
   "invitation.accepted",

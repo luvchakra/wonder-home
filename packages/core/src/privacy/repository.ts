@@ -170,11 +170,11 @@ async function readSection(
  * household's chance to change its mind, and it is the difference between a
  * product that respects a decision and one that punishes a bad evening.
  *
- * The Head of Family is refused. A household's head owns the tenant itself,
- * and deleting them would leave a home nobody administers, with children and
- * helpers still in it — the head hands over first, which is a different
- * action with different consequences and deserves its own flow rather than
- * being smuggled in behind this one.
+ * The household's owner is refused. They own the tenant itself, and deleting
+ * them would leave a home nobody administers, with children and helpers
+ * still in it — ownership hands over first, which is a different action with
+ * different consequences and deserves its own flow rather than being
+ * smuggled in behind this one.
  */
 export async function requestDeletion(
   supabase: SupabaseClient,
@@ -188,7 +188,7 @@ export async function requestDeletion(
   if (input.isHead) {
     throw new ApiError(
       "unprocessable",
-      `You are the Head of Family, so deleting your data would leave the household without anyone to run it. Hand that role to another adult first, then come back.`,
+      `You are this household's owner, so deleting your data would leave the household without anyone to run it. Hand that role to another adult first, then come back.`,
     );
   }
 

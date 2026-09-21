@@ -169,7 +169,7 @@ export function buildOpenApiDocument(): Json {
           },
         },
         post: {
-          summary: "Create a household and become its Head of Family",
+          summary: "Create a household and become its owner and Admin",
           requestBody: {
             required: true,
             content: { "application/json": { schema: toJsonSchema(createHouseholdSchema) } },

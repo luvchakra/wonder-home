@@ -34,11 +34,14 @@ type Row = {
  * Each has an owner, a backup, a cadence and an AI involvement level. An
  * unowned outcome is shown as a gap — the most useful thing the matrix can say.
  */
-export default async function ResponsibilitiesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const [{ tab }, session] = await Promise.all([searchParams, requireSession("/household/responsibilities")]);
+export default async function ResponsibilitiesPage({ searchParams }: { searchParams: Promise<{ tab?: string; outcome?: string }> }) {
+  const [{ tab, outcome }, session] = await Promise.all([searchParams, requireSession("/household/responsibilities")]);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const active = tab === "mine" || tab === "family" ? tab : "all";
+  // A responsibility opened from elsewhere (Family status) always lands on
+  // "all", whatever tab param it might otherwise carry — the outcome could
+  // belong to any member, not just this viewer.
+  const active = outcome ? "all" : tab === "mine" || tab === "family" ? tab : "all";
   const shell = { active: "more" as const, viewer, secondary, pathname: "/household/responsibilities", back: { href: "/more", label: "Back" }, title: "Responsibilities" };
 
   if (view.tone === "child") {
@@ -83,7 +86,7 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
   // the platform's own bare error page (requirements §49: error is always
   // one of the three states a screen shows, never a raw crash).
   try {
-    return renderResponsibilities({ shell, membership, active, responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId });
+    return renderResponsibilities({ shell, membership, active, responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId, openOutcomeKey: outcome ?? null });
   } catch (thrown) {
     console.error("Responsibilities page failed to render", thrown);
     return (
@@ -104,6 +107,7 @@ function renderResponsibilities({
   playbook,
   admin,
   householdId,
+  openOutcomeKey,
 }: {
   shell: { active: "more"; viewer: Session["viewer"]; secondary: Session["secondary"]; pathname: string; back: { href: string; label: string }; title: string };
   membership: Session["membership"];
@@ -114,6 +118,8 @@ function renderResponsibilities({
   playbook: Awaited<ReturnType<typeof listPlaybookOutcomes>>;
   admin: boolean;
   householdId: string;
+  /** Set when a link elsewhere (Family status) pointed at one specific outcome — opens its detail immediately, rather than leaving the visitor to find it in the list themselves. */
+  openOutcomeKey: string | null;
 }) {
   const rows = (responsibilityRows.data as Row[] | null) ?? [];
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
@@ -211,6 +217,7 @@ function renderResponsibilities({
                   <ResponsibilityRow
                     key={row.id}
                     outcomeKey={row.outcome_key}
+                    autoOpen={row.outcome_key === openOutcomeKey}
                     card={{
                       title,
                       owner: nameOf(row.primary_member_id) ?? "Nobody yet",

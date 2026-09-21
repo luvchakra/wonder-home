@@ -94,8 +94,7 @@ export type PersonalView = {
 };
 
 export function roleLabelFor(membership: HouseholdMembership): string {
-  if (membership.roles.includes("head")) return "Head of Family";
-  if (membership.roles.includes("administrator")) return "Household Administrator";
+  if (membership.roles.includes("head") || membership.roles.includes("administrator")) return "Admin";
   if (membership.memberType === "child") return "Child";
   if (membership.memberType === "helper") return "Househelper";
   return "Adult";

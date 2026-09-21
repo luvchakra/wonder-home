@@ -177,7 +177,7 @@ export default async function SettingsPage() {
               ) : (
                 <p className="text-sm text-[var(--wh-foreground-muted)]">
                   This household is on the {plans.find((plan) => plan.key === subscription?.planKey)?.name ?? "free"} plan.
-                  The Head of Family and administrators can change it.
+                  An Admin can change it.
                 </p>
               )}
               <p className="text-xs text-[var(--wh-foreground-subtle)]">
@@ -206,7 +206,7 @@ export default async function SettingsPage() {
               />
             ) : (
               <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                The Head of Family and administrators decide this for the household.
+                An Admin decides this for the household.
               </p>
             )}
           </Card>

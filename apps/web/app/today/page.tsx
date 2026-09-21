@@ -25,6 +25,7 @@ import { Suspense } from "react";
 import { Timeline, type TimelineItem } from "@wonderhome/core/ui/timeline";
 
 import { AgendaRow } from "../_components/agenda-row";
+import { NewEventForm } from "../_components/new-event-form";
 import { householdAgenda } from "../_lib/agenda";
 import { formatTime, formatToday, requireSession, type Session } from "../_lib/session";
 
@@ -218,7 +219,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
           icon={Clock3}
           title={someDataMissing ? "Couldn't confirm your day is clear" : active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
           description={someDataMissing ? "Some information didn’t load, so this may not be the whole picture." : "Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."}
-          action={<PillLink href="/family">Plan something</PillLink>}
+          action={<NewEventForm householdId={householdId} label="Plan something" />}
         />
       ) : (
         <Timeline items={shown} />

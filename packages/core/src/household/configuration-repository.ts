@@ -513,7 +513,7 @@ export async function applyConfigurationChange(
 
 function writeFailure(what: string, error: { code?: string; message?: string }): Error {
   if (error.code === "42501") {
-    return ApiError.forbidden(`Only the Head of Family or an administrator can change the ${what}.`);
+    return ApiError.forbidden(`Only an Admin can change the ${what}.`);
   }
   if (error.code === "23514") {
     return ApiError.badRequest(`That ${what} is not a combination WonderHome can store.`);
