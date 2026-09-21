@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**152 of 173 stories done — 87.9%**
+**153 of 173 stories done — 88.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 152 |
+| Done | 153 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 21 |
+| Not Started | 20 |
 
 ## By module
 
@@ -38,7 +38,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `███████░░░` | 6 | 8 | 2 not started |
+| 14 AI Orchestration & Learning | `████████░░` | 7 | 8 | 1 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `███████░░░` | 6 | 8 | 2 not started |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
@@ -58,7 +58,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-006` Optional daily summary | 07 Househelper & Home Operations | P1 | Not Started |
 | `07-007` Pattern learning | 07 Househelper & Home Operations | P1 | Not Started |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
-| `14-007` Multi-agent coordination | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `16-007` Privacy requests | 16 Platform Admin & Operations | P1 | Not Started |
 | `16-008` Feature flags/audit | 16 Platform Admin & Operations | P1 | Not Started |
@@ -291,7 +290,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -301,7 +300,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-004` Agent runs | P0 | Done | Authorization outside the model; approval binds to the exact action |
 | `14-005` Approval integration | P0 | Done | Authorization outside the model; approval binds to the exact action |
 | `14-006` Learning boundaries | P0 | Done | Authorization outside the model; approval binds to the exact action |
-| `14-007` Multi-agent coordination | P1 | Not Started | — |
+| `14-007` Multi-agent coordination | P1 | Done | `specialists.ts`: named specialists (meals, pets, home, bills, groceries) each propose `PlannedStep`s from `HomeAssessment`s for the existing governed tool registry; a contract (`grocery_list`) is how a meal or pet need it cannot itself fulfil is handed to groceries, which consolidates every producer's list into one deduplicated set of steps. `coordinate()` runs them in order and returns one plan; `AgentRun` gained a `contracts` field and `agent_runs.contracts` column to record what was handed off, alongside the plan `authorizeToolCall` still gates step by step |
 | `14-008` Predictive intelligence | P2 | Not Started | — |
 
 ### 15 — Privacy, Security & Governance
