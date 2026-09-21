@@ -208,12 +208,12 @@ export async function POST(request: Request, { params }: Params) {
 
     // A plain question about the home, or a hello, is read by the rules with
     // certainty; asking a model to confirm it is a round trip that changes
-    // nothing downstream, because the answer comes from the Household Brain
+    // nothing downstream, because the answer comes from the HomeBrain
     // either way. Everything else still goes to the model to be understood.
     const quick = resolveDeterministicIntent(body.utterance, { actorMemberId: membership.memberId, channel: body.channel });
     const plainQuestion = (quick.action === "ask_status" || quick.action === "greet") && quick.confidence >= 0.8;
 
-    // The Household Brain reads the home while the request is being
+    // The HomeBrain reads the home while the request is being
     // understood — the two need nothing from each other, and together they
     // are most of a turn.
     const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
@@ -270,7 +270,7 @@ export async function POST(request: Request, { params }: Params) {
 
     if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
       // A question about the home: answered from everything the home holds
-      // (the Household Brain), composed by the model where the household's
+      // (the HomeBrain), composed by the model where the household's
       // consent lets the facts go; otherwise from the deterministic summary.
       const agenda = brainRead ? (await brainRead.catch(() => null))?.agenda ?? (await householdAgenda(supabase, householdId, view)) : await householdAgenda(supabase, householdId, view);
       const [fallback, composed] = await Promise.all([
@@ -462,7 +462,7 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
 }
 
 /**
- * A question answered from the Household Brain (product-direction v4 §5).
+ * A question answered from the HomeBrain (product-direction v4 §5).
  *
  * Every domain this member may see is read into plain facts, each carrying
  * its consent class; the gate keeps only what the household has agreed may
@@ -483,7 +483,7 @@ async function answerFromBrain(input: {
     const { context } = await input.read;
     return await input.routing.answer(input.question, context.facts, input.view.roleLabel);
   } catch (thrown) {
-    console.error("[conversation] household brain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
+    console.error("[conversation] HomeBrain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
     return null;
   }
 }
@@ -638,7 +638,7 @@ async function decideProviderRouting(
 }
 
 /**
- * The Household Brain's facts, through the same consent gate as the
+ * The HomeBrain's facts, through the same consent gate as the
  * utterance: only the classes the household agreed to, names replaced on the
  * way out and restored on the way back. The model never sees who anyone is.
  */

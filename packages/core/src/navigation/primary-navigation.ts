@@ -34,10 +34,10 @@ export const PRIMARY_NAVIGATION: readonly PrimaryNavItem[] = [
   },
   {
     key: "ai",
-    label: "Talk",
+    label: "HomeTalk",
     href: "/ai",
     icon: "mic",
-    purpose: "Talk or text with WonderHome",
+    purpose: "Talk or text with WonderHome, through HomeTalk",
   },
   {
     key: "family",

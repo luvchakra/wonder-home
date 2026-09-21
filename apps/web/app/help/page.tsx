@@ -149,7 +149,7 @@ export default async function HelpPage() {
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {session ? (
-                <PillLink href="/ai" tone="primary">Talk to WonderHome</PillLink>
+                <PillLink href="/ai" tone="primary">Open HomeTalk</PillLink>
               ) : (
                 <>
                   <PillLink href="/sign-up" tone="primary">Get started</PillLink>
