@@ -1,14 +1,16 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
 
 /**
- * A person, as initials on a tinted disc.
- *
- * No photos yet: none are stored, and a placeholder face would be a fake. The
- * tint is derived from the name so the same person is the same colour on every
- * screen, and a child, an adult, a helper and a pet are distinguishable by the
- * small role glyph rather than by colour alone.
+ * A person, as their photo when the household has added one, or their
+ * initials on a tinted disc otherwise — never a stand-in face for someone
+ * who has no photo (a placeholder would be a fake). The tint is derived from
+ * the name so the same person is the same colour on every screen even once a
+ * photo is added, and a child, an adult, a helper and a pet stay
+ * distinguishable by the small role glyph rather than by colour alone.
  */
 export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
@@ -65,22 +67,36 @@ export type AvatarProps = {
   /** A small glyph in the corner naming the kind of member. */
   badge?: ReactNode;
   className?: string;
+  /** A photo URL. When absent or the image fails to load, falls back to initials. */
+  imageUrl?: string | null;
 };
 
-export function Avatar({ name, size = "md", badge, className }: AvatarProps) {
+export function Avatar({ name, size = "md", badge, className, imageUrl }: AvatarProps) {
+  const [failed, setFailed] = useState(false);
+
   return (
     <span className={cn("relative inline-flex shrink-0", className)}>
-      <span
-        role="img"
-        aria-label={name}
-        className={cn(
-          "grid place-items-center rounded-full font-semibold ring-2 ring-[var(--wh-surface)]",
-          SIZE[size],
-          tintFor(name),
-        )}
-      >
-        {initialsOf(name)}
-      </span>
+      {imageUrl && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element -- shared package component, outside Next's image pipeline
+        <img
+          src={imageUrl}
+          alt={name}
+          className={cn("rounded-full object-cover ring-2 ring-[var(--wh-surface)]", SIZE[size])}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span
+          role="img"
+          aria-label={name}
+          className={cn(
+            "grid place-items-center rounded-full font-semibold ring-2 ring-[var(--wh-surface)]",
+            SIZE[size],
+            tintFor(name),
+          )}
+        >
+          {initialsOf(name)}
+        </span>
+      )}
       {badge ? (
         <span
           aria-hidden

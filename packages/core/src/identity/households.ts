@@ -192,6 +192,8 @@ export type HouseholdMember = {
   schoolOrWorkLocation: string | null;
   specialOccasionLabel: string | null;
   specialOccasionDate: string | null;
+  /** A short-lived signed URL, minted fresh by `listMembers` on every read — never stored or cached (the bucket is private). */
+  avatarUrl: string | null;
 };
 
 /** The fields a household can edit about one of its own members, beyond creation. */
@@ -204,10 +206,12 @@ export type MemberProfileUpdate = {
   schoolOrWorkLocation?: string | null;
   specialOccasionLabel?: string | null;
   specialOccasionDate?: string | null;
+  /** The storage object path just uploaded to the `avatars` bucket, or null to clear the photo. */
+  avatarPath?: string | null;
 };
 
 const MEMBER_SELECT =
-  "id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, household_roles(role)";
+  "id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, avatar_path, household_roles(role)";
 
 type MemberRow = {
   id: string;
@@ -221,10 +225,11 @@ type MemberRow = {
   school_or_work_location: string | null;
   special_occasion_label: string | null;
   special_occasion_date: string | null;
+  avatar_path: string | null;
   household_roles: { role: HouseholdRole }[] | null;
 };
 
-function toHouseholdMember(row: MemberRow, ownerMemberId: string | null): HouseholdMember {
+function toHouseholdMember(row: MemberRow, ownerMemberId: string | null, avatarUrl: string | null): HouseholdMember {
   return {
     id: row.id,
     displayName: row.display_name,
@@ -239,10 +244,22 @@ function toHouseholdMember(row: MemberRow, ownerMemberId: string | null): Househ
     schoolOrWorkLocation: row.school_or_work_location,
     specialOccasionLabel: row.special_occasion_label,
     specialOccasionDate: row.special_occasion_date,
+    avatarUrl,
   };
 }
 
-/** Everyone in a household, as any member of it may see them. */
+/** How long a minted avatar URL stays valid — one render's worth, not a link worth saving. */
+const AVATAR_SIGNED_URL_TTL_SECONDS = 3600;
+
+/**
+ * Everyone in a household, as any member of it may see them.
+ *
+ * A photo's `avatar_path` is a storage object path, not a URL — the
+ * `avatars` bucket is private, so a signed URL is minted here, fresh on
+ * every call, rather than stored anywhere. Storage's own `createSignedUrls`
+ * batches every path a household actually has photos for into one round
+ * trip rather than one request per member.
+ */
 export async function listMembers(
   supabase: SupabaseClient,
   householdId: string,
@@ -256,7 +273,26 @@ export async function listMembers(
 
   if (error) throw new Error(`listMembers failed: ${error.code ?? "unknown"}`);
 
-  return ((data ?? []) as MemberRow[]).map((row) => toHouseholdMember(row, ownerMemberId));
+  const rows = (data ?? []) as MemberRow[];
+  const avatarUrlByPath = await signAvatarPaths(
+    supabase,
+    rows.map((row) => row.avatar_path).filter((path): path is string => path !== null),
+  );
+
+  return rows.map((row) => toHouseholdMember(row, ownerMemberId, row.avatar_path ? (avatarUrlByPath.get(row.avatar_path) ?? null) : null));
+}
+
+async function signAvatarPaths(supabase: SupabaseClient, paths: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (paths.length === 0) return result;
+
+  const { data, error } = await supabase.storage.from("avatars").createSignedUrls(paths, AVATAR_SIGNED_URL_TTL_SECONDS);
+  if (error || !data) return result;
+
+  for (const entry of data) {
+    if (entry.signedUrl && !entry.error) result.set(entry.path ?? "", entry.signedUrl);
+  }
+  return result;
 }
 
 /**
@@ -288,6 +324,7 @@ export async function updateMemberProfile(
   if (input.schoolOrWorkLocation !== undefined) patch.school_or_work_location = input.schoolOrWorkLocation;
   if (input.specialOccasionLabel !== undefined) patch.special_occasion_label = input.specialOccasionLabel;
   if (input.specialOccasionDate !== undefined) patch.special_occasion_date = input.specialOccasionDate;
+  if (input.avatarPath !== undefined) patch.avatar_path = input.avatarPath;
 
   if (Object.keys(patch).length === 0) return;
 

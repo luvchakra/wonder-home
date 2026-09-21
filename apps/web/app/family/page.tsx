@@ -138,7 +138,7 @@ export default async function FamilyPage() {
                     key={member.id}
                     summary={
                       <>
-                        <Avatar name={member.displayName} size="md" badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined} />
+                        <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined} />
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">{member.displayName}</span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
@@ -156,6 +156,7 @@ export default async function FamilyPage() {
                         timezone={timezone}
                         editable={admin}
                         householdId={householdId}
+                        currentMemberId={membership.memberId}
                         statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}
                       />
                       {member.memberType === "child" && view.permissions.includes("school.manage") ? (
@@ -208,6 +209,7 @@ export default async function FamilyPage() {
                           timezone={timezone}
                           editable={admin}
                           householdId={householdId}
+                          currentMemberId={membership.memberId}
                           statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}
                         />
                         <PillLink href="/househelper" tone="quiet">

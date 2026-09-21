@@ -106,7 +106,7 @@ function MemberRow({
   return (
     <li className="flex items-center justify-between gap-3 py-3">
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar name={member.displayName} badge={member.memberType === "child" ? "🧒" : member.memberType === "helper" ? "🤝" : undefined} />
+        <Avatar name={member.displayName} imageUrl={member.avatarUrl} badge={member.memberType === "child" ? "🧒" : member.memberType === "helper" ? "🤝" : undefined} />
         <div className="min-w-0">
           <p className="text-sm font-medium">{member.displayName}</p>
           <p className="text-xs text-[var(--wh-foreground-subtle)]">

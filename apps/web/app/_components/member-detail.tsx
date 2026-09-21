@@ -4,7 +4,9 @@ import type { HouseholdMember } from "@wonderhome/core/identity/households";
 
 import { formatDate } from "../_lib/session";
 import { describeRoles } from "../_lib/member-role";
+import { MemberAvatarControl } from "./member-avatar-control";
 import { MemberProfileForm } from "./member-profile-form";
+import { RemoveMemberControl } from "./remove-member-control";
 
 /** One label/value pair, skipped entirely when there is nothing to say (design principle 9: never a placeholder for what is not known). */
 function Fact({ label, value }: { label: string; value: string | null }) {
@@ -33,6 +35,7 @@ export function MemberDetail({
   editable,
   householdId,
   statusLabel,
+  currentMemberId,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -40,6 +43,7 @@ export function MemberDetail({
   editable: boolean;
   householdId: string;
   statusLabel?: string | null;
+  currentMemberId: string;
 }) {
   const dob = parseDateOfBirth(member.dateOfBirth);
   const age = dob ? `${completedYears(dob)} years old` : null;
@@ -52,6 +56,9 @@ export function MemberDetail({
 
   return (
     <div className="space-y-3">
+      {editable ? (
+        <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
+      ) : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         <Fact label="Role" value={describeRoles(member.roles, member.isOwner)} />
         <Fact label="Status" value={statusLabel ?? null} />
@@ -65,20 +72,25 @@ export function MemberDetail({
         <Fact label="Siblings" value={siblings} />
       </dl>
       {editable ? (
-        <MemberProfileForm
-          householdId={householdId}
-          memberId={member.id}
-          initial={{
-            displayName: member.displayName,
-            dateOfBirth: member.dateOfBirth,
-            nickname: member.nickname,
-            relationship: member.relationship,
-            occupation: member.occupation,
-            schoolOrWorkLocation: member.schoolOrWorkLocation,
-            specialOccasionLabel: member.specialOccasionLabel,
-            specialOccasionDate: member.specialOccasionDate,
-          }}
-        />
+        <div className="flex flex-wrap gap-2">
+          <MemberProfileForm
+            householdId={householdId}
+            memberId={member.id}
+            initial={{
+              displayName: member.displayName,
+              dateOfBirth: member.dateOfBirth,
+              nickname: member.nickname,
+              relationship: member.relationship,
+              occupation: member.occupation,
+              schoolOrWorkLocation: member.schoolOrWorkLocation,
+              specialOccasionLabel: member.specialOccasionLabel,
+              specialOccasionDate: member.specialOccasionDate,
+            }}
+          />
+          {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (
+            <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} />
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

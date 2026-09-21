@@ -311,7 +311,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   key={member.id}
                   summary={
                     <>
-                      <Avatar name={member.displayName} size="md" />
+                      <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">{member.displayName}</span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
@@ -361,7 +361,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   key={helper.id}
                   summary={
                     <>
-                      <Avatar name={helper.displayName} size="md" badge="🤝" />
+                      <Avatar name={helper.displayName} size="md" imageUrl={helper.avatarUrl} badge="🤝" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">{helper.displayName}</span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">

@@ -19,6 +19,7 @@ const NO_PROFILE_DETAILS = {
   schoolOrWorkLocation: null,
   specialOccasionLabel: null,
   specialOccasionDate: null,
+  avatarUrl: null,
 } as const;
 
 const snapshot: BrainSnapshot = {
