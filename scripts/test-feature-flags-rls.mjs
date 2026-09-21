@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_feature_flags_test";
@@ -77,17 +77,14 @@ test("a member cannot set a flag directly — only the admin client may", () => 
 });
 
 test("a member's update to an existing flag touches nothing — there is no policy that would let it", () => {
-  // No UPDATE policy exists, so this matches zero rows rather than raising —
-  // the same shape `agent_runs`' own "a client cannot rewrite a run" test
-  // checks. The assertion that matters is the value afterward, not the exit code.
-  asProfile(
-    HEAD,
-    `update public.household_feature_flags set enabled = false where id = '${flagId}';`,
-    options,
-  );
-  assert.equal(
-    psql(`select enabled from public.household_feature_flags where id = '${flagId}';`, options),
-    "t",
+  assert.ok(
+    deniedForUpdate(
+      HEAD,
+      `update public.household_feature_flags set enabled = false where id = '${flagId}';`,
+      `select enabled from public.household_feature_flags where id = '${flagId}';`,
+      "t",
+      options,
+    ),
     "a plain authenticated member could toggle their own household's feature flag",
   );
 });

@@ -203,6 +203,9 @@ Never invent credentials or claim a live integration. Build provider-neutral int
 ## Non-functional gates
 Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests are release blockers. Core API targets are p95 <=500ms reads and <=800ms ordinary writes excluding external provider latency.
 
+## Verifying UI changes in a browser
+For any UI change, actually drive it in a browser at 360px and desktop before calling the story done — typecheck/lint/unit tests verify correctness, not that the feature works. To sign in as a test household without touching the public sign-up form (which rejects sandboxed test-email domains like `.test`/`example.com` with a generic "could not create that account" error that looks like an app bug but is Supabase Auth's own validation, not this app's): `node scripts/qa-test-user.mjs create "Name"` creates an already-confirmed account directly via the service-role key already in `apps/web/.env.local`, then sign in with the printed credentials. Always `node scripts/qa-test-user.mjs delete <user-id>` when done — it only ever touches whatever Supabase project `.env.local` points at.
+
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 

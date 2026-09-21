@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_conversation_test";
@@ -192,22 +192,15 @@ test("nobody can fabricate a conversation from a browser session", () => {
 });
 
 test("nobody can approve their own proposal by writing to the table", () => {
-  // There is no UPDATE policy, so this is not an error — it simply matches no
-  // rows. Asserting on the outcome rather than on a thrown exception is the
-  // stronger check: silently affecting nothing is exactly what should happen.
-  asProfile(
-    HEAD,
-    `update public.conversation_actions set approval_status = 'approved'
-     where session_id = '${privateSession}';`,
-    options,
-  );
-
-  assert.equal(
-    psql(
+  assert.ok(
+    deniedForUpdate(
+      HEAD,
+      `update public.conversation_actions set approval_status = 'approved'
+       where session_id = '${privateSession}';`,
       `select approval_status from public.conversation_actions where session_id = '${privateSession}';`,
+      "proposed",
       options,
     ),
-    "proposed",
     "a client approved its own proposed action",
   );
 });

@@ -34,21 +34,26 @@ $$;
 
 -- Roles are cluster-wide, not per-database, so two test databases built at the
 -- same time race here: both pass the existence check, then one CREATE loses on
--- pg_authid's unique index. Catching duplicate_object makes this safe under
--- any concurrency rather than relying on the check winning.
+-- pg_authid's unique index. CREATE ROLE normally reports that as the clean
+-- duplicate_object error (it checks first) — but under genuine concurrency
+-- (proven in CI at test:db concurrency 4, 21 files racing this same block)
+-- two sessions can both pass that check before either commits, and the one
+-- that loses the index insert gets the raw unique_violation from
+-- pg_authid_rolname_index instead. Catching both makes this safe at any
+-- concurrency rather than relying on the check winning.
 do $$
 begin
   begin
     create role anon nologin noinherit;
-  exception when duplicate_object then null;
+  exception when duplicate_object or unique_violation then null;
   end;
   begin
     create role authenticated nologin noinherit;
-  exception when duplicate_object then null;
+  exception when duplicate_object or unique_violation then null;
   end;
   begin
     create role service_role nologin noinherit bypassrls;
-  exception when duplicate_object then null;
+  exception when duplicate_object or unique_violation then null;
   end;
 end $$;
 

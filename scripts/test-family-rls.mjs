@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_family_test";
@@ -108,13 +108,15 @@ test("anybody in the household may propose an event", () => {
 });
 
 test("somebody else's commitment is not yours to rewrite", () => {
-  // The head owns Sunday lunch. An UPDATE matching no policy affects no rows
-  // rather than raising, so the assertion is on the value.
-  asProfile(ADULT, `update public.family_events set title = 'Cancelled by me' where id = '${event}';`, options);
-
-  assert.equal(
-    psql(`select title from public.family_events where id = '${event}';`, options),
-    "Sunday lunch",
+  // The head owns Sunday lunch.
+  assert.ok(
+    deniedForUpdate(
+      ADULT,
+      `update public.family_events set title = 'Cancelled by me' where id = '${event}';`,
+      `select title from public.family_events where id = '${event}';`,
+      "Sunday lunch",
+      options,
+    ),
     "one member rewrote another's commitment",
   );
 });
