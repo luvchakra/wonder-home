@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-21 | [Helper/service identity: proving the account is actually limited (01-008)](2026-09-21-helper-identity-rls.md) |
 | 2026-09-21 | [Recovery runbook, and a real production finding it turned up (19-008)](2026-09-21-recovery-runbook.md) |
 | 2026-09-21 | [Certification health: a percentage that can't hide the belief that matters (05-008)](2026-09-21-certification-health.md) |
 | 2026-09-21 | [Feature flags and a platform-wide audit trail (16-008)](2026-09-21-feature-flags-and-platform-audit.md) |
