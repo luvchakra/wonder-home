@@ -103,8 +103,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     {
       label: "Need you",
       value: needsYou,
-      icon: GraduationCap,
-      tone: "attention",
+      icon: <IconTile icon={GraduationCap} tone="attention" size="sm" />,
       details:
         needsYouEntries.length === 0 ? (
           <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
@@ -126,8 +125,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     {
       label: "Live work",
       value: live.length,
-      icon: BookOpen,
-      tone: "school",
+      icon: <IconTile icon={BookOpen} tone="school" size="sm" />,
       details:
         live.length === 0 ? (
           <MetricDetailEmpty>No live homework right now.</MetricDetailEmpty>
@@ -169,15 +167,14 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     {
       label: "Checked",
       value: agenda?.checked ?? 0,
-      icon: MessageSquareText,
-      tone: "handled",
+      icon: <IconTile icon={MessageSquareText} tone="handled" size="sm" />,
       details:
         !agenda || agenda.checked === 0 ? (
           <MetricDetailEmpty>Nothing evaluated yet.</MetricDetailEmpty>
         ) : (
           <MetricDetailList>
-            <MetricDetailRow icon={BookOpen} tone="school" title="Homework & school items" meta={`${items.length} checked`} />
-            <MetricDetailRow icon={MessageSquareText} tone="handled" title="Messages from school" meta={`${communications.length} checked`} />
+            <MetricDetailRow icon={<IconTile icon={BookOpen} tone="school" size="sm" />} title="Homework & school items" meta={`${items.length} checked`} />
+            <MetricDetailRow icon={<IconTile icon={MessageSquareText} tone="handled" size="sm" />} title="Messages from school" meta={`${communications.length} checked`} />
           </MetricDetailList>
         ),
     },

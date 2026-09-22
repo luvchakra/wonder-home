@@ -10,6 +10,7 @@ import {
   MetricDetailEmpty,
   type ExpandableMetric,
 } from "@wonderhome/core/ui/expandable-metric-card";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
@@ -88,15 +89,13 @@ export default async function HomeUpkeepPage() {
     {
       label: "Need you",
       value: needsYou,
-      icon: Wrench,
-      tone: "attention",
+      icon: <IconTile icon={Wrench} tone="attention" size="sm" />,
       details: agendaDetail(needsYouItems, timezone, "Nothing needs you right now."),
     },
     {
       label: "Handled",
       value: handledCount,
-      icon: CircleCheck,
-      tone: "handled",
+      icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
       details: (
         <MetricDetailEmpty>
           {handledCount === 0
@@ -108,15 +107,13 @@ export default async function HomeUpkeepPage() {
     {
       label: "Laundry",
       value: agenda.laundry.length,
-      icon: Shirt,
-      tone: "care",
+      icon: <IconTile icon={Shirt} tone="care" size="sm" />,
       details: agendaDetail(agenda.laundry, timezone, "Laundry is caught up."),
     },
     {
       label: "Pets",
       value: agenda.pets.length,
-      icon: PawPrint,
-      tone: "care",
+      icon: <IconTile icon={PawPrint} tone="care" size="sm" />,
       details: agendaDetail(agenda.pets, timezone, "Nothing pet-related needs you."),
     },
   ];

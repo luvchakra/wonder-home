@@ -1,10 +1,9 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useId, useState, type ComponentType, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
-import { IconTile, type IconTone } from "./icon-tile";
 
 /**
  * A stat tile that opens in place onto the real entries behind its count
@@ -14,17 +13,19 @@ import { IconTile, type IconTone } from "./icon-tile";
  *
  * `details` is real, already-computed content (a short list, an empty-state
  * line) — this component never invents what is behind a number (rule 9),
- * only reveals it.
+ * only reveals it. `icon` is a pre-rendered `IconTile` element, not a
+ * component reference — this file is a Client Component (it owns open/close
+ * state), and a lucide icon function can't cross the server/client boundary
+ * as a raw prop value, only an already-rendered element can.
  */
 export type ExpandableMetric = {
   label: string;
   value: number | string;
-  icon: ComponentType<{ className?: string }>;
-  tone?: IconTone;
+  icon: ReactNode;
   details: ReactNode;
 };
 
-function ExpandableMetricCard({ label, value, icon, tone = "primary", details }: ExpandableMetric) {
+function ExpandableMetricCard({ label, value, icon, details }: ExpandableMetric) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
@@ -37,7 +38,7 @@ function ExpandableMetricCard({ label, value, icon, tone = "primary", details }:
         aria-controls={panelId}
         className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left transition-colors hover:bg-[var(--wh-primary-soft)]/20 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
       >
-        <IconTile icon={icon} tone={tone} size="sm" />
+        {icon}
         <span className="min-w-0 flex-1">
           <span className="block text-xl font-semibold leading-none tracking-tight">{value}</span>
           <span className="mt-1 block text-[0.6875rem] font-medium text-[var(--wh-foreground-muted)]">
@@ -108,13 +109,12 @@ export function MetricDetailList({ children }: { children: ReactNode }) {
 
 export function MetricDetailRow({
   icon,
-  tone,
   title,
   meta,
   badge,
 }: {
-  icon: ComponentType<{ className?: string }>;
-  tone: IconTone;
+  /** A pre-rendered `IconTile` element — see the note on `ExpandableMetric.icon`. */
+  icon: ReactNode;
   title: string;
   meta?: string | null;
   /** A short state word beside the row — a due date, a count, a status. */
@@ -122,7 +122,7 @@ export function MetricDetailRow({
 }) {
   return (
     <li className="flex items-start gap-2.5">
-      <IconTile icon={icon} tone={tone} size="sm" />
+      {icon}
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-medium">{title}</span>
         {meta ? <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{meta}</span> : null}

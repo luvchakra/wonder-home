@@ -330,8 +330,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     {
       label: "Need you",
       value: agenda.needsYou.length,
-      icon: AlertTriangle,
-      tone: "attention",
+      icon: <IconTile icon={AlertTriangle} tone="attention" size="sm" />,
       details:
         agenda.needsYou.length === 0 ? (
           <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
@@ -343,8 +342,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                 return (
                   <MetricDetailRow
                     key={item.subjectKey}
-                    icon={presentation.icon}
-                    tone={presentation.tone}
+                    icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
                     title={item.title}
                     meta={item.reason}
                   />
@@ -360,8 +358,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     {
       label: "Handled",
       value: handledCount,
-      icon: CircleCheck,
-      tone: "handled",
+      icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
       details:
         agenda.handled.length === 0 ? (
           <MetricDetailEmpty>Nothing checked yet today.</MetricDetailEmpty>
@@ -372,8 +369,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               return (
                 <MetricDetailRow
                   key={entry.key}
-                  icon={presentation.icon}
-                  tone={presentation.tone}
+                  icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
                   title={entry.title}
                   meta={entry.meta}
                 />
@@ -385,8 +381,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     {
       label: "Upcoming",
       value: upcoming.length,
-      icon: CalendarHeart,
-      tone: "people",
+      icon: <IconTile icon={CalendarHeart} tone="people" size="sm" />,
       details:
         upcoming.length === 0 ? (
           <MetricDetailEmpty>Nothing on the calendar yet.</MetricDetailEmpty>
@@ -396,8 +391,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               {upcoming.slice(0, 4).map((event) => (
                 <MetricDetailRow
                   key={event.id}
-                  icon={CalendarHeart}
-                  tone="people"
+                  icon={<IconTile icon={CalendarHeart} tone="people" size="sm" />}
                   title={event.title}
                   meta={`${formatDate(timezone, event.startsAt)} · ${formatTime(timezone, event.startsAt)}`}
                 />
@@ -412,8 +406,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     {
       label: "Checked",
       value: agenda.checked,
-      icon: Sparkles,
-      tone: "ai",
+      icon: <IconTile icon={Sparkles} tone="ai" size="sm" />,
       details:
         agenda.domains.length === 0 ? (
           <MetricDetailEmpty>Nothing evaluated yet.</MetricDetailEmpty>
@@ -424,8 +417,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               return (
                 <MetricDetailRow
                   key={domain.key}
-                  icon={presentation.icon}
-                  tone={presentation.tone}
+                  icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
                   title={domain.label}
                   meta={domain.failed ? "Couldn't check right now" : `${domain.checked} checked`}
                 />

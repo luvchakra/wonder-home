@@ -200,8 +200,7 @@ export default async function BillsPage({
     {
       label: "Need you",
       value: needs.length,
-      icon: Wallet,
-      tone: "attention",
+      icon: <IconTile icon={Wallet} tone="attention" size="sm" />,
       details:
         needs.length === 0 ? (
           <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
@@ -223,8 +222,7 @@ export default async function BillsPage({
     {
       label: "Upcoming",
       value: upcoming.length,
-      icon: CalendarDays,
-      tone: "money",
+      icon: <IconTile icon={CalendarDays} tone="money" size="sm" />,
       details:
         upcoming.length === 0 ? (
           <MetricDetailEmpty>Nothing due.</MetricDetailEmpty>
@@ -255,8 +253,7 @@ export default async function BillsPage({
     {
       label: "Settled",
       value: settled.length,
-      icon: CircleCheck,
-      tone: "handled",
+      icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
       details:
         settled.length === 0 ? (
           <MetricDetailEmpty>Nothing settled yet.</MetricDetailEmpty>
