@@ -41,6 +41,12 @@ describe("platform roles", () => {
     expect(platformCan(operator, "platform_admin.manage")).toBe(false);
     expect(platformCan(support, "platform_admin.manage")).toBe(false);
   });
+
+  it("reserves managing privacy requests for operator and owner", () => {
+    expect(platformCan(owner, "privacy_requests.manage")).toBe(true);
+    expect(platformCan(operator, "privacy_requests.manage")).toBe(true);
+    expect(platformCan(support, "privacy_requests.manage")).toBe(false);
+  });
 });
 
 describe("support grants", () => {

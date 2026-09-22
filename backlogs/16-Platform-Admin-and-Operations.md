@@ -10,7 +10,7 @@
 | 4 | P0 | 16-004 | Support access | Done | Grants bounded to 24h; household can read them |
 | 5 | P0 | 16-005 | Subscription administration | Done | operator/owner only; reason-coded, audited, reuses 20-004's changePlan |
 | 6 | P0 | 16-006 | AI operations | Done | Failed-run + tool-call monitoring; reuses module 14's prompt-free schema |
-| 7 | P1 | 16-007 | Privacy requests | Not Started | |
+| 7 | P1 | 16-007 | Privacy requests | Done | `fulfillMaturedDeletions` (the real deletion job 15-007 never built — scrubs a member's PII, keeps the row and its references readable); `privacy-requests.ts` gives staff list/refuse (operator/owner only), wired into `/platform/retention`'s existing sweep |
 | 8 | P1 | 16-008 | Feature flags/audit | Done | `feature-flags.ts`: a reason-coded, audited `setHouseholdFeatureFlag` (operator/owner only, following 16-005's exact shape) turns a staged capability on or off for one household; a household reads its own flags via RLS, matching support-access grants' "the family this concerns can see it" precedent. `audit-log.ts`: `listPlatformAuditEvents` widens who may read the already-redacted `audit_events` rows fleet-wide, never what is safe to show |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

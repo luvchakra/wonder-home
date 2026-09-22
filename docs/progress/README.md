@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [Story 16-007: privacy request admin visibility and deletion fulfillment](2026-09-22-privacy-request-deletion-fulfillment.md) |
 | 2026-09-22 | [HomeSend Phase 6: hardening](2026-09-22-homesend-phase6-hardening.md) |
 | 2026-09-22 | [HomeSend Phase 5: email address management and an install nudge](2026-09-22-homesend-phase5-address-and-install.md) |
 | 2026-09-22 | [HomeSend Phase 4: the PWA Web Share Target and its signed-out handoff](2026-09-22-homesend-phase4-share-target.md) |
