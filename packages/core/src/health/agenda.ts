@@ -3,7 +3,9 @@ import type { AppointmentType, HealthAppointment } from "./appointments";
 import { classifyCheckup, type CheckupType, type HealthCheckup } from "./checkups";
 import { assessForMedicalAttention } from "./issue-safety";
 import type { HealthIssue } from "./issues";
+import { classifyRoutine, type MeasurementRoutine, type VitalType } from "./measurement-routines";
 import type { HealthRecord, RecordType } from "./records";
+import { describeVitalTrend, summarizeVitalTrend, type HealthVital } from "./vitals";
 
 /**
  * Appointments as the Overview screen's rows (story 21-002) — the same
@@ -230,4 +232,99 @@ export function healthRecordsAgenda(records: readonly HealthRecord[], nameOf: (m
       const reason = `${RECORD_TYPE_LABEL[r.recordType]}${r.documentDate ? `, ${formatDueDate(r.documentDate)}` : ""}${r.status === "archived" ? " — removed." : "."}`;
       return silent(`record.${r.id}`, `${nameOf(r.memberId)} — ${r.label}`, reason);
     });
+}
+
+/**
+ * Vitals (story 21-007) as Overview rows — a reading never needs attention
+ * on its own, so this only ever feeds "Recent", newest first. When a
+ * reading has company (more than one of the same measurement for the same
+ * person), the row's reason adds the same verifiable arithmetic the Vitals
+ * detail view shows (`describeVitalTrend`) — never a stated conclusion
+ * about what the numbers mean.
+ */
+export const VITAL_TYPE_LABEL: Record<VitalType, string> = {
+  weight: "Weight",
+  height: "Height",
+  temperature: "Temperature",
+  blood_pressure: "Blood pressure",
+  pulse: "Pulse",
+  steps: "Steps",
+  distance: "Distance",
+  exercise_duration: "Exercise duration",
+  resting_heart_rate: "Resting heart rate",
+  custom: "Measurement",
+};
+
+function vitalLabel(vital: Pick<HealthVital, "vitalType" | "customLabel">): string {
+  return vital.vitalType === "custom" ? (vital.customLabel ?? "Measurement") : VITAL_TYPE_LABEL[vital.vitalType];
+}
+
+function formatVitalValue(vital: HealthVital): string {
+  return vital.vitalType === "blood_pressure" && vital.secondaryValue !== null ? `${vital.value}/${vital.secondaryValue} ${vital.unit}` : `${vital.value} ${vital.unit}`;
+}
+
+export function healthVitalsAgenda(vitals: readonly HealthVital[], nameOf: (memberId: string) => string): HomeAssessment[] {
+  const groupKey = (v: HealthVital) => `${v.memberId}:${v.vitalType}:${v.customLabel ?? ""}`;
+  const groups = new Map<string, HealthVital[]>();
+  for (const vital of vitals) {
+    const key = groupKey(vital);
+    const list = groups.get(key) ?? [];
+    list.push(vital);
+    groups.set(key, list);
+  }
+
+  return vitals.slice(0, 5).map((vital) => {
+    const group = groups.get(groupKey(vital)) ?? [vital];
+    const trend = group.length > 1 ? describeVitalTrend(summarizeVitalTrend(group)) : null;
+    const when = formatDueDate(vital.measuredAt.slice(0, 10));
+    const reason = `${formatVitalValue(vital)}, ${when}.${trend ? ` ${trend}` : ""}${vital.status === "archived" ? " — removed." : ""}`;
+    return silent(`vital.${vital.id}`, `${nameOf(vital.memberId)} — ${vitalLabel(vital)}`, reason);
+  });
+}
+
+/**
+ * Measurement routines (story 21-007) as Overview rows — the same
+ * overdue/due-soon/silent discipline `classifyCheckup` already established,
+ * via `classifyRoutine`.
+ */
+function routineToAssessment(routine: MeasurementRoutine, memberName: string, urgency: "overdue" | "due_soon"): HomeAssessment {
+  const when = formatDueDate(routine.nextDueOn);
+  const label = vitalLabel(routine);
+  const reason = urgency === "overdue" ? `${memberName} — ${label}, was due ${when}.` : `${memberName} — ${label}, due ${when}.`;
+
+  return {
+    subjectKey: `routine.${routine.id}`,
+    title: `${memberName} — ${label}`,
+    status: urgency === "overdue" ? "at_risk" : "pending",
+    riskLevel: urgency === "overdue" ? "medium" : "low",
+    notable: true,
+    reason,
+    action: null,
+    dueOn: routine.nextDueOn,
+  };
+}
+
+export type HealthRoutinesAgenda = {
+  needsAttention: HomeAssessment[];
+  comingUp: HomeAssessment[];
+  recent: HomeAssessment[];
+};
+
+export function healthRoutinesAgenda(routines: readonly MeasurementRoutine[], nameOf: (memberId: string) => string, today: Date = new Date()): HealthRoutinesAgenda {
+  const needsAttention: HomeAssessment[] = [];
+  const comingUp: HomeAssessment[] = [];
+
+  for (const routine of routines) {
+    const urgency = classifyRoutine(routine, today);
+    if (urgency === "overdue") needsAttention.push(routineToAssessment(routine, nameOf(routine.memberId), "overdue"));
+    else if (urgency === "due_soon") comingUp.push(routineToAssessment(routine, nameOf(routine.memberId), "due_soon"));
+  }
+
+  const recent = routines
+    .filter((r) => r.lastCompletedOn)
+    .sort((a, b) => (b.lastCompletedOn ?? "").localeCompare(a.lastCompletedOn ?? ""))
+    .slice(0, 5)
+    .map((r) => silent(`routine.${r.id}`, `${nameOf(r.memberId)} — ${vitalLabel(r)}`, `Measured ${r.lastCompletedOn ? formatDueDate(r.lastCompletedOn) : ""}.`));
+
+  return { needsAttention, comingUp, recent };
 }
