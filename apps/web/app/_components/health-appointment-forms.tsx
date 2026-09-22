@@ -57,10 +57,14 @@ export function BookAppointmentButton({
   const [step, setStep] = useState<Step>(0);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createAppointmentAction, {});
   const [memberId, setMemberId] = useState(members[0]?.id ?? "");
+  const [startsAt, setStartsAt] = useState("");
 
   const close = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (!nextOpen) setStep(0);
+    if (!nextOpen) {
+      setStep(0);
+      setStartsAt("");
+    }
   };
 
   if (members.length === 0) return null;
@@ -99,7 +103,15 @@ export function BookAppointmentButton({
           </div>
 
           <div className={step === 2 ? "space-y-3" : "hidden"}>
-            <Field label="Starts" name="startsAt" type="datetime-local" required={step === 2} />
+            <Field
+              label="Starts"
+              name="startsAt"
+              type="datetime-local"
+              required
+              value={startsAt}
+              onChange={(event) => setStartsAt(event.target.value)}
+              error={step === 2 && state.error && !startsAt ? "Choose when this starts." : undefined}
+            />
             <Field label="Ends (optional)" name="endsAt" type="datetime-local" hint="Used to check for a clash with anything else already booked." />
           </div>
 
@@ -137,11 +149,17 @@ export function BookAppointmentButton({
               <span />
             )}
             {step < 5 ? (
-              <Button type="button" onClick={() => setStep((s) => (s + 1) as Step)} className="gap-1">
+              <Button
+                key="next"
+                type="button"
+                onClick={() => setStep((s) => (s + 1) as Step)}
+                disabled={step === 2 && !startsAt}
+                className="gap-1"
+              >
                 Next <ChevronRight aria-hidden className="size-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={pending}>
+              <Button key="submit" type="submit" disabled={pending || !startsAt}>
                 {pending ? "Booking…" : "Book appointment"}
               </Button>
             )}

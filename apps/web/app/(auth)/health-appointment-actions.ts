@@ -59,9 +59,18 @@ function readForm(formData: FormData) {
   };
 }
 
+const FRIENDLY_FIELD_ERROR: Record<string, string> = {
+  startsAt: "Choose when this starts.",
+  memberDisplayName: "Choose who this is for.",
+};
+
 export async function createAppointmentAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = createSchema.safeParse(readForm(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = issue ? String(issue.path[0] ?? "") : "";
+    return { error: (field && FRIENDLY_FIELD_ERROR[field]) || issue?.message || "Please check the details above." };
+  }
 
   try {
     const supabase = await createClient();
