@@ -248,11 +248,71 @@ reason.
 **One nav tree, filtered once.** The drawer's content is not a second copy of
 the household's permissions logic — it renders the same `secondary` list
 `AppShell` already receives (filtered server-side, per rule 9), grouped the
-same way `/more` already groups it: primary areas, then Household, then
-Manage. A `NavDrawerProvider` context is what lets the header's trigger and
-the tab bar's "More" button open one shared drawer instance without prop-
-drilling open state through every intermediate server component in the
-shell.
+same way `/more` already groups it: `groupSecondaryNavigation()`
+(`navigation/secondary-navigation.ts`) buckets it into five labelled
+sections — Family & People, Food & Essentials, Home & Lifestyle, AI & Smart
+Tools, Manage — in that fixed order, dropping any section this viewer has
+nothing in. Both the drawer and `/more` call the one function rather than
+each grouping the flat list their own way, so the two can never drift apart
+on which item lives in which section. A `NavDrawerProvider` context is what
+lets the header's trigger and the tab bar's "More" button open one shared
+drawer instance without prop-drilling open state through every intermediate
+server component in the shell.
+
+**The drawer opens with the same warm hero every signed-out screen does.** A
+`var(--wh-gradient-hero)` band carrying `LeafDecor` (rule 5), `HomeIllustration`
+bleeding off its top-right corner, the brand `Wordmark` with its tagline, the
+close button, and one `ScriptAccent` line — the exact recipe
+`auth-layout.tsx`'s signed-out panel and the landing hero already use,
+reused rather than re-invented, since this is the one other place a
+household sees the full brand at once. Below it, a single card (an
+`IconTile` + title + subtitle + chevron) replaced the old pill-shaped link
+to Certification — restyled to match every other row's shape, not reworded.
+The identity row (avatar, name, role · household) that used to open the
+drawer was dropped: `Settings & Profile` already lives in the Manage
+section below it, so nothing became unreachable, and the banner is a truer
+"the household's own brand" opening than a personal card was.
+
+**A flex item with `overflow-hidden` needs `shrink-0`, every time.** The
+banner is a child of the drawer's own `flex flex-col` column, sitting above
+a `nav` that carries `flex-1` to fill the remaining height. By the flexbox
+spec, a flex item's *automatic* minimum size is `0` the moment its own
+`overflow` is anything but `visible` — so without an explicit `shrink-0`,
+the banner's real content (the wordmark, the tagline, the script line) can
+be shrunk by the flex algorithm down past its own padding, collapsing to a
+sliver with everything below the fold clipped by that same
+`overflow-hidden`. Found live, not in a diff: the banner rendered as a
+~36px strip with no visible tagline or script line until `shrink-0` was
+added. Any future `overflow-hidden` box placed inside a flex column in this
+kit needs the same `shrink-0` (or an explicit `min-height`), or it is one
+sibling's `flex-1` away from the same silent collapse.
+
+**A `Wordmark` tagline needs a bounded width wherever it might not fit.**
+The default tagline (`uppercase`, tracked, tiny) was designed for contexts
+with room to spare; two new placements — this banner, and the mobile
+header's centred mark once it started carrying a tagline too — do not
+always have that room. `Wordmark` grew an optional `taglineClassName` prop,
+merged over the default via `cn()` (which is `twMerge`, so a conflicting
+utility like `normal-case` genuinely replaces `uppercase` rather than
+losing a specificity fight) — the mobile header uses it for a sentence-case,
+untracked, slightly larger tagline sized and `max-w-[…] truncate`-capped to
+the room the centred column actually has once the hamburger and the bell/
+avatar cluster take their share; the drawer's banner uses a smaller
+`max-w-[…] truncate` cap of its own. Both default to ellipsis on a
+narrow-enough phone rather than a raw pixel overflow into a neighbour —
+the same "never clip outright, degrade to an ellipsis at the true edge
+case" posture rule 15 already asks for everywhere else.
+
+**The mobile header centres the mark in flow, not out of it.** It used to
+be positioned absolutely so it would centre on the whole bar regardless of
+how much its neighbours weighed — correct while the mark was icon-only, but
+once a tagline made it wider, an absolutely-positioned block has no
+awareness of the icon cluster beside it and will happily render on top of
+it. It now sits in the flexible middle column between the hamburger and the
+bell/avatar cluster instead, centred within whatever room that leaves it —
+no more overlap possible, at the cost of true whole-bar centring when the
+two side clusters are asymmetric widths, which reads as unnoticeable in
+practice.
 
 ## The handwritten line, and the greenery
 

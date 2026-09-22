@@ -3,6 +3,7 @@ import { ChevronRight, LifeBuoy, LogOut } from "lucide-react";
 import Link from "next/link";
 
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { groupSecondaryNavigation } from "@wonderhome/core/navigation/secondary-navigation";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
@@ -22,14 +23,16 @@ export const dynamic = "force-dynamic";
  *
  * Only sections this person may see are listed — the list is filtered
  * server-side from their permissions — and only sections that exist. A menu of
- * unbuilt things teaches people that links do nothing.
+ * unbuilt things teaches people that links do nothing. Grouped the same way
+ * the nav drawer groups it (`groupSecondaryNavigation`) so the two can never
+ * drift apart on which item lives in which section.
  */
 export default async function MorePage() {
-  const { viewer, secondary, view } = await requireSession("/more");
+  const { viewer, secondary } = await requireSession("/more");
 
-  const domains = secondary.filter((item) => !["manage", "settings", "notifications"].includes(item.key));
-  const admin = secondary.filter((item) => item.key === "manage");
-  const personal = secondary.filter((item) => item.key === "settings" || item.key === "notifications");
+  const sections = groupSecondaryNavigation(secondary);
+  const domainSections = sections.filter((section) => section.group !== "manage");
+  const manageSection = sections.find((section) => section.group === "manage");
 
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/more">
@@ -48,21 +51,23 @@ export default async function MorePage() {
           <ChevronRight aria-hidden className="size-5 text-[var(--wh-foreground-subtle)]" />
         </Link>
 
-        <section>
-          <SectionHeader title={view.tone === "child" ? "Your areas" : "Household"} />
-          <DomainGrid>
-            {domains.map((item) => (
-              <DomainCard key={item.key} href={item.href} icon={DOMAIN_ICONS[item.icon]} tone={item.tone} title={item.label} description={item.purpose} />
-            ))}
-          </DomainGrid>
-        </section>
+        {domainSections.map((section) => (
+          <section key={section.group}>
+            <SectionHeader title={section.label} />
+            <DomainGrid>
+              {section.items.map((item) => (
+                <DomainCard key={item.key} href={item.href} icon={DOMAIN_ICONS[item.icon]} tone={item.tone} title={item.label} description={item.purpose} />
+              ))}
+            </DomainGrid>
+          </section>
+        ))}
 
-        {admin.length > 0 || personal.length > 0 ? (
+        {manageSection ? (
           <section>
-            <SectionHeader title="Manage" />
+            <SectionHeader title={manageSection.label} />
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
-                {[...admin, ...personal].map((item) => {
+                {manageSection.items.map((item) => {
                   const Icon = DOMAIN_ICONS[item.icon];
                   return (
                     <li key={item.key}>

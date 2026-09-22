@@ -97,10 +97,13 @@ const LETTER_VAR: Record<WordmarkTone, string> = {
 export function Wordmark({
   className,
   tagline = false,
+  taglineClassName,
   size = 28,
 }: {
   className?: string;
   tagline?: boolean;
+  /** Overrides the tagline's own size/weight/tracking for this call site only — every other Wordmark keeps the default. */
+  taglineClassName?: string;
   size?: number;
 }) {
   return (
@@ -118,7 +121,12 @@ export function Wordmark({
           </span>
         </span>
         {tagline ? (
-          <span className="mt-0.5 block text-[0.5625rem] font-semibold tracking-[0.14em] whitespace-nowrap text-[var(--wh-foreground-muted)] uppercase">
+          <span
+            className={cn(
+              "mt-0.5 block text-[0.5625rem] font-semibold tracking-[0.14em] whitespace-nowrap text-[var(--wh-foreground-muted)] uppercase",
+              taglineClassName,
+            )}
+          >
             {TAGLINE}
           </span>
         ) : null}

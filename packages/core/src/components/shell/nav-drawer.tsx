@@ -1,16 +1,17 @@
 "use client";
 
-import { BadgeCheck, ChevronRight, LifeBuoy, LogOut, Menu, X } from "lucide-react";
+import { ChevronRight, House, LifeBuoy, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 import { signOut } from "../../identity/session-actions";
 import { cn } from "../../lib/cn";
-import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
-import { Avatar } from "../ui/avatar";
+import { groupSecondaryNavigation, type SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
 import { HomeIllustration } from "../ui/home-illustration";
+import { IconTile } from "../ui/icon-tile";
+import { LeafDecor } from "../ui/leaf-decor";
 import { ScriptAccent } from "../ui/script-accent";
 import type { ShellViewer } from "./mobile-header";
 import { SECONDARY_ICONS, SidebarLink } from "./primary-nav";
@@ -65,9 +66,7 @@ export function NavDrawerProvider({
   return (
     <NavDrawerContext.Provider value={{ open, setOpen }}>
       {children}
-      {viewer ? (
-        <NavDrawer open={open} onOpenChange={setOpen} viewer={viewer} secondary={secondary} pathname={pathname} />
-      ) : null}
+      {viewer ? <NavDrawer open={open} onOpenChange={setOpen} secondary={secondary} pathname={pathname} /> : null}
     </NavDrawerContext.Provider>
   );
 }
@@ -118,19 +117,16 @@ export function MoreTabButton({
 function NavDrawer({
   open,
   onOpenChange,
-  viewer,
   secondary,
   pathname,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  viewer: ShellViewer;
   secondary: readonly SecondaryNavItem[];
   pathname?: string;
 }) {
   const close = () => onOpenChange(false);
-  const domains = secondary.filter((item) => !["manage", "settings", "notifications"].includes(item.key));
-  const manage = secondary.filter((item) => ["manage", "notifications", "settings"].includes(item.key));
+  const sections = groupSecondaryNavigation(secondary);
 
   const isCurrent = (href: string) => Boolean(pathname && (pathname === href || pathname.startsWith(`${href}/`)));
 
@@ -141,40 +137,49 @@ function NavDrawer({
         <Dialog.Content
           className={cn(
             "wh-slide-in-left fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(20rem,85vw)] flex-col overflow-y-auto",
-            "bg-[var(--wh-surface)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-[var(--wh-shadow-float)] outline-none",
+            "bg-[var(--wh-surface)] pb-[env(safe-area-inset-bottom)] shadow-[var(--wh-shadow-float)] outline-none",
           )}
         >
           <Dialog.Title className="sr-only">Menu</Dialog.Title>
 
-          <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-1">
-            <Link href="/" onClick={close} className="min-w-0">
-              <Wordmark tagline />
-            </Link>
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                aria-label="Close menu"
-                className="grid size-10 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
-              >
-                <X className="size-5" />
-              </button>
-            </Dialog.Close>
-          </div>
-
-          <Link
-            href="/settings"
-            onClick={close}
-            className="mx-2 mt-2 flex items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 hover:bg-[var(--wh-surface-muted)]"
+          {/* The warm hero banner every signed-out screen already opens
+              with (rule 5's botanical framing, the same wh-gradient-hero +
+              LeafDecor + HomeIllustration recipe `auth-layout.tsx` and the
+              landing hero use) — now the drawer's own opening too, since it
+              is the one other place a household sees the full brand at
+              once. The safe-area top padding moved here from the content
+              wrapper so the gradient itself reaches the notch. `shrink-0`
+              is load-bearing: this is a flex item in the drawer's flex-col
+              column, and an overflow-hidden flex item's automatic min-height
+              is 0 by spec — without it, the `nav`'s own flex-1 below wins
+              the fight for space and the whole banner collapses to nothing
+              taller than its own padding. */}
+          <div
+            className="relative shrink-0 overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-5"
+            style={{ background: "var(--wh-gradient-hero)" }}
           >
-            <Avatar name={viewer.displayName} size="md" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">{viewer.displayName}</span>
-              <span className="block text-xs text-[var(--wh-foreground-muted)]">
-                {viewer.roleLabel} · {viewer.householdName}
-              </span>
-            </span>
-            <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
-          </Link>
+            <LeafDecor corner="top-right" size={130} opacity={0.3} />
+            <HomeIllustration className="pointer-events-none absolute -top-2 -right-16 w-44 opacity-80" />
+
+            <div className="relative flex items-start justify-between gap-2">
+              <Link href="/" onClick={close} className="min-w-0">
+                <Wordmark tagline taglineClassName="max-w-[10rem] truncate" />
+              </Link>
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-surface)]/75 text-[var(--wh-foreground-muted)] backdrop-blur-sm hover:bg-[var(--wh-surface)]"
+                >
+                  <X className="size-5" />
+                </button>
+              </Dialog.Close>
+            </div>
+
+            <ScriptAccent tone="primary" size="sm" heart className="relative mt-4">
+              A happier home together
+            </ScriptAccent>
+          </div>
 
           {/* Certification is "what WonderHome believes", the closest thing
               this menu has to "how the household is doing" — rather than a
@@ -182,16 +187,20 @@ function NavDrawer({
           <Link
             href="/certification"
             onClick={close}
-            className="mx-2 mt-2 flex items-center gap-2.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-handled-soft)] px-3 py-2 text-sm font-medium text-[var(--wh-handled)] transition-colors hover:bg-[var(--wh-handled-soft)]/70"
+            className="mx-2 mt-3 flex items-center gap-3 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
           >
-            <BadgeCheck aria-hidden className="size-4 shrink-0" />
-            <span className="min-w-0 flex-1 truncate">A happier home together</span>
-            <ChevronRight aria-hidden className="size-4 shrink-0" />
+            <IconTile icon={House} tone="handled" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">A happier home together</span>
+              <span className="block text-xs text-[var(--wh-foreground-muted)]">Plan. Organize. Share. Enjoy.</span>
+            </span>
+            <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
           </Link>
 
           <nav aria-label="Household menu" className="mt-2 flex-1 space-y-5 px-2 pb-6">
-            <DrawerSection title="Household" items={domains} isCurrent={isCurrent} onNavigate={close} />
-            <DrawerSection title="Manage" items={manage} isCurrent={isCurrent} onNavigate={close} />
+            {sections.map((section) => (
+              <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
+            ))}
 
             <ul className="space-y-0.5 border-t border-[var(--wh-border)] pt-3">
               <li>
@@ -199,17 +208,6 @@ function NavDrawer({
               </li>
             </ul>
           </nav>
-
-          {/* The same warm close every screen gets (rule 2), and the one
-              place in this menu that is purely decoration. Sized by width
-              only, like every other HomeIllustration call site — a fixed
-              height plus overflow-hidden was cropping it top and bottom. */}
-          <div className="mx-2 mb-3 flex items-center gap-3 rounded-[var(--wh-radius)] bg-[var(--wh-handled-soft)] p-4">
-            <ScriptAccent tone="primary" size="sm" tilt={false} className="min-w-0 flex-1">
-              Less mental load.<br />More family time!
-            </ScriptAccent>
-            <HomeIllustration className="w-20 shrink-0" />
-          </div>
 
           {/* A real sign-out, not a link: this is a POST, so nothing that
               merely lands on this page can trigger it (rule from the

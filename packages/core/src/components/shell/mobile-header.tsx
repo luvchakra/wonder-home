@@ -13,12 +13,14 @@ import { ViewerMenu } from "./viewer-menu";
  * person. On a phone it is compact and sticky; on desktop the same bar spans
  * the content column and grows a full search field.
  *
- * On a phone, the mark is centred on the bar itself — not in whatever space
- * is left after the hamburger and the notification/avatar cluster, which
- * are different widths and would pull an ordinary flex-1 slot off-centre.
- * It is positioned absolutely within the row for exactly that reason: taken
- * out of flow, it centres on the row's own box regardless of what its
- * neighbours weigh, and a `min-w-0 flex-1` spacer still holds their place.
+ * On a phone, the mark sits in the flexible middle column between the
+ * hamburger and the notification/avatar cluster, centred within whatever
+ * room that leaves it — in flow, not positioned absolutely out of it, so it
+ * can never sit on top of (and be clipped by) its neighbours once the
+ * tagline makes it wider than the icon-only mark ever was (rule 15: show
+ * the whole thing, never clip it). `min-w-0` on both the column and the
+ * tagline itself means a genuinely too-narrow phone truncates the tagline
+ * with an ellipsis rather than overflowing the row.
  */
 export type ShellViewer = {
   displayName: string;
@@ -65,16 +67,15 @@ export function MobileHeader({
         {title ? (
           <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight lg:hidden">{title}</h1>
         ) : (
-          <>
-            <span className="min-w-0 flex-1 lg:hidden" aria-hidden />
-            <Link
-              href="/"
-              aria-label="WonderHome home"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 lg:hidden"
-            >
-              <Wordmark size={26} />
+          <div className="flex min-w-0 flex-1 justify-center lg:hidden">
+            <Link href="/" aria-label="WonderHome home" className="min-w-0">
+              <Wordmark
+                size={26}
+                tagline
+                taglineClassName="max-w-[13.5rem] truncate text-[0.65rem] font-medium tracking-normal normal-case"
+              />
             </Link>
-          </>
+          </div>
         )}
 
         <div className="hidden min-w-0 flex-1 lg:block">
