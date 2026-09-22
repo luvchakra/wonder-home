@@ -61,6 +61,8 @@ export type Household = {
   timezone: string;
   status: "active" | "suspended" | "closed";
   ownerMemberId: string | null;
+  /** Who every other member's `relationship` is described relative to — distinct from `ownerMemberId`, which is about who administers the household, not whose perspective the family's story is told from. Null until an Admin sets one. */
+  keyMemberId: string | null;
 };
 
 export type HouseholdMembership = {

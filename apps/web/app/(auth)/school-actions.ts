@@ -17,16 +17,25 @@ import type { ActionState } from "./actions";
  * no form behind it even though `createSchoolItem` already existed for the
  * API route the AI assistant calls.
  */
-const schema = z.object({
-  householdId: z.uuid(),
-  childMemberId: z.uuid({ error: "Choose who this is for." }),
-  kind: z.enum(SCHOOL_ITEM_KINDS),
-  title: z.string().trim().min(1, { error: "What is it?" }).max(160),
-  subject: z.string().trim().max(60).optional(),
-  detail: z.string().trim().max(2000).optional(),
-  dueAt: z.string().optional(),
-  estimatedMinutes: z.union([z.coerce.number().int().min(1).max(600), z.literal("")]).optional(),
-});
+// A due date is what lets Overview group anything into "this week"/"next
+// week" — required for every kind except a notice, which is a plain FYI
+// with no deadline of its own to invent (rule 9: never show a date with no
+// source).
+const schema = z
+  .object({
+    householdId: z.uuid(),
+    childMemberId: z.uuid({ error: "Choose who this is for." }),
+    kind: z.enum(SCHOOL_ITEM_KINDS),
+    title: z.string().trim().min(1, { error: "What is it?" }).max(160),
+    subject: z.string().trim().max(60).optional(),
+    detail: z.string().trim().max(2000).optional(),
+    dueAt: z.string().optional(),
+    estimatedMinutes: z.union([z.coerce.number().int().min(1).max(600), z.literal("")]).optional(),
+  })
+  .refine((value) => value.kind === "notice" || Boolean(value.dueAt), {
+    error: "When is it due?",
+    path: ["dueAt"],
+  });
 
 export async function createSchoolItemAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = schema.safeParse({
@@ -136,17 +145,22 @@ export async function extractSchoolItemFromPhotoAction(
   }
 }
 
-const updateSchema = z.object({
-  householdId: z.uuid(),
-  itemId: z.uuid(),
-  childMemberId: z.uuid({ error: "Choose who this is for." }),
-  kind: z.enum(SCHOOL_ITEM_KINDS),
-  title: z.string().trim().min(1, { error: "What is it?" }).max(160),
-  subject: z.string().trim().max(60).optional(),
-  detail: z.string().trim().max(2000).optional(),
-  dueAt: z.string().optional(),
-  estimatedMinutes: z.union([z.coerce.number().int().min(1).max(600), z.literal("")]).optional(),
-});
+const updateSchema = z
+  .object({
+    householdId: z.uuid(),
+    itemId: z.uuid(),
+    childMemberId: z.uuid({ error: "Choose who this is for." }),
+    kind: z.enum(SCHOOL_ITEM_KINDS),
+    title: z.string().trim().min(1, { error: "What is it?" }).max(160),
+    subject: z.string().trim().max(60).optional(),
+    detail: z.string().trim().max(2000).optional(),
+    dueAt: z.string().optional(),
+    estimatedMinutes: z.union([z.coerce.number().int().min(1).max(600), z.literal("")]).optional(),
+  })
+  .refine((value) => value.kind === "notice" || Boolean(value.dueAt), {
+    error: "When is it due?",
+    path: ["dueAt"],
+  });
 
 /** The other half of `createSchoolItemAction`: correcting an entry after the fact (rule 12). */
 export async function updateSchoolItemAction(_previous: ActionState, formData: FormData): Promise<ActionState> {

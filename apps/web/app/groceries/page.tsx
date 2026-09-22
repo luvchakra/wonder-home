@@ -16,7 +16,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AgendaRow } from "../_components/agenda-row";
+import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { AddConsumableButton, ConsumableRowControls } from "../_components/commerce-forms";
 import { formatDate, requireSession } from "../_lib/session";
 
@@ -145,7 +145,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                   </p>
                 </Card>
               ) : (
-                <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{needs.map((item) => <AgendaRow key={item.subjectKey} item={item} href="/groceries?tab=list" />)}</ul></Card>
+                <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{needs.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/groceries?tab=list" />)}</ul></Card>
               )}
             </section>
           </>
@@ -160,14 +160,42 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {suggestions.map((row) => (
-                    <ActionRow
+                    <ExpandableRow
                       key={row.id}
-                      icon={ShoppingBasket}
-                      tone="care"
-                      title={`${row.name} · ${row.quantity} ${row.unit}`}
-                      meta={`${row.reason} (${describeBasis(row.evidence_basis)})${row.needed_by ? ` · by ${formatDate(timezone, new Date(row.needed_by))}` : ""}`}
-                      action={row.estimated_cost_minor !== null && row.currency ? <Badge>{formatMoney(row.estimated_cost_minor, row.currency)}</Badge> : <Badge tone="neutral">unpriced</Badge>}
-                    />
+                      summary={
+                        <>
+                          <IconTile icon={ShoppingBasket} tone="care" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium">{row.name} · {row.quantity} {row.unit}</span>
+                            <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{row.reason}</span>
+                          </span>
+                          <span className="shrink-0">
+                            {row.estimated_cost_minor !== null && row.currency ? <Badge>{formatMoney(row.estimated_cost_minor, row.currency)}</Badge> : <Badge tone="neutral">unpriced</Badge>}
+                          </span>
+                        </>
+                      }
+                    >
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+                        <div>
+                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Why</dt>
+                          <dd>{row.reason}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Based on</dt>
+                          <dd>{describeBasis(row.evidence_basis)}</dd>
+                        </div>
+                        {row.needed_by ? (
+                          <div>
+                            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Needed by</dt>
+                            <dd>{formatDate(timezone, new Date(row.needed_by), "long")}</dd>
+                          </div>
+                        ) : null}
+                        <div>
+                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Estimated cost</dt>
+                          <dd>{row.estimated_cost_minor !== null && row.currency ? formatMoney(row.estimated_cost_minor, row.currency) : "Not priced yet"}</dd>
+                        </div>
+                      </dl>
+                    </ExpandableRow>
                   ))}
                 </ul>
               </Card>

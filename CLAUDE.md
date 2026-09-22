@@ -98,7 +98,14 @@ work, and hold new work against these:
     a pill bolted onto a row or a header. HomeSend's paperclip beside the
     mic is not an exception to this — it is a second input *modality* of
     the same one door (a photo or a paste is content, not a question), not
-    a second door.
+    a second door. HomeSend's own screen (`/home-send`, secondary nav) is
+    the one deliberate exception to "not a second door": it is a second
+    *surface* for that same one pipeline — a drop zone and an inbox for
+    what is waiting on a confirm — not a competing "Ask AI" shortcut on an
+    unrelated screen, and the paperclip stays exactly as it was. A future
+    screen does not get to cite this as precedent for its own shortcut;
+    this exists because the product direction explicitly asked for a
+    HomeSend menu, not because the rule got easier to route around.
 14. **No two buttons for the same job.** Before a header or an empty state
     ships with more than one action, ask what each one actually does. Two
     pills that both amount to "add this" — one manual, one routed through
@@ -205,11 +212,13 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   with a decision — every downstream authorization gate runs on its output
   exactly as it runs on a deterministic one.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
-  the composer's paperclip button) is the inbound intake channel: a photo,
-  a file or a pasted forward, classified and routed into a real domain
-  table only once a person confirms it. v1 is upload/paste from inside the
-  app — no WhatsApp/email webhook exists (no provider credentials, see
-  "External providers" below), but the table is shaped so one can plug in
+  the composer's paperclip button, and its own screen at `/home-send` —
+  a drop zone plus an inbox of what is waiting on a confirm) is the
+  inbound intake channel: a photo, a file or a pasted forward, classified
+  and routed into a real domain table only once a person confirms it. v1
+  is upload/paste from inside the app — no WhatsApp/email webhook exists
+  (no provider credentials, see "External providers" below), but the
+  table is shaped so one can plug in
   later without a redesign.
 
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline

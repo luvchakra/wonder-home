@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [Key Member, HomeSend's own screen, Kids & School grouping, Groceries dropdowns](2026-09-22-key-member-homesend-page-kids-school-groceries-batch.md) |
 | 2026-09-22 | [Eight-item batch: birthday sync, Home & Upkeep chevrons, pets as family, self profile edit, HomeBrain review](2026-09-22-upkeep-pets-profile-homebrain-batch.md) |
 | 2026-09-22 | [CLAUDE.md now names HomeTalk, HomeBrain and HomeSend as the standing architecture](2026-09-22-hometalk-homebrain-homesend-in-claude-md.md) |
 | 2026-09-21 | [HomeSend v1: a real upload/paste intake channel](2026-09-21-homesend-v1-intake-channel.md) |

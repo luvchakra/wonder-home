@@ -29,8 +29,14 @@ function Fact({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-/** A Home & Upkeep assessment as a chevron row — full actionable detail lives behind the arrow, not squeezed into the summary line. */
-export function HomeAgendaRow({ item, timezone, href }: { item: HomeAssessment; timezone: string; href?: string }) {
+/**
+ * Any domain's assessment as a chevron row — full actionable detail lives
+ * behind the arrow, not squeezed into the summary line. Domain-neutral (it
+ * only depends on the shared `HomeAssessment` shape), so Home & Upkeep and
+ * Groceries' "Smart insights" both use this one component rather than each
+ * inventing its own.
+ */
+export function AgendaExpandableRow({ item, timezone, href }: { item: HomeAssessment; timezone: string; href?: string }) {
   const presentation = presentationFor(item.subjectKey);
   const label = item.action ? actionLabelFor(item.action.action) : null;
   const statusLabel = STATUS_LABEL[item.status] ?? item.status.replace(/_/g, " ");

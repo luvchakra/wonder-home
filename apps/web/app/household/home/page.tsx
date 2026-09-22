@@ -10,7 +10,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
 
 import { AddAssetButton, RaiseServiceRequestButton } from "../../_components/home-forms";
-import { HomeAgendaRow } from "../../_components/home-agenda-row";
+import { AgendaExpandableRow } from "../../_components/agenda-expandable-row";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Home & Upkeep" };
@@ -92,7 +92,7 @@ export default async function HomeUpkeepPage() {
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {section.items.map((item) => (
-                    <HomeAgendaRow key={item.subjectKey} item={item} timezone={membership.household.timezone} />
+                    <AgendaExpandableRow key={item.subjectKey} item={item} timezone={membership.household.timezone} />
                   ))}
                 </ul>
               </Card>
