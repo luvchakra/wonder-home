@@ -1,5 +1,7 @@
 import { silent, type HomeAssessment } from "../home/assessment";
 import type { AppointmentType, HealthAppointment } from "./appointments";
+import { assessForMedicalAttention } from "./issue-safety";
+import type { HealthIssue } from "./issues";
 
 /**
  * Appointments as the Overview screen's rows (story 21-002) — the same
@@ -79,4 +81,48 @@ export function healthAppointmentsAgenda(
     })) as HomeAssessment[];
 
   return { needsAttention, comingUp, recent };
+}
+
+/**
+ * Health issues (story 21-003) as the same Overview rows — active/mentioned
+ * ones in "Needs attention", monitoring in its own section, resolved/closed
+ * in "Recent". Never a flat list: the reader thinks in terms of what still
+ * needs them, not creation order.
+ */
+function issueToAssessment(issue: HealthIssue, memberName: string): HomeAssessment {
+  const medicalAttention = assessForMedicalAttention(issue.label, issue.description, issue.notes);
+  const reason = medicalAttention.recommend
+    ? `${memberName} — ${issue.label}. ${medicalAttention.message}`
+    : `${memberName} — ${issue.label}${issue.description ? `: ${issue.description}` : "."}`;
+
+  return {
+    subjectKey: `issue.${issue.id}`,
+    title: `${memberName} — ${issue.label}`,
+    status: medicalAttention.recommend ? "at_risk" : "pending",
+    riskLevel: medicalAttention.recommend ? "high" : "low",
+    notable: true,
+    reason,
+    action: null,
+    dueOn: null,
+  };
+}
+
+export type HealthIssuesAgenda = {
+  needsAttention: HomeAssessment[];
+  monitoring: HomeAssessment[];
+  recent: HomeAssessment[];
+};
+
+export function healthIssuesAgenda(issues: readonly HealthIssue[], nameOf: (memberId: string) => string): HealthIssuesAgenda {
+  const needsAttention = issues.filter((i) => i.status === "mentioned" || i.status === "active").map((i) => issueToAssessment(i, nameOf(i.memberId)));
+  const monitoring = issues.filter((i) => i.status === "monitoring").map((i) => issueToAssessment(i, nameOf(i.memberId)));
+  const recent = issues
+    .filter((i) => i.status === "resolved" || i.status === "closed")
+    .slice(0, 5)
+    .map((i) => ({
+      ...silent(`issue.${i.id}`, `${nameOf(i.memberId)} — ${i.label}`, i.status === "resolved" ? "Resolved." : "Closed."),
+      status: "met",
+    })) as HomeAssessment[];
+
+  return { needsAttention, monitoring, recent };
 }

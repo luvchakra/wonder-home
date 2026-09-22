@@ -810,6 +810,58 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/issues": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's health issues",
+          description: "Optionally filtered by `memberId` and `status` (repeatable). RLS (`wh.may_see_health`) decides which issues the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+          ],
+          responses: {
+            "200": { description: "The visible issues" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Record a health observation",
+          description:
+            "Only for the caller themselves, or a child they guard. Never a diagnosis: the response's `medicalAttention` field is a fixed, deterministic keyword check that can only ever recommend seeking medical attention, never name a condition.",
+          responses: {
+            "201": { description: "The new issue, plus a medical-attention recommendation if the text matched a concerning pattern" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/issues/{issueId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "issueId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One health issue",
+          responses: {
+            "200": { description: "The issue" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Update an issue's content, or move it through its lifecycle",
+          description:
+            "The body's `action` field discriminates: `update` changes label/description/notes, `set_status` moves the issue through mentioned/active/monitoring/resolved/closed — every status can reach every other one, so resolving is never one-way.",
+          responses: {
+            "200": { description: "The updated issue" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

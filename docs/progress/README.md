@@ -11,6 +11,8 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [Fix: appointment booking's When step could be skipped, and the wizard could double-submit](2026-09-22-appointment-booking-double-submit.md) |
+| 2026-09-22 | [Story 21-003: health issues](2026-09-22-health-issues.md) |
 | 2026-09-22 | [Story 21-002: appointments](2026-09-22-health-appointments.md) |
 | 2026-09-22 | [Story 21-001: health foundation & privacy](2026-09-22-health-foundation-and-privacy.md) |
 | 2026-09-22 | [Story 18-007: outbound webhooks](2026-09-22-outbound-webhooks.md) |
