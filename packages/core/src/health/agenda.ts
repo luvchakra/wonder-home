@@ -1,5 +1,6 @@
 import { silent, type HomeAssessment } from "../home/assessment";
 import type { AppointmentType, HealthAppointment } from "./appointments";
+import { classifyCheckup, type CheckupType, type HealthCheckup } from "./checkups";
 import { assessForMedicalAttention } from "./issue-safety";
 import type { HealthIssue } from "./issues";
 
@@ -125,4 +126,79 @@ export function healthIssuesAgenda(issues: readonly HealthIssue[], nameOf: (memb
     })) as HomeAssessment[];
 
   return { needsAttention, monitoring, recent };
+}
+
+/**
+ * Checkups (story 21-004) as the same Overview rows — overdue in "Needs
+ * attention", due soon in "Coming up" alongside confirmed appointments, a
+ * recent completion in "Recent". A checkup that is neither due nor overdue
+ * is silent, per the story's own acceptance criterion — `classifyCheckup`
+ * is the one place that decides, so the Overview never invents its own
+ * notion of "due soon".
+ */
+const CHECKUP_TYPE_LABEL: Record<CheckupType, string> = {
+  doctor: "Doctor",
+  dentist: "Dentist",
+  eye_care: "Eye care",
+  physiotherapy: "Physiotherapy",
+  dermatology: "Dermatology",
+  specialist: "Specialist",
+  diagnostic: "Diagnostic",
+  vaccination: "Vaccination",
+  screening: "Screening",
+  other: "Checkup",
+};
+
+function formatDueDate(dueOn: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(`${dueOn}T00:00:00Z`));
+  } catch {
+    return dueOn;
+  }
+}
+
+function checkupToAssessment(checkup: HealthCheckup, memberName: string, urgency: "overdue" | "due_soon"): HomeAssessment {
+  const when = formatDueDate(checkup.nextDueOn);
+  const reason =
+    urgency === "overdue"
+      ? `${memberName} — ${checkup.label}, was due ${when}.`
+      : `${memberName} — ${checkup.label}, due ${when}.`;
+
+  return {
+    subjectKey: `checkup.${checkup.id}`,
+    title: `${memberName} — ${checkup.label}`,
+    status: urgency === "overdue" ? "at_risk" : "pending",
+    riskLevel: urgency === "overdue" ? "medium" : "low",
+    notable: true,
+    reason,
+    action: null,
+    dueOn: checkup.nextDueOn,
+  };
+}
+
+export type HealthCheckupsAgenda = {
+  needsAttention: HomeAssessment[];
+  comingUp: HomeAssessment[];
+  recent: HomeAssessment[];
+};
+
+export function healthCheckupsAgenda(checkups: readonly HealthCheckup[], nameOf: (memberId: string) => string, today: Date = new Date()): HealthCheckupsAgenda {
+  const needsAttention: HomeAssessment[] = [];
+  const comingUp: HomeAssessment[] = [];
+
+  for (const checkup of checkups) {
+    const urgency = classifyCheckup(checkup, today);
+    if (urgency === "overdue") needsAttention.push(checkupToAssessment(checkup, nameOf(checkup.memberId), "overdue"));
+    else if (urgency === "due_soon") comingUp.push(checkupToAssessment(checkup, nameOf(checkup.memberId), "due_soon"));
+  }
+
+  const recent = checkups
+    .filter((c) => c.lastCompletedOn)
+    .sort((a, b) => (b.lastCompletedOn ?? "").localeCompare(a.lastCompletedOn ?? ""))
+    .slice(0, 5)
+    .map((c) =>
+      silent(`checkup.${c.id}`, `${nameOf(c.memberId)} — ${CHECKUP_TYPE_LABEL[c.checkupType]}`, `${c.label} completed ${c.lastCompletedOn ? formatDueDate(c.lastCompletedOn) : ""}.`),
+    );
+
+  return { needsAttention, comingUp, recent };
 }

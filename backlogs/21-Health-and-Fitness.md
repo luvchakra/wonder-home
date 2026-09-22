@@ -7,7 +7,7 @@
 | 1 | P0 | 21-001 | Health foundation & privacy | Done | Schema (`health_profiles`/`health_provenance`/`health_consents`), `wh.may_see_health` (no admin bypass), Overview + Privacy screens at `/health`, live-verified 2026-09-22 |
 | 2 | P0 | 21-002 | Appointments | Done | Progressive booking wizard, confirm/complete/cancel, reschedule (new row + old marked rescheduled), deterministic conflict/duplicate detection, day-granularity reminder sweep folded into `/platform/retention`, live-verified 2026-09-22 |
 | 3 | P0 | 21-003 | Health issues | Done | `health_issues` (status `mentioned→active→monitoring→resolved→closed`, `resolved_at` DB-enforced), deterministic `assessForMedicalAttention` (never a diagnosis), provenance row carries no health content, Overview groups active/mentioned into Needs attention, monitoring into its own section, resolved/closed into Recent, record/edit/status-change UI, live-verified 2026-09-22 |
-| 4 | P0 | 21-004 | Checkups & preventive care | Not Started | |
+| 4 | P0 | 21-004 | Checkups & preventive care | Done | `health_checkups` (source enum, `cadence_days`, `next_due_on`/`last_completed_on`), linked bidirectionally to `health_appointments.checkup_id`; completing/cancelling the linked appointment syncs the checkup automatically; overdue → Needs attention, due soon → Coming up, silent otherwise; add/edit(+reschedule)/complete/remove/bring-back UI, live-verified 2026-09-22 |
 | 5 | P0 | 21-005 | Health records & HomeSend intake | Not Started | |
 | 6 | P0 | 21-006 | HomeBrain & HomeTalk health context | Not Started | |
 | 7 | P1 | 21-007 | Vitals & measurement routines | Not Started | |

@@ -13,6 +13,7 @@ import {
   rescheduleAppointment,
   setAppointmentStatus,
 } from "@wonderhome/core/health/appointments";
+import { syncCheckupForAppointment } from "@wonderhome/core/health/checkups";
 import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
@@ -36,6 +37,7 @@ const createSchema = z.object({
   remindPreparation: z.enum(["true", "false"]).optional(),
   remindDayOf: z.enum(["true", "false"]).optional(),
   calendarSync: z.enum(["true", "false"]).optional(),
+  checkupId: z.uuid().optional(),
 });
 
 function readForm(formData: FormData) {
@@ -56,6 +58,7 @@ function readForm(formData: FormData) {
     remindPreparation: formData.get("remindPreparation") || undefined,
     remindDayOf: formData.get("remindDayOf") || undefined,
     calendarSync: formData.get("calendarSync") || undefined,
+    checkupId: formData.get("checkupId") || undefined,
   };
 }
 
@@ -97,6 +100,7 @@ export async function createAppointmentAction(_previous: ActionState, formData: 
       remindAdvance: parsed.data.remindAdvance === "true",
       remindPreparation: parsed.data.remindPreparation === "true",
       remindDayOf: parsed.data.remindDayOf !== "false",
+      checkupId: parsed.data.checkupId,
       calendarSync: parsed.data.calendarSync === "true",
     });
 
@@ -129,13 +133,15 @@ export async function setAppointmentStatusAction(_previous: ActionState, formDat
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
+    const actor = { householdId: parsed.data.householdId, memberId: membership.memberId };
 
-    await setAppointmentStatus(
+    const appointment = await setAppointmentStatus(
       supabase,
-      { householdId: parsed.data.householdId, memberId: membership.memberId },
+      actor,
       parsed.data.appointmentId,
       parsed.data.status as Exclude<(typeof APPOINTMENT_STATUSES)[number], "rescheduled">,
     );
+    await syncCheckupForAppointment(supabase, actor, appointment);
 
     revalidatePath("/health");
     return { notice: "Saved." };

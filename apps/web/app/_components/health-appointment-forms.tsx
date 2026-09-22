@@ -1,6 +1,7 @@
 "use client";
 
 import { Ban, ChevronLeft, ChevronRight, CircleCheck, Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import { useActionState, useState } from "react";
 
 import type { AppointmentType } from "@wonderhome/core/health/appointments";
@@ -48,15 +49,25 @@ export function BookAppointmentButton({
   householdId,
   members,
   defaultPrivacyScope,
+  checkupId,
+  defaultMemberId,
+  defaultAppointmentType = "doctor",
+  trigger,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  /** Links the booked appointment to a checkup (story 21-004) — completing it will mark that checkup done. */
+  checkupId?: string;
+  defaultMemberId?: string;
+  defaultAppointmentType?: AppointmentType;
+  /** A custom trigger, for a checkup row's own contextual "Book" action instead of the generic header pill. */
+  trigger?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(0);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createAppointmentAction, {});
-  const [memberId, setMemberId] = useState(members[0]?.id ?? "");
+  const [memberId, setMemberId] = useState(defaultMemberId ?? members[0]?.id ?? "");
   const [startsAt, setStartsAt] = useState("");
 
   const close = (nextOpen: boolean) => {
@@ -71,9 +82,13 @@ export function BookAppointmentButton({
 
   return (
     <>
-      <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Book an appointment
-      </Pill>
+      {trigger ? (
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+      ) : (
+        <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
+          <Plus aria-hidden className="size-3.5" /> Book an appointment
+        </Pill>
+      )}
 
       <Sheet open={open} onOpenChange={close} title="Book an appointment" description={`Step ${step + 1} of 6 — ${STEP_LABEL[step]}`}>
         <form action={formAction} className="space-y-4">
@@ -81,6 +96,7 @@ export function BookAppointmentButton({
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="memberDisplayName" value={members.find((m) => m.id === memberId)?.displayName ?? ""} />
+          {checkupId ? <input type="hidden" name="checkupId" value={checkupId} /> : null}
 
           <div className={step === 0 ? "space-y-3" : "hidden"}>
             <Select label="Who is this for?" name="memberId" value={memberId} onChange={(event) => setMemberId(event.target.value)}>
@@ -93,7 +109,7 @@ export function BookAppointmentButton({
           </div>
 
           <div className={step === 1 ? "space-y-3" : "hidden"}>
-            <Select label="What kind of appointment?" name="appointmentType" defaultValue="doctor">
+            <Select label="What kind of appointment?" name="appointmentType" defaultValue={defaultAppointmentType}>
               {TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}

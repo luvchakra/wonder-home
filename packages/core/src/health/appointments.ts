@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createEvent } from "../family/repository";
+import { getCheckup } from "./checkups";
 import type { PrivacyScope } from "./repository";
 
 /**
@@ -65,13 +66,14 @@ export type HealthAppointment = {
   calendarSync: boolean;
   familyEventId: string | null;
   rescheduledFromId: string | null;
+  checkupId: string | null;
   createdByMemberId: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
 const SELECT =
-  "id, household_id, member_id, appointment_type, status, privacy_scope, starts_at, ends_at, provider, facility, location, preparation_notes, notes, remind_advance, remind_preparation, remind_day_of, calendar_sync, family_event_id, rescheduled_from_id, created_by_member_id, created_at, updated_at";
+  "id, household_id, member_id, appointment_type, status, privacy_scope, starts_at, ends_at, provider, facility, location, preparation_notes, notes, remind_advance, remind_preparation, remind_day_of, calendar_sync, family_event_id, rescheduled_from_id, checkup_id, created_by_member_id, created_at, updated_at";
 
 function toAppointment(row: Row): HealthAppointment {
   return {
@@ -94,6 +96,7 @@ function toAppointment(row: Row): HealthAppointment {
     calendarSync: row.calendar_sync as boolean,
     familyEventId: (row.family_event_id as string | null) ?? null,
     rescheduledFromId: (row.rescheduled_from_id as string | null) ?? null,
+    checkupId: (row.checkup_id as string | null) ?? null,
     createdByMemberId: (row.created_by_member_id as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -250,6 +253,8 @@ export type CreateAppointmentInput = {
   remindPreparation?: boolean;
   remindDayOf?: boolean;
   calendarSync?: boolean;
+  /** Links this appointment as the next occurrence of a checkup (story 21-004) — see the migration's own comment. */
+  checkupId?: string | null;
 };
 
 export type CreateAppointmentResult = {
@@ -285,6 +290,11 @@ export async function createAppointment(
   const conflicts = endsAt ? findConflicts({ startsAt, endsAt }, existingWindows) : [];
   const duplicateOf = findLikelyDuplicate({ memberId: input.memberId, appointmentType: input.appointmentType, startsAt }, existingAppointments);
 
+  // A checkup id is only ever honoured when it genuinely belongs to this
+  // household and this actor may see it — never trusted as-is, since it can
+  // arrive from an API caller rather than the UI's own checkup list.
+  const linkedCheckup = input.checkupId ? await getCheckup(supabase, actor.householdId, input.checkupId) : null;
+
   const { data, error } = await supabase
     .from("health_appointments")
     .insert({
@@ -303,6 +313,7 @@ export async function createAppointment(
       remind_preparation: input.remindPreparation ?? false,
       remind_day_of: input.remindDayOf ?? true,
       calendar_sync: input.calendarSync ?? false,
+      checkup_id: linkedCheckup?.id ?? null,
       created_by_member_id: actor.memberId,
     })
     .select(SELECT)
@@ -321,6 +332,10 @@ export async function createAppointment(
       { householdId: actor.householdId, memberDisplayName: input.memberDisplayName, appointment: { id: appointment.id, startsAt, endsAt: endsAt! }, privacyScope: input.privacyScope },
       conflicts,
     );
+  }
+
+  if (linkedCheckup) {
+    await supabase.from("health_checkups").update({ linked_appointment_id: appointment.id }).eq("id", linkedCheckup.id).eq("household_id", actor.householdId);
   }
 
   if (input.calendarSync && input.privacyScope === "household_operational" && endsAt) {
@@ -474,6 +489,7 @@ export async function rescheduleAppointment(
     remindPreparation: current.remindPreparation,
     remindDayOf: current.remindDayOf,
     calendarSync: current.calendarSync,
+    checkupId: current.checkupId,
   });
 
   await supabase.from("health_appointments").update({ rescheduled_from_id: id }).eq("id", result.appointment.id);

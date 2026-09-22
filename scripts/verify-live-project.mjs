@@ -86,6 +86,7 @@ const SHIPPED_TABLES = [
   "health_consents",
   "health_appointments",
   "health_issues",
+  "health_checkups",
 ];
 
 /**
@@ -107,6 +108,7 @@ const SHIPPED_COLUMNS = [
   { table: "home_send_items", column: "security_status" },
   { table: "home_send_items", column: "external_id" },
   { table: "homesend_share_handoffs", column: "ip_hash" },
+  { table: "health_appointments", column: "checkup_id" },
 ];
 
 /**
@@ -321,6 +323,25 @@ async function main() {
     "anonymous cannot create a health issue",
     Boolean(forgedHealthIssue.error),
     forgedHealthIssue.error?.code ?? "no error",
+  );
+
+  // Health checkups (story 21-004) — same RLS shape as health_profiles.
+  const healthCheckups = await anon.from("health_checkups").select("id, label").limit(1);
+  check(
+    "anonymous cannot read a household's health checkups",
+    Boolean(healthCheckups.error) || (Array.isArray(healthCheckups.data) && healthCheckups.data.length === 0),
+    healthCheckups.error ? healthCheckups.error.code : `${healthCheckups.data?.length ?? "?"} rows`,
+  );
+  const forgedHealthCheckup = await anon.from("health_checkups").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    label: "Forged",
+    next_due_on: new Date().toISOString().slice(0, 10),
+  });
+  check(
+    "anonymous cannot create a health checkup",
+    Boolean(forgedHealthCheckup.error),
+    forgedHealthCheckup.error?.code ?? "no error",
   );
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at

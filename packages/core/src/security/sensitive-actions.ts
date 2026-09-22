@@ -273,6 +273,36 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Moving an issue through its lifecycle — mentioned, active, monitoring, resolved, closed — is how the household tracks what is still being watched.",
     recordedIn: "packages/core/src/health/issues.ts",
   },
+  {
+    event: "health.checkup_created",
+    because: "A new recurring preventive-care commitment for a member — who, what, and how often.",
+    recordedIn: "packages/core/src/health/checkups.ts",
+  },
+  {
+    event: "health.checkup_updated",
+    because: "Changes a checkup's own content — label, type, cadence, notes.",
+    recordedIn: "packages/core/src/health/checkups.ts",
+  },
+  {
+    event: "health.checkup_rescheduled",
+    because: "Moves when a checkup is next due — worth recording as the schedule change it is.",
+    recordedIn: "packages/core/src/health/checkups.ts",
+  },
+  {
+    event: "health.checkup_completed",
+    because: "Marks a checkup done and, when a cadence is configured, advances it to its next occurrence.",
+    recordedIn: "packages/core/src/health/checkups.ts",
+  },
+  {
+    event: "health.checkup_dismissed",
+    because: "Removes a checkup the household no longer wants tracked — reversible, but still a change worth recording.",
+    recordedIn: "packages/core/src/health/checkups.ts",
+  },
+  {
+    event: "health.checkup_reactivated",
+    because: "Brings back a checkup that had been removed.",
+    recordedIn: "packages/core/src/health/checkups.ts",
+  },
 ];
 
 /**
@@ -419,6 +449,18 @@ export function describeAuditEvent(
       return { title: "A health issue's details changed", detail: null };
     case "health.issue_status_changed":
       return { title: "A health issue's status changed", detail: metadata.to ? `Now ${stringOr(metadata.to, "")}` : null };
+    case "health.checkup_created":
+      return { title: "A checkup was added", detail: stringOr(metadata.checkupType, null) };
+    case "health.checkup_updated":
+      return { title: "A checkup's details changed", detail: null };
+    case "health.checkup_rescheduled":
+      return { title: "A checkup's due date changed", detail: stringOr(metadata.nextDueOn, null) };
+    case "health.checkup_completed":
+      return { title: "A checkup was marked done", detail: stringOr(metadata.nextDueOn, "No repeat — removed.") };
+    case "health.checkup_dismissed":
+      return { title: "A checkup was removed", detail: null };
+    case "health.checkup_reactivated":
+      return { title: "A checkup was brought back", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.
