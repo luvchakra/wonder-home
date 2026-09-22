@@ -112,7 +112,7 @@ export async function runHouseholdAgents(
     });
 
     if (outcome.kind === "executed") {
-      const result = await runExecutor(supabase, householdId, step);
+      const result = await runExecutor(supabase, householdId, step, admin);
       const finalOutcome: StepOutcome = result.performed
         ? outcome
         : { kind: "refused", toolName: step.toolName, reason: result.reason };

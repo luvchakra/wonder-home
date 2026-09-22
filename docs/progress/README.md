@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [Story 21-006: HomeBrain & HomeTalk health context](2026-09-22-hometalk-homebrain-health-context.md) |
 | 2026-09-22 | [Story 21-005: health records & HomeSend intake](2026-09-22-health-records-and-homesend-health-document.md) |
 | 2026-09-22 | [Story 21-004: checkups & preventive care](2026-09-22-health-checkups.md) |
 | 2026-09-22 | [Fix: appointment booking's When step could be skipped, and the wizard could double-submit](2026-09-22-appointment-booking-double-submit.md) |

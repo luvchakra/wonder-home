@@ -24,6 +24,16 @@ export const INTENT_ACTIONS = [
   "make_payment",
   "order_items",
   "assign_responsibility",
+  /** "I have a dentist appointment next Tuesday at 4" — books a real appointment via the governed health service. */
+  "record_health_appointment",
+  /** "I've had a headache since yesterday" — records a real health issue, never a diagnosis. */
+  "log_health_issue",
+  /** "My headache is gone" — resolves an open health issue for the speaker. */
+  "resolve_health_issue",
+  /** "My BP was 128 over 82 this morning" — recognized, but vitals tracking (story 21-007) is not built yet, so this is never claimed as done. */
+  "log_vital",
+  /** "I want to walk three times a week" — recognized, but fitness tracking (story 21-008) is not built yet, so this is never claimed as done. */
+  "set_fitness_goal",
   /** A hello, a thank-you, or "what can you do?" — answered warmly, never as a failure to understand. */
   "greet",
   "unknown",

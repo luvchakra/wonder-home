@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
 import { createConsumable } from "../commerce/repository";
+import { createAppointment, type AppointmentType } from "../health/appointments";
+import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
 import { linkTo } from "./reply-format";
@@ -51,6 +53,12 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return Boolean(intent.target.reference);
     case "check_agents":
       return true;
+    case "record_health_appointment":
+      return Boolean(intent.parameters.appointmentType);
+    case "log_health_issue":
+      return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
+    case "resolve_health_issue":
+      return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
     default:
       return false;
   }
@@ -69,6 +77,10 @@ export function notYetDoable(action: HouseholdIntent["action"]): string {
       return `Approved. Moving it on the family calendar is done under ${linkTo("/family", "Family")} for now — I have not moved anything myself.`;
     case "plan_event":
       return `Approved. I have not put anything on the calendar myself yet — add it under ${linkTo("/family", "Family")} and I will keep an eye on it.`;
+    case "log_vital":
+      return `Noted, though tracking measurements like this isn't built yet — for now, keep it under ${linkTo("/health", "Health & Fitness")} yourself.`;
+    case "set_fitness_goal":
+      return `Noted, though fitness goals aren't tracked yet — I have not set anything up on my own.`;
     default:
       return "Approved — noted, though there is nothing I can do about this on my own yet.";
   }
@@ -83,6 +95,12 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
         return await recordAbsence(intent, context);
       case "check_agents":
         return await runAgentCheck(context);
+      case "record_health_appointment":
+        return await recordHealthAppointment(intent, context);
+      case "log_health_issue":
+        return await logHealthIssue(intent, context);
+      case "resolve_health_issue":
+        return await resolveHealthIssue(intent, context);
       case "set_preference":
         return {
           ok: true,
@@ -159,6 +177,157 @@ async function recordAbsence(intent: HouseholdIntent, context: ExecutionContext)
     text: `Noted — **${member.displayName}** is away ${describeDate(onDate, when, context.timezone)}. I will re-check what they usually handle that day; see ${linkTo("/family", "Family")}.`,
     result: { memberId: member.id, onDate },
   };
+}
+
+/**
+ * "I have a dentist appointment next Tuesday at 4" — books a real
+ * appointment via the same governed `createAppointment` the booking wizard
+ * uses. Always for the speaker themselves: nothing in this rule set names a
+ * third party, and `createAppointment`'s own RLS would refuse it anyway
+ * unless the speaker is that person's guardian.
+ */
+async function recordHealthAppointment(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const appointmentType = (typeof intent.parameters.appointmentType === "string" ? intent.parameters.appointmentType : "other") as AppointmentType;
+  const typeText = typeof intent.parameters.typeText === "string" && intent.parameters.typeText.trim() ? intent.parameters.typeText.trim() : appointmentType;
+
+  const when = typeof intent.parameters.when === "string" ? intent.parameters.when : null;
+  if (!when) return { ok: false, reason: `Which day is the ${typeText} appointment? Say "today", "tomorrow" or a day of the week.` };
+  const onDate = resolveWhen(when, context.now ?? new Date(), context.timezone);
+  if (!onDate) return { ok: false, reason: `Which day is the ${typeText} appointment? Say "today", "tomorrow" or a day of the week.` };
+
+  const timeText = typeof intent.parameters.time === "string" ? intent.parameters.time : null;
+  const time = timeText ? parseTimeOfDay(timeText) : null;
+  if (!time) return { ok: false, reason: `What time is the ${typeText} appointment on ${describeDate(onDate, when, context.timezone)}?` };
+
+  const member = context.members.find((entry) => entry.id === context.actorMemberId);
+  if (!member) return { ok: false, reason: "I could not tell who was asking, so I did not book anything." };
+
+  const startsAt = zonedTimeToUtcIso(onDate, time.hour, time.minute, context.timezone);
+
+  const { appointment, conflicts } = await createAppointment(
+    context.supabase,
+    { householdId: context.householdId, memberId: context.actorMemberId },
+    {
+      memberId: context.actorMemberId,
+      memberDisplayName: member.displayName,
+      appointmentType,
+      privacyScope: "private",
+      startsAt,
+    },
+  );
+
+  const conflictNote = conflicts.length > 0 ? " That overlaps with something else on your calendar — worth a look." : "";
+  return {
+    ok: true,
+    text: `Booked — a ${typeText} appointment ${describeDate(onDate, when, context.timezone)} at ${formatHourMinute(time.hour, time.minute)}. See ${linkTo("/health", "Health & Fitness")}.${conflictNote}`,
+    result: { appointmentId: appointment.id, appointmentType, startsAt },
+  };
+}
+
+/**
+ * "I've had a headache since yesterday" — a real, private-by-default health
+ * issue, never a diagnosis (the domain's own `createIssue` decides only
+ * whether the wording suggests medical attention, and only says so, never
+ * acts on it).
+ */
+async function logHealthIssue(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const label = typeof intent.parameters.label === "string" ? intent.parameters.label.trim() : "";
+  if (!label) return { ok: false, reason: "What would you like me to note?" };
+
+  const since = typeof intent.parameters.since === "string" ? intent.parameters.since : null;
+  const startedAt = since ? (resolveWhen(since, context.now ?? new Date(), context.timezone) ?? undefined) : undefined;
+
+  const { issue, medicalAttention } = await createIssue(
+    context.supabase,
+    { householdId: context.householdId, memberId: context.actorMemberId },
+    { memberId: context.actorMemberId, label: capitalize(label), privacyScope: "private", startedAt },
+  );
+
+  const advisory = medicalAttention.recommend ? ` ${medicalAttention.message}` : "";
+  return {
+    ok: true,
+    text: `Noted — ${label}, private to you unless you choose to share it. See ${linkTo("/health", "Health & Fitness")}.${advisory}`,
+    result: { issueId: issue.id, label },
+  };
+}
+
+/**
+ * "My headache is gone" — resolves the matching open issue, found by a
+ * loose label match against the speaker's own open issues (RLS already
+ * scopes the list to what they may see). No match is an honest "I do not
+ * have that on record", never a guess at which issue was meant.
+ */
+async function resolveHealthIssue(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const label = typeof intent.parameters.label === "string" ? intent.parameters.label.trim().toLowerCase() : "";
+  if (!label) return { ok: false, reason: "What would you like me to mark resolved?" };
+
+  const open = await listIssues(context.supabase, context.householdId, {
+    memberId: context.actorMemberId,
+    statuses: ["mentioned", "active", "monitoring"],
+  });
+  const match = open.find((issue) => issue.label.toLowerCase().includes(label) || label.includes(issue.label.toLowerCase()));
+  if (!match) {
+    return { ok: false, reason: `I do not have an open record of "${label}" for you — check ${linkTo("/health", "Health & Fitness")} to see what is tracked.` };
+  }
+
+  await setIssueStatus(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, match.id, "resolved");
+  return {
+    ok: true,
+    text: `Good to hear — marked **${match.label}** resolved. See ${linkTo("/health", "Health & Fitness")}.`,
+    result: { issueId: match.id },
+  };
+}
+
+/** "4", "4pm", "16:30" → hour/minute. A bare hour 1-11 with no am/pm reads as afternoon/evening — the same household convention `rules.ts`'s meal-time parsing already uses. */
+function parseTimeOfDay(raw: string): { hour: number; minute: number } | null {
+  const match = raw.trim().toLowerCase().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2] ?? "0");
+  const meridiem = match[3];
+  if (hour > 23 || minute > 59) return null;
+  if (meridiem === "pm" && hour < 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+  if (!meridiem && hour >= 1 && hour <= 11) hour += 12;
+  return { hour, minute };
+}
+
+function formatHourMinute(hour: number, minute: number): string {
+  const period = hour >= 12 ? "pm" : "am";
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return minute === 0 ? `${twelve}${period}` : `${twelve}:${String(minute).padStart(2, "0")}${period}`;
+}
+
+/** A wall-clock date + hour/minute, read in `timeZone`, as a UTC ISO instant — the "guess, then correct by the zone's own offset" technique, correct across DST. */
+export function zonedTimeToUtcIso(isoDate: string, hour: number, minute: number, timeZone: string): string {
+  const naive = new Date(`${isoDate}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`);
+  const offsetMinutes = timezoneOffsetMinutes(naive, timeZone);
+  return new Date(naive.getTime() - offsetMinutes * 60_000).toISOString();
+}
+
+function timezoneOffsetMinutes(date: Date, timeZone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).formatToParts(date);
+    const get = (type: string) => Number(parts.find((entry) => entry.type === type)?.value ?? "0");
+    const hour = get("hour") === 24 ? 0 : get("hour");
+    const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), hour, get("minute"), get("second"));
+    return (asUtc - date.getTime()) / 60_000;
+  } catch {
+    return 0;
+  }
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function firstName(displayName: string): string {

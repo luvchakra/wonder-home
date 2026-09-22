@@ -89,6 +89,7 @@ describe("the tools an agent is offered", () => {
 
     expect(names).not.toContain("bills.pay");
     expect(names).not.toContain("members.set_role");
+    expect(names).not.toContain("health.notify_overdue");
     expect(names).toContain("outcomes.read");
   });
 

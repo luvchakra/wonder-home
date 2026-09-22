@@ -47,6 +47,11 @@ const REQUIRED_PERMISSION: Partial<Record<HouseholdIntent["action"], Permission>
   assign_responsibility: "responsibilities.manage",
   adjust_schedule: "responsibilities.manage",
   order_items: "finance.view",
+  record_health_appointment: "health.manage",
+  log_health_issue: "health.manage",
+  resolve_health_issue: "health.manage",
+  log_vital: "health.manage",
+  set_fitness_goal: "health.manage",
 };
 
 /** How an action maps onto the autonomy model's notion of what it does. */
@@ -63,6 +68,15 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   make_payment: "payment",
   order_items: "order",
   assign_responsibility: "permission_change",
+  record_health_appointment: "schedule",
+  log_health_issue: "draft",
+  resolve_health_issue: "draft",
+  // Recognized, never claimed as done: no vitals/fitness write exists yet
+  // (stories 21-007/21-008). "draft" keeps the autonomy gate harmless so the
+  // honest "not yet doable" reply comes from the executor, never a refusal
+  // that implies the household did something wrong by asking.
+  log_vital: "draft",
+  set_fitness_goal: "draft",
   greet: "read",
   unknown: "read",
 };
@@ -164,6 +178,16 @@ function summarize(intent: HouseholdIntent): string {
       return "Place the order";
     case "assign_responsibility":
       return `Make ${intent.target.reference ?? "them"} responsible for ${String(intent.parameters.outcomeKey ?? "this")}`;
+    case "record_health_appointment":
+      return `Book a ${String(intent.parameters.typeText ?? "health")} appointment`;
+    case "log_health_issue":
+      return `Record ${String(intent.parameters.label ?? "this")}`;
+    case "resolve_health_issue":
+      return `Mark ${String(intent.parameters.label ?? "this")} resolved`;
+    case "log_vital":
+      return `Note your ${String(intent.parameters.vital ?? "reading")}`;
+    case "set_fitness_goal":
+      return `Note the goal: ${String(intent.parameters.activity ?? "this")}`;
     default:
       return intent.utterance;
   }
@@ -184,6 +208,12 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Take the payment", "Mark the bill as paid"];
     case "order_items":
       return ["Place the order with the merchant", "Update what the household expects to arrive"];
+    case "record_health_appointment":
+      return ["Book the appointment for you", "Show it under Health & Fitness"];
+    case "log_health_issue":
+      return ["Record it under Health & Fitness, private to you unless you choose to share it"];
+    case "resolve_health_issue":
+      return ["Mark it resolved under Health & Fitness"];
     default:
       return [summarize(intent)];
   }
@@ -202,6 +232,12 @@ function refusalFor(intent: HouseholdIntent): string {
       return "Changing who is responsible is up to an administrator.";
     case "adjust_schedule":
       return "Changing the household's schedule is up to an administrator.";
+    case "record_health_appointment":
+    case "log_health_issue":
+    case "resolve_health_issue":
+    case "log_vital":
+    case "set_fitness_goal":
+      return "Health & Fitness is for the adults in the household.";
     default:
       return "You do not have access to that.";
   }

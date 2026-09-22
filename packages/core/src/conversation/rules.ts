@@ -1,3 +1,4 @@
+import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { extractItems } from "./clarify";
 
@@ -28,7 +29,7 @@ type Rule = {
   read: (match: RegExpMatchArray, utterance: string) => Omit<HouseholdIntent, "actorMemberId" | "channel" | "utterance" | "understanding"> | null;
 };
 
-const WHEN_WORDS = "today|tonight|tomorrow|this (?:week|weekend|morning|afternoon|evening)|next (?:week|weekend)|on \\w+day|\\w+day";
+const WHEN_WORDS = "today|tonight|tomorrow|this (?:week|weekend|month|morning|afternoon|evening)|next (?:week|weekend|month|\\w+day)|on \\w+day|\\w+day";
 
 const LIST_WORDS = "(?:grocery|groceries|shopping)(?: list)?|list";
 
@@ -59,6 +60,48 @@ function slug(value: string): string {
 
 function lowerName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** "dentist" → "dentist"; "my dentist" / "eye" / "skin" → the closest real appointment type; anything else → "other", never invented. */
+const APPOINTMENT_TYPE_WORDS: Partial<Record<AppointmentType, readonly string[]>> = {
+  dentist: ["dentist", "dental"],
+  eye_care: ["eye", "eyes", "optometrist", "ophthalmologist"],
+  physiotherapy: ["physio", "physiotherapy", "physiotherapist"],
+  dermatology: ["skin", "derm", "dermatologist", "dermatology"],
+  vaccination: ["vaccine", "vaccination", "jab", "shot"],
+  mental_wellness: ["therapy", "therapist", "counsellor", "counselor", "psychiatrist", "psychologist"],
+  diagnostic: ["scan", "x-ray", "xray", "blood test", "lab test", "diagnostic"],
+  doctor: ["doctor", "gp", "physician", "checkup", "check-up"],
+};
+
+function matchAppointmentType(text: string): AppointmentType {
+  const lower = text.toLowerCase();
+  for (const type of APPOINTMENT_TYPES) {
+    const words = APPOINTMENT_TYPE_WORDS[type];
+    if (words?.some((word) => lower.includes(word))) return type;
+  }
+  return "other";
+}
+
+/** "3" or "three" → 3, for "I want to walk three times a week" as readily as the digit form. */
+const WORD_COUNTS: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+};
+
+function countWord(value: string): number {
+  const lower = value.toLowerCase();
+  return WORD_COUNTS[lower] ?? Number(lower);
 }
 
 function item(value: string): string {
@@ -113,6 +156,15 @@ const RULES: readonly Rule[] = [
       parameters: { subject: match[2]!.trim() },
       confidence: 0.85,
     }),
+  },
+  {
+    // "What health appointments do I have this month?" — a health-scoped
+    // status question, read exactly like the schedule-scoped one above
+    // (story 21-006). Health facts only reach the reply when the asking
+    // member's own authorization allows it — this rule only recognizes the
+    // question, it decides nothing about what may be shown.
+    pattern: new RegExp(`^(?:what(?:'s| is|s)?\\s+)?(?:my |our )?health(?: appointments?| issues?| checkups?| records?)?(?: do (?:i|we) have)?(?: (${WHEN_WORDS}))?\\??$`, "i"),
+    read: (match) => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: withWhen({ scope: "health" }, match[1]), confidence: 0.93 }),
   },
 
   // --- Agents: run the specialists for real ----------------------------------
@@ -294,6 +346,72 @@ const RULES: readonly Rule[] = [
     }),
   },
 
+  // --- Health (story 21-006) ------------------------------------------------------
+  // Never a diagnosis, and never a direct write from this file — a rule only
+  // ever produces an intent; the governed health service (createAppointment,
+  // createIssue, setIssueStatus) is what actually records anything, exactly
+  // the same "request, not authorization" shape every other rule already
+  // keeps. Placed before "Preferences" below, since "I have X" would
+  // otherwise be read as a stated preference rather than a symptom.
+  {
+    pattern: new RegExp(
+      `^i(?:'ve| have)(?: got)? (?:a |an )?(.+?) appointment(?:\\s+(?:on\\s+|for\\s+)?(${WHEN_WORDS}|\\d{4}-\\d{2}-\\d{2}))?(?:\\s+at\\s+(\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?))?$`,
+      "i",
+    ),
+    read: (match) => {
+      const appointmentType = matchAppointmentType(match[1]!);
+      const parameters: Record<string, unknown> = { typeText: match[1]!.trim(), appointmentType };
+      if (match[2]) parameters.when = match[2].trim().toLowerCase();
+      if (match[3]) parameters.time = match[3].trim().toLowerCase();
+      return { action: "record_health_appointment", target: { kind: "member", reference: "self" }, parameters, confidence: 0.88 };
+    },
+  },
+  {
+    pattern: /^my (blood pressure|bp|weight|heart rate|pulse|temperature|blood sugar|sugar) (?:was|is)\s+(.+)$/i,
+    read: (match) => ({
+      action: "log_vital",
+      target: { kind: "member", reference: "self" },
+      parameters: { vital: match[1]!.toLowerCase(), reading: match[2]!.trim().replace(/[.!]+$/, "") },
+      confidence: 0.9,
+    }),
+  },
+  {
+    pattern: /^i want to (.+?) (\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve) times? a (day|week|month)$/i,
+    read: (match) => ({
+      action: "set_fitness_goal",
+      target: { kind: "member", reference: "self" },
+      parameters: { activity: match[1]!.trim(), timesPer: match[3]!.toLowerCase(), count: countWord(match[2]!) },
+      confidence: 0.88,
+    }),
+  },
+  {
+    pattern: /^my (.+?) (?:is|are|has|have) (?:gone|better|resolved|cleared up|cleared|over|done|fine now)$/i,
+    read: (match) => ({
+      action: "resolve_health_issue",
+      target: { kind: "member", reference: "self" },
+      parameters: { label: match[1]!.trim() },
+      confidence: 0.87,
+    }),
+  },
+  {
+    pattern: /^i(?:'ve| have)(?: had)? (?:a |an )?(.+?)(?:\s+since\s+(.+))?$/i,
+    read: (match) => {
+      const label = item(match[1]!);
+      // The same discipline the grocery "i need X" rule already uses: a
+      // short symptom-shaped noun, not a sentence about something else
+      // that happens to start with "I have" or "I've had".
+      if (
+        label.split(" ").length > 5 ||
+        /^(?:a |an )?(?:meeting|appointment|call|deadline|exam|test|idea|feeling|plan|question|thought)\b/i.test(label)
+      ) {
+        return null;
+      }
+      const params: Record<string, unknown> = { label };
+      if (match[2]) params.since = match[2].trim().toLowerCase();
+      return { action: "log_health_issue", target: { kind: "member", reference: "self" }, parameters: params, confidence: 0.83 };
+    },
+  },
+
   // --- Preferences ---------------------------------------------------------------
   {
     pattern: /^(?:actually,?\s+)?(?:we|i|the family|the kids)\s+(?:prefer|like|usually|always|want|have|eat|do)\s+(.+)$/i,
@@ -420,5 +538,10 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "plan_event",
   "adjust_schedule",
   "assign_responsibility",
+  "record_health_appointment",
+  "log_vital",
+  "set_fitness_goal",
+  "resolve_health_issue",
+  "log_health_issue",
   "set_preference",
 ];
