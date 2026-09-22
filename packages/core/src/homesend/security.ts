@@ -1,14 +1,17 @@
+import { platformMalwareScanConfig, scanForMalware, type MalwareScanOutcome } from "./malware-scan";
 import type { HomeSendSecurityStatus } from "./items";
 
 /**
  * A minimal, real content check for HomeSend uploads (architecture doc
- * section 12: "validate file signature, not only filename/MIME"). This is
- * deliberately small: it proves the bytes are actually the image format the
+ * section 12: "validate file signature, not only filename/MIME"). The
+ * magic-byte check proves the bytes are actually the image format the
  * upload claims to be, the same gap a mislabeled or renamed file exploits.
- * It is not a malware scanner — nothing in this repo has a live scanning
- * provider (see CLAUDE.md's external-providers rule), so a "clean" result
- * here means "the file is what it says it is", not "safe against every
- * threat".
+ * `malware-scan.ts` is the second, optional check — optional because
+ * nothing in this repo has a live scanning provider configured (see
+ * CLAUDE.md's external-providers rule), so `scanned: false` there means
+ * exactly what it already meant before that file existed: a "clean" result
+ * here says "the file is what it says it is, and nothing configured found
+ * it unsafe", never "scanned safe against every threat".
  */
 
 const JPEG_MAGIC = [0xff, 0xd8, 0xff];
@@ -34,8 +37,31 @@ export function detectImageMimeType(bytes: Uint8Array): "image/jpeg" | "image/pn
   return null;
 }
 
-/** `clean` only when the bytes actually are the claimed content type — a renamed or mislabeled file is `rejected`. */
-export function validateUploadSecurity(claimedContentType: string, bytes: Uint8Array): HomeSendSecurityStatus {
+/**
+ * `clean` only when the bytes actually are the claimed content type, and
+ * (whenever a scan actually ran) the provider did not flag them. A renamed
+ * or mislabeled file is `rejected` regardless of the scan; a file a
+ * configured provider flags is `rejected` even though its bytes matched.
+ */
+export function validateUploadSecurity(
+  claimedContentType: string,
+  bytes: Uint8Array,
+  malwareScan: MalwareScanOutcome = { scanned: false },
+): HomeSendSecurityStatus {
   const detected = detectImageMimeType(bytes);
-  return detected !== null && detected === claimedContentType ? "clean" : "rejected";
+  if (detected === null || detected !== claimedContentType) return "rejected";
+  if (malwareScan.scanned && !malwareScan.clean) return "rejected";
+  return "clean";
+}
+
+/**
+ * The convenience every upload path actually calls: resolves the platform's
+ * scanning config, runs the scan if one is configured, and folds the result
+ * into the same verdict `validateUploadSecurity` always returned — so
+ * wiring this in changes nothing about behaviour today (no provider is
+ * configured) and everything about behaviour the day one is.
+ */
+export async function assessUploadSecurity(claimedContentType: string, bytes: Uint8Array): Promise<HomeSendSecurityStatus> {
+  const scanOutcome = await scanForMalware(bytes, claimedContentType, platformMalwareScanConfig());
+  return validateUploadSecurity(claimedContentType, bytes, scanOutcome);
 }

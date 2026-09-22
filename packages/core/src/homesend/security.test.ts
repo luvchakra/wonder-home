@@ -47,4 +47,25 @@ describe("validateUploadSecurity", () => {
   it("is rejected when the bytes are not an image at all, whatever the claimed type", () => {
     expect(validateUploadSecurity("image/jpeg", NOT_AN_IMAGE)).toBe("rejected");
   });
+
+  it("defaults to clean on a magic-byte match with no scan supplied at all", () => {
+    expect(validateUploadSecurity("image/jpeg", JPEG)).toBe("clean");
+  });
+
+  it("is clean when the bytes match and an actual scan found nothing", () => {
+    expect(validateUploadSecurity("image/jpeg", JPEG, { scanned: true, clean: true })).toBe("clean");
+  });
+
+  it("is rejected when the bytes match but a configured scan flagged the file", () => {
+    expect(validateUploadSecurity("image/jpeg", JPEG, { scanned: true, clean: false })).toBe("rejected");
+  });
+
+  it("is clean when the bytes match and the scan did not run at all", () => {
+    expect(validateUploadSecurity("image/jpeg", JPEG, { scanned: false })).toBe("clean");
+  });
+
+  it("stays rejected for a bad magic-byte match even if a scan says clean", () => {
+    // The scan verdict can never override the file simply not being what it claims.
+    expect(validateUploadSecurity("image/png", JPEG, { scanned: true, clean: true })).toBe("rejected");
+  });
 });

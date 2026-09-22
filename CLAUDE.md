@@ -243,7 +243,26 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   immediately; signed out, it is staged (`homesend_share_handoffs`,
   RLS-unreachable from any session, an unguessable single-use token is
   its only credential) and resumed the moment sign-in resolves a
-  household.
+  household. That signed-out branch is rate-limited by IP hash
+  (`homesend/rate-limit.ts`'s `mayCreateShareHandoff`/`hashClientIp` —
+  never the raw address, only its sha256, counted via
+  `homesend_share_handoffs.ip_hash`); an unidentifiable caller is let
+  through rather than blocked, since this is a throttle against abuse, not
+  an authorization gate. Every upload path also runs a malware-scanning
+  seam (`homesend/malware-scan.ts`'s `scanForMalware`, wired in through
+  `security.ts`'s `assessUploadSecurity`) alongside the existing
+  magic-byte check — provider-neutral and genuinely inert until a
+  deployment sets `WONDERHOME_MALWARE_SCAN_ENDPOINT`, same discipline as
+  every other integration point here. The classifier's structured output
+  runs through a deterministic backstop (`classify-intake.ts`'s
+  `sanitizeIntakeExtraction`) that nulls out any field a hallucinating
+  model set outside its own claimed kind — never trusted to classify,
+  only to enforce the invariants the system prompt only asks for —
+  covered by golden scenarios in `classify-intake-evaluations.ts`, the
+  same "policy decides, the model only proposes" pattern `evaluations.ts`
+  already documents. `homesend_share_handoffs` past its 30-minute window
+  is swept both opportunistically on every share request and for real by
+  `/platform/retention`.
 
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
 runs the household's actual domains: `ai/gather-assessments.ts` merges

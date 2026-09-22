@@ -70,6 +70,53 @@ const IntakeExtractionSchema = z.object({
 
 export type IntakeExtraction = z.infer<typeof IntakeExtractionSchema>;
 
+/**
+ * Enforces, in code, the cross-field invariants the system prompt only
+ * *asks* the model to follow — a schema-valid response can still set
+ * `billKind` on a `grocery_item` or a `secondary` proposal on `unknown` if
+ * the model doesn't obey its own instructions. This is the deterministic
+ * backstop: never trusted to classify, only to null out whatever a kind
+ * doesn't own, so the confirm screen never shows a field that makes no
+ * sense for what it's confirming. See `classify-intake-evaluations.ts` for
+ * the golden cases this runs against.
+ */
+export function sanitizeIntakeExtraction(raw: IntakeExtraction): IntakeExtraction {
+  if (!raw.readable) {
+    return {
+      readable: false,
+      kind: "unknown",
+      title: null,
+      notes: null,
+      billKind: null,
+      payee: null,
+      amount: null,
+      currency: null,
+      dueDate: null,
+      schoolKind: null,
+      subject: null,
+      quantity: null,
+      unit: null,
+      category: null,
+      secondary: null,
+    };
+  }
+
+  return {
+    ...raw,
+    billKind: raw.kind === "bill" ? raw.billKind : null,
+    payee: raw.kind === "bill" ? raw.payee : null,
+    amount: raw.kind === "bill" ? raw.amount : null,
+    currency: raw.kind === "bill" ? raw.currency : null,
+    dueDate: raw.kind === "bill" ? raw.dueDate : null,
+    schoolKind: raw.kind === "school_item" ? raw.schoolKind : null,
+    subject: raw.kind === "school_item" ? raw.subject : null,
+    quantity: raw.kind === "grocery_item" ? raw.quantity : null,
+    unit: raw.kind === "grocery_item" ? raw.unit : null,
+    category: raw.kind === "grocery_item" ? raw.category : null,
+    secondary: raw.kind === "bill" || raw.kind === "school_item" ? raw.secondary : null,
+  };
+}
+
 // Gemini's responseJsonSchema is an OpenAPI 3.0 subset — see model-client.ts's
 // own comment on INTENT_JSON_SCHEMA for why this is hand-written rather than
 // derived from the Zod schema.
@@ -166,7 +213,7 @@ export async function classifyIntake(
           output_config: { format: zodOutputFormat(IntakeExtractionSchema), effort: "low" },
         });
         if (response.stop_reason === "refusal" || !response.parsed_output) return null;
-        return response.parsed_output;
+        return sanitizeIntakeExtraction(response.parsed_output);
       }
       case "google": {
         const client = new GoogleGenAI({ apiKey });
@@ -189,7 +236,7 @@ export async function classifyIntake(
           },
         });
         const parsed = response.text ? IntakeExtractionSchema.safeParse(JSON.parse(response.text)) : null;
-        return parsed?.success ? parsed.data : null;
+        return parsed?.success ? sanitizeIntakeExtraction(parsed.data) : null;
       }
       case "openai": {
         const client = new OpenAI({ apiKey });
@@ -210,7 +257,8 @@ export async function classifyIntake(
           ],
           response_format: zodResponseFormat(IntakeExtractionSchema, "intake_extraction"),
         });
-        return completion.choices[0]?.message.parsed ?? null;
+        const parsed = completion.choices[0]?.message.parsed;
+        return parsed ? sanitizeIntakeExtraction(parsed) : null;
       }
     }
   } catch (thrown) {

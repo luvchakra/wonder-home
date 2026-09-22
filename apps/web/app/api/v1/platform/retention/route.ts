@@ -1,5 +1,6 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
 import { purgeExpired, summarise } from "@wonderhome/core/privacy/purge";
 
@@ -38,18 +39,36 @@ export async function POST(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return refuse();
 
   try {
-    const outcomes = await purgeExpired(createAdminClient());
-    const failed = outcomes.filter((outcome) => outcome.error);
+    const admin = createAdminClient();
+    const outcomes = await purgeExpired(admin);
+
+    // Not a `RetentionClass`: staged, pre-account share content has its own
+    // fixed 30-minute window rather than the day-scale schedule the Privacy
+    // Centre publishes (see `pruneExpiredShareHandoffs`'s own doc comment),
+    // so it is swept here directly rather than forced into that schedule.
+    let handoffsDeleted = 0;
+    let handoffsError: string | undefined;
+    try {
+      handoffsDeleted = await pruneExpiredShareHandoffs(admin);
+    } catch (thrown) {
+      handoffsError = thrown instanceof Error ? thrown.message : "unknown";
+    }
+    const swept = [
+      ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
+      { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
+    ];
+    const failed = swept.filter((row) => row.error);
 
     log.info("retention sweep", {
       summary: summarise(outcomes),
+      handoffsDeleted,
       failed: failed.length,
-      allow: ["summary", "failed"],
+      allow: ["summary", "handoffsDeleted", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
     return Response.json(
-      { swept: outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })) },
+      { swept },
       { status: failed.length > 0 ? 207 : 200, headers: { "cache-control": "no-store" } },
     );
   } catch (thrown) {

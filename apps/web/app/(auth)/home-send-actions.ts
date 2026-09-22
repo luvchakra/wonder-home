@@ -13,7 +13,7 @@ import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { createHomeSendItem, dismissHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
-import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
+import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, createSchoolItem } from "@wonderhome/core/school/repository";
@@ -52,7 +52,7 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
     const membership = await requireMembership(supabase, householdId);
 
     const buffer = Buffer.from(await photo.arrayBuffer());
-    const securityStatus = validateUploadSecurity(photo.type, buffer);
+    const securityStatus = await assessUploadSecurity(photo.type, buffer);
 
     const itemId = crypto.randomUUID();
     const path = `${householdId}/${itemId}`;
