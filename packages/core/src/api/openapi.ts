@@ -757,6 +757,59 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/appointments": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's health appointments",
+          description:
+            "Optionally filtered by `memberId` and `status` (repeatable). RLS (`wh.may_see_health`) decides which appointments the caller sees, exactly as it does for a health profile.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+          ],
+          responses: {
+            "200": { description: "The visible appointments" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Book an appointment",
+          description:
+            "Progressive entry (who → what → when → where → notes → reminder). Only for the caller themselves, or a child they guard — never another adult, even one who has shared selected_family visibility. Returns any detected schedule conflict and a likely-duplicate warning alongside the new appointment, neither of which blocks the booking.",
+          responses: {
+            "201": { description: "The new appointment, plus any conflicts and a likely-duplicate warning" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/appointments/{appointmentId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "appointmentId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One appointment",
+          responses: {
+            "200": { description: "The appointment" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Update, confirm/complete/cancel, or reschedule an appointment",
+          description:
+            "The body's `action` field discriminates which of the three this is: `update` changes the appointment's own details (never its time or status), `set_status` moves it through proposed → confirmed/cancelled or confirmed → completed/cancelled, and `reschedule` creates a new appointment at a new time and marks this one `rescheduled` rather than mutating its time in place.",
+          responses: {
+            "200": { description: "The updated appointment (or, for a reschedule, the new one plus any new conflicts)" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

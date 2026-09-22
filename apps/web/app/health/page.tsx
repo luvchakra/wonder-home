@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { listAppointments } from "@wonderhome/core/health/appointments";
+import { healthAppointmentsAgenda } from "@wonderhome/core/health/agenda";
 import { getHealthProfile, listHealthConsents, type PrivacyScope } from "@wonderhome/core/health/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -19,6 +21,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { AppointmentStatusActions, BookAppointmentButton } from "../_components/health-appointment-forms";
 import {
   GrantHealthConsentButton,
   HealthAiAssistanceToggle,
@@ -75,10 +78,11 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members] = await Promise.all([
+  const [profile, consents, members, appointments] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    listAppointments(supabase, householdId).catch(() => []),
   ]);
 
   const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? "Someone";
@@ -88,6 +92,9 @@ export default async function HealthPage({
   const currentScope: PrivacyScope = profile?.privacyScope ?? "private";
   const aiAssistanceEnabled = profile?.aiAssistanceEnabled ?? true;
 
+  const agenda = healthAppointmentsAgenda(appointments, nameOf, membership.household.timezone);
+  const appointmentById = new Map(appointments.map((appointment) => [appointment.id, appointment]));
+
   const sections = [
     {
       key: "attention",
@@ -95,6 +102,7 @@ export default async function HealthPage({
       icon: HeartPulse,
       tone: "attention" as const,
       description: "An overdue checkup, an unconfirmed appointment, something worth a look — none yet.",
+      items: agenda.needsAttention,
     },
     {
       key: "coming_up",
@@ -102,6 +110,7 @@ export default async function HealthPage({
       icon: CalendarClock,
       tone: "health" as const,
       description: "Appointments and preventive care land here once you add them.",
+      items: agenda.comingUp,
     },
     {
       key: "monitoring",
@@ -109,6 +118,7 @@ export default async function HealthPage({
       icon: Clock,
       tone: "care" as const,
       description: "A health issue you're keeping an eye on shows up here.",
+      items: [],
     },
     {
       key: "recent",
@@ -116,15 +126,21 @@ export default async function HealthPage({
       icon: CircleCheck,
       tone: "handled" as const,
       description: "Nothing recorded yet.",
+      items: agenda.recent,
     },
   ];
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Health &amp; Fitness</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top, without having to keep track of everything yourself.</p>
+        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
+          <div className="hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Health &amp; Fitness</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top, without having to keep track of everything yourself.</p>
+          </div>
+          {active === "overview" ? (
+            <BookAppointmentButton householdId={householdId} members={members.map((m) => ({ id: m.id, displayName: m.displayName }))} defaultPrivacyScope={currentScope} />
+          ) : null}
         </header>
 
         <SegmentedControl
@@ -140,8 +156,33 @@ export default async function HealthPage({
           <>
             {sections.map((section) => (
               <section key={section.key}>
-                <SectionHeader title={section.title} />
-                <EmptyState icon={section.icon} tone={section.tone} title="Nothing here yet" description={section.description} />
+                <SectionHeader title={section.title} count={section.items.length || undefined} />
+                {section.items.length === 0 ? (
+                  <EmptyState icon={section.icon} tone={section.tone} title="Nothing here yet" description={section.description} />
+                ) : (
+                  <Card className="p-2">
+                    <ul className="divide-y divide-[var(--wh-border)]">
+                      {section.items.map((item) => {
+                        const appointmentId = item.subjectKey.replace("appointment.", "");
+                        const appointment = appointmentById.get(appointmentId);
+                        return (
+                          <ActionRow
+                            key={item.subjectKey}
+                            icon={section.icon}
+                            tone={section.tone}
+                            title={item.title}
+                            meta={item.reason}
+                            action={
+                              appointment && section.key !== "recent" ? (
+                                <AppointmentStatusActions householdId={householdId} appointmentId={appointment.id} status={appointment.status} />
+                              ) : null
+                            }
+                          />
+                        );
+                      })}
+                    </ul>
+                  </Card>
+                )}
               </section>
             ))}
             <QuoteCard>Less to remember. More time for what matters.</QuoteCard>

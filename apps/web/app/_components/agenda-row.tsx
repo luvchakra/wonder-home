@@ -2,6 +2,7 @@ import {
   CalendarHeart,
   Gift,
   GraduationCap,
+  HeartPulse,
   MessageSquareText,
   PawPrint,
   ShoppingBasket,
@@ -46,6 +47,7 @@ const BY_DOMAIN: Record<string, Presentation> = {
   event: { icon: CalendarHeart, tone: "people", href: "/family" },
   gift: { icon: Gift, tone: "people", href: "/family" },
   conflict: { icon: CalendarHeart, tone: "people", href: "/family" },
+  appointment: { icon: HeartPulse, tone: "health", href: "/health" },
 };
 
 /** The action in the family's words rather than the engine's. */
@@ -89,6 +91,8 @@ const ACTION_LABEL: Record<string, string> = {
   move_right: "Resolve",
   drop_optional: "Resolve",
   ask_household: "Decide",
+  confirm_appointment: "Confirm",
+  review_conflict: "Review",
 };
 
 /**
