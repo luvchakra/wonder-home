@@ -35,6 +35,19 @@ export function PillLink({
   return <Link {...props} className={cn(BASE, TONE[tone], className)} />;
 }
 
+export type BadgeTone =
+  | "neutral"
+  | "attention"
+  | "risk"
+  | "handled"
+  /** Domain-coloured variants, for a badge that names which domain a row belongs to
+   * rather than how urgent it is — e.g. Today's focus's "Grocery" / "School" chips. */
+  | "money"
+  | "meals"
+  | "school"
+  | "people"
+  | "home";
+
 /** A non-interactive state label: "Done", "On track", "Needs review". */
 export function Badge({
   children,
@@ -42,7 +55,7 @@ export function Badge({
   className,
 }: {
   children: ReactNode;
-  tone?: "neutral" | "attention" | "risk" | "handled";
+  tone?: BadgeTone;
   className?: string;
 }) {
   return (
@@ -53,6 +66,11 @@ export function Badge({
         tone === "attention" && "bg-[var(--wh-attention-soft)] text-[var(--wh-attention)]",
         tone === "risk" && "bg-[var(--wh-risk-soft)] text-[var(--wh-risk)]",
         tone === "handled" && "bg-[var(--wh-handled-soft)] text-[var(--wh-handled)]",
+        tone === "money" && "bg-[var(--wh-tone-money-soft)] text-[var(--wh-tone-money)]",
+        tone === "meals" && "bg-[var(--wh-tone-meals-soft)] text-[var(--wh-tone-meals)]",
+        tone === "school" && "bg-[var(--wh-tone-school-soft)] text-[var(--wh-tone-school)]",
+        tone === "people" && "bg-[var(--wh-tone-people-soft)] text-[var(--wh-tone-people)]",
+        tone === "home" && "bg-[var(--wh-tone-home-soft)] text-[var(--wh-tone-home)]",
         className,
       )}
     >

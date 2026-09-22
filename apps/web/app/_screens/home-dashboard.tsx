@@ -1,4 +1,18 @@
-import { AlertTriangle, CalendarHeart, CalendarOff, ChevronRight, CircleCheck, Heart, Sparkles, Sun } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarHeart,
+  CalendarOff,
+  ChevronRight,
+  CircleCheck,
+  GraduationCap,
+  Heart,
+  Send,
+  ShoppingBasket,
+  Sparkles,
+  Sun,
+  UserRoundPlus,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 
 import { listEvents } from "@wonderhome/core/family/repository";
@@ -8,10 +22,12 @@ import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
 import { cn } from "@wonderhome/core/lib/cn";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { AddTaskMenu, type AddTaskOption } from "@wonderhome/core/ui/add-task-menu";
 import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
+import { FamilyIllustration } from "@wonderhome/core/ui/family-illustration";
 import {
   ExpandableMetricGrid,
   MetricDetailEmpty,
@@ -22,7 +38,7 @@ import {
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { AI_MODE_LABEL, HandledList } from "@wonderhome/core/ui/outcome-card";
-import { Badge, PillLink } from "@wonderhome/core/ui/pill";
+import { Badge, PillLink, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
@@ -35,10 +51,38 @@ import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { NewEventForm } from "../_components/new-event-form";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
-import { householdAgenda } from "../_lib/agenda";
-import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
+import { householdAgenda, type DomainSummary } from "../_lib/agenda";
+import { formatDate, formatTime, greetingFor, type Session } from "../_lib/session";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
 import { iconForOutcome } from "../_lib/outcome-icons";
+
+/** The Home page's own quick-add launcher: each option is a real domain's
+ * existing add flow, never a new one invented here (rule 12/13). */
+const ADD_TASK_ITEMS: { key: "school" | "groceries" | "meals" | "bills"; label: string; icon: typeof GraduationCap }[] = [
+  { key: "school", label: "Add homework", icon: GraduationCap },
+  { key: "groceries", label: "Add grocery item", icon: ShoppingBasket },
+  { key: "meals", label: "Plan a meal", icon: Sparkles },
+  { key: "bills", label: "Add a bill", icon: Wallet },
+];
+
+/** Which domain a Today's-focus row belongs to, for its colour badge — the
+ * same domain colours the icon tiles already use, never an invented one. */
+const DOMAIN_BADGE: Partial<Record<DomainSummary["key"], { tone: BadgeTone; label: string }>> = {
+  school: { tone: "school", label: "School" },
+  shopping: { tone: "meals", label: "Grocery" },
+  meals: { tone: "meals", label: "Meals" },
+  bills: { tone: "money", label: "Bills" },
+  family: { tone: "people", label: "Family" },
+  home: { tone: "home", label: "Home" },
+};
+
+function focusBadge(riskLevel: HomeAssessmentRisk, domainKey: DomainSummary["key"] | undefined) {
+  if (riskLevel === "high") return { tone: "risk" as const, label: "Needs attention" };
+  if (riskLevel === "medium") return { tone: "attention" as const, label: "Needs attention" };
+  return (domainKey && DOMAIN_BADGE[domainKey]) || { tone: "neutral" as const, label: "Notable" };
+}
+
+type HomeAssessmentRisk = "high" | "medium" | "low" | "none";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -192,36 +236,54 @@ export function HomeDashboard({ session }: { session: Session }) {
   const now = new Date();
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
+  const addTaskOptions: AddTaskOption[] = ADD_TASK_ITEMS.flatMap((entry) => {
+    const item = secondary.find((candidate) => candidate.key === entry.key);
+    if (!item) return [];
+    const Icon = entry.icon;
+    return [{ href: item.href, label: entry.label, icon: <IconTile icon={Icon} tone={item.tone} size="sm" /> }];
+  });
+
   // The greeting needs nothing from the database, so it is on screen in the
   // first flush; everything below it streams in as its queries return.
   return (
     <AppShell active="home" viewer={viewer} secondary={secondary} pathname="/">
       <div className="space-y-6">
-        <header className="wh-rise space-y-2">
-          <div className="flex items-start justify-between gap-4">
+        <header className="wh-rise space-y-4">
+          <div>
             <h1 className="min-w-0 text-[1.625rem] font-bold tracking-tight text-balance sm:text-3xl">
               {greetingFor(timezone, now)}, {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
             </h1>
-            {/* The sheet puts the weather here. WonderHome has no weather
-                provider, and a temperature nobody measured is exactly the
-                invented number rule 9 forbids — so this says the true thing
-                it does know, and goes somewhere useful. */}
-            <Link
-              href="/today"
-              className="flex shrink-0 items-center gap-2 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-2 pr-2 pl-3 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
-            >
-              <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
-              <span className="min-w-0 text-left">
-                <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
-                <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
-              </span>
-              <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
-            </Link>
+            <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
           </div>
-          {/* Its own row, full width, rather than squeezed into a column
-              beside the date pill — which is what was forcing this one
-              short sentence onto three lines instead of one. */}
-          <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
+
+          {/* A family illustration with the brand's handwritten line beside
+              it — imagery in the household's own tones (rule 8), never a
+              stretched screenshot or a stock photo. */}
+          <div className="flex items-center gap-3">
+            <FamilyIllustration className="h-16 w-16 shrink-0 sm:h-20 sm:w-20" />
+            <div className="min-w-0 rounded-[var(--wh-radius-md)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-2.5 shadow-[var(--wh-shadow-card)]">
+              <ScriptAccent size="sm" heart className="truncate">
+                Happier Homes Happier Humans!
+              </ScriptAccent>
+            </div>
+          </div>
+
+          {/* Three quick pills: a launcher to a real add flow, and home-level
+              shortcuts to the two other primary AI surfaces — not a second
+              door (rule 13), since HomeTalk and HomeSend are already primary
+              nav destinations this only shortcuts to. */}
+          <div className="flex gap-2 overflow-x-auto pb-0.5">
+            <AddTaskMenu options={addTaskOptions} />
+            <PillLink href="/ai" tone="quiet" className="shrink-0">
+              <Sparkles aria-hidden className="size-4" />
+              HomeTalk
+            </PillLink>
+            <PillLink href="/home-send" tone="quiet" className="shrink-0">
+              <Send aria-hidden className="size-4" />
+              HomeSend
+            </PillLink>
+          </div>
         </header>
 
         <Suspense fallback={<LoadingState rows={4} label="Checking on the household" />}>
@@ -273,11 +335,27 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const todayFocus = upcoming.filter((event) => event.startsAt <= endOfToday && event.status !== "cancelled").slice(0, 3);
   const nextMoment = upcoming.find((event) => event.protected || event.kind === "family_time" || event.kind === "outing") ?? upcoming[0] ?? null;
 
-  const domainTiles = secondary.filter((item) => !["manage", "settings", "notifications", "certification"].includes(item.key));
+  // The six everyday domains, in the order a household actually reaches for
+  // them — responsibilities/school/meals/groceries/bills/upkeep. Househelper,
+  // Health and HomeSend keep their own cards/pills elsewhere on Home rather
+  // than repeating here.
+  const DOMAIN_TILE_ORDER = ["responsibilities", "school", "meals", "groceries", "bills", "upkeep"] as const;
+  const domainTiles = DOMAIN_TILE_ORDER.map((key) => secondary.find((item) => item.key === key)).filter(
+    (item): item is (typeof secondary)[number] => item !== undefined,
+  );
   // Helpers have their own screen and their own relationship to the home;
   // "family status" means the family, and househelp is its own card below.
   const family = members.filter((member) => member.memberType !== "helper");
   const helpers = members.filter((member) => member.memberType === "helper");
+
+  // Which domain each notable assessment came from, so a Today's-focus row
+  // can carry that domain's own colour badge (rule 3: domain colour, never
+  // invented). Built from the same per-domain reads `householdAgenda`
+  // already did — nothing here re-evaluates anything.
+  const domainBySubject = new Map<string, DomainSummary["key"]>();
+  for (const domain of agenda.domains) {
+    for (const need of domain.needs) domainBySubject.set(need.subjectKey, domain.key);
+  }
 
   // Only fetched once there is a helper to say anything about — the same
   // three tables the Househelper screen reads, so "Expected today" here
@@ -602,11 +680,12 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         </Card>
       ) : null}
 
-      {/* Today and the family moment: stacked on a phone, a pair from `sm`.
-          Both are primary reading rather than shortcuts, so neither is ever
-          half-width on a phone (rule 19). */}
-      <section className="wh-rise grid gap-4 sm:grid-cols-2" style={{ "--wh-rise-delay": "120ms" } as React.CSSProperties}>
-        <Card className="p-4">
+      {/* Today's focus and the family moment: each full width. Both are
+          primary reading rather than shortcuts, so neither is ever squeezed
+          into half a row on a phone (rule 19: primary information is a
+          full-width card, never one of a pair). */}
+      <div className="space-y-4">
+        <Card className="wh-rise p-4" style={{ "--wh-rise-delay": "120ms" } as React.CSSProperties}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
@@ -626,9 +705,17 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
             />
           ) : (
             <ul className="space-y-1">
-              {agenda.needsYou.slice(0, 2).map((item) => (
-                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} />
-              ))}
+              {agenda.needsYou.slice(0, 2).map((item) => {
+                const badge = focusBadge(item.riskLevel, domainBySubject.get(item.subjectKey));
+                return (
+                  <AgendaExpandableRow
+                    key={item.subjectKey}
+                    item={item}
+                    timezone={timezone}
+                    badge={<Badge tone={badge.tone}>{badge.label}</Badge>}
+                  />
+                );
+              })}
               {todayFocus.map((event) => (
                 <TodayEventRow key={event.id} event={event} timezone={timezone} />
               ))}
@@ -636,7 +723,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           )}
         </Card>
 
-        <Card className="flex flex-col p-4">
+        <Card className="wh-rise p-4" style={{ "--wh-rise-delay": "150ms" } as React.CSSProperties}>
           <div className="mb-3 flex items-center gap-2.5">
             <Heart aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-people)]" />
             <h2 className="text-base font-semibold tracking-tight">Family moment</h2>
@@ -651,13 +738,27 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   day={formatDate(timezone, nextMoment.startsAt).split(" ")[0] ?? ""}
                   month={formatDate(timezone, nextMoment.startsAt).split(" ")[1] ?? ""}
                   when={`${formatDate(timezone, nextMoment.startsAt, "long")} · ${formatTime(timezone, nextMoment.startsAt)}`}
+                  action={
+                    <PillLink href="/family" tone="soft">
+                      Plan together
+                    </PillLink>
+                  }
                 />
               </ul>
-              <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                <AvatarGroup names={family.map((member) => member.displayName)} />
-                <PillLink href="/family" tone="quiet">
-                  Family
-                </PillLink>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--wh-border)] pt-3">
+                <div className="flex items-center gap-1.5">
+                  <AvatarGroup names={family.map((member) => member.displayName)} />
+                  <Link
+                    href="/family"
+                    aria-label="Add a family member"
+                    className="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-[var(--wh-border-strong)] text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)]"
+                  >
+                    <UserRoundPlus aria-hidden className="size-4" />
+                  </Link>
+                </div>
+                <ScriptAccent size="sm" tilt={false} heart>
+                  More family time!
+                </ScriptAccent>
               </div>
             </>
           ) : (
@@ -676,7 +777,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
             </div>
           )}
         </Card>
-      </section>
+      </div>
 
       {domainTiles.length > 0 ? (
         <section className="wh-rise" style={{ "--wh-rise-delay": "180ms" } as React.CSSProperties}>
