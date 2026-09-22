@@ -6,6 +6,7 @@ import {
   CircleCheck,
   GraduationCap,
   Heart,
+  Mic,
   Send,
   ShoppingBasket,
   Sparkles,
@@ -36,7 +37,7 @@ import {
   type ExpandableMetric,
 } from "@wonderhome/core/ui/expandable-metric-card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
-import { IconTile } from "@wonderhome/core/ui/icon-tile";
+import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { AI_MODE_LABEL, HandledList } from "@wonderhome/core/ui/outcome-card";
 import { Badge, PillLink, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -44,7 +45,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
-import { Suspense } from "react";
+import { Suspense, type ComponentType } from "react";
 
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
@@ -83,6 +84,36 @@ function focusBadge(riskLevel: HomeAssessmentRisk, domainKey: DomainSummary["key
 }
 
 type HomeAssessmentRisk = "high" | "medium" | "low" | "none";
+
+/** A header quick-action: icon, bold label, one line of what it does — the
+ * same shape `AddTaskMenu`'s trigger visually matches, so the three pills
+ * in Home's header read as one row of equals. */
+function QuickActionLink({
+  href,
+  icon: Icon,
+  tone,
+  label,
+  meta,
+}: {
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  tone: IconTone;
+  label: string;
+  meta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-2 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
+    >
+      <IconTile icon={Icon} tone={tone} size="sm" />
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{meta}</span>
+      </span>
+    </Link>
+  );
+}
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -250,39 +281,41 @@ export function HomeDashboard({ session }: { session: Session }) {
       <div className="space-y-6">
         <header className="wh-rise space-y-4">
           <div>
-            <h1 className="min-w-0 text-[1.625rem] font-bold tracking-tight text-balance sm:text-3xl">
-              {greetingFor(timezone, now)}, {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
+            <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
+            <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
+              {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
             </h1>
             <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
             <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
           </div>
 
-          {/* A family illustration with the brand's handwritten line beside
-              it — imagery in the household's own tones (rule 8), never a
-              stretched screenshot or a stock photo. */}
-          <div className="flex items-center gap-3">
-            <FamilyIllustration className="h-16 w-16 shrink-0 sm:h-20 sm:w-20" />
-            <div className="min-w-0 rounded-[var(--wh-radius-md)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-2.5 shadow-[var(--wh-shadow-card)]">
-              <ScriptAccent size="sm" heart className="truncate">
-                Happier Homes Happier Humans!
+          {/* A family illustration with the brand's handwritten line in a
+              speech bubble beside it — imagery in the household's own tones
+              (rule 8), never a stretched screenshot or a stock photo. */}
+          <div className="flex items-center gap-2">
+            <FamilyIllustration className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" />
+            <div className="relative min-w-0 rounded-[var(--wh-radius-lg)] rounded-bl-none border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-3 shadow-[var(--wh-shadow-card)]">
+              <span
+                aria-hidden
+                className="absolute -bottom-0 -left-2 size-3 border-r border-b border-[var(--wh-border)] bg-[var(--wh-surface)] [clip-path:polygon(0_0,100%_100%,100%_0)]"
+              />
+              <ScriptAccent size="sm" tilt={false} heart className="text-right leading-[1.15]">
+                Happier Homes
+                <br />
+                Happier Humans!
               </ScriptAccent>
             </div>
           </div>
 
-          {/* Three quick pills: a launcher to a real add flow, and home-level
-              shortcuts to the two other primary AI surfaces — not a second
-              door (rule 13), since HomeTalk and HomeSend are already primary
-              nav destinations this only shortcuts to. */}
+          {/* Three quick actions: a launcher to a real add flow, and
+              home-level shortcuts to the two other primary AI surfaces —
+              not a second door (rule 13), since HomeTalk and HomeSend are
+              already primary/secondary nav destinations this only
+              shortcuts to. */}
           <div className="flex gap-2 overflow-x-auto pb-0.5">
-            <AddTaskMenu options={addTaskOptions} />
-            <PillLink href="/ai" tone="quiet" className="shrink-0">
-              <Sparkles aria-hidden className="size-4" />
-              HomeTalk
-            </PillLink>
-            <PillLink href="/home-send" tone="quiet" className="shrink-0">
-              <Send aria-hidden className="size-4" />
-              HomeSend
-            </PillLink>
+            <AddTaskMenu options={addTaskOptions} className="self-center" />
+            <QuickActionLink href="/ai" icon={Mic} tone="ai" label="HomeTalk" meta="Ask anything" />
+            <QuickActionLink href="/home-send" icon={Send} tone="handled" label="HomeSend" meta="Forward to WonderHome" />
           </div>
         </header>
 
