@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import {
   checkEntitlement,
   describe,
@@ -407,6 +408,12 @@ export async function changePlan(
       exceeded: assessment.exceeded.map((entry) => entry.featureKey),
       ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}),
     },
+  });
+
+  await dispatchWebhookEvent({
+    householdId: input.householdId,
+    eventType: "subscription.changed",
+    data: { from: assessment.fromPlanKey, to: assessment.toPlanKey, direction: assessment.direction },
   });
 
   return { assessment, planKey: input.toPlanKey };

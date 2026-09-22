@@ -649,6 +649,47 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/webhooks": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "The household's outbound webhook subscriptions",
+          description:
+            "Every subscription's URL, event types and status — never the signing secret. `household_webhooks` has no SELECT policy at all, the same exception `household_ai_credentials` already makes; this reads `list_webhook_subscriptions()` instead, which is built not to return it. Open to any member.",
+          responses: {
+            "200": { description: "The household's webhook subscriptions" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Subscribe a URL to a set of outbound events",
+          description:
+            "Admin-only. The URL must be https and not resolve to a private address (`webhooks/url-policy.ts`, re-checked again at delivery time). The response is the one and only time the signing secret is ever returned — copy it now.",
+          responses: {
+            "201": { description: "The new subscription, including its signing secret" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/webhooks/{webhookId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "webhookId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        patch: {
+          summary: "Rotate a webhook's secret, or turn it on/off",
+          description:
+            "Admin-only. `action: \"rotate\"` returns a new secret the same way creation does — the old one stops working immediately. `action: \"disable\"` is this entity's CLAUDE.md rule-12 \"remove\": never a hard delete, since a queued delivery still references the row.",
+          responses: {
+            "200": { description: "The subscription's new state; `secret` only present on rotate" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
@@ -792,6 +833,17 @@ export function buildOpenApiDocument(): Json {
           responses: {
             "200": { description: "Every table swept" },
             "207": { description: "Swept, with at least one table that could not be" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+      },
+      "/platform/webhook-delivery": {
+        post: {
+          summary: "Drain the outbound webhook delivery queue",
+          description:
+            "Signs and POSTs every due row in `webhook_deliveries` to its subscription's URL, retrying on failure with a fixed backoff before marking a delivery exhausted. Same authorization shape as /platform/retention — a shared secret, not a session, deliberately unreachable from any household's own session, since it crosses every household's subscriptions at once.",
+          responses: {
+            "200": { description: "Counts by outcome: delivered, retrying, exhausted, skipped" },
             "401": { $ref: "#/components/responses/Unauthenticated" },
           },
         },

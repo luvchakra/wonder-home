@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
+import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import type { HomeSendChange, HomeSendChangeDomain } from "./items";
 
 /**
@@ -112,6 +113,12 @@ export async function recordHomeSendChange(
     targetTable: input.domain,
     targetId: input.entityId,
     metadata: { intakeId: input.intakeId },
+  });
+
+  await dispatchWebhookEvent({
+    householdId: input.householdId,
+    eventType: "homesend.applied",
+    data: { domain: input.domain, entityId: input.entityId },
   });
 
   return fromRow(data as Row);

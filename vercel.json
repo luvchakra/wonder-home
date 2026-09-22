@@ -12,6 +12,10 @@
     {
       "path": "/api/v1/platform/retention",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/v1/platform/webhook-delivery",
+      "schedule": "30 3 * * *"
     }
   ]
 }
