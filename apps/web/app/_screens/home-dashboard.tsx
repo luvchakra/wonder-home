@@ -583,7 +583,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
       {agenda.handled.length > 0 ? (
         <Card
-          className="wh-rise border-[var(--wh-handled)]/25 bg-[var(--wh-handled-soft)]/50 p-4"
+          className="wh-rise border-[var(--wh-handled)]/40 bg-[var(--wh-handled-soft)]/70 p-4"
           style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}
         >
           <div className="mb-3 flex items-start justify-between gap-3">
