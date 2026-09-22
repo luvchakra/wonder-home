@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**164 of 181 stories done — 90.6%**
+**165 of 181 stories done — 91.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 164 |
+| Done | 165 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 17 |
+| Not Started | 16 |
 
 ## By module
 
@@ -45,7 +45,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
-| 21 Health and Fitness | `█░░░░░░░░░` | 1 | 8 | 7 not started |
+| 21 Health and Fitness | `██░░░░░░░░` | 2 | 8 | 6 not started |
 
 ## What is left
 
@@ -61,7 +61,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
-| `21-002` Appointments | 21 Health and Fitness | P0 | Not Started |
 | `21-003` Health issues | 21 Health and Fitness | P0 | Not Started |
 | `21-004` Checkups & preventive care | 21 Health and Fitness | P0 | Not Started |
 | `21-005` Health records & HomeSend intake | 21 Health and Fitness | P0 | Not Started |
@@ -393,12 +392,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 21 — Health and Fitness
 
-1 of 8 done `█░░░░░░░░░`
+2 of 8 done `██░░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `21-001` Health foundation & privacy | P0 | Done | Schema (`health_profiles`/`health_provenance`/`health_consents`), `wh.may_see_health` (no admin bypass), Overview + Privacy screens at `/health`, live-verified 2026-09-22 |
-| `21-002` Appointments | P0 | Not Started | — |
+| `21-002` Appointments | P0 | Done | Progressive booking wizard, confirm/complete/cancel, reschedule (new row + old marked rescheduled), deterministic conflict/duplicate detection, day-granularity reminder sweep folded into `/platform/retention`, live-verified 2026-09-22 |
 | `21-003` Health issues | P0 | Not Started | — |
 | `21-004` Checkups & preventive care | P0 | Not Started | — |
 | `21-005` Health records & HomeSend intake | P0 | Not Started | — |

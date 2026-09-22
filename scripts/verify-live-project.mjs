@@ -84,6 +84,7 @@ const SHIPPED_TABLES = [
   "health_profiles",
   "health_provenance",
   "health_consents",
+  "health_appointments",
 ];
 
 /**
@@ -293,6 +294,14 @@ async function main() {
     "anonymous cannot create a health profile",
     Boolean(forgedHealthProfile.error),
     forgedHealthProfile.error?.code ?? "no error",
+  );
+
+  // Health appointments (story 21-002) — same RLS shape as health_profiles.
+  const healthAppointments = await anon.from("health_appointments").select("id, appointment_type").limit(1);
+  check(
+    "anonymous cannot read a household's health appointments",
+    Boolean(healthAppointments.error) || (Array.isArray(healthAppointments.data) && healthAppointments.data.length === 0),
+    healthAppointments.error ? healthAppointments.error.code : `${healthAppointments.data?.length ?? "?"} rows`,
   );
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at

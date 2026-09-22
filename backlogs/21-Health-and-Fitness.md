@@ -5,7 +5,7 @@
 | # | Priority | Story ID | Story | Status | Notes |
 |---|---|---|---|---|---|
 | 1 | P0 | 21-001 | Health foundation & privacy | Done | Schema (`health_profiles`/`health_provenance`/`health_consents`), `wh.may_see_health` (no admin bypass), Overview + Privacy screens at `/health`, live-verified 2026-09-22 |
-| 2 | P0 | 21-002 | Appointments | Not Started | |
+| 2 | P0 | 21-002 | Appointments | Done | Progressive booking wizard, confirm/complete/cancel, reschedule (new row + old marked rescheduled), deterministic conflict/duplicate detection, day-granularity reminder sweep folded into `/platform/retention`, live-verified 2026-09-22 |
 | 3 | P0 | 21-003 | Health issues | Not Started | |
 | 4 | P0 | 21-004 | Checkups & preventive care | Not Started | |
 | 5 | P0 | 21-005 | Health records & HomeSend intake | Not Started | |

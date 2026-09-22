@@ -1,5 +1,6 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
@@ -71,6 +72,22 @@ export async function POST(request: Request) {
       });
     }
 
+    // Not a retention sweep at all — folded into this route rather than
+    // given its own cron entry because the project's Hobby-tier plan caps
+    // how many cron jobs a deployment gets (the same reason
+    // `/platform/webhook-delivery` runs daily rather than more often).
+    // Appointment reminders are day-granularity concepts anyway (advance/
+    // preparation/day-of), so this cadence is the right one for them, not a
+    // compromise made to fit.
+    let reminderSummary: { checked: number; sent: number; skipped: number } | null = null;
+    let reminderError: string | undefined;
+    try {
+      reminderSummary = await runHealthReminderSweep(admin);
+    } catch (thrown) {
+      reminderError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("health reminder sweep failed", { reason: reminderError, allow: ["reason"] });
+    }
+
     const swept = [
       ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
       { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
@@ -82,14 +99,15 @@ export async function POST(request: Request) {
       handoffsDeleted,
       deletionsFulfilled,
       deletionsFailed,
+      reminderSummary,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
     return Response.json(
-      { swept, deletionsFulfilled, deletionsFailed },
-      { status: failed.length > 0 || deletionsFailed !== 0 ? 207 : 200, headers: { "cache-control": "no-store" } },
+      { swept, deletionsFulfilled, deletionsFailed, healthReminders: reminderSummary ?? { error: reminderError } },
+      { status: failed.length > 0 || deletionsFailed !== 0 || reminderError ? 207 : 200, headers: { "cache-control": "no-store" } },
     );
   } catch (thrown) {
     const { status, body } = toErrorBody(thrown, "retention");

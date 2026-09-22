@@ -243,6 +243,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Narrows health-data visibility back down — as worth recording as the grant it undoes.",
     recordedIn: "packages/core/src/health/repository.ts",
   },
+  {
+    event: "health.appointment_created",
+    because: "A new health commitment for a member — who, when, and (when disclosed) why.",
+    recordedIn: "packages/core/src/health/appointments.ts",
+  },
+  {
+    event: "health.appointment_updated",
+    because: "Changes an appointment's own details — provider, notes, reminder preferences.",
+    recordedIn: "packages/core/src/health/appointments.ts",
+  },
+  {
+    event: "health.appointment_status_changed",
+    because: "Confirming, completing, cancelling or rescheduling an appointment — each one changes what the household believes is still coming up.",
+    recordedIn: "packages/core/src/health/appointments.ts",
+  },
 ];
 
 /**
@@ -377,6 +392,12 @@ export function describeAuditEvent(
       return { title: "Health data was shared with another member", detail: null };
     case "health.consent_revoked":
       return { title: "Health-data sharing was revoked", detail: null };
+    case "health.appointment_created":
+      return { title: "A health appointment was booked", detail: stringOr(metadata.appointmentType, null) };
+    case "health.appointment_updated":
+      return { title: "A health appointment's details changed", detail: null };
+    case "health.appointment_status_changed":
+      return { title: "A health appointment's status changed", detail: metadata.to ? `Now ${stringOr(metadata.to, "")}` : null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

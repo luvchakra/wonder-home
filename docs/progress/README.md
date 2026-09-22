@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [Story 21-002: appointments](2026-09-22-health-appointments.md) |
 | 2026-09-22 | [Story 21-001: health foundation & privacy](2026-09-22-health-foundation-and-privacy.md) |
 | 2026-09-22 | [Story 18-007: outbound webhooks](2026-09-22-outbound-webhooks.md) |
 | 2026-09-22 | [Story 16-007: privacy request admin visibility and deletion fulfillment](2026-09-22-privacy-request-deletion-fulfillment.md) |
