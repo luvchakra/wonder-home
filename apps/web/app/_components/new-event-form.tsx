@@ -15,6 +15,7 @@ const KINDS = [
   { value: "family_time", label: "Family time" },
   { value: "outing", label: "Outing" },
   { value: "birthday", label: "Birthday" },
+  { value: "special_occasion", label: "Special occasion" },
   { value: "visit", label: "Visit" },
   { value: "travel", label: "Travel" },
   { value: "appointment", label: "Appointment" },

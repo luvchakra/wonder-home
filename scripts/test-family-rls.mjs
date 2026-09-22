@@ -322,3 +322,69 @@ test("another household sees none of this", () => {
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.event_participants;`, options), "0");
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.schedule_conflicts;`, options), "0");
 });
+
+test("setting a member's birthday creates a family_events row for it", () => {
+  asProfile(
+    HEAD,
+    `update public.household_members set date_of_birth = '1990-01-01' where id = '${adultMember}';`,
+    options,
+  );
+  assert.equal(
+    psql(
+      `select kind || '|' || title from public.family_events where owner_member_id = '${adultMember}' and kind = 'birthday';`,
+      options,
+    ),
+    "birthday|Priya's birthday",
+  );
+});
+
+test("changing the birthday date moves the same event rather than adding a second one", () => {
+  asProfile(
+    HEAD,
+    `update public.household_members set date_of_birth = '1990-03-15' where id = '${adultMember}';`,
+    options,
+  );
+  assert.equal(
+    psql(`select count(*) from public.family_events where owner_member_id = '${adultMember}' and kind = 'birthday';`, options),
+    "1",
+  );
+  assert.equal(
+    psql(
+      `select extract(month from starts_at)::int || '-' || extract(day from starts_at)::int
+       from public.family_events where owner_member_id = '${adultMember}' and kind = 'birthday';`,
+      options,
+    ),
+    "3-15",
+  );
+});
+
+test("clearing the birthday removes the derived event", () => {
+  asProfile(HEAD, `update public.household_members set date_of_birth = null where id = '${adultMember}';`, options);
+  assert.equal(
+    psql(`select count(*) from public.family_events where owner_member_id = '${adultMember}' and kind = 'birthday';`, options),
+    "0",
+  );
+});
+
+test("a special occasion date syncs the same way, using its own label", () => {
+  asProfile(
+    HEAD,
+    `update public.household_members
+       set special_occasion_label = 'Wedding anniversary', special_occasion_date = '2015-11-20'
+     where id = '${adultMember}';`,
+    options,
+  );
+  assert.equal(
+    psql(
+      `select kind || '|' || title from public.family_events where owner_member_id = '${adultMember}' and kind = 'special_occasion';`,
+      options,
+    ),
+    "special_occasion|Wedding anniversary",
+  );
+
+  asProfile(HEAD, `update public.household_members set special_occasion_date = null where id = '${adultMember}';`, options);
+  assert.equal(
+    psql(`select count(*) from public.family_events where owner_member_id = '${adultMember}' and kind = 'special_occasion';`, options),
+    "0",
+  );
+});

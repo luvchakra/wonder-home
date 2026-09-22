@@ -262,6 +262,73 @@ test("an administrator cannot promote themselves to head", () => {
   );
 });
 
+test("a member can edit their own profile details", () => {
+  asProfile(
+    PARTNER,
+    `update public.household_members set nickname = 'Pri', occupation = 'Architect' where id = '${partnerMember}';`,
+    options,
+  );
+  assert.equal(
+    psql(`select nickname || ' ' || occupation from public.household_members where id = '${partnerMember}';`, options),
+    "Pri Architect",
+  );
+});
+
+test("a member editing themselves cannot change their own type, status, household or account link", () => {
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.household_members set member_type = 'child' where id = '${partnerMember}';`,
+      `select member_type from public.household_members where id = '${partnerMember}';`,
+      "adult",
+      options,
+    ),
+    "a member promoted or demoted their own member_type",
+  );
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.household_members set status = 'inactive' where id = '${partnerMember}';`,
+      `select status from public.household_members where id = '${partnerMember}';`,
+      "active",
+      options,
+    ),
+    "a member changed their own status",
+  );
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.household_members set household_id = '${otherHousehold}' where id = '${partnerMember}';`,
+      `select household_id from public.household_members where id = '${partnerMember}';`,
+      household,
+      options,
+    ),
+    "a member moved themselves to another household",
+  );
+});
+
+test("a member still cannot edit someone else's profile", () => {
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.household_members set nickname = 'Planted' where id = '${headMember}';`,
+      `select nickname from public.household_members where id = '${headMember}';`,
+      "KC",
+      options,
+    ),
+    "a non-admin member edited another member's profile",
+  );
+});
+
+test("an Admin editing their own row is unaffected by the self-edit guard", () => {
+  asProfile(
+    KUNAL,
+    `update public.household_members set nickname = 'K' where id = '${headMember}';`,
+    options,
+  );
+  assert.equal(psql(`select nickname from public.household_members where id = '${headMember}';`, options), "K");
+});
+
 test("a signed-out visitor is refused household data outright", () => {
   // anon holds no grant on these tables at all, so the refusal comes before RLS
   // is even consulted — a stronger outcome than an empty result set.

@@ -303,7 +303,7 @@ export default async function HousehelperPage({
                         member={helper}
                         allMembers={helpers}
                         timezone={timezone}
-                        editable={admin}
+                        editable={admin || helper.id === membership.memberId}
                         householdId={householdId}
                         currentMemberId={membership.memberId}
                         statusLabel={

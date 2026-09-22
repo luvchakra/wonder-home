@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForAnonymous, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForAnonymous, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_home_test";
@@ -22,18 +22,20 @@ const options = { database: DB };
 
 const HEAD = "11111111-1111-4111-8111-111111111111";
 const OUTSIDER = "22222222-2222-4222-8222-222222222222";
+const PARTNER = "33333333-3333-4333-8333-333333333333";
 
 let household = "";
 let headMember = "";
 let otherHousehold = "";
 let otherMember = "";
 let assetId = "";
+let partnerMember = "";
 
 before(() => {
   buildTestDatabase(DB);
   psql(
     `insert into auth.users (id, email) values
-       ('${HEAD}', 'kunal@example.test'), ('${OUTSIDER}', 'outsider@example.test');`,
+       ('${HEAD}', 'kunal@example.test'), ('${OUTSIDER}', 'outsider@example.test'), ('${PARTNER}', 'priya@example.test');`,
     options,
   );
 
@@ -54,6 +56,13 @@ before(() => {
     `insert into public.home_assets (household_id, name, service_interval_days, last_serviced_on, responsible_member_id)
      values ('${household}', 'Geyser', 365, '2026-05-01', '${headMember}')
      returning id;`,
+    options,
+  );
+
+  psql(`insert into public.profiles (id, display_name) values ('${PARTNER}', 'Priya');`, options);
+  partnerMember = psql(
+    `insert into public.household_members (household_id, profile_id, member_type, display_name)
+     values ('${household}', '${PARTNER}', 'adult', 'Priya') returning id;`,
     options,
   );
 });
@@ -228,6 +237,55 @@ test("a pet care need cannot be attached to another household's pet", () => {
        values ('${household}', '${theirPet}', 'food', 30);`,
       options,
     ),
+  );
+});
+
+test("a non-admin member cannot add a pet", () => {
+  assert.ok(
+    deniedForProfile(
+      PARTNER,
+      `insert into public.pets (household_id, name, species) values ('${household}', 'Whiskers', 'cat');`,
+      options,
+    ),
+  );
+});
+
+test("a new pet is active by default, and only an admin can retire or restore one", () => {
+  const pet = asProfile(
+    HEAD,
+    `insert into public.pets (household_id, name, species) values ('${household}', 'Rocky', 'dog') returning id;`,
+    options,
+  );
+
+  assert.equal(
+    psql(`select active from public.pets where id = '${pet}';`, options),
+    "t",
+    "a pet was not active by default",
+  );
+
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.pets set active = false where id = '${pet}';`,
+      `select active from public.pets where id = '${pet}';`,
+      "t",
+      options,
+    ),
+    "a non-admin member retired a pet",
+  );
+
+  asProfile(HEAD, `update public.pets set active = false where id = '${pet}';`, options);
+  assert.equal(
+    psql(`select active from public.pets where id = '${pet}';`, options),
+    "f",
+    "an admin could not retire a pet",
+  );
+
+  asProfile(HEAD, `update public.pets set active = true where id = '${pet}';`, options);
+  assert.equal(
+    psql(`select active from public.pets where id = '${pet}';`, options),
+    "t",
+    "an admin could not bring a retired pet back",
   );
 });
 

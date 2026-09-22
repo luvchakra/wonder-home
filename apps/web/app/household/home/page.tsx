@@ -9,8 +9,8 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
 
-import { AgendaRow } from "../../_components/agenda-row";
 import { AddAssetButton, RaiseServiceRequestButton } from "../../_components/home-forms";
+import { HomeAgendaRow } from "../../_components/home-agenda-row";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Home & Upkeep" };
@@ -69,9 +69,10 @@ export default async function HomeUpkeepPage() {
         </header>
 
         <MetricGrid
+          pairs
           metrics={[
-            { label: "Needs you", value: needsYou, icon: Wrench, tone: "attention" },
-            { label: "On track", value: Math.max(0, agenda.checked - needsYou), icon: CircleCheck, tone: "handled" },
+            { label: "Need you", value: needsYou, icon: Wrench, tone: "attention" },
+            { label: "Handled", value: Math.max(0, agenda.checked - needsYou), icon: CircleCheck, tone: "handled" },
             { label: "Laundry", value: agenda.laundry.length, icon: Shirt, tone: "care" },
             { label: "Pets", value: agenda.pets.length, icon: PawPrint, tone: "care" },
           ]}
@@ -81,7 +82,7 @@ export default async function HomeUpkeepPage() {
           <EmptyState
             icon={CircleCheck}
             tone="handled"
-            title="Nothing needs you"
+            title="All quiet — nothing needs you right now"
             description={agenda.checked === 0 ? "Add an appliance or raise a request above, or tell WonderHome about the house — either way, it keeps an eye on it from here." : "Everything is serviced, stocked and on schedule. WonderHome will say something when that changes."}
           />
         ) : (
@@ -90,7 +91,9 @@ export default async function HomeUpkeepPage() {
               <SectionHeader title={section.title} count={section.items.length} />
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
-                  {section.items.map((item) => <AgendaRow key={item.subjectKey} item={item} href="/household/home" />)}
+                  {section.items.map((item) => (
+                    <HomeAgendaRow key={item.subjectKey} item={item} timezone={membership.household.timezone} />
+                  ))}
                 </ul>
               </Card>
             </section>

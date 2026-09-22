@@ -56,7 +56,7 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "bills", label: "Bills & Finance", href: "/bills", icon: "wallet", tone: "money", purpose: "Stay on top", requires: ["finance.view"] },
   { key: "househelper", label: "Househelper", href: "/househelper", icon: "hand-heart", tone: "people", purpose: "Support that works", requires: null, adultOnly: true },
   { key: "upkeep", label: "Home & Upkeep", href: "/household/home", icon: "wrench", tone: "home", purpose: "Maintenance, laundry and pets", requires: null, adultOnly: true },
-  { key: "certification", label: "Belief Review", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true },
+  { key: "certification", label: "HomeBrain review", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true },
   { key: "notifications", label: "Notifications", href: "/notifications", icon: "bell", tone: "neutral", purpose: "Sparse and actionable", requires: null },
   { key: "manage", label: "Manage Household", href: "/household", icon: "settings-2", tone: "neutral", purpose: "Playbook, policies, AI autonomy", requires: ["household.manage"] },
   { key: "settings", label: "Settings & Profile", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "You, your preferences, your privacy", requires: null },

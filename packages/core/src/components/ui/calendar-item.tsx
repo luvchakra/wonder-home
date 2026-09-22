@@ -27,6 +27,7 @@ const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; t
   travel: { icon: Plane, tone: "home" },
   visit: { icon: Users, tone: "people" },
   family_time: { icon: Heart, tone: "people" },
+  special_occasion: { icon: Gift, tone: "people" },
 };
 
 export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className }: CalendarItemProps) {

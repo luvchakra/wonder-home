@@ -4,7 +4,7 @@ import { ApiError } from "../api/errors";
 import type { HomeAssessment } from "./assessment";
 import { maintenanceAgenda, type AssetCategory, type HomeAsset } from "./assets";
 import { assessLaundry, type LaundryNeed, type LaundryState } from "./laundry";
-import { petAgenda, type PetCareKind, type PetCareNeed } from "./pets";
+import { petAgenda, type Pet, type PetCareKind, type PetCareNeed } from "./pets";
 import { assessServiceRequest, openRequestAssetIds, type ServiceRequest, type ServiceStatus } from "./services";
 import type { DeviceSignal, SignalKind } from "./signals";
 import { dryingConditions, type WeatherWindow } from "./weather";
@@ -219,6 +219,118 @@ export async function listPetCareNeeds(
       supplyDaysRemaining: (row.supply_days_remaining as number | null) ?? null,
     };
   });
+}
+
+/**
+ * Pets as their own manageable entity (CLAUDE.md rule 12) — everything the
+ * household has told WonderHome about one, not just what `pet_care_needs`
+ * borrows for a care rhythm.
+ */
+export async function listPets(
+  supabase: SupabaseClient,
+  householdId: string,
+  options?: { includeRetired?: boolean },
+): Promise<Pet[]> {
+  let query = supabase
+    .from("pets")
+    .select("id, name, species, date_of_birth, vet_name, vet_contact, notes, active")
+    .eq("household_id", householdId)
+    .order("name", { ascending: true });
+  if (!options?.includeRetired) query = query.eq("active", true);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`listPets failed: ${error.code ?? "unknown"}`);
+
+  return (data ?? []).map((row: Row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    species: row.species as string,
+    dateOfBirth: (row.date_of_birth as string | null) ?? null,
+    vetName: (row.vet_name as string | null) ?? null,
+    vetContact: (row.vet_contact as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+    active: row.active as boolean,
+  }));
+}
+
+export type CreatePetInput = {
+  householdId: string;
+  name: string;
+  species: string;
+  dateOfBirth?: string | null;
+  vetName?: string | null;
+  vetContact?: string | null;
+  notes?: string | null;
+};
+
+export async function createPet(supabase: SupabaseClient, input: CreatePetInput): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("pets")
+    .insert({
+      household_id: input.householdId,
+      name: input.name,
+      species: input.species,
+      date_of_birth: input.dateOfBirth ?? null,
+      vet_name: input.vetName ?? null,
+      vet_contact: input.vetContact ?? null,
+      notes: input.notes ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can add a pet.");
+    throw new Error(`createPet failed: ${error.code ?? "unknown"}`);
+  }
+
+  return { id: (data as Row).id as string };
+}
+
+export type UpdatePetInput = {
+  name?: string;
+  species?: string;
+  dateOfBirth?: string | null;
+  vetName?: string | null;
+  vetContact?: string | null;
+  notes?: string | null;
+};
+
+export async function updatePet(
+  supabase: SupabaseClient,
+  householdId: string,
+  petId: string,
+  input: UpdatePetInput,
+): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.species !== undefined) patch.species = input.species;
+  if (input.dateOfBirth !== undefined) patch.date_of_birth = input.dateOfBirth;
+  if (input.vetName !== undefined) patch.vet_name = input.vetName;
+  if (input.vetContact !== undefined) patch.vet_contact = input.vetContact;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await supabase.from("pets").update(patch).eq("id", petId).eq("household_id", householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can edit a pet's details.");
+    throw new Error(`updatePet failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/** The other half of adding a pet (rule 12): retiring it, never a hard delete — `pet_care_needs` keeps its history against this row. */
+export async function setPetActive(
+  supabase: SupabaseClient,
+  householdId: string,
+  petId: string,
+  active: boolean,
+): Promise<void> {
+  const { error } = await supabase.from("pets").update({ active }).eq("id", petId).eq("household_id", householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can retire a pet.");
+    throw new Error(`setPetActive failed: ${error.code ?? "unknown"}`);
+  }
 }
 
 /** A reading with the asset it concerns, which the bare domain type has no need for. */

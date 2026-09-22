@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createClient } from "@wonderhome/core/db/server";
-import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import {
   acceptInvitation,
   createInvitation,
@@ -323,7 +323,7 @@ export async function updateMemberProfileAction(
   const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
 
   try {
-    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const actor = await requireMembership(supabase, parsed.data.householdId);
     await updateMemberProfile(supabase, actor, {
       memberId: parsed.data.memberId,
       displayName: parsed.data.displayName,
@@ -361,11 +361,13 @@ function avatarStoragePath(householdId: string, memberId: string): string {
 
 /**
  * The photo half of a member's details (rule 1: "for each person, give
- * option to edit their details, including their profile pictures").
+ * option to edit their details, including their profile pictures") — an
+ * Admin may do this for anyone, and a member may do it for themselves.
  *
  * Uploads to the private `avatars` bucket (never public — these can be
  * photos of children) at a path keyed by household and member id, which is
- * also the RLS boundary the storage policies check directly. Only the
+ * also the RLS boundary the storage policies check directly (both the
+ * Admin-scoped and the self-scoped ones — 20260922040000). Only the
  * storage path is written to `household_members.avatar_path`; the signed,
  * display-ready URL is minted at read time by `listMembers`, never stored.
  */
@@ -388,7 +390,7 @@ export async function updateMemberAvatarAction(
   const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
 
   try {
-    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const actor = await requireMembership(supabase, parsed.data.householdId);
     const path = avatarStoragePath(parsed.data.householdId, parsed.data.memberId);
 
     const { error: uploadError } = await supabase.storage
@@ -423,7 +425,7 @@ export async function removeMemberAvatarAction(
   const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
 
   try {
-    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const actor = await requireMembership(supabase, parsed.data.householdId);
     const path = avatarStoragePath(parsed.data.householdId, parsed.data.memberId);
     await supabase.storage.from("avatars").remove([path]);
     await updateMemberProfile(supabase, actor, { memberId: parsed.data.memberId, avatarPath: null });
