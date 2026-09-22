@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { HomeAssessment } from "@wonderhome/core/home/assessment";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -36,7 +38,21 @@ function Fact({ label, value }: { label: string; value: string | null }) {
  * Groceries' "Smart insights" both use this one component rather than each
  * inventing its own.
  */
-export function AgendaExpandableRow({ item, timezone, href }: { item: HomeAssessment; timezone: string; href?: string }) {
+export function AgendaExpandableRow({
+  item,
+  timezone,
+  href,
+  badge,
+}: {
+  item: HomeAssessment;
+  timezone: string;
+  href?: string;
+  /** Replaces the summary row's action pill with a status chip instead — for a
+   * screen (Home's Today's focus) that wants the row to read at a glance
+   * rather than invite a tap before it is even expanded. The real action
+   * stays reachable via the chevron's detail view either way. */
+  badge?: ReactNode;
+}) {
   const presentation = presentationFor(item.subjectKey);
   const label = item.action ? actionLabelFor(item.action.action) : null;
   const statusLabel = STATUS_LABEL[item.status] ?? item.status.replace(/_/g, " ");
@@ -50,7 +66,9 @@ export function AgendaExpandableRow({ item, timezone, href }: { item: HomeAssess
             <span className="block text-sm font-medium">{item.title}</span>
             <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{item.reason}</span>
           </span>
-          {label ? (
+          {badge ? (
+            <span className="shrink-0">{badge}</span>
+          ) : label ? (
             <span className="shrink-0">
               <PillLink href={href ?? presentation.href} tone={item.riskLevel === "high" ? "primary" : "soft"}>
                 {label}

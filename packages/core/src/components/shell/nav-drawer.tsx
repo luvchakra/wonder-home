@@ -162,7 +162,7 @@ function NavDrawer({
 
             <div className="relative flex items-start justify-between gap-2">
               <Link href="/" onClick={close} className="min-w-0">
-                <Wordmark tagline taglineClassName="max-w-[10rem] truncate" />
+                <Wordmark tagline taglineClassName="text-[0.4375rem] tracking-[0.08em]" />
               </Link>
               <Dialog.Close asChild>
                 <button
