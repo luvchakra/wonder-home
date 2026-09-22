@@ -8,11 +8,19 @@
 export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text"] as const;
 export type HomeSendSource = (typeof HOME_SEND_SOURCES)[number];
 
-export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed"] as const;
+export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed", "undone"] as const;
 export type HomeSendStatus = (typeof HOME_SEND_STATUSES)[number];
 
 export const HOME_SEND_KINDS = ["bill", "school_item", "grocery_item", "unknown"] as const;
 export type HomeSendKind = (typeof HOME_SEND_KINDS)[number];
+
+/** Whether a manual_upload's bytes actually matched the content type it claimed. Pasted text has no file, so it is always not_applicable. */
+export const HOME_SEND_SECURITY_STATUSES = ["not_applicable", "clean", "rejected"] as const;
+export type HomeSendSecurityStatus = (typeof HOME_SEND_SECURITY_STATUSES)[number];
+
+/** The one domain the HomeSend confirm form may write into (bill, school work or a grocery item). */
+export const HOME_SEND_CHANGE_DOMAINS = ["bill", "school_item", "grocery_item"] as const;
+export type HomeSendChangeDomain = (typeof HOME_SEND_CHANGE_DOMAINS)[number];
 
 /** Whatever the classifier read — the confirm screen's prefill, never written to a domain table directly. */
 export type HomeSendExtraction = {
@@ -42,5 +50,19 @@ export type HomeSendItem = {
   extracted: HomeSendExtraction | null;
   routedTable: string | null;
   routedId: string | null;
+  securityStatus: HomeSendSecurityStatus;
   createdAt: string;
+};
+
+/** What routing an item actually wrote — the record undo reverses. */
+export type HomeSendChange = {
+  id: string;
+  householdId: string;
+  intakeId: string;
+  domain: HomeSendChangeDomain;
+  entityId: string;
+  createdByMemberId: string;
+  createdAt: string;
+  undoneAt: string | null;
+  undoneByMemberId: string | null;
 };

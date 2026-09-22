@@ -6,15 +6,17 @@ import { z } from "zod";
 import type { IntakeSource } from "@wonderhome/core/ai/classify-intake";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
-import { createObligation } from "@wonderhome/core/finance/repository";
+import { cancelObligation, createObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
-import { createConsumable } from "@wonderhome/core/commerce/repository";
+import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
+import { getHomeSendChange, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
-import { createHomeSendItem, dismissHomeSendItem, routeHomeSendItem, setHomeSendClassification } from "@wonderhome/core/homesend/repository";
+import { createHomeSendItem, dismissHomeSendItem, markHomeSendUndone, routeHomeSendItem, setHomeSendClassification } from "@wonderhome/core/homesend/repository";
+import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
-import { createSchoolItem } from "@wonderhome/core/school/repository";
+import { cancelSchoolItem, createSchoolItem } from "@wonderhome/core/school/repository";
 
 /**
  * HomeSend v1 (Phase C): upload a photo/file, or paste a forwarded message,
@@ -106,8 +108,14 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
 
+    const buffer = Buffer.from(await photo.arrayBuffer());
+    const securityStatus = validateUploadSecurity(photo.type, buffer);
+
     const itemId = crypto.randomUUID();
     const path = `${householdId}/${itemId}`;
+    // Stored either way — the private bucket is the quarantine. Only
+    // classification is skipped for a rejected file, never the record that
+    // it was sent (CLAUDE.md's "security failure -> quarantine; no AI").
     const { error: uploadError } = await supabase.storage.from("home-send").upload(path, photo, { contentType: photo.type });
     if (uploadError) throw new Error(`home-send upload failed: ${uploadError.message}`);
 
@@ -117,9 +125,18 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
       createdByMemberId: membership.memberId,
       source: "manual_upload",
       filePath: path,
+      securityStatus,
     });
 
-    const buffer = Buffer.from(await photo.arrayBuffer());
+    if (securityStatus === "rejected") {
+      revalidatePath("/ai");
+      revalidatePath("/home-send");
+      return {
+        notice: "That file didn't read as a real image, so WonderHome kept it without looking inside — please try a different photo.",
+        item: { id: itemId, classifiedKind: "unknown", extracted: null },
+      };
+    }
+
     const state = await classifyAndSave(supabase, householdId, itemId, {
       image: { mediaType: photo.type as "image/jpeg" | "image/png" | "image/webp", base64: buffer.toString("base64") },
     });
@@ -215,7 +232,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
 
   try {
     const supabase = await createClient();
-    await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, parsed.data.householdId);
 
     let routedTable: string;
     let routedId: string;
@@ -259,6 +276,13 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     }
 
     await routeHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId, { routedTable, routedId });
+    await recordHomeSendChange(supabase, {
+      householdId: parsed.data.householdId,
+      intakeId: parsed.data.itemId,
+      domain: parsed.data.kind,
+      entityId: routedId,
+      createdByMemberId: membership.memberId,
+    });
 
     revalidatePath("/ai");
     revalidatePath("/home-send");
@@ -280,11 +304,48 @@ export async function dismissHomeSendItemAction(_previous: RouteHomeItemState, f
 
   try {
     const supabase = await createClient();
-    await requireMembership(supabase, parsed.data.householdId);
-    await dismissHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId);
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    await dismissHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId, membership.memberId);
     revalidatePath("/ai");
     revalidatePath("/home-send");
     return { notice: "Dismissed." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "homesend").body.error.message };
+  }
+}
+
+const undoSchema = z.object({ householdId: z.uuid(), changeId: z.uuid() });
+
+/** Undoing having sent something in (CLAUDE.md rule 12): reverses the one write routing made, through the same domain service a manual remove would use. */
+export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
+  const parsed = undoSchema.safeParse({ householdId: formData.get("householdId"), changeId: formData.get("changeId") });
+  if (!parsed.success) return { error: "Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+
+    const change = await getHomeSendChange(supabase, parsed.data.householdId, parsed.data.changeId);
+    if (!change) return { error: "That is not part of this household." };
+    if (change.undoneAt) return { error: "Already undone." };
+
+    if (change.domain === "bill") {
+      await cancelObligation(supabase, { id: change.entityId, householdId: parsed.data.householdId });
+    } else if (change.domain === "school_item") {
+      await cancelSchoolItem(supabase, parsed.data.householdId, change.entityId);
+    } else {
+      await retireConsumable(supabase, { id: change.entityId, householdId: parsed.data.householdId });
+    }
+
+    await undoHomeSendChange(supabase, parsed.data.householdId, change.id, membership.memberId);
+    await markHomeSendUndone(supabase, parsed.data.householdId, change.intakeId);
+
+    revalidatePath("/ai");
+    revalidatePath("/home-send");
+    revalidatePath("/bills");
+    revalidatePath("/school");
+    revalidatePath("/groceries");
+    return { notice: "Undone. WonderHome forgot it again." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }

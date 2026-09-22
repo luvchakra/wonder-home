@@ -190,3 +190,165 @@ test("an outsider cannot touch another household's intake item", () => {
     "an outsider could change the status of another household's intake item",
   );
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1: security_status, the "undone" status, and homesend_changes/undo.
+// ---------------------------------------------------------------------------
+
+test("an upload defaults to not_applicable security status", () => {
+  const uploadId = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, file_path)
+     values ('${household}', '${headMember}', 'manual_upload', '${household}/some-file')
+     returning id;`,
+    options,
+  );
+  assert.equal(
+    psql(`select security_status from public.home_send_items where id = '${uploadId}';`, options),
+    "not_applicable",
+  );
+});
+
+test("security_status only accepts the three real values", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, security_status)
+       values ('${household}', '${headMember}', 'pasted_text', 'Planted', 'infected');`,
+      options,
+    ),
+    "an invalid security_status was accepted",
+  );
+});
+
+let obligationId = "";
+
+test("routing writes a real domain row (so undo has something to reverse)", () => {
+  obligationId = psql(
+    `insert into public.obligations (household_id, name, kind) values ('${household}', 'Water bill', 'utility') returning id;`,
+    options,
+  );
+  assert.ok(obligationId.length > 0);
+});
+
+let changeId = "";
+
+test("any household member may record what routing wrote", () => {
+  changeId = asProfile(
+    OTHER_ADULT,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+     values ('${household}', '${itemId}', 'bill', '${obligationId}', '${otherAdultMember()}')
+     returning id;`,
+    options,
+  );
+  assert.ok(changeId.length > 0);
+});
+
+test("a member cannot record a change attributed to someone else", () => {
+  assert.ok(
+    deniedForProfile(
+      OTHER_ADULT,
+      `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+       values ('${household}', '${itemId}', 'bill', '${obligationId}', '${headMember}');`,
+      options,
+    ),
+    "a member recorded a change attributed to another member",
+  );
+});
+
+test("only one change per intake", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+       values ('${household}', '${itemId}', 'bill', '${obligationId}', '${headMember}');`,
+      options,
+    ),
+    "a second change was recorded for the same intake item",
+  );
+});
+
+test("another household cannot see this household's changes", () => {
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_changes;`, options), "0");
+});
+
+test("undone_at and undone_by_member_id must arrive together", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `update public.homesend_changes set undone_at = now() where id = '${changeId}';`,
+      options,
+    ),
+    "undone_at was accepted with no undone_by_member_id",
+  );
+});
+
+test("any household member can undo a shared change, attributing it to themselves", () => {
+  asProfile(
+    HEAD,
+    `update public.homesend_changes
+       set undone_at = now(), undone_by_member_id = '${headMember}'
+     where id = '${changeId}';`,
+    options,
+  );
+  asProfile(
+    HEAD,
+    `update public.home_send_items set status = 'undone' where id = '${itemId}';`,
+    options,
+  );
+  assert.equal(psql(`select status from public.home_send_items where id = '${itemId}';`, options), "undone");
+});
+
+test("a change already undone cannot be undone again", () => {
+  // The USING clause (`undone_at is null`) matches zero rows here, which
+  // does not throw — see lib/db.mjs's documented gotcha — so this has to
+  // re-read the row rather than rely on a caught exception.
+  assert.ok(
+    deniedForUpdate(
+      OTHER_ADULT,
+      `update public.homesend_changes set undone_at = now(), undone_by_member_id = '${otherAdultMember()}' where id = '${changeId}';`,
+      `select undone_by_member_id from public.homesend_changes where id = '${changeId}';`,
+      headMember,
+      options,
+    ),
+    "a change already marked undone was updated again",
+  );
+});
+
+test("a member cannot attribute an undo to someone else", () => {
+  const secondItemId = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+     values ('${household}', '${headMember}', 'pasted_text', 'A second thing sent in')
+     returning id;`,
+    options,
+  );
+  const secondObligationId = psql(
+    `insert into public.obligations (household_id, name, kind) values ('${household}', 'Gas bill', 'utility') returning id;`,
+    options,
+  );
+  const secondChangeId = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+     values ('${household}', '${secondItemId}', 'bill', '${secondObligationId}', '${headMember}')
+     returning id;`,
+    options,
+  );
+  assert.ok(
+    deniedForProfile(
+      OTHER_ADULT,
+      `update public.homesend_changes
+         set undone_at = now(), undone_by_member_id = '${headMember}'
+       where id = '${secondChangeId}';`,
+      options,
+    ),
+    "a member attributed an undo to another member",
+  );
+});
+
+function otherAdultMember() {
+  return psql(
+    `select id from public.household_members where household_id = '${household}' and profile_id = '${OTHER_ADULT}';`,
+    options,
+  );
+}

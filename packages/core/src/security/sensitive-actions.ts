@@ -158,6 +158,31 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Staff turned an experimental capability on or off for this household. The family can read this row.",
     recordedIn: "packages/core/src/platform/feature-flags.ts",
   },
+  {
+    event: "homesend.intake_received",
+    because: "External content — a photo, file or pasted forward — entered the household from outside HomeTalk.",
+    recordedIn: "packages/core/src/homesend/repository.ts",
+  },
+  {
+    event: "homesend.security_rejected",
+    because: "An upload's bytes did not match what it claimed to be. The household should be able to ask what was sent and why it was refused.",
+    recordedIn: "packages/core/src/homesend/repository.ts",
+  },
+  {
+    event: "homesend.applied",
+    because: "A bill, school item or grocery item was written from outside content, not typed in by hand.",
+    recordedIn: "packages/core/src/homesend/changes.ts",
+  },
+  {
+    event: "homesend.dismissed",
+    because: "A household decided something sent in was not worth acting on — as worth recording as acting on it.",
+    recordedIn: "packages/core/src/homesend/repository.ts",
+  },
+  {
+    event: "homesend.undone",
+    because: "A HomeSend write was reversed. The reversal is a change to household data, same as the write it undoes.",
+    recordedIn: "packages/core/src/homesend/changes.ts",
+  },
 ];
 
 /**
@@ -258,6 +283,16 @@ export function describeAuditEvent(
         title: "A feature was turned " + (metadata.enabled ? "on" : "off"),
         detail: stringOr(metadata.flagKey, null),
       };
+    case "homesend.intake_received":
+      return { title: "Something was sent to HomeSend", detail: stringOr(metadata.source, null) };
+    case "homesend.security_rejected":
+      return { title: "A HomeSend upload was refused", detail: "It did not read as the file type it claimed to be." };
+    case "homesend.applied":
+      return { title: "HomeSend added something to the household", detail: stringOr(metadata.intakeId, null) };
+    case "homesend.dismissed":
+      return { title: "A HomeSend item was dismissed", detail: null };
+    case "homesend.undone":
+      return { title: "A HomeSend addition was undone", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

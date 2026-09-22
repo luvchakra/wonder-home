@@ -11,10 +11,13 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { cn } from "@wonderhome/core/lib/cn";
 
+import type { HomeSendChange } from "@wonderhome/core/homesend/items";
+
 import {
   dismissHomeSendItemAction,
   pasteHomeSendItemAction,
   routeHomeSendItemAction,
+  undoHomeSendChangeAction,
   uploadHomeSendItemAction,
   type HomeSendItem,
   type RouteHomeItemState,
@@ -46,16 +49,19 @@ export function HomeSendInbox({
   kids,
   pending,
   history,
+  changes,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
   pending: HomeSendItem[];
   history: HomeSendItem[];
+  changes: HomeSendChange[];
 }) {
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});
   const [pasteState, pasteAction, pasting] = useActionState<SendHomeItemState, FormData>(pasteHomeSendItemAction, {});
   const [routeState, routeAction, routing] = useActionState<RouteHomeItemState, FormData>(routeHomeSendItemAction, {});
   const [dismissState, dismissAction, dismissing] = useActionState<RouteHomeItemState, FormData>(dismissHomeSendItemAction, {});
+  const [undoState, undoAction, undoing] = useActionState<RouteHomeItemState, FormData>(undoHomeSendChangeAction, {});
 
   const [mode, setMode] = useState<"drop" | "paste">("drop");
   const [dragOver, setDragOver] = useState(false);
@@ -78,7 +84,7 @@ export function HomeSendInbox({
 
   // Routing or dismissing closes the confirm step and clears the drop zone
   // back to its resting state, same as `HomeSendSheet` closing itself.
-  const closedNotice = routeState.notice ?? dismissState.notice ?? null;
+  const closedNotice = routeState.notice ?? dismissState.notice ?? undoState.notice ?? null;
   const [seenClosedNotice, setSeenClosedNotice] = useState(closedNotice);
   if (closedNotice !== seenClosedNotice) {
     setSeenClosedNotice(closedNotice);
@@ -102,6 +108,7 @@ export function HomeSendInbox({
   const prefill = openItem?.extracted ?? null;
   const defaultKind = openItem?.classifiedKind && openItem.classifiedKind !== "unknown" ? openItem.classifiedKind : "grocery_item";
   const pendingOthers = pending.filter((item) => item.id !== openItem?.id);
+  const changeByIntakeId = new Map(changes.map((change) => [change.intakeId, change]));
 
   return (
     <div className="space-y-5">
@@ -198,12 +205,13 @@ export function HomeSendInbox({
               {pendingOthers.map((item) => {
                 const presentation = presentationFor(item.classifiedKind);
                 const title = item.extracted?.title ?? (item.rawText ? item.rawText.slice(0, 60) : "Something you sent");
+                const subtitle = item.securityStatus === "rejected" ? "Couldn't be verified — you can still fill this in by hand" : presentation.label;
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
                     <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium">{title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{subtitle}</span>
                     </span>
                     <Pill
                       type="button"
@@ -228,6 +236,9 @@ export function HomeSendInbox({
               {history.map((item) => {
                 const presentation = presentationFor(item.classifiedKind);
                 const title = item.extracted?.title ?? (item.rawText ? item.rawText.slice(0, 60) : "Something you sent");
+                const change = changeByIntakeId.get(item.id);
+                const canUndo = item.status === "routed" && change && !change.undoneAt;
+                const statusLabel = item.status === "routed" ? "Added" : item.status === "undone" ? "Undone" : "Dismissed";
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
                     <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
@@ -235,12 +246,23 @@ export function HomeSendInbox({
                       <span className="block text-sm font-medium">{title}</span>
                       <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label}</span>
                     </span>
-                    <Badge tone={item.status === "routed" ? "handled" : "neutral"}>{item.status === "routed" ? "Added" : "Dismissed"}</Badge>
+                    {canUndo ? (
+                      <form action={undoAction}>
+                        <input type="hidden" name="householdId" value={householdId} />
+                        <input type="hidden" name="changeId" value={change.id} />
+                        <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${title}`}>
+                          {undoing ? "Undoing…" : "Undo"}
+                        </Pill>
+                      </form>
+                    ) : (
+                      <Badge tone={item.status === "routed" ? "handled" : "neutral"}>{statusLabel}</Badge>
+                    )}
                   </li>
                 );
               })}
             </ul>
           </Card>
+          {undoState.error ? <Alert>{undoState.error}</Alert> : null}
         </section>
       ) : null}
 
