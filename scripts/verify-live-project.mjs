@@ -79,6 +79,8 @@ const SHIPPED_TABLES = [
   "homesend_changes",
   "homesend_addresses",
   "homesend_share_handoffs",
+  "household_webhooks",
+  "webhook_deliveries",
 ];
 
 /**
@@ -249,6 +251,25 @@ async function main() {
     Boolean(keys.error) || (Array.isArray(keys.data) && keys.data.length === 0),
     keys.error ? keys.error.code : `${keys.data?.length ?? "?"} rows`,
   );
+
+  // household_webhooks has no client reach at all (story 18-007) -- not just
+  // no SELECT policy, no INSERT/UPDATE/DELETE policy either, for the reason
+  // its own migration comment gives: only the service-role client ever
+  // writes it, and a WHERE-conditioned write on a no-SELECT-policy table
+  // silently no-ops for every session anyway.
+  const webhookSecrets = await anon.from("household_webhooks").select("secret").limit(1);
+  check(
+    "nobody can read a webhook signing secret",
+    Boolean(webhookSecrets.error) || (Array.isArray(webhookSecrets.data) && webhookSecrets.data.length === 0),
+    webhookSecrets.error ? webhookSecrets.error.code : `${webhookSecrets.data?.length ?? "?"} rows`,
+  );
+  const forgedWebhook = await anon.from("household_webhooks").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    url: "https://example.com/forged",
+    secret: "a-secret-that-is-at-least-thirty-two-characters",
+    event_types: ["member.added"],
+  });
+  check("anonymous cannot create a webhook subscription", Boolean(forgedWebhook.error), forgedWebhook.error?.code ?? "no error");
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at
   // all, deliberately: a client that could write one could hand itself the

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**162 of 173 stories done — 93.6%**
+**163 of 173 stories done — 94.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 162 |
+| Done | 163 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 11 |
+| Not Started | 10 |
 
 ## By module
 
@@ -42,7 +42,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
-| 18 API & Developer Platform | `███████░░░` | 6 | 8 | 2 not started |
+| 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
 
@@ -56,7 +56,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-007` Weather | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
-| `18-007` Webhooks/events | 18 API & Developer Platform | P1 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
@@ -341,7 +340,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 18 — API & Developer Platform
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -351,7 +350,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `18-004` Idempotency | P0 | Done | Idempotency-Key replay with request fingerprinting |
 | `18-005` OpenAPI | P0 | Done | Generated from the route schemas, served at /api/v1/openapi; E2E derives the endpoint list from disk so it cannot go stale |
 | `18-006` Audit hooks | P0 | Done | recordAuditEvent with redaction; never fails the request |
-| `18-007` Webhooks/events | P1 | Not Started | — |
+| `18-007` Webhooks/events | P1 | Done | `household_webhooks`/`webhook_deliveries`: a household subscribes an HTTPS URL to 5 real events (member.added/removed, subscription.changed, privacy.deletion_fulfilled, homesend.applied), gets a Svix-style-signed (`t=<ts>,v1=<sig>`) versioned payload with retry/backoff over ~1 day; both tables unreachable from any client session, admin included, since every write already goes through the admin client and a WHERE-conditioned write on a no-SELECT-policy table silently no-ops for every session (found empirically while building this); `deliver.ts` drains the queue via a new `CRON_SECRET`-gated route/cron; live-verified end to end against webhook.site with an independently-recomputed HMAC match |
 | `18-008` Developer platform | P2 | Not Started | — |
 
 ### 19 — Testing, Observability & Production
