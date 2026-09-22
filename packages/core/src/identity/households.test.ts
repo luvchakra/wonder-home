@@ -26,6 +26,7 @@ const household = {
   timezone: "Asia/Kolkata",
   status: "active" as const,
   owner_member_id: "m-1",
+  key_member_id: null,
 };
 
 describe("membership mapping", () => {
@@ -53,6 +54,7 @@ describe("membership mapping", () => {
           timezone: "Asia/Kolkata",
           status: "active",
           ownerMemberId: "m-1",
+          keyMemberId: null,
         },
       },
     ]);

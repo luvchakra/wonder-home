@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { BookOpen, CalendarDays, GraduationCap, MessageSquareText, Plug } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import type { HomeAssessment } from "@wonderhome/core/home/assessment";
+import { isoDate } from "@wonderhome/core/home/assessment";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { describeSchoolHealth } from "@wonderhome/core/school/connector";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
@@ -18,7 +20,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AgendaRow } from "../_components/agenda-row";
+import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { AddHomeworkButton } from "../_components/school-forms";
 import { SchoolItemDetail } from "../_components/school-item-controls";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
@@ -146,15 +148,20 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             ) : (
               <>
                 {agenda.deadlines.length > 0 ? (
-                  <section>
+                  <section className="space-y-3">
                     <SectionHeader title="Deadlines at risk" count={agenda.deadlines.length} />
-                    <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{agenda.deadlines.map((item) => <AgendaRow key={item.subjectKey} item={item} href="/school?tab=homework" />)}</ul></Card>
+                    {groupByDueDate(agenda.deadlines, timezone).map((group) => (
+                      <div key={group.label}>
+                        <h3 className="px-1 pb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{group.label}</h3>
+                        <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{group.items.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/school?tab=homework" />)}</ul></Card>
+                      </div>
+                    ))}
                   </section>
                 ) : null}
                 {agenda.messages.length > 0 ? (
                   <section>
                     <SectionHeader title="From the school" count={agenda.messages.length} />
-                    <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{agenda.messages.map((item) => <AgendaRow key={item.subjectKey} item={item} href="/school?tab=calendar" />)}</ul></Card>
+                    <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{agenda.messages.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/school?tab=calendar" />)}</ul></Card>
                   </section>
                 ) : null}
               </>
@@ -251,4 +258,33 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
       </div>
     </AppShell>
   );
+}
+
+/**
+ * "Deadlines at risk" grouped by when they're due, rather than one flat
+ * list — every item here already has a real due date (`assessDeadline`
+ * never marks an item without one notable), so this never invents a bucket
+ * for a date that isn't there.
+ */
+function groupByDueDate(items: HomeAssessment[], timezone: string): { label: string; items: HomeAssessment[] }[] {
+  const now = new Date();
+  const today = isoDate(now);
+  const tomorrow = isoDate(new Date(now.getTime() + 86_400_000));
+  const sorted = [...items].sort((a, b) => (a.dueOn ?? "").localeCompare(b.dueOn ?? ""));
+
+  const groups = new Map<string, HomeAssessment[]>();
+  for (const item of sorted) {
+    const due = item.dueOn;
+    const label = !due
+      ? "No date yet"
+      : due < today
+        ? "Overdue"
+        : due === today
+          ? "Today"
+          : due === tomorrow
+            ? "Tomorrow"
+            : formatDate(timezone, new Date(`${due}T00:00:00.000Z`), "long");
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  }
+  return [...groups.entries()].map(([label, groupItems]) => ({ label, items: groupItems }));
 }

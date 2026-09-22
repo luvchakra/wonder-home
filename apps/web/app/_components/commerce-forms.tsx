@@ -1,11 +1,12 @@
 "use client";
 
 import { Archive, Pencil, Plus } from "lucide-react";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
+import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -15,8 +16,7 @@ import { createConsumableAction, retireConsumableAction, updateConsumableAction 
 
 // Lowercase, matching every category value the closed enum ever stored (and
 // the "pet" value consumables_pet_is_pet_category still requires verbatim) —
-// a <datalist> has no separate value/label the way a <select> does, so
-// what's shown here is exactly what gets typed into the field and stored.
+// what's shown here is exactly what gets stored, no separate value/label.
 const CATEGORIES = ["grocery", "household", "pet", "personal", "medical"];
 
 /** Common units households actually use — suggestions, never the only valid answer (the field stays free text). */
@@ -39,11 +39,11 @@ export type ConsumableInitial = {
  * (rule 12 doesn't just mean add/update/remove for an entity — a field
  * that already has real answers, like these three, should offer them
  * rather than make a household retype an existing one or guess the exact
- * spelling of a category it already used). Each gets a `<datalist>`: a
- * household's own existing names/categories first, `CATEGORIES`/`UNITS`
- * as a starting point when there's nothing to suggest yet, and free
- * typing always still works — a `<datalist>` never restricts the value
- * the way a `<select>` would.
+ * spelling of a category it already used). Each is a `ComboboxField`: a
+ * real dropdown of the household's own existing values (plus `CATEGORIES`/
+ * `UNITS` as a starting point when there's nothing to suggest yet) with its
+ * own explicit "Add new…" option — never a fixed list that refuses a name,
+ * category or unit nobody has used before.
  */
 function ConsumableFields({
   householdId,
@@ -55,16 +55,13 @@ function ConsumableFields({
   householdId: string;
   initial?: ConsumableInitial;
   state: ActionState;
-  /** Every other active consumable's name in this household, for the "What is it?" suggestions. */
+  /** Every other active consumable's name in this household, for the "What is it?" options. */
   existingNames?: string[];
-  /** Every distinct category this household has already used, for the Category suggestions. */
+  /** Every distinct category this household has already used, for the Category options. */
   existingCategories?: string[];
 }) {
-  const namesId = useId();
-  const categoriesId = useId();
-  const unitsId = useId();
-  const categorySuggestions = Array.from(new Set([...existingCategories, ...CATEGORIES]));
-  const unitSuggestions = Array.from(new Set([initial?.unit, ...UNITS].filter((value): value is string => Boolean(value))));
+  const categoryOptions = Array.from(new Set([...existingCategories, ...CATEGORIES])).sort((a, b) => a.localeCompare(b));
+  const unitOptions = Array.from(new Set([initial?.unit, ...UNITS].filter((value): value is string => Boolean(value))));
 
   return (
     <>
@@ -72,27 +69,12 @@ function ConsumableFields({
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
-      <Field label="What is it?" name="name" required placeholder="Milk" autoComplete="off" defaultValue={initial?.name} list={namesId} />
-      <datalist id={namesId}>
-        {existingNames.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
-      <Field label="Category" name="category" required placeholder="grocery" autoComplete="off" defaultValue={initial?.category ?? "grocery"} list={categoriesId} />
-      <datalist id={categoriesId}>
-        {categorySuggestions.map((category) => (
-          <option key={category} value={category} />
-        ))}
-      </datalist>
+      <ComboboxField label="What is it?" name="name" required options={existingNames} defaultValue={initial?.name} placeholder="Choose what it is" newValuePlaceholder="Milk" />
+      <ComboboxField label="Category" name="category" required options={categoryOptions} defaultValue={initial?.category ?? "grocery"} placeholder="Choose a category" newValuePlaceholder="A new category" />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Usual amount" name="typicalQuantity" type="number" min={0} step="0.1" required placeholder="2" defaultValue={initial?.typicalQuantity} />
-        <Field label="Counted in" name="unit" required placeholder="bottle, kg, pack" autoComplete="off" defaultValue={initial?.unit} list={unitsId} />
+        <ComboboxField label="Counted in" name="unit" required options={unitOptions} defaultValue={initial?.unit} placeholder="Choose a unit" newValuePlaceholder="e.g. crate, sachet" />
       </div>
-      <datalist id={unitsId}>
-        {unitSuggestions.map((unit) => (
-          <option key={unit} value={unit} />
-        ))}
-      </datalist>
       <Field
         label="Lasts about (days, optional)"
         name="daysPerUnit"

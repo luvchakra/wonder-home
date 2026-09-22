@@ -4,6 +4,7 @@ import type { HouseholdMember } from "@wonderhome/core/identity/households";
 
 import { formatDate } from "../_lib/session";
 import { describeRoles } from "../_lib/member-role";
+import { KeyMemberControl } from "./key-member-control";
 import { MemberAvatarControl } from "./member-avatar-control";
 import { MemberProfileForm } from "./member-profile-form";
 import { RemoveMemberControl } from "./remove-member-control";
@@ -36,6 +37,9 @@ export function MemberDetail({
   householdId,
   statusLabel,
   currentMemberId,
+  keyMemberId,
+  keyMemberName,
+  admin,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -44,6 +48,11 @@ export function MemberDetail({
   householdId: string;
   statusLabel?: string | null;
   currentMemberId: string;
+  /** The household's current Key Member, if one is set — every other member's `relationship` is described relative to them. */
+  keyMemberId?: string | null;
+  keyMemberName?: string | null;
+  /** Whether the signed-in viewer may change who the Key Member is — distinct from `editable`, which also covers a member editing their own row. */
+  admin?: boolean;
 }) {
   const dob = parseDateOfBirth(member.dateOfBirth);
   const age = dob ? `${completedYears(dob)} years old` : null;
@@ -53,6 +62,8 @@ export function MemberDetail({
       ? `${member.specialOccasionLabel} — ${formatDate(timezone, new Date(member.specialOccasionDate), "long")}`
       : member.specialOccasionLabel;
   const siblings = siblingOrder(member, allMembers);
+  const isKeyMember = Boolean(keyMemberId) && member.id === keyMemberId;
+  const relationshipLabel = isKeyMember ? "Relationship" : keyMemberName ? `Relationship to ${keyMemberName}` : "Relationship";
 
   return (
     <div className="space-y-3">
@@ -63,7 +74,7 @@ export function MemberDetail({
         <Fact label="Role" value={describeRoles(member.roles, member.isOwner)} />
         <Fact label="Status" value={statusLabel ?? null} />
         <Fact label="Nickname" value={member.nickname} />
-        <Fact label="Relationship" value={member.relationship} />
+        <Fact label={relationshipLabel} value={isKeyMember ? "Key Member — everyone else is described relative to them" : member.relationship} />
         <Fact label="Age" value={age} />
         <Fact label="Date of birth" value={born} />
         <Fact label="Occupation" value={member.occupation} />
@@ -72,7 +83,7 @@ export function MemberDetail({
         <Fact label="Siblings" value={siblings} />
       </dl>
       {editable ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <MemberProfileForm
             householdId={householdId}
             memberId={member.id}
@@ -89,6 +100,9 @@ export function MemberDetail({
           />
           {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (
             <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} />
+          ) : null}
+          {admin && member.status === "active" ? (
+            <KeyMemberControl householdId={householdId} memberId={member.id} isKeyMember={isKeyMember} />
           ) : null}
         </div>
       ) : null}

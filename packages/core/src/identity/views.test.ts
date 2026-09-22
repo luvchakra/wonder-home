@@ -9,6 +9,7 @@ const household = {
   timezone: "Asia/Kolkata",
   status: "active" as const,
   ownerMemberId: "m-1",
+  keyMemberId: null,
 };
 
 const membership = (over: Partial<HouseholdMembership> = {}): HouseholdMembership => ({

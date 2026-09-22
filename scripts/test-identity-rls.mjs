@@ -329,6 +329,40 @@ test("an Admin editing their own row is unaffected by the self-edit guard", () =
   assert.equal(psql(`select nickname from public.household_members where id = '${headMember}';`, options), "K");
 });
 
+test("a household's key member must belong to that household", () => {
+  assert.ok(
+    deniedForUpdate(
+      KUNAL,
+      `update public.households set key_member_id = '${otherMember}' where id = '${household}';`,
+      `select key_member_id from public.households where id = '${household}';`,
+      "",
+      options,
+    ),
+    "a key member from another household was accepted",
+  );
+});
+
+test("an Admin can name and clear the household's key member", () => {
+  asProfile(KUNAL, `update public.households set key_member_id = '${partnerMember}' where id = '${household}';`, options);
+  assert.equal(psql(`select key_member_id from public.households where id = '${household}';`, options), partnerMember);
+
+  asProfile(KUNAL, `update public.households set key_member_id = null where id = '${household}';`, options);
+  assert.equal(psql(`select key_member_id from public.households where id = '${household}';`, options), "");
+});
+
+test("a non-admin member cannot set the household's key member", () => {
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.households set key_member_id = '${partnerMember}' where id = '${household}';`,
+      `select key_member_id from public.households where id = '${household}';`,
+      "",
+      options,
+    ),
+    "a non-admin member named the household's key member",
+  );
+});
+
 test("a signed-out visitor is refused household data outright", () => {
   // anon holds no grant on these tables at all, so the refusal comes before RLS
   // is even consulted — a stronger outcome than an empty result set.

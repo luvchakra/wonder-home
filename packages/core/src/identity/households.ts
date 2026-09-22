@@ -29,6 +29,7 @@ type HouseholdRow = {
   timezone: string;
   status: Household["status"];
   owner_member_id: string | null;
+  key_member_id: string | null;
 };
 
 type MembershipRow = {
@@ -109,7 +110,7 @@ export const listMemberships = cache(async (supabase: SupabaseClient): Promise<H
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, member_type, date_of_birth, first_seen_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id), household_roles(role, created_at)",
+      "id, display_name, member_type, date_of_birth, first_seen_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id), household_roles(role, created_at)",
     )
     .eq("status", "active")
     .eq("profile_id", userId);
@@ -138,6 +139,7 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
         timezone: household.timezone,
         status: household.status,
         ownerMemberId: household.owner_member_id,
+        keyMemberId: household.key_member_id,
       },
     },
   ];
@@ -444,6 +446,54 @@ export async function setMemberRole(
     targetTable: "household_roles",
     targetId: input.memberId,
     metadata: { role: input.role },
+  });
+}
+
+/**
+ * Names the member every other relationship is described relative to
+ * ("Father", "Mother", "Younger brother" all answer "who is this, to the
+ * key member?"). `memberId: null` clears it — a household is never forced
+ * to have one. Deliberately does not touch anyone's `relationship` text:
+ * there is no gender/age/kinship engine here (20260921070000's own
+ * reasoning against a fixed relationship enum applies just as much to
+ * inventing one), so a household re-describes members by hand after
+ * changing who the frame of reference is.
+ */
+export async function setKeyMember(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  memberId: string | null,
+): Promise<void> {
+  if (!isHouseholdAdmin(actor)) {
+    throw ApiError.forbidden("Only an Admin can set the household's Key Member.");
+  }
+
+  const householdId = actor.household.id;
+
+  if (memberId) {
+    const { data: target, error: lookupError } = await supabase
+      .from("household_members")
+      .select("id")
+      .eq("id", memberId)
+      .eq("household_id", householdId)
+      .maybeSingle();
+    if (lookupError) throw new Error(`setKeyMember lookup failed: ${lookupError.code ?? "unknown"}`);
+    if (!target) throw ApiError.notFound("That member is not part of this household.");
+  }
+
+  const { error } = await supabase
+    .from("households")
+    .update({ key_member_id: memberId })
+    .eq("id", householdId);
+  if (error) throw new Error(`setKeyMember failed: ${error.code ?? "unknown"}`);
+
+  await auditChange({
+    householdId,
+    actorMemberId: actor.memberId,
+    eventType: "household.updated",
+    targetTable: "households",
+    targetId: householdId,
+    metadata: { field: "key_member_id" },
   });
 }
 

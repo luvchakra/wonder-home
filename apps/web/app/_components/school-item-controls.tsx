@@ -50,6 +50,8 @@ export function SchoolItemDetail({
   onRemoved?: () => void;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateSchoolItemAction, {});
+  const [kind, setKind] = useState(item.kind);
+  const dueRequired = kind !== "notice";
 
   if (!editable) {
     return (
@@ -87,7 +89,8 @@ export function SchoolItemDetail({
           <select
             id={`kind-${item.id}`}
             name="kind"
-            defaultValue={item.kind}
+            value={kind}
+            onChange={(event) => setKind(event.target.value as SchoolItem["kind"])}
             className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
           >
             {KINDS.map((k) => (
@@ -99,7 +102,14 @@ export function SchoolItemDetail({
         <Field label="Subject (optional)" name="subject" defaultValue={item.subject ?? ""} autoComplete="off" />
         <Field label="Notes (optional)" name="detail" defaultValue={item.detail ?? ""} autoComplete="off" />
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Due (optional)" name="dueAt" type="date" defaultValue={dateInputValue(item.dueAt, timezone)} />
+          <Field
+            label={dueRequired ? "Due" : "Due (optional)"}
+            name="dueAt"
+            type="date"
+            required={dueRequired}
+            defaultValue={dateInputValue(item.dueAt, timezone)}
+            hint={dueRequired ? undefined : "A notice does not need a date of its own."}
+          />
           <Field label="Est. minutes (optional)" name="estimatedMinutes" type="number" min={1} defaultValue={item.estimatedMinutes ?? ""} />
         </div>
         <Button type="submit" disabled={pending} className="w-full">

@@ -124,6 +124,7 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
       image: { mediaType: photo.type as "image/jpeg" | "image/png" | "image/webp", base64: buffer.toString("base64") },
     });
     revalidatePath("/ai");
+    revalidatePath("/home-send");
     return state;
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
@@ -153,6 +154,7 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
 
     const state = await classifyAndSave(supabase, parsed.data.householdId, itemId, { text: parsed.data.text });
     revalidatePath("/ai");
+    revalidatePath("/home-send");
     return state;
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
@@ -259,6 +261,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     await routeHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId, { routedTable, routedId });
 
     revalidatePath("/ai");
+    revalidatePath("/home-send");
     revalidatePath("/bills");
     revalidatePath("/school");
     revalidatePath("/groceries");
@@ -280,6 +283,7 @@ export async function dismissHomeSendItemAction(_previous: RouteHomeItemState, f
     await requireMembership(supabase, parsed.data.householdId);
     await dismissHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId);
     revalidatePath("/ai");
+    revalidatePath("/home-send");
     return { notice: "Dismissed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };

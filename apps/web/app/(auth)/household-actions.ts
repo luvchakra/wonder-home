@@ -140,6 +140,38 @@ export async function setMemberRoleAction(formData: FormData): Promise<void> {
   revalidatePath("/household/members");
 }
 
+const keyMemberSchema = z.object({
+  householdId: z.uuid(),
+  memberId: z.uuid().nullable(),
+});
+
+/**
+ * Names (or clears) the household's Key Member — the person every other
+ * member's `relationship` text is described relative to. Admin-only, same
+ * shape as `setMemberRoleAction`: the server and the RLS policy both refuse
+ * a non-admin regardless of what the UI shows.
+ */
+export async function setKeyMemberAction(formData: FormData): Promise<void> {
+  const parsed = keyMemberSchema.safeParse({
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId") || null,
+  });
+  if (!parsed.success) return;
+
+  const supabase = await createClient();
+  const { requireMembership, setKeyMember } = await import("@wonderhome/core/identity/households");
+
+  try {
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    await setKeyMember(supabase, actor, parsed.data.memberId);
+  } catch (error) {
+    log.warn("key member change refused", { reason: error instanceof Error ? error.name : "unknown" });
+  }
+
+  revalidatePath("/family");
+  revalidatePath("/household/members");
+}
+
 const addChildSchema = z.object({
   householdId: z.uuid(),
   displayName: z.string().trim().min(1, { error: "Give them a name." }).max(80),
