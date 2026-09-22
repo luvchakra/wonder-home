@@ -37,6 +37,9 @@ function extraction(over: Partial<IntakeExtraction>): IntakeExtraction {
     quantity: null,
     unit: null,
     category: null,
+    healthRecordType: null,
+    documentDate: null,
+    subjectMemberName: null,
     secondary: null,
     ...over,
   };
@@ -164,6 +167,53 @@ export const CLASSIFY_INTAKE_SCENARIOS: readonly ClassifyIntakeScenario[] = [
     description: "A bill with no hallucinated fields at all is unchanged, including a null secondary.",
     raw: extraction({ kind: "bill", title: "Rent", billKind: "rent", amount: 1500, currency: "USD" }),
     expected: extraction({ kind: "bill", title: "Rent", billKind: "rent", amount: 1500, currency: "USD" }),
+  },
+  {
+    id: "CI-09",
+    description: "A clean health_document extraction passes through untouched.",
+    raw: extraction({
+      kind: "health_document",
+      title: "Blood test results",
+      healthRecordType: "lab_result",
+      documentDate: "2026-09-15",
+      subjectMemberName: "Aarav",
+    }),
+    expected: extraction({
+      kind: "health_document",
+      title: "Blood test results",
+      healthRecordType: "lab_result",
+      documentDate: "2026-09-15",
+      subjectMemberName: "Aarav",
+    }),
+  },
+  {
+    id: "CI-10",
+    description: "A health_document hallucinated with bill and grocery fields has them stripped.",
+    raw: extraction({
+      kind: "health_document",
+      title: "Vaccination card",
+      healthRecordType: "vaccination_certificate",
+      billKind: "utility",
+      amount: 120.5,
+      quantity: 2,
+      unit: "kg",
+    }),
+    expected: extraction({
+      kind: "health_document",
+      title: "Vaccination card",
+      healthRecordType: "vaccination_certificate",
+    }),
+  },
+  {
+    id: "CI-11",
+    description: "A secondary proposal on health_document is dropped — secondary only ever belongs to bill or school_item.",
+    raw: extraction({
+      kind: "health_document",
+      title: "Discharge summary",
+      healthRecordType: "discharge_summary",
+      secondary: { reason: "Hallucinated — health documents never get a secondary.", title: "Should not survive" },
+    }),
+    expected: extraction({ kind: "health_document", title: "Discharge summary", healthRecordType: "discharge_summary" }),
   },
 ] as const;
 

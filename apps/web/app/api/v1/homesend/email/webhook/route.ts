@@ -151,6 +151,9 @@ async function classifyEmailIntake(
       quantity: extraction.quantity,
       unit: extraction.unit,
       category: extraction.category,
+      healthRecordType: extraction.healthRecordType,
+      documentDate: extraction.documentDate,
+      subjectMemberName: extraction.subjectMemberName,
       secondary: extraction.secondary,
     };
     await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: extraction.kind, extracted });

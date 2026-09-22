@@ -22,6 +22,7 @@ export function emptyExtraction(): HomeSendExtraction {
   return {
     title: null, notes: null, billKind: null, payee: null, amount: null, currency: null,
     dueDate: null, schoolKind: null, subject: null, quantity: null, unit: null, category: null,
+    healthRecordType: null, documentDate: null, subjectMemberName: null,
     secondary: null,
   };
 }
@@ -67,6 +68,9 @@ export async function classifyAndSave(
     quantity: extraction.quantity,
     unit: extraction.unit,
     category: extraction.category,
+    healthRecordType: extraction.healthRecordType,
+    documentDate: extraction.documentDate,
+    subjectMemberName: extraction.subjectMemberName,
     secondary: extraction.secondary,
   };
   await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: extraction.kind, extracted });

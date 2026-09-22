@@ -75,6 +75,10 @@ export const AUDIT_EVENTS = [
   "health.checkup_completed",
   "health.checkup_dismissed",
   "health.checkup_reactivated",
+  "health.record_created",
+  "health.record_updated",
+  "health.record_archived",
+  "health.record_reactivated",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];
