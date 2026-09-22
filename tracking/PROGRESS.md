@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 170 |
-| Done | 150 |
+| Done | 151 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 20 |
-| Completion | 88.2% |
+| Not Started | 19 |
+| Completion | 88.8% |
 | Current module | 21 Health and Fitness |
-| Current story | 21-005 Health records & HomeSend intake |
+| Current story | 21-006 HomeBrain & HomeTalk health context |
 | Last updated | 2026-09-22 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -45,7 +45,7 @@ disagree again.)
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 5 | In Progress |
-| 21 | Health and Fitness | 8 | 6 | 2 | 0 | 4 | In Progress |
+| 21 | Health and Fitness | 8 | 6 | 2 | 0 | 5 | In Progress |
 
 ## Execution Log
 

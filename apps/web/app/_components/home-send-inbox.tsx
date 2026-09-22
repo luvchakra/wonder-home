@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ClipboardPaste, HelpCircle, ShoppingBasket, UploadCloud, Wallet, GraduationCap } from "lucide-react";
+import { Camera, ClipboardPaste, HeartPulse, HelpCircle, ShoppingBasket, UploadCloud, Wallet, GraduationCap } from "lucide-react";
 import { useActionState, useRef, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -29,6 +29,7 @@ const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone; l
   bill: { icon: Wallet, tone: "money", label: "Bill" },
   school_item: { icon: GraduationCap, tone: "school", label: "School" },
   grocery_item: { icon: ShoppingBasket, tone: "care", label: "Grocery" },
+  health_document: { icon: HeartPulse, tone: "health", label: "Health" },
   unknown: { icon: HelpCircle, tone: "neutral", label: "Not sure yet" },
 };
 
@@ -239,11 +240,16 @@ export function HomeSendInbox({
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {history.map((item) => {
-                const presentation = presentationFor(item.classifiedKind);
                 const title = item.extracted?.title ?? (item.rawText ? item.rawText.slice(0, 60) : "Something you sent");
                 const itemChanges = changesByIntakeId.get(item.id) ?? [];
                 const primaryChange = itemChanges.find((change) => change.domain === item.classifiedKind) ?? itemChanges[0];
                 const secondaryChanges = itemChanges.filter((change) => change !== primaryChange);
+                // What was actually routed is more trustworthy than
+                // classified_kind — a manual override in the confirm form
+                // (or, as here, no AI provider ever having classified it at
+                // all) can leave classified_kind null while the real change
+                // row still says exactly what was written.
+                const presentation = presentationFor(primaryChange?.domain ?? item.classifiedKind);
                 const canUndoPrimary = Boolean(primaryChange && !primaryChange.undoneAt);
                 const statusLabel = item.status === "dismissed" ? "Dismissed" : primaryChange?.undoneAt ? "Undone" : "Added";
                 return (

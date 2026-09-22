@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**167 of 181 stories done — 92.3%**
+**168 of 181 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 167 |
+| Done | 168 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 14 |
+| Not Started | 13 |
 
 ## By module
 
@@ -45,7 +45,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
-| 21 Health and Fitness | `█████░░░░░` | 4 | 8 | 4 not started |
+| 21 Health and Fitness | `██████░░░░` | 5 | 8 | 3 not started |
 
 ## What is left
 
@@ -61,7 +61,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
-| `21-005` Health records & HomeSend intake | 21 Health and Fitness | P0 | Not Started |
 | `21-006` HomeBrain & HomeTalk health context | 21 Health and Fitness | P0 | Not Started |
 | `21-007` Vitals & measurement routines | 21 Health and Fitness | P1 | Not Started |
 | `21-008` Fitness & connected-health scaffolding | 21 Health and Fitness | P1 | Not Started |
@@ -390,7 +389,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 21 — Health and Fitness
 
-4 of 8 done `█████░░░░░`
+5 of 8 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -398,7 +397,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `21-002` Appointments | P0 | Done | Progressive booking wizard, confirm/complete/cancel, reschedule (new row + old marked rescheduled), deterministic conflict/duplicate detection, day-granularity reminder sweep folded into `/platform/retention`, live-verified 2026-09-22 |
 | `21-003` Health issues | P0 | Done | `health_issues` (status `mentioned→active→monitoring→resolved→closed`, `resolved_at` DB-enforced), deterministic `assessForMedicalAttention` (never a diagnosis), provenance row carries no health content, Overview groups active/mentioned into Needs attention, monitoring into its own section, resolved/closed into Recent, record/edit/status-change UI, live-verified 2026-09-22 |
 | `21-004` Checkups & preventive care | P0 | Done | `health_checkups` (source enum, `cadence_days`, `next_due_on`/`last_completed_on`), linked bidirectionally to `health_appointments.checkup_id`; completing/cancelling the linked appointment syncs the checkup automatically; overdue → Needs attention, due soon → Coming up, silent otherwise; add/edit(+reschedule)/complete/remove/bring-back UI, live-verified 2026-09-22 |
-| `21-005` Health records & HomeSend intake | P0 | Not Started | — |
+| `21-005` Health records & HomeSend intake | P0 | Done | `health_records` (member, `record_type`, `document_date`, `file_path`, `status` active/archived), own privacy-scoped `health-records` storage bucket (object read requires `wh.may_see_health`, not just membership); HomeSend gains a `health_document` intake kind with its own extraction fields (`healthRecordType`/`documentDate`/`subjectMemberName` — a name hint only, never trusted to pick an identity) and its own confirm-form section; `home_send_items` narrowed to sender-only visibility for `health_document` items until routed (every other kind stays shared-inbox); routing copies the file from HomeSend's bucket into the privacy-scoped one; Overview's Recent shows both active and archived records so "bring back" stays reachable, live-verified 2026-09-22 |
 | `21-006` HomeBrain & HomeTalk health context | P0 | Not Started | — |
 | `21-007` Vitals & measurement routines | P1 | Not Started | — |
 | `21-008` Fitness & connected-health scaffolding | P1 | Not Started | — |

@@ -11,15 +11,15 @@ export type HomeSendSource = (typeof HOME_SEND_SOURCES)[number];
 export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed", "undone"] as const;
 export type HomeSendStatus = (typeof HOME_SEND_STATUSES)[number];
 
-export const HOME_SEND_KINDS = ["bill", "school_item", "grocery_item", "unknown"] as const;
+export const HOME_SEND_KINDS = ["bill", "school_item", "grocery_item", "health_document", "unknown"] as const;
 export type HomeSendKind = (typeof HOME_SEND_KINDS)[number];
 
 /** Whether a manual_upload's bytes actually matched the content type it claimed. Pasted text has no file, so it is always not_applicable. */
 export const HOME_SEND_SECURITY_STATUSES = ["not_applicable", "clean", "rejected"] as const;
 export type HomeSendSecurityStatus = (typeof HOME_SEND_SECURITY_STATUSES)[number];
 
-/** The one domain the HomeSend confirm form may write into (bill, school work or a grocery item). */
-export const HOME_SEND_CHANGE_DOMAINS = ["bill", "school_item", "grocery_item"] as const;
+/** The one domain the HomeSend confirm form may write into (bill, school work, a grocery item or a health record). */
+export const HOME_SEND_CHANGE_DOMAINS = ["bill", "school_item", "grocery_item", "health_document"] as const;
 export type HomeSendChangeDomain = (typeof HOME_SEND_CHANGE_DOMAINS)[number];
 
 /** A second, different-domain need the same content also implies — see `ai/classify-intake.ts`'s `SecondaryProposalSchema`. Always a grocery suggestion; never written until the household confirms it too. */
@@ -42,6 +42,9 @@ export type HomeSendExtraction = {
   quantity: number | null;
   unit: string | null;
   category: string | null;
+  healthRecordType: string | null;
+  documentDate: string | null;
+  subjectMemberName: string | null;
   secondary: HomeSendSecondaryExtraction | null;
 };
 

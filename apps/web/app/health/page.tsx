@@ -10,9 +10,10 @@ import {
 
 import { may } from "@wonderhome/core/billing/repository";
 import { listAppointments } from "@wonderhome/core/health/appointments";
-import { healthAppointmentsAgenda, healthCheckupsAgenda, healthIssuesAgenda } from "@wonderhome/core/health/agenda";
+import { healthAppointmentsAgenda, healthCheckupsAgenda, healthIssuesAgenda, healthRecordsAgenda } from "@wonderhome/core/health/agenda";
 import { listCheckups } from "@wonderhome/core/health/checkups";
 import { listIssues } from "@wonderhome/core/health/issues";
+import { listRecords } from "@wonderhome/core/health/records";
 import { getHealthProfile, listHealthConsents, type PrivacyScope } from "@wonderhome/core/health/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -32,6 +33,7 @@ import {
   RevokeHealthConsentButton,
 } from "../_components/health-forms";
 import { AddIssueButton, EditIssueButton, IssueStatusActions } from "../_components/health-issue-forms";
+import { AddRecordButton, RecordActions } from "../_components/health-record-forms";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Health & Fitness" };
@@ -82,13 +84,17 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members, appointments, issues, checkups] = await Promise.all([
+  const [profile, consents, members, appointments, issues, checkups, records] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listAppointments(supabase, householdId).catch(() => []),
     listIssues(supabase, householdId).catch(() => []),
     listCheckups(supabase, householdId).catch(() => []),
+    // Both statuses -- Recent is this entity's only home in the Overview
+    // (see healthRecordsAgenda's own comment), so an archived record must
+    // stay reachable here too, or "bring back" would have nowhere to live.
+    listRecords(supabase, householdId, { statuses: ["active", "archived"] }).catch(() => []),
   ]);
 
   const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? "Someone";
@@ -101,9 +107,11 @@ export default async function HealthPage({
   const appointmentAgenda = healthAppointmentsAgenda(appointments, nameOf, membership.household.timezone);
   const issueAgenda = healthIssuesAgenda(issues, nameOf);
   const checkupAgenda = healthCheckupsAgenda(checkups, nameOf);
+  const recordAgenda = healthRecordsAgenda(records, nameOf);
   const appointmentById = new Map(appointments.map((appointment) => [appointment.id, appointment]));
   const issueById = new Map(issues.map((issue) => [issue.id, issue]));
   const checkupById = new Map(checkups.map((checkup) => [checkup.id, checkup]));
+  const recordById = new Map(records.map((record) => [record.id, record]));
   const memberList = members.map((m) => ({ id: m.id, displayName: m.displayName }));
 
   const sections = [
@@ -137,7 +145,7 @@ export default async function HealthPage({
       icon: CircleCheck,
       tone: "handled" as const,
       description: "Nothing recorded yet.",
-      items: [...appointmentAgenda.recent, ...issueAgenda.recent, ...checkupAgenda.recent],
+      items: [...appointmentAgenda.recent, ...issueAgenda.recent, ...checkupAgenda.recent, ...recordAgenda],
     },
   ];
 
@@ -153,6 +161,7 @@ export default async function HealthPage({
             <div className="flex flex-wrap gap-2">
               <AddIssueButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
               <AddCheckupButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
+              <AddRecordButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
               <BookAppointmentButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
             </div>
           ) : null}
@@ -213,6 +222,26 @@ export default async function HealthPage({
                                   </div>
                                 ) : null
                               }
+                            />
+                          );
+                        }
+
+                        if (item.subjectKey.startsWith("record.")) {
+                          // Records only ever live in "Recent" (a filed
+                          // document has no due date to be overdue against),
+                          // so — unlike the other rows in this same section —
+                          // its actions stay visible here: this is its only
+                          // home, not a silent history of something that
+                          // already happened elsewhere.
+                          const record = recordById.get(item.subjectKey.replace("record.", ""));
+                          return (
+                            <ActionRow
+                              key={item.subjectKey}
+                              icon={section.icon}
+                              tone={section.tone}
+                              title={item.title}
+                              meta={item.reason}
+                              action={record ? <RecordActions householdId={householdId} record={record} /> : null}
                             />
                           );
                         }

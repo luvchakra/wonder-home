@@ -303,6 +303,26 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Brings back a checkup that had been removed.",
     recordedIn: "packages/core/src/health/checkups.ts",
   },
+  {
+    event: "health.record_created",
+    because: "A health document filed against a member — by hand or confirmed from HomeSend.",
+    recordedIn: "packages/core/src/health/records.ts",
+  },
+  {
+    event: "health.record_updated",
+    because: "Changes a record's own content — label, type, document date, notes.",
+    recordedIn: "packages/core/src/health/records.ts",
+  },
+  {
+    event: "health.record_archived",
+    because: "Removes a record the household no longer wants filed — reversible, but still a change worth recording.",
+    recordedIn: "packages/core/src/health/records.ts",
+  },
+  {
+    event: "health.record_reactivated",
+    because: "Brings back a record that had been archived.",
+    recordedIn: "packages/core/src/health/records.ts",
+  },
 ];
 
 /**
@@ -461,6 +481,14 @@ export function describeAuditEvent(
       return { title: "A checkup was removed", detail: null };
     case "health.checkup_reactivated":
       return { title: "A checkup was brought back", detail: null };
+    case "health.record_created":
+      return { title: "A health record was filed", detail: stringOr(metadata.recordType, null) };
+    case "health.record_updated":
+      return { title: "A health record's details changed", detail: null };
+    case "health.record_archived":
+      return { title: "A health record was removed", detail: null };
+    case "health.record_reactivated":
+      return { title: "A health record was brought back", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

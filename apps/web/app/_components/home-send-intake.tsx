@@ -32,6 +32,19 @@ export const KIND_OPTIONS = [
   { value: "bill", label: "A bill" },
   { value: "school_item", label: "School work" },
   { value: "grocery_item", label: "A grocery item" },
+  { value: "health_document", label: "A health document" },
+];
+
+export const RECORD_TYPE_OPTIONS = [
+  { value: "lab_result", label: "Lab result" },
+  { value: "prescription", label: "Prescription" },
+  { value: "imaging_report", label: "Imaging report" },
+  { value: "vaccination_certificate", label: "Vaccination certificate" },
+  { value: "discharge_summary", label: "Discharge summary" },
+  { value: "referral", label: "Referral" },
+  { value: "insurance_document", label: "Insurance document" },
+  { value: "visit_summary", label: "Visit summary" },
+  { value: "other", label: "Other" },
 ];
 
 export const selectClass =
@@ -50,6 +63,9 @@ export type HomeSendExtractionFields = {
   quantity: number | null;
   unit: string | null;
   category: string | null;
+  healthRecordType: string | null;
+  documentDate: string | null;
+  subjectMemberName: string | null;
   secondary: { reason: string; title: string } | null;
 } | null;
 
@@ -194,6 +210,31 @@ export function HomeSendConfirmFields({
           </div>
           <Field label="Subject (optional)" name="subject" defaultValue={prefill?.subject ?? ""} autoComplete="off" />
           <Field label="Due (optional)" name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
+        </>
+      ) : kind === "health_document" ? (
+        <>
+          <div className="space-y-1.5">
+            <label htmlFor="subjectMemberId" className="block text-sm font-medium">Whose record is this?</label>
+            <select id="subjectMemberId" name="subjectMemberId" className={selectClass} defaultValue="">
+              <option value="">Me</option>
+              {kids.map((kid) => (
+                <option key={kid.id} value={kid.id}>{kid.displayName}</option>
+              ))}
+            </select>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">
+              {prefill?.subjectMemberName ? `WonderHome read the name "${prefill.subjectMemberName}" on this document. ` : ""}
+              Only you, or a child you look after, right now — anyone else needs to send it in themselves.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="healthRecordType" className="block text-sm font-medium">Kind of document</label>
+            <select id="healthRecordType" name="healthRecordType" defaultValue={prefill?.healthRecordType ?? "other"} className={selectClass}>
+              {RECORD_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <Field label="Document date (optional)" name="documentDate" type="date" defaultValue={prefill?.documentDate ?? ""} />
         </>
       ) : (
         <div className="grid grid-cols-2 gap-3">

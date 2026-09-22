@@ -914,6 +914,58 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/records": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's health records",
+          description: "Optionally filtered by `memberId` and `status` (repeatable). RLS (`wh.may_see_health`) decides which records the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+          ],
+          responses: {
+            "200": { description: "The visible records" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "File a health record",
+          description:
+            "Only for the caller themselves, or a child they guard. Never written directly from HomeSend's extraction — a person's confirmation is what actually writes it.",
+          responses: {
+            "201": { description: "The new record" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/records/{recordId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "recordId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One health record",
+          responses: {
+            "200": { description: "The record" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Update, remove or bring back a health record",
+          description:
+            "The body's `action` field discriminates: `update` changes label/type/document date/notes/privacy scope, `archive` removes it and `reactivate` brings it back — never a hard delete.",
+          responses: {
+            "200": { description: "The updated record" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

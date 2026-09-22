@@ -3,6 +3,7 @@ import type { AppointmentType, HealthAppointment } from "./appointments";
 import { classifyCheckup, type CheckupType, type HealthCheckup } from "./checkups";
 import { assessForMedicalAttention } from "./issue-safety";
 import type { HealthIssue } from "./issues";
+import type { HealthRecord, RecordType } from "./records";
 
 /**
  * Appointments as the Overview screen's rows (story 21-002) — the same
@@ -201,4 +202,32 @@ export function healthCheckupsAgenda(checkups: readonly HealthCheckup[], nameOf:
     );
 
   return { needsAttention, comingUp, recent };
+}
+
+/**
+ * Records (story 21-005) as Overview rows — a filed document never needs
+ * attention or comes up on its own, so this only ever feeds "Recent",
+ * newest first. Includes archived records too (not just active): Recent is
+ * a record's only home anywhere in this Overview, so an archived one has to
+ * stay reachable here for "bring back" to mean anything (CLAUDE.md rule 12).
+ */
+const RECORD_TYPE_LABEL: Record<RecordType, string> = {
+  lab_result: "Lab result",
+  prescription: "Prescription",
+  imaging_report: "Imaging report",
+  vaccination_certificate: "Vaccination certificate",
+  discharge_summary: "Discharge summary",
+  referral: "Referral",
+  insurance_document: "Insurance document",
+  visit_summary: "Visit summary",
+  other: "Document",
+};
+
+export function healthRecordsAgenda(records: readonly HealthRecord[], nameOf: (memberId: string) => string): HomeAssessment[] {
+  return records
+    .slice(0, 5)
+    .map((r) => {
+      const reason = `${RECORD_TYPE_LABEL[r.recordType]}${r.documentDate ? `, ${formatDueDate(r.documentDate)}` : ""}${r.status === "archived" ? " — removed." : "."}`;
+      return silent(`record.${r.id}`, `${nameOf(r.memberId)} — ${r.label}`, reason);
+    });
 }

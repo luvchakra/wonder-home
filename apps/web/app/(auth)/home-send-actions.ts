@@ -4,15 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
+import { may } from "@wonderhome/core/billing/repository";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
+import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
 import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
-import { createHomeSendItem, dismissHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { createHomeSendItem, dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
@@ -124,7 +126,7 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
 const routeSchema = z.object({
   householdId: z.uuid(),
   itemId: z.uuid(),
-  kind: z.enum(["bill", "school_item", "grocery_item"]),
+  kind: z.enum(["bill", "school_item", "grocery_item", "health_document"]),
   title: z.string().trim().min(1, { error: "What is it?" }).max(160),
   notes: z.string().trim().max(2000).optional(),
   // bill
@@ -141,6 +143,12 @@ const routeSchema = z.object({
   quantity: z.union([z.coerce.number().min(0.01).max(10_000), z.literal("")]).optional(),
   unit: z.string().trim().max(40).optional(),
   category: z.string().trim().max(40).optional(),
+  // health_document — subjectMemberId empty/omitted means "for me" (see
+  // routing below): the extracted subjectMemberName is only ever a hint
+  // shown beside this picker, never trusted to select an identity itself.
+  subjectMemberId: z.uuid().optional(),
+  healthRecordType: z.enum(RECORD_TYPES).optional(),
+  documentDate: z.string().optional(),
   // secondary: a second, different-domain need the same content also implies
   // (always a grocery suggestion — see ai/classify-intake.ts). Optional and
   // only ever written when the household explicitly ticks the box for it.
@@ -215,6 +223,39 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       });
       routedTable = "school_items";
       routedId = created.id;
+    } else if (parsed.data.kind === "health_document") {
+      const entitlement = await may(supabase, parsed.data.householdId, "health.tracking");
+      if (!entitlement.allowed) return { error: entitlement.reason };
+
+      // No selection means "for me" — the extracted subjectMemberName is a
+      // hint the confirm screen shows, never something trusted to pick an
+      // identity on its own; RLS is what actually decides whether this
+      // member (self, or a child the actor guards) is one they may file for.
+      const subjectMemberId = parsed.data.subjectMemberId || membership.memberId;
+
+      let filePath: string | null = null;
+      const item = await getHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId);
+      if (item?.filePath) {
+        const { data: downloaded, error: downloadError } = await supabase.storage.from("home-send").download(item.filePath);
+        if (downloadError) throw new Error(`home-send download failed: ${downloadError.message}`);
+        const newPath = `${parsed.data.householdId}/${crypto.randomUUID()}`;
+        const { error: uploadError } = await supabase.storage.from("health-records").upload(newPath, downloaded);
+        if (uploadError) throw new Error(`health-records upload failed: ${uploadError.message}`);
+        filePath = newPath;
+      }
+
+      const created = await createRecord(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, {
+        memberId: subjectMemberId,
+        label: parsed.data.title,
+        recordType: parsed.data.healthRecordType ?? "other",
+        documentDate: parsed.data.documentDate || null,
+        filePath,
+        notes: parsed.data.notes || null,
+        privacyScope: "private",
+        sourceType: "home_send_document",
+      });
+      routedTable = "health_records";
+      routedId = created.id;
     } else {
       const created = await createConsumable(supabase, {
         householdId: parsed.data.householdId,
@@ -262,6 +303,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     revalidatePath("/bills");
     revalidatePath("/school");
     revalidatePath("/groceries");
+    revalidatePath("/health");
     return { notice: "Added. WonderHome will track it from here." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
@@ -306,6 +348,8 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
       await cancelObligation(supabase, { id: change.entityId, householdId: parsed.data.householdId });
     } else if (change.domain === "school_item") {
       await cancelSchoolItem(supabase, parsed.data.householdId, change.entityId);
+    } else if (change.domain === "health_document") {
+      await archiveRecord(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, change.entityId);
     } else {
       await retireConsumable(supabase, { id: change.entityId, householdId: parsed.data.householdId });
     }
@@ -322,6 +366,7 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
     revalidatePath("/bills");
     revalidatePath("/school");
     revalidatePath("/groceries");
+    revalidatePath("/health");
     return { notice: "Undone. WonderHome forgot it again." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
