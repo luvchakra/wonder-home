@@ -87,7 +87,12 @@ work, and hold new work against these:
     entity (retire, deactivate, stand down, cancel) and is never a hard
     delete that orphans something else's history, but the option itself is
     never missing. A create-only screen is a half-built feature, not a
-    smaller one.
+    smaller one. Adding is also never capped at one: a household with an
+    existing helper, pet, bill or member can still add another, different
+    one — the "add" action stays reachable once a first instance exists,
+    not only from the now-gone empty state (this bit Househelper, whose
+    only add path was the empty state's own action, invisible again the
+    moment a first helper was added).
 13. **One door to the assistant, not one per screen.** The assistant is
     already a primary tab, raised in the middle of the phone bar (rule 6)
     and reachable everywhere the mic icon is. A screen never adds its own
@@ -186,7 +191,13 @@ work, and hold new work against these:
     in place to the full actionable detail behind it: every field, every
     action, not just the one the card already shows. The chevron is the
     single, consistent way in; it never coexists with a second, differently
-    styled "view more" link doing the same job (rule 14).
+    styled "view more" link doing the same job (rule 14). Built as
+    `ExpandableRow` for a single list row and `AgendaExpandableRow` for any
+    domain's `HomeAssessment` row, and as `ExpandableMetricGrid` (with
+    `MetricDetailList`/`MetricDetailRow`/`MetricDetailEmpty` for its own
+    panel rows) for a stat-card grid — a card opening onto the real entries
+    behind its count rather than only linking away. A screen never
+    hand-rolls this open/close behaviour; it reuses one of these three.
 22. **Money is decimal, always.** A household types and reads amounts in
     the currency's own major unit — 42.50, never 4250 — everywhere an
     amount is entered or shown: a bill, a budget, a price, a spending
