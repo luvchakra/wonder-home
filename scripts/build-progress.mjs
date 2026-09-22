@@ -6,7 +6,7 @@
  * `tracking/PROGRESS.md` is the running log of what changed and when;
  * `docs/progress/*.md` say what a piece of work was and how to pick it up.
  * Neither answers "where does the whole application stand right now, story by
- * story" without reading twenty-one backlog files.
+ * story" without reading twenty-two backlog files.
  *
  * This generates that view, and generates it rather than asking anybody to
  * maintain it, because a hand-kept summary of 170 stories is a summary that
@@ -97,7 +97,7 @@ export function renderProgress(modules, options = {}) {
     "> fails when this file is out of date.",
     "",
     "The backlogs are the source of truth for a story's status. This is a projection",
-    "of all twenty-one of them, so that \"what is left\" is one page rather than a",
+    "of all twenty-two of them, so that \"what is left\" is one page rather than a",
     "morning's reading. For what a given piece of work actually *was*, see the notes",
     "in `docs/progress/`; for the running log of what changed when, `tracking/PROGRESS.md`.",
     "",

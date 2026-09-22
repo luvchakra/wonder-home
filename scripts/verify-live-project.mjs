@@ -81,6 +81,9 @@ const SHIPPED_TABLES = [
   "homesend_share_handoffs",
   "household_webhooks",
   "webhook_deliveries",
+  "health_profiles",
+  "health_provenance",
+  "health_consents",
 ];
 
 /**
@@ -270,6 +273,27 @@ async function main() {
     event_types: ["member.added"],
   });
   check("anonymous cannot create a webhook subscription", Boolean(forgedWebhook.error), forgedWebhook.error?.code ?? "no error");
+
+  // Health profiles (story 21-001). RLS gates SELECT through wh.may_see_health,
+  // which never grants an anonymous caller (not a household member at all)
+  // anything — asserted the same way as every other RLS-only table: no rows
+  // and no error, since RLS answers by filtering, not by raising.
+  const healthProfiles = await anon.from("health_profiles").select("id, privacy_scope").limit(1);
+  check(
+    "anonymous cannot read a household's health profiles",
+    Boolean(healthProfiles.error) || (Array.isArray(healthProfiles.data) && healthProfiles.data.length === 0),
+    healthProfiles.error ? healthProfiles.error.code : `${healthProfiles.data?.length ?? "?"} rows`,
+  );
+  const forgedHealthProfile = await anon.from("health_profiles").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    privacy_scope: "private",
+  });
+  check(
+    "anonymous cannot create a health profile",
+    Boolean(forgedHealthProfile.error),
+    forgedHealthProfile.error?.code ?? "no error",
+  );
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at
   // all, deliberately: a client that could write one could hand itself the

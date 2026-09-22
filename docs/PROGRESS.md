@@ -5,20 +5,20 @@
 > fails when this file is out of date.
 
 The backlogs are the source of truth for a story's status. This is a projection
-of all twenty-one of them, so that "what is left" is one page rather than a
+of all twenty-two of them, so that "what is left" is one page rather than a
 morning's reading. For what a given piece of work actually *was*, see the notes
 in `docs/progress/`; for the running log of what changed when, `tracking/PROGRESS.md`.
 
 ## The whole picture
 
-**163 of 173 stories done — 94.2%**
+**164 of 181 stories done — 90.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 163 |
+| Done | 164 |
 | In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 10 |
+| Not Started | 17 |
 
 ## By module
 
@@ -45,6 +45,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
+| 21 Health and Fitness | `█░░░░░░░░░` | 1 | 8 | 7 not started |
 
 ## What is left
 
@@ -60,6 +61,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
+| `21-002` Appointments | 21 Health and Fitness | P0 | Not Started |
+| `21-003` Health issues | 21 Health and Fitness | P0 | Not Started |
+| `21-004` Checkups & preventive care | 21 Health and Fitness | P0 | Not Started |
+| `21-005` Health records & HomeSend intake | 21 Health and Fitness | P0 | Not Started |
+| `21-006` HomeBrain & HomeTalk health context | 21 Health and Fitness | P0 | Not Started |
+| `21-007` Vitals & measurement routines | 21 Health and Fitness | P1 | Not Started |
+| `21-008` Fitness & connected-health scaffolding | 21 Health and Fitness | P1 | Not Started |
 
 ## Every story
 
@@ -383,4 +391,19 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |
 
-_Generated 2026-09-22 from 21 backlog files._
+### 21 — Health and Fitness
+
+1 of 8 done `█░░░░░░░░░`
+
+| Story | Priority | Status | Notes |
+|---|---|---|---|
+| `21-001` Health foundation & privacy | P0 | Done | Schema (`health_profiles`/`health_provenance`/`health_consents`), `wh.may_see_health` (no admin bypass), Overview + Privacy screens at `/health`, live-verified 2026-09-22 |
+| `21-002` Appointments | P0 | Not Started | — |
+| `21-003` Health issues | P0 | Not Started | — |
+| `21-004` Checkups & preventive care | P0 | Not Started | — |
+| `21-005` Health records & HomeSend intake | P0 | Not Started | — |
+| `21-006` HomeBrain & HomeTalk health context | P0 | Not Started | — |
+| `21-007` Vitals & measurement routines | P1 | Not Started | — |
+| `21-008` Fitness & connected-health scaffolding | P1 | Not Started | — |
+
+_Generated 2026-09-22 from 22 backlog files._

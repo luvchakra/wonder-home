@@ -33,12 +33,13 @@ The order below resolves the earlier tension: security, API contracts, tests and
 18. `11-Bills-and-Finance`
 19. `12-Family-Time-and-Social`
 20. `13-Maintenance-Laundry-and-Pet-Care`
+21. `21-Health-and-Fitness`
 
 ## Phase 6 — External/platform capabilities
-21. `17-External-Integrations`
-22. `20-Subscriptions-Entitlements-and-Usage`
-23. Remaining `16` platform-admin hardening
-24. Remaining `15` advanced security/privacy and `19` production hardening
+22. `17-External-Integrations`
+23. `20-Subscriptions-Entitlements-and-Usage`
+24. Remaining `16` platform-admin hardening
+25. Remaining `15` advanced security/privacy and `19` production hardening
 
 ## Priority rule
 Within each phase, implement dependency-ready P0 stories first, then P1, then P2. A provider outage or missing credential never blocks unrelated stories. Use interfaces, local fakes and deterministic fixtures until a real provider can be configured.

@@ -26,6 +26,7 @@ export const FEATURES = {
   "finance.bills": "Bills and payments",
   "family.events": "Family time and social",
   "integrations.deep": "Deep provider integrations",
+  "health.tracking": "Health and fitness",
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;
