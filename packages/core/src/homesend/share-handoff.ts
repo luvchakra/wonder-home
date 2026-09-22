@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { SHARE_HANDOFF_RATE_LIMIT } from "./rate-limit";
+
 /**
  * The PWA Web Share Target's signed-out bridge (Phase 4).
  *
@@ -23,19 +25,56 @@ function generateHandoffToken(): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Stages a share's content and returns the token that unlocks it. */
-export async function createShareHandoff(admin: SupabaseClient, content: ShareHandoffContent): Promise<string> {
+/**
+ * Stages a share's content and returns the token that unlocks it.
+ *
+ * `ipHash` is the sha256 of the caller's IP (`rate-limit.ts`'s
+ * `hashClientIp`), never the address itself, or `null` when the request
+ * carried no identifiable IP at all — stored purely so
+ * `countRecentShareHandoffs` can throttle a single caller, not read back
+ * for any other purpose.
+ */
+export async function createShareHandoff(
+  admin: SupabaseClient,
+  content: ShareHandoffContent,
+  ipHash: string | null = null,
+): Promise<string> {
   const token = generateHandoffToken();
 
   const row: Record<string, string | null> =
     content.kind === "text"
-      ? { token, kind: "text", raw_text: content.rawText, file_bytes: null, file_content_type: null }
-      : { token, kind: "file", raw_text: null, file_bytes: `\\x${content.fileBytes.toString("hex")}`, file_content_type: content.fileContentType };
+      ? { token, kind: "text", raw_text: content.rawText, file_bytes: null, file_content_type: null, ip_hash: ipHash }
+      : {
+          token,
+          kind: "file",
+          raw_text: null,
+          file_bytes: `\\x${content.fileBytes.toString("hex")}`,
+          file_content_type: content.fileContentType,
+          ip_hash: ipHash,
+        };
 
   const { error } = await admin.from("homesend_share_handoffs").insert(row);
   if (error) throw new Error(`createShareHandoff failed: ${error.code ?? "unknown"}`);
 
   return token;
+}
+
+/**
+ * How many handoffs this IP hash has staged within the rate-limit window —
+ * the count `rate-limit.ts`'s `mayCreateShareHandoff` decides against.
+ * Counts every handoff regardless of whether it has since expired or been
+ * consumed: the rate limit is about request volume from one caller, not
+ * about what became of the rows afterward.
+ */
+export async function countRecentShareHandoffs(admin: SupabaseClient, ipHash: string, now: Date = new Date()): Promise<number> {
+  const since = new Date(now.getTime() - SHARE_HANDOFF_RATE_LIMIT.windowMinutes * 60_000).toISOString();
+  const { count, error } = await admin
+    .from("homesend_share_handoffs")
+    .select("id", { count: "exact", head: true })
+    .eq("ip_hash", ipHash)
+    .gte("created_at", since);
+  if (error) throw new Error(`countRecentShareHandoffs failed: ${error.code ?? "unknown"}`);
+  return count ?? 0;
 }
 
 /**
@@ -63,7 +102,25 @@ export async function consumeShareHandoff(admin: SupabaseClient, token: string):
   return { kind: "file", fileBytes: Buffer.from(hex, "hex"), fileContentType: data.file_content_type as string };
 }
 
-/** Opportunistic cleanup — cheap enough to run on every share POST rather than needing a cron. */
-export async function pruneExpiredShareHandoffs(admin: SupabaseClient): Promise<void> {
-  await admin.from("homesend_share_handoffs").delete().lt("expires_at", new Date().toISOString());
+/**
+ * Deletes every handoff past its 30-minute window, returning how many.
+ *
+ * Called two ways: opportunistically on every share POST (cheap enough not
+ * to need a cron of its own for the common case), and again from
+ * `/platform/retention`'s real sweep — a household that never shares
+ * signed-out again would otherwise leave its one expired row behind
+ * forever, and "a policy nothing applies is a promise" applies here too,
+ * even though this table's TTL is minutes, not the day-scale schedule
+ * `privacy/retention.ts` publishes (nobody has an account yet when a
+ * handoff is staged, so it is not "their" data in the Privacy Centre's
+ * sense — it is either consumed within minutes or it never was).
+ */
+export async function pruneExpiredShareHandoffs(admin: SupabaseClient): Promise<number> {
+  const { data, error } = await admin
+    .from("homesend_share_handoffs")
+    .delete()
+    .lt("expires_at", new Date().toISOString())
+    .select("id");
+  if (error) throw new Error(`pruneExpiredShareHandoffs failed: ${error.code ?? "unknown"}`);
+  return (data ?? []).length;
 }

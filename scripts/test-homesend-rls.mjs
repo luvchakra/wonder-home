@@ -650,6 +650,39 @@ test("two handoffs cannot share the same token", () => {
   assert.ok(threw, "a second handoff was created with an already-used token");
 });
 
+// ---------------------------------------------------------------------------
+// Phase 6 hardening: ip_hash rate-limit column on homesend_share_handoffs.
+// ---------------------------------------------------------------------------
+
+test("a handoff can carry an ip_hash for rate limiting, and it counts toward that hash", () => {
+  psql(
+    `insert into public.homesend_share_handoffs (token, kind, raw_text, ip_hash)
+     values ('tok-iphash-1', 'text', 'From a rate-limited caller', 'deadbeef1');`,
+    options,
+  );
+  psql(
+    `insert into public.homesend_share_handoffs (token, kind, raw_text, ip_hash)
+     values ('tok-iphash-2', 'text', 'Another from the same caller', 'deadbeef1');`,
+    options,
+  );
+  assert.equal(
+    psql(`select count(*) from public.homesend_share_handoffs where ip_hash = 'deadbeef1';`, options),
+    "2",
+  );
+});
+
+test("ip_hash is optional — a handoff with none is still staged and read back normally", () => {
+  psql(
+    `insert into public.homesend_share_handoffs (token, kind, raw_text)
+     values ('tok-iphash-none', 'text', 'No identifiable caller');`,
+    options,
+  );
+  assert.equal(
+    psql(`select ip_hash is null from public.homesend_share_handoffs where token = 'tok-iphash-none';`, options),
+    "t",
+  );
+});
+
 function otherAdultMember() {
   return psql(
     `select id from public.household_members where household_id = '${household}' and profile_id = '${OTHER_ADULT}';`,

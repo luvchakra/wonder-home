@@ -99,6 +99,7 @@ const SHIPPED_COLUMNS = [
   { table: "households", column: "key_member_id" },
   { table: "home_send_items", column: "security_status" },
   { table: "home_send_items", column: "external_id" },
+  { table: "homesend_share_handoffs", column: "ip_hash" },
 ];
 
 /**

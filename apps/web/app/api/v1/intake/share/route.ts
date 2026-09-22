@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
+import { clientIpFromHeaders, hashClientIp, mayCreateShareHandoff } from "@wonderhome/core/homesend/rate-limit";
 import { createHomeSendItem } from "@wonderhome/core/homesend/repository";
-import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
-import { createShareHandoff, pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
+import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
+import { countRecentShareHandoffs, createShareHandoff, pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { listMemberships } from "@wonderhome/core/identity/households";
 
 /**
@@ -65,7 +66,7 @@ export async function POST(request: Request): Promise<Response> {
 
     if (photo) {
       const buffer = Buffer.from(await photo.arrayBuffer());
-      const securityStatus = validateUploadSecurity(photo.type, buffer);
+      const securityStatus = await assessUploadSecurity(photo.type, buffer);
       const path = `${householdId}/${itemId}`;
       const { error: uploadError } = await supabase.storage.from("home-send").upload(path, photo, { contentType: photo.type });
       if (uploadError) return redirectTo("/home-send?shareError=upload", origin);
@@ -99,11 +100,24 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const admin = createAdminClient();
-  await pruneExpiredShareHandoffs(admin);
+  // Best-effort — a failed cleanup here must never block the actual share;
+  // the real sweep (`/platform/retention`) is what guarantees this happens.
+  await pruneExpiredShareHandoffs(admin).catch(() => undefined);
+
+  // The one genuinely anonymous write in this pipeline — rate-limited by IP
+  // hash, never the address itself. An unidentifiable caller (no forwarding
+  // header at all) is let through: this is a throttle against abuse, not an
+  // authorization gate.
+  const ip = clientIpFromHeaders(request.headers);
+  const ipHash = ip ? hashClientIp(ip) : null;
+  if (ipHash) {
+    const recentCount = await countRecentShareHandoffs(admin, ipHash);
+    if (!mayCreateShareHandoff(recentCount).allowed) return redirectTo("/home-send?shareError=rate_limited", origin);
+  }
 
   const token = photo
-    ? await createShareHandoff(admin, { kind: "file", fileBytes: Buffer.from(await photo.arrayBuffer()), fileContentType: photo.type })
-    : await createShareHandoff(admin, { kind: "text", rawText: combinedText });
+    ? await createShareHandoff(admin, { kind: "file", fileBytes: Buffer.from(await photo.arrayBuffer()), fileContentType: photo.type }, ipHash)
+    : await createShareHandoff(admin, { kind: "text", rawText: combinedText }, ipHash);
 
   return redirectTo(`/sign-in?next=${encodeURIComponent(`/home-send?handoff=${token}`)}`, origin);
 }

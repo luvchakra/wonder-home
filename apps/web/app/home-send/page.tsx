@@ -7,7 +7,7 @@ import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { createHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
-import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
+import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -26,6 +26,7 @@ const SHARE_ERROR_MESSAGES: Record<string, string> = {
   type: "That share wasn't a JPEG, PNG or WebP image, so WonderHome couldn't take it in.",
   size: "That shared file is too large — please use one under 8MB.",
   upload: "That share couldn't be saved — please try sending it in again.",
+  rate_limited: "Too many shares from this connection recently — please wait a few minutes and try again.",
 };
 
 /**
@@ -47,7 +48,7 @@ async function resumeShareHandoff(
   const itemId = crypto.randomUUID();
 
   if (content.kind === "file") {
-    const securityStatus = validateUploadSecurity(content.fileContentType, content.fileBytes);
+    const securityStatus = await assessUploadSecurity(content.fileContentType, content.fileBytes);
     const path = `${householdId}/${itemId}`;
     const { error: uploadError } = await supabase.storage
       .from("home-send")
