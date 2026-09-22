@@ -34,6 +34,7 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "subscription.manage",
     "feature_flags.manage",
     "audit.read_platform",
+    "privacy_requests.manage",
   ],
   owner: [
     "household.read_with_grant",
@@ -44,6 +45,7 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "feature_flags.manage",
     "audit.read_platform",
     "platform_admin.manage",
+    "privacy_requests.manage",
   ],
 };
 

@@ -517,6 +517,42 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/privacy-requests": {
+        get: {
+          summary: "Export/deletion requests, platform-wide",
+          description:
+            "Every privacy request across every household, newest first — filterable by `status`, `kind` and `householdId`. `privacy_requests` has never had a platform-admin policy of its own; this reads it through the service-role client the way every other platform-admin capability does. Requires `privacy_requests.manage` (`operator`/`owner`; `support` does not hold it).",
+          parameters: [
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: { type: "string", enum: ["pending", "ready", "completed", "cancelled", "refused"] },
+            },
+            { name: "kind", in: "query", required: false, schema: { type: "string", enum: ["export", "deletion"] } },
+            { name: "householdId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+          ],
+          responses: {
+            "200": { description: "Matching requests" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/platform-admin/privacy-requests/{requestId}": {
+        parameters: [{ name: "requestId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        patch: {
+          summary: "Refuse a pending or ready request",
+          description:
+            "The schema has supported `status: 'refused'`/`refusal_reason` since story 15-007; nothing ever wrote either until this route. Refusing a deletion stops its grace window from maturing — the household still owns asking again. Requires `privacy_requests.manage` and a reason someone reviewing this later could understand.",
+          responses: {
+            "200": { description: "Refused" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "Staff boundary not met, or no pending/ready request with that id" },
+          },
+        },
+      },
       "/openapi": {
         get: {
           summary: "This document",

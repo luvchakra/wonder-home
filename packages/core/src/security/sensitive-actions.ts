@@ -144,6 +144,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/privacy/repository.ts",
   },
   {
+    event: "privacy.deletion_fulfilled",
+    because: "The moment the grace window ends and a member's data is actually scrubbed — the thing the earlier clock was counting down to.",
+    recordedIn: "packages/core/src/privacy/fulfill-deletion.ts",
+  },
+  {
+    event: "privacy.request_refused",
+    because: "Staff said no to a household's own export or deletion request. The household is owed a reason and a record of when.",
+    recordedIn: "packages/core/src/platform/privacy-requests.ts",
+  },
+  {
     event: "subscription.changed",
     because: "Changes what the household may do. Somebody will ask when a capability stopped, and why.",
     recordedIn: "packages/core/src/billing/repository.ts",
@@ -283,6 +293,10 @@ export function describeAuditEvent(
       };
     case "privacy.deletion_cancelled":
       return { title: "A deletion was called off", detail: null };
+    case "privacy.deletion_fulfilled":
+      return { title: "A deletion request was fulfilled", detail: "The member's personal details were removed." };
+    case "privacy.request_refused":
+      return { title: "A privacy request was refused", detail: null };
     case "subscription.changed":
       return {
         title: "The household's plan changed",

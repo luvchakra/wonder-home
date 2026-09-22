@@ -2,6 +2,7 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
+import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
 import { purgeExpired, summarise } from "@wonderhome/core/privacy/purge";
 
 /**
@@ -53,6 +54,23 @@ export async function POST(request: Request) {
     } catch (thrown) {
       handoffsError = thrown instanceof Error ? thrown.message : "unknown";
     }
+    // Also not a `RetentionClass`: a matured deletion request acts on its own
+    // `acts_at`, not on an age cutoff `purgeExpired`'s table-scan pattern
+    // fits — `fulfill-deletion.ts`'s own doc comment says why.
+    let deletionsFulfilled = 0;
+    let deletionsFailed = 0;
+    try {
+      const deletionOutcomes = await fulfillMaturedDeletions(admin);
+      deletionsFulfilled = deletionOutcomes.filter((outcome) => outcome.fulfilled).length;
+      deletionsFailed = deletionOutcomes.filter((outcome) => !outcome.fulfilled).length;
+    } catch (thrown) {
+      deletionsFailed = -1; // The lookup itself failed, not one request within it.
+      log.error("deletion fulfillment sweep failed", {
+        reason: thrown instanceof Error ? thrown.message : "unknown",
+        allow: ["reason"],
+      });
+    }
+
     const swept = [
       ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
       { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
@@ -62,14 +80,16 @@ export async function POST(request: Request) {
     log.info("retention sweep", {
       summary: summarise(outcomes),
       handoffsDeleted,
+      deletionsFulfilled,
+      deletionsFailed,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
     return Response.json(
-      { swept },
-      { status: failed.length > 0 ? 207 : 200, headers: { "cache-control": "no-store" } },
+      { swept, deletionsFulfilled, deletionsFailed },
+      { status: failed.length > 0 || deletionsFailed !== 0 ? 207 : 200, headers: { "cache-control": "no-store" } },
     );
   } catch (thrown) {
     const { status, body } = toErrorBody(thrown, "retention");

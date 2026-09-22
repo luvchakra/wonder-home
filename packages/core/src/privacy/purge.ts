@@ -33,8 +33,11 @@ export type PurgeTarget = {
  *
  * `household_content` is deliberately absent: the household wrote it, and
  * nothing here expires a household's own words on a timer. `deleted_member`
- * is absent too — a member's data goes when their deletion request matures,
- * which is a different job with different consequences and is not yet built.
+ * is absent too, but for a different reason: it does not fit this map's
+ * age-cutoff shape at all. A deletion request acts on its own `acts_at`, not
+ * on how old a row is, so it is its own job — `privacy/fulfill-deletion.ts`'s
+ * `fulfillMaturedDeletions`, called from the same `/platform/retention`
+ * sweep this module's `purgeExpired` is.
  */
 export const PURGE_TARGETS: Partial<Record<RetentionClass, PurgeTarget[]>> = {
   conversation: [
