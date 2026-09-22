@@ -6,6 +6,7 @@ import type { HomeAssessment } from "@wonderhome/core/home/assessment";
 import { isoDate } from "@wonderhome/core/home/assessment";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { describeSchoolHealth } from "@wonderhome/core/school/connector";
+import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/items";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -78,6 +79,13 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? "School";
   const live = items.filter((item) => item.status === "pending" || item.status === "in_progress");
   const needsYou = agenda ? agenda.deadlines.length + agenda.messages.length : 0;
+
+  // "Coming up" previews what's ahead (exams/projects/events a month out,
+  // homework/worksheets a few days out) — distinct from "Deadlines at risk",
+  // which only flags what won't fit in the time left. An item already
+  // flagged there is left out here rather than shown twice.
+  const atRiskIds = new Set((agenda?.deadlines ?? []).map((deadline) => deadline.subjectKey));
+  const upcoming = upcomingSchoolItems(items).filter((item) => !atRiskIds.has(`school.${item.id}`));
 
   return (
     <AppShell {...shell}>
@@ -166,6 +174,39 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                 ) : null}
               </>
             )}
+            {upcoming.length > 0 ? (
+              <section className="space-y-3">
+                <SectionHeader title="Coming up" count={upcoming.length} />
+                {groupSchoolItemsByDueDate(upcoming, timezone).map((group) => (
+                  <div key={group.label}>
+                    <h3 className="px-1 pb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{group.label}</h3>
+                    <Card className="p-2">
+                      <ul className="divide-y divide-[var(--wh-border)]">
+                        {group.items.map((item) => (
+                          <ExpandableRow
+                            key={item.id}
+                            summary={
+                              <>
+                                <IconTile icon={item.kind === "homework" || item.kind === "worksheet" ? BookOpen : CalendarDays} tone="school" />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-sm font-medium">{item.title}</span>
+                                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                                    {[nameOf(item.childMemberId), item.subject, `due ${formatDate(timezone, item.dueAt!, "long")}`].filter(Boolean).join(" · ")}
+                                  </span>
+                                </span>
+                                <Badge tone="neutral">{item.kind}</Badge>
+                              </>
+                            }
+                          >
+                            <SchoolItemDetail item={item} householdId={householdId} kids={childOptions} timezone={timezone} editable />
+                          </ExpandableRow>
+                        ))}
+                      </ul>
+                    </Card>
+                  </div>
+                ))}
+              </section>
+            ) : null}
           </>
         ) : null}
 
@@ -284,6 +325,27 @@ function groupByDueDate(items: HomeAssessment[], timezone: string): { label: str
           : due === tomorrow
             ? "Tomorrow"
             : formatDate(timezone, new Date(`${due}T00:00:00.000Z`), "long");
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  }
+  return [...groups.entries()].map(([label, groupItems]) => ({ label, items: groupItems }));
+}
+
+/**
+ * Same Today/Tomorrow/date grouping as `groupByDueDate`, for the "Coming
+ * up" list — a plain `SchoolItem[]` rather than `HomeAssessment[]`, and
+ * every item here already has a due date and is due today or later
+ * (`upcomingSchoolItems` guarantees both), so there is no "Overdue" or "No
+ * date yet" bucket to account for.
+ */
+function groupSchoolItemsByDueDate(items: SchoolItem[], timezone: string): { label: string; items: SchoolItem[] }[] {
+  const now = new Date();
+  const today = isoDate(now);
+  const tomorrow = isoDate(new Date(now.getTime() + 86_400_000));
+
+  const groups = new Map<string, SchoolItem[]>();
+  for (const item of items) {
+    const due = isoDate(item.dueAt!);
+    const label = due === today ? "Today" : due === tomorrow ? "Tomorrow" : formatDate(timezone, item.dueAt!, "long");
     groups.set(label, [...(groups.get(label) ?? []), item]);
   }
   return [...groups.entries()].map(([label, groupItems]) => ({ label, items: groupItems }));

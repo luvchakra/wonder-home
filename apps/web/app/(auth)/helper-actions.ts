@@ -5,7 +5,13 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
-import { recordAvailabilityException, replaceAvailabilityPattern, saveHelperProfile } from "@wonderhome/core/household/helpers-repository";
+import {
+  createHelperEngagement,
+  recordAvailabilityException,
+  removeHelperEngagement,
+  replaceAvailabilityPattern,
+  updateHelperEngagement,
+} from "@wonderhome/core/household/helpers-repository";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 
 import type { ActionState } from "./actions";
@@ -28,7 +34,8 @@ const profileSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 
-export async function saveHelperProfileAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+/** Adding a new, distinct engagement for a helper who may already have one or more. */
+export async function createHelperEngagementAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = profileSchema.safeParse({
     householdId: formData.get("householdId"),
     memberId: formData.get("memberId"),
@@ -41,7 +48,7 @@ export async function saveHelperProfileAction(_previous: ActionState, formData: 
   try {
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await saveHelperProfile(supabase, {
+    await createHelperEngagement(supabase, {
       householdId: parsed.data.householdId,
       memberId: parsed.data.memberId,
       engagement: parsed.data.engagement,
@@ -49,7 +56,59 @@ export async function saveHelperProfileAction(_previous: ActionState, formData: 
       notes: parsed.data.notes || null,
     });
     revalidatePath("/househelper");
+    return { notice: "Added." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "househelper").body.error.message };
+  }
+}
+
+const updateProfileSchema = profileSchema.extend({ id: z.uuid() });
+
+/** Changing one already-recorded engagement, by its own id. */
+export async function updateHelperEngagementAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = updateProfileSchema.safeParse({
+    id: formData.get("id"),
+    householdId: formData.get("householdId"),
+    memberId: formData.get("memberId"),
+    engagement: formData.get("engagement"),
+    startedOn: formData.get("startedOn") || undefined,
+    notes: formData.get("notes") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await updateHelperEngagement(supabase, {
+      id: parsed.data.id,
+      householdId: parsed.data.householdId,
+      engagement: parsed.data.engagement,
+      startedOn: parsed.data.startedOn || null,
+      notes: parsed.data.notes || null,
+    });
+    revalidatePath("/househelper");
     return { notice: "Saved." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "househelper").body.error.message };
+  }
+}
+
+const removeProfileSchema = z.object({ id: z.uuid(), householdId: z.uuid() });
+
+/** Removing one engagement — a helper's other engagements, if any, are untouched. */
+export async function removeHelperEngagementAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = removeProfileSchema.safeParse({
+    id: formData.get("id"),
+    householdId: formData.get("householdId"),
+  });
+  if (!parsed.success) return { error: "Something is missing." };
+
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await removeHelperEngagement(supabase, parsed.data);
+    revalidatePath("/househelper");
+    return { notice: "Removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "househelper").body.error.message };
   }

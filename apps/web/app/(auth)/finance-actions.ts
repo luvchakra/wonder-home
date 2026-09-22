@@ -9,6 +9,7 @@ import {
   cancelObligation,
   createObligation,
   recordAmount,
+  removeTransaction,
   updateObligation,
 } from "@wonderhome/core/finance/repository";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
@@ -32,8 +33,11 @@ const obligationFields = z.object({
   name: z.string().trim().min(1, { error: "What's the bill?" }).max(160),
   kind: z.enum(OBLIGATION_KINDS),
   payee: z.string().trim().max(160).optional(),
-  amountMinor: z
-    .union([z.coerce.number().int().min(0), z.literal("")])
+  // A household types 42.50, never 4250 (CLAUDE.md principle 22) — this is
+  // the decimal major-unit amount; it's converted to minor units (paise)
+  // right before the repository call, the one boundary that needs them.
+  amount: z
+    .union([z.coerce.number().min(0), z.literal("")])
     .optional(),
   currency: z.union([z.string().regex(/^[A-Z]{3}$/), z.literal("")]).optional(),
   dueOn: z.union([isoDate, z.literal("")]).optional(),
@@ -46,8 +50,12 @@ function requiresCurrencyWithAmount() {
   return { error: "Add a currency along with the amount.", path: ["currency"] };
 }
 
+function toMinorUnits(amount: number | "" | undefined): number | null {
+  return amount === "" || amount === undefined ? null : Math.round(amount * 100);
+}
+
 const schema = obligationFields.refine(
-  (value) => (value.amountMinor ? Boolean(value.currency) : true),
+  (value) => (value.amount ? Boolean(value.currency) : true),
   requiresCurrencyWithAmount(),
 );
 
@@ -60,7 +68,7 @@ export async function createObligationAction(
     name: formData.get("name"),
     kind: formData.get("kind"),
     payee: formData.get("payee") || undefined,
-    amountMinor: formData.get("amountMinor") || undefined,
+    amount: formData.get("amount") || undefined,
     currency: formData.get("currency") || undefined,
     dueOn: formData.get("dueOn") || undefined,
     recurrence: formData.get("recurrence") || undefined,
@@ -81,10 +89,7 @@ export async function createObligationAction(
       name: parsed.data.name,
       kind: parsed.data.kind,
       payee: parsed.data.payee || null,
-      amountMinor:
-        parsed.data.amountMinor === "" || parsed.data.amountMinor === undefined
-          ? null
-          : parsed.data.amountMinor,
+      amountMinor: toMinorUnits(parsed.data.amount),
       currency: parsed.data.currency || null,
       dueOn: parsed.data.dueOn || null,
       recurrence: parsed.data.recurrence || null,
@@ -100,7 +105,7 @@ export async function createObligationAction(
 const updateSchema = obligationFields
   .extend({ id: z.uuid() })
   .refine(
-    (value) => (value.amountMinor ? Boolean(value.currency) : true),
+    (value) => (value.amount ? Boolean(value.currency) : true),
     requiresCurrencyWithAmount(),
   );
 
@@ -115,7 +120,7 @@ export async function updateObligationAction(
     name: formData.get("name"),
     kind: formData.get("kind"),
     payee: formData.get("payee") || undefined,
-    amountMinor: formData.get("amountMinor") || undefined,
+    amount: formData.get("amount") || undefined,
     currency: formData.get("currency") || undefined,
     dueOn: formData.get("dueOn") || undefined,
     recurrence: formData.get("recurrence") || undefined,
@@ -137,10 +142,7 @@ export async function updateObligationAction(
       name: parsed.data.name,
       kind: parsed.data.kind,
       payee: parsed.data.payee || null,
-      amountMinor:
-        parsed.data.amountMinor === "" || parsed.data.amountMinor === undefined
-          ? null
-          : parsed.data.amountMinor,
+      amountMinor: toMinorUnits(parsed.data.amount),
       currency: parsed.data.currency || null,
       dueOn: parsed.data.dueOn || null,
       recurrence: parsed.data.recurrence || null,
@@ -185,7 +187,7 @@ const transactionSchema = z.object({
     .trim()
     .min(1, { error: "Say which period this is for, like 2026-09." })
     .max(40),
-  amountMinor: z.coerce.number().int().min(0, { error: "Add the amount." }),
+  amount: z.coerce.number().min(0, { error: "Add the amount." }),
   currency: z
     .string()
     .trim()
@@ -207,7 +209,7 @@ export async function recordAmountAction(
     householdId: formData.get("householdId"),
     obligationId: formData.get("obligationId"),
     periodLabel: formData.get("periodLabel"),
-    amountMinor: formData.get("amountMinor"),
+    amount: formData.get("amount"),
     currency: formData.get("currency"),
   });
   if (!parsed.success) {
@@ -221,7 +223,13 @@ export async function recordAmountAction(
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
-    const { anomaly } = await recordAmount(supabase, parsed.data);
+    const { anomaly } = await recordAmount(supabase, {
+      householdId: parsed.data.householdId,
+      obligationId: parsed.data.obligationId,
+      periodLabel: parsed.data.periodLabel,
+      amountMinor: Math.round(parsed.data.amount * 100),
+      currency: parsed.data.currency,
+    });
 
     revalidatePath("/bills");
     return {
@@ -229,6 +237,35 @@ export async function recordAmountAction(
         ? "Recorded — this one looks unusual, so WonderHome flagged it for a look."
         : "Recorded.",
     };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+const removeTransactionSchema = z.object({
+  householdId: z.uuid(),
+  obligationId: z.uuid(),
+  periodLabel: z.string().trim().min(1).max(40),
+});
+
+/** Removing a mistaken transaction entry — the "remove" half of "Add transaction" (CLAUDE.md principle 12). */
+export async function removeTransactionAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = removeTransactionSchema.safeParse({
+    householdId: formData.get("householdId"),
+    obligationId: formData.get("obligationId"),
+    periodLabel: formData.get("periodLabel"),
+  });
+  if (!parsed.success) return { error: "Something is missing." };
+
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await removeTransaction(supabase, parsed.data);
+    revalidatePath("/bills");
+    return { notice: "Removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "finance").body.error.message };
   }

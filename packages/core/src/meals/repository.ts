@@ -404,6 +404,52 @@ async function recipesWithIngredients(
   }));
 }
 
+export type RecipeChoice = {
+  id: string;
+  name: string;
+  totalMinutes: number;
+  serves: number;
+  /** Every essential ingredient that's linked to a consumable is in stock. */
+  available: boolean;
+};
+
+/**
+ * Every recipe the household has, each flagged with whether it's cookable
+ * right now — the same essential-ingredient-in-stock check `suggestMeal`
+ * already runs, reused here so "Plan a meal" can offer what's actually
+ * available first instead of a flat alphabetical list. Nothing is filtered
+ * out: a recipe short an ingredient still needs to be pickable, since
+ * planning it is exactly what turns that shortage into a real shopping item.
+ */
+export async function listRecipeChoices(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<RecipeChoice[]> {
+  const [recipes, consumables] = await Promise.all([
+    recipesWithIngredients(supabase, householdId),
+    listConsumables(supabase, householdId),
+  ]);
+
+  const consumableIds = new Set(consumables.map((consumable) => consumable.id));
+
+  const choices: RecipeChoice[] = recipes.map(({ recipe, ingredients }) => {
+    const missingEssential = ingredients.some(
+      (ingredient) => ingredient.essential && ingredient.consumableId && !consumableIds.has(ingredient.consumableId),
+    );
+    return {
+      id: recipe.id,
+      name: recipe.name,
+      totalMinutes: recipe.totalMinutes,
+      serves: recipe.serves,
+      available: !missingEssential,
+    };
+  });
+
+  return choices.sort((a, b) =>
+    a.available === b.available ? a.name.localeCompare(b.name) : a.available ? -1 : 1,
+  );
+}
+
 export type MealSuggestion = {
   choice: PlanChoice;
   /** Essential ingredients of the chosen recipe that are running low — surfaced immediately, not buried in a shopping list. */

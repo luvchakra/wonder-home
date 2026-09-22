@@ -71,8 +71,6 @@ export default async function FamilyPage() {
   const needs = agenda ? [...agenda.events, ...agenda.conflicts, ...agenda.gifts] : [];
   const moment = events.find((event) => event.protected) ?? events.find((event) => event.kind === "family_time" || event.kind === "outing") ?? null;
   const admin = isHouseholdAdmin(membership);
-  const keyMemberId = membership.household.keyMemberId;
-  const keyMemberName = keyMemberId ? (members.find((member) => member.id === keyMemberId)?.displayName ?? null) : null;
   const kinds = EVENT_KINDS.map((kind) => ({ value: kind, label: kind.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()) }));
 
   return (
@@ -143,12 +141,12 @@ export default async function FamilyPage() {
                     key={member.id}
                     summary={
                       <>
-                        <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} badge={member.id === keyMemberId ? "⭐" : member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined} />
+                        <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined} />
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">{member.displayName}</span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                             {describeRoles(member.roles, member.isOwner)}
-                            {member.id === keyMemberId ? " · Key member" : member.status === "invited" ? " · Invited" : member.id === membership.memberId ? " · You" : ""}
+                            {member.status === "invited" ? " · Invited" : member.id === membership.memberId ? " · You" : ""}
                           </span>
                         </span>
                       </>
@@ -163,9 +161,6 @@ export default async function FamilyPage() {
                         householdId={householdId}
                         currentMemberId={membership.memberId}
                         statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}
-                        keyMemberId={keyMemberId}
-                        keyMemberName={keyMemberName}
-                        admin={admin}
                       />
                       {member.memberType === "child" && view.permissions.includes("school.manage") ? (
                         <PillLink href={`/school?child=${member.id}`} tone="quiet">

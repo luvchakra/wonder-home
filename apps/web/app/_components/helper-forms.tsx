@@ -1,16 +1,22 @@
 "use client";
 
-import { CalendarDays, Pencil, Plus } from "lucide-react";
+import { CalendarDays, Pencil, Plus, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { Sheet } from "@wonderhome/core/ui/sheet";
+import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
-import { recordLeaveAction, saveHelperProfileAction, setAvailabilityPatternAction } from "../(auth)/helper-actions";
+import {
+  createHelperEngagementAction,
+  recordLeaveAction,
+  removeHelperEngagementAction,
+  setAvailabilityPatternAction,
+  updateHelperEngagementAction,
+} from "../(auth)/helper-actions";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -114,46 +120,146 @@ export function WeeklyPatternButton({
   );
 }
 
-/** How the household relates to this helper: nothing about how they perform. */
-export function HelperProfileButton({
+export type HelperEngagementInitial = {
+  id: string;
+  engagement: "regular" | "occasional" | "service";
+  startedOn: string | null;
+  notes: string | null;
+};
+
+function EngagementFields({
+  current,
+}: {
+  current?: HelperEngagementInitial;
+}) {
+  return (
+    <>
+      <div className="space-y-1.5">
+        <label htmlFor="engagement" className="block text-sm font-medium">Kind of help</label>
+        <select id="engagement" name="engagement" defaultValue={current?.engagement ?? "regular"} className={selectClass}>
+          <option value="regular">Regular — most days</option>
+          <option value="occasional">Occasional</option>
+          <option value="service">A service that visits</option>
+        </select>
+      </div>
+      <Field label="With you since (optional)" name="startedOn" type="date" defaultValue={current?.startedOn ?? undefined} />
+      <Field
+        label="Notes (optional)"
+        name="notes"
+        placeholder="Prefers mornings; speaks Bengali and Hindi."
+        maxLength={500}
+        defaultValue={current?.notes ?? undefined}
+        autoComplete="off"
+      />
+    </>
+  );
+}
+
+/**
+ * A brand-new, distinct engagement for a helper who may already have one or
+ * more — the same regular housekeeping helper taking on occasional cooking
+ * on different days is a second arrangement, not an overwrite of the first
+ * (CLAUDE.md principle 12: never stuck replacing what's already there).
+ */
+export function AddHelperEngagementButton({
+  householdId,
+  helper,
+}: {
+  householdId: string;
+  helper: Person;
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(createHelperEngagementAction, {});
+
+  return (
+    <>
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="gap-1.5">
+        <Plus aria-hidden className="size-3.5" /> Add engagement
+      </Pill>
+
+      <Sheet open={open} onOpenChange={setOpen} title={`A new arrangement for ${helper.displayName}`} description="A second, distinct engagement — its own kind of help, start date and notes. WonderHome keeps no record of how anyone performs.">
+        <form action={formAction} className="space-y-3">
+          {state.error ? <Alert>{state.error}</Alert> : null}
+          {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="memberId" value={helper.id} />
+          <EngagementFields />
+          <Button type="submit" disabled={pending} className="w-full">
+            {pending ? "Adding…" : "Add"}
+          </Button>
+        </form>
+      </Sheet>
+    </>
+  );
+}
+
+/** Editing or removing one already-recorded engagement — the update and remove half of "Add engagement". */
+export function HelperEngagementRowControls({
   householdId,
   helper,
   current,
 }: {
   householdId: string;
   helper: Person;
-  current: { engagement: "regular" | "occasional" | "service"; startedOn: string | null; notes: string | null } | null;
+  current: HelperEngagementInitial;
 }) {
-  const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(saveHelperProfileAction, {});
+  const [editOpen, setEditOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [editState, editAction, editPending] = useActionState<ActionState, FormData>(updateHelperEngagementAction, {});
+  const [removeState, removeAction, removePending] = useActionState<ActionState, FormData>(removeHelperEngagementAction, {});
 
   return (
-    <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="gap-1.5">
-        <Pencil aria-hidden className="size-3.5" /> {current ? "Edit details" : "Add details"}
+    <div className="flex items-center gap-1.5">
+      <Pill
+        type="button"
+        tone="quiet"
+        onClick={() => setEditOpen(true)}
+        aria-label={`Edit this engagement`}
+        title="Edit this engagement"
+      >
+        <Pencil aria-hidden className="size-3.5" />
+      </Pill>
+      <Pill
+        type="button"
+        tone="quiet"
+        onClick={() => setRemoveOpen(true)}
+        aria-label="Remove this engagement"
+        title="Remove this engagement"
+        className="text-[var(--wh-risk)]"
+      >
+        <Trash2 aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title={helper.displayName} description="The arrangement, as the household knows it. WonderHome keeps no record of how anyone performs.">
-        <form action={formAction} className="space-y-3">
-          {state.error ? <Alert>{state.error}</Alert> : null}
-          {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+      <Sheet open={editOpen} onOpenChange={setEditOpen} title={`Edit this arrangement`} description="Change what the household knows about this engagement.">
+        <form action={editAction} className="space-y-3">
+          {editState.error ? <Alert>{editState.error}</Alert> : null}
+          <input type="hidden" name="id" value={current.id} />
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="memberId" value={helper.id} />
-          <div className="space-y-1.5">
-            <label htmlFor="engagement" className="block text-sm font-medium">Kind of help</label>
-            <select id="engagement" name="engagement" defaultValue={current?.engagement ?? "regular"} className={selectClass}>
-              <option value="regular">Regular — most days</option>
-              <option value="occasional">Occasional</option>
-              <option value="service">A service that visits</option>
-            </select>
-          </div>
-          <Field label="With you since (optional)" name="startedOn" type="date" defaultValue={current?.startedOn ?? undefined} />
-          <Field label="Notes (optional)" name="notes" placeholder="Prefers mornings; speaks Bengali and Hindi." maxLength={500} defaultValue={current?.notes ?? undefined} autoComplete="off" />
-          <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+          <EngagementFields current={current} />
+          <Button type="submit" disabled={editPending} className="w-full">
+            {editPending ? "Saving…" : "Save changes"}
           </Button>
         </form>
       </Sheet>
-    </>
+
+      <ConfirmationSheet
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        title="Remove this engagement?"
+        description={`This one arrangement with ${helper.displayName} goes away. Any other engagement they have is untouched.`}
+        confirmLabel="Remove"
+        destructive
+        pending={removePending}
+        onConfirm={() => {
+          const formData = new FormData();
+          formData.set("id", current.id);
+          formData.set("householdId", householdId);
+          removeAction(formData);
+        }}
+      >
+        {removeState.error ? <p className="text-sm text-[var(--wh-risk)]">{removeState.error}</p> : null}
+      </ConfirmationSheet>
+    </div>
   );
 }

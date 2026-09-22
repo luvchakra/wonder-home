@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Pencil, Plus } from "lucide-react";
+import { Ban, Pencil, Plus, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -8,13 +8,14 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { Sheet } from "@wonderhome/core/ui/sheet";
+import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import {
   cancelObligationAction,
   createObligationAction,
   recordAmountAction,
+  removeTransactionAction,
   updateObligationAction,
 } from "../(auth)/finance-actions";
 
@@ -116,12 +117,14 @@ function ObligationFields({
       <div className="grid grid-cols-2 gap-3">
         <Field
           label="Amount (optional)"
-          name="amountMinor"
+          name="amount"
           type="number"
           min={0}
-          placeholder="in paise, e.g. 250000"
-          hint="₹2,500 is 250000."
-          defaultValue={initial?.amountMinor ?? undefined}
+          step="0.01"
+          placeholder="2500"
+          defaultValue={
+            initial?.amountMinor != null ? initial.amountMinor / 100 : undefined
+          }
         />
         <Field
           label="Currency"
@@ -335,12 +338,12 @@ export function AddTransactionButton({
           <div className="grid grid-cols-2 gap-3">
             <Field
               label="Amount"
-              name="amountMinor"
+              name="amount"
               type="number"
               min={0}
+              step="0.01"
               required
-              placeholder="in paise, e.g. 250000"
-              hint="₹2,500 is 250000."
+              placeholder="2500"
             />
             <Field
               label="Currency"
@@ -355,6 +358,65 @@ export function AddTransactionButton({
           <Submit label="Record" pendingLabel="Recording…" />
         </form>
       </Sheet>
+    </>
+  );
+}
+
+export type TransactionInitial = {
+  obligationId: string;
+  periodLabel: string;
+  amountMinor: number;
+  currency: string;
+};
+
+/**
+ * Removing a recorded transaction — the "remove" half of "Add transaction"
+ * (CLAUDE.md principle 12). Lives behind a transaction row's own chevron.
+ */
+export function RemoveTransactionControl({
+  householdId,
+  transaction,
+  label,
+}: {
+  householdId: string;
+  transaction: TransactionInitial;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
+    removeTransactionAction,
+    {},
+  );
+
+  return (
+    <>
+      <Pill
+        type="button"
+        tone="quiet"
+        onClick={() => setOpen(true)}
+        className="gap-1.5 text-[var(--wh-risk)]"
+      >
+        <Trash2 aria-hidden className="size-3.5" /> Remove
+      </Pill>
+
+      <ConfirmationSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={`Remove this transaction?`}
+        description={`${label} for ${transaction.periodLabel} will no longer be recorded. This can't be undone, but you can always add it again.`}
+        confirmLabel="Remove"
+        destructive
+        pending={pending}
+        onConfirm={() => {
+          const formData = new FormData();
+          formData.set("householdId", householdId);
+          formData.set("obligationId", transaction.obligationId);
+          formData.set("periodLabel", transaction.periodLabel);
+          formAction(formData);
+        }}
+      >
+        {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}
+      </ConfirmationSheet>
     </>
   );
 }

@@ -6,6 +6,7 @@ import {
   estimateMinutes,
   mergeFromProvider,
   planStudy,
+  upcomingSchoolItems,
   type SchoolItem,
 } from "./items";
 
@@ -193,5 +194,46 @@ describe("the child's own view", () => {
     expect(view.today).toEqual([]);
     expect(view.soon).toEqual([]);
     expect(view.encouragement).toBe("Nothing due today. Nice.");
+  });
+});
+
+describe("what's coming up", () => {
+  it("gives homework and worksheets a few days' notice, and exams/projects/events a month", () => {
+    const items = [
+      item({ id: "hw-soon", kind: "homework", dueAt: new Date("2026-09-19T08:00:00.000Z") }),
+      item({ id: "hw-far", kind: "worksheet", dueAt: new Date("2026-09-30T08:00:00.000Z") }),
+      item({ id: "exam-far", kind: "exam", dueAt: new Date("2026-10-10T08:00:00.000Z") }),
+      item({ id: "exam-too-far", kind: "exam", dueAt: new Date("2026-11-01T08:00:00.000Z") }),
+      item({ id: "project-soon", kind: "project", dueAt: new Date("2026-09-20T08:00:00.000Z") }),
+      item({ id: "event-soon", kind: "event", dueAt: new Date("2026-09-25T08:00:00.000Z") }),
+      item({ id: "notice-no-window", kind: "notice", dueAt: new Date("2026-09-18T08:00:00.000Z") }),
+    ];
+
+    expect(upcomingSchoolItems(items, NOW).map((entry) => entry.id)).toEqual([
+      "hw-soon",
+      "project-soon",
+      "event-soon",
+      "exam-far",
+    ]);
+  });
+
+  it("leaves out anything already past due, finished, or without a due date", () => {
+    const items = [
+      item({ id: "overdue", kind: "homework", dueAt: new Date("2026-09-16T08:00:00.000Z") }),
+      item({ id: "done", kind: "homework", dueAt: new Date("2026-09-18T08:00:00.000Z"), status: "done" }),
+      item({ id: "cancelled", kind: "exam", dueAt: new Date("2026-09-25T08:00:00.000Z"), status: "cancelled" }),
+      item({ id: "no-date", kind: "exam", dueAt: null }),
+    ];
+
+    expect(upcomingSchoolItems(items, NOW)).toEqual([]);
+  });
+
+  it("sorts soonest first", () => {
+    const items = [
+      item({ id: "later", kind: "homework", dueAt: new Date("2026-09-20T08:00:00.000Z") }),
+      item({ id: "sooner", kind: "homework", dueAt: new Date("2026-09-18T08:00:00.000Z") }),
+    ];
+
+    expect(upcomingSchoolItems(items, NOW).map((entry) => entry.id)).toEqual(["sooner", "later"]);
   });
 });

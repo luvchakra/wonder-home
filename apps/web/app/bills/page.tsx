@@ -26,7 +26,6 @@ import {
 } from "@wonderhome/core/identity/households";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -37,11 +36,12 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AgendaRow } from "../_components/agenda-row";
+import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import {
   AddBillButton,
   AddTransactionButton,
   ObligationRowControls,
+  RemoveTransactionControl,
 } from "../_components/finance-forms";
 import { formatDate, requireSession } from "../_lib/session";
 
@@ -318,9 +318,10 @@ export default async function BillsPage({
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {agenda.anomalies.map((item) => (
-                      <AgendaRow
+                      <AgendaExpandableRow
                         key={item.subjectKey}
                         item={item}
+                        timezone={timezone}
                         href="/bills?tab=transactions"
                       />
                     ))}
@@ -460,17 +461,13 @@ export default async function BillsPage({
                     (o) => o.id === row.obligation_id,
                   );
                   return (
-                    <ActionRow
+                    <TransactionRow
                       key={`${row.obligation_id}-${row.period_label}`}
-                      icon={Receipt}
-                      tone="money"
-                      title={bill?.name ?? "Bill"}
-                      meta={`${row.period_label}${bill?.payee ? ` · ${bill.payee}` : ""}`}
-                      action={
-                        <Badge>
-                          {formatMoney(Number(row.amount_minor), row.currency)}
-                        </Badge>
-                      }
+                      row={row}
+                      bill={bill}
+                      owner={bill ? nameOf(bill.responsibleMemberId) : null}
+                      admin={admin}
+                      householdId={householdId}
                     />
                   );
                 })}
@@ -602,6 +599,64 @@ function BillRow({
               currency: bill.currency,
               dueOn: bill.dueOn,
             }}
+          />
+        ) : null}
+      </div>
+    </ExpandableRow>
+  );
+}
+
+function TransactionRow({
+  row,
+  bill,
+  owner,
+  admin,
+  householdId,
+}: {
+  row: HistoryRow;
+  bill: Obligation | undefined;
+  owner: string | null;
+  admin: boolean;
+  householdId: string;
+}) {
+  const amount = formatMoney(Number(row.amount_minor), row.currency);
+
+  return (
+    <ExpandableRow
+      summary={
+        <>
+          <IconTile icon={Receipt} tone="money" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">{bill?.name ?? "Bill"}</span>
+            <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+              {row.period_label}
+              {bill?.payee ? ` · ${bill.payee}` : ""}
+            </span>
+          </span>
+          <span className="shrink-0">
+            <Badge>{amount}</Badge>
+          </span>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+          <Fact label="Period" value={row.period_label} />
+          <Fact label="Amount" value={amount} />
+          <Fact label="Kind" value={bill?.kind ? bill.kind.replace(/_/g, " ") : null} />
+          <Fact label="Payee" value={bill?.payee ?? null} />
+          <Fact label="Owner" value={owner} />
+        </dl>
+        {admin && bill ? (
+          <RemoveTransactionControl
+            householdId={householdId}
+            transaction={{
+              obligationId: row.obligation_id,
+              periodLabel: row.period_label,
+              amountMinor: Number(row.amount_minor),
+              currency: row.currency,
+            }}
+            label={bill.name}
           />
         ) : null}
       </div>

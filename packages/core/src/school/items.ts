@@ -281,6 +281,41 @@ export function mergeFromProvider(
   };
 }
 
+/**
+ * The window a kind of school item is worth previewing ahead of its due
+ * date, in days — separate from `assessDeadline`'s "will this fit" risk
+ * check. An exam or project is worth a family's advance notice for a month;
+ * homework and worksheets are usually assigned and done within days, so
+ * showing them a month out would just be noise. `notice` has no due date of
+ * its own — it belongs to the school-messages list instead.
+ */
+const UPCOMING_WINDOW_DAYS: Record<SchoolItemKind, number> = {
+  homework: 3,
+  worksheet: 3,
+  exam: 30,
+  project: 30,
+  event: 30,
+  notice: 0,
+};
+
+/**
+ * Everything with a real due date, in that kind's own preview window, that
+ * isn't finished or withdrawn yet — sorted soonest first (08-005 follow-up:
+ * "what's coming", not just "what's at risk").
+ */
+export function upcomingSchoolItems(items: readonly SchoolItem[], now: Date = new Date()): SchoolItem[] {
+  return items
+    .filter((item) => item.dueAt !== null)
+    .filter((item) => item.status !== "done" && item.status !== "submitted" && item.status !== "cancelled")
+    .filter((item) => {
+      const windowDays = UPCOMING_WINDOW_DAYS[item.kind];
+      if (windowDays <= 0) return false;
+      const msAway = item.dueAt!.getTime() - now.getTime();
+      return msAway >= 0 && msAway <= windowDays * 86_400_000;
+    })
+    .sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
+}
+
 /** The child's own view: their work, in their words, with nothing else attached. */
 export function childView(
   items: readonly SchoolItem[],

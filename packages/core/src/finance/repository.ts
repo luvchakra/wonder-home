@@ -318,6 +318,30 @@ export async function recordAmount(
 }
 
 /**
+ * Removes one recorded transaction — a household correcting a mistaken
+ * entry, not a ledger requiring an audit trail of every deletion (unlike a
+ * bill definition, which stands down rather than disappearing, a single
+ * recorded amount is closer to a typo that should just go away).
+ */
+export async function removeTransaction(
+  supabase: SupabaseClient,
+  input: { householdId: string; obligationId: string; periodLabel: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("obligation_history")
+    .delete()
+    .eq("household_id", input.householdId)
+    .eq("obligation_id", input.obligationId)
+    .eq("period_label", input.periodLabel);
+
+  if (error) {
+    if (error.code === "42501")
+      throw ApiError.forbidden("You cannot remove transactions for this household.");
+    throw new Error(`removeTransaction failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/**
  * Records what somebody is about to approve. Nothing is paid here.
  *
  * The intent is created awaiting approval; approving it, and the step-up that
