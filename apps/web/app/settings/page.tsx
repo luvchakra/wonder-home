@@ -6,6 +6,7 @@ import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { listMembers } from "@wonderhome/core/identity/households";
 import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
 import { listPlans, loadSubscription, usageSummary } from "@wonderhome/core/billing/repository";
@@ -27,6 +28,8 @@ import { removeAiKey, saveAiKey } from "../(auth)/ai-key-actions";
 import { saveDataUseAction } from "../(auth)/privacy-actions";
 import { AiKeyForm } from "../_components/ai-key-form";
 import { DataUseForm } from "../_components/data-use-form";
+import { MemberAvatarControl } from "../_components/member-avatar-control";
+import { MemberProfileForm } from "../_components/member-profile-form";
 import { PlanForm } from "../_components/plan-form";
 import { formatDate, requireSession } from "../_lib/session";
 
@@ -44,13 +47,15 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
 export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const [user, { data: preferenceRows }, credential, dataUse, voiceSettings] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, dataUse, voiceSettings, members] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, membership.household.id),
     loadVoiceSettings(supabase, membership.household.id),
+    listMembers(supabase, membership.household.id, membership.household.ownerMemberId).catch(() => []),
   ]);
+  const me = members.find((member) => member.id === membership.memberId) ?? null;
 
   const [subscription, plans, usage] = await Promise.all([
     loadSubscription(supabase, membership.household.id).catch(() => null),
@@ -87,14 +92,37 @@ export default async function SettingsPage() {
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: "Back" }} title="Settings & Profile">
       <div className="space-y-6">
-        <Card className="flex items-center gap-4 p-5">
-          <Avatar name={view.displayName} size="xl" />
-          <div className="min-w-0 flex-1">
-            <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{view.roleLabel} · {view.householdName}</p>
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">{user?.email}</p>
+        <Card className="space-y-4 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{view.roleLabel} · {view.householdName}</p>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">{user?.email}</p>
+            </div>
+            {me ? (
+              <MemberProfileForm
+                householdId={membership.household.id}
+                memberId={me.id}
+                initial={{
+                  displayName: me.displayName,
+                  dateOfBirth: me.dateOfBirth,
+                  nickname: me.nickname,
+                  relationship: me.relationship,
+                  occupation: me.occupation,
+                  schoolOrWorkLocation: me.schoolOrWorkLocation,
+                  specialOccasionLabel: me.specialOccasionLabel,
+                  specialOccasionDate: me.specialOccasionDate,
+                }}
+              />
+            ) : (
+              <UserRound aria-hidden className="size-5 shrink-0 text-[var(--wh-foreground-subtle)]" />
+            )}
           </div>
-          <UserRound aria-hidden className="size-5 text-[var(--wh-foreground-subtle)]" />
+          {me ? (
+            <MemberAvatarControl householdId={membership.household.id} memberId={me.id} displayName={me.displayName} avatarUrl={me.avatarUrl} />
+          ) : (
+            <Avatar name={view.displayName} size="xl" />
+          )}
         </Card>
 
         <section>

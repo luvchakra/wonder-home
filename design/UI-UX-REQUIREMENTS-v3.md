@@ -139,7 +139,7 @@ All of these screens are required:
 14. Meals
 15. Bills & Finance
 16. Manage Household
-17. Belief Review
+17. HomeBrain review
 18. Settings & Profile
 
 ------------------------------------------------------------------------
@@ -480,7 +480,7 @@ Spending, approval, notification and privacy policies.
 
 ------------------------------------------------------------------------
 
-## 22. Belief Review
+## 22. HomeBrain review
 
 Purpose:
 
@@ -735,7 +735,7 @@ Feature stories:
 
 **Always here for your family.**
 
-### Belief Review
+### HomeBrain review
 
 **Your home, understood.**
 
@@ -756,7 +756,7 @@ Create an interactive section with app visuals for:
 -   Bills & Finance
 -   Kids & School
 -   Househelper
--   Belief Review
+-   HomeBrain review
 -   AI Assistant
 
 Prefer actual UI components rendered at high quality rather than static
@@ -1144,7 +1144,7 @@ Implementation order:
 5.  Core mobile screens
 6.  Domain screens
 7.  Household administration
-8.  Belief Review
+8.  HomeBrain review
 9.  Responsive desktop application
 10. Landing page
 11. Motion/parallax
@@ -1173,7 +1173,7 @@ Before declaring UI implementation complete:
 -   [ ] School has dedicated UI
 -   [ ] Child experience implemented
 -   [ ] Househelper experience implemented
--   [ ] Belief Review implemented
+-   [ ] HomeBrain review implemented
 -   [ ] Mobile navigation works
 -   [ ] Responsive desktop experience works
 -   [ ] Landing page implemented

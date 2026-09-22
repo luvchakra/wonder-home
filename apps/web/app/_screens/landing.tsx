@@ -237,7 +237,7 @@ export async function Landing() {
               { icon: Wallet, tone: "money", title: "Bills & Finance", description: "Stay on top. Stress less." },
               { icon: GraduationCap, tone: "school", title: "Kids & School", description: "All school info in one place." },
               { icon: HandHeart, tone: "people", title: "Househelper", description: "Support that keeps home running." },
-              { icon: BadgeCheck, tone: "ai", title: "Belief Review", description: "Your home, understood." },
+              { icon: BadgeCheck, tone: "ai", title: "HomeBrain review", description: "Your home, understood." },
               { icon: Sparkles, tone: "ai", title: "AI Assistant", description: "Always here for your family." },
             ].map((item, index) => (
               <div key={item.title} className="wh-reveal" style={{ "--wh-reveal-delay": `${index * 50}ms` } as React.CSSProperties}>

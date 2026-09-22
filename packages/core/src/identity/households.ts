@@ -301,17 +301,19 @@ async function signAvatarPaths(supabase: SupabaseClient, paths: string[]): Promi
  * acceptance, none of which can be revisited once the person exists
  * (CLAUDE.md's "every entity can be added, updated and removed").
  *
- * Admin-gated, same as every other write to this table
- * (`household_members_update_admin`) — there is no self-edit path yet, so
- * this does not open one.
+ * An Admin may edit anyone; any member may also edit themselves — the
+ * `household_members_update_self` RLS policy (and the trigger that keeps it
+ * from reaching `member_type`/`status`/`household_id`/`profile_id`) is what
+ * actually enforces this, not the check below, which only turns a doomed
+ * request into a clear error before a network round trip.
  */
 export async function updateMemberProfile(
   supabase: SupabaseClient,
   actor: HouseholdMembership,
   input: { memberId: string } & MemberProfileUpdate,
 ): Promise<void> {
-  if (!isHouseholdAdmin(actor)) {
-    throw ApiError.forbidden("Only an Admin can edit a member's details.");
+  if (!isHouseholdAdmin(actor) && input.memberId !== actor.memberId) {
+    throw ApiError.forbidden("You can edit your own details, or an Admin can edit anyone's.");
   }
 
   const householdId = actor.household.id;
@@ -335,7 +337,7 @@ export async function updateMemberProfile(
     .eq("household_id", householdId);
 
   if (error) {
-    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can edit a member's details.");
+    if (error.code === "42501") throw ApiError.forbidden("You can edit your own details, or an Admin can edit anyone's.");
     throw new Error(`updateMemberProfile failed: ${error.code ?? "unknown"}`);
   }
 

@@ -385,4 +385,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |
 
-_Generated 2026-09-21 from 21 backlog files._
+_Generated 2026-09-22 from 21 backlog files._

@@ -31,6 +31,7 @@ export const EVENT_KINDS = [
   "appointment",
   "school_event",
   "travel",
+  "special_occasion",
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 

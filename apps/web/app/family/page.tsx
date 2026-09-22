@@ -1,9 +1,10 @@
-import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, Sun, UserPlus, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, PawPrint, Sun, UserPlus, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
 import { familyAgenda, listEvents } from "@wonderhome/core/family/repository";
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
+import { listPets } from "@wonderhome/core/home/repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -25,6 +26,7 @@ import { presentationFor } from "../_components/agenda-row";
 import { FamilyNeedAction, SettleEventPill } from "../_components/family-need-action";
 import { MemberDetail } from "../_components/member-detail";
 import { NewEventForm } from "../_components/new-event-form";
+import { PetDetail } from "../_components/pet-detail";
 import { describeRoles } from "../_lib/member-role";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
@@ -42,10 +44,11 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, integrations] = await Promise.all([
+  const [members, entitlement, integrations, pets] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     listIntegrations(supabase, householdId).catch(() => []),
+    listPets(supabase, householdId).catch(() => []),
   ]);
 
   // A stale calendar and a free afternoon must never look alike (17-002): if a
@@ -154,7 +157,7 @@ export default async function FamilyPage() {
                         member={member}
                         allMembers={familyMembers}
                         timezone={timezone}
-                        editable={admin}
+                        editable={admin || member.id === membership.memberId}
                         householdId={householdId}
                         currentMemberId={membership.memberId}
                         statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}
@@ -171,6 +174,43 @@ export default async function FamilyPage() {
             </Card>
           )}
         </section>
+
+        {pets.length > 0 || admin ? (
+          <section className="wh-rise" style={{ "--wh-rise-delay": "75ms" } as React.CSSProperties}>
+            <SectionHeader
+              title="Pets"
+              count={pets.length}
+              action={admin ? <PillLink href="/household/members" tone="quiet"><PawPrint aria-hidden className="size-3.5" /> Add pet</PillLink> : null}
+            />
+            {pets.length === 0 ? (
+              <EmptyState icon={PawPrint} tone="care" title="No pets yet" description="Add a pet and WonderHome tracks their care alongside everyone else's." action={admin ? <ButtonLink href="/household/members">Add a pet</ButtonLink> : null} />
+            ) : (
+              <Card className="p-2">
+                <ul className="divide-y divide-[var(--wh-border)]">
+                  {pets.map((pet) => (
+                    <ExpandableRow
+                      key={pet.id}
+                      summary={
+                        <>
+                          <IconTile icon={PawPrint} tone="care" size="sm" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium">{pet.name}</span>
+                            <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                              {pet.species}
+                              {pet.active === false ? " · Retired" : ""}
+                            </span>
+                          </span>
+                        </>
+                      }
+                    >
+                      <PetDetail pet={pet} timezone={timezone} editable={admin} householdId={householdId} />
+                    </ExpandableRow>
+                  ))}
+                </ul>
+              </Card>
+            )}
+          </section>
+        ) : null}
 
         {helpers.length > 0 || admin ? (
           <section className="wh-rise" style={{ "--wh-rise-delay": "90ms" } as React.CSSProperties}>
@@ -207,7 +247,7 @@ export default async function FamilyPage() {
                           member={member}
                           allMembers={helpers}
                           timezone={timezone}
-                          editable={admin}
+                          editable={admin || member.id === membership.memberId}
                           householdId={householdId}
                           currentMemberId={membership.memberId}
                           statusLabel={member.status === "invited" ? "Invited, hasn't joined yet" : member.status === "inactive" ? "Inactive" : null}

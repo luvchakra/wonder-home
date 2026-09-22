@@ -27,6 +27,12 @@ export type Pet = {
   id: string;
   name: string;
   species: string;
+  /** The rest are only populated where a caller asks for the full profile (`listPets`) — `pet_care_needs`' own embed stays narrow. */
+  dateOfBirth?: string | null;
+  vetName?: string | null;
+  vetContact?: string | null;
+  notes?: string | null;
+  active?: boolean;
 };
 
 export type PetCareNeed = {

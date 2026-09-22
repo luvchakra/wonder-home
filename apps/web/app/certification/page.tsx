@@ -25,7 +25,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AddBeliefButton, CertificationControls } from "../_components/certification-controls";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
-export const metadata = { title: "Belief Review" };
+export const metadata = { title: "HomeBrain review" };
 export const dynamic = "force-dynamic";
 
 const CATEGORY_LABEL: Record<(typeof CERTIFICATION_CATEGORIES)[number], string> = {
@@ -78,7 +78,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "review";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "Belief Review" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "HomeBrain review" };
 
   const [{ data }, { data: historyRows }] = await Promise.all([
     supabase
@@ -137,7 +137,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Belief Review</h1>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">HomeBrain review</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
           </div>
           {canReview ? <AddBeliefButton householdId={householdId} /> : null}
@@ -220,8 +220,8 @@ export default async function CertificationPage({ searchParams }: { searchParams
               <EmptyState
                 icon={BadgeCheck}
                 tone="ai"
-                title={live.length === 0 ? "WonderHome has nothing recorded yet" : active === "review" ? "Nothing needs your review" : "Nothing here yet"}
-                description={live.length === 0 ? "As you set things up and talk to WonderHome, what it learns appears here for you to confirm or correct." : active === "review" ? "Every belief has been checked recently enough for how much it matters." : "Beliefs move here as they are learned and confirmed."}
+                title={live.length === 0 ? "WonderHome has nothing recorded yet" : active === "review" ? "You're all caught up — nothing needs your review" : "Nothing here yet"}
+                description={live.length === 0 ? "As you set things up and talk to WonderHome, what it learns appears here for you to confirm or correct." : active === "review" ? "Everything has been checked recently enough for how much it matters. Thank you for keeping WonderHome honest." : "Beliefs move here as they are learned and confirmed."}
                 action={live.length === 0 && canReview ? <AddBeliefButton householdId={householdId} /> : null}
               />
             ) : (
@@ -229,14 +229,18 @@ export default async function CertificationPage({ searchParams }: { searchParams
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {shown.map((item) => {
                     const alert = alerts.find((a) => a.itemId === item.id);
+                    const sourceLabel = `${SOURCE_LABEL[item.sourceType]}${item.sourceDetail ? ` (${item.sourceDetail})` : ""}`;
                     return (
                       <CertificationItem
                         key={item.id}
                         claim={item.claim}
                         status={alert ? "needs_review" : item.status}
                         badgeLabel={alert ? ALERT_ACTION_LABEL[alert.action] : undefined}
-                        source={`${SOURCE_LABEL[item.sourceType]}${item.sourceDetail ? ` (${item.sourceDetail})` : ""} · ${CATEGORY_LABEL[item.category]}${alert ? ` · ${alert.reason}` : ""}`}
+                        sourceLabel={sourceLabel}
+                        category={CATEGORY_LABEL[item.category]}
                         risk={item.riskLevel}
+                        lastReviewed={item.lastReviewedAt ? `${formatDate(timezone, item.lastReviewedAt, "long")} · ${formatTime(timezone, item.lastReviewedAt)}` : null}
+                        reason={alert?.reason}
                         controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} /> : undefined}
                       />
                     );
