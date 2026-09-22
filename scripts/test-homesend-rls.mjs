@@ -491,6 +491,85 @@ test("another household cannot see this household's HomeSend address", () => {
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_addresses;`, options), "0");
 });
 
+// ---------------------------------------------------------------------------
+// Phase 3: a second, different-domain change on the same intake (a bill that
+// also implies a grocery item) — homesend_changes_one_per_intake_domain.
+// ---------------------------------------------------------------------------
+
+let thirdItemId = "";
+let thirdBillChangeId = "";
+let thirdGroceryChangeId = "";
+
+test("a second write to a different domain on the same intake is allowed", () => {
+  thirdItemId = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+     values ('${household}', '${headMember}', 'pasted_text', 'School notice: bring Rs 500 and a glue stick')
+     returning id;`,
+    options,
+  );
+  const thirdObligationId = psql(
+    `insert into public.obligations (household_id, name, kind) values ('${household}', 'School fee', 'school_fee') returning id;`,
+    options,
+  );
+  thirdBillChangeId = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+     values ('${household}', '${thirdItemId}', 'bill', '${thirdObligationId}', '${headMember}')
+     returning id;`,
+    options,
+  );
+  assert.ok(thirdBillChangeId.length > 0);
+
+  const consumableId = psql(
+    `insert into public.consumables (household_id, name, category, unit) values ('${household}', 'Glue stick', 'household', 'unit') returning id;`,
+    options,
+  );
+  thirdGroceryChangeId = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+     values ('${household}', '${thirdItemId}', 'grocery_item', '${consumableId}', '${headMember}')
+     returning id;`,
+    options,
+  );
+  assert.ok(thirdGroceryChangeId.length > 0);
+});
+
+test("a second write to the *same* domain on that intake is still refused", () => {
+  const anotherObligationId = psql(
+    `insert into public.obligations (household_id, name, kind) values ('${household}', 'Duplicate fee', 'school_fee') returning id;`,
+    options,
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+       values ('${household}', '${thirdItemId}', 'bill', '${anotherObligationId}', '${headMember}');`,
+      options,
+    ),
+    "a second change was recorded for a domain the intake already has a change for",
+  );
+});
+
+test("undoing only the secondary change leaves the primary change active", () => {
+  asProfile(
+    HEAD,
+    `update public.homesend_changes set undone_at = now(), undone_by_member_id = '${headMember}' where id = '${thirdGroceryChangeId}';`,
+    options,
+  );
+  assert.equal(
+    psql(
+      `select count(*) from public.homesend_changes where intake_id = '${thirdItemId}' and undone_at is null;`,
+      options,
+    ),
+    "1",
+  );
+  assert.equal(
+    psql(`select undone_at is null from public.homesend_changes where id = '${thirdBillChangeId}';`, options),
+    "t",
+  );
+});
+
 function otherAdultMember() {
   return psql(
     `select id from public.household_members where household_id = '${household}' and profile_id = '${OTHER_ADULT}';`,

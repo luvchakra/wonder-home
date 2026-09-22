@@ -4,15 +4,16 @@ import { auditChange } from "../api/audit";
 import type { HomeSendChange, HomeSendChangeDomain } from "./items";
 
 /**
- * What a routed HomeSend item actually wrote (HomeSend Phase 1 — undo).
+ * What a routed HomeSend item actually wrote (HomeSend Phase 1 — undo;
+ * Phase 3 — up to one row per domain per intake, once a secondary grocery
+ * suggestion is confirmed alongside the primary bill/school item).
  *
- * Exactly one change per intake (the table's own unique constraint):
- * routing today only ever creates one domain row. Undo calls the matching
- * domain service directly (`cancelObligation` / `cancelSchoolItem` /
- * `retireConsumable`, from `apps/web/app/(auth)/home-send-actions.ts`) —
- * this file only records that it happened and that it was reversed, the
- * same "repository never writes outside its own table" contract
- * `homesend/repository.ts` keeps for `home_send_items`.
+ * Undo calls the matching domain service directly (`cancelObligation` /
+ * `cancelSchoolItem` / `retireConsumable`, from
+ * `apps/web/app/(auth)/home-send-actions.ts`) — this file only records
+ * that it happened and that it was reversed, the same "repository never
+ * writes outside its own table" contract `homesend/repository.ts` keeps
+ * for `home_send_items`.
  */
 
 type Row = Record<string, unknown>;
@@ -59,6 +60,23 @@ export async function getHomeSendChange(
 
   if (error) throw new Error(`getHomeSendChange failed: ${error.code ?? "unknown"}`);
   return data ? fromRow(data as Row) : null;
+}
+
+/** Whether any of an intake's writes are still live — an intake with a secondary alongside its primary is not fully undone until both are. */
+export async function hasActiveHomeSendChanges(
+  supabase: SupabaseClient,
+  householdId: string,
+  intakeId: string,
+): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("homesend_changes")
+    .select("id", { count: "exact", head: true })
+    .eq("household_id", householdId)
+    .eq("intake_id", intakeId)
+    .is("undone_at", null);
+
+  if (error) throw new Error(`hasActiveHomeSendChanges failed: ${error.code ?? "unknown"}`);
+  return (count ?? 0) > 0;
 }
 
 export type RecordHomeSendChangeInput = {
