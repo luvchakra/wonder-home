@@ -1,10 +1,12 @@
 "use client";
 
-import { CircleUserRound, Download, LifeBuoy, Settings2, ShieldCheck } from "lucide-react";
+import { CircleUserRound, Download, LifeBuoy, LogOut, Settings2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
 import { useState } from "react";
 
+import { signOut } from "../../identity/session-actions";
+import { cn } from "../../lib/cn";
 import { installInstructions, useInstallPrompt } from "../../pwa/use-install-prompt";
 import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -106,6 +108,20 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
               <CircleUserRound aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
               Everything else
             </Link>
+          </DropdownMenu.Item>
+
+          <DropdownMenu.Separator className="my-1 h-px bg-[var(--wh-border)]" />
+
+          {/* A real sign-out, not a link: this is a POST, so nothing that
+              merely lands on this page can trigger it (rule from the
+              session-cookie tests). */}
+          <DropdownMenu.Item asChild>
+            <form action={signOut}>
+              <button type="submit" className={cn(ITEM_CLASS, "text-[var(--wh-risk)]")}>
+                <LogOut aria-hidden className="size-4" />
+                Log out
+              </button>
+            </form>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

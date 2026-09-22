@@ -1,11 +1,10 @@
 "use client";
 
-import { ChevronRight, House, LifeBuoy, LogOut, Menu, X } from "lucide-react";
+import { ChevronRight, House, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-import { signOut } from "../../identity/session-actions";
 import { cn } from "../../lib/cn";
 import { groupSecondaryNavigation, type SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
@@ -201,25 +200,7 @@ function NavDrawer({
             {sections.map((section) => (
               <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
             ))}
-
-            <ul className="space-y-0.5 border-t border-[var(--wh-border)] pt-3">
-              <li>
-                <SidebarLink href="/help" icon={LifeBuoy} label="Get Help" active={isCurrent("/help")} onClick={close} size="lg" />
-              </li>
-            </ul>
           </nav>
-
-          {/* A real sign-out, not a link: this is a POST, so nothing that
-              merely lands on this page can trigger it (rule from the
-              session-cookie tests). */}
-          <form action={signOut} className="border-t border-[var(--wh-border)] px-4 py-3">
-            <button
-              type="submit"
-              className="flex items-center gap-2 text-sm font-medium text-[var(--wh-risk)] hover:underline"
-            >
-              <LogOut aria-hidden className="size-4" /> Log out
-            </button>
-          </form>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

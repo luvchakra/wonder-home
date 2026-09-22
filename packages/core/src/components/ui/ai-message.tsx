@@ -83,7 +83,7 @@ export function ChatMessage({
 
   return (
     <div className={cn("wh-rise flex gap-2.5", fromAssistant ? "flex-row" : "flex-row-reverse", className)}>
-      {fromAssistant ? <AiOrb size={32} thinking={pending} className="mt-0.5" /> : name ? <Avatar name={name} size="sm" className="mt-0.5" /> : null}
+      {!fromAssistant && name ? <Avatar name={name} size="sm" className="mt-0.5" /> : null}
       <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-2", fromAssistant ? "items-start" : "items-end")}>
         <div
           className={cn(
