@@ -4,16 +4,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
+import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { createHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
-import { listMembers } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { HomeSendChannels } from "../_components/home-send-channels";
 import { HomeSendInbox } from "../_components/home-send-inbox";
 import { requireSession } from "../_lib/session";
 
@@ -124,10 +126,11 @@ export default async function HomeSendPage({
     );
   }
 
-  const [items, members, changes] = await Promise.all([
+  const [items, members, changes, address] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listHomeSendChanges(supabase, householdId).catch(() => []),
+    getHomeSendAddress(supabase, householdId).catch(() => null),
   ]);
 
   const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
@@ -145,6 +148,13 @@ export default async function HomeSendPage({
         {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
 
         <HomeSendInbox householdId={householdId} kids={kids} pending={pending} history={history} changes={changes} />
+
+        <HomeSendChannels
+          householdId={householdId}
+          isAdmin={isHouseholdAdmin(membership)}
+          emailConfigured={platformHomeSendEmailDomain() !== null}
+          address={address}
+        />
 
         <QuoteCard>Send it in. WonderHome takes it from here.</QuoteCard>
       </div>
