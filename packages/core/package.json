@@ -34,6 +34,7 @@
     "./notifications/*": "./src/notifications/*.ts",
     "./pwa/*": "./src/pwa/*.ts",
     "./webhooks/*": "./src/webhooks/*.ts",
+    "./health/*": "./src/health/*.ts",
     "./shell/*": "./src/components/shell/*.tsx",
     "./ui/*": "./src/components/ui/*.tsx"
   },

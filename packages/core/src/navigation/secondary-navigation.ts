@@ -17,6 +17,7 @@ export type SecondaryNavKey =
   | "bills"
   | "househelper"
   | "upkeep"
+  | "health"
   | "certification"
   | "homesend"
   | "notifications"
@@ -36,12 +37,13 @@ export type SecondaryNavItem = {
     | "wallet"
     | "hand-heart"
     | "wrench"
+    | "heart-pulse"
     | "badge-check"
     | "send"
     | "bell"
     | "settings-2"
     | "user-round-cog";
-  tone: "primary" | "school" | "money" | "meals" | "care" | "home" | "people" | "ai" | "neutral";
+  tone: "primary" | "school" | "money" | "meals" | "care" | "home" | "people" | "ai" | "health" | "neutral";
   /** One line of purpose, shown as the card subtitle. */
   purpose: string;
   /** Any one of these unlocks the item; null means everyone. */
@@ -58,6 +60,7 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "bills", label: "Bills & Finance", href: "/bills", icon: "wallet", tone: "money", purpose: "Stay on top", requires: ["finance.view"] },
   { key: "househelper", label: "Househelper", href: "/househelper", icon: "hand-heart", tone: "people", purpose: "Support that works", requires: null, adultOnly: true },
   { key: "upkeep", label: "Home & Upkeep", href: "/household/home", icon: "wrench", tone: "home", purpose: "Maintenance, laundry and pets", requires: null, adultOnly: true },
+  { key: "health", label: "Health & Fitness", href: "/health", icon: "heart-pulse", tone: "health", purpose: "Stay on top, without keeping track of it all", requires: null, adultOnly: true },
   { key: "certification", label: "HomeBrain review", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true },
   { key: "notifications", label: "Notifications", href: "/notifications", icon: "bell", tone: "neutral", purpose: "Sparse and actionable", requires: null },

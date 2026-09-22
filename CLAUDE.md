@@ -318,9 +318,9 @@ Always open a PR for finished work pushed to a story/feature branch — never as
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 
 **Regenerate `docs/PROGRESS.md` after every story status change.** Run
-`npm run tracker`. It projects all twenty-one backlogs into one page — where
+`npm run tracker`. It projects all twenty-two backlogs into one page — where
 the whole application stands, what is left, and every story with its status —
-so nobody has to read twenty-one files to answer "what is done". The backlogs
+so nobody has to read twenty-two files to answer "what is done". The backlogs
 stay the source of truth: edit the story's row there, then regenerate. Never
 edit `docs/PROGRESS.md` by hand; CI runs `npm run tracker -- --check` and
 fails when it is out of date.

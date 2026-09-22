@@ -107,6 +107,8 @@
   --wh-tone-meals-soft: oklch(0.965 0.045 60);
   --wh-tone-ai: oklch(0.55 0.15 275);
   --wh-tone-ai-soft: oklch(0.955 0.035 275);
+  --wh-tone-health: oklch(0.58 0.13 185);
+  --wh-tone-health-soft: oklch(0.955 0.035 185);
 
   /* Gradients — subtle, warm, and the only place colour is allowed to bloom */
   --wh-gradient-page:
@@ -201,6 +203,8 @@
   --wh-tone-meals-soft: oklch(0.33 0.05 50);
   --wh-tone-ai: oklch(0.75 0.12 275);
   --wh-tone-ai-soft: oklch(0.32 0.05 275);
+  --wh-tone-health: oklch(0.75 0.11 185);
+  --wh-tone-health-soft: oklch(0.31 0.045 185);
 
   --wh-gradient-page:
     radial-gradient(60rem 30rem at 15% -10%, oklch(0.3 0.04 60 / 0.6), transparent 60%),

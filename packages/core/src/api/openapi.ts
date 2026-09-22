@@ -690,6 +690,73 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/profile": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A member's health-domain settings",
+          description:
+            "`memberId` query parameter names whose settings to read — the caller's own by default. RLS (`wh.may_see_health`), not this route, decides whether the caller may see it: the subject, everyone once the row is `household_operational`, a guardian for their child, or a member explicitly granted `selected_family` access.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+          ],
+          responses: {
+            "200": { description: "The named member's health settings, or null if never set" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        patch: {
+          summary: "Create or update a member's health-domain settings",
+          description:
+            "Only the subject themselves, or a guardian for the child they guard, may write this row — never a household-admin bypass, per the product's own privacy model. Sets the default privacy scope new health entries get, and whether AI may help manage them.",
+          responses: {
+            "200": { description: "The saved health settings" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/privacy": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Who a subject member has shared their health data with",
+          parameters: [
+            { name: "subjectMemberId", in: "query", required: true, schema: { type: "string", format: "uuid" } },
+          ],
+          responses: {
+            "200": { description: "The subject's granted health-sharing consents" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Grant another member SELECTED_FAMILY visibility into a subject's health data",
+          description:
+            "Only the subject themselves, or a guardian granting on behalf of the child they guard, may do this. Household membership never by itself grants access to another adult's private health information.",
+          responses: {
+            "201": { description: "The new consent grant" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/privacy/{consentId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "consentId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        delete: {
+          summary: "Revoke a health-sharing grant",
+          description: "This entity's CLAUDE.md rule-12 \"remove\" — sharing granted can always be taken back.",
+          responses: {
+            "200": { description: "Revoked" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

@@ -228,6 +228,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Resumes sending this household's events to an external system.",
     recordedIn: "packages/core/src/webhooks/repository.ts",
   },
+  {
+    event: "health.profile_updated",
+    because: "Changes who can see a member's health data or whether AI may help manage it — the privacy scope every later health entity is gated by.",
+    recordedIn: "packages/core/src/health/repository.ts",
+  },
+  {
+    event: "health.consent_granted",
+    because: "Widens who can see a subject's selected_family health data — a deliberate exception to their own default privacy scope.",
+    recordedIn: "packages/core/src/health/repository.ts",
+  },
+  {
+    event: "health.consent_revoked",
+    because: "Narrows health-data visibility back down — as worth recording as the grant it undoes.",
+    recordedIn: "packages/core/src/health/repository.ts",
+  },
 ];
 
 /**
@@ -356,6 +371,12 @@ export function describeAuditEvent(
       return { title: "A webhook was turned off", detail: null };
     case "webhook.subscription_enabled":
       return { title: "A webhook was turned back on", detail: null };
+    case "health.profile_updated":
+      return { title: "A health profile's settings changed", detail: null };
+    case "health.consent_granted":
+      return { title: "Health data was shared with another member", detail: null };
+    case "health.consent_revoked":
+      return { title: "Health-data sharing was revoked", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

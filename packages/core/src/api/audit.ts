@@ -60,6 +60,9 @@ export const AUDIT_EVENTS = [
   "webhook.secret_rotated",
   "webhook.subscription_disabled",
   "webhook.subscription_enabled",
+  "health.profile_updated",
+  "health.consent_granted",
+  "health.consent_revoked",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];
