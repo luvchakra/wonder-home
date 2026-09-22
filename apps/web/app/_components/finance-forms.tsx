@@ -355,6 +355,12 @@ export function AddTransactionButton({
               autoComplete="off"
             />
           </div>
+          <Field
+            label="Paid on (optional)"
+            name="paidOn"
+            type="date"
+            hint="When the household actually paid — separate from the period it covers."
+          />
           <Submit label="Record" pendingLabel="Recording…" />
         </form>
       </Sheet>

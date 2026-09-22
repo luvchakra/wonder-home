@@ -192,6 +192,7 @@ const transactionSchema = z.object({
     .string()
     .trim()
     .regex(/^[A-Z]{3}$/, { error: "Use a 3-letter currency code, like INR." }),
+  paidOn: z.union([z.iso.date(), z.literal("")]).optional(),
 });
 
 /**
@@ -211,6 +212,7 @@ export async function recordAmountAction(
     periodLabel: formData.get("periodLabel"),
     amount: formData.get("amount"),
     currency: formData.get("currency"),
+    paidOn: formData.get("paidOn") || undefined,
   });
   if (!parsed.success) {
     return {
@@ -229,6 +231,7 @@ export async function recordAmountAction(
       periodLabel: parsed.data.periodLabel,
       amountMinor: Math.round(parsed.data.amount * 100),
       currency: parsed.data.currency,
+      paidOn: parsed.data.paidOn === "" ? null : (parsed.data.paidOn ?? null),
     });
 
     revalidatePath("/bills");

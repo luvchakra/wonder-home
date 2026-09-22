@@ -27,10 +27,14 @@ import {
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
+import {
+  ExpandableMetricGrid,
+  MetricDetailEmpty,
+  type ExpandableMetric,
+} from "@wonderhome/core/ui/expandable-metric-card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
@@ -53,6 +57,7 @@ type HistoryRow = {
   period_label: string;
   amount_minor: number;
   currency: string;
+  paid_on: string | null;
 };
 type BudgetRow = {
   id: string;
@@ -127,7 +132,7 @@ export default async function BillsPage({
       ).catch(() => []),
       supabase
         .from("obligation_history")
-        .select("obligation_id, period_label, amount_minor, currency")
+        .select("obligation_id, period_label, amount_minor, currency, paid_on")
         .eq("household_id", householdId)
         .order("period_label", { ascending: false })
         .limit(120),
@@ -186,6 +191,100 @@ export default async function BillsPage({
     ? Math.round(((thisPeriod - lastPeriod) / lastPeriod) * 100)
     : null;
   const max = Math.max(1, ...periods.map(([, value]) => value));
+
+  // What each Overview count opens onto: the same real rows the sections
+  // below already render (never a second, thinner list invented for the
+  // card) — up to a handful, with the original section still there for
+  // the rest.
+  const metrics: ExpandableMetric[] = [
+    {
+      label: "Need you",
+      value: needs.length,
+      icon: Wallet,
+      tone: "attention",
+      details:
+        needs.length === 0 ? (
+          <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <ul className="space-y-1">
+              {needs.slice(0, 4).map((item) => (
+                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/bills?tab=transactions" />
+              ))}
+            </ul>
+            {needs.length > 4 ? (
+              <PillLink href="/notifications" tone="quiet">
+                View all {needs.length}
+              </PillLink>
+            ) : null}
+          </div>
+        ),
+    },
+    {
+      label: "Upcoming",
+      value: upcoming.length,
+      icon: CalendarDays,
+      tone: "money",
+      details:
+        upcoming.length === 0 ? (
+          <MetricDetailEmpty>Nothing due.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <ul className="space-y-1">
+              {upcoming.slice(0, 4).map((bill) => (
+                <BillRow
+                  key={bill.id}
+                  bill={bill}
+                  owner={nameOf(bill.responsibleMemberId)}
+                  timezone={timezone}
+                  needsYou={needs.some((n) => n.action?.target === bill.id)}
+                  history={history.filter((h) => h.obligation_id === bill.id)}
+                  admin={admin}
+                  householdId={householdId}
+                />
+              ))}
+            </ul>
+            {upcoming.length > 4 ? (
+              <PillLink href="/bills" tone="quiet">
+                View all {upcoming.length}
+              </PillLink>
+            ) : null}
+          </div>
+        ),
+    },
+    {
+      label: "Settled",
+      value: settled.length,
+      icon: CircleCheck,
+      tone: "handled",
+      details:
+        settled.length === 0 ? (
+          <MetricDetailEmpty>Nothing settled yet.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <ul className="space-y-1">
+              {settled.slice(0, 4).map((bill) => (
+                <BillRow
+                  key={bill.id}
+                  bill={bill}
+                  owner={nameOf(bill.responsibleMemberId)}
+                  timezone={timezone}
+                  needsYou={false}
+                  history={history.filter((h) => h.obligation_id === bill.id)}
+                  admin={admin}
+                  householdId={householdId}
+                />
+              ))}
+            </ul>
+            {settled.length > 4 ? (
+              <PillLink href="/bills?tab=transactions" tone="quiet">
+                View all {settled.length}
+              </PillLink>
+            ) : null}
+          </div>
+        ),
+    },
+  ];
 
   return (
     <AppShell {...shell}>
@@ -252,28 +351,7 @@ export default async function BillsPage({
 
         {active === "overview" ? (
           <>
-            <MetricGrid
-              metrics={[
-                {
-                  label: "Need you",
-                  value: needs.length,
-                  icon: Wallet,
-                  tone: "attention",
-                },
-                {
-                  label: "Upcoming",
-                  value: upcoming.length,
-                  icon: CalendarDays,
-                  tone: "money",
-                },
-                {
-                  label: "Settled",
-                  value: settled.length,
-                  icon: CircleCheck,
-                  tone: "handled",
-                },
-              ]}
-            />
+            <ExpandableMetricGrid metrics={metrics} />
 
             <section>
               <SectionHeader title="Upcoming bills" count={upcoming.length} />
@@ -468,6 +546,7 @@ export default async function BillsPage({
                       owner={bill ? nameOf(bill.responsibleMemberId) : null}
                       admin={admin}
                       householdId={householdId}
+                      timezone={timezone}
                     />
                   );
                 })}
@@ -612,12 +691,14 @@ function TransactionRow({
   owner,
   admin,
   householdId,
+  timezone,
 }: {
   row: HistoryRow;
   bill: Obligation | undefined;
   owner: string | null;
   admin: boolean;
   householdId: string;
+  timezone: string;
 }) {
   const amount = formatMoney(Number(row.amount_minor), row.currency);
 
@@ -646,6 +727,7 @@ function TransactionRow({
           <Fact label="Kind" value={bill?.kind ? bill.kind.replace(/_/g, " ") : null} />
           <Fact label="Payee" value={bill?.payee ?? null} />
           <Fact label="Owner" value={owner} />
+          <Fact label="Paid on" value={row.paid_on ? formatDate(timezone, new Date(`${row.paid_on}T00:00:00.000Z`), "long") : null} />
         </dl>
         {admin && bill ? (
           <RemoveTransactionControl

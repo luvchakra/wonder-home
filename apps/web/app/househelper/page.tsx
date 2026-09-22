@@ -186,14 +186,22 @@ export default async function HousehelperPage({
               Support that keeps home running — coordinated, never surveilled.
             </p>
           </div>
-          {helpers.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            {/* Always reachable, not only from the empty state (rule 12) —
+                a household with one househelper can still take on a
+                second, different person (a cook alongside a cleaner). */}
+            {view.permissions.includes("members.manage") ? (
+              <PillLink href="/household/members" tone="quiet">
+                <UserPlus aria-hidden className="size-3.5" /> Add helper
+              </PillLink>
+            ) : null}
+            {helpers.length > 0 ? (
               <RecordLeaveButton
                 householdId={householdId}
                 helpers={helperOptions}
               />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </header>
 
         <SegmentedControl
@@ -226,18 +234,14 @@ export default async function HousehelperPage({
             retryHref="/househelper"
           />
         ) : active === "overview" && helpers.length === 0 ? (
+          // The one "add" action is the header's own "Add helper" pill
+          // (rule 14) — always there, not only here, so it stays reachable
+          // once a first helper stops this state from showing.
           <EmptyState
             icon={HandHeart}
             tone="people"
             title="No househelper yet"
             description="Add the people who help at home. WonderHome tracks their days and who covers when they are away — nothing more."
-            action={
-              view.permissions.includes("members.manage") ? (
-                <PillLink href="/household/members">
-                  <UserPlus aria-hidden className="size-3.5" /> Add someone
-                </PillLink>
-              ) : null
-            }
           />
         ) : null}
 

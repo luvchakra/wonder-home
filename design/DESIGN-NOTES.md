@@ -462,6 +462,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `ActionRow` / `NavRow` | Name, one line of reason, one action or a chevron |
 | `Pill` / `PillLink` / `Badge` | The small rounded action or state label |
 | `MetricCard` / `MetricGrid` / `StatChips` | The counts under a greeting |
+| `ExpandableMetricGrid` (with `MetricDetailList`/`MetricDetailRow`/`MetricDetailEmpty` for a panel's own rows) | A stat card that opens in place onto the real entries behind its count (rule 21), chevron down rather than a link's chevron right. Built for Home's four counts (Need you / Handled / Upcoming / Checked) and Kids & School Overview's three (Need you / Live work / Checked), all of which used to only link away to another screen — now each opens onto the actual items (reusing `AgendaExpandableRow` and the same `ExpandableRow` + `SchoolItemDetail` rows the sections below already render, never a second thinner list invented for the card), an empty-state line when there are none, with the original destination still reachable from inside the open panel. Same responsive shape as `MetricGrid`: single-column full-width by default, `pairs` opts into the two-per-row exception (rule 19) for short one-word labels only |
 | `DomainCard` / `DomainGrid` | A household domain as a tile |
 | `SegmentedControl` | Link-based tabs with `aria-current` |
 | `Timeline` | The day as a vertical timeline |

@@ -268,7 +268,8 @@ export function assessEvent(event: FamilyEvent, now: Date = new Date()): HomeAss
   return silent(subjectKey, event.title, `${label}, but not yet.`);
 }
 
-function describeAction(state: NonNullable<FamilyEvent["actionState"]>): string {
+/** The household's words for what an event's `actionState` is asking for — the one place this sentence is written, so a row never invents its own. */
+export function describeAction(state: NonNullable<FamilyEvent["actionState"]>): string {
   switch (state) {
     case "needs_rsvp":
       return "Somebody needs to reply";
