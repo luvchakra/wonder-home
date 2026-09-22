@@ -258,6 +258,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Confirming, completing, cancelling or rescheduling an appointment — each one changes what the household believes is still coming up.",
     recordedIn: "packages/core/src/health/appointments.ts",
   },
+  {
+    event: "health.issue_created",
+    because: "A new health observation about a member — who, and (when disclosed) what.",
+    recordedIn: "packages/core/src/health/issues.ts",
+  },
+  {
+    event: "health.issue_updated",
+    because: "Changes an observation's own content — label, description, notes.",
+    recordedIn: "packages/core/src/health/issues.ts",
+  },
+  {
+    event: "health.issue_status_changed",
+    because: "Moving an issue through its lifecycle — mentioned, active, monitoring, resolved, closed — is how the household tracks what is still being watched.",
+    recordedIn: "packages/core/src/health/issues.ts",
+  },
 ];
 
 /**
@@ -398,6 +413,12 @@ export function describeAuditEvent(
       return { title: "A health appointment's details changed", detail: null };
     case "health.appointment_status_changed":
       return { title: "A health appointment's status changed", detail: metadata.to ? `Now ${stringOr(metadata.to, "")}` : null };
+    case "health.issue_created":
+      return { title: "A health issue was recorded", detail: null };
+    case "health.issue_updated":
+      return { title: "A health issue's details changed", detail: null };
+    case "health.issue_status_changed":
+      return { title: "A health issue's status changed", detail: metadata.to ? `Now ${stringOr(metadata.to, "")}` : null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

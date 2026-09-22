@@ -10,7 +10,8 @@ import {
 
 import { may } from "@wonderhome/core/billing/repository";
 import { listAppointments } from "@wonderhome/core/health/appointments";
-import { healthAppointmentsAgenda } from "@wonderhome/core/health/agenda";
+import { healthAppointmentsAgenda, healthIssuesAgenda } from "@wonderhome/core/health/agenda";
+import { listIssues } from "@wonderhome/core/health/issues";
 import { getHealthProfile, listHealthConsents, type PrivacyScope } from "@wonderhome/core/health/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -28,6 +29,7 @@ import {
   PrivacyScopeForm,
   RevokeHealthConsentButton,
 } from "../_components/health-forms";
+import { AddIssueButton, EditIssueButton, IssueStatusActions } from "../_components/health-issue-forms";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Health & Fitness" };
@@ -78,11 +80,12 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members, appointments] = await Promise.all([
+  const [profile, consents, members, appointments, issues] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listAppointments(supabase, householdId).catch(() => []),
+    listIssues(supabase, householdId).catch(() => []),
   ]);
 
   const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? "Someone";
@@ -92,8 +95,10 @@ export default async function HealthPage({
   const currentScope: PrivacyScope = profile?.privacyScope ?? "private";
   const aiAssistanceEnabled = profile?.aiAssistanceEnabled ?? true;
 
-  const agenda = healthAppointmentsAgenda(appointments, nameOf, membership.household.timezone);
+  const appointmentAgenda = healthAppointmentsAgenda(appointments, nameOf, membership.household.timezone);
+  const issueAgenda = healthIssuesAgenda(issues, nameOf);
   const appointmentById = new Map(appointments.map((appointment) => [appointment.id, appointment]));
+  const issueById = new Map(issues.map((issue) => [issue.id, issue]));
 
   const sections = [
     {
@@ -102,7 +107,7 @@ export default async function HealthPage({
       icon: HeartPulse,
       tone: "attention" as const,
       description: "An overdue checkup, an unconfirmed appointment, something worth a look — none yet.",
-      items: agenda.needsAttention,
+      items: [...appointmentAgenda.needsAttention, ...issueAgenda.needsAttention],
     },
     {
       key: "coming_up",
@@ -110,7 +115,7 @@ export default async function HealthPage({
       icon: CalendarClock,
       tone: "health" as const,
       description: "Appointments and preventive care land here once you add them.",
-      items: agenda.comingUp,
+      items: appointmentAgenda.comingUp,
     },
     {
       key: "monitoring",
@@ -118,7 +123,7 @@ export default async function HealthPage({
       icon: Clock,
       tone: "care" as const,
       description: "A health issue you're keeping an eye on shows up here.",
-      items: [],
+      items: issueAgenda.monitoring,
     },
     {
       key: "recent",
@@ -126,7 +131,7 @@ export default async function HealthPage({
       icon: CircleCheck,
       tone: "handled" as const,
       description: "Nothing recorded yet.",
-      items: agenda.recent,
+      items: [...appointmentAgenda.recent, ...issueAgenda.recent],
     },
   ];
 
@@ -139,7 +144,10 @@ export default async function HealthPage({
             <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top, without having to keep track of everything yourself.</p>
           </div>
           {active === "overview" ? (
-            <BookAppointmentButton householdId={householdId} members={members.map((m) => ({ id: m.id, displayName: m.displayName }))} defaultPrivacyScope={currentScope} />
+            <div className="flex flex-wrap gap-2">
+              <AddIssueButton householdId={householdId} members={members.map((m) => ({ id: m.id, displayName: m.displayName }))} defaultPrivacyScope={currentScope} />
+              <BookAppointmentButton householdId={householdId} members={members.map((m) => ({ id: m.id, displayName: m.displayName }))} defaultPrivacyScope={currentScope} />
+            </div>
           ) : null}
         </header>
 
@@ -163,8 +171,28 @@ export default async function HealthPage({
                   <Card className="p-2">
                     <ul className="divide-y divide-[var(--wh-border)]">
                       {section.items.map((item) => {
-                        const appointmentId = item.subjectKey.replace("appointment.", "");
-                        const appointment = appointmentById.get(appointmentId);
+                        if (item.subjectKey.startsWith("issue.")) {
+                          const issue = issueById.get(item.subjectKey.replace("issue.", ""));
+                          return (
+                            <ActionRow
+                              key={item.subjectKey}
+                              icon={section.icon}
+                              tone={section.tone}
+                              title={item.title}
+                              meta={item.reason}
+                              action={
+                                issue && section.key !== "recent" ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <IssueStatusActions householdId={householdId} issueId={issue.id} status={issue.status} />
+                                    <EditIssueButton householdId={householdId} issueId={issue.id} label={issue.label} description={issue.description} notes={issue.notes} />
+                                  </div>
+                                ) : null
+                              }
+                            />
+                          );
+                        }
+
+                        const appointment = appointmentById.get(item.subjectKey.replace("appointment.", ""));
                         return (
                           <ActionRow
                             key={item.subjectKey}

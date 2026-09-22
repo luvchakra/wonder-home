@@ -85,6 +85,7 @@ const SHIPPED_TABLES = [
   "health_provenance",
   "health_consents",
   "health_appointments",
+  "health_issues",
 ];
 
 /**
@@ -302,6 +303,24 @@ async function main() {
     "anonymous cannot read a household's health appointments",
     Boolean(healthAppointments.error) || (Array.isArray(healthAppointments.data) && healthAppointments.data.length === 0),
     healthAppointments.error ? healthAppointments.error.code : `${healthAppointments.data?.length ?? "?"} rows`,
+  );
+
+  // Health issues (story 21-003) — same RLS shape as health_profiles.
+  const healthIssues = await anon.from("health_issues").select("id, label").limit(1);
+  check(
+    "anonymous cannot read a household's health issues",
+    Boolean(healthIssues.error) || (Array.isArray(healthIssues.data) && healthIssues.data.length === 0),
+    healthIssues.error ? healthIssues.error.code : `${healthIssues.data?.length ?? "?"} rows`,
+  );
+  const forgedHealthIssue = await anon.from("health_issues").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    label: "Forged",
+  });
+  check(
+    "anonymous cannot create a health issue",
+    Boolean(forgedHealthIssue.error),
+    forgedHealthIssue.error?.code ?? "no error",
   );
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at
