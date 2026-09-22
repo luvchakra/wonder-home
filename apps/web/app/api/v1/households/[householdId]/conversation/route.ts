@@ -79,11 +79,18 @@ type Params = { params: Promise<{ householdId: string }> };
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Feature keys a consequential intent needs, beyond the conversation itself. */
-const FEATURE_FOR_ACTION: Partial<Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs">> = {
+const FEATURE_FOR_ACTION: Partial<
+  Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking">
+> = {
   make_payment: "finance.bills",
   order_items: "commerce.orders",
   plan_event: "family.events",
   check_agents: "ai.agent_runs",
+  record_health_appointment: "health.tracking",
+  log_health_issue: "health.tracking",
+  resolve_health_issue: "health.tracking",
+  log_vital: "health.tracking",
+  set_fitness_goal: "health.tracking",
 };
 
 /** The target kind each recorded action type implies, for carrying an approved proposal out. */
@@ -96,6 +103,11 @@ const TARGET_KIND_FOR_ACTION: Record<string, IntentTarget["kind"]> = {
   plan_event: "event",
   adjust_schedule: "event",
   set_preference: "outcome",
+  record_health_appointment: "member",
+  log_health_issue: "member",
+  resolve_health_issue: "member",
+  log_vital: "member",
+  set_fitness_goal: "member",
 };
 
 export async function GET(request: Request, { params }: Params) {
@@ -503,6 +515,15 @@ function windowFor(when: string, now: Date): { from: Date; to: Date } {
       return { from: startOf(when.toLowerCase() === "next week" ? 7 : 0), to: startOf(when.toLowerCase() === "next week" ? 14 : 7) };
     case "this weekend":
       return { from: startOf(0), to: startOf(7) };
+    case "this month":
+    case "next month": {
+      const base = when.toLowerCase() === "next month" ? new Date(now.getFullYear(), now.getMonth() + 1, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
+      const from = new Date(base);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+      to.setHours(0, 0, 0, 0);
+      return { from, to };
+    }
     default:
       return { from: startOf(0), to: startOf(1) };
   }
@@ -689,18 +710,20 @@ async function autonomyLookup(supabase: Supabase, householdId: string) {
 async function consequentialEntitlements(
   supabase: Supabase,
   householdId: string,
-): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs", boolean>> {
-  const [bills, orders, events, agentRuns] = await Promise.all([
+): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking", boolean>> {
+  const [bills, orders, events, agentRuns, health] = await Promise.all([
     may(supabase, householdId, "finance.bills"),
     may(supabase, householdId, "commerce.orders"),
     may(supabase, householdId, "family.events"),
     may(supabase, householdId, "ai.agent_runs"),
+    may(supabase, householdId, "health.tracking"),
   ]);
   return {
     "finance.bills": bills.allowed,
     "commerce.orders": orders.allowed,
     "family.events": events.allowed,
     "ai.agent_runs": agentRuns.allowed,
+    "health.tracking": health.allowed,
   };
 }
 

@@ -3,7 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../api/errors";
 import { createConsumable } from "../commerce/repository";
 import { prepareIntent } from "../finance/repository";
+import { getCheckup } from "../health/checkups";
+import { candidatesFor } from "../health/reminders";
 import { createServiceRequest } from "../home/repository";
+import { createNotification } from "../notifications/create";
+import { chooseRecipient, decideNotification, type HouseholdEvent } from "../notifications/decide";
 import type { PlannedStep } from "./orchestrator";
 
 /**
@@ -30,6 +34,11 @@ export async function runExecutor(
   supabase: SupabaseClient,
   householdId: string,
   step: PlannedStep,
+  // Only `health.notify_overdue` needs this so far — `createNotification`
+  // requires a service-role client (no RLS INSERT policy for `authenticated`
+  // on `notifications`), and `run.ts` already has one locally for its own
+  // `notifyApproval` call. Optional so every other executor stays untouched.
+  admin?: SupabaseClient,
 ): Promise<ExecutorResult> {
   switch (step.toolName) {
     case "list.add_item":
@@ -47,6 +56,8 @@ export async function runExecutor(
       // practice. It stays a real, safe function rather than a silent
       // no-op in case that ever changes.
       return preparePayment(supabase, householdId, step);
+    case "health.notify_overdue":
+      return notifyOverdueHealth(supabase, admin ?? null, householdId, step);
     default:
       return { performed: false, reason: `No automated action exists yet for ${step.toolName}.` };
   }
@@ -112,4 +123,45 @@ async function preparePayment(supabase: SupabaseClient, householdId: string, ste
     currency: (data.currency as string | null) ?? "INR",
   });
   return { performed: false, reason: "Prepared and waiting for someone to approve — WonderHome never pays on its own." };
+}
+
+async function notifyOverdueHealth(
+  supabase: SupabaseClient,
+  admin: SupabaseClient | null,
+  householdId: string,
+  step: PlannedStep,
+): Promise<ExecutorResult> {
+  // `createNotification` requires the service-role client; without one this
+  // tool genuinely cannot act yet, same honesty as every other "no backing
+  // write" case in this file.
+  if (!admin) return { performed: false, reason: "No automated action exists yet for health.notify_overdue." };
+
+  const checkupId = typeof step.arguments.checkupId === "string" ? step.arguments.checkupId : null;
+  if (!checkupId) return { performed: false, reason: "No checkup was identified." };
+
+  const checkup = await getCheckup(supabase, householdId, checkupId);
+  if (!checkup) return { performed: false, reason: "That checkup could not be found." };
+
+  const candidates = await candidatesFor(admin, householdId, checkup.memberId);
+  const recipient = chooseRecipient(candidates);
+  if (!recipient) return { performed: false, reason: "Nobody could be notified about this." };
+
+  const event: HouseholdEvent = {
+    threadKey: `health_checkup:${checkup.id}:overdue`,
+    outcomeKey: `checkup.${checkup.id}`,
+    kind: "exception",
+    aiResolvable: false,
+    riskLevel: "low",
+    dueAt: new Date(checkup.nextDueOn),
+    impact: step.rationale,
+    recommendedAction: { action: "view_checkup" },
+  };
+
+  const decision = decideNotification(event, { candidates, openThreadKeys: [], now: new Date() });
+  if (decision.kind !== "notify") return { performed: false, reason: "Nothing new to tell anyone about this yet." };
+
+  const created = await createNotification(admin, { householdId, decision, title: "Health checkup overdue", body: decision.impact });
+  return created
+    ? { performed: true, detail: `Told ${recipient.memberId === checkup.memberId ? "them" : "a guardian"} about the overdue checkup.` }
+    : { performed: false, reason: "Could not send the reminder just now." };
 }

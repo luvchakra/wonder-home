@@ -6,6 +6,7 @@ import {
   coordinate,
   groceriesSpecialist,
   handoff,
+  healthSpecialist,
   homeSpecialist,
   mealsSpecialist,
   petsSpecialist,
@@ -88,6 +89,35 @@ describe("a specialist proposes for its own domain only", () => {
     expect(result.steps).toEqual([
       { toolName: "home.book_service", rationale: "The boiler is overdue for service.", arguments: { assetId: "boiler-1" } },
     ]);
+  });
+
+  it("health proposes telling someone about an overdue checkup, and nothing else (21-006)", () => {
+    const result = healthSpecialist({
+      runId: "r-1",
+      assessments: [
+        assessment({
+          subjectKey: "checkup.annual-1",
+          title: "Kunal — Annual physical",
+          status: "at_risk",
+          reason: "Kunal — Annual physical, was due 2026-09-01.",
+          action: null,
+        }),
+      ],
+      inbox: [],
+    });
+    expect(result.contracts).toEqual([]);
+    expect(result.steps).toEqual([
+      { toolName: "health.notify_overdue", rationale: "Kunal — Annual physical, was due 2026-09-01.", arguments: { checkupId: "annual-1" } },
+    ]);
+  });
+
+  it("health stays silent for a checkup that is only due soon, not overdue", () => {
+    const result = healthSpecialist({
+      runId: "r-1",
+      assessments: [assessment({ subjectKey: "checkup.annual-1", status: "pending" })],
+      inbox: [],
+    });
+    expect(result).toEqual({ steps: [], contracts: [] });
   });
 
   it("bills only ever proposes the step — approval is authorizeToolCall's job, not this domain's", () => {

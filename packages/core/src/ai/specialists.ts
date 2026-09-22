@@ -20,7 +20,7 @@ import { type Contract, type ContractType, type PlannedStep } from "./orchestrat
  * it led to can be traced back to why it exists.
  */
 
-export const SPECIALIST_NAMES = ["meals", "pets", "home", "bills", "groceries"] as const;
+export const SPECIALIST_NAMES = ["meals", "pets", "home", "health", "bills", "groceries"] as const;
 export type SpecialistName = (typeof SPECIALIST_NAMES)[number];
 
 export type SpecialistGoal = {
@@ -130,6 +130,32 @@ export const homeSpecialist: Specialist = ({ assessments }) => {
 };
 
 /**
+ * Health (story 21-006): an overdue checkup is the one health item this
+ * pipeline acts on — a booked appointment or an open issue is something a
+ * person already knows about and is tracking, but an overdue checkup nobody
+ * has rebooked is exactly the kind of quiet drift the household agents exist
+ * to catch. Only ever proposes `health.notify_overdue` — telling someone,
+ * never diagnosing, never writing a health record — and the tool itself is
+ * gated by `health.manage`, the same permission HomeTalk's own health rules
+ * require.
+ */
+export const healthSpecialist: Specialist = ({ assessments }) => {
+  const steps: PlannedStep[] = [];
+
+  for (const checkup of forDomain(assessments, "checkup")) {
+    if (checkup.status === "at_risk") {
+      steps.push({
+        toolName: "health.notify_overdue",
+        rationale: checkup.reason,
+        arguments: { checkupId: checkup.subjectKey.replace("checkup.", "") },
+      });
+    }
+  }
+
+  return steps.length === 0 ? EMPTY : { steps, contracts: [] };
+};
+
+/**
  * Bills (module 11): paying is always a step-up action, so this domain only
  * ever proposes the step — `authorizeToolCall` is what actually requires the
  * approval.
@@ -183,12 +209,13 @@ export const SPECIALISTS: Record<SpecialistName, Specialist> = {
   meals: mealsSpecialist,
   pets: petsSpecialist,
   home: homeSpecialist,
+  health: healthSpecialist,
   bills: billsSpecialist,
   groceries: groceriesSpecialist,
 };
 
 /** The order specialists run in: producers of a contract before its consumer. */
-export const COORDINATION_ORDER: readonly SpecialistName[] = ["meals", "pets", "home", "bills", "groceries"];
+export const COORDINATION_ORDER: readonly SpecialistName[] = ["meals", "pets", "home", "health", "bills", "groceries"];
 
 /**
  * Decomposes a household goal into governed domain actions across

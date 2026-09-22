@@ -67,7 +67,8 @@ const REMINDER_MESSAGE: Record<ReminderKind, string> = {
 
 type Row = Record<string, unknown>;
 
-async function candidatesFor(admin: SupabaseClient, householdId: string, memberId: string): Promise<Candidate[]> {
+/** Who to tell about something concerning one member: themselves if they have an account, otherwise their guardians — the same resolution the appointment reminder sweep uses, reused by the specialist pipeline's own overdue-checkup notice (story 21-006). */
+export async function candidatesFor(admin: SupabaseClient, householdId: string, memberId: string): Promise<Candidate[]> {
   const [memberRow, guardianRows, quietRow] = await Promise.all([
     admin.from("household_members").select("id, member_type, profile_id").eq("id", memberId).maybeSingle(),
     admin.from("member_guardians").select("guardian_member_id").eq("household_id", householdId).eq("child_member_id", memberId),

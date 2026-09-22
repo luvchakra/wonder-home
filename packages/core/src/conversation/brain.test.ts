@@ -76,6 +76,72 @@ const snapshot: BrainSnapshot = {
   communications: [],
   memories: [{ scope: "household", memberId: null, category: "preference", key: "meals.dinner", value: { statement: "we prefer dinner at 8", time: "20:00" }, status: "learned" }],
   absences: [{ memberId: "sunita", onDate: "2026-09-22", available: false, reason: null }],
+  healthAppointments: [
+    {
+      id: "ha1",
+      householdId: "hh1",
+      memberId: "kunal",
+      appointmentType: "dentist",
+      status: "confirmed",
+      privacyScope: "private",
+      startsAt: "2026-09-23T10:30:00Z",
+      endsAt: null,
+      provider: "Dr. Rao",
+      facility: null,
+      location: null,
+      preparationNotes: null,
+      notes: null,
+      remindAdvance: true,
+      remindPreparation: false,
+      remindDayOf: true,
+      calendarSync: false,
+      familyEventId: null,
+      rescheduledFromId: null,
+      checkupId: null,
+      createdByMemberId: "kunal",
+      createdAt: "2026-09-19T00:00:00Z",
+      updatedAt: "2026-09-19T00:00:00Z",
+    },
+  ],
+  healthIssues: [
+    {
+      id: "hi1",
+      householdId: "hh1",
+      memberId: "upasana",
+      label: "Headache",
+      description: null,
+      status: "active",
+      privacyScope: "private",
+      sourceType: "manual_entry",
+      provenanceId: null,
+      notes: null,
+      startedAt: "2026-09-19T00:00:00Z",
+      resolvedAt: null,
+      createdByMemberId: "upasana",
+      createdAt: "2026-09-19T00:00:00Z",
+      updatedAt: "2026-09-19T00:00:00Z",
+    },
+  ],
+  healthCheckups: [
+    {
+      id: "hc1",
+      householdId: "hh1",
+      memberId: "kunal",
+      label: "Annual physical",
+      checkupType: "doctor",
+      source: "user_defined",
+      cadenceDays: 365,
+      nextDueOn: "2026-09-01",
+      lastCompletedOn: null,
+      privacyScope: "private",
+      status: "active",
+      linkedAppointmentId: null,
+      notes: null,
+      createdByMemberId: "kunal",
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+    },
+  ],
   agenda: {
     needsYou: [{ subjectKey: "bill:b1", title: "Electricity", status: "at_risk", riskLevel: "medium", notable: true, reason: "due tomorrow", action: { action: "Pay" }, dueOn: "2026-09-21" }],
     handled: [{ key: "meals", title: "Meals", meta: "1 of 1 checked" }],
@@ -105,6 +171,9 @@ describe("the facts a household's brain holds", () => {
     expect(text).toContain("Meals dinner — we prefer dinner at 8 (20:00).");
     expect(text).toContain("Needs attention: Electricity — due tomorrow (due 2026-09-21); suggested: Pay.");
     expect(text).toContain("WonderHome checked 14 things across meals and 1 need someone.");
+    expect(text).toContain("Kunal Chakrabarty has a dentist appointment on Wed 23 Sep at 4:00pm with Dr. Rao, confirmed.");
+    expect(text).toContain("Upasana Chakrabarty has an open health note: Headache (active), since Sat 19 Sep.");
+    expect(text).toContain("Kunal Chakrabarty's Annual physical is overdue (2026-09-01).");
   });
 
   it("labels each fact with the class the consent gate decides on", () => {
@@ -116,6 +185,9 @@ describe("the facts a household's brain holds", () => {
     expect(classOf("Sunita is away")).toBe("location");
     expect(classOf("Milk (grocery)")).toBe("general");
     expect(classOf("Sunita is a househelper")).toBe("general");
+    expect(classOf("dentist appointment")).toBe("health");
+    expect(classOf("open health note")).toBe("health");
+    expect(classOf("Annual physical")).toBe("health");
   });
 
   it("is held back by the default consent to ordinary household matters only", () => {
@@ -125,6 +197,8 @@ describe("the facts a household's brain holds", () => {
     expect(sent).not.toContain("Fractions worksheet");
     expect(sent).not.toContain("Electricity (utility");
     expect(sent).not.toContain("is away on");
+    expect(sent).not.toContain("dentist appointment");
+    expect(sent).not.toContain("open health note");
     expect(sent).toContain("Milk (grocery): typically 1 litre lasts about 1 day.");
     // Names never leave, whatever the class.
     expect(sent).not.toContain("Kunal");

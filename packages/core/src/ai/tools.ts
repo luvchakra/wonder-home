@@ -103,6 +103,14 @@ export const TOOLS: readonly ToolDefinition[] = [
     reversible: false,
   },
   {
+    name: "health.notify_overdue",
+    description: "Tell a household member about an overdue health item",
+    requires: "health.manage",
+    actionKind: "notify",
+    risk: "safe",
+    reversible: true,
+  },
+  {
     name: "members.set_role",
     description: "Change what someone in the household may do",
     requires: "members.assign_admin",

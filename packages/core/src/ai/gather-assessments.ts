@@ -4,6 +4,7 @@ import { financeAgenda } from "../finance/repository";
 import { familyAgenda } from "../family/repository";
 import type { HomeAssessment } from "../home/assessment";
 import { homeAgenda } from "../home/repository";
+import { healthAgenda } from "../health/domain-agenda";
 import { mealAgenda } from "../meals/repository";
 import { shoppingAgenda } from "../commerce/repository";
 import { schoolAgenda } from "../school/repository";
@@ -22,13 +23,14 @@ export async function householdAssessments(
   householdId: string,
   now: Date = new Date(),
 ): Promise<readonly HomeAssessment[]> {
-  const [meals, finance, shopping, home, family, school] = await Promise.all([
+  const [meals, finance, shopping, home, family, school, health] = await Promise.all([
     mealAgenda(supabase, householdId, { now }),
     financeAgenda(supabase, householdId, { now }),
     shoppingAgenda(supabase, householdId, { now }),
     homeAgenda(supabase, householdId, { now }),
     familyAgenda(supabase, householdId, { now }),
     schoolAgenda(supabase, householdId, { now }),
+    healthAgenda(supabase, householdId, { now }),
   ]);
 
   return [
@@ -46,5 +48,8 @@ export async function householdAssessments(
     ...family.conflicts,
     ...school.deadlines,
     ...school.messages,
+    ...health.needsAttention,
+    ...health.comingUp,
+    ...health.monitoring,
   ];
 }

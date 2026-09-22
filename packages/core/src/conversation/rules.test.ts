@@ -213,6 +213,11 @@ describe("what it does not know", () => {
         "move dinner to 8pm",
         "Ravi handles the bins",
         "we prefer lunch at 1",
+        "I have a dentist appointment next Tuesday at 4",
+        "My BP was 128 over 82 this morning",
+        "I've had a headache since yesterday",
+        "My headache is gone",
+        "I want to walk three times a week",
       ].map((utterance) => read(utterance).action),
     );
     for (const action of RULE_ACTIONS) expect(seen.has(action)).toBe(true);
@@ -236,5 +241,53 @@ describe("changing a meal", () => {
     expect(intent.action).toBe("set_preference");
     expect(intent.target).toEqual({ kind: "outcome", reference: "meals.dinner" });
     expect(intent.parameters).toMatchObject({ statement: "dinner friday: paneer pulao" });
+  });
+});
+
+describe("health (story 21-006)", () => {
+  it("books an appointment from 'I have a <type> appointment <when> at <time>'", () => {
+    const intent = read("I have a dentist appointment next Tuesday at 4");
+    expect(intent.action).toBe("record_health_appointment");
+    expect(intent.target).toEqual({ kind: "member", reference: "self" });
+    expect(intent.parameters).toMatchObject({ appointmentType: "dentist", when: "next tuesday", time: "4" });
+  });
+
+  it("prepares a vital reading from 'My BP was <reading>'", () => {
+    const intent = read("My BP was 128 over 82 this morning");
+    expect(intent.action).toBe("log_vital");
+    expect(intent.parameters).toMatchObject({ vital: "bp", reading: "128 over 82 this morning" });
+  });
+
+  it("logs an issue from 'I've had a <symptom> since <when>'", () => {
+    const intent = read("I've had a headache since yesterday");
+    expect(intent.action).toBe("log_health_issue");
+    expect(intent.parameters).toMatchObject({ label: "headache", since: "yesterday" });
+  });
+
+  it("resolves an issue from 'My <symptom> is gone'", () => {
+    const intent = read("My headache is gone");
+    expect(intent.action).toBe("resolve_health_issue");
+    expect(intent.parameters).toMatchObject({ label: "headache" });
+  });
+
+  it("prepares a fitness goal from 'I want to <activity> <count> times a <period>' — words and digits alike", () => {
+    const intent = read("I want to walk three times a week");
+    expect(intent.action).toBe("set_fitness_goal");
+    expect(intent.parameters).toMatchObject({ activity: "walk", count: 3, timesPer: "week" });
+
+    const digitIntent = read("I want to run 5 times a week");
+    expect(digitIntent.parameters).toMatchObject({ activity: "run", count: 5, timesPer: "week" });
+  });
+
+  it("reads 'What health appointments do I have this month?' as a health-scoped status question", () => {
+    const intent = read("What health appointments do I have this month?");
+    expect(intent.action).toBe("ask_status");
+    expect(intent.parameters).toMatchObject({ scope: "health", when: "this month" });
+  });
+
+  it("does not mistake an ordinary preference for a health issue", () => {
+    // "I have X" is a symptom shape only when X reads like a short noun, not
+    // a sentence about something else that happens to start with "I have".
+    expect(read("I have a meeting at 3").action).not.toBe("log_health_issue");
   });
 });

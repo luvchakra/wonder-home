@@ -7,6 +7,9 @@ import type { FamilyEvent } from "../family/schedule";
 import { listObligations } from "../finance/repository";
 import type { Obligation } from "../finance/payments";
 import type { HomeAssessment } from "../home/assessment";
+import { listAppointments, type HealthAppointment } from "../health/appointments";
+import { classifyCheckup, listCheckups, type HealthCheckup } from "../health/checkups";
+import { listIssues, type HealthIssue } from "../health/issues";
 import { listResponsibilities, type ResponsibilityRow } from "../household/configuration-repository";
 import { listMembers, type HouseholdMember } from "../identity/households";
 import type { PersonalView } from "../identity/views";
@@ -76,6 +79,9 @@ export type BrainSnapshot = {
   communications: readonly SchoolCommunication[];
   memories: readonly Memory[];
   absences: readonly Absence[];
+  healthAppointments: readonly HealthAppointment[];
+  healthIssues: readonly HealthIssue[];
+  healthCheckups: readonly HealthCheckup[];
   agenda: BrainAgenda;
 };
 
@@ -203,6 +209,43 @@ export function factsFrom(snapshot: BrainSnapshot): ContextCandidate[] {
     add("location", "who is away", `${name(absence.memberId) ?? "Someone"} is away on ${absence.onDate}${absence.reason ? ` (${absence.reason})` : ""}.`, [absence.memberId]);
   }
 
+  // --- Health -------------------------------------------------------------------
+  // `snapshot.healthAppointments`/`healthIssues`/`healthCheckups` are only
+  // ever populated when `gather()` actually read them — which it only does
+  // for a viewer holding `health.manage` (head/administrator/adult). An
+  // empty array from anyone else means "not gathered", not "nothing going
+  // on", so this never claims a household has no health items when it
+  // simply never looked; it just adds nothing, and the question about
+  // groceries or meals never touches this section at all.
+  for (const appointment of snapshot.healthAppointments.slice(0, MAX_PER_LIST)) {
+    const startsAt = new Date(appointment.startsAt);
+    add(
+      "health",
+      "what health appointments are coming up",
+      `${name(appointment.memberId) ?? "Someone"} has a ${appointment.appointmentType.replace(/_/g, " ")} appointment on ${dateOf(startsAt)} at ${timeOf(startsAt)}${appointment.provider ? ` with ${appointment.provider}` : ""}, ${appointment.status}.`,
+      [appointment.memberId],
+    );
+  }
+  for (const issue of snapshot.healthIssues.slice(0, MAX_PER_LIST)) {
+    add(
+      "health",
+      "what health issues are open",
+      `${name(issue.memberId) ?? "Someone"} has an open health note: ${issue.label} (${issue.status}), since ${dateOf(new Date(issue.startedAt))}.`,
+      [issue.memberId],
+    );
+  }
+  const notableCheckups = snapshot.healthCheckups
+    .map((checkup) => ({ checkup, urgency: classifyCheckup(checkup, snapshot.now) }))
+    .filter((entry) => entry.urgency !== "silent");
+  for (const { checkup, urgency } of notableCheckups.slice(0, MAX_PER_LIST)) {
+    add(
+      "health",
+      "what checkups are due",
+      `${name(checkup.memberId) ?? "Someone"}'s ${checkup.label} is ${urgency === "overdue" ? "overdue" : "due soon"} (${checkup.nextDueOn}).`,
+      [checkup.memberId],
+    );
+  }
+
   // --- What the household has said ----------------------------------------------
   for (const memory of snapshot.memories.slice(0, MAX_PER_LIST * 2)) {
     const about = memory.scope === "member" ? name(memory.memberId) : null;
@@ -272,7 +315,7 @@ async function gather(supabase: SupabaseClient, input: BrainInput): Promise<Hous
     }
   };
 
-  const [members, responsibilities, events, meals, consumables, orders, obligations, schoolItems, communications, memories, absences] = await Promise.all([
+  const [members, responsibilities, events, meals, consumables, orders, obligations, schoolItems, communications, memories, absences, healthAppointments, healthIssues, healthCheckups] = await Promise.all([
     read("who is in the household", () => listMembers(supabase, input.householdId, null), [] as HouseholdMember[]),
     read("responsibilities", () => listResponsibilities(supabase, input.householdId), [] as ResponsibilityRow[]),
     read("the calendar", () => listEvents(supabase, input.householdId, { from: now, to: horizon }), [] as FamilyEvent[]),
@@ -286,6 +329,22 @@ async function gather(supabase: SupabaseClient, input: BrainInput): Promise<Hous
     permitted("school.manage") ? read("school messages", () => listCommunications(supabase, input.householdId), [] as SchoolCommunication[]) : Promise.resolve([] as SchoolCommunication[]),
     read("what the household has said", () => listMemories(supabase, input.householdId), [] as Memory[]),
     read("who is away", () => listAbsences(supabase, input.householdId, today, isoDateIn(horizon, input.timezone)), [] as Absence[]),
+    // Health is only ever gathered for a member who holds `health.manage`
+    // (head/administrator/adult) — a request about groceries never pulls in
+    // a private health fact, and a child's own client never even attempts
+    // this read, matching the `finance.view`/`school.manage` precedent
+    // above. Row-level self-or-guardian visibility is still `may_see_health`
+    // itself, enforced by RLS on the read — this permission check is the
+    // context-class gate on top of it.
+    permitted("health.manage")
+      ? read("health appointments", () => listAppointments(supabase, input.householdId, { statuses: ["proposed", "confirmed"] }), [] as HealthAppointment[])
+      : Promise.resolve([] as HealthAppointment[]),
+    permitted("health.manage")
+      ? read("health issues", () => listIssues(supabase, input.householdId, { statuses: ["mentioned", "active", "monitoring"] }), [] as HealthIssue[])
+      : Promise.resolve([] as HealthIssue[]),
+    permitted("health.manage")
+      ? read("health checkups", () => listCheckups(supabase, input.householdId, { statuses: ["active"] }), [] as HealthCheckup[])
+      : Promise.resolve([] as HealthCheckup[]),
   ]);
 
   const facts = factsFrom({
@@ -304,6 +363,9 @@ async function gather(supabase: SupabaseClient, input: BrainInput): Promise<Hous
     communications,
     memories,
     absences,
+    healthAppointments,
+    healthIssues,
+    healthCheckups,
     agenda: { ...input.agenda, unavailable: [...input.agenda.unavailable, ...unavailable] },
   });
 
