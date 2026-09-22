@@ -214,12 +214,20 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the
-  inbound intake channel: a photo, a file or a pasted forward, classified
-  and routed into a real domain table only once a person confirms it. v1
-  is upload/paste from inside the app — no WhatsApp/email webhook exists
-  (no provider credentials, see "External providers" below), but the
-  table is shaped so one can plug in
-  later without a redesign.
+  inbound intake channel: a photo, a file, a pasted forward or a forwarded
+  email, classified and routed into a real domain table only once a
+  person confirms it. Every routed item can be undone
+  (`homesend/changes.ts`), the same domain service a manual remove would
+  use, never a raw delete. A real Resend inbound-email webhook
+  (`POST /api/v1/homesend/email/webhook`, `homesend/email-gateway.ts`)
+  exists behind the same provider-neutral gate the AI/voice keys use —
+  code-complete, Svix-signature-verified, unit- and DB-tested — but
+  genuinely inert until a deployment sets `RESEND_API_KEY` and
+  `RESEND_WEBHOOK_SECRET` for a real account with a verified receiving
+  domain, which no session has configured (a human's DNS/domain errand,
+  not a credential to invent). Its address-management UI is not built
+  yet — the backend (`homesend/addresses.ts`) is real and tested, waiting
+  for a screen. WhatsApp still has no webhook at all.
 
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
 runs the household's actual domains: `ai/gather-assessments.ts` merges

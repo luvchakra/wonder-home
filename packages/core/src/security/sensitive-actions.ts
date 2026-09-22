@@ -183,6 +183,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "A HomeSend write was reversed. The reversal is a change to household data, same as the write it undoes.",
     recordedIn: "packages/core/src/homesend/changes.ts",
   },
+  {
+    event: "homesend.address_created",
+    because: "A standing address that can write into this household exists from this moment on.",
+    recordedIn: "packages/core/src/homesend/addresses.ts",
+  },
+  {
+    event: "homesend.address_rotated",
+    because: "The old address stops working and a new one starts — worth knowing when, the same as any other credential change.",
+    recordedIn: "packages/core/src/homesend/addresses.ts",
+  },
+  {
+    event: "homesend.address_revoked",
+    because: "Closing the household's own way in by email is as worth recording as opening it.",
+    recordedIn: "packages/core/src/homesend/addresses.ts",
+  },
 ];
 
 /**
@@ -293,6 +308,12 @@ export function describeAuditEvent(
       return { title: "A HomeSend item was dismissed", detail: null };
     case "homesend.undone":
       return { title: "A HomeSend addition was undone", detail: null };
+    case "homesend.address_created":
+      return { title: "A HomeSend email address was set up", detail: null };
+    case "homesend.address_rotated":
+      return { title: "The HomeSend email address was rotated", detail: "The old address stopped working." };
+    case "homesend.address_revoked":
+      return { title: "The HomeSend email address was turned off", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

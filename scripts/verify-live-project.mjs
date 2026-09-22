@@ -77,6 +77,7 @@ const SHIPPED_TABLES = [
   "household_feature_flags",
   "home_send_items",
   "homesend_changes",
+  "homesend_addresses",
 ];
 
 /**
@@ -96,6 +97,7 @@ const SHIPPED_COLUMNS = [
   { table: "recipes", column: "calories_per_serving" },
   { table: "households", column: "key_member_id" },
   { table: "home_send_items", column: "security_status" },
+  { table: "home_send_items", column: "external_id" },
 ];
 
 /**

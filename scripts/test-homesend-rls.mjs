@@ -346,6 +346,151 @@ test("a member cannot attribute an undo to someone else", () => {
   );
 });
 
+// ---------------------------------------------------------------------------
+// Phase 2: email intake — homesend_addresses, and home_send_items widened
+// for a source with no acting household member.
+// ---------------------------------------------------------------------------
+
+test("an email-sourced item needs no acting member, and gets one only via the admin client", () => {
+  const emailItemId = psql(
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, external_id, sender_address)
+     values ('${household}', null, 'email', 'A forwarded school notice', 'ext-msg-1', 'school@example.test')
+     returning id;`,
+    options,
+  );
+  assert.ok(emailItemId.length > 0);
+  assert.equal(
+    psql(`select created_by_member_id is null from public.home_send_items where id = '${emailItemId}';`, options),
+    "t",
+  );
+});
+
+test("an email-sourced item cannot name an acting member", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+       values ('${household}', '${headMember}', 'email', 'Should be rejected');`,
+      options,
+    ),
+    "an email-sourced item was accepted with an acting member",
+  );
+});
+
+test("a non-email item still requires an acting member", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+       values ('${household}', null, 'pasted_text', 'Should be rejected');`,
+      options,
+    ),
+    "a pasted_text item was accepted with no acting member",
+  );
+});
+
+test("the same provider message id cannot create two intake rows for one household", () => {
+  let threw = false;
+  try {
+    psql(
+      `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, external_id)
+       values ('${household}', null, 'email', 'A duplicate delivery', 'ext-msg-1');`,
+      options,
+    );
+  } catch {
+    threw = true;
+  }
+  assert.ok(threw, "a second intake row was created for an external_id already seen by this household");
+});
+
+test("the same provider message id is fine again in a different household", () => {
+  const id = psql(
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, external_id)
+     values ('${otherHousehold}', null, 'email', 'Unrelated', 'ext-msg-1')
+     returning id;`,
+    options,
+  );
+  assert.ok(id.length > 0);
+});
+
+let addressId = "";
+
+test("an admin can set up the household's HomeSend address", () => {
+  addressId = asProfile(
+    HEAD,
+    `insert into public.homesend_addresses (household_id, address) values ('${household}', 'hs-testtoken@inbox.example.test') returning id;`,
+    options,
+  );
+  assert.ok(addressId.length > 0);
+});
+
+test("a non-admin member can read the address but not create one", () => {
+  assert.equal(asProfile(OTHER_ADULT, `select count(*) from public.homesend_addresses;`, options), "1");
+  assert.ok(
+    deniedForProfile(
+      OTHER_ADULT,
+      `insert into public.homesend_addresses (household_id, address) values ('${household}', 'hs-shouldfail@inbox.example.test');`,
+      options,
+    ),
+    "a non-admin created a HomeSend address",
+  );
+});
+
+test("a household may only have one address", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.homesend_addresses (household_id, address) values ('${household}', 'hs-second@inbox.example.test');`,
+      options,
+    ),
+    "a second address was created for a household that already has one",
+  );
+});
+
+test("a non-admin cannot rotate or revoke the address", () => {
+  // An UPDATE with no matching RLS policy silently matches zero rows rather
+  // than throwing (lib/db.mjs's documented gotcha) — deniedForUpdate re-reads
+  // the row rather than trusting a caught exception that never comes.
+  assert.ok(
+    deniedForUpdate(
+      OTHER_ADULT,
+      `update public.homesend_addresses set address = 'hs-rotated@inbox.example.test', rotated_at = now() where id = '${addressId}';`,
+      `select address from public.homesend_addresses where id = '${addressId}';`,
+      "hs-testtoken@inbox.example.test",
+      options,
+    ),
+    "a non-admin rotated the HomeSend address",
+  );
+});
+
+test("an admin can rotate the address", () => {
+  asProfile(
+    HEAD,
+    `update public.homesend_addresses set address = 'hs-rotated@inbox.example.test', rotated_at = now() where id = '${addressId}';`,
+    options,
+  );
+  assert.equal(psql(`select address from public.homesend_addresses where id = '${addressId}';`, options), "hs-rotated@inbox.example.test");
+});
+
+test("a revoked address does not resolve — the exact lookup the email webhook makes", () => {
+  asProfile(
+    HEAD,
+    `update public.homesend_addresses set status = 'revoked', revoked_at = now() where id = '${addressId}';`,
+    options,
+  );
+  assert.equal(
+    psql(
+      `select count(*) from public.homesend_addresses where address = 'hs-rotated@inbox.example.test' and status = 'active';`,
+      options,
+    ),
+    "0",
+  );
+});
+
+test("another household cannot see this household's HomeSend address", () => {
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_addresses;`, options), "0");
+});
+
 function otherAdultMember() {
   return psql(
     `select id from public.household_members where household_id = '${household}' and profile_id = '${OTHER_ADULT}';`,

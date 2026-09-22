@@ -760,6 +760,18 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/homesend/email/webhook": {
+        post: {
+          summary: "Inbound email intake (HomeSend Phase 2)",
+          description:
+            "Resend's inbound webhook, not a household session: authorised by a Svix-format signature over the raw body, keyed on a deployment-wide secret, the same 'authenticated by a secret, not a session' shape as /platform/retention. Resolves the household from the recipient address server-side — never from the payload — and never processes anything until the signature checks out. 401 for both a missing signature and a deployment with no Resend credentials configured, so neither is distinguishable from outside. Live only once RESEND_API_KEY and RESEND_WEBHOOK_SECRET are set.",
+          responses: {
+            "200": { description: "Acknowledged — processed, a duplicate delivery, an unrecognised recipient, or an event type this endpoint ignores" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "502": { description: "Could not retrieve the email from the provider; retry" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

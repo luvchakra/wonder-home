@@ -51,6 +51,9 @@ export const AUDIT_EVENTS = [
   "homesend.applied",
   "homesend.dismissed",
   "homesend.undone",
+  "homesend.address_created",
+  "homesend.address_rotated",
+  "homesend.address_revoked",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];
