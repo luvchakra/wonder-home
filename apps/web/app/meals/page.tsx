@@ -12,7 +12,7 @@ import {
   listMembers,
 } from "@wonderhome/core/identity/households";
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
-import { listMeals, mealAgenda } from "@wonderhome/core/meals/repository";
+import { listMeals, listRecipeChoices, mealAgenda } from "@wonderhome/core/meals/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
@@ -105,7 +105,7 @@ export default async function MealsPage({
     );
   }
 
-  const [meals, agenda, members, recipeRows, preferenceRows] =
+  const [meals, agenda, members, recipeRows, preferenceRows, recipeChoices] =
     await Promise.all([
       listMeals(supabase, householdId, { from: today, to: weekEnd }).catch(
         () => [],
@@ -129,6 +129,7 @@ export default async function MealsPage({
         .select("id, member_id, kind, subject")
         .eq("household_id", householdId)
         .order("kind"),
+      listRecipeChoices(supabase, householdId).catch(() => []),
     ]);
 
   const recipes = (recipeRows.data as RecipeRow[] | null) ?? [];
@@ -140,11 +141,11 @@ export default async function MealsPage({
     id: member.id,
     displayName: member.displayName,
   }));
+  // For attaching to an already-planned meal — every recipe is offered,
+  // since that flow has no availability signal of its own to prioritise by.
   const recipeOptions = recipes.map((recipe) => ({
     id: recipe.id,
     name: recipe.name,
-    totalMinutes: recipe.total_minutes,
-    serves: recipe.serves,
   }));
 
   const days = Array.from({ length: 7 }, (_, index) => {
@@ -194,7 +195,7 @@ export default async function MealsPage({
                 <PlanMealButton
                   householdId={householdId}
                   members={memberOptions}
-                  recipes={recipeOptions}
+                  recipes={recipeChoices}
                 />
               </>
             )}
@@ -258,7 +259,7 @@ export default async function MealsPage({
                   <PlanMealButton
                     householdId={householdId}
                     members={memberOptions}
-                    recipes={recipeOptions}
+                    recipes={recipeChoices}
                   />
                 }
               />
@@ -320,9 +321,20 @@ export default async function MealsPage({
                   {recipe.calories_per_serving !== null ? (
                     <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
                       {recipe.calories_per_serving} kcal
-                      {recipe.protein_grams !== null
-                        ? ` · ${recipe.protein_grams}g protein`
-                        : ""}
+                      {[
+                        recipe.protein_grams !== null
+                          ? `${recipe.protein_grams}g protein`
+                          : null,
+                        recipe.carbs_grams !== null
+                          ? `${recipe.carbs_grams}g carbs`
+                          : null,
+                        recipe.fat_grams !== null
+                          ? `${recipe.fat_grams}g fat`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .map((part) => ` · ${part}`)
+                        .join("")}
                     </p>
                   ) : null}
                 </Card>
@@ -413,7 +425,14 @@ function MealCard({
         : "neutral";
   const nutrients =
     meal.recipe?.caloriesPerServing != null
-      ? `${meal.recipe.caloriesPerServing} kcal${meal.recipe.proteinGrams != null ? ` · ${meal.recipe.proteinGrams}g protein` : ""} per serving`
+      ? `${meal.recipe.caloriesPerServing} kcal${[
+          meal.recipe.proteinGrams != null ? `${meal.recipe.proteinGrams}g protein` : null,
+          meal.recipe.carbsGrams != null ? `${meal.recipe.carbsGrams}g carbs` : null,
+          meal.recipe.fatGrams != null ? `${meal.recipe.fatGrams}g fat` : null,
+        ]
+          .filter(Boolean)
+          .map((part) => ` · ${part}`)
+          .join("")} per serving`
       : null;
 
   return (

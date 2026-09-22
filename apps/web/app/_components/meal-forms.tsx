@@ -51,7 +51,21 @@ function Submit({
   );
 }
 
-/** "Plan a meal" as a sheet — the manual half of "Plan with AI". A recipe is optional: picking one links timing and ingredients to the meal. */
+/**
+ * "Plan a meal" as a sheet — the manual half of "Plan with AI". A recipe is
+ * optional: picking one links timing and ingredients to the meal.
+ *
+ * The recipe picker groups what the household can cook right now (every
+ * essential ingredient in stock, the same check `suggestMeal`'s "Suggest"
+ * button already runs) ahead of what's missing something — the choices are
+ * offered based on what's actually available, not a flat alphabetical list,
+ * but nothing is hidden: a recipe that's short an ingredient is still one
+ * tap away, since WonderHome already turns that shortage into a shopping
+ * item once the meal is planned. A final "Add a new meal" option swaps in a
+ * compact recipe-creation form (rule 20: a picker always carries its own
+ * way to add a value that isn't listed yet); creating it there also makes
+ * it selectable for every future "Plan a meal", not just this one.
+ */
 export function PlanMealButton({
   householdId,
   members,
@@ -64,14 +78,38 @@ export function PlanMealButton({
     name: string;
     totalMinutes: number;
     serves: number;
+    available: boolean;
   }[];
 }) {
   const [open, setOpen] = useState(false);
+  const [addingMeal, setAddingMeal] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
     createMealAction,
     {},
   );
+  const [recipeState, recipeFormAction] = useActionState<
+    ActionState,
+    FormData
+  >(createRecipeAction, {});
   const today = new Date().toISOString().slice(0, 10);
+
+  // Once the quick-add recipe form succeeds, `revalidatePath("/meals")`
+  // refreshes this sheet's `recipes` prop with the new one already in it —
+  // so switching back to the picker is enough; there is nothing further to
+  // do to select it, it is simply there now. Adjusted during render (React's
+  // own pattern for "reset state when something changes") rather than in an
+  // effect, since this is deriving state from a render, not synchronising
+  // with an external system.
+  const [handledNotice, setHandledNotice] = useState<string | undefined>(
+    undefined,
+  );
+  if (recipeState.notice && recipeState.notice !== handledNotice) {
+    setHandledNotice(recipeState.notice);
+    setAddingMeal(false);
+  }
+
+  const ready = recipes.filter((recipe) => recipe.available);
+  const missingSomething = recipes.filter((recipe) => !recipe.available);
 
   return (
     <>
@@ -90,6 +128,52 @@ export function PlanMealButton({
         title="Plan a meal"
         description="WonderHome checks the ingredients and everyone's preferences against it from here."
       >
+        {addingMeal ? (
+          <form action={recipeFormAction} className="space-y-3">
+            {recipeState.error ? <Alert>{recipeState.error}</Alert> : null}
+            <input type="hidden" name="householdId" value={householdId} />
+            <input type="hidden" name="activeMinutes" value={20} />
+            <input type="hidden" name="totalMinutes" value={40} />
+            <input type="hidden" name="serves" value={4} />
+            <Field
+              label="What's the meal?"
+              name="name"
+              required
+              placeholder="Rajma chawal"
+              autoComplete="off"
+            />
+            <div className="space-y-1.5">
+              <label
+                htmlFor="essentialIngredients"
+                className="block text-sm font-medium"
+              >
+                Essential ingredients (one per line)
+              </label>
+              <textarea
+                id="essentialIngredients"
+                name="essentialIngredients"
+                rows={3}
+                placeholder={"Rajma\nOnion\nTomato"}
+                className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
+              />
+            </div>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">
+              Timing, servings and nutrients can be filled in later from the
+              Recipes tab.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setAddingMeal(false)}
+              >
+                Back to picking
+              </Button>
+              <Submit label="Add meal" pendingLabel="Adding…" />
+            </div>
+          </form>
+        ) : (
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
@@ -101,27 +185,43 @@ export function PlanMealButton({
             placeholder="Rajma chawal"
             autoComplete="off"
           />
-          {recipes.length > 0 ? (
-            <div className="space-y-1.5">
-              <label htmlFor="recipeId" className="block text-sm font-medium">
-                From a recipe (optional)
-              </label>
-              <select
-                id="recipeId"
-                name="recipeId"
-                defaultValue=""
-                className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-              >
-                <option value="">None — a one-off dish</option>
-                {recipes.map((recipe) => (
-                  <option key={recipe.id} value={recipe.id}>
-                    {recipe.name} · {recipe.totalMinutes} min · serves{" "}
-                    {recipe.serves}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+          <div className="space-y-1.5">
+            <label htmlFor="recipeId" className="block text-sm font-medium">
+              From a recipe (optional)
+            </label>
+            <select
+              id="recipeId"
+              name="recipeId"
+              defaultValue=""
+              onChange={(event) => {
+                if (event.target.value === "__new__") setAddingMeal(true);
+              }}
+              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+            >
+              <option value="">None — a one-off dish</option>
+              {ready.length > 0 ? (
+                <optgroup label="Ready to cook">
+                  {ready.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.name} · {recipe.totalMinutes} min · serves{" "}
+                      {recipe.serves}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+              {missingSomething.length > 0 ? (
+                <optgroup label="Missing an ingredient">
+                  {missingSomething.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.name} · {recipe.totalMinutes} min · serves{" "}
+                      {recipe.serves}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+              <option value="__new__">+ Add a new meal…</option>
+            </select>
+          </div>
           <div className="space-y-1.5">
             <label htmlFor="slot" className="block text-sm font-medium">
               Slot
@@ -175,6 +275,7 @@ export function PlanMealButton({
           </div>
           <Submit label="Plan meal" pendingLabel="Planning…" />
         </form>
+        )}
       </Sheet>
     </>
   );

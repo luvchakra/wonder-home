@@ -286,12 +286,42 @@ function renderResponsibilities({
 
         <section>
           <SectionHeader title="How much WonderHome does on its own" />
-          <Card className="space-y-2 text-sm text-[var(--wh-foreground-muted)]">
+          <Card className="space-y-3 text-sm text-[var(--wh-foreground-muted)]">
             <p>For each outcome above, you choose how far WonderHome may go without asking:</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Watch only</span> — it notices a problem and tells you. It does nothing else.</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Prepare, and leave it to me</span> — it gets everything ready (an order, a plan) and waits for you to send it.</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Ask me before acting</span> — it does the work the moment you say yes.</p>
-            <p><span className="font-semibold text-[var(--wh-foreground)]">Act, and tell me afterwards</span> — it goes ahead on its own and reports back. Payments and access changes always ask first, however you set this.</p>
+            <div className="space-y-2.5">
+              <p>
+                <span className="font-semibold text-[var(--wh-foreground)]">Watch only</span> — it notices a
+                problem and tells you. It does nothing else.
+                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
+                  e.g. Bills paid on time: it notices a bill is overdue and tells you — it never calls the
+                  provider or pays anything itself.
+                </span>
+              </p>
+              <p>
+                <span className="font-semibold text-[var(--wh-foreground)]">Prepare, and leave it to me</span> —
+                it gets everything ready (an order, a plan) and waits for you to send it.
+                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
+                  e.g. Groceries stocked: it drafts the shopping list from what is running low and waits for you
+                  to send it.
+                </span>
+              </p>
+              <p>
+                <span className="font-semibold text-[var(--wh-foreground)]">Ask me before acting</span> — it does
+                the work the moment you say yes.
+                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
+                  e.g. Home maintenance: it finds an available plumber slot and books it the moment you approve.
+                </span>
+              </p>
+              <p>
+                <span className="font-semibold text-[var(--wh-foreground)]">Act, and tell me afterwards</span> —
+                it goes ahead on its own and reports back. Payments and access changes always ask first, however
+                you set this.
+                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
+                  e.g. Dinner ready: it swaps tonight&rsquo;s meal when an ingredient runs out, and tells you
+                  what changed afterwards.
+                </span>
+              </p>
+            </div>
           </Card>
         </section>
 

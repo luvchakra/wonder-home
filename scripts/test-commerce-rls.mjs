@@ -102,6 +102,34 @@ test("a consumable with no rate is perfectly legal — not knowing is honest", (
   assert.match(id, /^[0-9a-f-]{36}$/);
 });
 
+test("the same name can be tracked separately in a different category", () => {
+  // Bug fix: a household adding "Shampoo" under Groceries and later
+  // "Shampoo" under Home & Upkeep used to be told WonderHome was "already
+  // tracking something with that name" — the uniqueness index only ever
+  // looked at (household_id, name), never category.
+  asProfile(
+    HEAD,
+    `insert into public.consumables (household_id, name, category) values ('${household}', 'Shampoo', 'grocery');`,
+    options,
+  );
+
+  const second = asProfile(
+    HEAD,
+    `insert into public.consumables (household_id, name, category) values ('${household}', 'Shampoo', 'household') returning id;`,
+    options,
+  );
+  assert.match(second, /^[0-9a-f-]{36}$/);
+
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.consumables (household_id, name, category) values ('${household}', 'Shampoo', 'grocery');`,
+      options,
+    ),
+    "the same name in the same category is still a real duplicate",
+  );
+});
+
 test("a pet supply has to belong to the pet category", () => {
   const pet = asProfile(
     HEAD,
