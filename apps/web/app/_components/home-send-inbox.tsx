@@ -108,7 +108,12 @@ export function HomeSendInbox({
   const prefill = openItem?.extracted ?? null;
   const defaultKind = openItem?.classifiedKind && openItem.classifiedKind !== "unknown" ? openItem.classifiedKind : "grocery_item";
   const pendingOthers = pending.filter((item) => item.id !== openItem?.id);
-  const changeByIntakeId = new Map(changes.map((change) => [change.intakeId, change]));
+  const changesByIntakeId = new Map<string, HomeSendChange[]>();
+  for (const change of changes) {
+    const list = changesByIntakeId.get(change.intakeId) ?? [];
+    list.push(change);
+    changesByIntakeId.set(change.intakeId, list);
+  }
 
   return (
     <div className="space-y-5">
@@ -236,27 +241,48 @@ export function HomeSendInbox({
               {history.map((item) => {
                 const presentation = presentationFor(item.classifiedKind);
                 const title = item.extracted?.title ?? (item.rawText ? item.rawText.slice(0, 60) : "Something you sent");
-                const change = changeByIntakeId.get(item.id);
-                const canUndo = item.status === "routed" && change && !change.undoneAt;
-                const statusLabel = item.status === "routed" ? "Added" : item.status === "undone" ? "Undone" : "Dismissed";
+                const itemChanges = changesByIntakeId.get(item.id) ?? [];
+                const primaryChange = itemChanges.find((change) => change.domain === item.classifiedKind) ?? itemChanges[0];
+                const secondaryChanges = itemChanges.filter((change) => change !== primaryChange);
+                const canUndoPrimary = Boolean(primaryChange && !primaryChange.undoneAt);
+                const statusLabel = item.status === "dismissed" ? "Dismissed" : primaryChange?.undoneAt ? "Undone" : "Added";
                 return (
-                  <li key={item.id} className="flex items-center gap-3 py-2.5">
-                    <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label}</span>
-                    </span>
-                    {canUndo ? (
-                      <form action={undoAction}>
-                        <input type="hidden" name="householdId" value={householdId} />
-                        <input type="hidden" name="changeId" value={change.id} />
-                        <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${title}`}>
-                          {undoing ? "Undoing…" : "Undo"}
-                        </Pill>
-                      </form>
-                    ) : (
-                      <Badge tone={item.status === "routed" ? "handled" : "neutral"}>{statusLabel}</Badge>
-                    )}
+                  <li key={item.id} className="space-y-1.5 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{title}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label}</span>
+                      </span>
+                      {canUndoPrimary ? (
+                        <form action={undoAction}>
+                          <input type="hidden" name="householdId" value={householdId} />
+                          <input type="hidden" name="changeId" value={primaryChange.id} />
+                          <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${title}`}>
+                            {undoing ? "Undoing…" : "Undo"}
+                          </Pill>
+                        </form>
+                      ) : (
+                        <Badge tone={statusLabel === "Added" ? "handled" : "neutral"}>{statusLabel}</Badge>
+                      )}
+                    </div>
+                    {secondaryChanges.map((change) => (
+                      <div key={change.id} className="ml-11 flex items-center gap-2 text-xs text-[var(--wh-foreground-subtle)]">
+                        <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />
+                        <span className="flex-1">Also added to Groceries</span>
+                        {!change.undoneAt ? (
+                          <form action={undoAction}>
+                            <input type="hidden" name="householdId" value={householdId} />
+                            <input type="hidden" name="changeId" value={change.id} />
+                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label="Undo the grocery item">
+                              {undoing ? "Undoing…" : "Undo"}
+                            </Pill>
+                          </form>
+                        ) : (
+                          <Badge tone="neutral">Undone</Badge>
+                        )}
+                      </div>
+                    ))}
                   </li>
                 );
               })}

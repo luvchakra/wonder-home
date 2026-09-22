@@ -22,6 +22,12 @@ export type HomeSendSecurityStatus = (typeof HOME_SEND_SECURITY_STATUSES)[number
 export const HOME_SEND_CHANGE_DOMAINS = ["bill", "school_item", "grocery_item"] as const;
 export type HomeSendChangeDomain = (typeof HOME_SEND_CHANGE_DOMAINS)[number];
 
+/** A second, different-domain need the same content also implies — see `ai/classify-intake.ts`'s `SecondaryProposalSchema`. Always a grocery suggestion; never written until the household confirms it too. */
+export type HomeSendSecondaryExtraction = {
+  reason: string;
+  title: string;
+};
+
 /** Whatever the classifier read — the confirm screen's prefill, never written to a domain table directly. */
 export type HomeSendExtraction = {
   title: string | null;
@@ -36,6 +42,7 @@ export type HomeSendExtraction = {
   quantity: number | null;
   unit: string | null;
   category: string | null;
+  secondary: HomeSendSecondaryExtraction | null;
 };
 
 export type HomeSendItem = {

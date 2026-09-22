@@ -50,6 +50,7 @@ export type HomeSendExtractionFields = {
   quantity: number | null;
   unit: string | null;
   category: string | null;
+  secondary: { reason: string; title: string } | null;
 } | null;
 
 /**
@@ -81,6 +82,8 @@ export function HomeSendConfirmStep({
   busy: boolean;
 }) {
   const [kind, setKind] = useState(defaultKind);
+  const [includeSecondary, setIncludeSecondary] = useState(false);
+  const secondary = kind !== "grocery_item" ? prefill?.secondary : null;
 
   return (
     <form action={routeAction} className="space-y-3">
@@ -105,6 +108,27 @@ export function HomeSendConfirmStep({
       </div>
 
       <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} />
+
+      {secondary ? (
+        <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="includeSecondary"
+              checked={includeSecondary}
+              onChange={(event) => setIncludeSecondary(event.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="block font-medium">Also add to Groceries</span>
+              <span className="block text-xs text-[var(--wh-foreground-subtle)]">{secondary.reason}</span>
+            </span>
+          </label>
+          {includeSecondary ? (
+            <Field label="What is it?" name="secondaryTitle" defaultValue={secondary.title} autoComplete="off" />
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={busy} className="flex-1">

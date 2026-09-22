@@ -10,7 +10,7 @@ import { cancelObligation, createObligation } from "@wonderhome/core/finance/rep
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
-import { getHomeSendChange, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
+import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { createHomeSendItem, dismissHomeSendItem, markHomeSendUndone, routeHomeSendItem, setHomeSendClassification } from "@wonderhome/core/homesend/repository";
 import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
@@ -78,6 +78,7 @@ async function classifyAndSave(
     quantity: extraction.quantity,
     unit: extraction.unit,
     category: extraction.category,
+    secondary: extraction.secondary,
   };
   await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: extraction.kind, extracted });
 
@@ -91,6 +92,7 @@ function emptyExtraction(): HomeSendExtraction {
   return {
     title: null, notes: null, billKind: null, payee: null, amount: null, currency: null,
     dueDate: null, schoolKind: null, subject: null, quantity: null, unit: null, category: null,
+    secondary: null,
   };
 }
 
@@ -198,6 +200,12 @@ const routeSchema = z.object({
   quantity: z.union([z.coerce.number().min(0.01).max(10_000), z.literal("")]).optional(),
   unit: z.string().trim().max(40).optional(),
   category: z.string().trim().max(40).optional(),
+  // secondary: a second, different-domain need the same content also implies
+  // (always a grocery suggestion — see ai/classify-intake.ts). Optional and
+  // only ever written when the household explicitly ticks the box for it.
+  // No notes field: createConsumable has nowhere to put one.
+  includeSecondary: z.literal("on").optional(),
+  secondaryTitle: z.string().trim().max(160).optional(),
 });
 
 /**
@@ -227,6 +235,9 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     quantity: formData.get("quantity") || undefined,
     unit: formData.get("unit") || undefined,
     category: formData.get("category") || undefined,
+    includeSecondary: formData.get("includeSecondary") || undefined,
+    secondaryTitle: formData.get("secondaryTitle") || undefined,
+    secondaryNotes: formData.get("secondaryNotes") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
@@ -284,6 +295,27 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       createdByMemberId: membership.memberId,
     });
 
+    // A second, different-domain need the same content also implied — a
+    // school notice that also asks for a specific item, say. Only ever a
+    // grocery suggestion, and only ever written once the household ticks
+    // the box for it too (never auto-added alongside the primary).
+    if (parsed.data.kind !== "grocery_item" && parsed.data.includeSecondary === "on" && parsed.data.secondaryTitle) {
+      const secondaryConsumable = await createConsumable(supabase, {
+        householdId: parsed.data.householdId,
+        name: parsed.data.secondaryTitle,
+        category: CONSUMABLE_CATEGORIES[0],
+        unit: "unit",
+        typicalQuantity: 1,
+      });
+      await recordHomeSendChange(supabase, {
+        householdId: parsed.data.householdId,
+        intakeId: parsed.data.itemId,
+        domain: "grocery_item",
+        entityId: secondaryConsumable.id,
+        createdByMemberId: membership.memberId,
+      });
+    }
+
     revalidatePath("/ai");
     revalidatePath("/home-send");
     revalidatePath("/bills");
@@ -338,7 +370,11 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
     }
 
     await undoHomeSendChange(supabase, parsed.data.householdId, change.id, membership.memberId);
-    await markHomeSendUndone(supabase, parsed.data.householdId, change.intakeId);
+
+    // An intake with a secondary alongside its primary is not fully undone
+    // until both are — undoing one of two leaves the other genuinely live.
+    const stillActive = await hasActiveHomeSendChanges(supabase, parsed.data.householdId, change.intakeId);
+    if (!stillActive) await markHomeSendUndone(supabase, parsed.data.householdId, change.intakeId);
 
     revalidatePath("/ai");
     revalidatePath("/home-send");
