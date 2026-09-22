@@ -1,10 +1,16 @@
 import { CircleCheck, PawPrint, Shirt, Wrench } from "lucide-react";
 
+import type { HomeAssessment } from "@wonderhome/core/home/assessment";
 import { homeAgenda } from "@wonderhome/core/home/repository";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
+import {
+  ExpandableMetricGrid,
+  MetricDetailEmpty,
+  type ExpandableMetric,
+} from "@wonderhome/core/ui/expandable-metric-card";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
@@ -15,6 +21,28 @@ import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Home & Upkeep" };
 export const dynamic = "force-dynamic";
+
+/**
+ * What a metric card's chevron opens onto: the real assessments behind its
+ * count, reusing the exact rows the sections below already render (never a
+ * second, thinner list invented for the panel) — capped at 4 with a plain
+ * note for the rest, since "view all" is this same page, not another one.
+ */
+function agendaDetail(items: readonly HomeAssessment[], timezone: string, emptyText: string) {
+  if (items.length === 0) return <MetricDetailEmpty>{emptyText}</MetricDetailEmpty>;
+  return (
+    <div className="space-y-2">
+      <ul className="space-y-1">
+        {items.slice(0, 4).map((item) => (
+          <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} />
+        ))}
+      </ul>
+      {items.length > 4 ? (
+        <p className="px-1 text-xs text-[var(--wh-foreground-subtle)]">+{items.length - 4} more below</p>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Home & upkeep (module 13). The screen shows what needs a person and
@@ -52,7 +80,43 @@ export default async function HomeUpkeepPage() {
     { title: "Pets", items: agenda.pets },
   ].filter((section) => section.items.length > 0);
   const needsYou = sections.reduce((total, section) => total + section.items.length, 0);
+  const handledCount = Math.max(0, agenda.checked - needsYou);
   const admin = isHouseholdAdmin(membership);
+  const timezone = membership.household.timezone;
+  const needsYouItems = sections.flatMap((section) => section.items);
+
+  const metrics: ExpandableMetric[] = [
+    {
+      label: "Need you",
+      value: needsYou,
+      icon: <IconTile icon={Wrench} tone="attention" size="sm" />,
+      details: agendaDetail(needsYouItems, timezone, "Nothing needs you right now."),
+    },
+    {
+      label: "Handled",
+      value: handledCount,
+      icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
+      details: (
+        <MetricDetailEmpty>
+          {handledCount === 0
+            ? "Nothing checked yet — add an asset or raise a request to get started."
+            : `${handledCount} of ${agenda.checked} things WonderHome checked need nothing from you.`}
+        </MetricDetailEmpty>
+      ),
+    },
+    {
+      label: "Laundry",
+      value: agenda.laundry.length,
+      icon: <IconTile icon={Shirt} tone="care" size="sm" />,
+      details: agendaDetail(agenda.laundry, timezone, "Laundry is caught up."),
+    },
+    {
+      label: "Pets",
+      value: agenda.pets.length,
+      icon: <IconTile icon={PawPrint} tone="care" size="sm" />,
+      details: agendaDetail(agenda.pets, timezone, "Nothing pet-related needs you."),
+    },
+  ];
 
   return (
     <AppShell {...shell}>
@@ -68,15 +132,7 @@ export default async function HomeUpkeepPage() {
           </div>
         </header>
 
-        <MetricGrid
-          pairs
-          metrics={[
-            { label: "Need you", value: needsYou, icon: Wrench, tone: "attention" },
-            { label: "Handled", value: Math.max(0, agenda.checked - needsYou), icon: CircleCheck, tone: "handled" },
-            { label: "Laundry", value: agenda.laundry.length, icon: Shirt, tone: "care" },
-            { label: "Pets", value: agenda.pets.length, icon: PawPrint, tone: "care" },
-          ]}
-        />
+        <ExpandableMetricGrid pairs metrics={metrics} />
 
         {sections.length === 0 ? (
           <EmptyState
@@ -92,7 +148,7 @@ export default async function HomeUpkeepPage() {
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {section.items.map((item) => (
-                    <AgendaExpandableRow key={item.subjectKey} item={item} timezone={membership.household.timezone} />
+                    <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} />
                   ))}
                 </ul>
               </Card>

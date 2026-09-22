@@ -13,9 +13,15 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { Card } from "@wonderhome/core/ui/card";
+import {
+  ExpandableMetricGrid,
+  MetricDetailEmpty,
+  MetricDetailList,
+  MetricDetailRow,
+  type ExpandableMetric,
+} from "@wonderhome/core/ui/expandable-metric-card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
@@ -87,6 +93,93 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const atRiskIds = new Set((agenda?.deadlines ?? []).map((deadline) => deadline.subjectKey));
   const upcoming = upcomingSchoolItems(items).filter((item) => !atRiskIds.has(`school.${item.id}`));
 
+  // What each Overview count opens onto: the real deadlines/messages behind
+  // "Need you", the real live pieces of work behind "Live work" — the same
+  // rows the sections below already render, reused rather than a second,
+  // thinner list invented for the card — and the genuine split behind
+  // "Checked" (rule 9: never more of a number's story than it can prove).
+  const needsYouEntries: HomeAssessment[] = agenda ? [...agenda.deadlines, ...agenda.messages] : [];
+  const metrics: ExpandableMetric[] = [
+    {
+      label: "Need you",
+      value: needsYou,
+      icon: <IconTile icon={GraduationCap} tone="attention" size="sm" />,
+      details:
+        needsYouEntries.length === 0 ? (
+          <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <ul className="space-y-1">
+              {needsYouEntries.slice(0, 4).map((item) => (
+                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} />
+              ))}
+            </ul>
+            {needsYouEntries.length > 4 ? (
+              <PillLink href="/school?tab=homework" tone="quiet">
+                View all {needsYouEntries.length}
+              </PillLink>
+            ) : null}
+          </div>
+        ),
+    },
+    {
+      label: "Live work",
+      value: live.length,
+      icon: <IconTile icon={BookOpen} tone="school" size="sm" />,
+      details:
+        live.length === 0 ? (
+          <MetricDetailEmpty>No live homework right now.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <ul className="space-y-1">
+              {live.slice(0, 4).map((item) => (
+                <ExpandableRow
+                  key={item.id}
+                  summary={
+                    <>
+                      <IconTile icon={item.kind === "exam" ? CalendarDays : BookOpen} tone="school" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{item.title}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                          {[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(timezone, item.dueAt, "long")}` : "no due date"]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                      <Badge tone={item.status === "in_progress" ? "attention" : "neutral"}>
+                        {item.status === "in_progress" ? "In progress" : item.kind}
+                      </Badge>
+                    </>
+                  }
+                >
+                  <SchoolItemDetail item={item} householdId={householdId} kids={childOptions} timezone={timezone} editable />
+                </ExpandableRow>
+              ))}
+            </ul>
+            {live.length > 4 ? (
+              <PillLink href="/school?tab=homework" tone="quiet">
+                View all {live.length}
+              </PillLink>
+            ) : null}
+          </div>
+        ),
+    },
+    {
+      label: "Checked",
+      value: agenda?.checked ?? 0,
+      icon: <IconTile icon={MessageSquareText} tone="handled" size="sm" />,
+      details:
+        !agenda || agenda.checked === 0 ? (
+          <MetricDetailEmpty>Nothing evaluated yet.</MetricDetailEmpty>
+        ) : (
+          <MetricDetailList>
+            <MetricDetailRow icon={<IconTile icon={BookOpen} tone="school" size="sm" />} title="Homework & school items" meta={`${items.length} checked`} />
+            <MetricDetailRow icon={<IconTile icon={MessageSquareText} tone="handled" size="sm" />} title="Messages from school" meta={`${communications.length} checked`} />
+          </MetricDetailList>
+        ),
+    },
+  ];
+
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
@@ -136,13 +229,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
 
         {active === "overview" ? (
           <>
-            <MetricGrid
-              metrics={[
-                { label: "Need you", value: needsYou, icon: GraduationCap, tone: "attention" },
-                { label: "Live work", value: live.length, icon: BookOpen, tone: "school" },
-                { label: "Checked", value: agenda?.checked ?? 0, icon: MessageSquareText, tone: "handled" },
-              ]}
-            />
+            <ExpandableMetricGrid metrics={metrics} />
             {agenda === null ? (
               <EmptyState icon={GraduationCap} tone="school" title="School could not be loaded" description="Nothing has been changed. Try again in a moment." />
             ) : needsYou === 0 ? (

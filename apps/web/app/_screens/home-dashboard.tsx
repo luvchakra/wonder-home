@@ -2,6 +2,7 @@ import { AlertTriangle, CalendarHeart, CalendarOff, ChevronRight, CircleCheck, H
 import Link from "next/link";
 
 import { listEvents } from "@wonderhome/core/family/repository";
+import { describeAction, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
@@ -11,9 +12,15 @@ import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
+import {
+  ExpandableMetricGrid,
+  MetricDetailEmpty,
+  MetricDetailList,
+  MetricDetailRow,
+  type ExpandableMetric,
+} from "@wonderhome/core/ui/expandable-metric-card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
 import { AI_MODE_LABEL, HandledList } from "@wonderhome/core/ui/outcome-card";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -24,6 +31,7 @@ import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
 
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
+import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { NewEventForm } from "../_components/new-event-form";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
@@ -123,6 +131,50 @@ function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoi
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A calendar event in Today's focus, opening onto its full time range and
+ * whatever it is actually asking of the household — `describeAction` is the
+ * one place that sentence is written, so this row never invents its own.
+ */
+function TodayEventRow({ event, timezone }: { event: FamilyEvent; timezone: string }) {
+  return (
+    <ExpandableRow
+      summary={
+        <>
+          <IconTile icon={CalendarHeart} tone="people" size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">{event.title}</span>
+            <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">
+              {formatTime(timezone, event.startsAt)} – {formatTime(timezone, event.endsAt)}
+            </span>
+          </span>
+          <Badge tone="neutral">{formatTime(timezone, event.startsAt)}</Badge>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-[var(--wh-foreground-muted)]">
+          {formatDate(timezone, event.startsAt, "long")} · {formatTime(timezone, event.startsAt)} –{" "}
+          {formatTime(timezone, event.endsAt)}
+          {event.protected ? " · Protected time" : ""}
+        </p>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+          <div>
+            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Kind</dt>
+            <dd className="text-sm capitalize">{event.kind.replace(/_/g, " ")}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+              Expected action
+            </dt>
+            <dd className="text-sm">{event.actionState ? describeAction(event.actionState) : "None — just a reminder."}</dd>
+          </div>
+        </dl>
+      </div>
+    </ExpandableRow>
   );
 }
 
@@ -271,6 +323,111 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         ])
       : ([[], [], []] as [HelperProfileRow[], AvailabilityWindowRow[], AvailabilityExceptionRow[]]);
 
+  // What each of the four counts opens onto: the real entries behind the
+  // number, never more of them invented for the panel than the count itself
+  // stands for (rule 9).
+  const metrics: ExpandableMetric[] = [
+    {
+      label: "Need you",
+      value: agenda.needsYou.length,
+      icon: <IconTile icon={AlertTriangle} tone="attention" size="sm" />,
+      details:
+        agenda.needsYou.length === 0 ? (
+          <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <MetricDetailList>
+              {agenda.needsYou.slice(0, 4).map((item) => {
+                const presentation = iconForOutcome(item.subjectKey);
+                return (
+                  <MetricDetailRow
+                    key={item.subjectKey}
+                    icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
+                    title={item.title}
+                    meta={item.reason}
+                  />
+                );
+              })}
+            </MetricDetailList>
+            <PillLink href="/notifications" tone="quiet">
+              {agenda.needsYou.length > 4 ? `View all ${agenda.needsYou.length}` : "Open"}
+            </PillLink>
+          </div>
+        ),
+    },
+    {
+      label: "Handled",
+      value: handledCount,
+      icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
+      details:
+        agenda.handled.length === 0 ? (
+          <MetricDetailEmpty>Nothing checked yet today.</MetricDetailEmpty>
+        ) : (
+          <MetricDetailList>
+            {agenda.handled.map((entry) => {
+              const presentation = iconForOutcome(entry.key);
+              return (
+                <MetricDetailRow
+                  key={entry.key}
+                  icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
+                  title={entry.title}
+                  meta={entry.meta}
+                />
+              );
+            })}
+          </MetricDetailList>
+        ),
+    },
+    {
+      label: "Upcoming",
+      value: upcoming.length,
+      icon: <IconTile icon={CalendarHeart} tone="people" size="sm" />,
+      details:
+        upcoming.length === 0 ? (
+          <MetricDetailEmpty>Nothing on the calendar yet.</MetricDetailEmpty>
+        ) : (
+          <div className="space-y-2.5">
+            <MetricDetailList>
+              {upcoming.slice(0, 4).map((event) => (
+                <MetricDetailRow
+                  key={event.id}
+                  icon={<IconTile icon={CalendarHeart} tone="people" size="sm" />}
+                  title={event.title}
+                  meta={`${formatDate(timezone, event.startsAt)} · ${formatTime(timezone, event.startsAt)}`}
+                />
+              ))}
+            </MetricDetailList>
+            <PillLink href="/family" tone="quiet">
+              {upcoming.length > 4 ? `View all ${upcoming.length}` : "Open"}
+            </PillLink>
+          </div>
+        ),
+    },
+    {
+      label: "Checked",
+      value: agenda.checked,
+      icon: <IconTile icon={Sparkles} tone="ai" size="sm" />,
+      details:
+        agenda.domains.length === 0 ? (
+          <MetricDetailEmpty>Nothing evaluated yet.</MetricDetailEmpty>
+        ) : (
+          <MetricDetailList>
+            {agenda.domains.map((domain) => {
+              const presentation = iconForOutcome(domain.key);
+              return (
+                <MetricDetailRow
+                  key={domain.key}
+                  icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
+                  title={domain.label}
+                  meta={domain.failed ? "Couldn't check right now" : `${domain.checked} checked`}
+                />
+              );
+            })}
+          </MetricDetailList>
+        ),
+    },
+  ];
+
   return (
     <>
       {/* One row with a chevron, whether it is somebody's first week or not:
@@ -278,18 +435,9 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           setup is a thing to go and finish rather than a block to read. */}
       {setup && !setup.complete ? <SetupProgressCard assessment={setup} variant="compact" /> : null}
 
-      {/* Four counts, two to a row on a phone (rule 19). Every label is one
-          word so it fits at half width — that is the test the `pairs`
-          layout exists for, not a licence to squeeze. */}
-      <MetricGrid
-        pairs
-        metrics={[
-          { label: "Need you", value: agenda.needsYou.length, icon: AlertTriangle, tone: "attention", href: "/notifications" },
-          { label: "Handled", value: handledCount, icon: CircleCheck, tone: "handled", href: "/today" },
-          { label: "Upcoming", value: upcoming.length, icon: CalendarHeart, tone: "people", href: "/family" },
-          { label: "Checked", value: agenda.checked, icon: Sparkles, tone: "ai", href: "/certification" },
-        ]}
-      />
+      {/* Four counts, two to a row on a phone (rule 19), each opening in
+          place onto its real entries (rule 21) instead of only linking away. */}
+      <ExpandableMetricGrid pairs metrics={metrics} />
 
       {family.length > 0 ? (
         <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
@@ -477,22 +625,12 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               className="py-6"
             />
           ) : (
-            <ul className="space-y-2.5">
+            <ul className="space-y-1">
               {agenda.needsYou.slice(0, 2).map((item) => (
-                <li key={item.subjectKey} className="flex items-center gap-3">
-                  <IconTile icon={iconForOutcome(item.subjectKey).icon} tone={iconForOutcome(item.subjectKey).tone} size="sm" />
-                  <span className="min-w-0 flex-1 text-sm">{item.title}</span>
-                  <Badge tone={item.riskLevel === "high" ? "risk" : "attention"}>
-                    {item.riskLevel === "high" ? "Urgent" : "Needs you"}
-                  </Badge>
-                </li>
+                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} />
               ))}
               {todayFocus.map((event) => (
-                <li key={event.id} className="flex items-center gap-3">
-                  <IconTile icon={CalendarHeart} tone="people" size="sm" />
-                  <span className="min-w-0 flex-1 text-sm">{event.title}</span>
-                  <Badge tone="neutral">{formatTime(timezone, event.startsAt)}</Badge>
-                </li>
+                <TodayEventRow key={event.id} event={event} timezone={timezone} />
               ))}
             </ul>
           )}

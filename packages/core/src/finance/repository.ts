@@ -261,6 +261,8 @@ export async function recordAmount(
     periodLabel: string;
     amountMinor: number;
     currency: string;
+    /** When the household actually paid it — distinct from the period it covers. */
+    paidOn?: string | null;
   },
 ): Promise<{ anomaly: boolean }> {
   const { error } = await supabase.from("obligation_history").upsert(
@@ -270,6 +272,7 @@ export async function recordAmount(
       period_label: input.periodLabel,
       amount_minor: input.amountMinor,
       currency: input.currency,
+      paid_on: input.paidOn ?? null,
     },
     { onConflict: "obligation_id,period_label" },
   );

@@ -87,7 +87,9 @@ export async function createConsumable(
   if (error) {
     if (error.code === "42501") throw ApiError.forbidden("You cannot add items for this household.");
     if (error.code === "23505")
-      throw ApiError.conflict("WonderHome is already tracking something with that name in this category.");
+      throw ApiError.conflict(
+        `WonderHome is already tracking "${input.name}" in ${input.category} — edit that one instead of adding it again.`,
+      );
     throw new Error(`createConsumable failed: ${error.code ?? "unknown"}`);
   }
 
@@ -125,7 +127,9 @@ export async function updateConsumable(
   if (error) {
     if (error.code === "42501") throw ApiError.forbidden("You cannot change items for this household.");
     if (error.code === "23505")
-      throw ApiError.conflict("WonderHome is already tracking something with that name in this category.");
+      throw ApiError.conflict(
+        `WonderHome is already tracking "${input.name}" in ${input.category} under a different entry — choose another name or edit that one instead.`,
+      );
     throw new Error(`updateConsumable failed: ${error.code ?? "unknown"}`);
   }
 }
