@@ -171,6 +171,29 @@ work, and hold new work against these:
     - **Touch targets stay comfortable and text stays readable** at that
       width: nothing shrinks its type or its tap area to make a row fit.
       If it would have to, it was not a two-up row.
+20. **A choice is picked, not typed.** Wherever a field's answer is one of a
+    known set — a category, a relationship, a unit, a status, a frequency —
+    it is a dropdown/select, a tag picker, a radio group or a checkbox list,
+    never a free-text box a person has to remember the right spelling for.
+    Free text stays for what it's actually for: a name, a note, an amount.
+    Whatever the picker, it always carries its own way to add a value that
+    isn't listed yet, inline, so a household is never stuck picking the
+    closest existing option because the real one doesn't exist — a form
+    that only offers what was seeded at launch is a half-built picker, not
+    a finished one.
+21. **A card opens to its full detail.** A summary card — one row's worth of
+    name, tile and headline number — carries a down chevron that expands it
+    in place to the full actionable detail behind it: every field, every
+    action, not just the one the card already shows. The chevron is the
+    single, consistent way in; it never coexists with a second, differently
+    styled "view more" link doing the same job (rule 14).
+22. **Money is decimal, always.** A household types and reads amounts in
+    the currency's own major unit — 42.50, never 4250 — everywhere an
+    amount is entered or shown: a bill, a budget, a price, a spending
+    limit. Nothing in this product's own UI or domain logic expects or
+    displays paise/cents as a bare integer. Convert to a minor unit only
+    at a boundary that genuinely requires it — a payment provider's own
+    API — and convert back before showing anything to a person.
 
 **The brand is the sheet at `design/WonderHome-brand-guidelines.png`.** The
 name is WonderHome, one word, its wordmark set once in the brand's ink —

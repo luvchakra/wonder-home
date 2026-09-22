@@ -303,6 +303,22 @@ narrow-enough phone rather than a raw pixel overflow into a neighbour —
 the same "never clip outright, degrade to an ellipsis at the true edge
 case" posture rule 15 already asks for everywhere else.
 
+**Sign-out moved into `ViewerMenu`, and the drawer no longer links "Get
+Help" itself.** The drawer used to close with its own `<form
+action={signOut}>` row at the very bottom, separate from every other exit
+from the menu. That form (and its "Get Help" `SidebarLink`, which sat in
+its own border-topped `<ul>` above it) are gone from `nav-drawer.tsx`
+entirely — log out now lives at the bottom of the avatar popup
+(`viewer-menu.tsx`), the one place a person already expects account-level
+actions, as a `DropdownMenu.Item asChild` wrapping the same `<form
+action={signOut}>` (still a real POST, never a link, per the
+session-cookie tests) styled in `--wh-risk`. `ViewerMenu`'s own `ITEMS`
+array already listed "Get Help" before this change, so nothing about
+`/help`'s reachability changed there; `/more`, `/settings` and `/legal`
+all still link it too, so removing the drawer's own row does not orphan
+the route (rule 12 is about entities, not every navigation surface
+needing every link).
+
 **The mobile header centres the mark in flow, not out of it.** It used to
 be positioned absolutely so it would centre on the whole bar regardless of
 how much its neighbours weighed — correct while the mark was icon-only, but
@@ -457,7 +473,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `Sheet`, `ConfirmationSheet`, `ToastProvider` | Radix dialog and toast |
 | `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton` | The three states |
 | `ScriptAccent`, `LeafDecor` | The handwritten line and the botanical corner |
-| `AiOrb`, `ChatMessage`, `SuggestionChips` | The conversation |
+| `AiOrb`, `ChatMessage`, `SuggestionChips` | The conversation. `ChatMessage` no longer renders `AiOrb` beside an assistant bubble — alignment (`flex-row`/`items-start`), the neutral surface background and the flat top-left corner already distinguish an assistant turn from a member's without a second visual cue. `AiOrb` itself is unchanged and still used for the quiet-state hero (`assistant.tsx`, 88px) and the landing mockups |
 | `TalkComposer` | The one way into the assistant, with four states: type, speak-to-text, send, and a live voice conversation. Replaced `ChatComposer` + `VoiceInputButton` + a toggle, which between them could not say which of two voice intentions a tap meant. An optional `onAttach` prop adds a paperclip button beside the mic (Phase C, HomeSend) — a second input *modality* of the same one door, not a second door: rule 13 still says a screen never gets its own "Ask AI" shortcut, but a photo or a pasted forward is not a question, it is content, so it earns a control here rather than being typed out by hand |
 | `HomeSendSheet` (`apps/web/app/_components`) | HomeSend v1's own sheet, opened by the composer's paperclip: choose upload-or-paste, review what WonderHome read (or fill it in by hand when no provider is configured), confirm into the real domain table. Mirrors `AddHomeworkButton`'s screenshot-import shape — extraction only ever fills a form, the form's own submit is what writes anything — generalised to three destinations (bill/school item/grocery item) instead of one. The confirm step itself (`HomeSendConfirmStep`/`HomeSendConfirmFields`) moved out to `home-send-intake.tsx` once a second caller needed it |
 | `HomeSendInbox` (`apps/web/app/_components`, behind `/home-send`) | The rule-13 exception's own screen: a dashed drop zone (drag a file on desktop, tap "Choose a photo or file" everywhere — drag has no phone equivalent, so the tap path is never secondary), a paste toggle, then the same `HomeSendConfirmStep` the sheet uses. Below it, "Needs your review" (received/classified items not yet confirmed) and "Recently handled" (routed/dismissed) — an inbox the sheet never had room for |

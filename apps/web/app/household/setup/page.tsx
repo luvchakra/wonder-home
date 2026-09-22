@@ -44,8 +44,8 @@ export const dynamic = "force-dynamic";
  */
 const STEPS = [
   { key: "family", label: "Family", icon: Users },
-  { key: "playbook", label: "Playbook", icon: BookOpen },
   { key: "responsibilities", label: "Who does what", icon: ListChecks },
+  { key: "playbook", label: "Playbook", icon: BookOpen },
   { key: "policies", label: "Policies", icon: ShieldCheck },
   { key: "connections", label: "Connections", icon: Plug },
   { key: "teach", label: "Just tell me", icon: MessageSquareText },
