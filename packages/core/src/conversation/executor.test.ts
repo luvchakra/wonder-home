@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canExecute, notYetDoable, resolveWhen, zonedTimeToUtcIso } from "./executor";
+import { canExecute, notYetDoable, parseVitalReading, resolveWhen, zonedTimeToUtcIso } from "./executor";
 import type { HouseholdIntent } from "./intent";
 
 const intent = (over: Partial<HouseholdIntent>): HouseholdIntent => ({
@@ -33,21 +33,51 @@ describe("what can be carried out today", () => {
     expect(canExecute(intent({ action: "record_absence", target: { kind: "unspecified" } }))).toBe(false);
   });
 
-  it("books an appointment, logs an issue, and resolves one — but never a vital or a fitness goal (21-006)", () => {
+  it("books an appointment, logs an issue, resolves one, and logs a vital — but never a fitness goal (21-006/21-007)", () => {
     expect(canExecute(intent({ action: "record_health_appointment", parameters: { appointmentType: "dentist" } }))).toBe(true);
     expect(canExecute(intent({ action: "record_health_appointment", parameters: {} }))).toBe(false);
     expect(canExecute(intent({ action: "log_health_issue", parameters: { label: "headache" } }))).toBe(true);
     expect(canExecute(intent({ action: "log_health_issue", parameters: { label: "" } }))).toBe(false);
     expect(canExecute(intent({ action: "resolve_health_issue", parameters: { label: "headache" } }))).toBe(true);
     expect(canExecute(intent({ action: "resolve_health_issue", parameters: {} }))).toBe(false);
-    expect(canExecute(intent({ action: "log_vital", parameters: { vital: "bp", reading: "128/82" } }))).toBe(false);
+    expect(canExecute(intent({ action: "log_vital", parameters: { vital: "bp", reading: "128/82" } }))).toBe(true);
+    expect(canExecute(intent({ action: "log_vital", parameters: {} }))).toBe(false);
     expect(canExecute(intent({ action: "set_fitness_goal", parameters: { activity: "walk" } }))).toBe(false);
   });
 
-  it("is honest that vitals and fitness goals point back to the Health screen, not 'on its way'", () => {
-    expect(notYetDoable("log_vital")).not.toMatch(/on its way/);
-    expect(notYetDoable("log_vital")).toMatch(/Health & Fitness/);
+  it("is honest that a fitness goal points back to the Health screen, not 'on its way'", () => {
     expect(notYetDoable("set_fitness_goal")).not.toMatch(/on its way/);
+    expect(notYetDoable("set_fitness_goal")).not.toMatch(/Health & Fitness/);
+  });
+});
+
+describe("parsing a spoken vital reading (21-007) — never guessing a unit", () => {
+  it("reads blood pressure as a paired systolic/diastolic in mmHg, with 'over' or a slash", () => {
+    expect(parseVitalReading("bp", "128 over 82")).toEqual({ vitalType: "blood_pressure", value: 128, secondaryValue: 82, unit: "mmHg" });
+    expect(parseVitalReading("blood pressure", "128/82")).toEqual({ vitalType: "blood_pressure", value: 128, secondaryValue: 82, unit: "mmHg" });
+  });
+
+  it("declines blood pressure with no recognizable pair", () => {
+    expect(parseVitalReading("bp", "normal")).toBeNull();
+  });
+
+  it("reads pulse and steps with their one conventional unit, even with no unit word said", () => {
+    expect(parseVitalReading("pulse", "72")).toEqual({ vitalType: "pulse", value: 72, unit: "bpm" });
+    expect(parseVitalReading("heart rate", "68 bpm")).toEqual({ vitalType: "pulse", value: 68, unit: "bpm" });
+  });
+
+  it("takes an explicit unit for a genuinely ambiguous type like weight or temperature", () => {
+    expect(parseVitalReading("weight", "72 kg")).toEqual({ vitalType: "weight", value: 72, unit: "kg" });
+    expect(parseVitalReading("temperature", "98.6 f")).toEqual({ vitalType: "temperature", value: 98.6, unit: "f" });
+  });
+
+  it("declines a genuinely ambiguous type with no unit word, rather than guessing a system of measurement", () => {
+    expect(parseVitalReading("weight", "72")).toBeNull();
+    expect(parseVitalReading("temperature", "98.6")).toBeNull();
+  });
+
+  it("declines a vital word it does not recognize", () => {
+    expect(parseVitalReading("shoe size", "9")).toBeNull();
   });
 });
 

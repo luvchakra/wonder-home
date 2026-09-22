@@ -346,7 +346,7 @@ const CANONICAL_UNIT: Partial<Record<VitalType, string>> = {
 
 type ParsedVital = { vitalType: VitalType; value: number; secondaryValue?: number; unit: string };
 
-function parseVitalReading(vitalWord: string, reading: string): ParsedVital | null {
+export function parseVitalReading(vitalWord: string, reading: string): ParsedVital | null {
   const vitalType = VITAL_WORD_TO_TYPE[vitalWord];
   if (!vitalType) return null;
 
