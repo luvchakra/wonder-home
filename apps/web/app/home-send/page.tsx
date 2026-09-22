@@ -1,5 +1,6 @@
 import { Send } from "lucide-react";
 
+import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -45,14 +46,15 @@ export default async function HomeSendPage() {
     );
   }
 
-  const [items, members] = await Promise.all([
+  const [items, members, changes] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    listHomeSendChanges(supabase, householdId).catch(() => []),
   ]);
 
   const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   const pending = items.filter((item) => item.status === "received" || item.status === "classified");
-  const history = items.filter((item) => item.status === "routed" || item.status === "dismissed").slice(0, 15);
+  const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);
 
   return (
     <AppShell {...shell}>
@@ -62,7 +64,7 @@ export default async function HomeSendPage() {
           <p className="text-sm text-[var(--wh-foreground-muted)]">A photo, a file, or a forwarded message — drop it here and HomeBrain reads it.</p>
         </header>
 
-        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} history={history} />
+        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} history={history} changes={changes} />
 
         <QuoteCard>Send it in. WonderHome takes it from here.</QuoteCard>
       </div>

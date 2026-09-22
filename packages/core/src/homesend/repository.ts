@@ -1,7 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
-import type { HomeSendExtraction, HomeSendItem, HomeSendKind, HomeSendSource, HomeSendStatus } from "./items";
+import type {
+  HomeSendExtraction,
+  HomeSendItem,
+  HomeSendKind,
+  HomeSendSecurityStatus,
+  HomeSendSource,
+  HomeSendStatus,
+} from "./items";
 
 /**
  * Reading and writing HomeSend intake (Phase C).
@@ -28,12 +36,13 @@ function fromRow(row: Row): HomeSendItem {
     extracted: (row.extracted as HomeSendExtraction | null) ?? null,
     routedTable: (row.routed_table as string | null) ?? null,
     routedId: (row.routed_id as string | null) ?? null,
+    securityStatus: row.security_status as HomeSendSecurityStatus,
     createdAt: row.created_at as string,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, created_at";
+  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, created_at";
 
 export async function listHomeSendItems(
   supabase: SupabaseClient,
@@ -60,12 +69,16 @@ export type CreateHomeSendItemInput = {
   source: HomeSendSource;
   filePath?: string | null;
   rawText?: string | null;
+  /** Defaults to `not_applicable` (pasted text has no file to check). */
+  securityStatus?: HomeSendSecurityStatus;
 };
 
 export async function createHomeSendItem(
   supabase: SupabaseClient,
   input: CreateHomeSendItemInput,
 ): Promise<HomeSendItem> {
+  const securityStatus = input.securityStatus ?? "not_applicable";
+
   const { data, error } = await supabase
     .from("home_send_items")
     .insert({
@@ -75,6 +88,7 @@ export async function createHomeSendItem(
       source: input.source,
       file_path: input.filePath ?? null,
       raw_text: input.rawText ?? null,
+      security_status: securityStatus,
     })
     .select(SELECT_COLUMNS)
     .single();
@@ -82,6 +96,25 @@ export async function createHomeSendItem(
   if (error) {
     if (error.code === "42501") throw ApiError.forbidden("You cannot send items to this household.");
     throw new Error(`createHomeSendItem failed: ${error.code ?? "unknown"}`);
+  }
+
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.createdByMemberId,
+    eventType: "homesend.intake_received",
+    targetTable: "home_send_items",
+    targetId: input.id,
+    metadata: { source: input.source },
+  });
+  if (securityStatus === "rejected") {
+    await auditChange({
+      householdId: input.householdId,
+      actorMemberId: input.createdByMemberId,
+      eventType: "homesend.security_rejected",
+      targetTable: "home_send_items",
+      targetId: input.id,
+      metadata: { source: input.source },
+    });
   }
 
   return fromRow(data as Row);
@@ -122,6 +155,7 @@ export async function dismissHomeSendItem(
   supabase: SupabaseClient,
   householdId: string,
   itemId: string,
+  actorMemberId: string,
 ): Promise<void> {
   const { error } = await supabase
     .from("home_send_items")
@@ -130,4 +164,27 @@ export async function dismissHomeSendItem(
     .eq("id", itemId);
 
   if (error) throw new Error(`dismissHomeSendItem failed: ${error.code ?? "unknown"}`);
+
+  await auditChange({
+    householdId,
+    actorMemberId,
+    eventType: "homesend.dismissed",
+    targetTable: "home_send_items",
+    targetId: itemId,
+  });
+}
+
+/** Flips a routed item's status once its one change has been undone — the record of what was routed (`routed_table`/`routed_id`) is kept, never erased. */
+export async function markHomeSendUndone(
+  supabase: SupabaseClient,
+  householdId: string,
+  itemId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("home_send_items")
+    .update({ status: "undone" })
+    .eq("household_id", householdId)
+    .eq("id", itemId);
+
+  if (error) throw new Error(`markHomeSendUndone failed: ${error.code ?? "unknown"}`);
 }

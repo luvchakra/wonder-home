@@ -75,6 +75,8 @@ const SHIPPED_TABLES = [
   "step_up_verifications",
   "privacy_requests",
   "household_feature_flags",
+  "home_send_items",
+  "homesend_changes",
 ];
 
 /**
@@ -93,6 +95,7 @@ const SHIPPED_COLUMNS = [
   { table: "notification_preferences", column: "target" },
   { table: "recipes", column: "calories_per_serving" },
   { table: "households", column: "key_member_id" },
+  { table: "home_send_items", column: "security_status" },
 ];
 
 /**
