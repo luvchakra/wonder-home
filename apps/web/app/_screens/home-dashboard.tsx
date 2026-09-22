@@ -4,15 +4,10 @@ import {
   CalendarOff,
   ChevronRight,
   CircleCheck,
-  GraduationCap,
   Heart,
-  Mic,
-  Send,
-  ShoppingBasket,
   Sparkles,
   Sun,
   UserRoundPlus,
-  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,12 +18,10 @@ import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
 import { cn } from "@wonderhome/core/lib/cn";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { AddTaskMenu, type AddTaskOption } from "@wonderhome/core/ui/add-task-menu";
 import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
-import { FamilyIllustration } from "@wonderhome/core/ui/family-illustration";
 import {
   ExpandableMetricGrid,
   MetricDetailEmpty,
@@ -37,7 +30,7 @@ import {
   type ExpandableMetric,
 } from "@wonderhome/core/ui/expandable-metric-card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
-import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { AI_MODE_LABEL, HandledList } from "@wonderhome/core/ui/outcome-card";
 import { Badge, PillLink, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -45,7 +38,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
-import { Suspense, type ComponentType } from "react";
+import { Suspense } from "react";
 
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
@@ -56,15 +49,6 @@ import { householdAgenda, type DomainSummary } from "../_lib/agenda";
 import { formatDate, formatTime, greetingFor, type Session } from "../_lib/session";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
 import { iconForOutcome } from "../_lib/outcome-icons";
-
-/** The Home page's own quick-add launcher: each option is a real domain's
- * existing add flow, never a new one invented here (rule 12/13). */
-const ADD_TASK_ITEMS: { key: "school" | "groceries" | "meals" | "bills"; label: string; icon: typeof GraduationCap }[] = [
-  { key: "school", label: "Add homework", icon: GraduationCap },
-  { key: "groceries", label: "Add grocery item", icon: ShoppingBasket },
-  { key: "meals", label: "Plan a meal", icon: Sparkles },
-  { key: "bills", label: "Add a bill", icon: Wallet },
-];
 
 /** Which domain a Today's-focus row belongs to, for its colour badge — the
  * same domain colours the icon tiles already use, never an invented one. */
@@ -84,36 +68,6 @@ function focusBadge(riskLevel: HomeAssessmentRisk, domainKey: DomainSummary["key
 }
 
 type HomeAssessmentRisk = "high" | "medium" | "low" | "none";
-
-/** A header quick-action: icon, bold label, one line of what it does — the
- * same shape `AddTaskMenu`'s trigger visually matches, so the three pills
- * in Home's header read as one row of equals. */
-function QuickActionLink({
-  href,
-  icon: Icon,
-  tone,
-  label,
-  meta,
-}: {
-  href: string;
-  icon: ComponentType<{ className?: string }>;
-  tone: IconTone;
-  label: string;
-  meta: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-2 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
-    >
-      <IconTile icon={Icon} tone={tone} size="sm" />
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold">{label}</span>
-        <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{meta}</span>
-      </span>
-    </Link>
-  );
-}
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -267,56 +221,18 @@ export function HomeDashboard({ session }: { session: Session }) {
   const now = new Date();
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const addTaskOptions: AddTaskOption[] = ADD_TASK_ITEMS.flatMap((entry) => {
-    const item = secondary.find((candidate) => candidate.key === entry.key);
-    if (!item) return [];
-    const Icon = entry.icon;
-    return [{ href: item.href, label: entry.label, icon: <IconTile icon={Icon} tone={item.tone} size="sm" /> }];
-  });
-
   // The greeting needs nothing from the database, so it is on screen in the
   // first flush; everything below it streams in as its queries return.
   return (
     <AppShell active="home" viewer={viewer} secondary={secondary} pathname="/">
       <div className="space-y-6">
-        <header className="wh-rise space-y-4">
-          <div>
-            <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
-            <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
-              {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
-            </h1>
-            <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
-          </div>
-
-          {/* A family illustration with the brand's handwritten line in a
-              speech bubble beside it — imagery in the household's own tones
-              (rule 8), never a stretched screenshot or a stock photo. */}
-          <div className="flex items-center gap-2">
-            <FamilyIllustration className="h-20 w-20 shrink-0 sm:h-24 sm:w-24" />
-            <div className="relative min-w-0 rounded-[var(--wh-radius-lg)] rounded-bl-none border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-3 shadow-[var(--wh-shadow-card)]">
-              <span
-                aria-hidden
-                className="absolute -bottom-0 -left-2 size-3 border-r border-b border-[var(--wh-border)] bg-[var(--wh-surface)] [clip-path:polygon(0_0,100%_100%,100%_0)]"
-              />
-              <ScriptAccent size="sm" tilt={false} heart className="text-right leading-[1.15]">
-                Happier Homes
-                <br />
-                Happier Humans!
-              </ScriptAccent>
-            </div>
-          </div>
-
-          {/* Three quick actions: a launcher to a real add flow, and
-              home-level shortcuts to the two other primary AI surfaces —
-              not a second door (rule 13), since HomeTalk and HomeSend are
-              already primary/secondary nav destinations this only
-              shortcuts to. */}
-          <div className="flex gap-2 overflow-x-auto pb-0.5">
-            <AddTaskMenu options={addTaskOptions} className="self-center" />
-            <QuickActionLink href="/ai" icon={Mic} tone="ai" label="HomeTalk" meta="Ask anything" />
-            <QuickActionLink href="/home-send" icon={Send} tone="handled" label="HomeSend" meta="Forward to WonderHome" />
-          </div>
+        <header className="wh-rise space-y-1">
+          <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
+          <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
+            {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
+          </h1>
+          <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
         </header>
 
         <Suspense fallback={<LoadingState rows={4} label="Checking on the household" />}>
