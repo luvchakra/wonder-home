@@ -61,6 +61,7 @@ function appointment(overrides: Partial<HealthAppointment>): HealthAppointment {
     calendarSync: false,
     familyEventId: null,
     rescheduledFromId: null,
+    checkupId: null,
     createdByMemberId: "m-1",
     createdAt: "2026-10-01T00:00:00Z",
     updatedAt: "2026-10-01T00:00:00Z",

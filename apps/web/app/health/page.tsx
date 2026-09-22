@@ -10,7 +10,8 @@ import {
 
 import { may } from "@wonderhome/core/billing/repository";
 import { listAppointments } from "@wonderhome/core/health/appointments";
-import { healthAppointmentsAgenda, healthIssuesAgenda } from "@wonderhome/core/health/agenda";
+import { healthAppointmentsAgenda, healthCheckupsAgenda, healthIssuesAgenda } from "@wonderhome/core/health/agenda";
+import { listCheckups } from "@wonderhome/core/health/checkups";
 import { listIssues } from "@wonderhome/core/health/issues";
 import { getHealthProfile, listHealthConsents, type PrivacyScope } from "@wonderhome/core/health/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
@@ -23,6 +24,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AppointmentStatusActions, BookAppointmentButton } from "../_components/health-appointment-forms";
+import { AddCheckupButton, CheckupActions } from "../_components/health-checkup-forms";
 import {
   GrantHealthConsentButton,
   HealthAiAssistanceToggle,
@@ -80,12 +82,13 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members, appointments, issues] = await Promise.all([
+  const [profile, consents, members, appointments, issues, checkups] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listAppointments(supabase, householdId).catch(() => []),
     listIssues(supabase, householdId).catch(() => []),
+    listCheckups(supabase, householdId).catch(() => []),
   ]);
 
   const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? "Someone";
@@ -97,8 +100,11 @@ export default async function HealthPage({
 
   const appointmentAgenda = healthAppointmentsAgenda(appointments, nameOf, membership.household.timezone);
   const issueAgenda = healthIssuesAgenda(issues, nameOf);
+  const checkupAgenda = healthCheckupsAgenda(checkups, nameOf);
   const appointmentById = new Map(appointments.map((appointment) => [appointment.id, appointment]));
   const issueById = new Map(issues.map((issue) => [issue.id, issue]));
+  const checkupById = new Map(checkups.map((checkup) => [checkup.id, checkup]));
+  const memberList = members.map((m) => ({ id: m.id, displayName: m.displayName }));
 
   const sections = [
     {
@@ -107,7 +113,7 @@ export default async function HealthPage({
       icon: HeartPulse,
       tone: "attention" as const,
       description: "An overdue checkup, an unconfirmed appointment, something worth a look — none yet.",
-      items: [...appointmentAgenda.needsAttention, ...issueAgenda.needsAttention],
+      items: [...appointmentAgenda.needsAttention, ...issueAgenda.needsAttention, ...checkupAgenda.needsAttention],
     },
     {
       key: "coming_up",
@@ -115,7 +121,7 @@ export default async function HealthPage({
       icon: CalendarClock,
       tone: "health" as const,
       description: "Appointments and preventive care land here once you add them.",
-      items: appointmentAgenda.comingUp,
+      items: [...appointmentAgenda.comingUp, ...checkupAgenda.comingUp],
     },
     {
       key: "monitoring",
@@ -131,7 +137,7 @@ export default async function HealthPage({
       icon: CircleCheck,
       tone: "handled" as const,
       description: "Nothing recorded yet.",
-      items: [...appointmentAgenda.recent, ...issueAgenda.recent],
+      items: [...appointmentAgenda.recent, ...issueAgenda.recent, ...checkupAgenda.recent],
     },
   ];
 
@@ -145,8 +151,9 @@ export default async function HealthPage({
           </div>
           {active === "overview" ? (
             <div className="flex flex-wrap gap-2">
-              <AddIssueButton householdId={householdId} members={members.map((m) => ({ id: m.id, displayName: m.displayName }))} defaultPrivacyScope={currentScope} />
-              <BookAppointmentButton householdId={householdId} members={members.map((m) => ({ id: m.id, displayName: m.displayName }))} defaultPrivacyScope={currentScope} />
+              <AddIssueButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
+              <AddCheckupButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
+              <BookAppointmentButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
             </div>
           ) : null}
         </header>
@@ -171,6 +178,24 @@ export default async function HealthPage({
                   <Card className="p-2">
                     <ul className="divide-y divide-[var(--wh-border)]">
                       {section.items.map((item) => {
+                        if (item.subjectKey.startsWith("checkup.")) {
+                          const checkup = checkupById.get(item.subjectKey.replace("checkup.", ""));
+                          return (
+                            <ActionRow
+                              key={item.subjectKey}
+                              icon={section.icon}
+                              tone={section.tone}
+                              title={item.title}
+                              meta={item.reason}
+                              action={
+                                checkup && section.key !== "recent" ? (
+                                  <CheckupActions householdId={householdId} checkup={checkup} members={memberList} defaultPrivacyScope={currentScope} />
+                                ) : null
+                              }
+                            />
+                          );
+                        }
+
                         if (item.subjectKey.startsWith("issue.")) {
                           const issue = issueById.get(item.subjectKey.replace("issue.", ""));
                           return (

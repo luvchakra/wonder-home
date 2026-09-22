@@ -862,6 +862,58 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/checkups": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's checkups & preventive care",
+          description: "Optionally filtered by `memberId` and `status` (repeatable). RLS (`wh.may_see_health`) decides which checkups the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+          ],
+          responses: {
+            "200": { description: "The visible checkups" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Add a checkup",
+          description:
+            "Only for the caller themselves, or a child they guard. A household-defined recurring commitment — `source` records where it came from, and WonderHome never invents a schedule the household did not configure or import.",
+          responses: {
+            "201": { description: "The new checkup" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/checkups/{checkupId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "checkupId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One checkup",
+          responses: {
+            "200": { description: "The checkup" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Update, reschedule, complete, remove or bring back a checkup",
+          description:
+            "The body's `action` field discriminates: `update` changes label/type/cadence/notes, `reschedule` moves the next due date, `complete` marks it done as of a date (defaulting to today) and, when a cadence is configured, computes the next due date, `dismiss` removes it and `reactivate` brings it back — never a hard delete.",
+          responses: {
+            "200": { description: "The updated checkup" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

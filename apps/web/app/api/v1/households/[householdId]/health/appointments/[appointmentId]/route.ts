@@ -6,6 +6,7 @@ import { defineRoute } from "@wonderhome/core/api/route";
 import { may } from "@wonderhome/core/billing/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { APPOINTMENT_STATUSES, getAppointment, rescheduleAppointment, setAppointmentStatus, updateAppointment } from "@wonderhome/core/health/appointments";
+import { syncCheckupForAppointment } from "@wonderhome/core/health/checkups";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
 /**
@@ -87,6 +88,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
     if (body.action === "set_status") {
       const appointment = await setAppointmentStatus(supabase, actor, appointmentId, body.status as Exclude<(typeof APPOINTMENT_STATUSES)[number], "rescheduled">);
+      await syncCheckupForAppointment(supabase, actor, appointment);
       return { appointment };
     }
 
