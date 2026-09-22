@@ -227,7 +227,20 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   domain, which no session has configured (a human's DNS/domain errand,
   not a credential to invent). Its address-management UI is not built
   yet — the backend (`homesend/addresses.ts`) is real and tested, waiting
-  for a screen. WhatsApp still has no webhook at all.
+  for a screen. WhatsApp still has no webhook at all. The classifier can
+  also propose one secondary, different-domain write alongside an
+  intake's primary one (a bill or school notice that also implies a
+  grocery need) — always a grocery suggestion, never written until the
+  household confirms it separately, tracked as its own
+  `homesend_changes` row so it can be undone independently of the
+  primary. Installed as a PWA, WonderHome is a real Web Share Target
+  (`manifest.webmanifest`'s `share_target`, `POST /api/v1/intake/share`):
+  the OS share sheet lands there whether or not the person has signed in
+  on that device yet — signed in, the content is classified and saved
+  immediately; signed out, it is staged (`homesend_share_handoffs`,
+  RLS-unreachable from any session, an unguessable single-use token is
+  its only credential) and resumed the moment sign-in resolves a
+  household.
 
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
 runs the household's actual domains: `ai/gather-assessments.ts` merges

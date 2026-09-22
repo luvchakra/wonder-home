@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import type { IntakeSource } from "@wonderhome/core/ai/classify-intake";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
+import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
-import { createHomeSendItem, dismissHomeSendItem, markHomeSendUndone, routeHomeSendItem, setHomeSendClassification } from "@wonderhome/core/homesend/repository";
+import { createHomeSendItem, dismissHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { validateUploadSecurity } from "@wonderhome/core/homesend/security";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
@@ -36,65 +36,6 @@ export type SendHomeItemState = {
 
 const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 const UPLOAD_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-async function classifyAndSave(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  householdId: string,
-  itemId: string,
-  source: IntakeSource,
-): Promise<SendHomeItemState> {
-  const { readHouseholdKey } = await import("@wonderhome/core/ai/credentials");
-  const { resolveModelKey, platformKey } = await import("@wonderhome/core/ai/model-key");
-  const { classifyIntake } = await import("@wonderhome/core/ai/classify-intake");
-
-  const householdKey = await readHouseholdKey(householdId).catch(() => null);
-  const key = resolveModelKey(householdKey, platformKey());
-  if (key.source === "none" || !key.provider || !key.key) {
-    return {
-      notice: "No AI provider is set up for this household yet — you can still tell WonderHome what this is below.",
-      item: { id: itemId, classifiedKind: "unknown", extracted: null },
-    };
-  }
-
-  const extraction = await classifyIntake(key.provider, key.key, source);
-  if (!extraction || !extraction.readable) {
-    await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: "unknown", extracted: emptyExtraction() });
-    return {
-      notice: "Could not make that out — please fill in the details below by hand.",
-      item: { id: itemId, classifiedKind: "unknown", extracted: null },
-    };
-  }
-
-  const extracted: HomeSendExtraction = {
-    title: extraction.title,
-    notes: extraction.notes,
-    billKind: extraction.billKind,
-    payee: extraction.payee,
-    amount: extraction.amount,
-    currency: extraction.currency,
-    dueDate: extraction.dueDate,
-    schoolKind: extraction.schoolKind,
-    subject: extraction.subject,
-    quantity: extraction.quantity,
-    unit: extraction.unit,
-    category: extraction.category,
-    secondary: extraction.secondary,
-  };
-  await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: extraction.kind, extracted });
-
-  return {
-    notice: "Filled in from what you sent — check it over before adding.",
-    item: { id: itemId, classifiedKind: extraction.kind, extracted },
-  };
-}
-
-function emptyExtraction(): HomeSendExtraction {
-  return {
-    title: null, notes: null, billKind: null, payee: null, amount: null, currency: null,
-    dueDate: null, schoolKind: null, subject: null, quantity: null, unit: null, category: null,
-    secondary: null,
-  };
-}
 
 /** The upload half of sending something in: a photo or file. */
 export async function uploadHomeSendItemAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {

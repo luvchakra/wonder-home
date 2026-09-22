@@ -78,6 +78,7 @@ const SHIPPED_TABLES = [
   "home_send_items",
   "homesend_changes",
   "homesend_addresses",
+  "homesend_share_handoffs",
 ];
 
 /**
