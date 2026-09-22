@@ -13,16 +13,26 @@
  * Two gotchas this file exists to stop you from re-discovering the hard way
  * (both have bitten real test files more than once):
  *
- * 1. **An UPDATE with no matching RLS policy does not throw.** Postgres just
- *    matches and changes zero rows — no error, nothing `deniedForProfile`'s
- *    try/catch can see. Testing "no UPDATE policy grants this" needs
- *    `deniedForUpdate` below, not `deniedForProfile`: it re-reads the row
+ * 1. **An UPDATE or DELETE with no matching RLS policy does not throw.**
+ *    Postgres just matches and changes zero rows — no error, nothing
+ *    `deniedForProfile`'s try/catch can see. This holds for both commands
+ *    for the same reason: their policies filter by a USING clause (no WITH
+ *    CHECK on DELETE at all, and UPDATE's WITH CHECK only fires once a row
+ *    already passed USING and is actually being written), and a row that
+ *    fails USING is simply excluded from the set to touch, not rejected.
+ *    Testing "no UPDATE/DELETE policy grants this" needs `deniedForUpdate`
+ *    below (its name predates realizing DELETE has the identical gap — it
+ *    works unchanged for a DELETE statement, since it only cares whether
+ *    the row changed), not `deniedForProfile`: it re-reads the row
  *    afterwards and checks nothing actually changed, which is the only way
  *    to tell "correctly refused" apart from "ran and quietly did nothing"
  *    (the two look identical from `deniedForProfile`'s point of view).
- *    `deniedForProfile` stays correct for INSERT/DELETE/SELECT, and for an
- *    UPDATE that a CHECK constraint or a column-level grant genuinely
- *    throws on — it is specifically the *silent no-op* case it cannot see.
+ *    `deniedForProfile` stays correct for INSERT/SELECT, and for an
+ *    UPDATE/DELETE that a CHECK constraint or a column-level grant
+ *    genuinely throws on — it is specifically the *silent no-op* case it
+ *    cannot see. (`scripts/test-webhooks-rls.mjs` is where the DELETE case
+ *    was found to bite, while adding a "non-admin cannot delete" assertion
+ *    for `household_webhooks`.)
  *
  * 2. **Every test in one file shares one database**, built once in that
  *    file's `before()` hook — there is no per-test isolation. A test that

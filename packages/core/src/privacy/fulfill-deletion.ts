@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { recordAuditEvent } from "../api/audit";
 import { log } from "../observability/logger";
+import { dispatchWebhookEvent } from "../webhooks/dispatch";
 
 /**
  * Fulfilling a matured deletion request (story 16-007).
@@ -168,5 +169,11 @@ async function fulfillOne(
     targetTable: "household_members",
     targetId: input.subjectMemberId,
     metadata: { requestId: input.requestId },
+  });
+
+  await dispatchWebhookEvent({
+    householdId: input.householdId,
+    eventType: "privacy.deletion_fulfilled",
+    data: { memberId: input.subjectMemberId },
   });
 }

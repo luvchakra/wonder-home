@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import type { HouseholdRole, MemberType } from "./schemas";
 
 /**
@@ -188,6 +189,12 @@ export async function acceptInvitation(
     targetTable: "household_members",
     targetId: row.member_id,
     metadata: { via: "invitation" },
+  });
+
+  await dispatchWebhookEvent({
+    householdId: row.household_id,
+    eventType: "member.added",
+    data: { memberId: row.member_id, via: "invitation" },
   });
 
   return { householdId: row.household_id, memberId: row.member_id };

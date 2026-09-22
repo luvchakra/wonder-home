@@ -10,7 +10,7 @@
 | 4 | P0 | 18-004 | Idempotency | Done | Idempotency-Key replay with request fingerprinting |
 | 5 | P0 | 18-005 | OpenAPI | Done | Generated from the route schemas, served at /api/v1/openapi; E2E derives the endpoint list from disk so it cannot go stale |
 | 6 | P0 | 18-006 | Audit hooks | Done | recordAuditEvent with redaction; never fails the request |
-| 7 | P1 | 18-007 | Webhooks/events | Not Started | |
+| 7 | P1 | 18-007 | Webhooks/events | Done | `household_webhooks`/`webhook_deliveries`: a household subscribes an HTTPS URL to 5 real events (member.added/removed, subscription.changed, privacy.deletion_fulfilled, homesend.applied), gets a Svix-style-signed (`t=<ts>,v1=<sig>`) versioned payload with retry/backoff over ~1 day; both tables unreachable from any client session, admin included, since every write already goes through the admin client and a WHERE-conditioned write on a no-SELECT-policy table silently no-ops for every session (found empirically while building this); `deliver.ts` drains the queue via a new `CRON_SECRET`-gated route/cron; live-verified end to end against webhook.site with an independently-recomputed HMAC match |
 | 8 | P2 | 18-008 | Developer platform | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

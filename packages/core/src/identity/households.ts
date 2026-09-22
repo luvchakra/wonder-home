@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import type {
   CreateHouseholdInput,
   Household,
@@ -614,6 +615,12 @@ export async function deactivateMember(
     targetTable: "household_members",
     targetId: input.memberId,
     metadata: { previousRoles: roles },
+  });
+
+  await dispatchWebhookEvent({
+    householdId,
+    eventType: "member.removed",
+    data: { memberId: input.memberId },
   });
 }
 

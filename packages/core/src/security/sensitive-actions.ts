@@ -208,6 +208,26 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Closing the household's own way in by email is as worth recording as opening it.",
     recordedIn: "packages/core/src/homesend/addresses.ts",
   },
+  {
+    event: "webhook.subscription_created",
+    because: "A signing secret that can authenticate outbound household events to an external system now exists.",
+    recordedIn: "packages/core/src/webhooks/repository.ts",
+  },
+  {
+    event: "webhook.secret_rotated",
+    because: "The old secret stops working and a new one starts — worth knowing when, the same as any other credential change.",
+    recordedIn: "packages/core/src/webhooks/repository.ts",
+  },
+  {
+    event: "webhook.subscription_disabled",
+    because: "Stops an external system receiving this household's events. As worth recording as turning it on.",
+    recordedIn: "packages/core/src/webhooks/repository.ts",
+  },
+  {
+    event: "webhook.subscription_enabled",
+    because: "Resumes sending this household's events to an external system.",
+    recordedIn: "packages/core/src/webhooks/repository.ts",
+  },
 ];
 
 /**
@@ -328,6 +348,14 @@ export function describeAuditEvent(
       return { title: "The HomeSend email address was rotated", detail: "The old address stopped working." };
     case "homesend.address_revoked":
       return { title: "The HomeSend email address was turned off", detail: null };
+    case "webhook.subscription_created":
+      return { title: "A webhook was set up", detail: stringOr(metadata.url, null) };
+    case "webhook.secret_rotated":
+      return { title: "A webhook's signing secret was rotated", detail: "The old secret stopped working." };
+    case "webhook.subscription_disabled":
+      return { title: "A webhook was turned off", detail: null };
+    case "webhook.subscription_enabled":
+      return { title: "A webhook was turned back on", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.
