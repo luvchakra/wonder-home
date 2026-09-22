@@ -376,6 +376,15 @@ const RULES: readonly Rule[] = [
     }),
   },
   {
+    pattern: /^(?:log|record) my (blood pressure|bp|weight|heart rate|pulse|temperature|blood sugar|sugar) as\s+(.+)$/i,
+    read: (match) => ({
+      action: "log_vital",
+      target: { kind: "member", reference: "self" },
+      parameters: { vital: match[1]!.toLowerCase(), reading: match[2]!.trim().replace(/[.!]+$/, "") },
+      confidence: 0.9,
+    }),
+  },
+  {
     pattern: /^i want to (.+?) (\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve) times? a (day|week|month)$/i,
     read: (match) => ({
       action: "set_fitness_goal",

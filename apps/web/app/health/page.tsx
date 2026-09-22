@@ -10,11 +10,13 @@ import {
 
 import { may } from "@wonderhome/core/billing/repository";
 import { listAppointments } from "@wonderhome/core/health/appointments";
-import { healthAppointmentsAgenda, healthCheckupsAgenda, healthIssuesAgenda, healthRecordsAgenda } from "@wonderhome/core/health/agenda";
+import { healthAppointmentsAgenda, healthCheckupsAgenda, healthIssuesAgenda, healthRecordsAgenda, healthRoutinesAgenda, healthVitalsAgenda, VITAL_TYPE_LABEL } from "@wonderhome/core/health/agenda";
 import { listCheckups } from "@wonderhome/core/health/checkups";
 import { listIssues } from "@wonderhome/core/health/issues";
+import { listRoutines } from "@wonderhome/core/health/measurement-routines";
 import { listRecords } from "@wonderhome/core/health/records";
 import { getHealthProfile, listHealthConsents, type PrivacyScope } from "@wonderhome/core/health/repository";
+import { listVitals } from "@wonderhome/core/health/vitals";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
@@ -33,7 +35,9 @@ import {
   RevokeHealthConsentButton,
 } from "../_components/health-forms";
 import { AddIssueButton, EditIssueButton, IssueStatusActions } from "../_components/health-issue-forms";
+import { AddRoutineButton, RoutineActions } from "../_components/health-measurement-routine-forms";
 import { AddRecordButton, RecordActions } from "../_components/health-record-forms";
+import { AddVitalButton, VitalActions } from "../_components/health-vital-forms";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Health & Fitness" };
@@ -84,7 +88,7 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members, appointments, issues, checkups, records] = await Promise.all([
+  const [profile, consents, members, appointments, issues, checkups, records, vitals, routines] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
@@ -95,6 +99,8 @@ export default async function HealthPage({
     // (see healthRecordsAgenda's own comment), so an archived record must
     // stay reachable here too, or "bring back" would have nowhere to live.
     listRecords(supabase, householdId, { statuses: ["active", "archived"] }).catch(() => []),
+    listVitals(supabase, householdId, { statuses: ["active", "archived"] }).catch(() => []),
+    listRoutines(supabase, householdId).catch(() => []),
   ]);
 
   const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? "Someone";
@@ -108,10 +114,14 @@ export default async function HealthPage({
   const issueAgenda = healthIssuesAgenda(issues, nameOf);
   const checkupAgenda = healthCheckupsAgenda(checkups, nameOf);
   const recordAgenda = healthRecordsAgenda(records, nameOf);
+  const vitalAgenda = healthVitalsAgenda(vitals, nameOf);
+  const routineAgenda = healthRoutinesAgenda(routines, nameOf);
   const appointmentById = new Map(appointments.map((appointment) => [appointment.id, appointment]));
   const issueById = new Map(issues.map((issue) => [issue.id, issue]));
   const checkupById = new Map(checkups.map((checkup) => [checkup.id, checkup]));
   const recordById = new Map(records.map((record) => [record.id, record]));
+  const vitalById = new Map(vitals.map((vital) => [vital.id, vital]));
+  const routineById = new Map(routines.map((routine) => [routine.id, routine]));
   const memberList = members.map((m) => ({ id: m.id, displayName: m.displayName }));
 
   const sections = [
@@ -121,7 +131,7 @@ export default async function HealthPage({
       icon: HeartPulse,
       tone: "attention" as const,
       description: "An overdue checkup, an unconfirmed appointment, something worth a look — none yet.",
-      items: [...appointmentAgenda.needsAttention, ...issueAgenda.needsAttention, ...checkupAgenda.needsAttention],
+      items: [...appointmentAgenda.needsAttention, ...issueAgenda.needsAttention, ...checkupAgenda.needsAttention, ...routineAgenda.needsAttention],
     },
     {
       key: "coming_up",
@@ -129,7 +139,7 @@ export default async function HealthPage({
       icon: CalendarClock,
       tone: "health" as const,
       description: "Appointments and preventive care land here once you add them.",
-      items: [...appointmentAgenda.comingUp, ...checkupAgenda.comingUp],
+      items: [...appointmentAgenda.comingUp, ...checkupAgenda.comingUp, ...routineAgenda.comingUp],
     },
     {
       key: "monitoring",
@@ -145,7 +155,7 @@ export default async function HealthPage({
       icon: CircleCheck,
       tone: "handled" as const,
       description: "Nothing recorded yet.",
-      items: [...appointmentAgenda.recent, ...issueAgenda.recent, ...checkupAgenda.recent, ...recordAgenda],
+      items: [...appointmentAgenda.recent, ...issueAgenda.recent, ...checkupAgenda.recent, ...recordAgenda, ...vitalAgenda, ...routineAgenda.recent],
     },
   ];
 
@@ -161,6 +171,8 @@ export default async function HealthPage({
             <div className="flex flex-wrap gap-2">
               <AddIssueButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
               <AddCheckupButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
+              <AddVitalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
+              <AddRoutineButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
               <AddRecordButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
               <BookAppointmentButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
             </div>
@@ -220,6 +232,57 @@ export default async function HealthPage({
                                     <IssueStatusActions householdId={householdId} issueId={issue.id} status={issue.status} />
                                     <EditIssueButton householdId={householdId} issueId={issue.id} label={issue.label} description={issue.description} notes={issue.notes} />
                                   </div>
+                                ) : null
+                              }
+                            />
+                          );
+                        }
+
+                        if (item.subjectKey.startsWith("routine.")) {
+                          const routine = routineById.get(item.subjectKey.replace("routine.", ""));
+                          return (
+                            <ActionRow
+                              key={item.subjectKey}
+                              icon={section.icon}
+                              tone={section.tone}
+                              title={item.title}
+                              meta={item.reason}
+                              action={
+                                // Normally silent history once in Recent, like
+                                // a checkup — except a dismissed routine with
+                                // no completion has no other home, so its
+                                // "Bring back" stays reachable here too.
+                                routine && (section.key !== "recent" || routine.status === "dismissed") ? (
+                                  <RoutineActions
+                                    householdId={householdId}
+                                    routine={{ ...routine, label: routine.vitalType === "custom" ? (routine.customLabel ?? "Measurement") : VITAL_TYPE_LABEL[routine.vitalType] }}
+                                  />
+                                ) : null
+                              }
+                            />
+                          );
+                        }
+
+                        if (item.subjectKey.startsWith("vital.")) {
+                          // Vitals only ever live in "Recent" (a reading has
+                          // no due date to be overdue against), so — like a
+                          // record — its actions stay visible here: this is
+                          // its only home, not a silent history of something
+                          // that already happened elsewhere.
+                          const vital = vitalById.get(item.subjectKey.replace("vital.", ""));
+                          return (
+                            <ActionRow
+                              key={item.subjectKey}
+                              icon={section.icon}
+                              tone={section.tone}
+                              title={item.title}
+                              meta={item.reason}
+                              action={
+                                vital ? (
+                                  <VitalActions
+                                    householdId={householdId}
+                                    vital={{ ...vital, label: vital.vitalType === "custom" ? (vital.customLabel ?? "Measurement") : VITAL_TYPE_LABEL[vital.vitalType] }}
+                                  />
                                 ) : null
                               }
                             />

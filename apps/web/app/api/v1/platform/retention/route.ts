@@ -1,6 +1,7 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
+import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
@@ -88,6 +89,20 @@ export async function POST(request: Request) {
       log.error("health reminder sweep failed", { reason: reminderError, allow: ["reason"] });
     }
 
+    // Same reasoning as the appointment reminder sweep above: a measurement
+    // routine's reminder is a day-scale concept ("today's the day"), so this
+    // cadence is the right one, not a compromise, and folding it into this
+    // route rather than a route of its own is the same Hobby-tier cron-count
+    // constraint.
+    let routineReminderSummary: { checked: number; sent: number; skipped: number } | null = null;
+    let routineReminderError: string | undefined;
+    try {
+      routineReminderSummary = await runMeasurementRoutineSweep(admin);
+    } catch (thrown) {
+      routineReminderError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("measurement routine reminder sweep failed", { reason: routineReminderError, allow: ["reason"] });
+    }
+
     const swept = [
       ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
       { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
@@ -100,14 +115,24 @@ export async function POST(request: Request) {
       deletionsFulfilled,
       deletionsFailed,
       reminderSummary,
+      routineReminderSummary,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
     return Response.json(
-      { swept, deletionsFulfilled, deletionsFailed, healthReminders: reminderSummary ?? { error: reminderError } },
-      { status: failed.length > 0 || deletionsFailed !== 0 || reminderError ? 207 : 200, headers: { "cache-control": "no-store" } },
+      {
+        swept,
+        deletionsFulfilled,
+        deletionsFailed,
+        healthReminders: reminderSummary ?? { error: reminderError },
+        routineReminders: routineReminderSummary ?? { error: routineReminderError },
+      },
+      {
+        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError ? 207 : 200,
+        headers: { "cache-control": "no-store" },
+      },
     );
   } catch (thrown) {
     const { status, body } = toErrorBody(thrown, "retention");

@@ -5,6 +5,7 @@ import { runHouseholdAgents, type RunActor } from "../ai/run";
 import { createConsumable } from "../commerce/repository";
 import { createAppointment, type AppointmentType } from "../health/appointments";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
+import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
 import { linkTo } from "./reply-format";
@@ -59,6 +60,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
     case "resolve_health_issue":
       return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
+    case "log_vital":
+      return typeof intent.parameters.vital === "string" && typeof intent.parameters.reading === "string";
     default:
       return false;
   }
@@ -77,8 +80,6 @@ export function notYetDoable(action: HouseholdIntent["action"]): string {
       return `Approved. Moving it on the family calendar is done under ${linkTo("/family", "Family")} for now — I have not moved anything myself.`;
     case "plan_event":
       return `Approved. I have not put anything on the calendar myself yet — add it under ${linkTo("/family", "Family")} and I will keep an eye on it.`;
-    case "log_vital":
-      return `Noted, though tracking measurements like this isn't built yet — for now, keep it under ${linkTo("/health", "Health & Fitness")} yourself.`;
     case "set_fitness_goal":
       return `Noted, though fitness goals aren't tracked yet — I have not set anything up on my own.`;
     default:
@@ -101,6 +102,8 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
         return await logHealthIssue(intent, context);
       case "resolve_health_issue":
         return await resolveHealthIssue(intent, context);
+      case "log_vital":
+        return await logVital(intent, context);
       case "set_preference":
         return {
           ok: true,
@@ -276,6 +279,94 @@ async function resolveHealthIssue(intent: HouseholdIntent, context: ExecutionCon
     text: `Good to hear — marked **${match.label}** resolved. See ${linkTo("/health", "Health & Fitness")}.`,
     result: { issueId: match.id },
   };
+}
+
+/**
+ * "My BP was 128 over 82 this morning" — a real vital reading (story
+ * 21-007), through the same `createVital` the Health & Fitness screen's own
+ * form calls. Never invents a unit: blood pressure, pulse and steps have
+ * one conventional unit each (mmHg, bpm, steps) and this uses it; every
+ * other vital type (weight, height, temperature, distance…) is genuinely
+ * ambiguous between systems of measurement, so a reading with no unit word
+ * in it is declined rather than guessed — the honest reason names exactly
+ * what to say instead ("72 kg", not just "72").
+ */
+async function logVital(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const vitalWord = typeof intent.parameters.vital === "string" ? intent.parameters.vital : "";
+  const reading = typeof intent.parameters.reading === "string" ? intent.parameters.reading : "";
+  const parsed = parseVitalReading(vitalWord, reading);
+
+  if (!parsed) {
+    return {
+      ok: false,
+      reason: `I heard "${reading}", but could not pick a clear value and unit out of that — try again with a unit (e.g. "72 kg", "128 over 82"), or add it under ${linkTo("/health", "Health & Fitness")} yourself.`,
+    };
+  }
+
+  const vital = await createVital(
+    context.supabase,
+    { householdId: context.householdId, memberId: context.actorMemberId },
+    {
+      memberId: context.actorMemberId,
+      vitalType: parsed.vitalType,
+      customLabel: parsed.vitalType === "custom" ? capitalize(vitalWord) : undefined,
+      value: parsed.value,
+      secondaryValue: parsed.secondaryValue ?? null,
+      unit: parsed.unit,
+      privacyScope: "private",
+      sourceType: "home_talk",
+    },
+  );
+
+  const valueText = parsed.secondaryValue != null ? `${parsed.value}/${parsed.secondaryValue} ${parsed.unit}` : `${parsed.value} ${parsed.unit}`;
+  return {
+    ok: true,
+    text: `Noted — ${valueText}. See ${linkTo("/health", "Health & Fitness")}.`,
+    result: { vitalId: vital.id, vitalType: parsed.vitalType },
+  };
+}
+
+const VITAL_WORD_TO_TYPE: Record<string, VitalType> = {
+  "blood pressure": "blood_pressure",
+  bp: "blood_pressure",
+  weight: "weight",
+  "heart rate": "pulse",
+  pulse: "pulse",
+  temperature: "temperature",
+  "blood sugar": "custom",
+  sugar: "custom",
+};
+
+/** A unit this vital type always uses — never guessed for a type where the household's own system of measurement (metric vs imperial) is genuinely ambiguous. */
+const CANONICAL_UNIT: Partial<Record<VitalType, string>> = {
+  blood_pressure: "mmHg",
+  pulse: "bpm",
+  steps: "steps",
+};
+
+type ParsedVital = { vitalType: VitalType; value: number; secondaryValue?: number; unit: string };
+
+export function parseVitalReading(vitalWord: string, reading: string): ParsedVital | null {
+  const vitalType = VITAL_WORD_TO_TYPE[vitalWord];
+  if (!vitalType) return null;
+
+  const text = reading.trim().toLowerCase();
+
+  if (vitalType === "blood_pressure") {
+    const match = text.match(/(\d{2,3})\s*(?:\/|over)\s*(\d{2,3})/);
+    if (!match) return null;
+    return { vitalType, value: Number(match[1]), secondaryValue: Number(match[2]), unit: "mmHg" };
+  }
+
+  const match = text.match(/^(\d+(?:\.\d+)?)\s*([a-z%]*)/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  const explicitUnit = match[2]?.trim();
+
+  if (explicitUnit) return { vitalType, value, unit: explicitUnit };
+
+  const canonical = CANONICAL_UNIT[vitalType];
+  return canonical ? { vitalType, value, unit: canonical } : null;
 }
 
 /** "4", "4pm", "16:30" → hour/minute. A bare hour 1-11 with no am/pm reads as afternoon/evening — the same household convention `rules.ts`'s meal-time parsing already uses. */

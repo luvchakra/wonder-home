@@ -88,6 +88,8 @@ const SHIPPED_TABLES = [
   "health_issues",
   "health_checkups",
   "health_records",
+  "health_measurement_routines",
+  "health_vitals",
 ];
 
 /**
@@ -362,6 +364,46 @@ async function main() {
     "anonymous cannot create a health record",
     Boolean(forgedHealthRecord.error),
     forgedHealthRecord.error?.code ?? "no error",
+  );
+
+  // Measurement routines (story 21-007) — same RLS shape as health_profiles.
+  const healthRoutines = await anon.from("health_measurement_routines").select("id, vital_type").limit(1);
+  check(
+    "anonymous cannot read a household's measurement routines",
+    Boolean(healthRoutines.error) || (Array.isArray(healthRoutines.data) && healthRoutines.data.length === 0),
+    healthRoutines.error ? healthRoutines.error.code : `${healthRoutines.data?.length ?? "?"} rows`,
+  );
+  const forgedHealthRoutine = await anon.from("health_measurement_routines").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    vital_type: "weight",
+    cadence_days: 7,
+    next_due_on: new Date().toISOString().slice(0, 10),
+  });
+  check(
+    "anonymous cannot create a measurement routine",
+    Boolean(forgedHealthRoutine.error),
+    forgedHealthRoutine.error?.code ?? "no error",
+  );
+
+  // Vitals (story 21-007) — same RLS shape as health_profiles.
+  const healthVitals = await anon.from("health_vitals").select("id, vital_type").limit(1);
+  check(
+    "anonymous cannot read a household's vitals",
+    Boolean(healthVitals.error) || (Array.isArray(healthVitals.data) && healthVitals.data.length === 0),
+    healthVitals.error ? healthVitals.error.code : `${healthVitals.data?.length ?? "?"} rows`,
+  );
+  const forgedHealthVital = await anon.from("health_vitals").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    vital_type: "weight",
+    value: 72,
+    unit: "kg",
+  });
+  check(
+    "anonymous cannot create a vital",
+    Boolean(forgedHealthVital.error),
+    forgedHealthVital.error?.code ?? "no error",
   );
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at

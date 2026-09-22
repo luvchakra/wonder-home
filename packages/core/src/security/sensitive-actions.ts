@@ -323,6 +323,51 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Brings back a record that had been archived.",
     recordedIn: "packages/core/src/health/records.ts",
   },
+  {
+    event: "health.vital_recorded",
+    because: "A new structured reading for a member — who, what was measured, and by hand or through HomeTalk.",
+    recordedIn: "packages/core/src/health/vitals.ts",
+  },
+  {
+    event: "health.vital_updated",
+    because: "Corrects a reading's own content — value, unit, notes.",
+    recordedIn: "packages/core/src/health/vitals.ts",
+  },
+  {
+    event: "health.vital_archived",
+    because: "Removes a mis-entered reading — reversible, but still a change worth recording.",
+    recordedIn: "packages/core/src/health/vitals.ts",
+  },
+  {
+    event: "health.vital_reactivated",
+    because: "Brings back a reading that had been archived.",
+    recordedIn: "packages/core/src/health/vitals.ts",
+  },
+  {
+    event: "health.routine_created",
+    because: "A new recurring measurement commitment for a member — who, what, and how often.",
+    recordedIn: "packages/core/src/health/measurement-routines.ts",
+  },
+  {
+    event: "health.routine_updated",
+    because: "Changes a routine's own cadence, reminder policy or content.",
+    recordedIn: "packages/core/src/health/measurement-routines.ts",
+  },
+  {
+    event: "health.routine_completed",
+    because: "Marks a routine done and records the real reading it represents, advancing it to its next occurrence.",
+    recordedIn: "packages/core/src/health/measurement-routines.ts",
+  },
+  {
+    event: "health.routine_dismissed",
+    because: "Removes a routine the household no longer wants tracked — reversible, but still a change worth recording.",
+    recordedIn: "packages/core/src/health/measurement-routines.ts",
+  },
+  {
+    event: "health.routine_reactivated",
+    because: "Brings back a routine that had been removed.",
+    recordedIn: "packages/core/src/health/measurement-routines.ts",
+  },
 ];
 
 /**
@@ -489,6 +534,24 @@ export function describeAuditEvent(
       return { title: "A health record was removed", detail: null };
     case "health.record_reactivated":
       return { title: "A health record was brought back", detail: null };
+    case "health.vital_recorded":
+      return { title: "A reading was recorded", detail: stringOr(metadata.vitalType, null) };
+    case "health.vital_updated":
+      return { title: "A reading's details changed", detail: null };
+    case "health.vital_archived":
+      return { title: "A reading was removed", detail: null };
+    case "health.vital_reactivated":
+      return { title: "A reading was brought back", detail: null };
+    case "health.routine_created":
+      return { title: "A measurement routine was set up", detail: stringOr(metadata.vitalType, null) };
+    case "health.routine_updated":
+      return { title: "A measurement routine's details changed", detail: null };
+    case "health.routine_completed":
+      return { title: "A measurement routine was marked done", detail: stringOr(metadata.nextDueOn, null) };
+    case "health.routine_dismissed":
+      return { title: "A measurement routine was removed", detail: null };
+    case "health.routine_reactivated":
+      return { title: "A measurement routine was brought back", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.

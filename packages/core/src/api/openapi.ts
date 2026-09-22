@@ -914,6 +914,109 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/vitals": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's vitals",
+          description: "Optionally filtered by `memberId`, `vitalType` (repeatable), `status` (repeatable) and `limit`. RLS (`wh.may_see_health`) decides which readings the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "vitalType", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": { description: "The visible readings" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Record a structured reading",
+          description: "Only for the caller themselves, or a child they guard. Always what the household actually recorded — value, unit and, for blood pressure, a secondary (diastolic) value.",
+          responses: {
+            "201": { description: "The new reading" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/vitals/{vitalId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "vitalId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One vital reading",
+          responses: {
+            "200": { description: "The reading" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Correct, archive or bring back a reading",
+          description: "The body's `action` field discriminates: `update` corrects value/unit/notes, `archive` removes it and `reactivate` brings it back — never a hard delete.",
+          responses: {
+            "200": { description: "The updated reading" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/households/{householdId}/health/measurement-routines": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's measurement routines",
+          description: "Optionally filtered by `memberId` and `status` (repeatable). RLS (`wh.may_see_health`) decides which routines the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+          ],
+          responses: {
+            "200": { description: "The visible routines" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Configure a recurring measurement",
+          description: "Only for the caller themselves, or a child they guard. A household-defined recurring commitment — WonderHome never invents a cadence the household did not configure.",
+          responses: {
+            "201": { description: "The new routine" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/measurement-routines/{routineId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "routineId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One measurement routine",
+          responses: {
+            "200": { description: "The routine" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Update, complete, remove or bring back a routine",
+          description:
+            "The body's `action` field discriminates: `update` changes cadence/reminder policy/notes/next due date, `complete` records the real reading it represents and advances the schedule by the routine's own cadence, `dismiss` removes it and `reactivate` brings it back — never a hard delete.",
+          responses: {
+            "200": { description: "The updated routine, or (for `complete`) the routine and the new reading" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/health/records": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
