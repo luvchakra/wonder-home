@@ -225,9 +225,12 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   genuinely inert until a deployment sets `RESEND_API_KEY` and
   `RESEND_WEBHOOK_SECRET` for a real account with a verified receiving
   domain, which no session has configured (a human's DNS/domain errand,
-  not a credential to invent). Its address-management UI is not built
-  yet — the backend (`homesend/addresses.ts`) is real and tested, waiting
-  for a screen. WhatsApp still has no webhook at all. The classifier can
+  not a credential to invent). Its address-management screen
+  (`home-send-channels.tsx`) is real: every member can read and copy the
+  household's address, only an admin can set it up, rotate or turn it
+  off — real forwarding still waits on that same human errand, but
+  nothing about the UI or the backend behind it does. WhatsApp still has
+  no webhook at all. The classifier can
   also propose one secondary, different-domain write alongside an
   intake's primary one (a bill or school notice that also implies a
   grocery need) — always a grocery suggestion, never written until the

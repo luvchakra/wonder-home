@@ -32,6 +32,7 @@
     "./platform/*": "./src/platform/*.ts",
     "./navigation/*": "./src/navigation/*.ts",
     "./notifications/*": "./src/notifications/*.ts",
+    "./pwa/*": "./src/pwa/*.ts",
     "./shell/*": "./src/components/shell/*.tsx",
     "./ui/*": "./src/components/ui/*.tsx"
   },
