@@ -27,7 +27,7 @@ function fromRow(row: Row): HomeSendItem {
   return {
     id: row.id as string,
     householdId: row.household_id as string,
-    createdByMemberId: row.created_by_member_id as string,
+    createdByMemberId: (row.created_by_member_id as string | null) ?? null,
     source: row.source as HomeSendSource,
     filePath: (row.file_path as string | null) ?? null,
     rawText: (row.raw_text as string | null) ?? null,
@@ -37,12 +37,14 @@ function fromRow(row: Row): HomeSendItem {
     routedTable: (row.routed_table as string | null) ?? null,
     routedId: (row.routed_id as string | null) ?? null,
     securityStatus: row.security_status as HomeSendSecurityStatus,
+    externalId: (row.external_id as string | null) ?? null,
+    senderAddress: (row.sender_address as string | null) ?? null,
     createdAt: row.created_at as string,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, created_at";
+  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, created_at";
 
 export async function listHomeSendItems(
   supabase: SupabaseClient,
@@ -118,6 +120,69 @@ export async function createHomeSendItem(
   }
 
   return fromRow(data as Row);
+}
+
+export type CreateEmailHomeSendItemInput = {
+  householdId: string;
+  /** The provider's own message id — the idempotency key. Re-delivery of the same id is a no-op, not a duplicate row. */
+  externalId: string;
+  senderAddress: string | null;
+  rawText: string;
+};
+
+/**
+ * The email-webhook half of intake — always called with the admin client
+ * (a webhook has no household session), always with no acting member (see
+ * the migration's `home_send_items_actor_matches_source` constraint). An
+ * `on conflict do nothing` against `(household_id, external_id)` is what
+ * makes a re-delivered webhook harmless instead of a second intake row.
+ */
+export async function createEmailHomeSendItem(
+  supabase: SupabaseClient,
+  input: CreateEmailHomeSendItemInput,
+): Promise<{ item: HomeSendItem; duplicate: boolean }> {
+  const id = crypto.randomUUID();
+
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .upsert(
+      {
+        id,
+        household_id: input.householdId,
+        created_by_member_id: null,
+        source: "email",
+        raw_text: input.rawText,
+        external_id: input.externalId,
+        sender_address: input.senderAddress,
+        security_status: "not_applicable",
+      },
+      { onConflict: "household_id,external_id", ignoreDuplicates: true },
+    )
+    .select(SELECT_COLUMNS);
+
+  if (error) throw new Error(`createEmailHomeSendItem failed: ${error.code ?? "unknown"}`);
+
+  if (data && data.length > 0) {
+    await auditChange({
+      householdId: input.householdId,
+      actorMemberId: null,
+      eventType: "homesend.intake_received",
+      targetTable: "home_send_items",
+      targetId: id,
+      metadata: { source: "email" },
+    });
+    return { item: fromRow(data[0] as Row), duplicate: false };
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("home_send_items")
+    .select(SELECT_COLUMNS)
+    .eq("household_id", input.householdId)
+    .eq("external_id", input.externalId)
+    .single();
+  if (fetchError) throw new Error(`createEmailHomeSendItem lookup failed: ${fetchError.code ?? "unknown"}`);
+
+  return { item: fromRow(existing as Row), duplicate: true };
 }
 
 export async function setHomeSendClassification(

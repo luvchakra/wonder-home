@@ -5,7 +5,7 @@
  * file the same way `school/items.ts` is split from `school/repository.ts`.
  */
 
-export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text"] as const;
+export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text", "email"] as const;
 export type HomeSendSource = (typeof HOME_SEND_SOURCES)[number];
 
 export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed", "undone"] as const;
@@ -41,7 +41,8 @@ export type HomeSendExtraction = {
 export type HomeSendItem = {
   id: string;
   householdId: string;
-  createdByMemberId: string;
+  /** Null only for `source: "email"` — nobody in the household typed this in. */
+  createdByMemberId: string | null;
   source: HomeSendSource;
   filePath: string | null;
   rawText: string | null;
@@ -51,7 +52,25 @@ export type HomeSendItem = {
   routedTable: string | null;
   routedId: string | null;
   securityStatus: HomeSendSecurityStatus;
+  /** The provider's own message id, for idempotent re-delivery. Only set for `source: "email"`. */
+  externalId: string | null;
+  /** Who sent it in, for an email. Never a household member's own address by design. */
+  senderAddress: string | null;
   createdAt: string;
+};
+
+export const HOME_SEND_ADDRESS_STATUSES = ["active", "revoked"] as const;
+export type HomeSendAddressStatus = (typeof HOME_SEND_ADDRESS_STATUSES)[number];
+
+/** The household's own inbound HomeSend email address. */
+export type HomeSendAddress = {
+  id: string;
+  householdId: string;
+  address: string;
+  status: HomeSendAddressStatus;
+  createdAt: string;
+  rotatedAt: string | null;
+  revokedAt: string | null;
 };
 
 /** What routing an item actually wrote — the record undo reverses. */

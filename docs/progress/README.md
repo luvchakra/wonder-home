@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [HomeSend Phase 2: the email intake channel](2026-09-22-homesend-phase2-email-intake.md) |
 | 2026-09-22 | [HomeSend Phase 1: undo, audit trail, and a real upload security check](2026-09-22-homesend-phase1-foundation.md) |
 | 2026-09-22 | [Key Member, HomeSend's own screen, Kids & School grouping, Groceries dropdowns](2026-09-22-key-member-homesend-page-kids-school-groceries-batch.md) |
 | 2026-09-22 | [Eight-item batch: birthday sync, Home & Upkeep chevrons, pets as family, self profile edit, HomeBrain review](2026-09-22-upkeep-pets-profile-homebrain-batch.md) |
