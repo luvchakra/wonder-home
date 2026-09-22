@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [Bills & Finance detail, multi-engagement househelpers, and Key Member removal](2026-09-22-bills-detail-helper-engagements-key-member-removal.md) |
 | 2026-09-22 | [Responsibilities examples, Kids & School "Coming up", a Groceries data bug, and ingredient-aware meal planning](2026-09-22-responsibilities-school-groceries-meals-batch.md) |
 | 2026-09-22 | [Sidebar logout, setup tab order, HomeTalk avatar — plus three new CLAUDE.md rules](2026-09-22-sidebar-setup-tabs-hometalk-cleanup.md) |
 | 2026-09-22 | [Nav drawer and mobile header redesign](2026-09-22-nav-drawer-and-mobile-header-redesign.md) |

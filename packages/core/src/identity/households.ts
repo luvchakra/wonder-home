@@ -451,54 +451,6 @@ export async function setMemberRole(
 }
 
 /**
- * Names the member every other relationship is described relative to
- * ("Father", "Mother", "Younger brother" all answer "who is this, to the
- * key member?"). `memberId: null` clears it — a household is never forced
- * to have one. Deliberately does not touch anyone's `relationship` text:
- * there is no gender/age/kinship engine here (20260921070000's own
- * reasoning against a fixed relationship enum applies just as much to
- * inventing one), so a household re-describes members by hand after
- * changing who the frame of reference is.
- */
-export async function setKeyMember(
-  supabase: SupabaseClient,
-  actor: HouseholdMembership,
-  memberId: string | null,
-): Promise<void> {
-  if (!isHouseholdAdmin(actor)) {
-    throw ApiError.forbidden("Only an Admin can set the household's Key Member.");
-  }
-
-  const householdId = actor.household.id;
-
-  if (memberId) {
-    const { data: target, error: lookupError } = await supabase
-      .from("household_members")
-      .select("id")
-      .eq("id", memberId)
-      .eq("household_id", householdId)
-      .maybeSingle();
-    if (lookupError) throw new Error(`setKeyMember lookup failed: ${lookupError.code ?? "unknown"}`);
-    if (!target) throw ApiError.notFound("That member is not part of this household.");
-  }
-
-  const { error } = await supabase
-    .from("households")
-    .update({ key_member_id: memberId })
-    .eq("id", householdId);
-  if (error) throw new Error(`setKeyMember failed: ${error.code ?? "unknown"}`);
-
-  await auditChange({
-    householdId,
-    actorMemberId: actor.memberId,
-    eventType: "household.updated",
-    targetTable: "households",
-    targetId: householdId,
-    metadata: { field: "key_member_id" },
-  });
-}
-
-/**
  * Adds a household helper with no account of their own (story 01-002, and
  * the same reasoning `identity/children.ts` states for a child: nothing here
  * should require a person the household is only tracking to hold an email

@@ -23,7 +23,8 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
 
 import {
-  HelperProfileButton,
+  AddHelperEngagementButton,
+  HelperEngagementRowControls,
   RecordLeaveButton,
   WeeklyPatternButton,
 } from "../_components/helper-forms";
@@ -244,7 +245,8 @@ export default async function HousehelperPage({
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {helpers.map((helper) => {
-                const profile = profiles.find((p) => p.member_id === helper.id);
+                const engagements = profiles.filter((p) => p.member_id === helper.id);
+                const profile = engagements[0];
                 const todayException = exceptions.find(
                   (e) => e.member_id === helper.id && e.on_date === today,
                 );
@@ -274,10 +276,12 @@ export default async function HousehelperPage({
                             {helper.displayName}
                           </span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                            {profile
-                              ? `${profile.engagement} help`
-                              : "Househelper"}
-                            {profile?.started_on
+                            {engagements.length === 0
+                              ? "Househelper"
+                              : engagements.length === 1
+                                ? `${profile!.engagement} help`
+                                : `${engagements.length} engagements`}
+                            {engagements.length === 1 && profile?.started_on
                               ? ` · since ${formatDate(timezone, new Date(profile.started_on))}`
                               : ""}
                           </span>
@@ -315,6 +319,57 @@ export default async function HousehelperPage({
                         }
                       />
 
+                      <div>
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+                          Engagements
+                        </p>
+                        {engagements.length === 0 ? (
+                          <p className="text-sm text-[var(--wh-foreground-muted)]">
+                            No arrangement recorded yet.
+                          </p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {engagements.map((engagement) => (
+                              <li
+                                key={engagement.id}
+                                className="flex items-start justify-between gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2"
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-sm font-medium capitalize">
+                                    {engagement.engagement} help
+                                  </span>
+                                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                                    {engagement.started_on
+                                      ? `Since ${formatDate(timezone, new Date(engagement.started_on))}`
+                                      : "No start date recorded"}
+                                    {engagement.notes ? ` · ${engagement.notes}` : ""}
+                                  </span>
+                                </span>
+                                {admin ? (
+                                  <HelperEngagementRowControls
+                                    householdId={householdId}
+                                    helper={{ id: helper.id, displayName: helper.displayName }}
+                                    current={{
+                                      id: engagement.id,
+                                      engagement: engagement.engagement,
+                                      startedOn: engagement.started_on,
+                                      notes: engagement.notes,
+                                    }}
+                                  />
+                                ) : null}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {admin ? (
+                          <div className="mt-2">
+                            <AddHelperEngagementButton
+                              householdId={householdId}
+                              helper={{ id: helper.id, displayName: helper.displayName }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
                       <div>
                         <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
                           Usual days
@@ -371,24 +426,6 @@ export default async function HousehelperPage({
                       ) : null}
                       {mayEdit(helper.id) ? (
                         <div className="flex flex-wrap gap-1.5">
-                          {admin ? (
-                            <HelperProfileButton
-                              householdId={householdId}
-                              helper={{
-                                id: helper.id,
-                                displayName: helper.displayName,
-                              }}
-                              current={
-                                profile
-                                  ? {
-                                      engagement: profile.engagement,
-                                      startedOn: profile.started_on,
-                                      notes: profile.notes,
-                                    }
-                                  : null
-                              }
-                            />
-                          ) : null}
                           <WeeklyPatternButton
                             householdId={householdId}
                             helper={{

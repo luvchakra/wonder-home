@@ -59,7 +59,7 @@ export function MemberProfileForm({
 
           <Field label="Name" name="displayName" required defaultValue={initial.displayName} autoComplete="off" />
           <Field label="Nickname" name="nickname" defaultValue={initial.nickname ?? ""} placeholder="What the household actually calls them" autoComplete="off" />
-          <Field label="Relationship" name="relationship" defaultValue={initial.relationship ?? ""} placeholder="Father, Mother, Daughter, Grandmother…" autoComplete="off" />
+          <Field label="Family calls me" name="relationship" defaultValue={initial.relationship ?? ""} placeholder="Father, Mother, Daughter, Grandmother…" autoComplete="off" />
           <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={initial.dateOfBirth ?? ""} />
           <Field label="Occupation" name="occupation" defaultValue={initial.occupation ?? ""} placeholder="What they do for work or study" autoComplete="off" />
           <Field label="School or work location" name="schoolOrWorkLocation" defaultValue={initial.schoolOrWorkLocation ?? ""} placeholder="Where they spend the day" autoComplete="off" />

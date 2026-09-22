@@ -39,11 +39,6 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "supabase/migrations/20260917005443_identity_rls_and_creation.sql",
   },
   {
-    event: "household.updated",
-    because: "Changes something every member's own record is read against — who the household's Key Member is, so far.",
-    recordedIn: "packages/core/src/identity/households.ts",
-  },
-  {
     event: "member.added",
     because: "One more person can now see the household.",
     recordedIn: "packages/core/src/identity/invitations.ts",
@@ -383,6 +378,10 @@ export const NOT_YET_BUILT: readonly { event: AuditEventType; story: string }[] 
   { event: "member.removed", story: "removing a member is not built" },
   { event: "child.updated", story: "editing a child's record is not built" },
   { event: "integration.disconnected", story: "nothing disconnects an account yet; module 17" },
+  {
+    event: "household.updated",
+    story: "no household-level setting (name, timezone, currency…) is editable yet — the Key Member designation that used to emit this was removed",
+  },
 ];
 
 /**

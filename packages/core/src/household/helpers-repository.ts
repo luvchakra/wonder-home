@@ -11,24 +11,60 @@ import type { Engagement } from "./helpers";
  * is one day that differs. None of it is checked against anything they did.
  */
 
-export async function saveHelperProfile(
+/**
+ * A new engagement for a helper — a second, distinct arrangement (a
+ * different kind of help, its own start date and notes) is a separate row,
+ * not an overwrite of whatever the person already has recorded.
+ */
+export async function createHelperEngagement(
   supabase: SupabaseClient,
   input: { householdId: string; memberId: string; engagement: Engagement; startedOn: string | null; notes: string | null },
 ): Promise<void> {
-  const { error } = await supabase.from("helper_profiles").upsert(
-    {
-      household_id: input.householdId,
-      member_id: input.memberId,
-      engagement: input.engagement,
-      started_on: input.startedOn,
-      notes: input.notes,
-    },
-    { onConflict: "member_id" },
-  );
+  const { error } = await supabase.from("helper_profiles").insert({
+    household_id: input.householdId,
+    member_id: input.memberId,
+    engagement: input.engagement,
+    started_on: input.startedOn,
+    notes: input.notes,
+  });
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can add a helper's arrangement.");
+    throw new Error(`createHelperEngagement failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/** Changing one already-recorded engagement — never touches any other engagement the same person has. */
+export async function updateHelperEngagement(
+  supabase: SupabaseClient,
+  input: { id: string; householdId: string; engagement: Engagement; startedOn: string | null; notes: string | null },
+): Promise<void> {
+  const { error } = await supabase
+    .from("helper_profiles")
+    .update({ engagement: input.engagement, started_on: input.startedOn, notes: input.notes })
+    .eq("id", input.id)
+    .eq("household_id", input.householdId);
 
   if (error) {
     if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can change a helper's arrangement.");
-    throw new Error(`saveHelperProfile failed: ${error.code ?? "unknown"}`);
+    throw new Error(`updateHelperEngagement failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/** Removing one engagement — the person and their other engagements, if any, are untouched. */
+export async function removeHelperEngagement(
+  supabase: SupabaseClient,
+  input: { id: string; householdId: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("helper_profiles")
+    .delete()
+    .eq("id", input.id)
+    .eq("household_id", input.householdId);
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can remove a helper's arrangement.");
+    throw new Error(`removeHelperEngagement failed: ${error.code ?? "unknown"}`);
   }
 }
 
