@@ -248,7 +248,11 @@ export default async function HealthPage({
                               title={item.title}
                               meta={item.reason}
                               action={
-                                routine && section.key !== "recent" ? (
+                                // Normally silent history once in Recent, like
+                                // a checkup — except a dismissed routine with
+                                // no completion has no other home, so its
+                                // "Bring back" stays reachable here too.
+                                routine && (section.key !== "recent" || routine.status === "dismissed") ? (
                                   <RoutineActions
                                     householdId={householdId}
                                     routine={{ ...routine, label: routine.vitalType === "custom" ? (routine.customLabel ?? "Measurement") : VITAL_TYPE_LABEL[routine.vitalType] }}

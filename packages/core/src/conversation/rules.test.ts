@@ -258,6 +258,16 @@ describe("health (story 21-006)", () => {
     expect(intent.parameters).toMatchObject({ vital: "bp", reading: "128 over 82 this morning" });
   });
 
+  it("prepares a vital reading from 'Log my <vital> as <reading>' (story 21-007)", () => {
+    const intent = read("Log my weight as 71.5 kg");
+    expect(intent.action).toBe("log_vital");
+    expect(intent.parameters).toMatchObject({ vital: "weight", reading: "71.5 kg" });
+
+    const recorded = read("Record my blood pressure as 128/82");
+    expect(recorded.action).toBe("log_vital");
+    expect(recorded.parameters).toMatchObject({ vital: "blood pressure", reading: "128/82" });
+  });
+
   it("logs an issue from 'I've had a <symptom> since <when>'", () => {
     const intent = read("I've had a headache since yesterday");
     expect(intent.action).toBe("log_health_issue");

@@ -321,10 +321,19 @@ export function healthRoutinesAgenda(routines: readonly MeasurementRoutine[], na
   }
 
   const recent = routines
-    .filter((r) => r.lastCompletedOn)
-    .sort((a, b) => (b.lastCompletedOn ?? "").localeCompare(a.lastCompletedOn ?? ""))
+    // A completed routine's history lands here, and so does a dismissed one
+    // that was never completed — otherwise it has no home anywhere on this
+    // page and "bring back" would be unreachable (CLAUDE.md rule 12).
+    .filter((r) => r.lastCompletedOn || r.status === "dismissed")
+    .sort((a, b) => (b.lastCompletedOn ?? b.createdAt).localeCompare(a.lastCompletedOn ?? a.createdAt))
     .slice(0, 5)
-    .map((r) => silent(`routine.${r.id}`, `${nameOf(r.memberId)} — ${vitalLabel(r)}`, `Measured ${r.lastCompletedOn ? formatDueDate(r.lastCompletedOn) : ""}.`));
+    .map((r) =>
+      silent(
+        `routine.${r.id}`,
+        `${nameOf(r.memberId)} — ${vitalLabel(r)}`,
+        r.lastCompletedOn ? `Measured ${formatDueDate(r.lastCompletedOn)}.` : "Removed.",
+      ),
+    );
 
   return { needsAttention, comingUp, recent };
 }
