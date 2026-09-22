@@ -46,7 +46,13 @@ function requestable(template: string): string {
   return template.replace(/\{[^}]+\}/g, (parameter) => PLACEHOLDER[parameter] ?? "unknown");
 }
 
-const PUBLIC_PATHS = new Set(["/health", "/health/ready", "/openapi"]);
+// `/intake/share` is the PWA Web Share Target's landing point — reachable
+// from the OS share sheet whether or not the person has ever signed in on
+// this device (that is the whole point of the signed-out handoff), so it is
+// deliberately not held to the "anonymous caller gets 401" shape the rest of
+// `/api/v1` is: it always ends in a redirect, never the standard JSON error
+// envelope.
+const PUBLIC_PATHS = new Set(["/health", "/health/ready", "/openapi", "/intake/share"]);
 
 const SERVED = servedPaths().sort();
 const GUARDED = SERVED.filter((path) => !PUBLIC_PATHS.has(path));

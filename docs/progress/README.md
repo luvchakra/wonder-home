@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-22 | [HomeSend Phase 4: the PWA Web Share Target and its signed-out handoff](2026-09-22-homesend-phase4-share-target.md) |
 | 2026-09-22 | [HomeSend Phase 3: a second, different-domain proposal per intake](2026-09-22-homesend-phase3-secondary-domain.md) |
 | 2026-09-22 | [HomeSend Phase 2: the email intake channel](2026-09-22-homesend-phase2-email-intake.md) |
 | 2026-09-22 | [HomeSend Phase 1: undo, audit trail, and a real upload security check](2026-09-22-homesend-phase1-foundation.md) |

@@ -29,6 +29,7 @@ const NON_TENANT_TABLES = new Set([
   "plans", // platform-level plan catalogue
   "plan_features", // what a plan allows; a property of the plan, not of a tenant
   "platform_admins", // the separate platform-admin boundary
+  "homesend_share_handoffs", // a share sheet staged before sign-in; no household is known yet
 ]);
 
 const ALICE = "11111111-1111-4111-8111-111111111111";

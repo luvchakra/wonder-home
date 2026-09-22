@@ -772,6 +772,17 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/intake/share": {
+        post: {
+          summary: "PWA Web Share Target landing point (HomeSend Phase 4)",
+          description:
+            "Where the OS share sheet lands once WonderHome is installed (manifest.webmanifest's share_target). A real full-page form POST, not a fetch call, so it always ends in a redirect rather than the standard JSON envelope, and it is public on purpose — reachable whether or not the person has ever signed in on this device. Signed in with a household: classifies and saves the shared text/photo immediately, same as a manual upload/paste, then redirects to /home-send. Otherwise: stages the content (homesend_share_handoffs, no household known yet) behind an unguessable token and redirects to /sign-in?next=..., which /home-send resumes once sign-in resolves a household.",
+          security: [],
+          responses: {
+            "303": { description: "Redirects to /home-send (saved), /sign-in (staged for after sign-in), or /home-send with a shareError query param" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

@@ -570,6 +570,86 @@ test("undoing only the secondary change leaves the primary change active", () =>
   );
 });
 
+// ---------------------------------------------------------------------------
+// Phase 4: the PWA Web Share Target's signed-out handoff --
+// homesend_share_handoffs. No household is known when a row is written, so
+// every write and read here goes through psql (the admin-equivalent
+// connection) directly, exactly as the real handoff code always uses the
+// admin client -- there is no session to scope a request-bound client to.
+// ---------------------------------------------------------------------------
+
+test("a text handoff can be staged and read back by the admin connection", () => {
+  const id = psql(
+    `insert into public.homesend_share_handoffs (token, kind, raw_text)
+     values ('tok-text-1', 'text', 'A shared bill reminder') returning id;`,
+    options,
+  );
+  assert.ok(id.length > 0);
+  assert.equal(
+    psql(`select raw_text from public.homesend_share_handoffs where token = 'tok-text-1';`, options),
+    "A shared bill reminder",
+  );
+});
+
+test("no signed-in caller, however privileged, can read a staged handoff", () => {
+  assert.equal(asProfile(HEAD, `select count(*) from public.homesend_share_handoffs;`, options), "0");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_share_handoffs;`, options), "0");
+});
+
+test("a text handoff cannot also carry file content", () => {
+  let threw = false;
+  try {
+    psql(
+      `insert into public.homesend_share_handoffs (token, kind, raw_text, file_bytes)
+       values ('tok-bad-1', 'text', 'Text', '\\x00');`,
+      options,
+    );
+  } catch {
+    threw = true;
+  }
+  assert.ok(threw, "a text handoff was accepted with file content attached");
+});
+
+test("a file handoff needs both its bytes and a content type", () => {
+  let threw = false;
+  try {
+    psql(
+      `insert into public.homesend_share_handoffs (token, kind, file_bytes)
+       values ('tok-bad-2', 'file', '\\x89504e47');`,
+      options,
+    );
+  } catch {
+    threw = true;
+  }
+  assert.ok(threw, "a file handoff was accepted with no content type");
+});
+
+test("a file handoff round-trips its bytes and content type", () => {
+  psql(
+    `insert into public.homesend_share_handoffs (token, kind, file_bytes, file_content_type)
+     values ('tok-file-1', 'file', '\\x89504e47', 'image/png');`,
+    options,
+  );
+  assert.equal(
+    psql(`select file_content_type from public.homesend_share_handoffs where token = 'tok-file-1';`, options),
+    "image/png",
+  );
+});
+
+test("two handoffs cannot share the same token", () => {
+  let threw = false;
+  try {
+    psql(
+      `insert into public.homesend_share_handoffs (token, kind, raw_text)
+       values ('tok-text-1', 'text', 'A different message');`,
+      options,
+    );
+  } catch {
+    threw = true;
+  }
+  assert.ok(threw, "a second handoff was created with an already-used token");
+});
+
 function otherAdultMember() {
   return psql(
     `select id from public.household_members where household_id = '${household}' and profile_id = '${OTHER_ADULT}';`,
