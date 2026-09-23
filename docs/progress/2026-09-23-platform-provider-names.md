@@ -146,10 +146,40 @@ because they only step in when the model says `unknown`.
 - Typecheck, lint and the secret scan passed.
 - 2171 unit tests passed.
 
-## QA data for this note
+## Production deploy of #126 is waiting on Vercel's daily limit
 
-- **QA account:** `570355fb-4015-490c-a8d0-923ced397303`.
-- **Household:** "Model QA Home" (`4d47c1de-f7c8-45f9-b0ac-7c12c2b3d8a9`).
+#126 merged as `608f38b`, but no production deployment was ever created for
+it. Triggering a redeploy by hand was refused:
 
-Both are removed after the final production check. The cleanup is recorded
-below.
+    402 payment_required: "Resource is limited - try again in 24 hours
+    (more than 100, code: "api-deployments-free-per-day")"
+
+The project is on Vercel's free plan, which allows 100 deployments a day.
+Every push and pull request makes a preview as well as a production build,
+so a busy day of small PRs uses the allowance up. The limit resets at
+**2026-09-24 14:26 UTC**.
+
+Until then production keeps serving `112687b`: #125 without #126. What that
+means for a household:
+- the key fix and the field repair are live;
+- "remind me … this evening" still asks "when?".
+
+**Needs doing after the reset:**
+1. Redeploy production with the latest `main`: in Vercel, Redeploy, or any
+   new merge to `main`.
+2. Re-run the reminder with a fresh QA account.
+
+A session check-in is scheduled for then. Upgrading the Vercel plan would
+lift the limit, but that is a billing decision for the owner.
+
+## QA cleanup
+
+This session's QA data is all removed from the live project:
+- **Household:** "Model QA Home" (`4d47c1de-f7c8-45f9-b0ac-7c12c2b3d8a9`)
+  was deleted, with every row in it. Nothing was in Storage.
+- **QA account:** `570355fb-4015-490c-a8d0-923ced397303` was deleted with
+  `scripts/qa-test-user.mjs`.
+- **Local:** the scratchpad scripts are gone, and no dev server is running.
+
+**Confirmed:** a count over every `household_id` table in `public` and `wh`
+finds 0 rows for that household, and the auth user no longer exists.
