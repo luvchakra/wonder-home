@@ -518,6 +518,19 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/ai-quality": {
+        get: {
+          summary: "HomeTalk and HomeBrain quality in production",
+          description:
+            "Platform-wide AI quality (Wave 5 §23). It reports:\n\n- household outcomes handled (HomeTalk writes executed and HomeSend items routed);\n- model understanding share and provider failures by code;\n- clarification rate;\n- HomeTalk update success;\n- HomeBrain grounded answers and validation refusals;\n- corrections by surface and error type;\n- approvals refused as expired, changed or stale;\n- unsafe actions (consequential actions carried out with no approval step), which must be zero.\n\nEach figure is a count and the count it is out of. It is read only from closed words (reply metadata codes, action type and status, correction type), never household content. Requires `ai_operations.read`. `days` sets the window (1–365, default 30).",
+          parameters: [{ name: "days", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 365 } }],
+          responses: {
+            "200": { description: "The metrics for the window" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/platform-admin/ai-operations/runs/{runId}": {
         parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         get: {

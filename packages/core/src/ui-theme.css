@@ -316,6 +316,72 @@
   }
 }
 
+/* Home's cat (CozyCornerIllustration): it tiptoes in from the right in
+   small crouching steps, overshoots a touch, and settles with a tiny hop.
+   Units are the illustration's own (an SVG <g> reads px as user units). */
+@keyframes wh-cat-sneak {
+  0% {
+    transform: translate(280px, 8px);
+  }
+  18% {
+    transform: translate(210px, 0);
+  }
+  26% {
+    transform: translate(210px, 8px);
+  }
+  44% {
+    transform: translate(130px, 0);
+  }
+  52% {
+    transform: translate(130px, 8px);
+  }
+  70% {
+    transform: translate(40px, 0);
+  }
+  80% {
+    transform: translate(-8px, 2px);
+  }
+  90% {
+    transform: translate(0, -6px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* A blink: eyes open most of the time, a quick close, then a second quick
+   one now and then, so it reads as a cat and not a metronome. */
+@keyframes wh-cat-blink {
+  0%,
+  86%,
+  100% {
+    transform: scaleY(1);
+  }
+  88% {
+    transform: scaleY(0.08);
+  }
+  90%,
+  93% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.08);
+  }
+  97% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes wh-cat-tail {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-10deg);
+  }
+}
+
 /* Scroll reveal: opacity + translateY + subtle scale (requirements §41). */
 .wh-reveal {
   opacity: 0;
@@ -346,6 +412,20 @@
   transform-origin: 70% 70%;
   animation: wh-hand-wave 1.4s ease-in-out 1;
   animation-delay: 300ms;
+}
+
+.wh-cat-sneak {
+  animation: wh-cat-sneak 2.6s cubic-bezier(0.3, 0.7, 0.4, 1) 0.4s both;
+}
+.wh-cat-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wh-cat-blink 4.2s ease-in-out 3.2s infinite;
+}
+.wh-cat-tail {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: wh-cat-tail 3s ease-in-out 3s infinite;
 }
 
 /* The nav drawer's own entrance — the sheet family's speed, not the slower content reveal. */
@@ -391,7 +471,10 @@
   .wh-rise,
   .wh-skeleton,
   .wh-slide-in-left,
-  .wh-hand-wave {
+  .wh-hand-wave,
+  .wh-cat-sneak,
+  .wh-cat-blink,
+  .wh-cat-tail {
     animation: none;
   }
   .wh-rise,
