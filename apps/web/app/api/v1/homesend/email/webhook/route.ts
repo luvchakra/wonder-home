@@ -1,5 +1,5 @@
 import { createAdminClient } from "@wonderhome/core/db/admin";
-import { resolveHouseholdIdByAddress } from "@wonderhome/core/homesend/addresses";
+import { resolveRecipientHouseholds } from "@wonderhome/core/homesend/addresses";
 import {
   fetchReceivedAttachment,
   fetchReceivedEmail,
@@ -22,7 +22,7 @@ import { log } from "@wonderhome/core/observability/logger";
  * JSON before a handler runs; signature verification needs the exact raw
  * bytes first, per Resend's own instruction to verify against the raw
  * request body). The household is resolved from the recipient address,
- * server-side, via `resolveHouseholdIdByAddress` — never accepted from the
+ * server-side, via `resolveRecipientHouseholds` — never accepted from the
  * payload itself.
  *
  * Real end to end only once a deployment sets `RESEND_API_KEY` and
@@ -38,12 +38,6 @@ import { log } from "@wonderhome/core/observability/logger";
  * consistent with `e2e/domains.spec.ts`'s "every endpoint refuses an
  * anonymous caller the same way" sweep, without needing a special case.
  */
-/** "Rao Home <hs-abc@inbox.example>" → "hs-abc@inbox.example". */
-function bareAddress(value: string): string {
-  const angled = /<([^>]+)>/.exec(value);
-  return (angled?.[1] ?? value).trim().toLowerCase();
-}
-
 function unauthenticated(): Response {
   return new Response(
     JSON.stringify({ error: { code: "unauthenticated", message: "Authentication required.", requestId: "homesend-email-webhook" } }),
@@ -84,13 +78,8 @@ export async function POST(request: Request): Promise<Response> {
   // message was delivered to, each resolved server-side. One email sent to
   // two households' addresses is two intakes, one per household; a revoked
   // or unknown address resolves to nothing.
-  const candidates = [...new Set([...event.data.to, ...event.data.received_for].map(bareAddress))];
-  const households = new Set<string>();
-  for (const candidate of candidates) {
-    const householdId = await resolveHouseholdIdByAddress(supabase, candidate);
-    if (householdId) households.add(householdId);
-  }
-  if (households.size === 0) {
+  const households = await resolveRecipientHouseholds(supabase, [...event.data.to, ...event.data.received_for]);
+  if (households.length === 0) {
     // No household recognizes this address — never confirm or deny which
     // addresses are real to an unauthenticated sender; just ack and stop.
     return new Response(null, { status: 200 });

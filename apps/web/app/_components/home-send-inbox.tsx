@@ -26,10 +26,10 @@ import {
   type RouteHomeItemState,
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
-import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
+import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
-export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null };
+export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null; confirmation?: ReviewConfirmation | null };
 
 const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone; label: string }> = {
   bill: { icon: Wallet, tone: "money", label: "Bill" },
@@ -85,6 +85,7 @@ type OpenItem = {
   receivedAt?: string | null;
   heard?: { text: string; prompt: string } | null;
   notice?: string | null;
+  confirmation?: ReviewConfirmation | null;
 };
 
 function openFromState(state: SendHomeItemState): OpenItem | null {
@@ -97,6 +98,7 @@ function openFromState(state: SendHomeItemState): OpenItem | null {
     understanding: state.item.understanding ?? null,
     reconciliation: state.item.reconciliation ?? null,
     subject: state.item.subject ?? null,
+    confirmation: state.item.confirmation ?? null,
     receivedAt: new Date().toISOString(),
     heard: state.heard ?? null,
     notice: state.notice ?? null,
@@ -142,6 +144,9 @@ export function HomeSendInbox({
   const [dragOver, setDragOver] = useState(false);
   const [openItem, setOpenItem] = useState<OpenItem | null>(null);
   const [failedNotice, setFailedNotice] = useState<string | null>(null);
+  // Applied on its own under the household's own autonomy setting (§12):
+  // said so, with its Undo right here as well as in "Recently handled".
+  const [autoApplied, setAutoApplied] = useState<{ notice: string; changeId: string; title: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadFormRef = useRef<HTMLFormElement>(null);
   const busy = uploading || pasting;
@@ -153,6 +158,7 @@ export function HomeSendInbox({
   const fresh = [uploadState, pasteState, transcriptState].find((state, index) => state !== seen[index]);
   if (fresh) {
     setSeen([uploadState, pasteState, transcriptState]);
+    setAutoApplied(fresh.autoApplied ? { notice: fresh.notice ?? "", changeId: fresh.autoApplied.changeId, title: fresh.autoApplied.title } : null);
     if (fresh.state === "failed") {
       setFailedNotice(fresh.notice ?? null);
       setOpenItem(null);
@@ -202,6 +208,7 @@ export function HomeSendInbox({
       heard,
       reconciliation: handFill ? null : (reviews[item.id]?.reconciliation ?? null),
       subject: handFill ? null : (reviews[item.id]?.subject ?? null),
+      confirmation: handFill ? null : (reviews[item.id]?.confirmation ?? null),
     });
   }
 
@@ -258,6 +265,20 @@ export function HomeSendInbox({
             </form>
             {uploadState.error ? <Alert>{uploadState.error}</Alert> : null}
             {failedNotice ? <Alert>{failedNotice} It&apos;s kept below under &ldquo;Failed safely&rdquo;.</Alert> : null}
+            {autoApplied ? (
+              <Alert tone="info">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 flex-1 break-words">{autoApplied.notice}</span>
+                  <form action={undoAction}>
+                    <input type="hidden" name="householdId" value={householdId} />
+                    <input type="hidden" name="changeId" value={autoApplied.changeId} />
+                    <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${autoApplied.title}`}>
+                      {undoing ? "Undoing…" : "Undo"}
+                    </Pill>
+                  </form>
+                </span>
+              </Alert>
+            ) : null}
 
             {mode === "paste" ? (
               <form action={pasteAction} className="space-y-3">
@@ -315,6 +336,7 @@ export function HomeSendInbox({
               contentType={openItem.contentType}
               receivedAt={openItem.receivedAt}
               subject={openItem.subject ?? null}
+              confirmation={openItem.confirmation ?? null}
             />
             <form action={dismissAction}>
               <input type="hidden" name="householdId" value={householdId} />
@@ -407,7 +429,9 @@ export function HomeSendInbox({
                 const canUndoPrimary = Boolean(primaryChange && !primaryChange.undoneAt);
                 const statusLabel =
                   item.status === "dismissed"
-                    ? "Dismissed"
+                    ? item.reviewDecision === "kept_existing"
+                      ? "Kept existing"
+                      : "Dismissed"
                     : primaryChange?.undoneAt
                       ? "Undone"
                       : primaryChange?.changeType === "updated"
@@ -424,6 +448,7 @@ export function HomeSendInbox({
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                           {presentation.label}
                           {primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? ` · ${statusLabel} the one on record` : ""}
+                          {item.reviewDecision === "auto_added" && !primaryChange?.undoneAt ? " · Added on its own" : ""}
                         </span>
                       </span>
                       {canUndoPrimary ? (
