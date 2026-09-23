@@ -16,6 +16,7 @@
  */
 
 import { inQuietHours } from "./decide";
+import { createWhatsAppAdapter, whatsappConfigFromEnv } from "./whatsapp";
 
 export const DELIVERY_CHANNELS = ["in_app", "push", "email", "whatsapp"] as const;
 export type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
@@ -42,7 +43,10 @@ export type ChannelError = {
   message: string;
 };
 
-export type ChannelSendResult = { ok: true } | { ok: false; error: ChannelError };
+export type ChannelSendResult =
+  /** `providerMessageId` ties a later delivery report back to this send (story 17-006). */
+  | { ok: true; providerMessageId?: string }
+  | { ok: false; error: ChannelError };
 
 export type ChannelAdapter = {
   readonly channel: DeliveryChannel;
@@ -109,6 +113,15 @@ export const CHANNEL_ADAPTERS: Record<DeliveryChannel, ChannelAdapter> = {
   email: emailAdapter,
   whatsapp: whatsappAdapter,
 };
+
+/**
+ * The adapters this deployment actually has: WhatsApp's Cloud API once it
+ * is configured (story 17-006), the fixtures otherwise.
+ */
+export function channelAdaptersFromEnv(env: Record<string, string | undefined> = process.env): Record<DeliveryChannel, ChannelAdapter> {
+  const whatsapp = whatsappConfigFromEnv(env);
+  return whatsapp ? { ...CHANNEL_ADAPTERS, whatsapp: createWhatsAppAdapter(whatsapp.adapter) } : CHANNEL_ADAPTERS;
+}
 
 /**
  * Which of a member's channels should be attempted for this notification.

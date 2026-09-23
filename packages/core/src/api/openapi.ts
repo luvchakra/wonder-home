@@ -1428,6 +1428,27 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/whatsapp/webhook": {
+        get: {
+          summary: "WhatsApp webhook verification (story 17-006)",
+          description:
+            "Meta's one-time handshake: echoes hub.challenge only when hub.verify_token matches the deployment's WHATSAPP_VERIFY_TOKEN. Anything else — including a deployment with no WhatsApp configured — is the standard 401.",
+          responses: {
+            "200": { description: "The challenge, as plain text" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+        post: {
+          summary: "WhatsApp delivery reports and replies (story 17-006)",
+          description:
+            "Believed only after X-Hub-Signature-256 verifies over the raw body with WHATSAPP_APP_SECRET. A delivery report moves a notification's WhatsApp copy to delivered, seen or delivery_failed, found by the provider's message id; a reply of STOP switches WhatsApp off for that number and says so. Nothing else a person writes is acted on, and no household record is touched from here. 401 for both a bad signature and an unconfigured deployment.",
+          responses: {
+            "200": { description: "Acknowledged, with how many reports were recorded and opt-outs honoured" },
+            "400": { description: "A verified body that could not be read" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+      },
       "/billing/webhook": {
         post: {
           summary: "Billing provider webhook (story 20-006)",

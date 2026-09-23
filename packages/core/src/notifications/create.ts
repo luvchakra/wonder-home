@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import type { NotificationDecision } from "./decide";
+import { deliverNotification } from "./deliver";
 
 /**
  * Turning a decision into a row (stories 06-001 through 06-007).
@@ -29,6 +31,7 @@ export type NotifyInput = {
 export async function createNotification(
   admin: SupabaseClient,
   input: NotifyInput,
+  options: { now?: Date; adapters?: Record<DeliveryChannel, ChannelAdapter> } = {},
 ): Promise<{ id: string } | null> {
   const { householdId, decision, title, body } = input;
 
@@ -61,5 +64,25 @@ export async function createNotification(
 
   const { data, error } = await admin.from("notifications").insert(row).select("id").single();
   if (error) return null;
-  return { id: (data as { id: string }).id };
+  const id = (data as { id: string }).id;
+
+  // A new notification that is due now also goes out on the member's other
+  // channels (story 17-006). A later one waits for its time; an update to an
+  // open thread never pings again — threads are grouped, not repeated.
+  const now = options.now ?? new Date();
+  if (decision.deliverAt.getTime() <= now.getTime()) {
+    const riskLevel = decision.factors.riskLevel;
+    await deliverNotification(
+      admin,
+      {
+        householdId,
+        notificationId: id,
+        recipientMemberId: decision.recipientMemberId,
+        notification: { title, body, priority: riskLevel === "critical" ? "critical" : riskLevel === "high" ? "high" : "normal" },
+        now,
+      },
+      options.adapters,
+    );
+  }
+  return { id };
 }

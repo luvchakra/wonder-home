@@ -116,3 +116,20 @@ without inventing a live provider.
   directly.
 - Registering the webhook endpoint with the provider and setting its secret
   on the deployment.
+
+## Test data cleanup
+
+Ran after PRs #138 and #139 merged. One QA household served both 20-006 and
+08-009:
+- Deleted the QA account `ec891031-2390-421d-8d71-965161f214e8` with
+  `qa-test-user.mjs`.
+- Deleted its household `5a834bf5-1980-4a96-80c5-9632ed65f171` ("Billing QA
+  Home"): audit and channel events first, then the household. That cascades
+  the child Aarav, his school item, the HomeSend items and changes, and any
+  billing rows.
+- Deleted this session's rate-limit counters.
+- Deleted the local screenshots and QA scripts.
+
+SQL counts for the household, members, school items, HomeSend items, billing
+intents, audit, counters and files are all 0. The live plan catalogue has no
+plan marked `requires_payment`: Max's QA flag was reverted.

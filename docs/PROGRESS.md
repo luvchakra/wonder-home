@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**186 of 195 stories done — 95.4%**
+**187 of 195 stories done — 95.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 186 |
+| Done | 187 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 8 |
+| Not Started | 7 |
 
 ## By module
 
@@ -41,7 +41,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 14 AI Orchestration & Learning | `█████████░` | 13 | 14 | 1 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
-| 17 External Integrations | `███████░░░` | 6 | 8 | 2 not started |
+| 17 External Integrations | `████████░░` | 7 | 8 | 1 not started |
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `███████░░░` | 6 | 8 | 2 not started |
@@ -55,7 +55,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
-| `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
@@ -339,7 +338,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 17 — External Integrations
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -348,7 +347,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-003` Email | P0 | Done | recognised bills → obligations by provider identity + content hash; status never touched by a sync; POST integrations/email/sync (409 until a provider is live) |
 | `17-004` School | P0 | Done | translate() extended with contentHash + provider-cancellation signal; reconciled onto school_items by identity; cancel never overrides done/submitted; POST integrations/school/sync (409 until a provider is live) |
 | `17-005` Commerce | P0 | Done | Merchant reports reconciled by identity + hash; lifecycle refuses a rewind, a reprice never overwrites the approved figure; POST integrations/commerce/sync (409 until a merchant is live) |
-| `17-006` WhatsApp | P1 | Not Started | — |
+| `17-006` WhatsApp | P1 | Done | WhatsApp Cloud API adapter behind the 06-008 channel shape (approved template, E.164 only, closed-word errors); new due notifications now go out on the member's live channels (`notifications/deliver.ts`) with `sent`/`delivery_failed` events; signed webhook records delivered/seen/failed by provider message id and honours STOP; inert until a deployment sets `WHATSAPP_*` |
 | `17-007` Weather | P1 | Done | Open-Meteo behind the 13-005 weather port; an Admin picks an area (coordinates rounded to ~1 km, `weather_locations`), the forecast is cached hourly on the household's row, entitlement `home.weather` decided on the server; laundry/drying plans around it; outages recorded on the connection only, last forecast serves ≤6 h; off unless the deployment sets `WONDERHOME_WEATHER_PROVIDER=open-meteo` |
 | `17-008` Smart home | P2 | Not Started | — |
 
