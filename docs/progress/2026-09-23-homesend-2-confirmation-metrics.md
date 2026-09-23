@@ -95,8 +95,10 @@ this story.
 
 ## Verification
 
-- `npm run test`: 2,002 unit tests and 43 script tests, all green. That
-  includes confirmation (11), metrics (7) and the §20 matrix (42).
+- `npm run verify` (exit 0): 2,003 unit tests and 43 script tests, 398 DB
+  tests, build, and 364 Playwright e2e — all green. The unit tests include
+  confirmation (11), metrics (7), the §20 matrix (42) and strict
+  reconciliation (1).
 - `node --test scripts/test-homesend-rls.mjs`: 60/60. The new tests cover:
   - a member records a review outcome
   - only closed words are accepted
