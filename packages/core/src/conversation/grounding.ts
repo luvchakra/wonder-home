@@ -54,7 +54,7 @@ export type GroundingEnv = {
   assets?: () => Promise<readonly { id: string; name: string }[]>;
 };
 
-export type SchoolItemRef = { id: string; title: string; childMemberId: string; dueAt: string | null; status: string };
+export type SchoolItemRef = { id: string; title: string; childMemberId: string; dueAt: string | null; status: string; dueTimeKnown?: boolean; endsAt?: string | null };
 
 /** Parameters that carry a date phrase, and whether the action needs exactly one day from it. */
 const DATE_KEYS = ["when", "date", "since", "to", "window"] as const;
@@ -228,7 +228,7 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     const school = await schoolItemFor(grounded, env);
     if (school.kind === "clarify") return clarify(grounded, school.awaiting, school.question, school.candidates);
     if (school.kind === "found") {
-      grounded = { ...grounded, parameters: { ...grounded.parameters, schoolItemId: school.item.id, title: school.item.title, childName: school.childName, ...(school.item.dueAt ? { dueAt: school.item.dueAt } : {}) } };
+      grounded = { ...grounded, parameters: { ...grounded.parameters, schoolItemId: school.item.id, title: school.item.title, childName: school.childName, ...(school.item.dueAt ? { dueAt: school.item.dueAt, dueTimeKnown: school.item.dueTimeKnown ?? true, endsAt: school.item.endsAt ?? null } : {}) } };
       focus.push({ entityType: "school_item", entityId: school.item.id, label: school.item.title, source: "mention", at });
     }
   }

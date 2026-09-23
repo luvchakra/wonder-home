@@ -3,6 +3,7 @@ import { BookOpen, CalendarHeart, PartyPopper, Sparkles, Star, Target } from "lu
 import { listEvents } from "@wonderhome/core/family/repository";
 import { childSchoolView } from "@wonderhome/core/school/repository";
 import type { SchoolItem } from "@wonderhome/core/school/items";
+import { schoolDayZone } from "@wonderhome/core/school/times";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
@@ -137,7 +138,7 @@ function SchoolList({ items, timezone }: { items: SchoolItem[]; timezone: string
             icon={item.kind === "event" ? CalendarHeart : BookOpen}
             tone="school"
             title={item.title}
-            meta={[item.subject, item.dueAt ? `due ${formatDate(timezone, item.dueAt, "long")}` : null, item.estimatedMinutes ? `about ${item.estimatedMinutes} min` : null].filter(Boolean).join(" · ")}
+            meta={[item.subject, item.dueAt ? `due ${formatDate(schoolDayZone(item, timezone), item.dueAt, "long")}` : null, item.estimatedMinutes ? `about ${item.estimatedMinutes} min` : null].filter(Boolean).join(" · ")}
             action={
               <PillLink href="/school" tone={item.status === "in_progress" ? "primary" : "soft"}>
                 {item.status === "in_progress" ? "Continue" : "Start"}

@@ -57,6 +57,8 @@ describe("HomeSend classify-intake golden scenario evaluations", () => {
       change: "new",
       confidence: "low",
       secondary: null,
+      dueTime: null,
+      endTime: null,
     });
   });
 

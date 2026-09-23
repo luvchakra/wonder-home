@@ -93,6 +93,8 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
     amount: extraction.amount,
     currency: extraction.currency,
     dueDate: extraction.dueDate,
+    dueTime: extraction.dueTime ?? null,
+    endTime: extraction.endTime ?? null,
     schoolKind: extraction.schoolKind,
     subject: extraction.subject,
     quantity: extraction.quantity,

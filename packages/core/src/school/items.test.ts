@@ -20,6 +20,8 @@ const item = (over: Partial<SchoolItem> = {}): SchoolItem => ({
   subject: "Maths",
   detail: null,
   dueAt: new Date("2026-09-18T08:00:00.000Z"),
+  dueTimeKnown: false,
+  endsAt: null,
   estimatedMinutes: null,
   estimateSource: null,
   status: "pending",

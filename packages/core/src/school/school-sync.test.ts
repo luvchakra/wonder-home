@@ -129,6 +129,8 @@ const item = (over: Partial<TranslatedSchoolItem> = {}, externalId = "msg-1", co
   subject: "Maths",
   detail: null,
   dueAt: null,
+  dueTimeKnown: false,
+  endsAt: null,
   estimatedMinutes: null,
   estimateSource: null,
   provider: "example_school",

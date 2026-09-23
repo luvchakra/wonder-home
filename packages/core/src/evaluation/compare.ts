@@ -32,6 +32,12 @@ export function compareStages(expected: Expectation, observed: Observation, cate
     if (!pass) errors.add("wrong_date");
   }
 
+  if (expected.time !== undefined) {
+    const pass = observed.time === expected.time;
+    stages.push({ stage: "grounding", pass, expected: expected.time, actual: observed.time });
+    if (!pass) errors.add("wrong_date");
+  }
+
   if (expected.entity !== undefined) {
     const pass = observed.entity === expected.entity;
     stages.push({ stage: "entity", pass, expected: expected.entity, actual: observed.entity });

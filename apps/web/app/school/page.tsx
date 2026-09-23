@@ -8,6 +8,8 @@ import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/househo
 import { describeSchoolHealth } from "@wonderhome/core/school/connector";
 import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/items";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
+import { schoolDateValue, schoolDayZone, schoolTimeWords } from "@wonderhome/core/school/times";
+import { isoDateIn } from "@wonderhome/core/context/format";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
@@ -30,7 +32,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { AddHomeworkButton } from "../_components/school-forms";
 import { SchoolItemDetail } from "../_components/school-item-controls";
-import { formatDate, formatTime, requireSession } from "../_lib/session";
+import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
 export const dynamic = "force-dynamic";
@@ -141,7 +143,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">{item.title}</span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                          {[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(timezone, item.dueAt, "long")}` : "no due date"]
+                          {[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(schoolDayZone(item, timezone), item.dueAt, "long")}` : "no due date"]
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
@@ -278,7 +280,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                                 <span className="min-w-0 flex-1">
                                   <span className="block text-sm font-medium">{item.title}</span>
                                   <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                                    {[nameOf(item.childMemberId), item.subject, `due ${formatDate(timezone, item.dueAt!, "long")}`].filter(Boolean).join(" · ")}
+                                    {[nameOf(item.childMemberId), item.subject, `due ${formatDate(schoolDayZone(item, timezone), item.dueAt!, "long")}`].filter(Boolean).join(" · ")}
                                   </span>
                                 </span>
                                 <Badge tone="neutral">{item.kind}</Badge>
@@ -312,7 +314,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">{item.title}</span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                            {[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(timezone, item.dueAt, "long")}` : "no due date", item.estimatedMinutes ? `~${item.estimatedMinutes} min${item.estimateSource === "inferred" ? " (estimated)" : ""}` : null].filter(Boolean).join(" · ")}
+                            {[nameOf(item.childMemberId), item.subject, item.dueAt ? `due ${formatDate(schoolDayZone(item, timezone), item.dueAt, "long")}` : "no due date", item.estimatedMinutes ? `~${item.estimatedMinutes} min${item.estimateSource === "inferred" ? " (estimated)" : ""}` : null].filter(Boolean).join(" · ")}
                           </span>
                         </span>
                         <Badge tone={item.status === "in_progress" ? "attention" : "neutral"}>{item.status === "in_progress" ? "In progress" : item.kind}</Badge>
@@ -345,7 +347,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                             <span className="min-w-0 flex-1">
                               <span className="block text-sm font-medium">{item.title}</span>
                               <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                                {nameOf(item.childMemberId)} · {formatDate(timezone, item.dueAt!, "long")} · {formatTime(timezone, item.dueAt!)}
+                                {[nameOf(item.childMemberId), formatDate(schoolDayZone(item, timezone), item.dueAt!, "long"), schoolTimeWords(item, timezone) ?? "all day"].filter(Boolean).join(" · ")}
                               </span>
                             </span>
                           </>
@@ -426,13 +428,13 @@ function groupByDueDate(items: HomeAssessment[], timezone: string): { label: str
  */
 function groupSchoolItemsByDueDate(items: SchoolItem[], timezone: string): { label: string; items: SchoolItem[] }[] {
   const now = new Date();
-  const today = isoDate(now);
-  const tomorrow = isoDate(new Date(now.getTime() + 86_400_000));
+  const today = isoDateIn(now, timezone);
+  const tomorrow = isoDateIn(new Date(now.getTime() + 86_400_000), timezone);
 
   const groups = new Map<string, SchoolItem[]>();
   for (const item of items) {
-    const due = isoDate(item.dueAt!);
-    const label = due === today ? "Today" : due === tomorrow ? "Tomorrow" : formatDate(timezone, item.dueAt!, "long");
+    const due = schoolDateValue(item, timezone);
+    const label = due === today ? "Today" : due === tomorrow ? "Tomorrow" : formatDate(schoolDayZone(item, timezone), item.dueAt!, "long");
     groups.set(label, [...(groups.get(label) ?? []), item]);
   }
   return [...groups.entries()].map(([label, groupItems]) => ({ label, items: groupItems }));

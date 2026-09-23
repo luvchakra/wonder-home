@@ -43,6 +43,10 @@ export type SchoolItem = {
   subject: string | null;
   detail: string | null;
   dueAt: Date | null;
+  /** Whether anybody gave a time of day. When false, `dueAt` only names a day and no time is shown (14-014). */
+  dueTimeKnown: boolean;
+  /** When a timed event or exam ends, where that was given. */
+  endsAt: Date | null;
   estimatedMinutes: number | null;
   estimateSource: "provider" | "inferred" | "member_confirmed" | null;
   status: SchoolItemStatus;

@@ -77,6 +77,8 @@ export type Expectation = {
   interpretation?: string;
   /** The local day the input was grounded to (YYYY-MM-DD), or null when no day should be decided. */
   date?: string | null;
+  /** The local time of day it was grounded to ("HH:MM", or "HH:MM–HH:MM" with an end), or null for all day (14-014). */
+  time?: string | null;
   /** The household member it lands on, or "ask" when the right answer is one question. */
   entity?: string | "ask" | null;
   /** The existing record it matches, and how. */
@@ -152,6 +154,7 @@ export type EvalCase = HomeTalkCase | HomeSendCase | HomeBrainCase;
 export type Observation = {
   interpretation: string | null;
   date: string | null;
+  time: string | null;
   entity: string | "ask" | null;
   match: { outcome: MatchOutcome; recordId: string | null };
   conflict: boolean;

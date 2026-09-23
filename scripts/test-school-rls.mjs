@@ -168,6 +168,48 @@ test("an estimate has to say where it came from", () => {
   );
 });
 
+test("a time of day and an end are only ever kept with a day and a start (14-014)", () => {
+  const timed = asProfile(
+    HEAD,
+    `insert into public.school_items (household_id, child_member_id, kind, title, due_at, due_time_known, ends_at)
+     values ('${household}', '${child}', 'event', 'Sports Day', '2026-09-26T03:30:00Z', true, '2026-09-26T05:30:00Z') returning ends_at is not null;`,
+    options,
+  );
+  assert.equal(timed, "t");
+  assert.equal(
+    psql(`select due_time_known from public.school_items where title = 'Sports Day';`, options),
+    "t",
+  );
+
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.school_items (household_id, child_member_id, kind, title, due_time_known)
+       values ('${household}', '${child}', 'event', 'Time with no day', true);`,
+      options,
+    ),
+    "a time of day was kept with no day to belong to",
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.school_items (household_id, child_member_id, kind, title, due_at, ends_at)
+       values ('${household}', '${child}', 'event', 'End of an all-day item', '2026-09-26T00:00:00Z', '2026-09-26T05:00:00Z');`,
+      options,
+    ),
+    "an all-day item was given an end",
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.school_items (household_id, child_member_id, kind, title, due_at, due_time_known, ends_at)
+       values ('${household}', '${child}', 'event', 'Ends before it starts', '2026-09-26T05:30:00Z', true, '2026-09-26T03:30:00Z');`,
+      options,
+    ),
+    "an end before the start was accepted",
+  );
+});
+
 test("the same portal item cannot be imported twice", () => {
   const integration = asProfile(
     HEAD,

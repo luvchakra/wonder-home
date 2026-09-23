@@ -119,6 +119,11 @@ export function translate(
       // A provider never sends a household's own notes about the work.
       detail: null,
       dueAt: dueAt && !Number.isNaN(dueAt.getTime()) ? dueAt : null,
+      // A portal's midnight-UTC due date, or a bare date, is a day — the same
+      // convention the household's own all-day items use; anything else is a
+      // time the portal gave (14-014).
+      dueTimeKnown: Boolean(dueAt && !Number.isNaN(dueAt.getTime()) && /T\d{2}:\d{2}/.test(record.payload.dueAt ?? "") && dueAt.getUTCHours() + dueAt.getUTCMinutes() > 0),
+      endsAt: null,
       estimatedMinutes: record.payload.estimatedMinutes ?? null,
       estimateSource: record.payload.estimatedMinutes != null ? "provider" : null,
       provider,

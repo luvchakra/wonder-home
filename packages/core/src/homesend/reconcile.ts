@@ -113,33 +113,6 @@ export function shortDate(iso: string | null | undefined): string | null {
   return `${Number(match[3])} ${SHORT_MONTHS[Number(match[2]) - 1]}`;
 }
 
-function zoneParts(date: Date, timeZone: string): { year: number; month: number; day: number; hour: number; minute: number } {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(date);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
-  return { year: get("year"), month: get("month"), day: get("day"), hour: get("hour") === 24 ? 0 : get("hour"), minute: get("minute") };
-}
-
-/**
- * The new due instant when only the date moved (§10): "moved to 29 Sep"
- * keeps the 10:00 start it had, read in the household's own time zone,
- * rather than dropping the time of day. With no time on record, the new
- * date is taken as given.
- */
-export function movedDueAt(previousIso: string | null, newDate: string, timeZone: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(newDate);
-  const previous = previousIso ? new Date(previousIso) : null;
-  if (!match || !previous || Number.isNaN(previous.getTime())) return new Date(newDate).toISOString();
-  try {
-    const { hour, minute } = zoneParts(previous, timeZone);
-    const naive = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, minute);
-    const seen = zoneParts(new Date(naive), timeZone);
-    const offset = Date.UTC(seen.year, seen.month - 1, seen.day, seen.hour, seen.minute) - naive;
-    return new Date(naive - offset).toISOString();
-  } catch {
-    return new Date(newDate).toISOString();
-  }
-}
-
 function formatAmount(minor: number | null, currency: string | null): string | null {
   if (minor === null) return null;
   return `${(minor / 100).toFixed(2)}${currency ? ` ${currency}` : ""}`;

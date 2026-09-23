@@ -1,4 +1,4 @@
-import type { IntakeExtraction } from "../ai/classify-intake";
+import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { DEFAULT_DATA_USE } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
 import { converse, type Understanding } from "../conversation/engine";
@@ -39,6 +39,7 @@ export type Models = {
 const EMPTY: Observation = {
   interpretation: null,
   date: null,
+  time: null,
   entity: null,
   match: { outcome: "new", recordId: null },
   conflict: false,
@@ -144,7 +145,9 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   const household = GOLDEN_HOUSEHOLDS[c.household];
   // A date phrase is resolved against when the content was written, in the household's timezone.
   const reference = { now: c.source.capturedAt ? new Date(c.source.capturedAt) : household.now, timezone: household.timezone };
-  const reading = models.classify ? await models.classify(c.source, reference) : { ...BLANK_READING, ...c.reading };
+  // A recorded reading goes through the same grounding a live one does:
+  // the model names the date phrase, WonderHome decides the day and time.
+  const reading = models.classify ? await models.classify(c.source, reference) : groundIntakeDate({ ...BLANK_READING, ...c.reading }, reference);
   if (!reading) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
 
   const injection = detectInstructionInjection(c.source.text, c.source.subject);
@@ -210,6 +213,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     ...EMPTY,
     interpretation: kind,
     date,
+    time: reading.dueTime ? `${reading.dueTime}${reading.endTime ? `–${reading.endTime}` : ""}` : null,
     entity: subject.question ? "ask" : (subject.selected?.memberId ?? null),
     match: { outcome: proposal, recordId: reconciliation?.existingId ?? null },
     conflict: proposal === "conflict",

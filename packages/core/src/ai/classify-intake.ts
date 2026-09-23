@@ -77,7 +77,7 @@ const IntakeExtractionSchema = z.object({
    * the phrase; `groundIntakeDate` decides the day, in the household's
    * timezone, the same way HomeTalk's temporal grounding does.
    */
-  dateText: z.string().trim().max(80).nullable(),
+  dateText: z.string().trim().max(120).nullable(),
   /** A name as printed/written on the document — never a member id; the confirm screen matches it to a household member, or asks when it cannot. */
   subjectMemberName: z.string().trim().max(120).nullable(),
   // Wave 3 (§8): the richer reading every input shares.
@@ -98,8 +98,14 @@ const IntakeExtractionSchema = z.object({
 /** What a provider returns. */
 export type RawIntakeExtraction = z.infer<typeof IntakeExtractionSchema>;
 
-/** What the rest of WonderHome reads: the raw reading after the deterministic backstop, with `secondary` kept as the first need so the v1 confirm form still has it. */
-export type IntakeExtraction = RawIntakeExtraction & { secondary: SecondaryProposal | null };
+/**
+ * What the rest of WonderHome reads: the raw reading after the deterministic
+ * backstop, with `secondary` kept as the first need so the v1 confirm form
+ * still has it. `dueTime`/`endTime` ("HH:MM", the household's local clock)
+ * are never a model's: `groundIntakeDate` reads them from `dateText`, and
+ * only for a school item whose day is known (14-014).
+ */
+export type IntakeExtraction = RawIntakeExtraction & { secondary: SecondaryProposal | null; dueTime?: string | null; endTime?: string | null };
 
 const UUID_LIKE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -146,6 +152,8 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
       change: "new",
       confidence: "low",
       secondary: null,
+      dueTime: null,
+      endTime: null,
     };
   }
 
@@ -179,6 +187,9 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     change: raw.change ?? "new",
     confidence: raw.confidence ?? "medium",
     secondary: needs[0] ?? ("secondary" in raw && needsAllowed ? raw.secondary : null) ?? null,
+    // Server-decided, whatever a response carried (see `groundIntakeDate`).
+    dueTime: null,
+    endTime: null,
   };
 }
 
@@ -241,7 +252,7 @@ Fields that only apply to one kind stay null for the others. billKind is one of:
 
 healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date, an appointment date), in YYYY-MM-DD form, only when a full date with its year is shown; otherwise put the words used for it in dateText. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
 
-dateText: for a bill, school_item or health_document, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. Null when the content names no date, and always null for grocery_item and unknown.
+dateText: for a bill, school_item or health_document, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
@@ -337,7 +348,68 @@ export function groundIntakeDate(extraction: IntakeExtraction, context: Pick<Int
   const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" ? "documentDate" : null;
   if (!field) return extraction;
   const day = dayFromDateText(extraction.dateText, { timezone: context.timezone, now: context.now ?? new Date() });
-  return day ? { ...extraction, [field]: day } : extraction;
+  const grounded = day ? { ...extraction, [field]: day } : extraction;
+  // The time of day (14-014): only a school item keeps one (a bill is due on
+  // a day, a document is dated), and only once its day is known — a time on
+  // its own never invents a day, and a day with no time stays all-day.
+  const time = grounded.kind === "school_item" && grounded.dueDate ? timeFromDateText(extraction.dateText) : null;
+  return { ...grounded, dueTime: time?.start ?? null, endTime: time?.end ?? null };
+}
+
+const CLOCK = String.raw`(\d{1,2})(?:([:.])(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?)?`;
+const CLOCK_RANGE = new RegExp(String.raw`(?:^|[^\d/.:-])${CLOCK}\s*(?:-|–|—|to|until|till|and)\s*${CLOCK}(?![\d/])`, "i");
+const CLOCK_SINGLE = new RegExp(String.raw`(?:^|[^\d/.:-])${CLOCK}(?![\d/])`, "gi");
+
+type Clock = { hour: number; minute: number; meridiem: "am" | "pm" | null; colon: boolean };
+
+function clock(hour: string | undefined, separator: string | undefined, minute: string | undefined, meridiem: string | undefined): Clock | null {
+  if (hour === undefined) return null;
+  const h = Number(hour);
+  const m = Number(minute ?? "0");
+  // "9.30" is a time only with am/pm; on its own a dot is too often a date or a number.
+  if (separator === "." && !meridiem) return null;
+  const mer = meridiem ? (/^a/i.test(meridiem) ? "am" : "pm") : null;
+  if (m > 59 || (mer ? h < 1 || h > 12 : h > 23)) return null;
+  return { hour: h, minute: m, meridiem: mer, colon: separator === ":" };
+}
+
+/** Whether this is a clock time on its own — "9am", "14:30" — not a bare number that could be a day. */
+const certain = (value: Clock | null): value is Clock => value !== null && (value.meridiem !== null || value.colon);
+
+function hhmm(value: Clock, meridiem: "am" | "pm" | null = value.meridiem): string {
+  let hour = value.hour;
+  if (meridiem === "pm" && hour < 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`;
+}
+
+/**
+ * The time of day a date phrase names, on the household's own clock — "at
+ * 9:00 am", "9–11am", "from 2 to 4 pm", "14:30", "noon". Only what is
+ * unmistakably a time counts: a bare "9" could be a day of the month, so it
+ * decides nothing and the person fills the time in (never a guess). A range
+ * whose end is not after its start keeps only the start.
+ */
+export function timeFromDateText(dateText: string): { start: string; end: string | null } | null {
+  const text = dateText.replace(/\b(?:12\s*)?noon\b|\bmidday\b/gi, "12:00");
+  const range = CLOCK_RANGE.exec(text);
+  if (range) {
+    const first = clock(range[1], range[2], range[3], range[4]);
+    const second = clock(range[5], range[6], range[7], range[8]);
+    if (first && second && (certain(first) || certain(second))) {
+      // "9–11am": the start borrows the end's am/pm, unless that puts it after
+      // the end ("11–1pm" starts at 11am); "9am–11" lends the other way.
+      let start = hhmm(first, first.meridiem ?? (first.colon && !second.meridiem ? null : second.meridiem));
+      const end = hhmm(second, second.meridiem ?? (second.colon && !first.meridiem ? null : first.meridiem));
+      if (!first.meridiem && second.meridiem === "pm" && start > end) start = hhmm(first, "am");
+      return { start, end: end > start ? end : null };
+    }
+  }
+  for (const match of text.matchAll(CLOCK_SINGLE)) {
+    const single = clock(match[1], match[2], match[3], match[4]);
+    if (certain(single)) return { start: hhmm(single), end: null };
+  }
+  return null;
 }
 
 const MONTH_NAME = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";

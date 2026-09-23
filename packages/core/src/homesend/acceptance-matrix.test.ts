@@ -70,7 +70,7 @@ const MEMBERS = [member("kunal", "Kunal Mehta", "adult"), member("asmi", "Asmi",
 const NAMES = new Map(MEMBERS.map((m) => [m.id, m.displayName]));
 
 function schoolItem(id: string, childMemberId: string, title: string, dueAt: string, extra: Partial<SchoolItem> = {}): SchoolItem {
-  return { id, childMemberId, kind: "event", title, subject: null, detail: null, dueAt: new Date(dueAt), estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null, ...extra };
+  return { id, childMemberId, kind: "event", title, subject: null, detail: null, dueAt: new Date(dueAt), dueTimeKnown: !dueAt.includes("T00:00:00"), endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null, ...extra };
 }
 function bill(id: string, name: string, extra: Partial<Obligation> = {}): Obligation {
   return { id, name, kind: "utility", payee: "City Power", amountMinor: 124050, currency: "INR", dueOn: "2026-10-05", responsibleMemberId: "kunal", status: "received", requiresReview: false, ...extra };

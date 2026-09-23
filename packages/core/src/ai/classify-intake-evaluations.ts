@@ -48,6 +48,8 @@ function extraction(over: Partial<IntakeExtraction>): IntakeExtraction {
     change: "new",
     confidence: "medium",
     secondary: null,
+    dueTime: null,
+    endTime: null,
     ...over,
   };
 }
@@ -283,6 +285,12 @@ export const CLASSIFY_INTAKE_SCENARIOS: readonly ClassifyIntakeScenario[] = [
     description: "A school event's date survives — the Science Exhibition example needs it to reconcile (§10).",
     raw: extraction({ kind: "school_item", title: "Science Exhibition", schoolKind: "event", dueDate: "2026-09-29", change: "update", people: ["Asmi"] }),
     expected: extraction({ kind: "school_item", title: "Science Exhibition", schoolKind: "event", dueDate: "2026-09-29", change: "update", people: ["Asmi"] }),
+  },
+  {
+    id: "CI-14014-01",
+    description: "A time of day is never the model's: one it sets anyway is dropped, and WonderHome reads the time from dateText itself (14-014).",
+    raw: extraction({ kind: "school_item", title: "Sports Day", schoolKind: "event", dueDate: "2026-09-26", dateText: "Saturday 26 September at 9:00 am", dueTime: "03:00", endTime: "04:00" }),
+    expected: extraction({ kind: "school_item", title: "Sports Day", schoolKind: "event", dueDate: "2026-09-26", dateText: "Saturday 26 September at 9:00 am" }),
   },
 ] as const;
 

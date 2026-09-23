@@ -86,6 +86,7 @@ function head(id: string, displayName: string, extra: Partial<HouseholdMember> =
 function schoolItem(id: string, childMemberId: string, kind: SchoolItem["kind"], title: string, subject: string | null, dueAt: string | null): SchoolItem {
   return {
     id, childMemberId, kind, title, subject, detail: null, dueAt: dueAt ? new Date(dueAt) : null,
+    dueTimeKnown: Boolean(dueAt && !dueAt.includes("T00:00:00")), endsAt: null,
     estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
   };
 }
@@ -394,7 +395,7 @@ export function groundingEnvFor(household: GoldenHousehold, memberId: string, re
     schoolItems: async () =>
       (household.records.schoolItems ?? [])
         .filter((item) => item.status === "pending")
-        .map((item) => ({ id: item.id, title: item.title, childMemberId: item.childMemberId, dueAt: item.dueAt ? item.dueAt.toISOString() : null, status: item.status })),
+        .map((item) => ({ id: item.id, title: item.title, childMemberId: item.childMemberId, dueAt: item.dueAt ? item.dueAt.toISOString() : null, status: item.status, dueTimeKnown: item.dueTimeKnown, endsAt: item.endsAt ? item.endsAt.toISOString() : null })),
     assets: async () => (household.records.assets ?? []).filter((a) => a.status === "active").map((a) => ({ id: a.id, name: a.name })),
   };
 }

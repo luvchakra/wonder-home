@@ -13,7 +13,9 @@ import { listObligations } from "@wonderhome/core/finance/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { listMeals } from "@wonderhome/core/meals/repository";
+import { isoDateIn } from "@wonderhome/core/context/format";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
+import { schoolDateValue, schoolTimeWords } from "@wonderhome/core/school/times";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { PillLink } from "@wonderhome/core/ui/pill";
@@ -180,13 +182,16 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
     });
   }
 
+  const todayLocal = isoDateIn(now, timezone);
   for (const item of schoolItems) {
-    if (!item.dueAt || item.dueAt < dayStart || item.dueAt > dayEnd) continue;
+    // The household's own day (14-014): a timed item by its local date, an
+    // all-day one by the day it names — never a time nobody gave.
+    if (!item.dueAt || schoolDateValue(item, timezone) !== todayLocal) continue;
     if (item.status === "done" || item.status === "submitted" || item.status === "cancelled") continue;
     items.push({
       key: `school.${item.id}`,
-      at: item.dueAt,
-      time: formatTime(timezone, item.dueAt),
+      at: item.dueTimeKnown ? item.dueAt : new Date(dayEnd),
+      time: schoolTimeWords(item, timezone) ?? "Today",
       title: item.title,
       meta: `${nameOf(item.childMemberId) ?? "School"}${item.subject ? ` · ${item.subject}` : ""}`,
       icon: GraduationCap,

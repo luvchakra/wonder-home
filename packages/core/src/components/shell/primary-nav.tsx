@@ -109,7 +109,8 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
         className="sticky top-0 hidden h-dvh w-[var(--wh-sidebar-width)] shrink-0 flex-col border-r border-[var(--wh-border)] bg-[var(--wh-surface)]/60 px-4 py-5 lg:flex"
       >
         <Link href="/" className="mb-6 block px-2">
-          <Wordmark tagline />
+          {/* The tagline wraps under the name rather than running past the sidebar edge (rule 15). */}
+          <Wordmark tagline taglineClassName="whitespace-normal" />
         </Link>
 
         <ul className="space-y-0.5">
