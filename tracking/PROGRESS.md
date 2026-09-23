@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 195 |
-| Done | 185 |
+| Done | 186 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 9 |
-| Completion | 94.9% |
-| Current module | 20 Subscriptions, Entitlements & Usage |
-| Current story | — (20-006 Done; 04-017 waits on a person; next: 08-009) |
+| Not Started | 8 |
+| Completion | 95.4% |
+| Current module | 08 Kids & School Intelligence |
+| Current story | — (08-009 Done; 04-017 waits on a person; next: 17-006) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -32,7 +32,7 @@ disagree again.)
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
-| 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 8 | In Progress |
+| 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 9 | Done |
 | 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
@@ -228,3 +228,4 @@ disagree again.)
 | 2026-09-24 | 09 | 09-009 | Done | 2466 unit (receipts 15, intake receipt 7, HS-14 golden case), 450 database (commerce purchases 3, HomeSend receipt kind + purchase change), eval 46/46 with 0/14 unsafe deterministic and on Gemini, verify:live 157/157, browser QA at 360px and desktop, real Gemini receipt readings | A receipt becomes purchase history: new HomeSend kind `receipt` (never a bill), read with shop, day and lines; each line is matched to a tracked item only when plain (`commerce/receipts.ts`'s `matchConsumable`), started as new, or left out, and confirmed by a person before `consumable_purchases` is written; the consumable's last purchase and inferred rate refresh from its history; every line undoes on its own (`homesend_changes` domain `purchase`, migration `20260927100000`, applied live); Groceries shows each item's recent purchases |
 | 2026-09-24 | 17 | 17-007 | Done | 2494 unit (Open-Meteo 18, weather service 13), 457 database (7 new weather-area RLS), eval 46/46 with 0/14 unsafe, verify:live 159/159, a real Open-Meteo forecast and geocoding through the dev server, browser QA at 360px and desktop | Weather as a planning signal: Open-Meteo behind the provider-neutral weather port (`home/open-meteo.ts`), an Admin-chosen area stored only as coordinates rounded to ~1 km (`weather_locations`, migration `20260927110000`, applied live), the forecast cached hourly on that row by the server, the `home.weather` entitlement decided on the server path, outages recorded on the connection and never on household state (last forecast serves up to 6 h), `homeAgenda` plans laundry around it and Home & Upkeep says so only when it changes a decision; connect/disconnect audited (`integration.disconnected` now built). Off unless a deployment sets `WONDERHOME_WEATHER_PROVIDER=open-meteo` — production needs a person's call on Open-Meteo's commercial terms (`OPEN_METEO_API_KEY`) |
 | 2026-09-24 | 20 | 20-006 | Done | 2518 unit (billing reducer 8, Stripe 12, webhook 4), entitlements database suite 17 (4 new billing RLS), eval 46/46 with 0/14 unsafe, verify:live 163/163, browser QA at 360px and desktop, live API refusal of an unpaid paid-plan change | Provider-neutral billing: `billing/provider.ts` (port, canonical events, pure `applyBillingEvent`: out-of-order and other-subscription events ignored, failed payment keeps the plan past-due, cancellation falls back to free and never deletes), `billing/stripe.ts` (code-complete, inert: intent id as Idempotency-Key, HMAC-SHA256 webhook verification with a 5-minute window), `billing/checkout.ts` (idempotent `startCheckout`, apply-once `recordBillingEvent`), `POST /api/v1/billing/webhook` (401 unconfigured or bad signature), plan route/PlanForm send paid plans to a checkout. Migration `20260927120000` (applied live): `plans.requires_payment` (off for every plan) enforced in RLS, `billing_intents` (one open per household+plan), `billing_events` (unique per provider event, server-written only). Needs a person: a billing account, prices and the decision to mark plans paid |
+| 2026-09-24 | 08 | 08-009 | Done | 2523 unit (unknown-child resolution 5), eval 47/47 with 0/14 unsafe (new HS-15), browser QA at 360px and desktop with a real Gemini reading | Add a child from a school notice: `homesend/resolve.ts` names the first untitled unmatched person on a school notice as the child it is about (`unknown`) and never assumes a household's only child when the notice named someone else; the review offers "Add <name> as a child" (prefilled) to Admins, adds them the way Family does (guardian = the Admin) and confirms the notice for them in the same step; a non-Admin is told who can |

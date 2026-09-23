@@ -1,7 +1,7 @@
 import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
-import { listMembers } from "@wonderhome/core/identity/households";
+import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -75,6 +75,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           voiceLanguage={voiceSettings.language}
           liveEngine={liveEngine}
           kids={kids}
+          canAddChild={isHouseholdAdmin(membership)}
         />
       ) : (
         <EmptyState

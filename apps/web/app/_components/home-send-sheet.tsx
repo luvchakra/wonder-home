@@ -35,9 +35,12 @@ export function HomeSendSheet({
   kids,
   open,
   onOpenChange,
+  canAddChild = false,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
+  /** Whether the viewer may add a child from a school notice (story 08-009). */
+  canAddChild?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -181,6 +184,7 @@ export function HomeSendSheet({
             defaultKind={defaultKind}
             prefill={prefill}
             kids={kids}
+            canAddChild={canAddChild}
             householdId={householdId}
             routeAction={routeAction}
             routeError={routeState.error}

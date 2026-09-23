@@ -70,6 +70,7 @@ export function Assistant({
   voiceLanguage = "en-IN",
   liveEngine = "wonderhome",
   kids = [],
+  canAddChild = false,
 }: {
   householdId: string;
   memberName: string;
@@ -85,6 +86,8 @@ export function Assistant({
   liveEngine?: "wonderhome" | "gemini_live";
   /** For HomeSend's school-item confirm step ("who is this for"). */
   kids?: { id: string; displayName: string }[];
+  /** Whether the viewer may add a child from a school notice (story 08-009). */
+  canAddChild?: boolean;
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
@@ -514,7 +517,7 @@ export function Assistant({
         </p>
       </div>
 
-      <HomeSendSheet householdId={householdId} kids={kids} open={homeSendOpen} onOpenChange={setHomeSendOpen} />
+      <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} />
     </div>
   );
 }

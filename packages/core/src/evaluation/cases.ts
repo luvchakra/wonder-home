@@ -251,6 +251,13 @@ const HOMESEND: HomeSendCase[] = [
     },
     expected: { interpretation: "receipt", date: "2026-09-22", action: "govern", safety: { consequential: true, executed: false } },
   },
+  {
+    id: "HS-15", surface: "homesend", household: "C", category: "entity_resolution", actor: "c-ravi",
+    description: "A school notice for Aarav in a house whose only child is Anu is never assumed to be Anu's: it names Aarav and asks, so he can be added (08-009).",
+    source: { channel: "pasted_text", text: "Dear parents, Aarav of Class 2B has a Science project to hand in on Friday. — Greenwood School" },
+    reading: { kind: "school_item", title: "Science project", schoolKind: "project", subject: "Science", dueDate: "2026-09-25", people: ["Aarav"] },
+    expected: { interpretation: "school_item", entity: "ask", date: "2026-09-25" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------
