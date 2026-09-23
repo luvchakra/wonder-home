@@ -45,6 +45,7 @@ export const AUTO_APPLY_OUTCOMES: Partial<Record<HomeSendKind, { outcomeKey: str
 const CONSEQUENTIAL: Partial<Record<HomeSendKind, string>> = {
   bill: "A bill is about money, so it always waits for a person — however clearly it was read.",
   health_document: "A health document is private, so it always waits for a person — however clearly it was read.",
+  receipt: "A receipt becomes purchase history line by line, so a person confirms which lines are which — however clearly it was read.",
 };
 
 const KIND_LABEL: Record<HomeSendKind, string> = {
@@ -52,6 +53,7 @@ const KIND_LABEL: Record<HomeSendKind, string> = {
   school_item: "school work",
   grocery_item: "something to buy",
   health_document: "a health document",
+  receipt: "a receipt",
   unknown: "something",
 };
 
@@ -72,7 +74,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   const title = input.extracted?.title?.trim() ?? "";
 
   if (!kind || kind === "unknown" || input.understanding?.readable === false) {
-    return { mode: "ask", reason: "WonderHome couldn't tell what this is.", question: "What is this — a bill, school work, something to buy or a health document?" };
+    return { mode: "ask", reason: "WonderHome couldn't tell what this is.", question: "What is this — a bill, school work, something to buy, a receipt or a health document?" };
   }
 
   const consequential = CONSEQUENTIAL[kind];

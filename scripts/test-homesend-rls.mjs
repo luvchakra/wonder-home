@@ -924,3 +924,29 @@ test("a review outcome is only ever one of the closed words, and always says whe
 test("another household cannot see how this household's reviews went", () => {
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.home_send_items where review_decision is not null;`, options), "0");
 });
+
+// Story 09-009: a receipt is its own kind, and each recorded line its own change.
+test("a receipt is a kind HomeSend can hold, and a recorded purchase a change it can undo", () => {
+  const receipt = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, status, classified_kind)
+     values ('${household}', '${headMember}', 'pasted_text', 'FreshMart: milk 2 x 28.00. PAID', 'classified', 'receipt') returning id;`,
+    options,
+  );
+  const change = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+     values ('${household}', '${receipt}', 'purchase', gen_random_uuid(), '${headMember}') returning domain;`,
+    options,
+  );
+  assert.equal(change, "purchase");
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, status, classified_kind)
+       values ('${household}', '${headMember}', 'pasted_text', 'An invoice', 'classified', 'invoice');`,
+      options,
+    ),
+    "an unknown kind was accepted",
+  );
+});

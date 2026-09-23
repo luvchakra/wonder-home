@@ -73,7 +73,9 @@ export async function prepareReview(
   const kind = item.classifiedKind;
   const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode) =>
     decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy });
-  if (!kind || kind === "unknown" || !item.extracted?.title) {
+  // A receipt is matched line by line on its own confirm form (09-009): it is
+  // for nobody in particular and never a second copy of a record.
+  if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
     return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "observe") };
   }
 

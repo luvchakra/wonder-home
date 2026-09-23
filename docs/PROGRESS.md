@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**182 of 195 stories done — 93.3%**
+**183 of 195 stories done — 93.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 182 |
+| Done | 183 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 12 |
+| Not Started | 11 |
 
 ## By module
 
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
 | 08 Kids & School Intelligence | `████████░░` | 8 | 9 | 1 not started |
-| 09 Commerce, Groceries & Pet Supplies | `████████░░` | 8 | 9 | 1 not started |
+| 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 8 | 8 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
@@ -55,7 +55,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `08-009` Add a child from a school notice | 08 Kids & School Intelligence | P2 | Not Started |
-| `09-009` A receipt becomes purchase history | 09 Commerce, Groceries & Pet Supplies | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-007` Weather | 17 External Integrations | P1 | Not Started |
@@ -216,7 +215,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
-8 of 9 done `████████░░`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -228,7 +227,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `09-006` Order tracking | P1 | Done | only a real transition moves an outcome, so a poll cannot duplicate a notification |
 | `09-007` Pet supply prediction | P1 | Done | pet supplies use the same depletion model, scoped to the animal |
 | `09-008` Merchant optimization | P2 | Done | cheapest that can actually deliver in time; stale prices are excluded |
-| `09-009` A receipt becomes purchase history | P1 | Not Started | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
+| `09-009` A receipt becomes purchase history | P1 | Done | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
 
 ### 10 — Meals & Cooking
 

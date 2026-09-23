@@ -21,6 +21,7 @@ const TABLE_FOR_DOMAIN: Record<HomeSendChange["domain"], string> = {
   school_item: "school_item",
   grocery_item: "consumable",
   health_document: "health_record",
+  purchase: "purchase",
 };
 
 /** Attaches each routed HomeSend intake to the item it became. Returns new objects. */

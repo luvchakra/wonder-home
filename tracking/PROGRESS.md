@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 195 |
-| Done | 182 |
+| Done | 183 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 12 |
-| Completion | 93.3% |
-| Current module | 14 AI Orchestration & Learning |
-| Current story | — (14-014 Done; 04-017 waits on a person; next: 09-009) |
+| Not Started | 11 |
+| Completion | 93.8% |
+| Current module | 09 Commerce, Groceries & Pets |
+| Current story | — (09-009 Done; 04-017 waits on a person; next: 08-009) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -33,7 +33,7 @@ disagree again.)
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
 | 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 8 | In Progress |
-| 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 8 | In Progress |
+| 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
@@ -225,3 +225,4 @@ disagree again.)
 | 2026-09-24 | 04 | 04-016 | Done | capability matrix 11, session surfaces 3, golden voice 25, 2 database, browser QA at 360px and desktop | Voice phase 5: the capability matrix as data and held to the real gates, shown on the Voice assistants screen; conversations belong to their surface (app / Alexa, migration `20260926100000`, applied live); the spec's everyday questions read by the rules |
 | 2026-09-24 | 04 | 04-017 | In Progress | voice gate in eval (15/15 Gemini sentences, 4/4 Alexa phrases, 22/22 actions placed, 11/11 app-only refused), channel metrics 5 unit + 3 gateway, 1 database, verify:live 153/153, live rows checked | Voice phase 6: golden voice scenarios and a blocking eval gate, `hometalk_channel_events` telemetry (migration `20260926110000`, applied live) with the spec's per-channel metrics, per-session tool-call cap, structured Gemini tool sentences read by the rules first. Needs a person: a real Alexa run, a device-level Gemini Live run, a rendered dashboard with alert delivery |
 | 2026-09-24 | 14 | 14-014 | Done | 2444 unit (intake time 23, school times 8, HomeTalk move 2), 446 database (school time constraints), eval 45/45 with 0/13 unsafe deterministic and on Gemini, verify:live 155/155, browser QA at 360px and desktop, real Gemini classifications | HomeSend reads the time of day: `timeFromDateText` reads only unmistakable clock times from the notice's own date words; `school_items.due_time_known` + `ends_at` (migration `20260927090000`, applied live, existing timed rows backfilled); add/edit/HomeSend review forms carry Starts/Ends; all-day items never show a time and read their day in UTC; a moved item keeps its time. Found live: Gemini dropped the time from `dateText` — prompt now asks for it |
+| 2026-09-24 | 09 | 09-009 | Done | 2466 unit (receipts 15, intake receipt 7, HS-14 golden case), 450 database (commerce purchases 3, HomeSend receipt kind + purchase change), eval 46/46 with 0/14 unsafe deterministic and on Gemini, verify:live 157/157, browser QA at 360px and desktop, real Gemini receipt readings | A receipt becomes purchase history: new HomeSend kind `receipt` (never a bill), read with shop, day and lines; each line is matched to a tracked item only when plain (`commerce/receipts.ts`'s `matchConsumable`), started as new, or left out, and confirmed by a person before `consumable_purchases` is written; the consumable's last purchase and inferred rate refresh from its history; every line undoes on its own (`homesend_changes` domain `purchase`, migration `20260927100000`, applied live); Groceries shows each item's recent purchases |

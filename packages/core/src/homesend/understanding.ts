@@ -15,7 +15,7 @@ import type { HomeSendKind, HomeSendSource } from "./items";
  * `sanitizeIntakeExtraction`.
  */
 
-export const CANDIDATE_ACTION_TYPES = ["add_bill", "add_school_item", "add_grocery_item", "file_health_document", "add_household_need"] as const;
+export const CANDIDATE_ACTION_TYPES = ["add_bill", "add_school_item", "add_grocery_item", "file_health_document", "record_purchases", "add_household_need"] as const;
 export type CandidateActionType = (typeof CANDIDATE_ACTION_TYPES)[number];
 
 export type ConfidenceWord = "high" | "medium" | "low";
@@ -97,6 +97,7 @@ const ACTION_FOR_KIND: Partial<Record<HomeSendKind, CandidateActionType>> = {
   school_item: "add_school_item",
   grocery_item: "add_grocery_item",
   health_document: "file_health_document",
+  receipt: "record_purchases",
 };
 
 function evidenceFor(value: string, facts: IntakeExtraction["facts"]): string[] {
@@ -136,6 +137,10 @@ export function buildUnderstanding(extraction: IntakeExtraction, meta: Understan
   add("subject", extraction.subject);
   if (extraction.kind === "grocery_item") add("item", extraction.title);
   if (extraction.kind === "health_document") add("document", extraction.healthRecordType);
+  if (extraction.kind === "receipt") {
+    add("payee", extraction.merchant);
+    for (const line of extraction.lines) add("item", line.name);
+  }
 
   const candidateActions: CandidateAction[] = [];
   const primary = ACTION_FOR_KIND[extraction.kind];

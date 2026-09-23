@@ -12,7 +12,7 @@
 | 6 | P1 | 09-006 | Order tracking | Done | only a real transition moves an outcome, so a poll cannot duplicate a notification |
 | 7 | P1 | 09-007 | Pet supply prediction | Done | pet supplies use the same depletion model, scoped to the animal |
 | 8 | P2 | 09-008 | Merchant optimization | Done | cheapest that can actually deliver in time; stale prices are excluded |
-| 9 | P1 | 09-009 | A receipt becomes purchase history | Not Started | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
+| 9 | P1 | 09-009 | A receipt becomes purchase history | Done | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

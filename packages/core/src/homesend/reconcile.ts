@@ -48,7 +48,14 @@ export type HomeSendReconciliation = {
   proposal: HomeSendProposal;
 };
 
-const DOMAIN_FOR_KIND: Record<HomeSendChangeDomain, ContextDomain> = {
+/**
+ * The domains a candidate is reconciled in: every change domain but a
+ * purchase — a receipt line is a new fact about what was bought, never a
+ * second copy of a record (09-009), so there is nothing to reconcile it with.
+ */
+export type ReconcilableDomain = Exclude<HomeSendChangeDomain, "purchase">;
+
+const DOMAIN_FOR_KIND: Record<ReconcilableDomain, ContextDomain> = {
   bill: "bills",
   school_item: "school",
   grocery_item: "groceries",
@@ -56,10 +63,10 @@ const DOMAIN_FOR_KIND: Record<HomeSendChangeDomain, ContextDomain> = {
 };
 
 /** Domains whose governed services can update or cancel a record, and put it back on undo. */
-const REVISABLE: ReadonlySet<HomeSendChangeDomain> = new Set(["bill", "school_item"]);
+const REVISABLE: ReadonlySet<ReconcilableDomain> = new Set(["bill", "school_item"]);
 
 export type HomeSendCandidate = {
-  kind: HomeSendChangeDomain;
+  kind: ReconcilableDomain;
   title: string;
   /** ISO date: a bill's due date, a school item's due date, a document's date. */
   date?: string | null;
@@ -94,10 +101,10 @@ async function readDomain(supabase: SupabaseClient, householdId: string, candida
   }
 }
 
-const NOUN: Record<HomeSendChangeDomain, string> = { bill: "bill", school_item: "one", grocery_item: "item", health_document: "document" };
+const NOUN: Record<ReconcilableDomain, string> = { bill: "bill", school_item: "one", grocery_item: "item", health_document: "document" };
 
 /** What to call the record in the question: the school item's own kind ("event", "exam", "homework") when it has one. */
-function nounFor(kind: HomeSendChangeDomain, item: HouseholdContextItem): string {
+function nounFor(kind: ReconcilableDomain, item: HouseholdContextItem): string {
   const own = item.attributes.kind;
   if (kind === "school_item" && typeof own === "string" && own.trim()) return own.replace(/_/g, " ");
   return NOUN[kind];

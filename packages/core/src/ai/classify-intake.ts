@@ -26,7 +26,7 @@ import { resolveDay, TEMPORAL_PHRASE } from "../conversation/temporal";
  * show comes back null, never guessed.
  */
 
-export const INTAKE_KINDS = ["bill", "school_item", "grocery_item", "health_document", "unknown"] as const;
+export const INTAKE_KINDS = ["bill", "school_item", "grocery_item", "health_document", "receipt", "unknown"] as const;
 export type IntakeKind = (typeof INTAKE_KINDS)[number];
 
 /**
@@ -45,6 +45,15 @@ const SecondaryProposalSchema = z.object({
 });
 
 export type SecondaryProposal = z.infer<typeof SecondaryProposalSchema>;
+
+/** One line of a paid receipt (09-009): the item as printed, how many, and what it cost in total. */
+const ReceiptLineSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  quantity: z.number().min(0).max(10_000).nullable(),
+  unit: z.string().trim().max(40).nullable(),
+  /** The line's total, in the currency's major unit (42.50). */
+  lineTotal: z.number().min(0).max(10_000_000).nullable(),
+});
 
 const IntakeExtractionSchema = z.object({
   /** False when there is no legible, actionable content at all. */
@@ -78,6 +87,10 @@ const IntakeExtractionSchema = z.object({
    * timezone, the same way HomeTalk's temporal grounding does.
    */
   dateText: z.string().trim().max(120).nullable(),
+  // receipt fields (09-009): the total paid goes in amount/currency, the
+  // day it was bought in documentDate.
+  merchant: z.string().trim().max(120).nullable(),
+  lines: z.array(ReceiptLineSchema).max(40),
   /** A name as printed/written on the document — never a member id; the confirm screen matches it to a household member, or asks when it cannot. */
   subjectMemberName: z.string().trim().max(120).nullable(),
   // Wave 3 (§8): the richer reading every input shares.
@@ -144,6 +157,8 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
       healthRecordType: null,
       documentDate: null,
       dateText: null,
+      merchant: null,
+      lines: [],
       subjectMemberName: null,
       summary: null,
       people: [],
@@ -168,8 +183,8 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     notes: withoutIds(raw.notes),
     billKind: raw.kind === "bill" ? raw.billKind : null,
     payee: raw.kind === "bill" ? withoutIds(raw.payee) : null,
-    amount: raw.kind === "bill" ? raw.amount : null,
-    currency: raw.kind === "bill" ? raw.currency : null,
+    amount: raw.kind === "bill" || raw.kind === "receipt" ? raw.amount : null,
+    currency: raw.kind === "bill" || raw.kind === "receipt" ? raw.currency : null,
     dueDate: raw.kind === "bill" || raw.kind === "school_item" ? raw.dueDate : null,
     schoolKind: raw.kind === "school_item" ? raw.schoolKind : null,
     subject: raw.kind === "school_item" ? raw.subject : null,
@@ -177,8 +192,10 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     unit: raw.kind === "grocery_item" ? raw.unit : null,
     category: raw.kind === "grocery_item" ? raw.category : null,
     healthRecordType: raw.kind === "health_document" ? raw.healthRecordType : null,
-    documentDate: raw.kind === "health_document" ? raw.documentDate : null,
+    documentDate: raw.kind === "health_document" || raw.kind === "receipt" ? raw.documentDate : null,
     dateText: raw.kind === "unknown" || raw.kind === "grocery_item" ? null : withoutIds(raw.dateText ?? null),
+    merchant: raw.kind === "receipt" ? withoutIds(raw.merchant ?? null) : null,
+    lines: raw.kind === "receipt" ? (raw.lines ?? []).filter((line) => !UUID_LIKE.test(line.name)).slice(0, 40) : [],
     subjectMemberName: raw.kind === "health_document" ? withoutIds(raw.subjectMemberName) : null,
     summary: withoutIds(raw.summary ?? null),
     people: (raw.people ?? []).filter((name) => !UUID_LIKE.test(name)).slice(0, 8),
@@ -216,6 +233,15 @@ const EXTRACTION_JSON_SCHEMA = {
     healthRecordType: { type: "string", enum: RECORD_TYPES, nullable: true },
     documentDate: { type: "string", nullable: true },
     dateText: { type: "string", nullable: true },
+    merchant: { type: "string", nullable: true },
+    lines: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { name: { type: "string" }, quantity: { type: "number", nullable: true }, unit: { type: "string", nullable: true }, lineTotal: { type: "number", nullable: true } },
+        required: ["name", "quantity", "unit", "lineTotal"],
+      },
+    },
     subjectMemberName: { type: "string", nullable: true },
     summary: { type: "string", nullable: true },
     people: { type: "array", items: { type: "string" } },
@@ -233,26 +259,29 @@ const EXTRACTION_JSON_SCHEMA = {
   required: [
     "readable", "kind", "title", "notes", "billKind", "payee", "amount", "currency", "dueDate",
     "schoolKind", "subject", "quantity", "unit", "category", "healthRecordType", "documentDate",
-    "dateText", "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
+    "dateText", "merchant", "lines", "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
   ],
 } as const;
 
 export const INTAKE_SYSTEM_PROMPT = `You read one thing a household sent to WonderHome — a photo, a PDF, a text file, a forwarded email, a web page someone shared, or a voice note's transcript — and work out which of these it is, then extract only what is actually shown or written.
 
 kind is exactly one of:
-- bill: something the household still has to pay — an invoice, a payment reminder, a utility/subscription/fee statement. A receipt or payment confirmation for something already paid ("PAID", "Thank you for your payment", a shop till receipt) is not a bill: it asks nothing to be paid.
+- bill: something the household still has to pay — an invoice, a payment reminder, a utility/subscription/fee statement. A receipt or payment confirmation for something already paid ("PAID", "Thank you for your payment", a shop till receipt) is never a bill: it asks nothing to be paid.
+- receipt: proof of a purchase already paid for — a shop or supermarket till receipt, an online order invoice marked paid, a delivery receipt. It records what was bought; it asks for nothing.
 - school_item: homework, a worksheet, an exam notice, a school event or a notice from a school.
 - grocery_item: a single product, a shopping-list line, or a photo of one item to buy or restock.
 - health_document: a lab result, prescription, imaging report, vaccination certificate, discharge summary, referral, insurance document or appointment/visit summary — anything about one person's health.
-- unknown: anything else — including a receipt for something already paid, which you still summarise ("A FreshMart receipt for milk and eggs, already paid") — or content you cannot make out well enough to classify.
+- unknown: anything else, or content you cannot make out well enough to classify. A payment confirmation that lists no items bought (a bill paid online) is unknown, not a receipt; summarise it.
 
 Never invent a title, amount, date, name or note the source does not show. If it is blurry, unrelated, or you cannot make out any actionable content, set readable to false, kind to "unknown", leave every other field null or empty, and set confidence to "low".
 
 Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due) or a school_item (when it is due, or the day the event or exam happens), as a calendar date in YYYY-MM-DD form, only when the source writes out a full date with its year. Whenever the content names the day in any other way — "tomorrow", "Saturday", "next Friday", "5 October", "27/09" — copy those exact words into dateText and leave the calendar arithmetic to WonderHome; never work out a date yourself from a weekday or a date without a year. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg").
 
+For a receipt: merchant is the shop's name as printed; amount and currency are the total paid (the number only, and the currency as printed or its three-letter code); documentDate is the day of the purchase in YYYY-MM-DD form only when a full date with its year is printed, otherwise its words go in dateText; lines lists each item bought, in order — name exactly as printed ("Amul Toned Milk 1L"), quantity as a number when printed (null otherwise, never assumed), unit when printed ("kg", "pc"), and lineTotal as the line's total price in the major unit. Leave out taxes, discounts, bag charges, subtotals and payment lines. For every other kind, merchant is null and lines is empty.
+
 healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date, an appointment date), in YYYY-MM-DD form, only when a full date with its year is shown; otherwise put the words used for it in dateText. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
 
-dateText: for a bill, school_item or health_document, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
+dateText: for a bill, school_item, health_document or receipt, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
@@ -345,7 +374,7 @@ function attachmentPrompt(context: IntakeContext | undefined): string {
  */
 export function groundIntakeDate(extraction: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone"> | undefined): IntakeExtraction {
   if (!context?.timezone || !extraction.readable || !extraction.dateText) return extraction;
-  const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" ? "documentDate" : null;
+  const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" || extraction.kind === "receipt" ? "documentDate" : null;
   if (!field) return extraction;
   const day = dayFromDateText(extraction.dateText, { timezone: context.timezone, now: context.now ?? new Date() });
   const grounded = day ? { ...extraction, [field]: day } : extraction;

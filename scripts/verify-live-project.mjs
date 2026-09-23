@@ -578,6 +578,17 @@ async function main() {
   const anonClaim = await anon.rpc("claim_jobs", { p_worker_id: "verify-live", p_limit: 1, p_lease_seconds: 5 });
   check("anonymous cannot claim queued work", anonClaim.error?.code === "42501", anonClaim.error?.code ?? "no error");
 
+  // Receipts and purchase changes (20260927100000, story 09-009). Probed
+  // without writing anything: each row points at a parent that does not
+  // exist, and Postgres checks a CHECK constraint before a foreign key — so
+  // a foreign-key error (23503) proves the new value passed the check, and a
+  // check violation (23514) would mean the migration never landed.
+  const nobodyHome = "00000000-0000-4000-8000-000000000000";
+  const receiptProbe = await admin.from("home_send_items").insert({ household_id: nobodyHome, source: "email", raw_text: "verify-live receipt probe", status: "classified", classified_kind: "receipt" });
+  check("HomeSend accepts a receipt", receiptProbe.error?.code === "23503", receiptProbe.error?.code ?? "inserted?!");
+  const purchaseProbe = await admin.from("homesend_changes").insert({ household_id: nobodyHome, intake_id: nobodyHome, domain: "purchase", entity_id: nobodyHome, created_by_member_id: nobodyHome });
+  check("a recorded purchase is an undoable HomeSend change", purchaseProbe.error?.code === "23503", purchaseProbe.error?.code ?? "inserted?!");
+
   // HomeTalk channel telemetry (20260926110000, voice phase 6).
   const serverChannelEvents = await admin.from("hometalk_channel_events").select("id").limit(1);
   check("the server can read HomeTalk channel telemetry", !serverChannelEvents.error, serverChannelEvents.error?.code ?? "ok");

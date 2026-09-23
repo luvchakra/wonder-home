@@ -8,7 +8,8 @@ import { may } from "@wonderhome/core/billing/repository";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation, listObligations, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
-import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
+import { createConsumable, listConsumables, recordPurchase, removePurchase, retireConsumable } from "@wonderhome/core/commerce/repository";
+import { currencyCode, unitCostMinor } from "@wonderhome/core/commerce/receipts";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
@@ -454,7 +455,127 @@ function wasCorrected(intake: HomeSendItem | null, input: RouteInput): boolean |
   return false;
 }
 
+const receiptSchema = z.object({
+  householdId: z.uuid(),
+  itemId: z.uuid(),
+  merchant: z.string().trim().max(120).optional(),
+  purchasedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "When was it bought?" }),
+  currency: z.string().trim().max(8).optional(),
+  lines: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1, { error: "Every line needs a name." }).max(120),
+        quantity: z.union([z.coerce.number().positive().max(10_000), z.literal("")]),
+        unit: z.string().trim().max(20),
+        lineTotal: z.union([z.coerce.number().min(0).max(10_000_000), z.literal("")]),
+        /** A tracked consumable's id, "new" to start tracking it, or "skip" to leave the line out. */
+        match: z.union([z.uuid(), z.literal("new"), z.literal("skip")]),
+      }),
+    )
+    .max(40),
+});
+
+/**
+ * A receipt's own confirm (09-009): each line the person kept becomes one
+ * purchase in `consumable_purchases`, against the tracked item it is — or a
+ * new tracked item when they said so — and the item's history learns from
+ * it. Every write is its own `homesend_changes` row, so each line (and each
+ * item it started tracking) can be undone on its own. Nothing is paid and
+ * nothing is ordered: a receipt is evidence, never a bill.
+ */
+async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
+  const column = (name: string) => formData.getAll(name).map((value) => (typeof value === "string" ? value : ""));
+  const names = column("lineName");
+  const quantities = column("lineQuantity");
+  const units = column("lineUnit");
+  const totals = column("lineTotal");
+  const matches = column("lineMatch");
+  const parsed = receiptSchema.safeParse({
+    householdId: formData.get("householdId"),
+    itemId: formData.get("itemId"),
+    merchant: formData.get("merchant") || undefined,
+    purchasedOn: formData.get("purchasedOn"),
+    currency: formData.get("currency") || undefined,
+    lines: names.map((name, index) => ({ name, quantity: quantities[index] ?? "", unit: units[index] ?? "", lineTotal: totals[index] ?? "", match: matches[index] || "skip" })),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the lines above." };
+  const input = parsed.data;
+  const kept = input.lines.filter((line) => line.match !== "skip");
+  if (kept.length === 0) return { error: "Choose at least one line to record, or dismiss the receipt." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, input.householdId);
+    const intake = await getHomeSendItem(supabase, input.householdId, input.itemId).catch(() => null);
+    const tracked = await listConsumables(supabase, input.householdId);
+    const byId = new Map(tracked.map((consumable) => [consumable.id, consumable]));
+    const byName = new Map<string, { id: string }>(tracked.map((consumable) => [consumable.name.trim().toLowerCase(), { id: consumable.id }]));
+    const currency = currencyCode(input.currency);
+    const change = (domain: "grocery_item" | "purchase", entityId: string) =>
+      recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain, entityId, createdByMemberId: membership.memberId });
+
+    let firstPurchase: string | null = null;
+    let started = 0;
+    for (const line of kept) {
+      const quantity = line.quantity === "" ? 1 : line.quantity;
+      let consumableId: string;
+      if (line.match === "new") {
+        // "New" never makes a second copy of something already tracked under
+        // the same name — it records against that one instead.
+        const same = byName.get(line.name.toLowerCase());
+        if (same) {
+          consumableId = same.id;
+        } else {
+          const created = await createConsumable(supabase, {
+            householdId: input.householdId,
+            name: line.name,
+            category: CONSUMABLE_CATEGORIES[0],
+            unit: line.unit || "unit",
+            typicalQuantity: quantity,
+          });
+          consumableId = created.id;
+          byName.set(line.name.toLowerCase(), { id: created.id });
+          await change("grocery_item", created.id);
+          started += 1;
+        }
+      } else {
+        if (!byId.has(line.match)) return { error: `"${line.name}" was matched to something this household no longer tracks. Choose again.` };
+        consumableId = line.match;
+      }
+      const purchase = await recordPurchase(supabase, {
+        householdId: input.householdId,
+        consumableId,
+        purchasedOn: input.purchasedOn,
+        quantity,
+        unitCostMinor: unitCostMinor(line.lineTotal === "" ? null : line.lineTotal, quantity, currency),
+        currency,
+        merchant: input.merchant ?? null,
+      });
+      firstPurchase ??= purchase.id;
+      await change("purchase", purchase.id);
+    }
+
+    const read = intake?.extracted?.lines ?? [];
+    const corrected = intake?.extracted
+      ? kept.length !== read.length || kept.some((line, index) => line.name.trim().toLowerCase() !== (read[index]?.name ?? "").trim().toLowerCase())
+      : null;
+    await routeHomeSendItem(supabase, input.householdId, input.itemId, {
+      routedTable: "consumable_purchases",
+      routedId: firstPurchase!,
+      review: { decision: "added", proposal: null, subject: null, corrected },
+    });
+
+    revalidateDomains();
+    const where = input.merchant ? ` from ${input.merchant}` : "";
+    const lines = kept.length === 1 ? "one purchase" : `${kept.length} purchases`;
+    return { notice: `Recorded ${lines}${where}. Groceries learns from them.${started > 0 ? ` ${started === 1 ? "One new item is" : `${started} new items are`} now tracked.` : ""}` };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "homesend").body.error.message };
+  }
+}
+
 export async function routeHomeSendItemAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
+  if (formData.get("kind") === "receipt") return routeReceipt(formData);
   const parsed = routeSchema.safeParse({
     householdId: formData.get("householdId"),
     itemId: formData.get("itemId"),
@@ -685,6 +806,10 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
       await cancelObligation(supabase, { id: change.entityId, householdId });
     } else if (change.domain === "school_item") {
       await cancelSchoolItem(supabase, householdId, change.entityId);
+    } else if (change.domain === "purchase") {
+      // A recorded purchase goes, and the item's history is what the
+      // remaining purchases say (09-009).
+      await removePurchase(supabase, { householdId, purchaseId: change.entityId });
     } else if (change.domain === "health_document") {
       await archiveRecord(supabase, { householdId, memberId: membership.memberId }, change.entityId);
     } else {
@@ -706,3 +831,13 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
 }
 
 export type { HomeSendItem };
+
+/** What a receipt's lines can be matched to (09-009): the household's own tracked items, names only. */
+export async function trackedItemsAction(householdId: string): Promise<{ id: string; name: string }[]> {
+  const parsed = z.uuid().safeParse(householdId);
+  if (!parsed.success) return [];
+  const supabase = await createClient();
+  await requireMembership(supabase, parsed.data);
+  const items = await listConsumables(supabase, parsed.data);
+  return items.map((item) => ({ id: item.id, name: item.name }));
+}

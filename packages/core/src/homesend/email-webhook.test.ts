@@ -23,6 +23,8 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0
 const SPORTS_DAY: IntakeExtraction = {
   readable: true, kind: "school_item", title: "Sports Day", notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: "2026-09-26",
   schoolKind: "event", subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, dateText: "Saturday 26 September",
+  merchant: null,
+  lines: [],
   subjectMemberName: null, summary: "Sports Day is on Saturday 26 September.", people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
 };
 

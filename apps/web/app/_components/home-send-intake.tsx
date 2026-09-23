@@ -8,6 +8,8 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 
+import { HomeSendReceiptFields } from "./home-send-receipt";
+
 export const OBLIGATION_KIND_OPTIONS = [
   { value: "utility", label: "Utility" },
   { value: "rent", label: "Rent" },
@@ -34,6 +36,7 @@ export const KIND_OPTIONS = [
   { value: "school_item", label: "School work" },
   { value: "grocery_item", label: "A grocery item" },
   { value: "health_document", label: "A health document" },
+  { value: "receipt", label: "A receipt (already paid)" },
 ];
 
 export const RECORD_TYPE_OPTIONS = [
@@ -92,6 +95,8 @@ export type HomeSendExtractionFields = {
   healthRecordType: string | null;
   documentDate: string | null;
   subjectMemberName: string | null;
+  merchant?: string | null;
+  lines?: { name: string; quantity: number | null; unit: string | null; lineTotal: number | null }[];
   secondary: { reason: string; title: string } | null;
   needs?: { reason: string; title: string }[];
 } | null;
@@ -282,7 +287,7 @@ export function HomeSendConfirmStep({
   confirmation?: ReviewConfirmation | null;
 }) {
   const [kind, setKind] = useState(defaultKind);
-  const needs = (kind !== "grocery_item" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
+  const needs = (kind !== "grocery_item" && kind !== "receipt" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
     (need) => typeof need?.title === "string" && need.title.trim() !== "",
   );
   const proposal = reconciliation?.proposal?.type ?? (reconciliation ? "duplicate" : null);
@@ -347,7 +352,7 @@ export function HomeSendConfirmStep({
         </select>
       </div>
 
-      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} />
+      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} />
 
       {needs.length > 0 ? (
         <fieldset className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
@@ -390,7 +395,7 @@ export function HomeSendConfirmStep({
         </div>
       ) : (
         <Button type="submit" disabled={busy} className="w-full">
-          Add
+          {kind === "receipt" ? "Record purchases" : "Add"}
         </Button>
       )}
     </form>
@@ -406,12 +411,16 @@ export function HomeSendConfirmFields({
   prefill,
   kids,
   subject = null,
+  householdId,
 }: {
   kind: string;
   prefill: HomeSendExtractionFields;
   kids: { id: string; displayName: string }[];
   subject?: ReviewSubject | null;
+  /** Needed by a receipt, whose lines are matched against what the household tracks. */
+  householdId?: string;
 }) {
+  if (kind === "receipt" && householdId) return <HomeSendReceiptFields householdId={householdId} prefill={prefill} />;
   // Who it is for: whoever the content named, resolved through the
   // household's own people — or, when that is not clear, nobody until the
   // person chooses (§9: never guess).
