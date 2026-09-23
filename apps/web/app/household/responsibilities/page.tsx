@@ -1,9 +1,11 @@
-import { ListChecks } from "lucide-react";
+import { ListChecks, Scale } from "lucide-react";
 import Link from "next/link";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
+import { findImbalances, formatPerWeek, memberLoads, suggestRebalance } from "@wonderhome/core/household/workload";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -11,7 +13,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
+import { AcceptRebalanceButton, AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
 import { cadenceLabel } from "../../_lib/cadence";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession, type Session } from "../../_lib/session";
@@ -166,6 +168,25 @@ function renderResponsibilities({
   ].filter((outcome) => !alreadyAssigned.has(outcome.key));
   const memberOptions = members.map((member) => ({ id: member.id, displayName: member.displayName }));
 
+  // Who carries what (story 03-008): times a week, counted from each
+  // outcome's own rhythm. Only an imbalance worth a word is ever shown.
+  const workloadMembers = members
+    .filter((member) => member.status === "active")
+    .map((member) => ({ id: member.id, displayName: member.displayName, memberType: member.memberType }));
+  const workloadOutcomes = rows.map((row) => {
+    const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
+    return {
+      outcomeKey: row.outcome_key,
+      name: item?.name ?? row.outcome_key.replace(/[._]/g, " "),
+      primaryMemberId: row.primary_member_id,
+      backupMemberId: row.backup_member_id,
+      cadenceUnit: cadenceLabel(item?.cadence) ?? null,
+    };
+  });
+  const suggestions = suggestRebalance(workloadMembers, workloadOutcomes);
+  const imbalances = findImbalances(memberLoads(workloadMembers, workloadOutcomes));
+  const titleOf = (key: string) => workloadOutcomes.find((outcome) => outcome.outcomeKey === key)?.name ?? key;
+
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
@@ -233,6 +254,47 @@ function renderResponsibilities({
             <Badge tone="attention">{gaps.length} unowned</Badge>
             <p className="text-sm text-[var(--wh-foreground-muted)]">Some outcomes have nobody responsible. Assign them so WonderHome knows who to ask.</p>
           </Card>
+        ) : null}
+
+        {active === "all" && (imbalances.length > 0 || suggestions.length > 0) ? (
+          <section>
+            <SectionHeader title="Share the load" />
+            <Card className="p-2">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {suggestions.map((suggestion) => (
+                  <ActionRow
+                    key={suggestion.outcomeKey}
+                    icon={Scale}
+                    tone="people"
+                    title={`${titleOf(suggestion.outcomeKey)}: ${nameOf(suggestion.toMemberId) ?? "the backup"} could take it`}
+                    meta={suggestion.reason}
+                    action={
+                      admin ? (
+                        <AcceptRebalanceButton
+                          householdId={householdId}
+                          outcomeKey={suggestion.outcomeKey}
+                          fromMemberId={suggestion.fromMemberId}
+                          toMemberId={suggestion.toMemberId}
+                          toName={nameOf(suggestion.toMemberId) ?? "the backup"}
+                        />
+                      ) : undefined
+                    }
+                  />
+                ))}
+                {imbalances
+                  .filter((imbalance) => !suggestions.some((suggestion) => suggestion.fromMemberId === imbalance.heaviest.memberId))
+                  .map((imbalance) => (
+                    <ActionRow
+                      key={imbalance.group}
+                      icon={Scale}
+                      tone="people"
+                      title={`${imbalance.heaviest.displayName} carries the most`}
+                      meta={`${capitalise(formatPerWeek(imbalance.heaviest.perWeek))} a week across ${imbalance.heaviest.outcomes} ${imbalance.heaviest.outcomes === 1 ? "outcome" : "outcomes"}, against ${formatPerWeek(imbalance.lightest.perWeek)} for ${imbalance.lightest.displayName}. Give some of them a backup, and WonderHome can suggest a fair swap.`}
+                    />
+                  ))}
+              </ul>
+            </Card>
+          </section>
         ) : null}
 
         {shown.length === 0 ? (
@@ -331,3 +393,7 @@ function renderResponsibilities({
   );
 }
 
+
+function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

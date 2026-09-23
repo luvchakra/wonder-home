@@ -19,6 +19,7 @@ import {
   saveResponsibility,
   setPlaybookItemActive,
 } from "@wonderhome/core/household/configuration-repository";
+import { acceptRebalance } from "@wonderhome/core/household/workload-repository";
 import { listMembers, requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { MEMBER_TYPES } from "@wonderhome/core/identity/schemas";
 
@@ -70,6 +71,31 @@ export async function saveResponsibilityAction(
     revalidatePath("/household/setup");
     revalidatePath("/household/responsibilities");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+const rebalanceSchema = z.object({
+  householdId: z.uuid(),
+  outcomeKey: z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/),
+  fromMemberId: z.uuid(),
+  toMemberId: z.uuid(),
+});
+
+/** Accepting one suggested swap (story 03-008): the backup takes the outcome, the owner backs it up. */
+export async function acceptRebalanceAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = rebalanceSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "That suggestion could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const { householdId, ...swap } = parsed.data;
+    const membership = await requireHouseholdAdmin(supabase, householdId);
+    const members = await listMembers(supabase, householdId, membership.household.ownerMemberId);
+    const { changed } = await acceptRebalance(supabase, { householdId, actorMemberId: membership.memberId, members, ...swap });
+    revalidatePath("/household/responsibilities");
+    return { notice: changed ? "Swapped. The backup owns it now, and the owner backs it up." : "Already swapped." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
   }

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**190 of 195 stories done — 97.4%**
+**191 of 195 stories done — 97.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 190 |
+| Done | 191 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 4 |
+| Not Started | 3 |
 
 ## By module
 
@@ -27,7 +27,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `██████████` | 8 | 8 | — |
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
-| 03 Outcome & Routine Engine | `████████░░` | 7 | 8 | 1 not started |
+| 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
@@ -51,7 +51,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
-| `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
@@ -108,7 +107,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 03 — Outcome & Routine Engine
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -119,7 +118,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `03-005` Replanning | P0 | Done | Downstream reachability computed, unaffected plans preserved |
 | `03-006` Dependency graph | P1 | Done | `attachDependencies` turns the household's real dependency edges (the same ones `configuration.ts`'s `canDependOn` validates) into each outcome's own `dependencies`, carrying the upstream outcome's current status, feeding straight into the evaluation and replanning already built for 03-003/03-005 |
 | `03-007` Pattern learning | P1 | Done | `pattern-learning.ts`: `findTimingPattern` looks at an outcome key's actually-met history and calls a normal timing only when completions cluster tightly enough (consistency ≥0.6, at least 4 samples) — scattered history says nothing. `proposeTimingPattern` turns a found pattern into the same `LearningProposal` shape module 14 uses everywhere (observed, capped confidence, status "learned"), and refuses outright — returns `null`, proposing nothing — once the household has confirmed a fact about that outcome's timing, the goal's own words made a caller-supplied fact so it is testable rather than assumed |
-| `03-008` Optimization | P2 | Not Started | — |
+| `03-008` Optimization | P2 | Done | `workload.ts`: each member's load in times a week from each outcome's own rhythm (daily 7, weekly 1, monthly ≈0.25; no rhythm set counts as weekly and is reported as assumed); an imbalance is named only when the heaviest carries ≥2× the lightest and ≥5 more a week; `suggestRebalance` only ever proposes the outcome's named backup taking it, within adults or within helpers, never a child, and only a swap that narrows the gap. `acceptRebalance` applies it through the validated, audited responsibility save, idempotent, refusing a suggestion the household has moved on from. Responsibilities shows "Share the load" only when there is something to share; `GET /households/{id}/workload`, `POST .../workload/rebalance` |
 
 ### 04 — Conversation, Voice & Text
 
