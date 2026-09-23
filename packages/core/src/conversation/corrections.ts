@@ -56,6 +56,9 @@ export const TARGET_KIND_FOR_ACTION: Record<string, IntentTarget["kind"]> = {
   plan_event: "event",
   plan_meal: "outcome",
   set_reminder: "outcome",
+  remove_from_list: "list",
+  complete_school_item: "member",
+  raise_service_request: "outcome",
   adjust_schedule: "event",
   set_preference: "outcome",
   record_health_appointment: "member",
@@ -189,7 +192,7 @@ function itemsOf(parameters: Record<string, unknown>): string[] {
 function withoutGrounded(parameters: Record<string, unknown>): Record<string, unknown> {
   const next: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(parameters)) {
-    if (key.endsWith("Resolved") || key === "awaiting" || key === "candidates" || key === "corrects" || key === "referred") continue;
+    if (key.endsWith("Resolved") || key === "awaiting" || key === "candidates" || key === "corrects" || key === "referred" || key === "groundedConfidence" || key === "groundedFrom") continue;
     next[key] = value;
   }
   return next;

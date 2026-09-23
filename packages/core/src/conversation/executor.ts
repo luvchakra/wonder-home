@@ -9,7 +9,10 @@ import { resolveEntity, resolvePerson } from "../context/resolution";
 import { createAppointment, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
+import { createEvent } from "../family/repository";
+import { createServiceRequest } from "../home/repository";
 import { attachIngredients, createMeal } from "../meals/repository";
+import { completeSchoolItem, updateSchoolItem } from "../school/repository";
 import type { MealSlot } from "../meals/meals";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
@@ -68,6 +71,23 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof (intent.parameters.mealName ?? intent.parameters.what) === "string" && Boolean(intent.parameters.windowResolved ?? intent.parameters.whenResolved);
     case "set_reminder":
       return typeof intent.parameters.what === "string" && intent.parameters.what.trim().length > 0 && typeof intent.parameters.when === "string";
+    case "remove_from_list":
+      return itemsOf(intent).length > 0;
+    case "complete_school_item":
+      return typeof intent.parameters.schoolItemId === "string";
+    case "raise_service_request":
+      return typeof intent.parameters.assetName === "string";
+    // Moving something is done only where there is a real record to move:
+    // a school item, to one grounded day. A calendar move is not yet.
+    case "adjust_schedule":
+      return typeof intent.parameters.schoolItemId === "string" && (intent.parameters.toResolved as { precision?: string } | undefined)?.precision === "day";
+    // A plan goes on the calendar only with a real time to put it at: a part
+    // of a day ("Saturday evening"), or a whole day kept free. "Sometime this
+    // weekend" stays a plan the household finishes itself.
+    case "plan_event": {
+      const window = (intent.parameters.windowResolved ?? intent.parameters.whenResolved) as { precision?: string; window?: unknown } | undefined;
+      return Boolean(window && (window.window || (intent.parameters.protected === true && window.precision === "day")));
+    }
     case "record_absence":
       return intent.target.kind === "member" && Boolean(intent.target.reference);
     case "set_preference":
@@ -149,6 +169,16 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await planMeal(intent, context);
       case "set_reminder":
         return await setReminder(intent, context);
+      case "remove_from_list":
+        return await removeFromGroceries(intent, context);
+      case "complete_school_item":
+        return await markSchoolItemDone(intent, context);
+      case "raise_service_request":
+        return await raiseServiceRequest(intent, context);
+      case "adjust_schedule":
+        return await moveSchoolItem(intent, context);
+      case "plan_event":
+        return await putOnCalendar(intent, context);
       case "record_absence":
         return await recordAbsence(intent, context);
       case "check_agents":
@@ -337,6 +367,132 @@ function describeAdds(entries: AddedItem[], intent: HouseholdIntent): string {
   const thereLine = there.length > 0 ? `; ${joinWords(there)} ${there.length === 1 ? "was" : "were"} already there` : "";
   const learn = !forMeal && added.length === 1 && there.length === 0 ? " Once I see it bought a few times I will work out how often you need it." : "";
   return `${lead}${addedLine}${thereLine}.${learn}`;
+}
+
+/**
+ * "Remove the bananas" — each named item taken off through the same retire
+ * a person's own remove on the Groceries screen uses. One not on the list is
+ * said so; nothing else is touched.
+ */
+async function removeFromGroceries(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const names = itemsOf(intent);
+  const tracked = await listConsumables(context.supabase, context.householdId).catch(() => []);
+  const known = buildContextItems({ consumables: tracked }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now: context.now ?? new Date(), viewerMemberId: context.actorMemberId });
+  const removed: { name: string; consumableId: string }[] = [];
+  const missing: string[] = [];
+  for (const name of names) {
+    const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
+    if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate") && match.item.entityId && !removed.some((entry) => entry.consumableId === match.item!.entityId)) {
+      await retireConsumable(context.supabase, { id: match.item.entityId, householdId: context.householdId });
+      removed.push({ name: String(match.item.attributes.title ?? name), consumableId: match.item.entityId });
+    } else {
+      missing.push(name.charAt(0).toUpperCase() + name.slice(1));
+    }
+  }
+  const groceries = linkTo("/groceries", "groceries");
+  const took = removed.length > 0 ? `Took ${joinWords(removed.map((entry) => `**${entry.name}**`))} off the ${groceries}.` : "";
+  const absent = missing.length > 0 ? `${joinWords(missing.map((name) => `**${name}**`))} ${missing.length === 1 ? "was" : "were"} not on the ${groceries}, so there was nothing to take off.` : "";
+  return { ok: true, text: [took, absent].filter(Boolean).join(" "), result: { removed, missing, alreadyTracked: removed.length === 0 } };
+}
+
+/** "Mark Asmi's worksheet complete" — the School service's own done, as a person's tap on it would be. */
+async function markSchoolItemDone(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const id = String(intent.parameters.schoolItemId);
+  await completeSchoolItem(context.supabase, id);
+  const whose = typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : "";
+  return {
+    ok: true,
+    text: `Marked ${whose}**${String(intent.parameters.title ?? "that")}** done. See ${linkTo("/school", "Kids & School")}.`,
+    result: { schoolItemId: id, title: intent.parameters.title ?? null },
+  };
+}
+
+/** "Move Manan's science project to Friday" — the item's due day changes, keeping the time of day it had. */
+async function moveSchoolItem(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const id = String(intent.parameters.schoolItemId);
+  const day = intent.parameters.toResolved as { date?: string; label?: string } | undefined;
+  if (!day?.date) return { ok: false, reason: "Which day should it move to?" };
+  const was = typeof intent.parameters.dueAt === "string" ? localClock(intent.parameters.dueAt, context.timezone) : null;
+  const at = was ?? { hour: 9, minute: 0 };
+  await updateSchoolItem(context.supabase, context.householdId, id, { dueAt: zonedTimeToUtcIso(day.date, at.hour, at.minute, context.timezone) });
+  const whose = typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : "";
+  return {
+    ok: true,
+    text: `Moved ${whose}**${String(intent.parameters.title ?? "that")}** to ${(day.label ?? day.date).replace(/^on /, "")}. See ${linkTo("/school", "Kids & School")}.`,
+    result: { schoolItemId: id, dueOn: day.date },
+  };
+}
+
+/**
+ * "The washing machine is making that noise again" — a service request on
+ * record, against the appliance where the household has it listed. Logged,
+ * not dispatched: nobody is contacted until the household chooses who.
+ */
+async function raiseServiceRequest(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const assetName = String(intent.parameters.assetName);
+  const symptom = typeof intent.parameters.symptom === "string" ? intent.parameters.symptom : null;
+  const subject = `${assetName}${symptom ? ` ${symptom}` : " needs a look"}`.slice(0, 200);
+  const { id } = await createServiceRequest(context.supabase, {
+    householdId: context.householdId,
+    assetId: typeof intent.parameters.assetId === "string" ? intent.parameters.assetId : null,
+    subject: subject.charAt(0).toUpperCase() + subject.slice(1),
+    nextAction: "Choose who to call",
+    nextActionBy: "household",
+  });
+  const listed = typeof intent.parameters.assetId === "string" ? "" : ` The ${assetName.toLowerCase()} is not on your list of appliances yet, so it is logged by name.`;
+  return {
+    ok: true,
+    text: `Logged a service request for the **${assetName.toLowerCase()}**. Nobody has been contacted — choose who to call under ${linkTo("/household/home", "Home & Upkeep")}.${listed}`,
+    result: { serviceRequestId: id, assetName, ...(typeof intent.parameters.assetId === "string" ? { assetId: intent.parameters.assetId } : {}) },
+  };
+}
+
+/**
+ * "Protect Saturday evening for family time" — a real block on the family
+ * calendar through `createEvent`, protected and owned by the person who
+ * asked (protected time always has an owner).
+ */
+async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const resolved = (intent.parameters.windowResolved ?? intent.parameters.whenResolved) as { date?: string; window?: { from: string; to: string } | null; label?: string; precision?: string } | undefined;
+  if (!resolved?.date) return { ok: false, reason: "Which day is it for?" };
+  const protectedTime = intent.parameters.protected === true;
+  const span = resolved.window ?? (protectedTime ? { from: "09:00", to: "21:00" } : null);
+  if (!span) return { ok: false, reason: notYetDoable("plan_event") };
+  const clock = (value: string) => ({ hour: Number(value.slice(0, 2)), minute: Number(value.slice(3, 5)) });
+  const from = clock(span.from);
+  const to = clock(span.to);
+  const what = String(intent.parameters.what ?? "Family time").trim();
+  const title = what.charAt(0).toUpperCase() + what.slice(1);
+  const { id } = await createEvent(context.supabase, {
+    householdId: context.householdId,
+    title,
+    kind: /family|together/i.test(what) ? "family_time" : "outing",
+    startsAt: zonedTimeToUtcIso(resolved.date, from.hour, from.minute, context.timezone),
+    endsAt: zonedTimeToUtcIso(resolved.date, to.hour, to.minute, context.timezone),
+    protected: protectedTime,
+    ownerMemberId: context.actorMemberId,
+  });
+  const label = (resolved.label ?? resolved.date).replace(/\s*\(.*\)$/, "");
+  const hours = `${formatHourMinute(from.hour, from.minute)}–${formatHourMinute(to.hour, to.minute)}`;
+  return {
+    ok: true,
+    text: protectedTime
+      ? `${label.charAt(0).toUpperCase()}${label.slice(1)}, ${hours}, is now kept free for **${what}** on the family calendar. See ${linkTo("/family", "Family")}.`
+      : `Put **${what}** on the family calendar ${onDay(label)}, ${hours}. See ${linkTo("/family", "Family")}.`,
+    result: { eventId: id, title, protected: protectedTime },
+  };
+}
+
+/** A stored instant as the household's own clock time. */
+function localClock(iso: string, timezone: string): { hour: number; minute: number } | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone }).formatToParts(new Date(iso));
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value);
+    return Number.isFinite(hour) && Number.isFinite(minute) ? { hour: hour % 24, minute } : null;
+  } catch {
+    return null;
+  }
 }
 
 /** "tomorrow (Thu 24 Sep)" reads as it is; a bare date reads "on Fri 25 Sep". */

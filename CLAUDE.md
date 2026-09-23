@@ -260,7 +260,17 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   happened. A reminder is a real notification to the speaker alone, held
   until its `scheduled_for`; the inbox and badge only ever show what is
   due. An add where nothing was new shows "Nothing to change", never
-  "Done".
+  "Done". The understanding model is given the moment as facts — role,
+  local date and time, what is waiting, what the conversation is about,
+  all minimised like the utterance (`ai/model-client.ts`'s `systemFor`) —
+  and returns named, nullable parameters with no id field of any kind;
+  `withoutServerOnly` strips anything that is the server's to decide (ids,
+  grounded dates, a correction's undo record) from whatever a model
+  sends. A person resolved at medium confidence is named back ("I think
+  you mean Manan…"); two equally likely ones are one question. Every
+  §21 example and the §22 matrix are covered deterministically in
+  `conversation/evaluation.test.ts` — extend it, never loosen it, when an
+  understanding changes.
 - **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`'s
   `understand`/answer-composition seam) is the reasoning behind a reply: a
   real model call, gated by the same consent/minimisation/entitlement

@@ -64,6 +64,12 @@ function lowerName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+/** "Sunita" → "sunita"; "the younger one" keeps its words, for the resolver to read as a relationship or an age. */
+function personReference(value: string): string {
+  const words = value.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  return words.includes(" ") ? words.replace(/\s+/g, " ") : lowerName(words);
+}
+
 /** "dentist" → "dentist"; "my dentist" / "eye" / "skin" → the closest real appointment type; anything else → "other", never invented. */
 const APPOINTMENT_TYPE_WORDS: Partial<Record<AppointmentType, readonly string[]>> = {
   dentist: ["dentist", "dental"],
@@ -110,6 +116,10 @@ function item(value: string): string {
   return value
     .trim()
     .replace(/^(?:a|an|some|the|more)\s+/i, "")
+    // "the same milk we bought last week" is the milk — the matcher finds
+    // the one already tracked, so "same" never becomes part of a name.
+    .replace(/^same\s+/i, "")
+    .replace(/\s+(?:that\s+)?(?:we|i)\s+(?:bought|got|had|ordered|always get|usually get)(?:\s+(?:last\s+\w+|before|yesterday|last time))?$/i, "")
     .replace(/\s+(?:too|as well|also)$/i, "")
     .trim();
 }
@@ -133,7 +143,7 @@ function reminder(what: string, when: string | undefined, time: string | undefin
  * added or found already there on its own.
  */
 function withItems(intent: Omit<HouseholdIntent, "actorMemberId" | "channel" | "utterance" | "understanding">) {
-  if (intent.action !== "add_to_list" || typeof intent.parameters.item !== "string") return intent;
+  if ((intent.action !== "add_to_list" && intent.action !== "remove_from_list") || typeof intent.parameters.item !== "string") return intent;
   if (!/,|;|&|\band\b|\bplus\b/i.test(intent.parameters.item)) return intent;
   const items = extractItems(intent.parameters.item);
   if (items.length < 2) return intent;
@@ -242,6 +252,13 @@ const RULES: readonly Rule[] = [
     },
   },
 
+  {
+    // "When is my next checkup?" — a question about the home, answered by
+    // HomeBrain from the facts.
+    pattern: /^(?:when|what time)(?:'s| is| are| was| will| do| does)\b.+$/i,
+    read: () => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "home" }, confidence: 0.82 }),
+  },
+
   // --- Meals ---------------------------------------------------------------------
   {
     // The Meals screen's own "Change meal" link says exactly this; a person
@@ -309,6 +326,15 @@ const RULES: readonly Rule[] = [
     read: (match) => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: item(match[1]!) }, confidence: 0.88 }),
   },
   {
+    // "Remove the bananas" / "take milk off the list".
+    pattern: new RegExp(`^(?:remove|take|delete|cross out|cross off|strike)\\s+(.+?)(?:\\s+(?:off|from)(?:\\s+(?:the |my |our )?(?:${LIST_WORDS}))?)?(?:\\s+off)?$`, "i"),
+    read: (match) => {
+      const what = item(match[1]!);
+      if (!what || /\b(?:reminder|appointment|event|member|person|responsibility|helper)\b/i.test(what) || what.split(" ").length > 8) return null;
+      return { action: "remove_from_list", target: { kind: "list", reference: "groceries" }, parameters: { item: what }, confidence: 0.86 };
+    },
+  },
+  {
     // "Add milk and bananas" — no list named, so only plainly a thing or
     // two: anything with a destination or a time in it is some other request.
     pattern: /^add\s+(?:some |a |an |more )?(.+)$/i,
@@ -331,12 +357,12 @@ const RULES: readonly Rule[] = [
   // --- Absence ------------------------------------------------------------------
   {
     pattern: new RegExp(
-      `^([A-Za-z]+)\\s+(?:won'?t be (?:here|in|around|coming|available)|isn'?t (?:here|coming|available|in)|is (?:away|off|out|unavailable|on leave|not (?:coming|available|here|in|around)|sick|unwell|ill|travelling|traveling)|will be (?:away|off|out|unavailable)|can'?t (?:come|make it)|has (?:the day )?off|is taking (?:the day |a day |leave )?off)(?:\\s+(${WHEN_WORDS}))?$`,
+      `^((?:the |my |our )?(?:[A-Za-z]+)(?: one| kid| child| boy| girl)?)\\s+(?:won'?t be (?:here|in|around|coming|available)|isn'?t (?:here|coming|available|in)|is (?:away|off|out|unavailable|on leave|not (?:coming|available|here|in|around)|sick|unwell|ill|travelling|traveling)|will be (?:away|off|out|unavailable)|can'?t (?:come|make it)|has (?:the day )?off|is taking (?:the day |a day |leave )?off)(?:\\s+(${WHEN_WORDS}))?$`,
       "i",
     ),
     read: (match) => ({
       action: "record_absence",
-      target: { kind: "member", reference: lowerName(match[1]!) },
+      target: { kind: "member", reference: personReference(match[1]!) },
       parameters: withWhen({}, match[2] ?? "today"),
       confidence: 0.92,
     }),
@@ -405,7 +431,54 @@ const RULES: readonly Rule[] = [
   },
   {
     pattern: /^(?:move|shift|reschedule|change|push)\s+(.+?)\s+(?:to|for)\s+(.+)$/i,
-    read: (match) => ({ action: "adjust_schedule", target: { kind: "event", reference: slug(match[1]!) }, parameters: { to: match[2]!.trim().toLowerCase() }, confidence: 0.88 }),
+    // The words as said ("Manan's science project") ride along, so grounding
+    // can find the one school item they name.
+    read: (match) => ({ action: "adjust_schedule", target: { kind: "event", reference: slug(match[1]!) }, parameters: { to: match[2]!.trim().toLowerCase(), what: match[1]!.trim() }, confidence: 0.88 }),
+  },
+  {
+    // "Protect Saturday evening for family time" — a protected block on the
+    // family calendar, not a vague plan.
+    pattern: /^(?:protect|block(?: out| off)?|keep|reserve|hold)\s+(.+?)\s+(?:free\s+)?for\s+(.+)$/i,
+    read: (match) => ({
+      action: "plan_event",
+      target: { kind: "event", reference: slug(match[2]!) },
+      parameters: { what: match[2]!.trim().replace(/^(?:some|a bit of)\s+/i, ""), window: match[1]!.trim().toLowerCase(), protected: true },
+      confidence: 0.88,
+    }),
+  },
+
+  // --- School: done ------------------------------------------------------------
+  {
+    pattern: /^(?:mark|tick off|set)\s+(?:([A-Za-z]+)'s\s+)?(.+?)\s+(?:as\s+)?(?:complete|completed|done|finished)$/i,
+    read: (match) => ({
+      action: "complete_school_item",
+      target: match[1] ? { kind: "member", reference: lowerName(match[1]) } : { kind: "outcome", reference: "school" },
+      parameters: { title: item(match[2]!) },
+      confidence: 0.9,
+    }),
+  },
+  {
+    pattern: /^([A-Za-z]+)\s+(?:has\s+)?(?:finished|completed|done)\s+(?:(?:her|his|their)\s+)?(.+)$/i,
+    read: (match) =>
+      /^(?:i|we|you|they|it|that)$/i.test(match[1]!)
+        ? null
+        : { action: "complete_school_item", target: { kind: "member", reference: lowerName(match[1]!) }, parameters: { title: item(match[2]!) }, confidence: 0.85 },
+  },
+
+  // --- Home: something needs a repair ------------------------------------------
+  {
+    pattern: /^(?:raise|log|open|create|book|file)\s+(?:a\s+)?(?:service|repair|maintenance)\s+(?:request|call|ticket)(?:\s+for\s+(?:the\s+|our\s+|my\s+)?(.+))?$/i,
+    read: (match) => ({ action: "raise_service_request", target: { kind: "outcome", reference: "home" }, parameters: match[1] ? { asset: match[1].trim() } : { asset: "it" }, confidence: 0.9 }),
+  },
+  {
+    pattern: /^(?:the\s+|our\s+|my\s+)?([a-z][a-z ]{2,40}?)\s+((?:is|keeps)\s+making\s+(?:a|that|the|some|this|an?\s+\w+)?\s*(?:noise|sound)|is\s+(?:broken|leaking|not working|acting up|dripping)|isn'?t working|stopped working|won'?t\s+(?:start|turn on|work|drain|spin|cool)|keeps\s+\w+ing)(?:\s+again)?$/i,
+    read: (match) => ({ action: "raise_service_request", target: { kind: "outcome", reference: "home" }, parameters: { asset: match[1]!.trim(), symptom: match[2]!.trim().toLowerCase() }, confidence: 0.8 }),
+  },
+
+  // --- Payments: prepare ------------------------------------------------------------
+  {
+    pattern: /^(?:prepare|set up|get ready|line up)\s+(?:the |my |our )?(.+?)\s+(?:payment|bill)$/i,
+    read: (match) => ({ action: "make_payment", target: { kind: "bill", reference: slug(match[1]!) }, parameters: {}, confidence: 0.9 }),
   },
 
   // --- Responsibilities --------------------------------------------------------
@@ -642,6 +715,9 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "check_agents",
   "add_to_list",
   "set_reminder",
+  "remove_from_list",
+  "complete_school_item",
+  "raise_service_request",
   "record_absence",
   "make_payment",
   "order_items",

@@ -12,11 +12,11 @@ import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
-import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
+import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type RuntimeContext, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
 import { heldBecause, leansOnEarlier, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
-import { groundIntent, type GroundingEnv } from "@wonderhome/core/conversation/grounding";
+import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
 import { classifyShortReply, type HouseholdIntent } from "@wonderhome/core/conversation/intent";
 import { attributeMemory } from "@wonderhome/core/conversation/memory";
 import {
@@ -49,6 +49,8 @@ import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
+import { listAssets } from "@wonderhome/core/home/repository";
+import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
 import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
@@ -97,12 +99,14 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Feature keys a consequential intent needs, beyond the conversation itself. */
 const FEATURE_FOR_ACTION: Partial<
-  Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking" | "meals.planning">
+  Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking" | "meals.planning" | "school.connector" | "home.maintenance">
 > = {
   make_payment: "finance.bills",
   order_items: "commerce.orders",
   plan_event: "family.events",
   plan_meal: "meals.planning",
+  complete_school_item: "school.connector",
+  raise_service_request: "home.maintenance",
   check_agents: "ai.agent_runs",
   record_health_appointment: "health.tracking",
   log_health_issue: "health.tracking",
@@ -199,12 +203,22 @@ export async function POST(request: Request, { params }: Params) {
     // The question asked last turn, if there was one: this turn is read as
     // its answer before anything else, which is what stops the same
     // question coming back however clearly it is answered (story 04-011).
-    const [pending, history, clarifying] = await Promise.all([
+    const [pending, history, clarifying, lastFocus] = await Promise.all([
       pendingAction(admin, sessionId),
       recentTurns(admin, sessionId, 6),
       pendingClarification(admin, sessionId),
+      recentFocus(admin, sessionId, 2).catch(() => [] as FocusEntity[]),
     ]);
-    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people);
+    // What the model is told about this moment (Wave 4 §17): a role, the
+    // local date and time, what is waiting, what the conversation was just
+    // about — minimised with the utterance, never the household itself.
+    const moment = {
+      role: roleWords(membership),
+      localDateTime: localDateTime(new Date(), membership.household.timezone),
+      pending: clarifying ? `a question: "${clarifying.question}"` : pending ? `a yes or no on "${pending.summary}"` : null,
+      recent: [...new Set(lastFocus.map((entity) => entity.label))].slice(0, 5),
+    };
+    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, moment);
     const startedAt = Date.now();
 
     // Recording what was said and metering it need nothing from the answer,
@@ -298,6 +312,8 @@ export async function POST(request: Request, { params }: Params) {
     // Recipes and what a meal needs, read only when a plan might be a meal
     // or "make sure we have everything" needs the list (Wave 4 §11).
     let recipeRead: Promise<{ id: string; name: string }[]> | null = null;
+    let schoolRead: Promise<SchoolItemRef[]> | null = null;
+    let assetRead: Promise<{ id: string; name: string }[]> | null = null;
     const groundingEnv = (read: () => Promise<ReferenceState>): GroundingEnv => ({
       people: peopleItems,
       viewerMemberId: membership.memberId,
@@ -306,6 +322,11 @@ export async function POST(request: Request, { params }: Params) {
       references: read,
       recipes: () => (recipeRead ??= listRecipeNames(supabase, householdId).catch(() => [])),
       ingredients: (of) => ingredientNames(supabase, householdId, of).catch(() => []),
+      schoolItems: () =>
+        (schoolRead ??= listSchoolItems(supabase, householdId)
+          .then((items) => items.map((entry) => ({ id: entry.id, title: entry.title, childMemberId: entry.childMemberId, dueAt: entry.dueAt?.toISOString() ?? null, status: entry.status })))
+          .catch(() => [])),
+      assets: () => (assetRead ??= listAssets(supabase, householdId).then((items) => items.filter((entry) => entry.status === "active").map((entry) => ({ id: entry.id, name: entry.name }))).catch(() => [])),
     });
 
     const execution: ExecutionContext = {
@@ -421,6 +442,9 @@ export async function POST(request: Request, { params }: Params) {
             forgetHouseholdContext(householdId);
           }
         }
+
+        const partHedge = turn.proposal.kind !== "clarify" ? confidenceLead(turn.intent) : null;
+        if (partHedge) text = `${partHedge} ${text}`;
 
         // A question in the middle of a request is answered before anything
         // after it is done — and the question stays the last thing said, so
@@ -596,6 +620,9 @@ export async function POST(request: Request, { params }: Params) {
     if (correctionNote && result.kind === "reply" && result.proposal.kind !== "clarify") {
       text = `Changed: ${correctionNote}. ${text}`;
     }
+    // Confident enough to go on, not certain (§20): say who it was taken to be.
+    const hedge = result.kind === "reply" && result.proposal.kind !== "clarify" ? confidenceLead(result.intent) : null;
+    if (hedge) text = `${hedge} ${text}`;
 
     const memberMessageId = await memberMessageWrite;
     await metering;
@@ -932,6 +959,7 @@ async function decideProviderRouting(
   utterance: string,
   history: readonly ConversationTurn[],
   people: Person[],
+  moment?: { role: string; localDateTime: string; pending: string | null; recent: string[] },
 ): Promise<{
   code: string;
   itemsSent: number;
@@ -956,6 +984,8 @@ async function decideProviderRouting(
 
   const candidates: ContextCandidate[] = [
     { id: "utterance", contentClass: "general", need: "what was asked", text: utterance, relevant: true },
+    ...(moment?.pending ? [{ id: "pending", contentClass: "general" as const, need: "what is waiting on the person", text: moment.pending, relevant: true }] : []),
+    ...(moment && moment.recent.length > 0 ? [{ id: "recent", contentClass: "general" as const, need: "what the conversation was just about", text: moment.recent.join(", "), relevant: true }] : []),
     ...history.map((turn, index) => ({
       id: `history-${index}`,
       contentClass: "general" as const,
@@ -1003,6 +1033,12 @@ async function decideProviderRouting(
 
   // The model sees the pseudonymised text and answers about placeholders;
   // what it answers is mapped back to the household here, on this server.
+  // The moment, as it may leave: the same minimisation as the utterance, so
+  // a name in a pending question arrives as its placeholder.
+  const sentText = (id: string) => minimised.included.find((entry) => entry.id === id)?.text ?? null;
+  const runtime: RuntimeContext | undefined = moment
+    ? { role: moment.role, localDateTime: moment.localDateTime, pending: sentText("pending"), recent: sentText("recent")?.split(", ") ?? [] }
+    : undefined;
   const toHousehold = (intent: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
     if (intent.target.kind === "member" && intent.target.reference) {
       const mapped = unpseudonymise(intent.target.reference, pseudonyms, people);
@@ -1015,7 +1051,7 @@ async function decideProviderRouting(
     return intent;
   };
   const understand: Understanding = async (_utterance, context) =>
-    toHousehold(await provider.understand(sentUtterance, { ...context, history: sentHistory }), minimised.pseudonyms);
+    toHousehold(await provider.understand(sentUtterance, { ...context, history: sentHistory, runtime }), minimised.pseudonyms);
   // One part of a longer request goes through the same minimisation on its
   // own, so the model reads only that part — and a part the household's
   // consent will not let leave is read by the rules instead.
@@ -1023,7 +1059,7 @@ async function decideProviderRouting(
     const alone = minimiseContext([{ id: "utterance", contentClass: "general", need: "what was asked", text: part, relevant: true }], { policy, people });
     const sent = alone.included.find((entry) => entry.id === "utterance")?.text;
     if (!sent) return resolveDeterministicIntent(part, context);
-    return toHousehold(await provider.understand(sent, { ...context, history: sentHistory }), alone.pseudonyms);
+    return toHousehold(await provider.understand(sent, { ...context, history: sentHistory, runtime }), alone.pseudonyms);
   };
 
 
@@ -1032,6 +1068,9 @@ async function decideProviderRouting(
     itemsSent: minimised.included.length,
     disclosure: [
       `What you said${sentHistory.length > 0 ? `, and the last ${sentHistory.length} turn${sentHistory.length === 1 ? "" : "s"} of this conversation,` : ""} went to ${provider.name} to understand your request. Names were replaced with roles first.`,
+      ...(runtime
+        ? [`With it went the date and time here, your role in the household${runtime.pending ? ", what was waiting on you" : ""}${runtime.recent && runtime.recent.length > 0 ? " and what the conversation was just about" : ""} — so "tomorrow" and "that" can be understood. Nothing else about your home was sent.`]
+        : []),
     ],
     understand,
     understandPart,
@@ -1040,6 +1079,24 @@ async function decideProviderRouting(
     sentUtterance,
     compose: provider.compose,
   };
+}
+
+/** Who is speaking, as a role the model may know — never a name. */
+function roleWords(membership: HouseholdMembership): string {
+  if (membership.memberType === "child") return "a child of the household";
+  if (membership.memberType === "helper") return "a helper who works for the household";
+  return membership.roles.includes("head") || membership.roles.includes("administrator") ? "an adult who runs the household" : "an adult of the household";
+}
+
+/** "Wednesday 23 September 2026, 18:10 (Asia/Kolkata)" — the household's own clock. */
+function localDateTime(now: Date, timezone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone }).formatToParts(now);
+    const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
+    return `${part("weekday")} ${part("day")} ${part("month")} ${part("year")}, ${part("hour")}:${part("minute")} (${timezone})`;
+  } catch {
+    return now.toISOString();
+  }
 }
 
 /**
@@ -1066,14 +1123,16 @@ async function autonomyLookup(supabase: Supabase, householdId: string) {
 async function consequentialEntitlements(
   supabase: Supabase,
   householdId: string,
-): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking" | "meals.planning", boolean>> {
-  const [bills, orders, events, agentRuns, health, meals] = await Promise.all([
+): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking" | "meals.planning" | "school.connector" | "home.maintenance", boolean>> {
+  const [bills, orders, events, agentRuns, health, meals, school, home] = await Promise.all([
     may(supabase, householdId, "finance.bills"),
     may(supabase, householdId, "commerce.orders"),
     may(supabase, householdId, "family.events"),
     may(supabase, householdId, "ai.agent_runs"),
     may(supabase, householdId, "health.tracking"),
     may(supabase, householdId, "meals.planning"),
+    may(supabase, householdId, "school.connector"),
+    may(supabase, householdId, "home.maintenance"),
   ]);
   return {
     "finance.bills": bills.allowed,
@@ -1082,6 +1141,8 @@ async function consequentialEntitlements(
     "ai.agent_runs": agentRuns.allowed,
     "health.tracking": health.allowed,
     "meals.planning": meals.allowed,
+    "school.connector": school.allowed,
+    "home.maintenance": home.allowed,
   };
 }
 

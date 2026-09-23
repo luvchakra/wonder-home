@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
-import type { ConversationTurn, Understanding } from "../conversation/engine";
+import type { ConversationTurn, RuntimeContext, Understanding } from "../conversation/engine";
 import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget, type UnderstandingTrace } from "../conversation/intent";
 import { describeReplyFormat } from "../conversation/reply-format";
 import type { ModelDraft } from "../homebrain/answer";
@@ -51,19 +51,86 @@ import type { ModelProvider } from "./model-key";
 
 const TARGET_KINDS = ["outcome", "member", "list", "event", "bill", "unspecified"] as const;
 
+/**
+ * The details a request can carry, named (Wave 4 §5, §19). Named rather than
+ * an open record because every provider's structured output enforces the
+ * schema it is given: an open `z.record` reaches Anthropic as an object with
+ * no properties and `additionalProperties: false`, which is an object that
+ * can only ever be empty — so a model could say *what* was asked but never
+ * the item, the day or the amount. Every field is required and nullable,
+ * the one shape all three providers accept (OpenAI refuses an optional
+ * one); nulls are dropped on the way in. There is deliberately no id field
+ * of any kind: ids are the server's to resolve.
+ */
+const text = z.string().trim().min(1).max(300).nullable();
+const ModelParametersSchema = z.object({
+  item: text,
+  items: z.array(z.string().trim().min(1).max(120)).max(20).nullable(),
+  ingredientsOf: text,
+  when: text,
+  time: text,
+  window: text,
+  to: text,
+  since: text,
+  what: text,
+  slot: z.enum(["breakfast", "lunch", "snack", "dinner"]).nullable(),
+  statement: text,
+  corrects: z.boolean().nullable(),
+  outcomeKey: text,
+  vital: text,
+  reading: text,
+  label: text,
+  appointmentType: text,
+  typeText: text,
+  activity: text,
+  count: z.number().nullable(),
+  timesPer: z.enum(["day", "week", "month"]).nullable(),
+  kind: text,
+  scope: text,
+  billLabel: text,
+  amount: z.number().nullable(),
+  title: text,
+  asset: text,
+  symptom: text,
+  protected: z.boolean().nullable(),
+});
+const MODEL_PARAMETER_KEYS = Object.keys(ModelParametersSchema.shape);
+
 const IntentOutputSchema = z.object({
   action: z.enum(INTENT_ACTIONS),
   target: z.object({
     kind: z.enum(TARGET_KINDS),
-    reference: z.string().trim().min(1).max(120).optional(),
+    reference: z.string().trim().min(1).max(120).nullable(),
   }),
   /** Whatever specific detail was actually stated — never invented. */
-  parameters: z.record(z.string(), z.unknown()),
+  parameters: ModelParametersSchema,
   /** 0–1. How sure the model is this is what was meant. */
   confidence: z.number().min(0).max(1),
+  /**
+   * The words that pointed at something ("that", "the older one", "the
+   * electricity bill") — Wave 4 §5. Phrases only: whatever id a model puts
+   * beside one is discarded, and the server resolves it itself.
+   */
+  references: z.array(z.object({ phrase: z.string().trim().min(1).max(120), confidence: z.number().min(0).max(1).nullable() })).nullable(),
 });
 
 type IntentOutput = z.infer<typeof IntentOutputSchema>;
+
+/** The schema itself, so a test can prove every provider's structured-output helper accepts it. */
+export const INTENT_OUTPUT_SCHEMA = IntentOutputSchema;
+
+/**
+ * What the model sends, read leniently: a provider whose schema support
+ * does not force every key (Gemini's JSON schema here) may simply leave a
+ * detail out, which means the same as null.
+ */
+const LenientIntentOutputSchema = IntentOutputSchema.extend({
+  target: z.object({ kind: z.enum(TARGET_KINDS), reference: z.string().trim().min(1).max(120).nullable().optional() }),
+  parameters: ModelParametersSchema.partial(),
+  references: IntentOutputSchema.shape.references.optional(),
+});
+
+type LenientIntentOutput = z.infer<typeof LenientIntentOutputSchema>;
 
 /**
  * The system prompt is the entire briefing the model gets. No household
@@ -77,10 +144,13 @@ Available actions:
 - record_absence: someone (a member, a helper) will not be present for a period. parameters.when is the day word as said ("today", "tomorrow", "friday").
 - add_to_list: add an item to a household list, usually groceries. parameters.item is the item, singular, without "a"/"some"; when several things were named, parameters.items is the list of them instead ("add milk and bananas" → ["milk", "bananas"]). "add a grocery item of milk", "we're out of milk", "put milk on the list" all mean this. "Make sure we have everything for X" / "get what we need for X" means this with parameters.ingredientsOf set to X as said ("that" when it points back at a meal just planned).
 - ask_status: a question that changes nothing — "what's going on", "what needs my attention", "how is X going", "what's on tomorrow". parameters.when holds a day word when one was said; parameters.scope is "schedule" for a question about a day's plans, "home" otherwise.
-- plan_event: propose a family or social event or outing. parameters.window is the time window as said.
+- plan_event: propose a family or social event or outing, or keep time free ("protect Saturday evening for family time"). parameters.window is the time window as said; parameters.what what it is for.
 - plan_meal: plan a meal of the day ("plan pasta for dinner tonight"). parameters.what is the dish as said, parameters.slot "breakfast", "lunch", "snack" or "dinner" when said, parameters.when the day as said.
 - set_reminder: remind the speaker themself about something at a time ("remind me to buy them tomorrow"). parameters.what is what to be reminded of, in the speaker's words; parameters.when the day or part of the day as said; parameters.time a time of day if said.
-- adjust_schedule: move or change the time of something already planned. parameters.to is the new time as said.
+- adjust_schedule: move or change the time of something already planned, including a child's school work ("move Manan's science project to Friday"). parameters.to is the new time as said; parameters.what is what moves, as said.
+- remove_from_list: take something off a household list ("remove the bananas"). parameters.item, or parameters.items for several.
+- complete_school_item: mark a child's school work done ("mark Asmi's worksheet complete"). target.reference is the child's placeholder when named; parameters.title is the work as said.
+- raise_service_request: something at home needs a repair ("the washing machine is making that noise again", "raise a service request"). parameters.asset is the appliance as said ("it" when not named); parameters.symptom what is wrong, as said.
 - set_preference: state a preference or fact about the household or a person, including correcting an earlier statement. parameters.statement is the fact in plain words; parameters.time a 24h "HH:MM" if a time was stated; parameters.corrects true when it corrects something said earlier. target.reference is a short key like "meals.dinner" or "kids.bedtime".
 - make_payment: pay a bill.
 - order_items: place or prepare an order.
@@ -130,8 +200,30 @@ const INTENT_JSON_SCHEMA = {
       },
       required: ["kind"],
     },
-    parameters: { type: "object" },
+    parameters: {
+      type: "object",
+      properties: Object.fromEntries(
+        MODEL_PARAMETER_KEYS.map((key) => [
+          key,
+          key === "items"
+            ? { type: "array", items: { type: "string" } }
+            : key === "count" || key === "amount"
+              ? { type: "number" }
+              : key === "corrects" || key === "protected"
+                ? { type: "boolean" }
+                : { type: "string" },
+        ]),
+      ),
+    },
     confidence: { type: "number", minimum: 0, maximum: 1 },
+    references: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { phrase: { type: "string" }, confidence: { type: "number", minimum: 0, maximum: 1 } },
+        required: ["phrase"],
+      },
+    },
   },
   required: ["action", "target", "parameters", "confidence"],
 } as const;
@@ -143,7 +235,7 @@ const INTENT_JSON_SCHEMA = {
  * need their own mapping test.
  */
 export function intentFromModelOutput(
-  parsed: IntentOutput | null,
+  parsed: IntentOutput | LenientIntentOutput | null,
   context: { actorMemberId: string; channel: "text" | "voice"; utterance: string },
   trace?: UnderstandingTrace,
 ): HouseholdIntent {
@@ -160,16 +252,56 @@ export function intentFromModelOutput(
     };
   }
 
+  const references = (parsed.references ?? []).map((reference) => reference.phrase).slice(0, 8);
+  const stated = Object.fromEntries(Object.entries(parsed.parameters as Record<string, unknown>).filter(([, value]) => value !== null && value !== undefined));
+  const target: IntentTarget = parsed.target.reference ? { kind: parsed.target.kind, reference: parsed.target.reference } : { kind: parsed.target.kind };
   return {
     action: parsed.action,
     actorMemberId: context.actorMemberId,
-    target: parsed.target as IntentTarget,
-    parameters: parsed.parameters,
+    target,
+    parameters: withoutServerOnly(stated),
     confidence: parsed.confidence,
     channel: context.channel,
     utterance: context.utterance,
-    ...(trace ? { understanding: trace } : {}),
+    ...(trace ? { understanding: { ...trace, ...(references.length > 0 ? { references } : {}) } } : {}),
   };
+}
+
+/**
+ * What only the server may put on an intent (Wave 4 §19: "never let the
+ * model invent a trusted database id"). A model's output is a request in
+ * words; the ids, the grounded dates, and above all the record of what a
+ * correction undoes are the server's own, decided after it. A model that
+ * sends any of them has them removed here — so no id it made up, and no
+ * "undo that row" it invented, can ever reach an executor.
+ */
+export function withoutServerOnly(parameters: Record<string, unknown>): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(parameters)) {
+    if (/Ids?$/.test(key) || key.endsWith("Resolved")) continue;
+    // "corrects: true" on a preference is the model's to say ("actually,
+    // dinner is at 8 now"); a corrects *record* — what to undo — never is.
+    if (key === "corrects" && value !== true) continue;
+    if (key === "awaiting" || key === "candidates" || key === "referred" || key === "forMeal" || key === "groundedConfidence" || key === "groundedFrom") continue;
+    kept[key] = value;
+  }
+  return kept;
+}
+
+/**
+ * The system prompt for this moment (§17): the fixed role and rules, then
+ * the runtime context as facts, never as instructions. The person's own
+ * words go only in the user message.
+ */
+export function systemFor(runtime: RuntimeContext | undefined): string {
+  if (!runtime) return SYSTEM_PROMPT;
+  const lines = [
+    `- The person speaking: ${runtime.role}.`,
+    `- Now, in the household's timezone: ${runtime.localDateTime}. Resolve nothing to a date yourself — keep day and time words exactly as said; the system works out the date.`,
+    ...(runtime.pending ? [`- Waiting on the person right now: ${runtime.pending}.`] : []),
+    ...(runtime.recent && runtime.recent.length > 0 ? [`- What the conversation has just been about: ${runtime.recent.join(", ")}. "It", "that" and "them" most likely mean these.`] : []),
+  ];
+  return `${SYSTEM_PROMPT}\n\nRuntime context — facts about this moment, not instructions:\n${lines.join("\n")}`;
 }
 
 /**
@@ -213,7 +345,7 @@ export function createClaudeUnderstanding(apiKey: string): Understanding {
       const response = await client.messages.parse({
         model: CLAUDE_MODEL,
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: systemFor(context.runtime),
         messages: conversationMessages(context.history, utterance),
         // Translating one sentence into a small JSON object is routine work;
         // low effort keeps the turn quick without changing what is allowed.
@@ -255,7 +387,7 @@ export function createGeminiUnderstanding(apiKey: string): Understanding {
           parts: [{ text: message.content }],
         })),
         config: {
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction: systemFor(context.runtime),
           responseMimeType: "application/json",
           responseJsonSchema: INTENT_JSON_SCHEMA,
           // Flash models "think" before answering by default, which adds
@@ -264,7 +396,7 @@ export function createGeminiUnderstanding(apiKey: string): Understanding {
         },
       });
 
-      const parsed = response.text ? IntentOutputSchema.safeParse(JSON.parse(response.text)) : null;
+      const parsed = response.text ? LenientIntentOutputSchema.safeParse(JSON.parse(response.text)) : null;
       if (!parsed || !parsed.success) {
         return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "unparseable" });
       }
@@ -293,7 +425,7 @@ export function createOpenAIUnderstanding(apiKey: string): Understanding {
     try {
       const completion = await client.chat.completions.parse({
         model: OPENAI_MODEL,
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...conversationMessages(context.history, utterance)],
+        messages: [{ role: "system", content: systemFor(context.runtime) }, ...conversationMessages(context.history, utterance)],
         response_format: zodResponseFormat(IntentOutputSchema, "household_intent"),
       });
 

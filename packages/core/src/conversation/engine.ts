@@ -46,9 +46,26 @@ export const PROPOSAL_TTL_MINUTES = 10;
  */
 export type ConversationTurn = { role: "member" | "assistant"; text: string };
 
+/**
+ * What the understanding is told about this moment (Wave 4 §17) — never
+ * the household itself. Each line is already minimised by the caller: a
+ * role, not a name; the local date and time; what is waiting; the labels of
+ * the few things the conversation is about (people only as placeholders).
+ */
+export type RuntimeContext = {
+  /** "an adult of the household", "a child", "a helper". */
+  role: string;
+  /** "Wednesday 23 September 2026, 18:10 (Asia/Kolkata)". */
+  localDateTime: string;
+  /** The proposal waiting for a yes, or the question just asked, in plain words. */
+  pending?: string | null;
+  /** What the last few turns were about: "milk", "Tomato pasta". */
+  recent?: readonly string[];
+};
+
 export type Understanding = (
   utterance: string,
-  context: { actorMemberId: string; channel: "text" | "voice"; history?: readonly ConversationTurn[] },
+  context: { actorMemberId: string; channel: "text" | "voice"; history?: readonly ConversationTurn[]; runtime?: RuntimeContext },
 ) => HouseholdIntent | Promise<HouseholdIntent>;
 
 /**
@@ -89,6 +106,8 @@ export type TurnInput = {
   understand?: Understanding;
   /** Earlier turns of this session, for an understanding that can use them. */
   history?: readonly ConversationTurn[];
+  /** This moment, for an understanding that is a model (§17). */
+  runtime?: RuntimeContext;
   /**
    * The question WonderHome asked last turn, if it asked one. This turn is
    * read as the answer to it before it is read as anything else, and the
@@ -158,7 +177,7 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
   }
 
   const understand = input.understand ?? resolveDeterministicIntent;
-  const context = { actorMemberId: input.actor.memberId, channel: input.channel, history: input.history };
+  const context = { actorMemberId: input.actor.memberId, channel: input.channel, history: input.history, runtime: input.runtime };
 
   // A question WonderHome asked is a promise to use the answer. Reading
   // this turn against it first is what stops the loop where the same
