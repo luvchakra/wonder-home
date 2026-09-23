@@ -24,6 +24,7 @@
  * session actually authenticated, never whatever a request claims.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { after, before, test } from "node:test";
 
 import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
@@ -183,4 +184,39 @@ test("a member cannot write a certification item directly either", () => {
       options,
     ),
   );
+});
+
+test("what HomeTalk learned is backfilled into HomeBrain Review, once, and only while current (Wave 2 §9)", () => {
+  const current = psql(
+    `insert into public.memories (household_id, scope, member_id, category, key, value, source_type, confidence, status)
+     values ('${household}', 'member', '${subjectMember}', 'preference', 'pref.priya.peanut',
+             '{"statement": "Priya is allergic to peanuts", "stance": "allergic"}'::jsonb, 'conversation', 0.88, 'learned')
+     returning id;`,
+    options,
+  );
+  const replaced = psql(
+    `insert into public.memories (household_id, scope, member_id, category, key, value, source_type, confidence, status)
+     values ('${household}', 'household', null, 'preference', 'meals.dinner', '{"statement": "dinner at 9"}'::jsonb, 'conversation', 0.7, 'superseded')
+     returning id;`,
+    options,
+  );
+  const empty = psql(
+    `insert into public.memories (household_id, scope, member_id, category, key, value, source_type, confidence, status)
+     values ('${household}', 'household', null, 'preference', 'meals.lunch', '{}'::jsonb, 'conversation', 0.5, 'learned')
+     returning id;`,
+    options,
+  );
+  const backfill = readFileSync(new URL("../supabase/migrations/20260923120000_homebrain_review_links_memories.sql", import.meta.url), "utf8");
+  psql(backfill, options);
+  psql(backfill, options);
+
+  assert.equal(
+    psql(`select category || '|' || risk_level || '|' || status || '|' || scope || '|' || claim from public.certification_items where memory_id = '${current}';`, options),
+    "safety|high|learned|member|Priya is allergic to peanuts.",
+  );
+  assert.equal(psql(`select count(*) from public.certification_items where memory_id = '${current}';`, options), "1", "running the backfill twice linked the belief twice");
+  assert.equal(psql(`select count(*) from public.certification_items where memory_id = '${replaced}';`, options), "0", "a superseded belief was put up for review");
+  assert.equal(psql(`select count(*) from public.certification_items where memory_id = '${empty}';`, options), "0", "an empty memory was put up for review");
+  // The subject's own member-scoped belief stays theirs: a bystander adult still cannot read it.
+  assert.equal(asProfile(BYSTANDER, `select count(*) from public.certification_items where memory_id = '${current}';`, options), "0");
 });

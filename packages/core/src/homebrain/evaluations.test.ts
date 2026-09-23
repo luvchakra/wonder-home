@@ -718,3 +718,41 @@ describe("A HomeBrain turn", () => {
     expect(broad.text).toBeNull();
   });
 });
+
+describe("Corrections and current truth (§8, §9)", () => {
+  const correction: ContextRecords = {
+    ...RECORDS,
+    memories: [
+      { id: "m-old", scope: "member", memberId: "asmi", category: "preference", key: "pref.asmi.mushroom", value: { statement: "Asmi doesn't like mushrooms", subject: "Asmi", object: "mushrooms", stance: "dislikes" }, status: "learned", confidence: 0.88, sourceType: "conversation", createdAt: "2026-09-10T00:00:00Z", updatedAt: "2026-09-10T00:00:00Z" },
+      { id: "m-new", scope: "member", memberId: "asmi", category: "preference", key: "pref.asmi.mushroom", value: { statement: "Asmi is okay with mushrooms", subject: "Asmi", object: "mushrooms", stance: "okay_with" }, status: "learned", confidence: 0.88, sourceType: "conversation", createdAt: "2026-09-22T00:00:00Z", updatedAt: "2026-09-22T00:00:00Z" },
+    ],
+    beliefs: [
+      { id: "b-bedtime", category: "home_routines", claim: "The children are in bed by 9pm on school nights.", scope: "household", memberId: null, sourceType: "setup", sourceDetail: "added by Kunal Mehta", status: "confirmed", createdAt: "2026-09-20T00:00:00Z", reviewedAt: "2026-09-20T00:00:00Z" },
+    ],
+  };
+  const items = itemsFor({ memberId: "kunal" }, correction);
+
+  it("answers from the correction, never the belief it replaced", () => {
+    const { text } = ask("Does Asmi like mushrooms?", { items });
+    expect(text).toContain("Asmi is okay with mushrooms");
+    expect(text).not.toContain("doesn't like mushrooms");
+    expect(items.find((item) => item.entityId === "m-old")?.freshness).toBe("superseded");
+  });
+
+  it("keeps a child's preference in the child's privacy class", () => {
+    expect(items.find((item) => item.entityId === "m-new")?.privacyClass).toBe("child");
+  });
+
+  it("answers from a Review belief the question paraphrases, with no model", () => {
+    const { reading, relevant } = ask("When do the children go to bed?", { items });
+    expect(composeFromFacts(relevant, reading)).toContain("The children are in bed by 9pm on school nights (confirmed).");
+  });
+
+  it("reads what the household confirmed in HomeBrain Review, and says where it came from", () => {
+    const { text } = ask("When do the children go to bed?", { items });
+    expect(text).toContain("The children are in bed by 9pm on school nights (confirmed).");
+    const why = readWhyQuestion("Where did that come from?")!;
+    const answer = explain({ ...why, items, viewerMemberId: "kunal", timezone: TZ, now: NOW, lastAssistantText: "The children are in bed by 9pm on school nights.", lastAction: null, clarifying: null });
+    expect(answer.text).toContain("Something the household told WonderHome in HomeBrain Review, and confirmed.");
+  });
+});

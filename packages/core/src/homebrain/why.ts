@@ -164,6 +164,9 @@ const NOT_EVIDENCE = new Set(["household", "member", "pet", "state"]);
 function whereFrom(input: WhyInput): WhyAnswer {
   const said = input.lastAssistantText ?? "";
   let candidates = said ? mentionedItems(said, input.items).filter((item) => !NOT_EVIDENCE.has(item.entityType) && isUsable(item)) : [];
+  // A reply that paraphrased a fact names none of its aliases exactly; the
+  // fact whose own words it mostly repeats is the one it came from.
+  if (candidates.length === 0 && said) candidates = paraphrased(said, input.items);
 
   let person: { memberId: string; displayName: string } | null = null;
   if (input.topic === "why_person" && input.subject) {
@@ -194,6 +197,26 @@ function whereFrom(input: WhyInput): WhyAnswer {
     return `- ${item.summary.replace(/\.$/, "")}. ${explainProvenance(item, input.timezone)}${who}`;
   });
   return { text: `Here is where that comes from:\n${lines.join("\n")}`, evidenceIds: candidates.slice(0, 3).map((item) => item.id) };
+}
+
+const STOP_WORDS = new Set(["the", "a", "an", "is", "are", "was", "on", "in", "at", "by", "for", "to", "of", "and", "or", "with", "it", "its", "this", "that", "has", "have", "be"]);
+
+function contentWords(text: string): string[] {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((word) => word.length > 1 && !STOP_WORDS.has(word));
+}
+
+function paraphrased(said: string, items: readonly HouseholdContextItem[]): HouseholdContextItem[] {
+  const spoken = new Set(contentWords(said));
+  return items
+    .filter((item) => !NOT_EVIDENCE.has(item.entityType) && isUsable(item))
+    .map((item) => {
+      const words = contentWords(item.summary);
+      const shared = words.filter((word) => spoken.has(word)).length;
+      return { item, overlap: words.length > 0 ? shared / words.length : 0, shared };
+    })
+    .filter((entry) => entry.shared >= 3 && entry.overlap >= 0.6)
+    .sort((a, b) => b.overlap - a.overlap)
+    .map((entry) => entry.item);
 }
 
 function latestSentBy(input: WhyInput): HouseholdContextItem | null {

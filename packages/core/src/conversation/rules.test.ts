@@ -327,3 +327,21 @@ describe("'why?' questions (HomeBrain 2.0, Wave 2 §10)", () => {
     expect(read("Add milk to the list").action).not.toBe("ask_status");
   });
 });
+
+describe("a person's stance on a thing (Wave 2 §8)", () => {
+  it("reads the spec's own example as one belief, corrected", () => {
+    const first = read("Asmi doesn't like mushrooms");
+    const later = read("Actually Asmi is okay with mushrooms now");
+    expect(first.action).toBe("set_preference");
+    expect(later.action).toBe("set_preference");
+    expect(first.target.reference).toBe("pref.asmi.mushroom");
+    expect(later.target.reference).toBe(first.target.reference);
+    expect(first.parameters.corrects).toBeUndefined();
+    expect(later.parameters.corrects).toBe(true);
+  });
+
+  it("does not take requests or questions for preferences", () => {
+    expect(read("Add mushrooms to the list").action).toBe("add_to_list");
+    expect(read("What does Asmi like?").action).not.toBe("set_preference");
+  });
+});

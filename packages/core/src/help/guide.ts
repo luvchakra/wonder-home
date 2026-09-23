@@ -170,12 +170,12 @@ export const GUIDE: GuideSection[] = [
   },
   {
     id: "certification",
-    title: "HomeBrain review: what WonderHome believes",
+    title: "HomeBrain Review: what WonderHome believes",
     summary: "Everything it thinks it knows, with where each belief came from.",
     group: "Privacy and trust",
     keywords: ["belief review", "certification", "understanding", "belief", "correct", "source", "confidence", "wrong"],
     body: [
-      "HomeBrain review shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or a provider said so.",
+      "HomeBrain Review shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or a provider said so.",
       "Anything it has wrong, you can correct. The percentage is confirmed beliefs over live ones: arithmetic you can check, not a model's opinion of itself.",
     ],
   },
