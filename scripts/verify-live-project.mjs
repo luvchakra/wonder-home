@@ -107,6 +107,8 @@ const SHIPPED_COLUMNS = [
   { table: "agent_runs", column: "contracts" },
   { table: "household_members", column: "nickname" },
   { table: "household_members", column: "avatar_path" },
+  { table: "household_members", column: "gender" },
+  { table: "pets", column: "gender" },
   { table: "notification_preferences", column: "target" },
   { table: "recipes", column: "calories_per_serving" },
   { table: "households", column: "key_member_id" },

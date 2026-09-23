@@ -23,12 +23,22 @@ export const PET_CARE_KINDS = [
 ] as const;
 export type PetCareKind = (typeof PET_CARE_KINDS)[number];
 
+/**
+ * The answers a household is offered for a pet's gender. Offered, not
+ * enforced: `pets.gender` is open text and the picker always lets another
+ * answer be written in (CLAUDE.md rule 20). Spayed/neutered sit in the list
+ * because a vet, a groomer or a sitter asks, and it is the same question.
+ */
+export const PET_GENDER_OPTIONS = ["Female", "Male", "Female (spayed)", "Male (neutered)", "Not sure"] as const;
+
 export type Pet = {
   id: string;
   name: string;
   species: string;
   /** The rest are only populated where a caller asks for the full profile (`listPets`) — `pet_care_needs`' own embed stays narrow. */
   dateOfBirth?: string | null;
+  /** How the household describes their gender, if it records it — open text, like a member's. */
+  gender?: string | null;
   vetName?: string | null;
   vetContact?: string | null;
   notes?: string | null;

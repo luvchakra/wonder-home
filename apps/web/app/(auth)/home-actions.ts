@@ -8,6 +8,7 @@ import { ASSET_CATEGORIES } from "@wonderhome/core/home/assets";
 import { createAsset, createPet, createServiceRequest, setPetActive, updatePet } from "@wonderhome/core/home/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
+import { GENDER_MAX_LENGTH } from "@wonderhome/core/identity/member-details";
 
 import type { ActionState } from "./actions";
 
@@ -113,6 +114,7 @@ const petSchema = z.object({
   name: z.string().trim().min(1, { error: "Give them a name." }).max(60),
   species: z.string().trim().min(1, { error: "What kind of pet?" }).max(40),
   dateOfBirth: z.union([isoDate, z.literal("")]).optional(),
+  gender: z.string().trim().max(GENDER_MAX_LENGTH, { error: "Keep gender under 40 characters." }).optional(),
   vetName: z.string().trim().max(120).optional(),
   vetContact: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(500).optional(),
@@ -124,6 +126,7 @@ export async function createPetAction(_previous: ActionState, formData: FormData
     name: formData.get("name"),
     species: formData.get("species"),
     dateOfBirth: formData.get("dateOfBirth") || undefined,
+    gender: formData.get("gender") || undefined,
     vetName: formData.get("vetName") || undefined,
     vetContact: formData.get("vetContact") || undefined,
     notes: formData.get("notes") || undefined,
@@ -141,6 +144,7 @@ export async function createPetAction(_previous: ActionState, formData: FormData
       name: parsed.data.name,
       species: parsed.data.species,
       dateOfBirth: parsed.data.dateOfBirth || null,
+      gender: parsed.data.gender || null,
       vetName: parsed.data.vetName || null,
       vetContact: parsed.data.vetContact || null,
       notes: parsed.data.notes || null,
@@ -164,6 +168,7 @@ export async function updatePetAction(_previous: ActionState, formData: FormData
     name: formData.get("name"),
     species: formData.get("species"),
     dateOfBirth: formData.get("dateOfBirth") || undefined,
+    gender: formData.get("gender") || undefined,
     vetName: formData.get("vetName") || undefined,
     vetContact: formData.get("vetContact") || undefined,
     notes: formData.get("notes") || undefined,
@@ -180,6 +185,7 @@ export async function updatePetAction(_previous: ActionState, formData: FormData
       name: parsed.data.name,
       species: parsed.data.species,
       dateOfBirth: parsed.data.dateOfBirth || null,
+      gender: parsed.data.gender || null,
       vetName: parsed.data.vetName || null,
       vetContact: parsed.data.vetContact || null,
       notes: parsed.data.notes || null,

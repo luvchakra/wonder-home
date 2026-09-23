@@ -38,6 +38,7 @@ export function PetDetail({
         <Fact label="Species" value={pet.species} />
         <Fact label="Age" value={age} />
         <Fact label="Date of birth" value={born} />
+        <Fact label="Gender" value={pet.gender ?? null} />
         <Fact label="Vet" value={vet ?? null} />
         <Fact label="Notes" value={pet.notes ?? null} />
         <Fact label="Status" value={pet.active === false ? "Retired" : null} />
@@ -51,6 +52,7 @@ export function PetDetail({
               name: pet.name,
               species: pet.species,
               dateOfBirth: pet.dateOfBirth ?? null,
+              gender: pet.gender ?? null,
               vetName: pet.vetName ?? null,
               vetContact: pet.vetContact ?? null,
               notes: pet.notes ?? null,

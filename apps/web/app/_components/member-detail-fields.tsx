@@ -1,7 +1,8 @@
 "use client";
 
-import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { GENDER_OPTIONS, MEMBER_NOTES_MAX_LENGTH } from "@wonderhome/core/identity/member-details";
+
+import { GenderField } from "./gender-field";
 
 /**
  * A member's gender and notes — shared by "Add a helper" and the profile
@@ -10,20 +11,9 @@ import { GENDER_OPTIONS, MEMBER_NOTES_MAX_LENGTH } from "@wonderhome/core/identi
  * (rule 20); notes are free text, which is what they are for.
  */
 export function MemberDetailFields({ gender, notes }: { gender?: string | null; notes?: string | null }) {
-  const options: string[] = [...GENDER_OPTIONS];
-  if (gender && !options.includes(gender)) options.push(gender);
-
   return (
     <>
-      <ComboboxField
-        label="Gender (optional)"
-        name="gender"
-        options={options}
-        defaultValue={gender ?? undefined}
-        emptyLabel="Not recorded"
-        addNewLabel="Describe another way…"
-        newValuePlaceholder="In their own words"
-      />
+      <GenderField options={GENDER_OPTIONS} value={gender} />
       <div className="space-y-1.5">
         <label htmlFor="member-notes" className="block text-sm font-medium">
           Notes (optional)
