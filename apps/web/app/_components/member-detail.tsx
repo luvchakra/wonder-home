@@ -66,11 +66,18 @@ export function MemberDetail({
         <Fact label="Family calls me" value={member.relationship} />
         <Fact label="Age" value={age} />
         <Fact label="Date of birth" value={born} />
+        <Fact label="Gender" value={member.gender} />
         <Fact label="Occupation" value={member.occupation} />
         <Fact label="School / work" value={member.schoolOrWorkLocation} />
         <Fact label="Special occasion" value={occasion} />
         <Fact label="Siblings" value={siblings} />
       </dl>
+      {member.notes ? (
+        <div>
+          <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Notes</p>
+          <p className="text-sm whitespace-pre-line">{member.notes}</p>
+        </div>
+      ) : null}
       {editable ? (
         <div className="flex flex-wrap items-center gap-2">
           <MemberProfileForm
@@ -85,6 +92,8 @@ export function MemberDetail({
               schoolOrWorkLocation: member.schoolOrWorkLocation,
               specialOccasionLabel: member.specialOccasionLabel,
               specialOccasionDate: member.specialOccasionDate,
+              gender: member.gender,
+              notes: member.notes,
             }}
           />
           {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (

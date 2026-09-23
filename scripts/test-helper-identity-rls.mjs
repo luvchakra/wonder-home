@@ -21,7 +21,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_helper_identity_test";
@@ -186,6 +186,41 @@ test("a helper cannot set another member's availability", () => {
       options,
     ),
     "a helper could set another member's availability",
+  );
+});
+
+test("an Admin can record a helper's gender and notes", () => {
+  asProfile(
+    HEAD,
+    `update public.household_members set gender = 'Female', notes = 'Speaks Bengali and Hindi.' where id = '${helperMember}';`,
+    options,
+  );
+  assert.equal(
+    psql(`select gender || '|' || notes from public.household_members where id = '${helperMember}';`, options),
+    "Female|Speaks Bengali and Hindi.",
+  );
+});
+
+test("a helper can change their own notes, but not another adult", () => {
+  asProfile(HELPER, `update public.household_members set notes = 'Prefers mornings.' where id = '${helperMember}';`, options);
+  assert.equal(psql(`select notes from public.household_members where id = '${helperMember}';`, options), "Prefers mornings.");
+  assert.ok(
+    deniedForUpdate(
+      OTHER_ADULT,
+      `update public.household_members set notes = 'Changed by someone else.' where id = '${helperMember}';`,
+      `select notes from public.household_members where id = '${helperMember}';`,
+      "Prefers mornings.",
+      options,
+    ),
+  );
+});
+
+test("gender and notes are held to their lengths", () => {
+  assert.ok(
+    deniedForProfile(HEAD, `update public.household_members set gender = repeat('x', 41) where id = '${helperMember}';`, options),
+  );
+  assert.ok(
+    deniedForProfile(HEAD, `update public.household_members set notes = repeat('x', 501) where id = '${helperMember}';`, options),
   );
 });
 

@@ -9,6 +9,7 @@ import { Field } from "@wonderhome/core/ui/field";
 
 import type { ActionState } from "../(auth)/actions";
 import { addHelperAction } from "../(auth)/household-actions";
+import { MemberDetailFields } from "./member-detail-fields";
 
 /** The other accountless member — same shape as `AddChildForm`, for a househelper. */
 export function AddHelperForm({ householdId }: { householdId: string }) {
@@ -30,6 +31,7 @@ export function AddHelperForm({ householdId }: { householdId: string }) {
 
         <input type="hidden" name="householdId" value={householdId} />
         <Field label="Their name" name="displayName" required autoComplete="off" />
+        <MemberDetailFields />
 
         <Button type="submit" disabled={pending}>
           {pending ? "Adding…" : "Add helper"}

@@ -264,6 +264,12 @@ async function recordAmountImpl(
     currency: string;
     /** When the household actually paid it — distinct from the period it covers. */
     paidOn?: string | null;
+    /** Who it was paid to, when the household says; null falls back to the bill's payee. */
+    payee?: string | null;
+    /** What kind of payment it was, in the household's words; null falls back to the bill's kind. */
+    kind?: string | null;
+    /** Whose payment it was to make; null falls back to the bill's responsible member. */
+    ownerMemberId?: string | null;
   },
 ): Promise<{ anomaly: boolean }> {
   const { error } = await supabase.from("obligation_history").upsert(
@@ -274,6 +280,9 @@ async function recordAmountImpl(
       amount_minor: input.amountMinor,
       currency: input.currency,
       paid_on: input.paidOn ?? null,
+      payee: input.payee ?? null,
+      kind: input.kind ?? null,
+      owner_member_id: input.ownerMemberId ?? null,
     },
     { onConflict: "obligation_id,period_label" },
   );

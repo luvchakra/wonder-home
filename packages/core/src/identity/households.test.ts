@@ -15,6 +15,8 @@ function member(over: Partial<HouseholdMember> & Pick<HouseholdMember, "id" | "d
     schoolOrWorkLocation: null,
     specialOccasionLabel: null,
     specialOccasionDate: null,
+    gender: null,
+    notes: null,
     avatarUrl: null,
     ...over,
   };

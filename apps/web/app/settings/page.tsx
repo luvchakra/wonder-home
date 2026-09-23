@@ -112,6 +112,8 @@ export default async function SettingsPage() {
                   schoolOrWorkLocation: me.schoolOrWorkLocation,
                   specialOccasionLabel: me.specialOccasionLabel,
                   specialOccasionDate: me.specialOccasionDate,
+                  gender: me.gender,
+                  notes: me.notes,
                 }}
               />
             ) : (

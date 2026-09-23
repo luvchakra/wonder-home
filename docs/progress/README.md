@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-23 | [Transaction payee/kind/owner, helper gender and notes](2026-09-23-transaction-details-and-helper-gender-notes.md) |
 | 2026-09-23 | [Household context & grounding engine — Wave 1 (story 14-009)](2026-09-23-household-context-engine-wave1.md) |
 | 2026-09-23 | [Story 21-008: fitness & connected-health scaffolding](2026-09-23-fitness-and-connected-health-scaffolding.md) |
 | 2026-09-22 | [Home: greeting header, Today's focus and Family moment per mockup](2026-09-22-home-page-mockup-refresh.md) |
