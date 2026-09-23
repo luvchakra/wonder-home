@@ -14,14 +14,15 @@ import { WebhookSignatureError } from "./stripe";
  * delivery that fails verification changes nothing and says nothing about
  * why beyond "rejected".
  *
- * Unconfigured, it answers 404 — the same thing any caller sees for an
- * endpoint that does not exist here.
+ * Unconfigured and a bad signature both refuse with the exact same 401, in
+ * the standard envelope every other guarded route uses (the same choice the
+ * email webhook makes), so neither is distinguishable from outside.
  */
 export async function handleBillingWebhook(
   request: Request,
   deps: { provider: BillingProvider | null; admin: () => SupabaseClient; now?: Date },
 ): Promise<Response> {
-  if (!deps.provider?.live) return json(404, { error: "not_found" });
+  if (!deps.provider?.live) return unauthenticated();
 
   const rawBody = await request.text();
   let event;
@@ -30,7 +31,7 @@ export async function handleBillingWebhook(
   } catch (thrown) {
     if (thrown instanceof WebhookSignatureError) {
       log.warn("billing webhook rejected", { provider: deps.provider.name });
-      return json(400, { error: "rejected" });
+      return unauthenticated();
     }
     // Unparseable after a valid signature: the provider's problem to resend.
     log.warn("billing webhook unreadable", { provider: deps.provider.name, reason: thrown instanceof Error ? thrown.name : "unknown" });
@@ -41,6 +42,13 @@ export async function handleBillingWebhook(
 
   const result = await recordBillingEvent(deps.admin(), deps.provider.name, event);
   return json(200, { received: true, acted: result.recorded && result.applied, duplicate: !result.recorded });
+}
+
+function unauthenticated(): Response {
+  return new Response(
+    JSON.stringify({ error: { code: "unauthenticated", message: "Authentication required.", requestId: "billing-webhook" } }),
+    { status: 401, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } },
+  );
 }
 
 function json(status: number, body: unknown): Response {

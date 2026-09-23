@@ -50,8 +50,12 @@ without inventing a live provider.
     audits `subscription.changed` with `source: "billing"`, and records a
     closed-word outcome.
 - **Webhook**: `POST /api/v1/billing/webhook` via `billing/webhook.ts`.
-  - 404 when unconfigured.
-  - 400 for a rejected signature or an unreadable body, with nothing changed.
+  - 401, in the standard envelope, both when unconfigured and for a
+    rejected signature, so the two cannot be told apart from outside. This
+    is the same choice the email webhook makes, and CI's e2e check that
+    every guarded route refuses an anonymous POST caught the first version,
+    which answered 404.
+  - 400 for a verified body that cannot be read, with nothing changed.
   - 200 otherwise, reporting whether the event was acted on or a duplicate.
 - **Plan change.**
   - The plan route's preview now says `checkout` or `unavailable` for a paid
@@ -81,7 +85,7 @@ without inventing a live provider.
 - Unit tests: 2518/2518. New: the reducer (8), Stripe (12: signature
   accept/tamper/wrong-secret/replay, event mapping including both metadata
   locations, one Idempotency-Key across retries, unsold plans, env gating)
-  and the webhook (4: unconfigured 404, rejected signature changes nothing,
+  and the webhook (4: unconfigured 401, rejected signature 401 and changes nothing,
   apply then duplicate, unknown event ignored).
 - `test:db`: 461/461, including 4 new billing tests in the entitlements
   suite:

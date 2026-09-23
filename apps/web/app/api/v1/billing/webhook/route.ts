@@ -9,7 +9,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
  * Real only once a deployment sets `WONDERHOME_BILLING_PROVIDER`, the
  * provider's secret and webhook secret, and a price for each plan it sells —
  * an account and a pricing decision are a person's errand, not something this
- * code can make up. Unconfigured, it is a 404.
+ * code can make up. Unconfigured, it refuses with the same 401 as a bad signature.
  */
 export async function POST(request: Request): Promise<Response> {
   return handleBillingWebhook(request, { provider: billingProviderFromEnv(), admin: createAdminClient });

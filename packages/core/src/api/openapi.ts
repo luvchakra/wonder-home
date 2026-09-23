@@ -1435,8 +1435,8 @@ export function buildOpenApiDocument(): Json {
             "The configured billing provider's webhook, not a household session: believed only after its signature verifies over the raw body (Stripe: HMAC-SHA256, five-minute tolerance). Each provider event is recorded once by its own id, and only `applyBillingEvent` moves a subscription — never a household's records. 404 when no billing provider is configured. Live only once WONDERHOME_BILLING_PROVIDER, the provider's secret and webhook secret, and a price per sold plan are set.",
           responses: {
             "200": { description: "Acknowledged — applied, a duplicate delivery, or an event this endpoint does not act on" },
-            "400": { description: "Signature rejected or body unreadable; nothing changed" },
-            "404": { description: "No billing provider is configured" },
+            "400": { description: "A verified body that could not be read; nothing changed" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
           },
         },
       },

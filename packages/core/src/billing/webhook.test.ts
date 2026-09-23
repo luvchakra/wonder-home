@@ -63,15 +63,17 @@ const post = async (body: string, signature?: string) =>
   new Request("https://app.example/api/v1/billing/webhook", { method: "POST", body, headers: { "stripe-signature": signature ?? (await sign(body)) } });
 
 describe("the billing webhook", () => {
-  it("is a 404 when no billing provider is configured", async () => {
+  it("refuses in the standard 401 envelope when no billing provider is configured", async () => {
     const response = await handleBillingWebhook(await post(activation), { provider: null, admin: () => fakeAdmin().client, now: NOW });
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(401);
+    expect((await response.json()).error.code).toBe("unauthenticated");
   });
 
   it("rejects a delivery whose signature does not verify, and changes nothing", async () => {
     const admin = fakeAdmin();
     const response = await handleBillingWebhook(await post(activation, "t=1,v1=deadbeef"), { provider, admin: () => admin.client, now: NOW });
-    expect(response.status).toBe(400);
+    // The same refusal as an unconfigured endpoint: nothing to tell apart from outside.
+    expect(response.status).toBe(401);
     expect(admin.writes).toEqual([]);
   });
 
