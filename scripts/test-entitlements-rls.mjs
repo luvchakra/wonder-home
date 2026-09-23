@@ -447,3 +447,58 @@ test("billing events are the server's to write, once each, and an Admin's to rea
   assert.equal(asProfile(ADULT, `select count(*) from public.billing_events;`, options), "0");
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.billing_events;`, options), "0");
 });
+
+test("a plan's burst and fair-use policy is platform data a household can neither set nor read the history of", () => {
+  asProfile(
+    HEAD,
+    `update public.plan_features set burst_limit = 1000, burst_window_seconds = 60, fair_use_limit = null where plan_key = 'free';`,
+    options,
+  );
+  assert.equal(
+    psql(`select count(*) from public.plan_features where burst_limit is not null or fair_use_limit is not null;`, options),
+    "0",
+    "a household set its own plan's policy",
+  );
+
+  psql(
+    `insert into public.plan_policy_events (plan_key, feature_key, reason_code, before, after)
+     values ('free', 'conversation.text', 'cost_control', '{}', '{"fairUseLimit": 400}');`,
+    options,
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.plan_policy_events;`, options), "0");
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.plan_policy_events (plan_key, feature_key, reason_code, before, after)
+       values ('free', 'conversation.text', 'cost_control', '{}', '{}');`,
+      options,
+    ),
+    "a household wrote its own policy history",
+  );
+});
+
+test("the database refuses an incoherent policy, whoever writes it", () => {
+  const set = (assignments) =>
+    psql(`update public.plan_features set ${assignments} where plan_key = 'free' and feature_key = 'ai.agent_runs';`, options);
+
+  assert.throws(() => set(`burst_limit = 5, burst_window_seconds = null`), /plan_features_burst_is_whole/);
+  assert.throws(() => set(`burst_limit = 5, burst_window_seconds = 5`), /plan_features_burst_positive/);
+  assert.throws(() => set(`fair_use_limit = 0`), /plan_features_fair_use_positive/);
+  assert.throws(() => set(`fair_use_limit = limit_per_period + 1`), /plan_features_fair_use_within_limit/);
+
+  set(`burst_limit = 5, burst_window_seconds = 60, fair_use_limit = limit_per_period`);
+  assert.equal(
+    psql(`select burst_limit || '/' || burst_window_seconds from public.plan_features where plan_key = 'free' and feature_key = 'ai.agent_runs';`, options),
+    "5/60",
+  );
+  set(`burst_limit = null, burst_window_seconds = null, fair_use_limit = null`);
+});
+
+test("a burst policy is counted in the same fixed-window counters as every rate limit", () => {
+  const hit = () =>
+    psql(`select public.rate_limit_hit('plan.burst.conversation.text', '${household}', 60, 2);`, options);
+  assert.equal(hit(), "t");
+  assert.equal(hit(), "t");
+  assert.equal(hit(), "f", "a third use inside a burst of two was allowed");
+  psql(`delete from public.rate_limit_counters where bucket = 'plan.burst.conversation.text';`, options);
+});

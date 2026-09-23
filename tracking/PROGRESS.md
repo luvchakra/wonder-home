@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 195 |
-| Done | 187 |
+| Done | 188 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 7 |
-| Completion | 95.9% |
-| Current module | 17 External Integrations |
-| Current story | — (17-006 Done; 04-017 waits on a person; next: 20-007) |
+| Not Started | 6 |
+| Completion | 96.4% |
+| Current module | 20 Subscriptions, Entitlements & Usage |
+| Current story | — (20-007 Done; 04-017 waits on a person; next: 20-008) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -44,7 +44,7 @@ disagree again.)
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 7 | In Progress |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
-| 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 6 | In Progress |
+| 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 7 | In Progress |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
 
 ## Execution Log
@@ -230,3 +230,4 @@ disagree again.)
 | 2026-09-24 | 20 | 20-006 | Done | 2518 unit (billing reducer 8, Stripe 12, webhook 4), entitlements database suite 17 (4 new billing RLS), eval 46/46 with 0/14 unsafe, verify:live 163/163, browser QA at 360px and desktop, live API refusal of an unpaid paid-plan change | Provider-neutral billing: `billing/provider.ts` (port, canonical events, pure `applyBillingEvent`: out-of-order and other-subscription events ignored, failed payment keeps the plan past-due, cancellation falls back to free and never deletes), `billing/stripe.ts` (code-complete, inert: intent id as Idempotency-Key, HMAC-SHA256 webhook verification with a 5-minute window), `billing/checkout.ts` (idempotent `startCheckout`, apply-once `recordBillingEvent`), `POST /api/v1/billing/webhook` (401 unconfigured or bad signature), plan route/PlanForm send paid plans to a checkout. Migration `20260927120000` (applied live): `plans.requires_payment` (off for every plan) enforced in RLS, `billing_intents` (one open per household+plan), `billing_events` (unique per provider event, server-written only). Needs a person: a billing account, prices and the decision to mark plans paid |
 | 2026-09-24 | 08 | 08-009 | Done | 2523 unit (unknown-child resolution 5), eval 47/47 with 0/14 unsafe (new HS-15), browser QA at 360px and desktop with a real Gemini reading | Add a child from a school notice: `homesend/resolve.ts` names the first untitled unmatched person on a school notice as the child it is about (`unknown`) and never assumes a household's only child when the notice named someone else; the review offers "Add <name> as a child" (prefilled) to Admins, adds them the way Family does (guardian = the Admin) and confirms the notice for them in the same step; a non-Admin is told who can |
 | 2026-09-24 | 17 | 17-006 | Done | 2535 unit (WhatsApp adapter, webhook, delivery 12), notifications database suite 17 (2 new), verify:live 164/164, browser QA at 360px and desktop with a configured channel | WhatsApp as a real channel: `notifications/whatsapp.ts` (Cloud API template adapter, E.164 only, closed-word errors, env-gated), `notifications/deliver.ts` wired into `createNotification` so a new due notification also goes to the member's live channels with `sent`/`delivery_failed` events, `POST/GET /api/v1/whatsapp/webhook` (Meta handshake, X-Hub-Signature-256, delivered/seen/failed by provider message id, STOP opt-out honoured and confirmed). Migration `20260927130000` (applied live): the two event words and a provider-message index. Needs a person: a WhatsApp Business account, a verified number and an approved template |
+| 2026-09-24 | 20 | 20-007 | Done | 2549 unit (policies and consume 14), entitlements database suite 20 (3 new: household cannot set or read policies, incoherent policies refused, burst bucket counted), eval 47/47 with 0/14 unsafe, verify:live 168/168, live QA on the real project with Gemini: fair use past 1 answered by the rules with a disclosure, a fifth turn in one minute refused 429, staff PATCH/GET, non-staff 404, Settings at 360px and desktop | Fair-use and burst policies as plan data: `plan_features.burst_limit`/`burst_window_seconds`/`fair_use_limit` (migration `20260927140000`, applied live; every plan starts with none), read only by `consume` — a burst refuses for its fixed window before anything is counted (fails open), a fair-use level is counted even on an unlimited feature and reported as `fairUse`, never refused. HomeTalk now spends its allowance up front with `consume` (falling back to `may`), refuses a burst as temporary, and past fair use answers from the rules with a disclosure (`not_transmitted_fair_use`). `billing/policies.ts` (`policyProblem`, `setFeaturePolicy`, `policyHistory`), `GET/PATCH /api/v1/platform-admin/plans/{planKey}/policies` (`subscription.manage`, reason code, append-only `plan_policy_events`), Settings shows the policies in words |

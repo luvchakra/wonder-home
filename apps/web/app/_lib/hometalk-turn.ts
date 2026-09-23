@@ -6,6 +6,7 @@ import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { minimiseContext, routeToProvider, unpseudonymise, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
+import { FAIR_USE_DISCLOSURE } from "@wonderhome/core/billing/policies";
 import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
@@ -210,8 +211,17 @@ export async function homeTalkTurn(input: {
 
   // Entitlement first, on the server, before anything is read or written.
   const feature = body.channel === "voice" ? "conversation.voice" : "conversation.text";
-  const entitlement = await may(supabase, householdId, feature);
-  if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
+  // Spent here, atomically, rather than checked here and spent later: the
+  // same call answers the allowance, the plan's burst policy and where the
+  // household stands against its fair-use level (story 20-007). A meter
+  // that cannot be reached falls back to the read-only check, so a counter
+  // hiccup never locks a household out of its own home.
+  const entitlement = await consume(supabase, householdId, feature).catch(() => may(supabase, householdId, feature));
+  if (!entitlement.allowed) {
+    if (entitlement.code === "burst_limited") throw new ApiError("rate_limited", entitlement.reason);
+    throw ApiError.forbidden(entitlement.reason);
+  }
+  const overFairUse = entitlement.fairUse === "over";
   // Faster than anyone talks, slower than a script (Wave 5 §15). Counted
   // per member, before anything is read, written or sent anywhere.
   if (!(await hitRateLimit(admin, "hometalk.turn", membership.memberId))) throw new ApiError("rate_limited", rateLimitMessage("hometalk.turn"));
@@ -248,11 +258,11 @@ export async function homeTalkTurn(input: {
     pending: pendingWords(clarifying ? { question: clarifying.question } : pending ? { summary: pending.summary } : null),
     recent: [...new Set(lastFocus.map((entity) => entity.label))].slice(0, 5),
   };
-  const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, moment);
+  const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, moment, overFairUse);
   const startedAt = Date.now();
 
-  // Recording what was said and metering it need nothing from the answer,
-  // so they run alongside it rather than ahead of it.
+  // Recording what was said needs nothing from the answer, so it runs
+  // alongside it rather than ahead of it.
   const memberMessageWrite = recordMessage(admin, {
     householdId,
     sessionId,
@@ -261,7 +271,6 @@ export async function homeTalkTurn(input: {
     transcriptConfidence: body.transcriptConfidence,
     metadata: { channel: body.channel },
   });
-  const metering = consume(supabase, householdId, feature).catch(() => undefined);
 
   // A plain question about the home, or a hello, is read by the rules with
   // certainty; asking a model to confirm it is a round trip that changes
@@ -382,7 +391,6 @@ export async function homeTalkTurn(input: {
     const open = await openProposals(admin, sessionId, new Date(Date.now() - PROPOSAL_TTL_MINUTES * 60_000)).catch(() => []);
     if (open.length > 1) {
       const memberMessageId = await memberMessageWrite;
-      await metering;
       if (!allOfThem) {
         const list = open.map((entry) => `"${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}"`);
         const text = `${open.length === 2 ? "Two" : String(open.length)} things are waiting for your answer: ${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}. Use the buttons on the one you mean, or say "${shortReply === "decline" ? "no" : "yes"} to ${open.length === 2 ? "both" : "all"}".`;
@@ -419,7 +427,6 @@ export async function homeTalkTurn(input: {
   // is never the premise for the next.
   if (parts.length > 1) {
     const memberMessageId = await memberMessageWrite;
-    await metering;
     const replies: { id: string; text: string; action: ConversationAction | null; preview: ReturnType<typeof previewOf>; proposal: string; mode: BrainMode }[] = [];
     const earlier: { part: string; outcome: PartOutcome }[] = [];
     const written: FocusEntity[] = [];
@@ -703,8 +710,6 @@ export async function homeTalkTurn(input: {
   if (hedge) text = `${hedge} ${text}`;
 
   const memberMessageId = await memberMessageWrite;
-  await metering;
-
   // The question left open for the next turn: the engine's own, unless
   // HomeBrain answered instead; and one asked earlier stays open while the
   // member asks why it was asked.
@@ -1073,6 +1078,8 @@ async function decideProviderRouting(
   history: readonly ConversationTurn[],
   people: Person[],
   moment?: { role: string; localDateTime: string; pending: string | null; recent: string[] },
+  /** Past the plan's fair-use level (story 20-007): answered by the rules, with a disclosure. */
+  overFairUse = false,
 ): Promise<{
   code: string;
   itemsSent: number;
@@ -1118,6 +1125,12 @@ async function decideProviderRouting(
 
   if (!decision.ok) {
     return { code: decision.code, itemsSent: 0, disclosure: [decision.reason], policy };
+  }
+
+  // Past the plan's fair-use level the household is served more simply, never
+  // refused (story 20-007): the rules answer, and the household is told so.
+  if (overFairUse) {
+    return { code: "not_transmitted_fair_use", itemsSent: 0, disclosure: [FAIR_USE_DISCLOSURE], policy };
   }
 
   // Model calls are budgeted per household (Wave 5 §15). Past the budget the

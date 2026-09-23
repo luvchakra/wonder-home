@@ -422,6 +422,14 @@ Production hardening (Wave 5 §14–§17):
   `public.rate_limit_hit`. It fails open, because it throttles abuse and is
   not an authorization gate. Its refusal says the pause is temporary and
   that nothing was lost.
+- **Plan policies.** A burst limit and a fair-use level are plan data on
+  `plan_features` (story 20-007), read only by `billing/repository.ts`'s
+  `consume`. A burst refuses for its fixed window, and the refusal says so.
+  Past a fair-use level nothing is refused: the household is served more
+  simply, and HomeTalk answers from the rules with a disclosure. Staff
+  change them through `PATCH /platform-admin/plans/{planKey}/policies`, and
+  every change is kept in `plan_policy_events`. A domain module never
+  hard-codes a number of its own.
 - **Timeouts.** Every model client comes from `ai/provider-clients.ts`, with
   a timeout and a single retry. Never construct an SDK client elsewhere.
 - **Forwarded email.** Each delivery leaves closed-word events in

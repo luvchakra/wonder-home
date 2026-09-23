@@ -24,6 +24,7 @@ const SHIPPED_TABLES = [
   "billing_intents",
   "billing_events",
   "weather_locations",
+  "plan_policy_events",
   "profiles",
   "households",
   "household_members",
@@ -139,6 +140,9 @@ const SHIPPED_COLUMNS = [
   { table: "weather_locations", column: "forecast_fetched_at" },
   { table: "plans", column: "requires_payment" },
   { table: "household_subscriptions", column: "last_billing_event_at" },
+  { table: "plan_features", column: "burst_limit" },
+  { table: "plan_features", column: "burst_window_seconds" },
+  { table: "plan_features", column: "fair_use_limit" },
 ];
 
 /**

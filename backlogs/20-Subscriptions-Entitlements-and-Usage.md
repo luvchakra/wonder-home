@@ -10,7 +10,7 @@
 | 4 | P0 | 20-004 | Upgrade/downgrade | Done | A change writes one row and never a household record; consequences shown and re-derived before applying; audited |
 | 5 | P1 | 20-005 | Usage UI | Done | Settings shows used/limit per metered feature, from the same counter `consume` enforces against |
 | 6 | P1 | 20-006 | Billing abstraction | Done | Provider-neutral `BillingProvider` port + pure `applyBillingEvent` (out-of-order and other-subscription events ignored, cancellation falls back to free, never deletes); Stripe adapter code-complete and inert (intent id as Idempotency-Key, HMAC-verified webhooks); `billing_intents` (one open per household+plan) and `billing_events` (unique per provider event) with RLS; `plans.requires_payment` keeps paid plans out of reach of any household session |
-| 7 | P2 | 20-007 | Quota automation | Not Started | |
+| 7 | P2 | 20-007 | Quota automation | Done | Burst (N per fixed W-second window) and fair-use (past N in the period, served more simply, never refused) as plan data on `plan_features`, enforced in the one entitlement service (`consume`); HomeTalk answers from the rules past fair use, with a disclosure, and refuses a burst as temporary; staff set policies through `PATCH /platform-admin/plans/{planKey}/policies` (`subscription.manage`, reason code), every change kept in `plan_policy_events` |
 | 8 | P2 | 20-008 | Plan experiments | Not Started | |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`

@@ -94,4 +94,10 @@ a real channel and wires delivery in.
 
 ## Test data cleanup
 
-Recorded after the merge, below.
+Ran after PR #140 merged. The QA household "Channel QA Home"
+(`8b424086-23d9-49c5-83dd-4bd6cd2bcbd2`) was deleted with its one audit row,
+the `verify.live` rate-limit row the probe run left was removed, and the QA
+account `3d7f93f2-7528-4504-8848-e910621d949c` was deleted with
+`node scripts/qa-test-user.mjs delete`. A SQL count afterwards found no
+household, member, audit row, notification preference, profile or auth user
+left. The dev server was stopped. Nothing was left behind.

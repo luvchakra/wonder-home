@@ -493,6 +493,31 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/plans/{planKey}/policies": {
+        parameters: [{ name: "planKey", in: "path", required: true, schema: { type: "string" } }],
+        get: {
+          summary: "A plan's fair-use and burst policies",
+          description:
+            "Every feature of the plan with its allowance, burst policy (at most N uses per fixed W-second window) and fair-use level (past N uses in the period the household is served more simply, never refused), plus the recorded changes to them (story 20-007). Requires `subscription.manage`; a caller who is not staff receives 404 rather than 403.",
+          responses: {
+            "200": { description: "The plan's features with their policies, and the policy change history" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Set one feature's fair-use and burst policy",
+          description:
+            "Sets `burstLimit` with `burstWindowSeconds` (both or neither; the window is 10 seconds to a day) and `fairUseLimit` (never above the feature's own allowance) for one feature of the plan. Null clears a policy. Requires a reason code; the change is kept in the append-only `plan_policy_events` with who made it and the before and after. Touches no household's records and no usage counter. Setting what is already set records nothing. Requires `subscription.manage`.",
+          responses: {
+            "200": { description: "The policy before and after, and whether anything changed" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "422": { description: "The policy is not coherent for this feature, said in words" },
+          },
+        },
+      },
       "/platform-admin/ai-operations": {
         get: {
           summary: "AI operations overview",
