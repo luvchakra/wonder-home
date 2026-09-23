@@ -378,7 +378,9 @@ export function budgetView(input: {
 
 /** Minor units as a household reads them. */
 export function format(minor: number, currency: string): string {
-  const major = (minor / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  // Whole amounts stay whole ("₹500"); anything with paise shows both digits
+  // ("₹3,449.50", never "₹3,449.5") — money is read the way it is written.
+  const major = (minor / 100).toLocaleString("en-IN", { minimumFractionDigits: minor % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
   return currency === "INR" ? `₹${major}` : `${currency} ${major}`;
 }
 

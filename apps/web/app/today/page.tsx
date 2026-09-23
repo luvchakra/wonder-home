@@ -4,10 +4,13 @@ import {
   Clock3,
   GraduationCap,
   ListChecks,
+  ShoppingBasket,
   Utensils,
   Wallet,
 } from "lucide-react";
 
+import { describePredictionBasis, predictHousehold } from "@wonderhome/core/ai/predictions";
+import { listConsumables } from "@wonderhome/core/commerce/repository";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listObligations } from "@wonderhome/core/finance/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
@@ -17,6 +20,7 @@ import { isoDateIn } from "@wonderhome/core/context/format";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { schoolDateValue, schoolTimeWords } from "@wonderhome/core/school/times";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -105,13 +109,14 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
   const seesMoney = view.permissions.includes("finance.view");
   const seesSchool = view.permissions.includes("school.manage") || view.permissions.includes("school.view_own");
 
-  const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR] = await Promise.all([
+  const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR, consumablesR] = await Promise.all([
     settle(listEvents(supabase, householdId, { from: dayStart, to: dayEnd }), []),
     isChild ? ok([]) : settle(listMeals(supabase, householdId, { from: today, to: today }), []),
     seesMoney ? settle(listObligations(supabase, householdId), []) : ok([]),
     seesSchool ? settle(listSchoolItems(supabase, householdId), []) : ok([]),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     isChild ? ok(null) : settle(householdAgenda(supabase, householdId, view), null),
+    isChild ? ok([]) : settle(listConsumables(supabase, householdId), []),
   ]);
 
   const { data: events } = eventsR;
@@ -207,6 +212,19 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
   items.sort((a, b) => a.at.getTime() - b.at.getTime());
   const shown = items.filter((item) => (active === "mine" ? item.mine : active === "family" ? item.family : item.household));
   const householdNeeds = active === "household" && agenda ? agenda.needsYou : [];
+  // Looking ahead (story 14-008): the next two weeks, predicted only from
+  // what this viewer may already see — never a child's view, never a bill
+  // for someone without finance access.
+  const predictions =
+    active === "household" && !isChild
+      ? predictHousehold({
+          consumables: consumablesR.data,
+          obligations,
+          schoolItems,
+          childName: (id) => nameOf(id) ?? "your child",
+          now,
+        })
+      : [];
 
   return (
     <>
@@ -237,6 +255,30 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
             <ul className="divide-y divide-[var(--wh-border)]">
               {householdNeeds.slice(0, 6).map((item) => (
                 <AgendaRow key={item.subjectKey} item={item} />
+              ))}
+            </ul>
+          </Card>
+        </section>
+      ) : null}
+
+      {predictions.length > 0 ? (
+        <section>
+          <SectionHeader title="Looking ahead" />
+          <Card className="p-2">
+            <ul className="divide-y divide-[var(--wh-border)]">
+              {predictions.map((prediction) => (
+                <ActionRow
+                  key={prediction.key}
+                  icon={prediction.domain === "groceries" ? ShoppingBasket : prediction.domain === "bills" ? Wallet : GraduationCap}
+                  tone={prediction.domain === "groceries" ? "meals" : prediction.domain === "bills" ? "money" : "school"}
+                  title={prediction.title}
+                  meta={`${prediction.reason} ${describePredictionBasis(prediction.basis)}.`}
+                  action={
+                    <PillLink href={prediction.href} tone="soft">
+                      {prediction.domain === "groceries" ? "Groceries" : prediction.domain === "bills" ? "Bills" : "School"}
+                    </PillLink>
+                  }
+                />
               ))}
             </ul>
           </Card>

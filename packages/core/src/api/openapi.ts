@@ -488,6 +488,17 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/predictions": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Looking ahead: the next two weeks' risks and opportunities",
+          description:
+            "Read-only predictions from what the caller may already read (story 14-008): three or more things likely to run out within a week of each other (one shop instead of several), two or more unpaid bills due within 5 days (amounts summed only when known and in one currency), and a child's exam in a week with 3 or more other things due. Each names its basis — the household's buying pattern, what it told WonderHome, or dates already set — and where to act. Nothing is written and no model is called.",
+          responses: { "200": { description: "Predictions, soonest first" }, "403": { $ref: "#/components/responses/Forbidden" } },
+        },
+      },
       "/households/{householdId}/members/{memberId}/roles": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
