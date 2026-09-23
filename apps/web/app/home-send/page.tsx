@@ -2,6 +2,7 @@ import { Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { consumableNames } from "@wonderhome/core/commerce/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
@@ -15,7 +16,8 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { HomeSendChannels } from "../_components/home-send-channels";
-import { HomeSendInbox } from "../_components/home-send-inbox";
+import { prepareReview } from "../(auth)/home-send-review";
+import { HomeSendInbox, type PreparedReview } from "../_components/home-send-inbox";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "HomeSend" };
@@ -115,7 +117,22 @@ export default async function HomeSendPage({
   // table every time — never held only in the page that sent it.
   const pending = items.filter((item) => item.status === "received" || item.status === "classified");
   const failed = items.filter((item) => item.status === "failed");
+
+  // Who each waiting item is for, and whether it is already on record —
+  // worked out now, on this member's own client, so opening one shows the
+  // same "I found Asmi's existing Science Exhibition" a fresh send would.
+  const reviews: Record<string, PreparedReview> = {};
+  await Promise.all(
+    pending.slice(0, 10).map(async (item) => {
+      const review = await prepareReview(supabase, membership, item).catch(() => null);
+      if (review && (review.subject || review.reconciliation)) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation };
+    }),
+  );
   const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);
+  // "Also added to Groceries: White T-shirt" — each need by name, so two of
+  // them from one notice can be told apart (and undone) separately.
+  const groceryIds = changes.filter((change) => change.domain === "grocery_item").map((change) => change.entityId);
+  const groceryNames = await consumableNames(supabase, householdId, groceryIds).catch(() => ({}));
 
   return (
     <AppShell {...shell}>
@@ -127,7 +144,7 @@ export default async function HomeSendPage({
 
         {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
 
-        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} failed={failed} history={history} changes={changes} />
+        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} />
 
         <HomeSendChannels
           householdId={householdId}

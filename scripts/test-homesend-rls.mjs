@@ -256,7 +256,7 @@ test("a member cannot record a change attributed to someone else", () => {
   );
 });
 
-test("only one change per intake", () => {
+test("the same record is only recorded once per intake", () => {
   assert.ok(
     deniedForProfile(
       HEAD,
@@ -493,7 +493,8 @@ test("another household cannot see this household's HomeSend address", () => {
 
 // ---------------------------------------------------------------------------
 // Phase 3: a second, different-domain change on the same intake (a bill that
-// also implies a grocery item) — homesend_changes_one_per_intake_domain.
+// also implies a grocery item) — one change per record per intake
+// (homesend_changes_one_per_intake_record, Wave 3 §11).
 // ---------------------------------------------------------------------------
 
 let thirdItemId = "";
@@ -535,19 +536,15 @@ test("a second write to a different domain on the same intake is allowed", () =>
   assert.ok(thirdGroceryChangeId.length > 0);
 });
 
-test("a second write to the *same* domain on that intake is still refused", () => {
-  const anotherObligationId = psql(
-    `insert into public.obligations (household_id, name, kind) values ('${household}', 'Duplicate fee', 'school_fee') returning id;`,
-    options,
-  );
+test("the same record written twice by that intake is still refused", () => {
   assert.ok(
     deniedForProfile(
       HEAD,
       `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
-       values ('${household}', '${thirdItemId}', 'bill', '${anotherObligationId}', '${headMember}');`,
+       select household_id, intake_id, domain, entity_id, created_by_member_id from public.homesend_changes where id = '${thirdGroceryChangeId}';`,
       options,
     ),
-    "a second change was recorded for a domain the intake already has a change for",
+    "the same record was recorded twice for one intake",
   );
 });
 
@@ -824,4 +821,73 @@ test("a share handoff can stage a PDF or a voice note, not only a photo", () => 
     options,
   );
   assert.equal(psql(`select file_content_type from public.homesend_share_handoffs where token = 'tok-pdf-1';`, options), "application/pdf");
+});
+
+// ---------------------------------------------------------------------------
+// Wave 3 §10, §11: a routed item can update or cancel a record already on
+// record (and undo puts back exactly what it replaced), and one notice can
+// write two different grocery needs.
+// ---------------------------------------------------------------------------
+
+function newIntake(text) {
+  return asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+     values ('${household}', '${headMember}', 'pasted_text', '${text}') returning id;`,
+    options,
+  );
+}
+
+test("an existing change row reads as 'created' with nothing it replaced", () => {
+  assert.equal(psql(`select change_type || ':' || coalesce(previous::text, 'null') from public.homesend_changes where id = '${changeId}';`, options), "created:null");
+});
+
+test("an update records what it replaced, and a cancellation too", () => {
+  const moved = newIntake("Science Exhibition moved to 29 September");
+  const exhibition = psql(`insert into public.obligations (household_id, name, kind, due_on) values ('${household}', 'Exhibition fee', 'school_fee', '2026-09-28') returning id;`, options);
+  const updated = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, change_type, previous)
+     values ('${household}', '${moved}', 'bill', '${exhibition}', '${headMember}', 'updated', '{"dueOn": "2026-09-28"}'::jsonb) returning id;`,
+    options,
+  );
+  assert.equal(psql(`select previous->>'dueOn' from public.homesend_changes where id = '${updated}';`, options), "2026-09-28");
+
+  const called = newIntake("Sports Day is cancelled");
+  const cancelled = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, change_type, previous)
+     values ('${household}', '${called}', 'bill', '${exhibition}', '${headMember}', 'cancelled', '{"status": "received"}'::jsonb) returning id;`,
+    options,
+  );
+  assert.ok(cancelled.length > 0);
+});
+
+test("an update or cancellation must say what it replaced, and a creation must not", () => {
+  const intake = newIntake("Fee revised");
+  const record = psql(`insert into public.obligations (household_id, name, kind) values ('${household}', 'Revised fee', 'school_fee') returning id;`, options);
+  const insert = (type, previous) =>
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, change_type, previous)
+     values ('${household}', '${intake}', 'bill', '${record}', '${headMember}', '${type}', ${previous});`;
+  assert.ok(deniedForProfile(HEAD, insert("updated", "null"), options), "an update with nothing it replaced was accepted");
+  assert.ok(deniedForProfile(HEAD, insert("cancelled", "null"), options), "a cancellation with nothing it replaced was accepted");
+  assert.ok(deniedForProfile(HEAD, insert("created", `'{"dueOn": "2026-09-28"}'::jsonb`), options), "a creation claiming to replace something was accepted");
+  assert.ok(deniedForProfile(HEAD, insert("deleted", `'{}'::jsonb`), options), "an unknown change type was accepted");
+});
+
+test("one notice can add two different grocery needs, each undone on its own", () => {
+  const notice = newIntake("Sports Day: bring a white T-shirt and sports shoes");
+  const [shirt, shoes] = ["White T-shirt", "Sports shoes"].map((name) =>
+    psql(`insert into public.consumables (household_id, name, category, unit) values ('${household}', '${name}', 'household', 'unit') returning id;`, options),
+  );
+  const [shirtChange] = [shirt, shoes].map((consumable) =>
+    asProfile(
+      HEAD,
+      `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+       values ('${household}', '${notice}', 'grocery_item', '${consumable}', '${headMember}') returning id;`,
+      options,
+    ),
+  );
+  asProfile(HEAD, `update public.homesend_changes set undone_at = now(), undone_by_member_id = '${headMember}' where id = '${shirtChange}';`, options);
+  assert.equal(psql(`select count(*) from public.homesend_changes where intake_id = '${notice}' and undone_at is null;`, options), "1");
 });

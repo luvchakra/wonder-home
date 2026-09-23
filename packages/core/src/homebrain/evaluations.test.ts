@@ -162,7 +162,7 @@ const SENT: HomeSendItem = {
 } as HomeSendItem;
 
 const CHANGES: HomeSendChange[] = [
-  { id: "chg-1", householdId: HOUSEHOLD, intakeId: "hs-1", domain: "bill", entityId: "b-electricity", createdByMemberId: "kunal", createdAt: "2026-09-22T15:01:00Z", undoneAt: null, undoneByMemberId: null },
+  { id: "chg-1", householdId: HOUSEHOLD, intakeId: "hs-1", domain: "bill", entityId: "b-electricity", createdByMemberId: "kunal", createdAt: "2026-09-22T15:01:00Z", undoneAt: null, undoneByMemberId: null, changeType: "created", previous: null },
 ];
 
 const SPORTS_NOTE: SchoolCommunication = {

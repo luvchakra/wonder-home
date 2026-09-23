@@ -204,6 +204,32 @@ async function cancelSchoolItemImpl(
   if (!data || data.length === 0) throw ApiError.notFound("That is not part of this household.");
 }
 
+/**
+ * Puts a cancelled school item back the way it was — HomeSend's undo of a
+ * cancellation it made (Wave 3 §10). Only ever from `cancelled`, only ever
+ * to a status the item could have had before it.
+ */
+async function restoreSchoolItemImpl(
+  supabase: SupabaseClient,
+  householdId: string,
+  itemId: string,
+  status: "pending" | "in_progress" | "submitted" | "done" | "missed",
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("school_items")
+    .update({ status })
+    .eq("id", itemId)
+    .eq("household_id", householdId)
+    .eq("status", "cancelled")
+    .select("id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only this child's guardians can change this.");
+    throw new Error(`restoreSchoolItem failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.notFound("That is no longer cancelled, or not part of this household.");
+}
+
 export async function listCommunications(
   supabase: SupabaseClient,
   householdId: string,
@@ -383,4 +409,5 @@ export const createSchoolItem = invalidatesContext(createSchoolItemImpl, (_supab
 export const completeSchoolItem = invalidatesContext(completeSchoolItemImpl, () => null);
 export const updateSchoolItem = invalidatesContext(updateSchoolItemImpl, (_supabase, householdId) => householdId);
 export const cancelSchoolItem = invalidatesContext(cancelSchoolItemImpl, (_supabase, householdId) => householdId);
+export const restoreSchoolItem = invalidatesContext(restoreSchoolItemImpl, (_supabase, householdId) => householdId);
 export const applySchoolItemsSyncPlan = invalidatesContext(applySchoolItemsSyncPlanImpl, (_supabase, input) => input.householdId);

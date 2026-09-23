@@ -129,6 +129,10 @@ export type HomeSendAddress = {
   revokedAt: string | null;
 };
 
+/** What routing did to a domain record (Wave 3 §10): made a new one, or updated or cancelled one already on record. */
+export const HOME_SEND_CHANGE_TYPES = ["created", "updated", "cancelled"] as const;
+export type HomeSendChangeType = (typeof HOME_SEND_CHANGE_TYPES)[number];
+
 /** What routing an item actually wrote — the record undo reverses. */
 export type HomeSendChange = {
   id: string;
@@ -140,4 +144,7 @@ export type HomeSendChange = {
   createdAt: string;
   undoneAt: string | null;
   undoneByMemberId: string | null;
+  changeType: HomeSendChangeType;
+  /** For an update or a cancellation: the fields as they were, which undo restores. */
+  previous: Record<string, unknown> | null;
 };

@@ -48,6 +48,22 @@ export const RECORD_TYPE_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
+/** What the review step shows of a reconciliation (`homesend/reconcile.ts`). */
+export type ReviewReconciliation = {
+  verdict: string;
+  message: string;
+  existingId?: string;
+  proposal?: { type: "duplicate" | "update" | "cancellation" | "conflict" };
+};
+
+/** Who it is for (`homesend/resolve.ts`). */
+export type ReviewSubject = {
+  said: string | null;
+  selected: { memberId: string; displayName: string } | null;
+  candidates: { memberId: string; displayName: string }[];
+  question: string | null;
+};
+
 export const selectClass =
   "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
 
@@ -68,6 +84,7 @@ export type HomeSendExtractionFields = {
   documentDate: string | null;
   subjectMemberName: string | null;
   secondary: { reason: string; title: string } | null;
+  needs?: { reason: string; title: string }[];
 } | null;
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -232,6 +249,7 @@ export function HomeSendConfirmStep({
   understanding,
   contentType,
   receivedAt,
+  subject,
 }: {
   item: { id: string };
   defaultKind: string;
@@ -241,22 +259,28 @@ export function HomeSendConfirmStep({
   routeAction: (formData: FormData) => void;
   routeError?: string;
   notice?: string;
-  /** A record this already looks like (Wave 1 §7) — shown, never silently duplicated. */
-  reconciliation?: { verdict: string; message: string } | null;
+  /** A record this already looks like (Wave 1 §7, Wave 3 §10) — shown, never silently duplicated, updated or cancelled. */
+  reconciliation?: ReviewReconciliation | null;
   busy: boolean;
   /** The canonical reading (Wave 3 §8), shown as "What I found". */
   understanding?: IntakeUnderstanding | null;
   contentType?: string | null;
   receivedAt?: string | null;
+  /** Who it is for, resolved through the household's own people (§9). */
+  subject?: ReviewSubject | null;
 }) {
   const [kind, setKind] = useState(defaultKind);
-  const [includeSecondary, setIncludeSecondary] = useState(false);
-  const secondary = kind !== "grocery_item" ? prefill?.secondary : null;
+  const needs = (kind !== "grocery_item" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
+    (need) => typeof need?.title === "string" && need.title.trim() !== "",
+  );
+  const proposal = reconciliation?.proposal?.type ?? (reconciliation ? "duplicate" : null);
+  const primaryLabel = prefill?.title ?? KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "This";
 
   return (
     <form action={routeAction} className="space-y-3">
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="itemId" value={item.id} />
+      {reconciliation?.existingId ? <input type="hidden" name="existingId" value={reconciliation.existingId} /> : null}
       {routeError ? <Alert>{routeError}</Alert> : null}
       {notice ? (
         <Alert tone="info">
@@ -268,16 +292,26 @@ export function HomeSendConfirmStep({
 
       <HomeSendFindings understanding={understanding} contentType={contentType} receivedAt={receivedAt} />
 
+      {needs.length > 0 ? (
+        // "I found 2 things" (§13): the main item plus what else the same
+        // content asked for, each its own decision.
+        <p className="text-sm font-medium">I found {needs.length + 1} things: {[primaryLabel, ...needs.map((need) => need.title)].join(", ")}.</p>
+      ) : null}
+
       {reconciliation ? (
         <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
           <p className="text-sm">
-            <span className="block font-medium">{reconciliation.verdict === "likely_update" || reconciliation.verdict === "contradiction" ? "This may already be on record, with different details" : "This may already be on record"}</span>
+            <span className="block font-medium">
+              {proposal === "update"
+                ? "This looks like an update to something on record"
+                : proposal === "cancellation"
+                  ? "This looks like a cancellation of something on record"
+                  : proposal === "conflict"
+                    ? "This disagrees with something on record"
+                    : "This may already be on record"}
+            </span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">{reconciliation.message}</span>
           </p>
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" name="confirmDuplicate" className="mt-0.5" />
-            <span>It&apos;s a different one — add it anyway</span>
-          </label>
         </div>
       ) : null}
 
@@ -290,34 +324,52 @@ export function HomeSendConfirmStep({
         </select>
       </div>
 
-      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} />
+      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} />
 
-      {secondary ? (
-        <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="includeSecondary"
-              checked={includeSecondary}
-              onChange={(event) => setIncludeSecondary(event.target.checked)}
-              className="mt-0.5"
-            />
-            <span>
-              <span className="block font-medium">Also add to Groceries</span>
-              <span className="block text-xs text-[var(--wh-foreground-subtle)]">{secondary.reason}</span>
-            </span>
-          </label>
-          {includeSecondary ? (
-            <Field label="What is it?" name="secondaryTitle" defaultValue={secondary.title} autoComplete="off" />
-          ) : null}
-        </div>
+      {needs.length > 0 ? (
+        <fieldset className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
+          <legend className="px-1 text-sm font-medium">Also add to Groceries</legend>
+          {needs.map((need) => (
+            <label key={need.title} className="flex items-start gap-2 text-sm">
+              <input type="checkbox" name="need" value={need.title} className="mt-0.5" />
+              <span>
+                <span className="block font-medium">{need.title}</span>
+                <span className="block text-xs text-[var(--wh-foreground-subtle)]">{need.reason}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
       ) : null}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={busy} className="flex-1">
+      {/* One path per decision (rule 14): the proposal decides which buttons there are. */}
+      {proposal === "update" || proposal === "cancellation" ? (
+        <div className="space-y-2">
+          <Button type="submit" name="decision" value={proposal === "update" ? "update" : "cancel"} disabled={busy} className="w-full">
+            {proposal === "update" ? "Update existing" : "Cancel existing"}
+          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="submit" name="decision" value="keep" variant="secondary" disabled={busy}>
+              Keep existing
+            </Button>
+            <Button type="submit" name="confirmDuplicate" value="on" variant="secondary" disabled={busy}>
+              Add as new
+            </Button>
+          </div>
+        </div>
+      ) : proposal ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="submit" name="decision" value="keep" variant="secondary" disabled={busy}>
+            Keep existing
+          </Button>
+          <Button type="submit" name="confirmDuplicate" value="on" disabled={busy}>
+            Add anyway
+          </Button>
+        </div>
+      ) : (
+        <Button type="submit" disabled={busy} className="w-full">
           Add
         </Button>
-      </div>
+      )}
     </form>
   );
 }
@@ -330,11 +382,18 @@ export function HomeSendConfirmFields({
   kind,
   prefill,
   kids,
+  subject = null,
 }: {
   kind: string;
   prefill: HomeSendExtractionFields;
   kids: { id: string; displayName: string }[];
+  subject?: ReviewSubject | null;
 }) {
+  // Who it is for: whoever the content named, resolved through the
+  // household's own people — or, when that is not clear, nobody until the
+  // person chooses (§9: never guess).
+  const schoolDefault = subject?.selected?.memberId ?? (subject?.question ? "" : (kids[0]?.id ?? ""));
+  const healthDefault = subject?.selected && kids.some((kid) => kid.id === subject.selected?.memberId) ? subject.selected.memberId : "";
   return (
     <>
       <Field label="What is it?" name="title" required defaultValue={prefill?.title ?? ""} autoComplete="off" />
@@ -360,8 +419,10 @@ export function HomeSendConfirmFields({
         <>
           <div className="space-y-1.5">
             <label htmlFor="childMemberId" className="block text-sm font-medium">For</label>
-            <select id="childMemberId" name="childMemberId" className={selectClass} defaultValue={kids[0]?.id ?? ""}>
+            {subject?.question ? <p className="text-sm text-[var(--wh-foreground-muted)]">{subject.question}</p> : null}
+            <select id="childMemberId" name="childMemberId" className={selectClass} defaultValue={schoolDefault} required>
               {kids.length === 0 ? <option value="">No children on this household yet</option> : null}
+              {kids.length > 0 && !schoolDefault ? <option value="">Choose who this is for</option> : null}
               {kids.map((kid) => (
                 <option key={kid.id} value={kid.id}>{kid.displayName}</option>
               ))}
@@ -382,7 +443,8 @@ export function HomeSendConfirmFields({
         <>
           <div className="space-y-1.5">
             <label htmlFor="subjectMemberId" className="block text-sm font-medium">Whose record is this?</label>
-            <select id="subjectMemberId" name="subjectMemberId" className={selectClass} defaultValue="">
+            {subject?.question ? <p className="text-sm text-[var(--wh-foreground-muted)]">{subject.question}</p> : null}
+            <select id="subjectMemberId" name="subjectMemberId" className={selectClass} defaultValue={healthDefault}>
               <option value="">Me</option>
               {kids.map((kid) => (
                 <option key={kid.id} value={kid.id}>{kid.displayName}</option>

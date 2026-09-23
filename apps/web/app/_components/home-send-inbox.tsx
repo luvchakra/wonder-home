@@ -26,7 +26,10 @@ import {
   type RouteHomeItemState,
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
-import { describeSource, HomeSendConfirmStep, TranscriptCheck } from "./home-send-intake";
+import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
+
+/** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
+export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null };
 
 const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone; label: string }> = {
   bill: { icon: Wallet, tone: "money", label: "Bill" },
@@ -76,7 +79,8 @@ type OpenItem = {
   classifiedKind: string;
   extracted: HomeSendItem["extracted"];
   understanding?: IntakeUnderstanding | null;
-  reconciliation?: { verdict: string; message: string } | null;
+  reconciliation?: ReviewReconciliation | null;
+  subject?: ReviewSubject | null;
   contentType?: string | null;
   receivedAt?: string | null;
   heard?: { text: string; prompt: string } | null;
@@ -92,6 +96,7 @@ function openFromState(state: SendHomeItemState): OpenItem | null {
     extracted: state.item.extracted,
     understanding: state.item.understanding ?? null,
     reconciliation: state.item.reconciliation ?? null,
+    subject: state.item.subject ?? null,
     receivedAt: new Date().toISOString(),
     heard: state.heard ?? null,
     notice: state.notice ?? null,
@@ -112,13 +117,19 @@ export function HomeSendInbox({
   failed,
   history,
   changes,
+  reviews = {},
+  groceryNames = {},
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
   pending: HomeSendItem[];
   failed: HomeSendItem[];
+  /** Prepared server-side for items already waiting, by item id. */
+  reviews?: Record<string, PreparedReview>;
   history: HomeSendItem[];
   changes: HomeSendChange[];
+  /** Consumable names by id, for the "Also added to Groceries" lines. */
+  groceryNames?: Record<string, string>;
 }) {
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});
   const [pasteState, pasteAction, pasting] = useActionState<SendHomeItemState, FormData>(pasteHomeSendItemAction, {});
@@ -189,6 +200,8 @@ export function HomeSendInbox({
       contentType: item.contentType,
       receivedAt: item.createdAt,
       heard,
+      reconciliation: handFill ? null : (reviews[item.id]?.reconciliation ?? null),
+      subject: handFill ? null : (reviews[item.id]?.subject ?? null),
     });
   }
 
@@ -301,6 +314,7 @@ export function HomeSendInbox({
               understanding={openItem.understanding}
               contentType={openItem.contentType}
               receivedAt={openItem.receivedAt}
+              subject={openItem.subject ?? null}
             />
             <form action={dismissAction}>
               <input type="hidden" name="householdId" value={householdId} />
@@ -391,20 +405,32 @@ export function HomeSendInbox({
                 // still says exactly what was written.
                 const presentation = presentationFor(primaryChange?.domain ?? item.classifiedKind);
                 const canUndoPrimary = Boolean(primaryChange && !primaryChange.undoneAt);
-                const statusLabel = item.status === "dismissed" ? "Dismissed" : primaryChange?.undoneAt ? "Undone" : "Added";
+                const statusLabel =
+                  item.status === "dismissed"
+                    ? "Dismissed"
+                    : primaryChange?.undoneAt
+                      ? "Undone"
+                      : primaryChange?.changeType === "updated"
+                        ? "Updated"
+                        : primaryChange?.changeType === "cancelled"
+                          ? "Cancelled"
+                          : "Added";
                 return (
                   <li key={item.id} className="space-y-1.5 py-2.5">
                     <div className="flex items-center gap-3">
                       <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium break-words">{title}</span>
-                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                          {presentation.label}
+                          {primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? ` · ${statusLabel} the one on record` : ""}
+                        </span>
                       </span>
                       {canUndoPrimary ? (
                         <form action={undoAction}>
                           <input type="hidden" name="householdId" value={householdId} />
                           <input type="hidden" name="changeId" value={primaryChange!.id} />
-                          <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${title}`}>
+                          <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo ${statusLabel === "Added" ? "adding" : statusLabel === "Updated" ? "updating" : "cancelling"} ${title}`}>
                             {undoing ? "Undoing…" : "Undo"}
                           </Pill>
                         </form>
@@ -415,12 +441,14 @@ export function HomeSendInbox({
                     {secondaryChanges.map((change) => (
                       <div key={change.id} className="ml-11 flex items-center gap-2 text-xs text-[var(--wh-foreground-subtle)]">
                         <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />
-                        <span className="flex-1">Also added to Groceries</span>
+                        <span className="flex-1 break-words">
+                          Also added to Groceries{groceryNames[change.entityId] ? `: ${groceryNames[change.entityId]}` : ""}
+                        </span>
                         {!change.undoneAt ? (
                           <form action={undoAction}>
                             <input type="hidden" name="householdId" value={householdId} />
                             <input type="hidden" name="changeId" value={change.id} />
-                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label="Undo the grocery item">
+                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${groceryNames[change.entityId] ?? "the grocery item"}`}>
                               {undoing ? "Undoing…" : "Undo"}
                             </Pill>
                           </form>
