@@ -55,6 +55,8 @@ function member(id: string, displayName: string, memberType: HouseholdMember["me
     schoolOrWorkLocation: null,
     specialOccasionLabel: null,
     specialOccasionDate: null,
+    gender: null,
+    notes: null,
     avatarUrl: null,
     ...extra,
   };

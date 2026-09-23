@@ -11,6 +11,7 @@ import {
   createInvitation,
   revokeInvitation,
 } from "@wonderhome/core/identity/invitations";
+import { GENDER_MAX_LENGTH, MEMBER_NOTES_MAX_LENGTH } from "@wonderhome/core/identity/member-details";
 import { log } from "@wonderhome/core/observability/logger";
 
 import type { ActionState } from "./actions";
@@ -195,6 +196,8 @@ export async function addChildAction(
 const addHelperSchema = z.object({
   householdId: z.uuid(),
   displayName: z.string().trim().min(1, { error: "Give them a name." }).max(80),
+  gender: z.string().trim().max(GENDER_MAX_LENGTH, { error: "Keep gender under 40 characters." }),
+  notes: z.string().trim().max(MEMBER_NOTES_MAX_LENGTH, { error: "Keep notes under 500 characters." }),
 });
 
 /**
@@ -209,6 +212,8 @@ export async function addHelperAction(
   const parsed = addHelperSchema.safeParse({
     householdId: formData.get("householdId"),
     displayName: formData.get("displayName"),
+    gender: formData.get("gender") ?? "",
+    notes: formData.get("notes") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
@@ -221,7 +226,11 @@ export async function addHelperAction(
 
   try {
     const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await createHelperMember(supabase, actor, { displayName: parsed.data.displayName });
+    await createHelperMember(supabase, actor, {
+      displayName: parsed.data.displayName,
+      gender: textOrNull(parsed.data.gender),
+      notes: textOrNull(parsed.data.notes),
+    });
   } catch (error) {
     log.warn("adding a helper failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "We could not add that helper. Please try again." };
@@ -275,6 +284,8 @@ const updateMemberProfileSchema = z.object({
   schoolOrWorkLocation: z.string().trim().max(120),
   specialOccasionLabel: z.string().trim().max(80),
   specialOccasionDate: z.string().trim().max(10),
+  gender: z.string().trim().max(GENDER_MAX_LENGTH, { error: "Keep gender under 40 characters." }),
+  notes: z.string().trim().max(MEMBER_NOTES_MAX_LENGTH, { error: "Keep notes under 500 characters." }),
 });
 
 const DATE_LIKE = /^\d{4}-\d{2}-\d{2}$/;
@@ -307,6 +318,8 @@ export async function updateMemberProfileAction(
     schoolOrWorkLocation: formData.get("schoolOrWorkLocation") ?? "",
     specialOccasionLabel: formData.get("specialOccasionLabel") ?? "",
     specialOccasionDate: formData.get("specialOccasionDate") ?? "",
+    gender: formData.get("gender") ?? "",
+    notes: formData.get("notes") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
@@ -334,6 +347,8 @@ export async function updateMemberProfileAction(
       schoolOrWorkLocation: textOrNull(parsed.data.schoolOrWorkLocation),
       specialOccasionLabel: textOrNull(parsed.data.specialOccasionLabel),
       specialOccasionDate: textOrNull(parsed.data.specialOccasionDate),
+      gender: textOrNull(parsed.data.gender),
+      notes: textOrNull(parsed.data.notes),
     });
   } catch (error) {
     const { toErrorBody } = await import("@wonderhome/core/api/errors");

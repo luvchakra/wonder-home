@@ -63,7 +63,7 @@ const NOW = new Date("2026-09-23T06:00:00Z");
 function member(id: string, displayName: string, memberType: HouseholdMember["memberType"]): HouseholdMember {
   return {
     id, displayName, memberType, status: "active", roles: [], isOwner: false, dateOfBirth: null, nickname: null, relationship: null,
-    occupation: null, schoolOrWorkLocation: null, specialOccasionLabel: null, specialOccasionDate: null, avatarUrl: null,
+    occupation: null, schoolOrWorkLocation: null, specialOccasionLabel: null, specialOccasionDate: null, gender: null, notes: null, avatarUrl: null,
   };
 }
 const MEMBERS = [member("kunal", "Kunal Mehta", "adult"), member("asmi", "Asmi", "child"), member("manan", "Manan", "child")];

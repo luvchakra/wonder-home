@@ -195,6 +195,10 @@ export type HouseholdMember = {
   schoolOrWorkLocation: string | null;
   specialOccasionLabel: string | null;
   specialOccasionDate: string | null;
+  /** How they describe their gender, if the household records it — open text. */
+  gender: string | null;
+  /** Anything the household wants to remember about them. */
+  notes: string | null;
   /** A short-lived signed URL, minted fresh by `listMembers` on every read — never stored or cached (the bucket is private). */
   avatarUrl: string | null;
 };
@@ -209,12 +213,14 @@ export type MemberProfileUpdate = {
   schoolOrWorkLocation?: string | null;
   specialOccasionLabel?: string | null;
   specialOccasionDate?: string | null;
+  gender?: string | null;
+  notes?: string | null;
   /** The storage object path just uploaded to the `avatars` bucket, or null to clear the photo. */
   avatarPath?: string | null;
 };
 
 const MEMBER_SELECT =
-  "id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, avatar_path, household_roles(role)";
+  "id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, household_roles(role)";
 
 type MemberRow = {
   id: string;
@@ -228,6 +234,8 @@ type MemberRow = {
   school_or_work_location: string | null;
   special_occasion_label: string | null;
   special_occasion_date: string | null;
+  gender: string | null;
+  notes: string | null;
   avatar_path: string | null;
   household_roles: { role: HouseholdRole }[] | null;
 };
@@ -247,6 +255,8 @@ function toHouseholdMember(row: MemberRow, ownerMemberId: string | null, avatarU
     schoolOrWorkLocation: row.school_or_work_location,
     specialOccasionLabel: row.special_occasion_label,
     specialOccasionDate: row.special_occasion_date,
+    gender: row.gender,
+    notes: row.notes,
     avatarUrl,
   };
 }
@@ -329,6 +339,8 @@ export async function updateMemberProfile(
   if (input.schoolOrWorkLocation !== undefined) patch.school_or_work_location = input.schoolOrWorkLocation;
   if (input.specialOccasionLabel !== undefined) patch.special_occasion_label = input.specialOccasionLabel;
   if (input.specialOccasionDate !== undefined) patch.special_occasion_date = input.specialOccasionDate;
+  if (input.gender !== undefined) patch.gender = input.gender;
+  if (input.notes !== undefined) patch.notes = input.notes;
   if (input.avatarPath !== undefined) patch.avatar_path = input.avatarPath;
 
   if (Object.keys(patch).length === 0) return;
@@ -463,7 +475,7 @@ export async function setMemberRole(
 export async function createHelperMember(
   supabase: SupabaseClient,
   actor: HouseholdMembership,
-  input: { displayName: string },
+  input: { displayName: string; gender?: string | null; notes?: string | null },
 ): Promise<{ memberId: string }> {
   if (!isHouseholdAdmin(actor)) {
     throw ApiError.forbidden("Only an Admin can add a helper.");
@@ -473,7 +485,14 @@ export async function createHelperMember(
 
   const { data, error } = await supabase
     .from("household_members")
-    .insert({ household_id: householdId, profile_id: null, member_type: "helper", display_name: input.displayName })
+    .insert({
+      household_id: householdId,
+      profile_id: null,
+      member_type: "helper",
+      display_name: input.displayName,
+      gender: input.gender ?? null,
+      notes: input.notes ?? null,
+    })
     .select("id")
     .single();
 

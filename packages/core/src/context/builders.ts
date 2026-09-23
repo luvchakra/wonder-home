@@ -1026,6 +1026,8 @@ export function personItems(people: readonly PersonLike[], options: Pick<BuildOp
         schoolOrWorkLocation: null,
         specialOccasionLabel: null,
         specialOccasionDate: null,
+        gender: null,
+        notes: null,
         avatarUrl: null,
       })),
     },

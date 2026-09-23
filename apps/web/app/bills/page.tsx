@@ -44,6 +44,7 @@ import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import {
   AddBillButton,
   AddTransactionButton,
+  EditTransactionControl,
   ObligationRowControls,
   RemoveTransactionControl,
 } from "../_components/finance-forms";
@@ -58,6 +59,9 @@ type HistoryRow = {
   amount_minor: number;
   currency: string;
   paid_on: string | null;
+  payee: string | null;
+  kind: string | null;
+  owner_member_id: string | null;
 };
 type BudgetRow = {
   id: string;
@@ -132,7 +136,7 @@ export default async function BillsPage({
       ).catch(() => []),
       supabase
         .from("obligation_history")
-        .select("obligation_id, period_label, amount_minor, currency, paid_on")
+        .select("obligation_id, period_label, amount_minor, currency, paid_on, payee, kind, owner_member_id")
         .eq("household_id", householdId)
         .order("period_label", { ascending: false })
         .limit(120),
@@ -173,7 +177,26 @@ export default async function BillsPage({
   const needs = agenda ? [...agenda.bills, ...agenda.anomalies] : [];
   const trackedBills = obligations
     .filter((o) => o.status !== "cancelled")
-    .map((o) => ({ id: o.id, name: o.name, currency: o.currency }));
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      currency: o.currency,
+      kind: o.kind,
+      payee: o.payee,
+      responsibleMemberId: o.responsibleMemberId,
+    }));
+  // What the transaction form offers: who can own a payment, and the payees
+  // and written-in kinds this household has already used.
+  const transactionChoices = {
+    members: members
+      .filter((member) => member.status === "active" && member.memberType !== "child")
+      .map((member) => ({ id: member.id, displayName: member.displayName })),
+    payeeOptions: distinct([
+      ...obligations.map((o) => o.payee),
+      ...history.map((row) => row.payee),
+    ]),
+    kindOptions: distinct(history.map((row) => row.kind)),
+  };
 
   // Monthly spend from recorded history: a trend, not a ledger.
   const byPeriod = new Map<string, number>();
@@ -301,6 +324,7 @@ export default async function BillsPage({
                 <AddTransactionButton
                   householdId={householdId}
                   bills={trackedBills}
+                  {...transactionChoices}
                 />
               ) : (
                 <AddBillButton householdId={householdId} />
@@ -540,7 +564,8 @@ export default async function BillsPage({
                       key={`${row.obligation_id}-${row.period_label}`}
                       row={row}
                       bill={bill}
-                      owner={bill ? nameOf(bill.responsibleMemberId) : null}
+                      owner={nameOf(row.owner_member_id ?? bill?.responsibleMemberId ?? null)}
+                      choices={transactionChoices}
                       admin={admin}
                       householdId={householdId}
                       timezone={timezone}
@@ -686,6 +711,7 @@ function TransactionRow({
   row,
   bill,
   owner,
+  choices,
   admin,
   householdId,
   timezone,
@@ -693,11 +719,25 @@ function TransactionRow({
   row: HistoryRow;
   bill: Obligation | undefined;
   owner: string | null;
+  choices: { members: { id: string; displayName: string }[]; payeeOptions: string[]; kindOptions: string[] };
   admin: boolean;
   householdId: string;
   timezone: string;
 }) {
   const amount = formatMoney(Number(row.amount_minor), row.currency);
+  // A transaction's own payee and kind when it says, otherwise its bill's.
+  const payee = row.payee ?? bill?.payee ?? null;
+  const kind = row.kind ?? (bill?.kind ? bill.kind.replace(/_/g, " ") : null);
+  const transaction = {
+    obligationId: row.obligation_id,
+    periodLabel: row.period_label,
+    amountMinor: Number(row.amount_minor),
+    currency: row.currency,
+    paidOn: row.paid_on,
+    payee: row.payee,
+    kind: row.kind,
+    ownerMemberId: row.owner_member_id,
+  };
 
   return (
     <ExpandableRow
@@ -708,7 +748,7 @@ function TransactionRow({
             <span className="block text-sm font-medium">{bill?.name ?? "Bill"}</span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {row.period_label}
-              {bill?.payee ? ` · ${bill.payee}` : ""}
+              {payee ? ` · ${payee}` : ""}
             </span>
           </span>
           <span className="shrink-0">
@@ -721,26 +761,41 @@ function TransactionRow({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
           <Fact label="Period" value={row.period_label} />
           <Fact label="Amount" value={amount} />
-          <Fact label="Kind" value={bill?.kind ? bill.kind.replace(/_/g, " ") : null} />
-          <Fact label="Payee" value={bill?.payee ?? null} />
+          <Fact label="Kind" value={kind} />
+          <Fact label="Payee" value={payee} />
           <Fact label="Owner" value={owner} />
           <Fact label="Paid on" value={row.paid_on ? formatDate(timezone, new Date(`${row.paid_on}T00:00:00.000Z`), "long") : null} />
         </dl>
         {admin && bill ? (
-          <RemoveTransactionControl
-            householdId={householdId}
-            transaction={{
-              obligationId: row.obligation_id,
-              periodLabel: row.period_label,
-              amountMinor: Number(row.amount_minor),
-              currency: row.currency,
-            }}
-            label={bill.name}
-          />
+          <div className="flex flex-wrap gap-2">
+            <EditTransactionControl
+              householdId={householdId}
+              bill={{
+                id: bill.id,
+                name: bill.name,
+                currency: bill.currency,
+                kind: bill.kind,
+                payee: bill.payee,
+                responsibleMemberId: bill.responsibleMemberId,
+              }}
+              transaction={transaction}
+              {...choices}
+            />
+            <RemoveTransactionControl
+              householdId={householdId}
+              transaction={transaction}
+              label={bill.name}
+            />
+          </div>
         ) : null}
       </div>
     </ExpandableRow>
   );
+}
+
+/** Each non-empty value once, in a stable order, for a picker's options. */
+function distinct(values: (string | null | undefined)[]): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim())))).sort((a, b) => a.localeCompare(b));
 }
 
 function Fact({ label, value }: { label: string; value: string | null }) {

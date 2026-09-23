@@ -193,6 +193,9 @@ const transactionSchema = z.object({
     .trim()
     .regex(/^[A-Z]{3}$/, { error: "Use a 3-letter currency code, like INR." }),
   paidOn: z.union([z.iso.date(), z.literal("")]).optional(),
+  payee: z.string().trim().max(160, { error: "Keep the payee under 160 characters." }).optional(),
+  kind: z.string().trim().max(60, { error: "Keep the kind under 60 characters." }).optional(),
+  ownerMemberId: z.union([z.uuid(), z.literal("")]).optional(),
 });
 
 /**
@@ -213,6 +216,9 @@ export async function recordAmountAction(
     amount: formData.get("amount"),
     currency: formData.get("currency"),
     paidOn: formData.get("paidOn") || undefined,
+    payee: formData.get("payee") || undefined,
+    kind: formData.get("kind") || undefined,
+    ownerMemberId: formData.get("ownerMemberId") || undefined,
   });
   if (!parsed.success) {
     return {
@@ -226,6 +232,9 @@ export async function recordAmountAction(
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
     const { anomaly } = await recordAmount(supabase, {
+      payee: parsed.data.payee || null,
+      kind: parsed.data.kind || null,
+      ownerMemberId: parsed.data.ownerMemberId || null,
       householdId: parsed.data.householdId,
       obligationId: parsed.data.obligationId,
       periodLabel: parsed.data.periodLabel,

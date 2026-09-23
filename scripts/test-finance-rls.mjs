@@ -27,6 +27,7 @@ const OUTSIDER = "33333333-3333-4333-8333-333333333333";
 let household = "";
 let headMember = "";
 let otherHousehold = "";
+let outsiderMember = "";
 let obligation = "";
 let intent = "";
 
@@ -45,7 +46,7 @@ before(() => {
     `select household_id || ' ' || member_id from wh.create_household('Chakraborty Home', 'Kunal');`,
     options,
   ).split(" ");
-  [otherHousehold] = asProfile(
+  [otherHousehold, outsiderMember] = asProfile(
     OUTSIDER,
     `select household_id || ' ' || member_id from wh.create_household('Outsider Home', 'Outsider');`,
     options,
@@ -287,6 +288,37 @@ test("an anomaly never blocks the payment it concerns", () => {
   assert.equal(
     psql(`select count(*) from public.spend_anomalies where status = 'open';`, options),
     "1",
+  );
+});
+
+test("a recorded transaction can name its own payee, kind and owner", () => {
+  asProfile(
+    HEAD,
+    `insert into public.obligation_history (household_id, obligation_id, period_label, amount_minor, currency, payee, kind, owner_member_id)
+     values ('${household}', '${obligation}', '2026-08', 281000, 'INR', 'BESCOM collection agent', 'Utility', '${headMember}');`,
+    options,
+  );
+  assert.equal(
+    psql(`select payee || '|' || kind || '|' || owner_member_id from public.obligation_history where period_label = '2026-08';`, options),
+    `BESCOM collection agent|Utility|${headMember}`,
+  );
+});
+
+test("a transaction's owner has to belong to the same household", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.obligation_history (household_id, obligation_id, period_label, amount_minor, currency, owner_member_id)
+       values ('${household}', '${obligation}', '2026-07', 280000, 'INR', '${outsiderMember}');`,
+      options,
+    ),
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `update public.obligation_history set owner_member_id = '${outsiderMember}' where period_label = '2026-08';`,
+      options,
+    ),
   );
 });
 

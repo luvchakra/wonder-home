@@ -18,6 +18,10 @@ const INPUT_CLASS =
  * there is never blocked by the options shown, so a genuinely new answer is
  * always as easy as an existing one (rule: a field with real answers offers
  * them, but never refuses the true one).
+ *
+ * An optional field passes `emptyLabel` ("Not recorded"), which becomes a
+ * real, choosable first option — so an answer once given can be taken back
+ * (rule 12), not only swapped for another one.
  */
 export function ComboboxField({
   label,
@@ -29,6 +33,7 @@ export function ComboboxField({
   addNewLabel = "Add new…",
   newValuePlaceholder,
   hint,
+  emptyLabel,
   className,
 }: {
   label: string;
@@ -40,6 +45,8 @@ export function ComboboxField({
   addNewLabel?: string;
   newValuePlaceholder?: string;
   hint?: string;
+  /** For an optional field: a choosable first option meaning "no answer", submitted as an empty value. */
+  emptyLabel?: string;
   className?: string;
 }) {
   const selectId = useId();
@@ -71,7 +78,7 @@ export function ComboboxField({
               type="button"
               onClick={() => {
                 setAdding(false);
-                setValue(options[0] ?? "");
+                setValue(emptyLabel !== undefined ? "" : (options[0] ?? ""));
               }}
               className="shrink-0 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] px-3 text-xs font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
             >
@@ -95,7 +102,9 @@ export function ComboboxField({
           }}
           className={INPUT_CLASS}
         >
-          {!value ? (
+          {emptyLabel !== undefined ? (
+            <option value="">{emptyLabel}</option>
+          ) : !value ? (
             <option value="" disabled>
               {placeholder}
             </option>

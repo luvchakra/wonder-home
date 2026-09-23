@@ -6,8 +6,10 @@ import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
+import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
+import { Select } from "@wonderhome/core/ui/select";
 import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -267,6 +269,98 @@ function CancelSubmit({ name }: { name: string }) {
   );
 }
 
+export type TransactionBill = {
+  id: string;
+  name: string;
+  currency: string | null;
+  kind: string;
+  payee: string | null;
+  responsibleMemberId: string | null;
+};
+
+export type TransactionInitial = {
+  obligationId: string;
+  periodLabel: string;
+  amountMinor: number;
+  currency: string;
+  paidOn?: string | null;
+  payee?: string | null;
+  kind?: string | null;
+  ownerMemberId?: string | null;
+};
+
+type TransactionChoices = {
+  members: { id: string; displayName: string }[];
+  /** Payees already on this household's bills and transactions. */
+  payeeOptions: string[];
+  /** Kinds this household has written in on a transaction, beyond the bill kinds. */
+  kindOptions: string[];
+};
+
+/** The words a bill's own kind is shown in, so a transaction defaults to the same ones. */
+function kindLabel(kind: string): string {
+  return KINDS.find((k) => k.value === kind)?.label ?? kind.replace(/_/g, " ");
+}
+
+/**
+ * A transaction's payee, kind and owner. It starts with its bill's own three
+ * — the common case needs no typing — and can say otherwise; payee and kind
+ * offer every answer this household has used and always "add new" (rule 20).
+ */
+function TransactionDetailFields({
+  bill,
+  initial,
+  members,
+  payeeOptions,
+  kindOptions,
+}: TransactionChoices & {
+  bill: TransactionBill | undefined;
+  initial?: TransactionInitial;
+}) {
+  const payee = initial ? (initial.payee ?? bill?.payee ?? undefined) : (bill?.payee ?? undefined);
+  const kind = initial?.kind ?? (bill ? kindLabel(bill.kind) : undefined);
+  const owner = initial ? (initial.ownerMemberId ?? bill?.responsibleMemberId ?? "") : (bill?.responsibleMemberId ?? "");
+  const withCurrent = (options: string[], value: string | undefined) =>
+    value && !options.includes(value) ? [...options, value] : options;
+  // Every bill kind, then any kind this household has already written in.
+  const kinds = Array.from(new Set([...KINDS.map((k) => k.label), ...kindOptions]));
+
+  return (
+    <>
+      <ComboboxField
+        label="Payee (optional)"
+        name="payee"
+        options={withCurrent(payeeOptions, payee)}
+        defaultValue={payee}
+        placeholder="Choose who was paid"
+        emptyLabel="Not recorded"
+        addNewLabel="Add a new payee…"
+        newValuePlaceholder="State Electricity Board"
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ComboboxField
+          label="Kind (optional)"
+          name="kind"
+          options={withCurrent(kinds, kind)}
+          defaultValue={kind}
+          placeholder="Choose a kind"
+          emptyLabel="Not recorded"
+          addNewLabel="Add a new kind…"
+          newValuePlaceholder="e.g. Maintenance"
+        />
+        <Select label="Owner (optional)" name="ownerMemberId" defaultValue={owner}>
+          <option value="">No one in particular</option>
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.displayName}
+            </option>
+          ))}
+        </Select>
+      </div>
+    </>
+  );
+}
+
 /**
  * "Add transaction" as a sheet — the manual half of an imported bill's own
  * amount, recording what a bill actually came to for a period via the same
@@ -275,16 +369,18 @@ function CancelSubmit({ name }: { name: string }) {
 export function AddTransactionButton({
   householdId,
   bills,
-}: {
+  ...choices
+}: TransactionChoices & {
   householdId: string;
-  bills: { id: string; name: string; currency: string | null }[];
+  bills: TransactionBill[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
     recordAmountAction,
     {},
   );
-  const firstBill = bills[0];
+  const [billId, setBillId] = useState(bills[0]?.id);
+  const bill = bills.find((b) => b.id === billId) ?? bills[0];
 
   if (bills.length === 0) return null;
 
@@ -309,23 +405,18 @@ export function AddTransactionButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <div className="space-y-1.5">
-            <label htmlFor="obligationId" className="block text-sm font-medium">
-              Which bill?
-            </label>
-            <select
-              id="obligationId"
-              name="obligationId"
-              defaultValue={firstBill?.id}
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
-              {bills.map((bill) => (
-                <option key={bill.id} value={bill.id}>
-                  {bill.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Which bill?"
+            name="obligationId"
+            value={bill?.id}
+            onChange={(event) => setBillId(event.target.value)}
+          >
+            {bills.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
           <Field
             label="Period"
             name="periodLabel"
@@ -346,15 +437,18 @@ export function AddTransactionButton({
               placeholder="2500"
             />
             <Field
+              key={`currency-${bill?.id}`}
               label="Currency"
               name="currency"
               required
               placeholder="INR"
-              defaultValue={firstBill?.currency ?? "INR"}
+              defaultValue={bill?.currency ?? "INR"}
               maxLength={3}
               autoComplete="off"
             />
           </div>
+          {/* Keyed by bill, so choosing another bill brings in that bill's own payee, kind and owner. */}
+          <TransactionDetailFields key={bill?.id} bill={bill} {...choices} />
           <Field
             label="Paid on (optional)"
             name="paidOn"
@@ -368,12 +462,84 @@ export function AddTransactionButton({
   );
 }
 
-export type TransactionInitial = {
-  obligationId: string;
-  periodLabel: string;
-  amountMinor: number;
-  currency: string;
-};
+/**
+ * Changing a recorded transaction — the "update" half of "Add transaction"
+ * (CLAUDE.md principle 12). The bill and period are what identify it, so
+ * they stay as they are; everything else can change. Saved through the same
+ * `recordAmount` upsert, so an edited amount gets the same anomaly review.
+ */
+export function EditTransactionControl({
+  householdId,
+  bill,
+  transaction,
+  ...choices
+}: TransactionChoices & {
+  householdId: string;
+  bill: TransactionBill;
+  transaction: TransactionInitial;
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction] = useActionState<ActionState, FormData>(
+    recordAmountAction,
+    {},
+  );
+
+  return (
+    <>
+      <Pill
+        type="button"
+        tone="quiet"
+        onClick={() => setOpen(true)}
+        className="gap-1.5"
+      >
+        <Pencil aria-hidden className="size-3.5" /> Edit
+      </Pill>
+
+      <Sheet
+        open={open}
+        onOpenChange={setOpen}
+        title="Edit transaction"
+        description={`${bill.name} for ${transaction.periodLabel}.`}
+      >
+        <form action={formAction} className="space-y-3">
+          {state.error ? <Alert>{state.error}</Alert> : null}
+          {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="obligationId" value={transaction.obligationId} />
+          <input type="hidden" name="periodLabel" value={transaction.periodLabel} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Amount"
+              name="amount"
+              type="number"
+              min={0}
+              step="0.01"
+              required
+              defaultValue={transaction.amountMinor / 100}
+            />
+            <Field
+              label="Currency"
+              name="currency"
+              required
+              defaultValue={transaction.currency}
+              maxLength={3}
+              autoComplete="off"
+            />
+          </div>
+          <TransactionDetailFields bill={bill} initial={transaction} {...choices} />
+          <Field
+            label="Paid on (optional)"
+            name="paidOn"
+            type="date"
+            defaultValue={transaction.paidOn ?? undefined}
+            hint="When the household actually paid — separate from the period it covers."
+          />
+          <Submit label="Save changes" pendingLabel="Saving…" />
+        </form>
+      </Sheet>
+    </>
+  );
+}
 
 /**
  * Removing a recorded transaction — the "remove" half of "Add transaction"

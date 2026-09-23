@@ -19,6 +19,8 @@ const NO_PROFILE_DETAILS = {
   schoolOrWorkLocation: null,
   specialOccasionLabel: null,
   specialOccasionDate: null,
+  gender: null,
+  notes: null,
   avatarUrl: null,
 } as const;
 
