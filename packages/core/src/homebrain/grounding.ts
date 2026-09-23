@@ -70,6 +70,7 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
   // answered with everything about the person asking — only the parts it is
   // unmistakably about, what those connect to, and the calendar.
   const inScope = new Set<ContextDomain>([...reading.domains, ...reading.connected]);
+  const asked = new Set(meaningfulWords(reading.retrievalText));
 
   const drafts: Omit<GroundedFact, "contextId">[] = [];
   for (const entry of ranked) {
@@ -80,6 +81,17 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
     const date = typeof item.attributes.date === "string" ? item.attributes.date.slice(0, 10) : null;
     // A replaced or out-of-date fact is not a candidate at all — the same line Wave 1 draws.
     if (!usable && score <= 0) continue;
+
+    // A fact that says what the question says — "when do the children go to
+    // bed?" and "the children are in bed by 9pm" — is about it, whichever
+    // domain it sits in and whether or not it has an alias to match.
+    if (usable && item.tier !== 1 && score < 0.65) {
+      const shared = meaningfulWords(item.summary).filter((word) => asked.has(word));
+      if (shared.length >= 2) {
+        score = 0.65;
+        reasons.push("says what the question asks about");
+      }
+    }
 
     if (usable && item.tier <= 2 && reading.connected.has(item.domain) && score < 0.6) {
       score = 0.6;
@@ -202,3 +214,16 @@ export function relevantFacts(facts: readonly GroundedFact[]): GroundedFact[] {
 function statementOf(item: HouseholdContextItem): string {
   return `${item.summary.replace(/\.$/, "")}${freshnessQualifier(item)}.`.replace(/\.\.$/, ".");
 }
+
+/** Words too common to say what a sentence is about. */
+const COMMON = new Set([
+  "the", "and", "for", "are", "was", "were", "has", "have", "had", "does", "did", "what", "when", "where", "which", "who", "why", "how",
+  "this", "that", "with", "from", "into", "our", "your", "their", "his", "her", "its", "any", "all", "some", "there", "here", "about",
+  "will", "would", "can", "could", "should", "is", "not", "yet", "today", "tomorrow", "week", "now", "on", "at", "in", "by", "of", "to",
+  "go", "do", "get", "got", "be", "been", "being", "me", "my", "we", "us", "you", "it", "a", "an", "or", "so", "up", "out",
+]);
+
+function meaningfulWords(text: string): string[] {
+  return [...new Set(text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((word) => word.length >= 3 && !COMMON.has(word)))];
+}
+

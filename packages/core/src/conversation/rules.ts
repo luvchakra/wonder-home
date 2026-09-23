@@ -2,6 +2,7 @@ import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments"
 import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
+import { parsePreference } from "./memory";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -454,6 +455,24 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:actually,?\s+)(.+?) (?:is|are) (?:at|on) (.+)$/i,
     read: (match) => preference(`${match[1]} at ${match[2]}`, true),
+  },
+  {
+    // "Asmi doesn't like mushrooms", "Dad is allergic to peanuts", "actually
+    // Asmi is okay with mushrooms now" — one person's stance on one thing,
+    // keyed so a later change of mind replaces the earlier one (Wave 2 §8).
+    // Last, so every more specific rule above reads its sentence first.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const parsed = parsePreference(utterance);
+      if (!parsed) return null;
+      const statement = utterance.trim().replace(/^actually,?\s+/i, "").replace(/[.!]+$/, "");
+      return {
+        action: "set_preference",
+        target: { kind: "outcome", reference: parsed.key },
+        parameters: { statement, ...(parsed.corrects ? { corrects: true } : {}) },
+        confidence: 0.88,
+      };
+    },
   },
 ];
 

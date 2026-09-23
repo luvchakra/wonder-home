@@ -1,7 +1,7 @@
 # HomeBrain 2.0, part 1: grounded reasoning (story 14-010, Wave 2)
 
 **Date:** 2026-09-23
-**Story:** 14-010 (new, P0, module 14). In Progress: this note covers part 1 of 2.
+**Story:** 14-010 (new, P0, module 14). This note covers part 1 of 2; part 2 is [current truth and HomeBrain Review](2026-09-23-homebrain-2-current-truth-review.md).
 **Spec:** `design/HOMEBRAIN-2.0-WAVE-2.md` ("WonderHome Wave 2 — HomeBrain 2.0", Product Council approved). Committed with this work so later sessions have it. The Wave 1 spec never was.
 
 ## Why

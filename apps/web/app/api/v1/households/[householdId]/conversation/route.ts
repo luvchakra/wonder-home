@@ -15,6 +15,7 @@ import type { PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
+import { attributeMemory } from "@wonderhome/core/conversation/memory";
 import {
   beginEditMessage,
   currentSessionId,
@@ -353,13 +354,13 @@ export async function POST(request: Request, { params }: Params) {
         brain = { source: "none", factsSent: answered.factsSent };
       }
     } else if (result.kind === "reply" && result.proposal.kind === "executed") {
-      if (result.memory) await remember(admin, householdId, result.memory);
+      if (result.memory) await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
       const done = await executeIntent(result.intent, execution);
       text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
       outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
       if (done.ok) forgetHouseholdContext(householdId);
     } else if (result.kind === "reply" && result.memory) {
-      await remember(admin, householdId, result.memory);
+      await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
       forgetHouseholdContext(householdId);
     }
 

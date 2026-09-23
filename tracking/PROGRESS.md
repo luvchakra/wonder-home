@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 172 |
-| Done | 155 |
-| In Progress | 1 |
+| Total stories | 183 |
+| Done | 173 |
+| In Progress | 0 |
 | Blocked | 0 |
-| Not Started | 16 |
-| Completion | 90.1% |
+| Not Started | 10 |
+| Completion | 94.5% |
 | Current module | 14 AI Orchestration & Learning |
-| Current story | 14-010 HomeBrain 2.0 — grounded household reasoning (In Progress) |
+| Current story | 14-010 HomeBrain 2.0 — grounded household reasoning (Done) |
 | Last updated | 2026-09-23 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 9 | 7 | 1 | 1 | 7 | In Progress |
+| 14 | AI Orchestration & Learning | 10 | 8 | 1 | 1 | 9 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -208,3 +208,4 @@ disagree again.)
 | 2026-09-22 | 21 | 21-004 | Done | 60 unit, 9 database, 320 E2E, 102 live | Checkups & preventive care: `health_checkups` (new migration, applied live) reuses the same self-or-guardian RLS shape — a checkup carries a `source` (`user_defined | doctor_recommended | imported_appointment | configured_plan | informational_template`), an optional `cadence_days`, and `next_due_on`/`last_completed_on`; `classifyCheckup()` is the one place that decides overdue/due-soon/silent (14-day window), so the Overview never invents its own notion of "due soon". Linked bidirectionally to appointments — `health_checkups.linked_appointment_id` points at the currently-booked appointment, `health_appointments.checkup_id` points back — `createAppointment()` now validates a passed `checkupId` actually belongs to the household before honouring it (never trusted as-is from an API caller). `syncCheckupForAppointment()`, called from both the server action and the API route's `set_status` branch, is the one place that reacts to an appointment's status change: completing it stamps `last_completed_on` from the appointment's own date and advances `next_due_on` by the cadence (or dismisses a one-off checkup with no cadence), cancelling only clears the link so it can be rebooked. `health_checkups.status` is `active`/`dismissed`, never a hard delete, so removing a checkup is reversible (rule 12). A UI density bug was caught during live verification, not left for a user to find: the row's five action icons (mark done/book/reschedule/edit/remove) crowded the title into an unreadable stack of one-word lines at 390px — fixed by folding reschedule into the edit sheet (content, cadence and due date together), landing on four icons at most, matching every other health row's density. Live-verified the full loop with a QA household: added an overdue checkup, booked its linked appointment via the row's own "Book" action, confirmed and completed that appointment, and watched the checkup automatically drop out of Needs Attention and land in Recent with the real completion date — at 390px and desktop; QA household and auth user removed afterward |
 | 2026-09-23 | 14 | 14-009 | Done | 53 context unit (1699 total), 381 database, lint/typecheck/build/security clean | Household Context & Grounding Engine (Wave 1): `packages/core/src/context/` — canonical `HouseholdContextItem`s with provenance, freshness, tiers and privacy class, built from every shipped domain through the member's own RLS client; retrieval API; candidate-based resolution that clarifies instead of guessing; six-verdict matching; conflicts. HomeBrain's context (`brain.ts` now a façade over the engine, answers ranked by question relevance), HomeTalk's resolution (absence for "Dad"/"the cook", grocery duplicates, health issues) and HomeSend's reconciliation (duplicate/update/contradiction shown on the confirm step, "add it anyway" to override) share it. Context invalidated after every successful write (`auditChange` plus wrappers on every non-audited repository write). Fixed along the way: HomeSend's confirm form never read the health document's subject/type/date. Live count-only leakage check: impersonated member sees 0 of the other households' rows across all 29 tables read. No migration. Browser QA and `verify:live` not run — no service-role credential in this sandbox |
 | 2026-09-23 | 14 | 14-010 | In Progress | 63 HomeBrain unit + 12 rules/engine (full suite green), lint/typecheck clean | HomeBrain 2.0 part 1 — grounded reasoning core: `packages/core/src/homebrain/` (question reading with cross-domain connection, follow-ups and focused clarification; the `GroundedFact` contract; §14 prompt contract with cited facts; post-generation validation with one tighter regeneration, deterministic fallback and honest "not on record"; "why?" answers from recorded evidence; modes with "done" only after an executor confirms). The conversation route answers every question through it, with or without a model. Part 2 (corrections, HomeTalk memories ↔ HomeBrain Review) next. |
+| 2026-09-23 | 14 | 14-010 | Done | 1800+ unit (homebrain/context/conversation 340+), 10 certification database, 117/117 live | HomeBrain 2.0 part 2 — current truth and HomeBrain Review: preferences keyed by subject and object so a correction supersedes the older observation with history kept; HomeTalk preferences written to HomeBrain Review as linked `certification_items` (migration `20260923120000_homebrain_review_links_memories.sql` backfills existing ones, applied live); Review confirm/correct/remove update the memory HomeBrain reads; Review beliefs are HomeBrain facts with provenance; screen renamed HomeBrain Review with source, when learned, confidence and confirmation. Live bug fixed: "Add a belief" was always refused by RLS (member client on a SELECT-only table). Browser-verified at 360px and desktop with a QA household, removed afterward |

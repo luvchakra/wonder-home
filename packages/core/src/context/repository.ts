@@ -26,6 +26,7 @@ import {
   type AgendaInput,
   type AgentRunRecord,
   type ContextRecords,
+  type BeliefRecord,
   type MemoryRecord,
   type NotificationRecord,
   type OutcomeRecord,
@@ -92,7 +93,10 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
   { domain: "pets", label: "pets", permitted: anyone, read: async (supabase, scope) => ({ pets: await listPets(supabase, scope.householdId) }) },
   { domain: "responsibilities", label: "responsibilities", permitted: anyone, read: async (supabase, scope) => ({ responsibilities: await listResponsibilities(supabase, scope.householdId) }) },
   { domain: "outcomes", label: "outcomes", permitted: notChild, read: async (supabase, scope) => ({ outcomes: await listOpenOutcomes(supabase, scope) }) },
-  { domain: "preferences", label: "what the household has said", permitted: anyone, read: async (supabase, scope) => ({ memories: await listMemories(supabase, scope.householdId) }) },
+  { domain: "preferences", label: "what the household has said", permitted: anyone, read: async (supabase, scope) => {
+      const [memories, beliefs] = await Promise.all([listMemories(supabase, scope.householdId), listBeliefs(supabase, scope.householdId)]);
+      return { memories, beliefs };
+    } },
   {
     domain: "calendar",
     label: "the calendar",
@@ -274,6 +278,35 @@ export async function listMemories(supabase: Supabase, householdId: string): Pro
     sourceId: (row.source_id as string | null) ?? null,
     createdAt: (row.created_at as string | undefined) ?? undefined,
     updatedAt: (row.updated_at as string | undefined) ?? undefined,
+  }));
+}
+
+/**
+ * Beliefs held in HomeBrain Review with no HomeTalk memory behind them —
+ * what the household added or corrected there. Memory-linked items are
+ * already read as memories, so they are not read twice.
+ */
+export async function listBeliefs(supabase: Supabase, householdId: string): Promise<BeliefRecord[]> {
+  const { data, error } = await supabase
+    .from("certification_items")
+    .select("id, category, claim, scope, member_id, source_type, source_detail, status, created_at, last_reviewed_at")
+    .eq("household_id", householdId)
+    .is("memory_id", null)
+    .in("status", ["learned", "confirmed", "needs_review"])
+    .order("created_at", { ascending: false })
+    .limit(60);
+  if (error) throw new Error(`listBeliefs failed: ${error.code ?? "unknown"}`);
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    category: row.category as string,
+    claim: row.claim as string,
+    scope: row.scope as BeliefRecord["scope"],
+    memberId: (row.member_id as string | null) ?? null,
+    sourceType: row.source_type as string,
+    sourceDetail: (row.source_detail as string | null) ?? null,
+    status: row.status as string,
+    createdAt: row.created_at as string,
+    reviewedAt: (row.last_reviewed_at as string | null) ?? null,
   }));
 }
 

@@ -25,7 +25,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AddBeliefButton, CertificationControls } from "../_components/certification-controls";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
-export const metadata = { title: "HomeBrain review" };
+export const metadata = { title: "HomeBrain Review" };
 export const dynamic = "force-dynamic";
 
 const CATEGORY_LABEL: Record<(typeof CERTIFICATION_CATEGORIES)[number], string> = {
@@ -61,10 +61,29 @@ const DECISION_TONE: Record<ReviewDecision, IconTone> = {
 
 const SOURCE_LABEL: Record<Item["sourceType"], string> = {
   setup: "setup",
-  conversation: "something you said",
+  conversation: "something said in HomeTalk",
   integration: "a connected account",
   observed: "a pattern WonderHome noticed",
 };
+
+/**
+ * How sure WonderHome is, in words (rule 9: never a percentage nobody can
+ * explain) — from where a belief came from and whether the family has
+ * confirmed it, which is all the certainty there really is.
+ */
+function confidenceFor(sourceType: Item["sourceType"], status: Item["status"]): string {
+  if (status === "confirmed") return "Confirmed by the family";
+  switch (sourceType) {
+    case "setup":
+      return "Stated by the household, not yet confirmed";
+    case "conversation":
+      return "Said in HomeTalk, not yet confirmed";
+    case "integration":
+      return "From a connected account, not yet confirmed";
+    case "observed":
+      return "Worked out from a pattern — the least certain kind";
+  }
+}
 
 /**
  * Household Certification (requirements §22): what WonderHome believes, where
@@ -78,12 +97,12 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "review";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "HomeBrain review" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "HomeBrain Review" };
 
   const [{ data }, { data: historyRows }] = await Promise.all([
     supabase
       .from("certification_items")
-      .select("id, category, claim, source_type, source_detail, status, risk_level, last_reviewed_at")
+      .select("id, category, claim, source_type, source_detail, status, risk_level, last_reviewed_at, created_at")
       .eq("household_id", householdId)
       .order("risk_level")
       .order("created_at", { ascending: false }),
@@ -112,6 +131,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
     };
   });
 
+  const learnedAt = new Map(((data as Record<string, unknown>[] | null) ?? []).map((row) => [row.id as string, new Date(row.created_at as string)]));
   const items: Item[] = ((data as Record<string, unknown>[] | null) ?? []).map((row) => ({
     id: row.id as string,
     category: row.category as Item["category"],
@@ -137,7 +157,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">HomeBrain review</h1>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">HomeBrain Review</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
           </div>
           {canReview ? <AddBeliefButton householdId={householdId} /> : null}
@@ -216,6 +236,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
           )
         ) : (
           <>
+            <SectionHeader title="What WonderHome knows" />
             {shown.length === 0 ? (
               <EmptyState
                 icon={BadgeCheck}
@@ -240,6 +261,8 @@ export default async function CertificationPage({ searchParams }: { searchParams
                         category={CATEGORY_LABEL[item.category]}
                         risk={item.riskLevel}
                         lastReviewed={item.lastReviewedAt ? `${formatDate(timezone, item.lastReviewedAt, "long")} · ${formatTime(timezone, item.lastReviewedAt)}` : null}
+                        learnedAt={learnedAt.get(item.id) ? formatDate(timezone, learnedAt.get(item.id)!, "long") : null}
+                        confidence={confidenceFor(item.sourceType, item.status)}
                         reason={alert?.reason}
                         controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} /> : undefined}
                       />
