@@ -307,7 +307,9 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   Whatever cannot go on is kept and shown under "Failed safely", never
   dropped. Names are resolved through the same Wave 1 resolver HomeBrain
   uses (`homesend/resolve.ts` — one question when two people fit, never a
-  guess), and every candidate is reconciled against what is already on
+  guess; a school notice naming a child not on record is never assumed to
+  be the household's only child, and an Admin can add them right in the
+  review, story 08-009), and every candidate is reconciled against what is already on
   record (`homesend/reconcile.ts`): a duplicate is shown, a moved date or a
   cancellation is offered as an update to the existing record, never a
   second copy. How an item is confirmed is `homesend/confirmation.ts`

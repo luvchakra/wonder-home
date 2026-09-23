@@ -12,7 +12,7 @@
 | 6 | P1 | 08-006 | Document workspace | Done | documents by reference, guardian-gated in the API and in RLS |
 | 7 | P1 | 08-007 | School summaries | Done | only messages that ask something surface; a newsletter is filed |
 | 8 | P2 | 08-008 | Deep portal automation | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
-| 9 | P2 | 08-009 | Add a child from a school notice | Not Started | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline |
+| 9 | P2 | 08-009 | Add a child from a school notice | Done | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline. Done: the resolver names an untitled unknown child (`unknown`), never assumes the household's only child; the review offers "Add <name> as a child" to Admins (guardian = the Admin, as on Family) and confirms the notice for them in the same step; golden case HS-15 |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

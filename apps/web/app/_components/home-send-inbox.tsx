@@ -123,9 +123,12 @@ export function HomeSendInbox({
   reviews = {},
   groceryNames = {},
   purchaseNames = {},
+  canAddChild = false,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
+  /** Whether the viewer may add a child from a school notice (story 08-009). */
+  canAddChild?: boolean;
   pending: HomeSendItem[];
   failed: HomeSendItem[];
   /** Prepared server-side for items already waiting, by item id. */
@@ -330,6 +333,7 @@ export function HomeSendInbox({
               defaultKind={defaultKind}
               prefill={prefill}
               kids={kids}
+              canAddChild={canAddChild}
               householdId={householdId}
               routeAction={routeAction}
               routeError={routeState.error}

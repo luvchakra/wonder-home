@@ -25,6 +25,12 @@ export type SubjectResolution = {
   candidates: IntakePerson[];
   /** One focused question, when it is not clear. */
   question: string | null;
+  /**
+   * The content named somebody who matches nobody on record (story 08-009) —
+   * a school notice for a child the household has not added yet. `said`
+   * carries the name, so the review can offer to add them.
+   */
+  unknown?: boolean;
 };
 
 export type IntakeResolution = {
@@ -73,10 +79,18 @@ export function resolveIntakePeople(
   const none: SubjectResolution = { said: null, selected: null, candidates: [], question: null };
   if (!PERSONAL_KINDS.has(understanding.kind)) return { references, subject: none };
 
+  let unmatchedChild: string | null = null;
   for (const reference of understanding.references) {
     const resolution = resolvePerson(reference.text, items, { viewerMemberId: options.viewerMemberId });
     const candidates = resolution.candidates.map((candidate) => toPerson(candidate.entity)).filter(eligible);
-    if (candidates.length === 0) continue;
+    if (candidates.length === 0) {
+      // A school notice's untitled name that matches nobody at all is most
+      // likely the child it is about ("Mr. Rao" is the teacher, not them).
+      if (understanding.kind === "school_item" && resolution.candidates.length === 0 && !unmatchedChild && !TITLED.test(reference.text.trim())) {
+        unmatchedChild = reference.text.trim();
+      }
+      continue;
+    }
     const selected = resolution.selected ? toPerson(resolution.selected) : null;
     if (selected && eligible(selected)) return { references, subject: { said: reference.text, selected, candidates, question: null } };
     if (candidates.length >= 2) {
@@ -90,11 +104,29 @@ export function resolveIntakePeople(
   // the household is asked.
   if (understanding.kind === "school_item") {
     const kids = children.map((item) => ({ memberId: item.entityId, displayName: String(item.attributes.displayName), memberType: "child" as const }));
+    // It named a child the household does not have on record (story 08-009):
+    // never assume it is the one child who is — say who it named, and let
+    // the household add them or choose.
+    if (unmatchedChild) {
+      return {
+        references,
+        subject: {
+          said: unmatchedChild,
+          selected: null,
+          candidates: kids,
+          unknown: true,
+          question: kids.length > 0 ? `${unmatchedChild} isn't one of your children on record — add them, or choose who this is for.` : null,
+        },
+      };
+    }
     if (kids.length === 1) return { references, subject: { said: null, selected: kids[0]!, candidates: kids, question: null } };
     if (kids.length > 1) return { references, subject: { said: null, selected: null, candidates: kids, question: `Who is this for — ${joinOr(kids.map((kid) => kid.displayName))}?` } };
   }
   return { references, subject: none };
 }
+
+/** A name that is plainly an adult's title, not a child: "Mr. Rao", "Dr Mehta", "Principal Singh". */
+const TITLED = /^(mr|mrs|ms|miss|mx|dr|prof|professor|sir|madam|ma'am|teacher|principal|coach|fr|sr)\b\.?/i;
 
 /**
  * Who an item is for, when the content never says but it matched a record

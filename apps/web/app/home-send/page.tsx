@@ -147,7 +147,7 @@ export default async function HomeSendPage({
 
         {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
 
-        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} purchaseNames={purchaseNames} />
+        <HomeSendInbox householdId={householdId} kids={kids} canAddChild={isHouseholdAdmin(membership)} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} purchaseNames={purchaseNames} />
 
         <HomeSendChannels
           householdId={householdId}

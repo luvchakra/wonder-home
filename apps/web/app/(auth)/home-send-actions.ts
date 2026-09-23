@@ -22,7 +22,8 @@ import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
 import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
-import { requireMembership } from "@wonderhome/core/identity/households";
+import { createChildMember } from "@wonderhome/core/identity/children";
+import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
@@ -267,7 +268,11 @@ const routeSchema = z.object({
   // school — a local start and end ("HH:MM"); empty means all day.
   dueTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
   endTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
-  childMemberId: z.uuid().optional(),
+  // A child already on record, or "new": a child the notice names who is not
+  // on record yet, added in the same step (story 08-009).
+  childMemberId: z.union([z.uuid(), z.literal("new")]).optional(),
+  newChildName: z.string().trim().min(1, { error: "What is the child's name?" }).max(80).optional(),
+  newChildDob: z.union([z.iso.date(), z.literal("")]).optional(),
   schoolKind: z.enum(SCHOOL_ITEM_KINDS).optional(),
   subject: z.string().trim().max(60).optional(),
   // grocery
@@ -353,6 +358,30 @@ async function reviseExisting(
     return { routedTable: "obligations", routedId: existing.id, changeType: "updated", previous, domain: "bill" };
   }
   throw new Error("only a bill or a school item can be updated or cancelled from HomeSend");
+}
+
+async function addChildFromNotice(supabase: Supabase, input: RouteInput): Promise<{ memberId: string } | { error: string }> {
+  if (!input.newChildName) return { error: "What is the child's name?" };
+  let actor: Membership;
+  try {
+    actor = await requireHouseholdAdmin(supabase, input.householdId);
+  } catch {
+    return { error: "Only an Admin can add a child. Ask one to add them from Family, then confirm this for them." };
+  }
+  try {
+    const added = await createChildMember(supabase, {
+      householdId: input.householdId,
+      displayName: input.newChildName,
+      dateOfBirth: input.newChildDob || null,
+      guardianMemberIds: [actor.memberId],
+    });
+    revalidatePath("/family");
+    revalidatePath("/school");
+    return added;
+  } catch (thrown) {
+    log.warn("adding a child from a school notice failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+    return { error: "We could not add that child. Nothing was saved — please try again." };
+  }
 }
 
 async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<{ routedTable: string; routedId: string } | { error: string }> {
@@ -592,6 +621,8 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     dueTime: formData.get("dueTime") ?? undefined,
     endTime: formData.get("endTime") ?? undefined,
     childMemberId: formData.get("childMemberId") || undefined,
+    newChildName: formData.get("newChildName") || undefined,
+    newChildDob: formData.get("newChildDob") ?? undefined,
     schoolKind: formData.get("schoolKind") || undefined,
     subject: formData.get("subject") || undefined,
     quantity: formData.get("quantity") || undefined,
@@ -661,13 +692,22 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
             date: input.kind === "health_document" ? input.documentDate || null : input.dueDate || null,
             amount: input.amount ? Number(input.amount) : null,
             payee: input.payee || null,
-            subjectMemberId: input.kind === "school_item" ? input.childMemberId || null : input.kind === "health_document" ? input.subjectMemberId || null : null,
+            subjectMemberId: input.kind === "school_item" ? (input.childMemberId && input.childMemberId !== "new" ? input.childMemberId : null) : input.kind === "health_document" ? input.subjectMemberId || null : null,
             capturedAt: intake?.createdAt ?? null,
             change: intake?.extracted?.change ?? "new",
           },
           { timezone: membership.household.timezone },
         ).catch(() => null);
         if (found) return { reconciliation: found };
+      }
+
+      // A child the notice names who is not on record yet (story 08-009):
+      // added the way the Family screen adds one — an Admin, who becomes the
+      // child's guardian — and the notice is confirmed for them straight after.
+      if (input.kind === "school_item" && input.childMemberId === "new") {
+        const added = await addChildFromNotice(supabase, input);
+        if ("error" in added) return { error: added.error };
+        input.childMemberId = added.memberId;
       }
 
       const created = await createNew(supabase, membership, input);

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**185 of 195 stories done — 94.9%**
+**186 of 195 stories done — 95.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 185 |
+| Done | 186 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 9 |
+| Not Started | 8 |
 
 ## By module
 
@@ -32,7 +32,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
-| 08 Kids & School Intelligence | `████████░░` | 8 | 9 | 1 not started |
+| 08 Kids & School Intelligence | `██████████` | 9 | 9 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 8 | 8 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
@@ -54,7 +54,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
-| `08-009` Add a child from a school notice | 08 Kids & School Intelligence | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
@@ -197,7 +196,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-8 of 9 done `████████░░`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -209,7 +208,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-006` Document workspace | P1 | Done | documents by reference, guardian-gated in the API and in RLS |
 | `08-007` School summaries | P1 | Done | only messages that ask something surface; a newsletter is filed |
 | `08-008` Deep portal automation | P2 | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
-| `08-009` Add a child from a school notice | P2 | Not Started | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline |
+| `08-009` Add a child from a school notice | P2 | Done | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline. Done: the resolver names an untitled unknown child (`unknown`), never assumes the household's only child; the review offers "Add <name> as a child" to Admins (guardian = the Admin, as on Family) and confirms the notice for them in the same step; golden case HS-15 |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 

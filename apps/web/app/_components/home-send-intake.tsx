@@ -72,6 +72,8 @@ export type ReviewSubject = {
   selected: { memberId: string; displayName: string } | null;
   candidates: { memberId: string; displayName: string }[];
   question: string | null;
+  /** The content named somebody who is not on record (story 08-009). */
+  unknown?: boolean;
 };
 
 export const selectClass =
@@ -265,6 +267,7 @@ export function HomeSendConfirmStep({
   receivedAt,
   subject,
   confirmation,
+  canAddChild = false,
 }: {
   item: { id: string };
   defaultKind: string;
@@ -285,6 +288,8 @@ export function HomeSendConfirmStep({
   subject?: ReviewSubject | null;
   /** Why this waits for a person, or the one question to answer (§12). */
   confirmation?: ReviewConfirmation | null;
+  /** Whether this person may add a child right here (story 08-009) — the Family screen's rule. */
+  canAddChild?: boolean;
 }) {
   const [kind, setKind] = useState(defaultKind);
   const needs = (kind !== "grocery_item" && kind !== "receipt" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
@@ -352,7 +357,7 @@ export function HomeSendConfirmStep({
         </select>
       </div>
 
-      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} />
+      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} />
 
       {needs.length > 0 ? (
         <fieldset className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
@@ -403,6 +408,66 @@ export function HomeSendConfirmStep({
 }
 
 /**
+ * Who a school notice is for (story 08-009).
+ *
+ * A picker of the household's children, with its own way to add one who is
+ * not on record yet (rule 20): a notice for a child the household has not
+ * added is not a dead end. The name the notice used is filled in; adding
+ * follows the Family screen's rule — an Admin adds, and becomes the child's
+ * guardian — and the notice is then confirmed for that child in the same
+ * step. Someone who may not add a child is told who can, instead of being
+ * offered a control that would refuse them.
+ */
+function SchoolChildField({
+  kids,
+  subject,
+  defaultValue,
+  canAddChild,
+}: {
+  kids: { id: string; displayName: string }[];
+  subject: ReviewSubject | null;
+  defaultValue: string;
+  canAddChild: boolean;
+}) {
+  // A notice that named somebody the household does not have starts on
+  // "add them"; so does a household with no children at all.
+  const namedSomeoneNew = Boolean(subject?.unknown && subject.said);
+  const [value, setValue] = useState(canAddChild && (kids.length === 0 || (namedSomeoneNew && !defaultValue)) ? NEW_CHILD : defaultValue);
+  const adding = value === NEW_CHILD;
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1.5">
+        <label htmlFor="childMemberId" className="block text-sm font-medium">For</label>
+        {subject?.question && !adding ? <p className="text-sm text-[var(--wh-foreground-muted)]">{subject.question}</p> : null}
+        <select id="childMemberId" name="childMemberId" className={selectClass} value={value} onChange={(event) => setValue(event.target.value)} required>
+          {kids.length === 0 && !canAddChild ? <option value="">No children on this household yet</option> : null}
+          {kids.length > 0 && !value ? <option value="">Choose who this is for</option> : null}
+          {kids.map((kid) => (
+            <option key={kid.id} value={kid.id}>{kid.displayName}</option>
+          ))}
+          {canAddChild ? <option value={NEW_CHILD}>{subject?.said && namedSomeoneNew ? `Add ${subject.said} as a child` : "Add a child"}</option> : null}
+        </select>
+        {!canAddChild && (kids.length === 0 || namedSomeoneNew) ? (
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">
+            {subject?.said ? `${subject.said} isn't on record yet. ` : ""}An Admin can add a child from Family; then this can be confirmed for them.
+          </p>
+        ) : null}
+      </div>
+      {adding ? (
+        <div className="space-y-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
+          <Field label="Child's name" name="newChildName" required defaultValue={namedSomeoneNew || kids.length === 0 ? (subject?.said ?? "") : ""} autoComplete="off" />
+          <Field label="Date of birth (optional)" name="newChildDob" type="date" />
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">They join the household as a child, with you as their guardian — the same as adding them from Family.</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The picker's value for "add a child who is not on record yet". */
+const NEW_CHILD = "new";
+
+/**
  * The kind-specific fields, swapped by the `kind` select above it — the
  * parent owns that selection so both controls read the one piece of state.
  */
@@ -412,6 +477,7 @@ export function HomeSendConfirmFields({
   kids,
   subject = null,
   householdId,
+  canAddChild = false,
 }: {
   kind: string;
   prefill: HomeSendExtractionFields;
@@ -419,6 +485,8 @@ export function HomeSendConfirmFields({
   subject?: ReviewSubject | null;
   /** Needed by a receipt, whose lines are matched against what the household tracks. */
   householdId?: string;
+  /** Offer adding the child the notice names when they are not on record yet (story 08-009). */
+  canAddChild?: boolean;
 }) {
   if (kind === "receipt" && householdId) return <HomeSendReceiptFields householdId={householdId} prefill={prefill} />;
   // Who it is for: whoever the content named, resolved through the
@@ -449,17 +517,7 @@ export function HomeSendConfirmFields({
         </>
       ) : kind === "school_item" ? (
         <>
-          <div className="space-y-1.5">
-            <label htmlFor="childMemberId" className="block text-sm font-medium">For</label>
-            {subject?.question ? <p className="text-sm text-[var(--wh-foreground-muted)]">{subject.question}</p> : null}
-            <select id="childMemberId" name="childMemberId" className={selectClass} defaultValue={schoolDefault} required>
-              {kids.length === 0 ? <option value="">No children on this household yet</option> : null}
-              {kids.length > 0 && !schoolDefault ? <option value="">Choose who this is for</option> : null}
-              {kids.map((kid) => (
-                <option key={kid.id} value={kid.id}>{kid.displayName}</option>
-              ))}
-            </select>
-          </div>
+          <SchoolChildField kids={kids} subject={subject} defaultValue={schoolDefault} canAddChild={canAddChild} />
           <div className="space-y-1.5">
             <label htmlFor="schoolKind" className="block text-sm font-medium">Kind</label>
             <select id="schoolKind" name="schoolKind" defaultValue={prefill?.schoolKind ?? "homework"} className={selectClass}>
