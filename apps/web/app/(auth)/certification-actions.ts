@@ -8,6 +8,7 @@ import { createClient } from "@wonderhome/core/db/server";
 import { forgetHouseholdContext } from "@wonderhome/core/conversation/brain";
 import { applyReview, type CertificationItem } from "@wonderhome/core/household/certification";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { homebrainCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { log } from "@wonderhome/core/observability/logger";
 
 import type { ActionState } from "./actions";
@@ -198,6 +199,19 @@ export async function reviewCertificationAction(_previous: ActionState, formData
         last_reviewed_by: membership.memberId,
       });
       if (insertError) throw new Error(`replacement insert failed: ${insertError.code ?? "unknown"}`);
+    }
+
+    // A belief WonderHome held, corrected by a person, is evaluation
+    // evidence (Wave 5 §13) — alongside the review history, never instead.
+    if (correction) {
+      await recordCorrectionEvidence(admin, {
+        householdId: parsed.data.householdId,
+        surface: "homebrain",
+        sourceType: "certification_item",
+        sourceId: item.id,
+        memberId: membership.memberId,
+        evidence: homebrainCorrectionEvidence(item.claim, correction),
+      }).catch((error) => log.warn("correction evidence not recorded", { reason: error instanceof Error ? error.message : "unknown" }));
     }
 
     await admin.from("certification_reviews").insert({

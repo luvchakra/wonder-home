@@ -21,7 +21,7 @@ import { runEvaluation, type RunTarget } from "./run";
 const OPERATIONS = {
   pass: false,
   evidence:
-    "Per-turn telemetry is kept on every HomeTalk reply (understanding source, failure, timings, HomeBrain validation) and HomeSend and AI-operations metrics have platform-admin endpoints; email-forwarding counters, alerts and dashboards are Wave 5 part 3.",
+    "Per-turn telemetry is kept on every HomeTalk reply (understanding source, failure, timings, HomeBrain validation). HomeSend, AI-operations and AI-quality (§23: outcomes handled, corrections, refused approvals, unsafe actions) metrics have platform-admin endpoints. Email-forwarding counters and alerts are Wave 5 part 3.",
 };
 
 const LIMITATIONS = [

@@ -39,7 +39,7 @@ export type AssistantMessage = {
   role: "member" | "assistant";
   text: string;
   pending?: boolean;
-  action?: { id: string; status: ActionState; preview: ActionPreviewShape | null; unchanged?: boolean } | null;
+  action?: { id: string; status: ActionState; preview: ActionPreviewShape | null; unchanged?: boolean; fingerprint?: string | null } | null;
   /** A preview WonderHome showed without recording an action (e.g. prepared). */
   preview?: ActionPreviewShape | null;
   proposal?: string;
@@ -283,7 +283,7 @@ export function Assistant({
   }, []);
 
   const decide = useCallback(
-    async (actionId: string, decision: "approved" | "rejected") => {
+    async (actionId: string, decision: "approved" | "rejected", fingerprint: string | null = null) => {
       if (busy) return;
       setBusy(true);
       setError(null);
@@ -291,7 +291,9 @@ export function Assistant({
         const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ actionId, decision }),
+          // What this card showed (Wave 5 §20): an approval is only for
+          // that exact version of the proposal.
+          body: JSON.stringify({ actionId, decision, ...(fingerprint ? { fingerprint } : {}) }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload?.error?.message ?? "That decision did not go through.");
@@ -299,7 +301,7 @@ export function Assistant({
         setMessages((current) =>
           current
             .map((message) =>
-              message.action?.id === actionId ? { ...message, action: { ...message.action, status: decision } } : message,
+              message.action?.id === actionId ? { ...message, action: { ...message.action, status: payload.reply.action?.status ?? decision } } : message,
             )
             .concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text }),
         );
@@ -387,7 +389,7 @@ export function Assistant({
                     controls={
                       message.action?.status === "proposed" ? (
                         <>
-                          <Button onClick={() => void decide(message.action!.id, "approved")} disabled={busy}>
+                          <Button onClick={() => void decide(message.action!.id, "approved", message.action!.fingerprint ?? null)} disabled={busy}>
                             Confirm
                           </Button>
                           <Pill type="button" tone="quiet" onClick={() => void send("Actually, let me change that.", "text")} disabled={busy}>

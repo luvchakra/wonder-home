@@ -376,6 +376,14 @@ and `--write` records the release artifact in `docs/ai-releases/`. When the
 golden set catches a defect, fix the product. Never loosen an expectation
 to pass. Add a case whenever an understanding, a reconciliation or an
 answer rule changes.
+A person's correction is evidence, not just a fix:
+`evaluation/evidence.ts` writes one row per corrected field into the
+append-only `ai_corrections` (HomeTalk "no, I meant…", HomeSend review
+edits, HomeBrain Review corrections). A HomeTalk approval binds to the
+exact proposal through `conversation/approval.ts`: a fingerprint of the
+action, its target and every parameter. A stale, changed or timed-out
+approval is refused and closed, never carried out. Production quality
+(§23) is counted from closed words only, in `evaluation/production.ts`.
 
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
 runs the household's actual domains: `ai/gather-assessments.ts` merges

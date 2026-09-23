@@ -50,7 +50,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           id: message.id,
           role: message.role as "member" | "assistant",
           text: message.content,
-          action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview } : null,
+          action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null } : null,
         }));
     }
   }

@@ -336,7 +336,8 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 **Progress**
 - Started 2026-09-23.
 - Part 1 (2026-09-23): the evaluation framework, `packages/core/src/evaluation/`, run by `npm run eval` in CI and `verify`. It covers golden households A–E and 45 cases across the three surfaces. It adds the §2 staged comparison, the §10 taxonomy, the §8 metrics, the §9 Unsafe Action Rate, content-hashed prompt/context/dataset versions, the §21 gates and the §22 artifact (`docs/ai-releases/`). The golden set found five HomeBrain and HomeTalk defects, which were fixed. Note: `docs/progress/2026-09-23-wave5-evaluation-framework.md`.
-- Remaining: part 2 covers correction evidence, the approval fingerprint and rate metrics; part 3 covers limits, email telemetry, failure codes, idempotency and retries.
+- Part 2 (2026-09-23): corrections are now structured evidence (§13). HomeTalk corrections, HomeSend review fixes and HomeBrain Review corrections each write one row per corrected field into the append-only, admin-readable `ai_corrections`, stamped with error type, understanding source and prompt version. Approvals bind to the exact proposal (§20): `conversation_actions.approval_fingerprint`, and stale, changed and expired approvals are refused and closed. HomeTalk and HomeBrain production quality (§23) is served at `GET /api/v1/platform-admin/ai-quality`. Migration `20260924140000` is applied live and `verify:live` passes 140/140. Note: `docs/progress/2026-09-23-wave5-corrections-approvals-metrics.md`.
+- Remaining: part 3 covers rate/payload limits and model timeouts, email-forwarding telemetry and alerts, failure codes, idempotency and retries, and registering HomeSend and approval tests in `npm run security`.
 
 **Definition of Done**
 - One unified evaluation framework, synthetic golden households, common infrastructure across the three surfaces.

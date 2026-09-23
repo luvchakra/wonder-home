@@ -82,6 +82,7 @@ describe("the OpenAPI document", () => {
       "/platform-admin/ai-operations",
       "/platform-admin/ai-operations/runs/{runId}",
       "/platform-admin/homesend-metrics",
+      "/platform-admin/ai-quality",
     ]) {
       expect(paths, `${path} is missing from the OpenAPI document`).toHaveProperty([path]);
     }
