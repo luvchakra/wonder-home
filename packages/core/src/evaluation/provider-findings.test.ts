@@ -158,3 +158,30 @@ describe("HomeBrain: a withheld answer is never reported as \"not on record\"", 
     expect(answer.text ?? "").not.toMatch(/no record of that/);
   });
 });
+
+describe("HomeTalk: a bill the model named from the conversation is as settled as \"that bill\"", () => {
+  // Gemini, given the conversation, resolves "Pay that bill" itself and
+  // names the bill ("electricity") — sometimes with a self-reported
+  // confidence of 0.7, which alone would ask "Which bill?" about a bill
+  // that was just discussed (HT-08, 23 Sep 2026, intermittent).
+  const env = groundingEnvFor(A, "a-kunal", { conversation: [{ entityType: "bill", entityId: "a-b-electricity", label: "Electricity", minutesAgo: 1 }] });
+  const named = (reference: string, confidence = 0.7): HouseholdIntent => ({
+    action: "make_payment", actorMemberId: "a-kunal", target: { kind: "bill", reference }, parameters: { billLabel: reference },
+    confidence, channel: "text", utterance: "Pay that bill", understanding: { source: "model", provider: "google" },
+  });
+
+  it("grounds the named bill to the one in play and settles which bill it is", async () => {
+    const grounded = await groundIntent(named("electricity"), env);
+    expect(grounded.kind).toBe("grounded");
+    if (grounded.kind !== "grounded") return;
+    expect(grounded.intent.parameters.billId).toBe("a-b-electricity");
+    expect(grounded.intent.target.reference).toBe("Electricity");
+    expect(grounded.intent.confidence).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it("a bill named that is not the one in play keeps its own doubt", async () => {
+    const grounded = await groundIntent(named("water", 0.6), env);
+    expect(grounded.kind === "grounded" && grounded.intent.confidence).toBe(0.6);
+    expect(grounded.kind === "grounded" && grounded.intent.parameters.billId).toBeUndefined();
+  });
+});

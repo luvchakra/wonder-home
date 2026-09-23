@@ -8,7 +8,7 @@ import type { HouseholdIntent } from "../conversation/intent";
 import { runHomeTalkGateway, FAILED_SPEECH } from "../hometalk/gateway";
 import type { ModelDraft } from "../homebrain/answer";
 import { answerWithHomeBrain } from "../homebrain/turn";
-import { attachHomeSendEvidence, explainProvenance } from "../context/provenance";
+import { attachHomeSendEvidence, describeProvenance, explainProvenance } from "../context/provenance";
 import type { HealthRecord } from "../health/records";
 import type { HomeSendItem } from "../homesend/items";
 import { reconcileAgainstRecords } from "../homesend/reconcile";
@@ -298,5 +298,98 @@ describe("PERF-001 — latency is recorded as percentiles of real observations",
     expect(summariseLatency(observed)).toEqual({ cases: 10, p50: 100, p95: 1000, p99: 1000 });
     expect(percentile([42], 99)).toBe(42);
     expect(summariseLatency([])).toEqual({ cases: 0, p50: null, p95: null, p99: null });
+  });
+});
+
+describe("X-003 — HomeSend never writes a household record itself", () => {
+  // Everything HomeSend reads becomes a household record only through the
+  // domain services a person's confirmation calls — never a direct write
+  // from the intake pipeline. Checked structurally, so a shortcut added
+  // later fails here rather than in someone's household.
+  const OWN_TABLES = new Set(["home_send_items", "homesend_addresses", "homesend_changes", "homesend_email_events", "homesend_share_handoffs", "jobs", "households"]);
+
+  it("the HomeSend pipeline and its web actions touch no table but HomeSend's own", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const core = join(__dirname, "../homesend");
+    const web = join(__dirname, "../../../../apps/web/app");
+    const files = [
+      ...readdirSync(core).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && file !== "testing.ts").map((file) => join(core, file)),
+      join(web, "(auth)/home-send-actions.ts"),
+      join(web, "(auth)/home-send-review.ts"),
+      join(web, "api/v1/intake/share/route.ts"),
+      join(web, "api/v1/homesend/email/webhook/route.ts"),
+    ];
+    const touched = files.flatMap((file) => [...readFileSync(file, "utf8").matchAll(/(?<!storage)\.from\("([a-z_]+)"\)/g)].map((match) => `${match[1]} (${file.split("/").slice(-2).join("/")})`));
+    expect(touched.filter((entry) => !OWN_TABLES.has(entry.split(" ")[0]!))).toEqual([]);
+  });
+});
+
+describe("HS-018 / DATA-004 — a fact that came from HomeSend can be traced back to what was sent", () => {
+  it("intake → confirmed change → the record → the fact HomeBrain cites, each naming the one before", () => {
+    const sent = {
+      id: "a-hs-circular", householdId: A.id, createdByMemberId: null, source: "email", filePath: null, rawText: "Science project due Tuesday.",
+      status: "routed", classifiedKind: "school_item",
+      extracted: { title: "Science project", notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: "2026-09-29", schoolKind: "project", subject: "Science", quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, subjectMemberName: "Manan", secondary: null },
+      routedTable: "school_items", routedId: "a-s-science", securityStatus: "not_applicable", externalId: "email-77", senderAddress: "office@school.example.org", createdAt: "2026-09-22T08:00:00Z",
+    } as HomeSendItem;
+    const change = { id: "a-chg-1", householdId: A.id, intakeId: sent.id, domain: "school_item" as const, entityId: "a-s-science", createdByMemberId: "a-upasana", createdAt: "2026-09-22T08:05:00Z", undoneAt: null, undoneByMemberId: null, changeType: "created" as const, previous: null };
+    const items = attachHomeSendEvidence(contextItemsFor(withRecords(A, { homeSendItems: [sent] }), "a-kunal"), [change]);
+
+    const record = items.find((item) => item.entityId === "a-s-science")!;
+    const trail = describeProvenance(record, A.timezone);
+    expect(trail[1]).toBe(`Sources: school_items/a-s-science, HomeSend intake/${sent.id}`);
+    expect(explainProvenance(record, A.timezone)).toMatch(/^Added from something sent to HomeSend on /);
+
+    const intake = items.find((item) => item.entityId === sent.id)!;
+    expect(intake.relatedEntityIds).toContain("a-s-science");
+    expect(intake.summary).toMatch(/Science project, and added/);
+
+    // Undone, the trail goes with it: the record no longer claims HomeSend.
+    const undone = attachHomeSendEvidence(contextItemsFor(A, "a-kunal"), [{ ...change, undoneAt: "2026-09-22T09:00:00Z" }]);
+    expect(describeProvenance(undone.find((item) => item.entityId === "a-s-science")!, A.timezone)[1]).toBe("Sources: school_items/a-s-science");
+  });
+});
+
+describe("PERF-004 — a model that times out never becomes an invented or unsafe answer", () => {
+  it("a composer that throws (a timeout) still ends in the facts on record, not an error", async () => {
+    const answer = await ask(A, "a-kunal", "What's for dinner tonight?", async () => {
+      throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+    });
+    expect(answer.source).toBe("deterministic");
+    expect(answer.text ?? "").toMatch(/Pasta arrabbiata/);
+  });
+
+  it("with nothing readable and the model gone, the answer is an honest 'not on record'", async () => {
+    const empty = withRecords(A, { meals: [], events: [], schoolItems: [], consumables: [], obligations: [], memories: [], beliefs: [] });
+    const answer = await ask(empty, "a-kunal", "What's for dinner tonight?", async () => {
+      throw new Error("timeout");
+    });
+    expect(answer.mode).toBe("unknown");
+    expect(answer.text ?? "").toMatch(/does not have anything on record/);
+  });
+});
+
+describe("PERF-004 — an understanding that throws never fails the turn or writes anything", () => {
+  const throwing: Understanding = () => {
+    throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+  };
+  const turn = (utterance: string) => {
+    const kunal = memberOf(A, "a-kunal");
+    return converse({
+      utterance, channel: "text", actor: { memberId: kunal.id, roles: kunal.roles, memberType: kunal.memberType }, pending: null,
+      autonomyFor: () => "execute", entitledFor: () => true, executable: canExecute, sessionId: "spec-perf-004", now: A.now, understand: throwing,
+    });
+  };
+
+  it("an ordinary request still works from the rules", async () => {
+    const result = await turn("Add milk to the grocery list");
+    expect(result.kind).toBe("reply");
+    if (result.kind === "reply") expect(result.intent.action).toBe("add_to_list");
+  });
+
+  it("a payment request is never carried out on the back of a failure", async () => {
+    const result = await turn("Pay the electricity bill");
+    expect(result.kind === "reply" && result.proposal.kind).not.toBe("executed");
   });
 });

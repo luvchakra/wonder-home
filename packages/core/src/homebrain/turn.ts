@@ -97,9 +97,15 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
       let lastRequestSize = sent.length;
       const outcome = await composeGrounded({
         facts: sent,
-        compose: (request) => {
+        compose: async (request) => {
           lastRequestSize = request.facts.length;
-          return compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems });
+          // A composer that throws — a timeout, an outage it did not catch
+          // itself — is a model with no answer, never an error the person sees.
+          try {
+            return await compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems });
+          } catch {
+            return null;
+          }
         },
         validation: { question: turn.sentQuestion, history: turn.sentHistory.map((entry) => entry.text), localNow, today: isoDay(turn.now, turn.timezone) },
       });

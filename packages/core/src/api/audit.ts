@@ -19,6 +19,7 @@ import { log } from "../observability/logger";
  */
 
 export const AUDIT_EVENTS = [
+  "hometalk.executed",
   "household.created",
   "household.updated",
   "member.added",

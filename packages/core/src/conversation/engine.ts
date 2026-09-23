@@ -197,7 +197,23 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
         channel: input.channel,
       })
     : null;
-  let intent = answered ?? (await understand(input.utterance, context));
+  // An understanding that throws — a timeout, an outage it did not catch
+  // itself — is a model that did not answer: the rules below take over, and
+  // the turn never fails because of it (test spec PERF-004).
+  let intent =
+    answered ??
+    (await Promise.resolve()
+      .then(() => understand(input.utterance, context))
+      .catch((): HouseholdIntent => ({
+        action: "unknown",
+        actorMemberId: input.actor.memberId,
+        target: { kind: "unspecified" },
+        parameters: {},
+        confidence: 0,
+        channel: input.channel,
+        utterance: input.utterance,
+        understanding: { source: "model", failure: "provider_error" },
+      })));
 
   // A model that did not answer, or answered "unknown" for something the
   // rules plainly read, is not the last word: the rules are the safety net

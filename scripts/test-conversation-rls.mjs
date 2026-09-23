@@ -233,6 +233,20 @@ test("an approved proposal still runs to executed or failed", () => {
   assert.equal(psql(`select approval_status from public.conversation_actions where id = '${id}';`, options), "executed");
 });
 
+test("an approval is decided once: a second yes finds nothing waiting, so nothing runs twice (HT-008)", () => {
+  const id = psql(
+    `insert into public.conversation_actions (household_id, session_id, action_type, payload, approval_status)
+     values ('${household}', '${sharedSession}', 'make_payment', '{}'::jsonb, 'proposed') returning id;`,
+    options,
+  );
+  // decideAction's own statement: only ever from proposed.
+  const decide = () => psql(`update public.conversation_actions set approval_status = 'approved' where id = '${id}' and approval_status = 'proposed' returning id;`, options);
+  assert.equal(decide(), id);
+  psql(`update public.conversation_actions set approval_status = 'executed' where id = '${id}';`, options);
+  assert.equal(decide(), "", "a second approval found the action waiting again");
+  assert.equal(psql(`select approval_status from public.conversation_actions where id = '${id}';`, options), "executed");
+});
+
 test("a session cannot be opened for a member of another household", () => {
   // profiles.id references auth.users, so the account has to exist first.
   psql(

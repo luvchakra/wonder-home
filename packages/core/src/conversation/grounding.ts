@@ -365,10 +365,37 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
       } else if (resolved.kind === "ambiguous") {
         return clarify(grounded, "referent", resolved.question.replace(/^Do you mean/, "Which bill do you mean —").replace(/\?$/, "?"), resolved.candidates);
       }
+    } else if (said) {
+      // A model given the conversation may resolve "that bill" itself and
+      // name it ("electricity"). When that name is exactly one bill already
+      // in play — just asked about, proposed, talked about or sent in — it is
+      // the same certainty as the reference resolving here, and earns the
+      // same treatment: which bill is settled, the payment still waits for
+      // a person's yes and every finance gate.
+      const state = await env.references();
+      const key = billKey(said);
+      const named = [...state.clarification, ...state.proposal, ...state.conversation, ...state.homesend].filter(
+        (entity, index, all) => entity.entityType === "bill" && billKey(entity.label) === key && all.findIndex((other) => other.entityType === "bill" && (other.entityId ?? other.label) === (entity.entityId ?? entity.label)) === index,
+      );
+      if (key && named.length === 1) {
+        const bill = named[0]!;
+        grounded = {
+          ...grounded,
+          target: { kind: "bill", reference: bill.label },
+          parameters: { ...grounded.parameters, billLabel: bill.label, ...(bill.entityId ? { billId: bill.entityId } : {}) },
+          confidence: Math.max(grounded.confidence, 0.8),
+        };
+        focus.push({ ...bill, source: "mention", at });
+      }
     }
   }
 
   return { kind: "grounded", intent: grounded, focus };
+}
+
+/** "The Electricity bill", "electricity" and "Electricity Bill" are one name. */
+function billKey(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\b(?:the|my|our|bill)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 
 /** Whether an intent is one grounding has anything to do for. */

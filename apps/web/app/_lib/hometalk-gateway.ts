@@ -20,7 +20,7 @@ export function handleHomeTalkRequest(
 ): Promise<HomeTalkResponse> {
   return runHomeTalkGateway(request, {
     membership: (householdId) => requireMembership(session.supabase, householdId),
-    turn: (body) => homeTalkTurn({ supabase: session.supabase, householdId: request.householdId, body, ...(limits ? { limits } : {}) }),
+    turn: (body) => homeTalkTurn({ supabase: session.supabase, householdId: request.householdId, body, source: request.channel, ...(limits ? { limits } : {}) }),
     idempotency: supabaseIdempotencyStore(session.supabase, request.householdId),
   });
 }

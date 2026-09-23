@@ -142,8 +142,11 @@ export async function homeTalkTurn(input: {
    * Absent for the household's own app.
    */
   limits?: { scopes: readonly VoiceScope[] };
+  /** The channel this turn came through, for the audit trail: "web" unless a gateway channel says otherwise. */
+  source?: string;
 }) {
   const { supabase, householdId, body, limits } = input;
+  const source = input.source ?? "web";
   const membership = await requireMembership(supabase, householdId);
   const actor = { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType };
   const admin = createAdminClient();
@@ -165,7 +168,7 @@ export async function homeTalkTurn(input: {
     const settled = action.refused
       ? { text: approvalRefusal(action.refused), action }
       : body.decision === "approved"
-        ? await carryOutApproved({ admin, supabase, householdId, membership, action, people })
+        ? await carryOutApproved({ admin, supabase, householdId, membership, action, people, source, modality: "text" })
         : { text: "Understood. I have left that alone.", action };
     const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: action.id } });
 
@@ -385,7 +388,7 @@ export async function homeTalkTurn(input: {
         if (!decided) continue;
         const settled = decided.refused
           ? { text: approvalRefusal(decided.refused), action: decided, focus: [] as FocusEntity[] }
-          : approve ? await carryOutApproved({ admin, supabase, householdId, membership, action: decided, people }) : { text: `Left alone: ${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}.`, action: decided, focus: [] as FocusEntity[] };
+          : approve ? await carryOutApproved({ admin, supabase, householdId, membership, action: decided, people, source, modality: body.channel }) : { text: `Left alone: ${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}.`, action: decided, focus: [] as FocusEntity[] };
         const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: decided.id, ...(settled.focus.length > 0 ? { focus: settled.focus } : {}) } });
         replies.push({ id, text: settled.text, action: settled.action, preview: null, proposal: approve ? "approve" : "reject", mode: modeFor(approve ? "approve" : "reject", settled.action.status === "executed") });
       }
@@ -502,7 +505,7 @@ export async function homeTalkTurn(input: {
       if (turn.record) {
         action = await recordProposal(admin, { householdId, sessionId, messageId: id, intent: turn.intent, proposal: turn.proposal });
         if (outcome) {
-          await markActionResult(admin, { actionId: action.id, ...outcome });
+          await markActionResult(admin, { actionId: action.id, ...outcome, audit: { householdId, actorMemberId: membership.memberId, actionType: turn.intent.action, source, modality: body.channel } });
           action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
         }
       }
@@ -762,7 +765,7 @@ export async function homeTalkTurn(input: {
       text = approvalRefusal(action.refused);
       await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
     } else if (result.kind === "approve" && action) {
-      const settled = await carryOutApproved({ admin, supabase, householdId, membership, action, people });
+      const settled = await carryOutApproved({ admin, supabase, householdId, membership, action, people, source, modality: body.channel });
       text = settled.text;
       action = settled.action;
       mode = modeFor("approve", action.status === "executed");
@@ -773,7 +776,7 @@ export async function homeTalkTurn(input: {
   } else if (result.kind === "reply" && result.record) {
     action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal });
     if (outcome) {
-      await markActionResult(admin, { actionId: action.id, ...outcome });
+      await markActionResult(admin, { actionId: action.id, ...outcome, audit: { householdId, actorMemberId: membership.memberId, actionType: result.intent.action, source, modality: body.channel } });
       action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
     }
   }
@@ -822,6 +825,8 @@ async function carryOutApproved(input: {
   membership: HouseholdMembership;
   action: ConversationAction;
   people: Person[];
+  source: string;
+  modality: "text" | "voice";
 }): Promise<{ text: string; action: ConversationAction; focus: FocusEntity[] }> {
   const stored = await loadAction(input.admin, { householdId: input.householdId, actionId: input.action.id });
   if (!stored) return { text: "I have your go-ahead, but I could not find what it was for, so nothing was changed.", action: input.action, focus: [] };
@@ -853,7 +858,12 @@ async function carryOutApproved(input: {
     admin: input.admin,
   });
   const status = done.ok ? "executed" : "failed";
-  await markActionResult(input.admin, { actionId: input.action.id, status, result: done.ok ? done.result : { reason: done.reason } });
+  await markActionResult(input.admin, {
+    actionId: input.action.id,
+    status,
+    result: done.ok ? done.result : { reason: done.reason },
+    audit: { householdId: input.householdId, actorMemberId: input.membership.memberId, actionType: stored.actionType, source: input.source, modality: input.modality },
+  });
   if (done.ok) forgetHouseholdContext(input.householdId);
 
   return {

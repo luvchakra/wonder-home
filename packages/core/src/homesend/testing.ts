@@ -26,14 +26,14 @@ export function fakeSupabase(seed: Record<string, Row[]> = {}): FakeSupabase {
     const rows = (tables[table] ??= []);
     const filters: Filter[] = [];
     let mode: "select" | "insert" | "update" | "upsert" = "select";
-    let payload: Row | null = null;
+    let payload: Row | Row[] | null = null;
     let conflict: { columns: string[]; ignoreDuplicates: boolean } | null = null;
     let order: { column: string; ascending: boolean } | null = null;
     let limit: number | null = null;
 
     const run = (): Row[] => {
       if (mode === "upsert" && payload && conflict) {
-        const value = payload;
+        const value = payload as Row;
         const clash = rows.find((row) => conflict!.columns.every((column) => row[column] === value[column]));
         if (clash) {
           if (conflict.ignoreDuplicates) return [];
@@ -43,9 +43,9 @@ export function fakeSupabase(seed: Record<string, Row[]> = {}): FakeSupabase {
         mode = "insert";
       }
       if (mode === "insert" && payload) {
-        const row = { created_at: new Date(Date.now() + rows.length).toISOString(), status: "received", ...payload };
-        rows.push(row);
-        return [row];
+        const inserted = (Array.isArray(payload) ? payload : [payload]).map((value: Row) => ({ created_at: new Date(Date.now() + rows.length).toISOString(), status: "received", ...value }));
+        rows.push(...inserted);
+        return inserted;
       }
       let matched = rows.filter((row) => filters.every((filter) => filter(row)));
       if (mode === "update" && payload) {
@@ -62,7 +62,7 @@ export function fakeSupabase(seed: Record<string, Row[]> = {}): FakeSupabase {
       select() {
         return builder;
       },
-      insert(value: Row) {
+      insert(value: Row | Row[]) {
         mode = "insert";
         payload = value;
         return builder;
