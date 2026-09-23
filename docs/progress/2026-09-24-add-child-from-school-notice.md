@@ -71,5 +71,6 @@ HomeSend's own rule is never to guess.
 
 ## Test data cleanup
 
-See the 20-006 note: the same QA household served both stories and is
-removed after this PR merges.
+The same QA household served 20-006 and was removed after this PR merged.
+The 20-006 note (`2026-09-24-billing-abstraction.md`) has the ids and the
+counts, all 0.

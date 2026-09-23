@@ -595,6 +595,12 @@ async function main() {
   const purchaseProbe = await admin.from("homesend_changes").insert({ household_id: nobodyHome, intake_id: nobodyHome, domain: "purchase", entity_id: nobodyHome, created_by_member_id: nobodyHome });
   check("a recorded purchase is an undoable HomeSend change", purchaseProbe.error?.code === "23503", purchaseProbe.error?.code ?? "inserted?!");
 
+  // Notifications sent beyond the app (20260927130000, story 17-006): a
+  // "sent" event passes the event-word check and only then fails on the
+  // missing notification.
+  const sentProbe = await admin.from("notification_events").insert({ household_id: nobodyHome, notification_id: nobodyHome, event_type: "sent", channel: "whatsapp", metadata: { providerMessageId: "verify-live" } });
+  check("a notification can be recorded as sent to WhatsApp", sentProbe.error?.code === "23503", sentProbe.error?.code ?? "inserted?!");
+
   // HomeTalk channel telemetry (20260926110000, voice phase 6).
   const serverChannelEvents = await admin.from("hometalk_channel_events").select("id").limit(1);
   check("the server can read HomeTalk channel telemetry", !serverChannelEvents.error, serverChannelEvents.error?.code ?? "ok");

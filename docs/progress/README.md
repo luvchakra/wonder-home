@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [WhatsApp as a notification channel: Cloud API template adapter, delivery wired into new notifications, a signed webhook for delivery reports and STOP (story 17-006 Done)](2026-09-24-whatsapp-channel.md) |
 | 2026-09-24 | [Add a child from a school notice: an unknown child is named, never assumed to be the only one, and an Admin adds them in the review (story 08-009 Done)](2026-09-24-add-child-from-school-notice.md) |
 | 2026-09-24 | [Provider-neutral billing: a pure event reducer, an inert Stripe adapter with idempotent checkouts and verified webhooks, paid plans out of reach of any household session (story 20-006 Done)](2026-09-24-billing-abstraction.md) |
 | 2026-09-24 | [Weather as a planning signal: Open-Meteo behind the weather port, an Admin-chosen area rounded to ~1 km, hourly cached forecast, laundry planned around it (story 17-007 Done)](2026-09-24-weather-planning-signal.md) |

@@ -333,8 +333,8 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   (`home-send-channels.tsx`) is real: every member can read and copy the
   household's address, only an admin can set it up, rotate or turn it
   off — real forwarding still waits on that same human errand, but
-  nothing about the UI or the backend behind it does. WhatsApp still has
-  no webhook at all. The classifier can
+  nothing about the UI or the backend behind it does. WhatsApp is a
+  delivery channel with its own webhook (story 17-006), not an intake. The classifier can
   also propose one secondary, different-domain write alongside an
   intake's primary one (a bill or school notice that also implies a
   grocery need) — always a grocery suggestion, never written until the
@@ -510,6 +510,25 @@ subscription from a household session: RLS and `changePlan` both refuse
 it. Every plan is unmarked today, and marking plans paid is a person's
 pricing decision. Never let a household change its own plan to a paid one
 without a verified payment.
+
+WhatsApp (story 17-006) is a delivery channel behind the 06-008 adapter
+shape (`notifications/whatsapp.ts`). A new notification that is due now
+goes out on the member's live channels (`notifications/deliver.ts`, called
+from `createNotification`), and each attempt leaves a `sent` or
+`delivery_failed` event in closed words. A reply to an open thread never
+pings again.
+
+The webhook (`/api/v1/whatsapp/webhook`) does three things:
+- answers Meta's handshake;
+- believes a POST only after `X-Hub-Signature-256` verifies, then records
+  delivered, seen or failed by provider message id;
+- honours STOP on the spot.
+
+WhatsApp is not a second brain. Nothing else a person writes there is acted
+on, and no household record is touched from it. It stays inert until a
+deployment sets `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
+`WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN`.
+Scheduled (future-dated) notifications are not yet sent beyond the app.
 
 ## Non-functional gates
 Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests are release blockers. Core API targets are p95 <=500ms reads and <=800ms ordinary writes excluding external provider latency.

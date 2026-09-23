@@ -1,5 +1,6 @@
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
+import { channelAdaptersFromEnv } from "@wonderhome/core/notifications/channels";
 import { loadChannelPreferences } from "@wonderhome/core/notifications/preferences";
 
 import { saveChannelPreferenceAction } from "../../(auth)/notification-preferences-actions";
@@ -24,6 +25,9 @@ export default async function NotificationSettingsPage() {
   const { supabase, membership, viewer, secondary } = session;
 
   const preferences = await loadChannelPreferences(supabase, membership.memberId);
+  // Which channels actually reach someone on this deployment (story 17-006):
+  // WhatsApp once its Cloud API is configured, in-app always.
+  const adapters = channelAdaptersFromEnv();
 
   return (
     <AppShell
@@ -49,7 +53,7 @@ export default async function NotificationSettingsPage() {
               householdId={membership.household.id}
               tone="attention"
               preference={preference}
-              live={preference.channel === "in_app"}
+              live={adapters[preference.channel].live}
               description={CHANNEL_DESCRIPTIONS[preference.channel]}
               save={saveChannelPreferenceAction}
             />

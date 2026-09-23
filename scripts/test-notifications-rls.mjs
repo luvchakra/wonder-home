@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_notifications_test";
@@ -278,5 +278,37 @@ test("a push target is free text — it is an opaque subscription reference, not
       options,
     ),
     "endpoint:abc123",
+  );
+});
+
+// Story 17-006: a notification sent beyond the app, and its delivery report.
+
+test("a WhatsApp send and its report are server-written events a member cannot forge", () => {
+  const id = notify(headMember, { threadKey: "outcome:whatsapp.delivery" });
+  psql(
+    `insert into public.notification_events (household_id, notification_id, event_type, channel, metadata)
+     values ('${household}', '${id}', 'sent', 'whatsapp', '{"providerMessageId": "wamid.TEST"}'),
+            ('${household}', '${id}', 'delivery_failed', 'whatsapp', '{"providerMessageId": "wamid.TEST", "code": 131047}');`,
+    options,
+  );
+  assert.equal(
+    psql(`select count(*) from public.notification_events where metadata ->> 'providerMessageId' = 'wamid.TEST';`, options),
+    "2",
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.notification_events (household_id, notification_id, event_type, channel)
+       values ('${household}', '${id}', 'sent', 'whatsapp');`,
+      options,
+    ),
+    "a member recorded a delivery of their own",
+  );
+});
+
+test("an event word outside the lifecycle is refused", () => {
+  const id = notify(headMember, { threadKey: "outcome:whatsapp.words" });
+  assert.throws(() =>
+    psql(`insert into public.notification_events (household_id, notification_id, event_type) values ('${household}', '${id}', 'bounced');`, options),
   );
 });
