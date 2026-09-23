@@ -131,6 +131,8 @@ const SHIPPED_COLUMNS = [
   { table: "health_appointments", column: "checkup_id" },
   { table: "household_voice_settings", column: "live_engine" },
   { table: "conversation_sessions", column: "surface" },
+  { table: "school_items", column: "due_time_known" },
+  { table: "school_items", column: "ends_at" },
 ];
 
 /**

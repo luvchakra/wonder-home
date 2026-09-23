@@ -150,6 +150,10 @@ function AddHomeworkForm({
         />
         <Field label="Est. minutes (optional)" name="estimatedMinutes" type="number" min={1} placeholder="30" />
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Starts (optional)" name="dueTime" type="time" hint="Leave empty for all day." />
+        <Field label="Ends (optional)" name="endTime" type="time" />
+      </div>
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Adding…" : "Add"}
       </Button>

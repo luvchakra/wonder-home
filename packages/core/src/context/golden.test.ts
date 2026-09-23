@@ -68,7 +68,7 @@ function bill(id: string, name: string, extra: Partial<Obligation> = {}): Obliga
 }
 
 function schoolItem(id: string, childMemberId: string, title: string, extra: Partial<SchoolItem> = {}): SchoolItem {
-  return { id, childMemberId, kind: "project", title, subject: "Science", detail: null, dueAt: new Date("2026-09-26T04:30:00Z"), estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null, ...extra };
+  return { id, childMemberId, kind: "project", title, subject: "Science", detail: null, dueAt: new Date("2026-09-26T04:30:00Z"), dueTimeKnown: true, endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null, ...extra };
 }
 
 function consumable(id: string, name: string, extra: Partial<Consumable> = {}): Consumable {

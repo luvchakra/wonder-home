@@ -8,6 +8,7 @@ import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { cancelSchoolItem, createSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
+import { schoolWhen } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
 
@@ -30,6 +31,9 @@ const schema = z
     subject: z.string().trim().max(60).optional(),
     detail: z.string().trim().max(2000).optional(),
     dueAt: z.string().optional(),
+    // A local start and end ("HH:MM"); empty means all day (14-014).
+    dueTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
+    endTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
     estimatedMinutes: z.union([z.coerce.number().int().min(1).max(600), z.literal("")]).optional(),
   })
   .refine((value) => value.kind === "notice" || Boolean(value.dueAt), {
@@ -46,6 +50,8 @@ export async function createSchoolItemAction(_previous: ActionState, formData: F
     subject: formData.get("subject") || undefined,
     detail: formData.get("detail") || undefined,
     dueAt: formData.get("dueAt") || undefined,
+    dueTime: formData.get("dueTime") ?? undefined,
+    endTime: formData.get("endTime") ?? undefined,
     estimatedMinutes: formData.get("estimatedMinutes") || undefined,
   });
   if (!parsed.success) {
@@ -54,7 +60,7 @@ export async function createSchoolItemAction(_previous: ActionState, formData: F
 
   try {
     const supabase = await createClient();
-    await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, parsed.data.householdId);
 
     await createSchoolItem(supabase, {
       householdId: parsed.data.householdId,
@@ -63,7 +69,7 @@ export async function createSchoolItemAction(_previous: ActionState, formData: F
       title: parsed.data.title,
       subject: parsed.data.subject || null,
       detail: parsed.data.detail || null,
-      dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt).toISOString() : null,
+      ...schoolWhen({ date: parsed.data.dueAt, time: parsed.data.dueTime, endTime: parsed.data.endTime, timezone: membership.household.timezone }),
       estimatedMinutes: parsed.data.estimatedMinutes === "" ? null : parsed.data.estimatedMinutes,
     });
 
@@ -155,6 +161,9 @@ const updateSchema = z
     subject: z.string().trim().max(60).optional(),
     detail: z.string().trim().max(2000).optional(),
     dueAt: z.string().optional(),
+    // A local start and end ("HH:MM"); empty means all day (14-014).
+    dueTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
+    endTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
     estimatedMinutes: z.union([z.coerce.number().int().min(1).max(600), z.literal("")]).optional(),
   })
   .refine((value) => value.kind === "notice" || Boolean(value.dueAt), {
@@ -173,6 +182,8 @@ export async function updateSchoolItemAction(_previous: ActionState, formData: F
     subject: formData.get("subject") || undefined,
     detail: formData.get("detail") || undefined,
     dueAt: formData.get("dueAt") || undefined,
+    dueTime: formData.get("dueTime") ?? undefined,
+    endTime: formData.get("endTime") ?? undefined,
     estimatedMinutes: formData.get("estimatedMinutes") || undefined,
   });
   if (!parsed.success) {
@@ -181,7 +192,7 @@ export async function updateSchoolItemAction(_previous: ActionState, formData: F
 
   try {
     const supabase = await createClient();
-    await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, parsed.data.householdId);
 
     await updateSchoolItem(supabase, parsed.data.householdId, parsed.data.itemId, {
       childMemberId: parsed.data.childMemberId,
@@ -189,7 +200,7 @@ export async function updateSchoolItemAction(_previous: ActionState, formData: F
       title: parsed.data.title,
       subject: parsed.data.subject || null,
       detail: parsed.data.detail || null,
-      dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt).toISOString() : null,
+      ...schoolWhen({ date: parsed.data.dueAt, time: parsed.data.dueTime, endTime: parsed.data.endTime, timezone: membership.household.timezone }),
       estimatedMinutes: parsed.data.estimatedMinutes === "" ? null : parsed.data.estimatedMinutes,
     });
 

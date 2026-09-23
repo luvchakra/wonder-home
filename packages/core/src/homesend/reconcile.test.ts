@@ -9,7 +9,7 @@ import type { HouseholdMember } from "../identity/households";
 import type { SchoolItem } from "../school/items";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { movedDueAt, proposalFor, reconcileHomeSend, shortDate, type HomeSendCandidate } from "./reconcile";
+import { proposalFor, reconcileHomeSend, shortDate, type HomeSendCandidate } from "./reconcile";
 import { resolveIntakePeople } from "./resolve";
 
 const TZ = "Asia/Kolkata";
@@ -26,7 +26,7 @@ const MEMBERS = [member("kunal", "Kunal Mehta", "adult"), member("asmi", "Asmi",
 const NAMES = new Map(MEMBERS.map((m) => [m.id, m.displayName]));
 
 function schoolItem(id: string, childMemberId: string, title: string, dueAt: string, extra: Partial<SchoolItem> = {}): SchoolItem {
-  return { id, childMemberId, kind: "event", title, subject: "Science", detail: null, dueAt: new Date(dueAt), estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null, ...extra };
+  return { id, childMemberId, kind: "event", title, subject: "Science", detail: null, dueAt: new Date(dueAt), dueTimeKnown: !dueAt.includes("T00:00:00"), endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null, ...extra };
 }
 
 function bill(id: string, name: string, extra: Partial<Obligation> = {}): Obligation {
@@ -105,13 +105,6 @@ describe("HomeSend reconciliation (Wave 3 §10)", () => {
 
   it("finds nothing for something genuinely new", () => {
     expect(reconcile({ schoolItems: [exhibition] }, { kind: "school_item", title: "Annual Day rehearsal", date: "2026-10-02", subjectMemberId: "asmi" })).toBeNull();
-  });
-
-  it("keeps the time of day when only the date moves", () => {
-    // 10:00 in Kolkata on 28 Sep, moved to 29 Sep, is still 10:00 there.
-    expect(movedDueAt("2026-09-28T04:30:00.000Z", "2026-09-29", TZ)).toBe("2026-09-29T04:30:00.000Z");
-    expect(movedDueAt("2026-03-07T14:00:00.000Z", "2026-03-10", "America/New_York")).toBe("2026-03-10T13:00:00.000Z");
-    expect(movedDueAt(null, "2026-09-29", TZ)).toBe("2026-09-29T00:00:00.000Z");
   });
 
   it("says it could not check, when asked to be strict, instead of calling an unread item new", async () => {

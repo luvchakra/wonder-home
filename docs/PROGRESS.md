@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**181 of 195 stories done — 92.8%**
+**182 of 195 stories done — 93.3%**
 
 | Status | Stories |
 |---|---:|
-| Done | 181 |
+| Done | 182 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 13 |
+| Not Started | 12 |
 
 ## By module
 
@@ -38,7 +38,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `████████░░` | 12 | 14 | 2 not started |
+| 14 AI Orchestration & Learning | `█████████░` | 13 | 14 | 1 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████░░░░` | 5 | 8 | 3 not started |
@@ -57,7 +57,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-009` Add a child from a school notice | 08 Kids & School Intelligence | P2 | Not Started |
 | `09-009` A receipt becomes purchase history | 09 Commerce, Groceries & Pet Supplies | P1 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
-| `14-014` HomeSend reads the time of day | 14 AI Orchestration & Learning | P1 | Not Started |
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-007` Weather | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
@@ -293,7 +292,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-12 of 14 done `████████░░`
+13 of 14 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -310,7 +309,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-011` HomeSend 2.0 — multimodal intake & reconciliation (Wave 3) | P0 | Done | Spec: `design/HOMESEND-2.0-WAVE-3.md`. Part 1 (one pipeline, every input): `packages/core/src/homesend/ingest.ts` — every entry point (upload, paste, composer paperclip, share target, share handoff, email webhook) goes secure intake → normalize → understand → the canonical `IntakeUnderstanding` (`understanding.ts`: summary, entities, facts, candidate actions from a fixed list, references, change signal, safety, provenance). New inputs: PDF (read by the model as a document, so scanned PDFs too), TXT/CSV, links (`link-fetch.ts`: SSRF-safe — public addresses only, DNS checked and pinned, redirects re-checked, size/time limits, no cookies), voice notes (`audio.ts`: transcript confidence gate, uncertain or consequential transcripts shown and confirmed, never acted on). Types decided from bytes (`normalize.ts`), prompt-injection defense (`injection.ts`: fenced untrusted content, flagged instructions ignored and said so), content-hash idempotency, "Failed safely" inbox state with reasons, HTML-only emails read instead of dropped. Migration `20260924090000_homesend_multimodal_intake.sql` (applied live). Part 2: entity resolution through the Wave 1 resolver (`resolve.ts`, one question when ambiguous — "Who is this for — Asmi or Manan?"), reconciliation (`reconcile.ts`: duplicate / update / cancellation / conflict against the record on file, the spec's own "Update the existing event?"), updates and cancellations through the domain services with exact undo (`homesend_changes.change_type` + `previous`, migration `20260924100000_homesend_reconciliation_changes.sql`, applied live), several needs per notice each separately confirmed and undone, review UI (What I found / Update existing / Keep existing / Add as new), email 2.0 (every recipient, HTML bodies, attachments as their own items via Resend's attachment API, idempotent retries). Part 3: confirmation strategy (`confirmation.ts`, §12 — a new grocery or school item applies on its own only when read clearly, sent in by a member, matching nothing on record, with no question open, and only where the household set that outcome to "execute"; bills and health documents always wait for a person; medium confidence prepares, low confidence asks one question), review outcomes kept on each item in closed words (migration `20260924110000_homesend_review_outcomes.sql`, applied live), HomeSend metrics (`metrics.ts`, §19, each a count out of a count, `GET /api/v1/platform-admin/homesend-metrics`), and the §20 acceptance matrix, one test per row (`acceptance-matrix.test.ts`). Live email still waits on a Resend account and receiving domain (§18) and is not labelled connected |
 | `14-012` HomeTalk 2.0 — contextual conversational operations (Wave 4) | P0 | Done | Spec: `design/HOMETALK-2.0-WAVE-4.md`. Part 1 (grounding): `conversation/temporal.ts` — one deterministic resolver for today/tomorrow/tonight/this and next Friday/this weekend/next week/after school/before dinner/explicit dates, in the household's timezone (the model names the phrase, code decides the day); `conversation/grounding.ts` — every action intent is grounded before a proposal exists: person mentions through the Wave 1 resolver (one focused question when two fit, "I do not know anyone called…" when none do), dates to local days, "that/it/them/him/the other one" through `conversation/references.ts` in the spec's priority order (pending question → pending proposal → recent conversation and recent HomeSend by recency → context), with "Do you mean the white T-shirt from the school notice or the printer paper?" when two things are in play; each turn persists its focus (what it acted on, proposed or mentioned) on its reply for the next turn's "that". Part 2 (operations): corrections (`conversation/corrections.ts`) amend a waiting proposal or undo-then-redo an executed write through its own domain service; multi-part sentences split (`conversation/decompose.ts`) into independently gated parts with the premise rule; several items per add; real reminders (`set_reminder`, a notification held until due); meals (`plan_meal` via `createMeal`/`attachIngredients`) and "make sure we have everything" from the recipe's ingredients; "Nothing to change" instead of "Done" when nothing was written Part 3 (contract): the model sees a runtime context (role, local date/time, what is waiting, what the conversation is about — minimised like the utterance) and returns named, nullable parameters with no id field, and anything server-only is stripped from its output; "I think you mean …" at medium confidence and "I found two possibilities …" at low; every §21 example handled through its own domain service (school done/move, remove from list, service request, protected family time); §22 matrix in `conversation/evaluation.test.ts` |
 | `14-013` Unified AI evaluation, reliability & production hardening (Wave 5) | P0 | Done | Spec: `design/AI-EVALUATION-WAVE-5.md`. One evaluation framework for HomeTalk, HomeSend and HomeBrain; synthetic golden households; §8 metrics and the §10 error taxonomy; corrections as structured evaluation evidence; provider/model/prompt/context versions recorded per run; release artifact and gates; rate and payload limits; failure semantics; idempotency; email-forwarding monitoring |
-| `14-014` HomeSend reads the time of day | P1 | Not Started | Found in the test-spec live run (23 Sep 2026): "Saturday 26 September at 9:00 am" keeps the day but drops the time |
+| `14-014` HomeSend reads the time of day | P1 | Done | Local start and end read deterministically from the notice's own date words (`timeFromDateText`); `school_items.due_time_known` + `ends_at` (migration `20260927090000`, applied live); all-day items never show a time |
 
 ### 15 — Privacy, Security & Governance
 

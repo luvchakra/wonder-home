@@ -64,6 +64,9 @@ export type HomeSendExtraction = {
   amount: number | null;
   currency: string | null;
   dueDate: string | null;
+  /** A school item's local start and end ("HH:MM"), read from the notice's own words (14-014). Absent on items read before it. */
+  dueTime?: string | null;
+  endTime?: string | null;
   schoolKind: string | null;
   subject: string | null;
   quantity: number | null;

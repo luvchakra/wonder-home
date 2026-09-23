@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import type { SchoolItem } from "@wonderhome/core/school/items";
+import { localTimeValue, schoolDateValue, schoolTimeWords } from "@wonderhome/core/school/times";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
@@ -21,12 +22,6 @@ const KINDS = [
   { value: "event", label: "Event" },
   { value: "notice", label: "Notice" },
 ];
-
-/** A YYYY-MM-DD string for a date input, in the household's own timezone rather than UTC. */
-function dateInputValue(date: Date | null, timezone: string): string {
-  if (!date) return "";
-  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
-}
 
 /**
  * Everything a piece of school work carries, read from an `ExpandableRow`'s
@@ -58,6 +53,7 @@ export function SchoolItemDetail({
       <dl className="space-y-2 text-sm">
         <Fact label="For" value={kids.find((kid) => kid.id === item.childMemberId)?.displayName ?? null} />
         <Fact label="Subject" value={item.subject} />
+        <Fact label="Time" value={schoolTimeWords(item, timezone)} />
         <Fact label="Notes" value={item.detail} />
         <Fact label="Estimated time" value={item.estimatedMinutes ? `${item.estimatedMinutes} minutes` : null} />
       </dl>
@@ -107,10 +103,14 @@ export function SchoolItemDetail({
             name="dueAt"
             type="date"
             required={dueRequired}
-            defaultValue={dateInputValue(item.dueAt, timezone)}
+            defaultValue={schoolDateValue(item, timezone)}
             hint={dueRequired ? undefined : "A notice does not need a date of its own."}
           />
           <Field label="Est. minutes (optional)" name="estimatedMinutes" type="number" min={1} defaultValue={item.estimatedMinutes ?? ""} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Starts (optional)" name="dueTime" type="time" defaultValue={item.dueTimeKnown ? localTimeValue(item.dueAt, timezone) : ""} hint="Leave empty for all day." />
+          <Field label="Ends (optional)" name="endTime" type="time" defaultValue={item.endsAt ? localTimeValue(item.endsAt, timezone) : ""} />
         </div>
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Saving…" : "Save"}

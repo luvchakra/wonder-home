@@ -73,7 +73,7 @@ const snapshot: BrainSnapshot = {
     { id: "b1", name: "Electricity", kind: "utility", payee: "BESCOM", amountMinor: 184000, currency: "INR", dueOn: "2026-09-21", responsibleMemberId: "kunal", status: "received", requiresReview: false },
   ],
   schoolItems: [
-    { id: "s1", childMemberId: "anaya", kind: "homework", title: "Fractions worksheet", subject: "Maths", detail: null, dueAt: new Date("2026-09-22T03:30:00Z"), estimatedMinutes: 30, estimateSource: "inferred", status: "pending", completedAt: null, provider: null, externalId: null },
+    { id: "s1", childMemberId: "anaya", kind: "homework", title: "Fractions worksheet", subject: "Maths", detail: null, dueAt: new Date("2026-09-22T03:30:00Z"), dueTimeKnown: true, endsAt: null, estimatedMinutes: 30, estimateSource: "inferred", status: "pending", completedAt: null, provider: null, externalId: null },
   ],
   communications: [],
   memories: [{ scope: "household", memberId: null, category: "preference", key: "meals.dinner", value: { statement: "we prefer dinner at 8", time: "20:00" }, status: "learned" }],

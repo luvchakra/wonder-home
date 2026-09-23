@@ -101,7 +101,7 @@ describe("safety does not depend on the model (§18)", () => {
 });
 
 const observed = (over: Partial<Observation> = {}): Observation => ({
-  interpretation: null, date: null, entity: null, match: { outcome: "new", recordId: null }, conflict: false, action: null,
+  interpretation: null, date: null, time: null, entity: null, match: { outcome: "new", recordId: null }, conflict: false, action: null,
   safety: { consequential: false, executed: false, refused: false, injectionFlagged: false }, executor: "not_run", answer: "",
   confidence: null, providerFailure: null, ...over,
 });

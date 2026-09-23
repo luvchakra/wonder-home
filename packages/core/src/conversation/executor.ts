@@ -13,6 +13,7 @@ import { createEvent } from "../family/repository";
 import { createServiceRequest } from "../home/repository";
 import { attachIngredients, createMeal } from "../meals/repository";
 import { completeSchoolItem, updateSchoolItem } from "../school/repository";
+import { movedSchoolWhen } from "../school/times";
 import type { MealSlot } from "../meals/meals";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
@@ -407,14 +408,20 @@ async function markSchoolItemDone(intent: HouseholdIntent, context: ExecutionCon
   };
 }
 
-/** "Move Manan's science project to Friday" — the item's due day changes, keeping the time of day it had. */
+/**
+ * "Move Manan's science project to Friday" — the item's due day changes,
+ * keeping what was known about its time (14-014): a timed item keeps its
+ * local start and its length, an all-day item stays all-day, and nothing
+ * gets a time nobody gave.
+ */
 async function moveSchoolItem(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
   const id = String(intent.parameters.schoolItemId);
   const day = intent.parameters.toResolved as { date?: string; label?: string } | undefined;
   if (!day?.date) return { ok: false, reason: "Which day should it move to?" };
-  const was = typeof intent.parameters.dueAt === "string" ? localClock(intent.parameters.dueAt, context.timezone) : null;
-  const at = was ?? { hour: 9, minute: 0 };
-  await updateSchoolItem(context.supabase, context.householdId, id, { dueAt: zonedTimeToUtcIso(day.date, at.hour, at.minute, context.timezone) });
+  const dueAt = typeof intent.parameters.dueAt === "string" ? new Date(intent.parameters.dueAt) : null;
+  const endsAt = typeof intent.parameters.endsAt === "string" ? new Date(intent.parameters.endsAt) : null;
+  const previous = { dueAt: dueAt && !Number.isNaN(dueAt.getTime()) ? dueAt : null, dueTimeKnown: intent.parameters.dueTimeKnown !== false, endsAt };
+  await updateSchoolItem(context.supabase, context.householdId, id, movedSchoolWhen(previous, day.date, context.timezone));
   const whose = typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : "";
   return {
     ok: true,

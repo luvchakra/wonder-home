@@ -16,7 +16,7 @@ import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/heal
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import { HOME_SEND_REVIEW_PROPOSALS, HOME_SEND_REVIEW_SUBJECTS, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
-import { movedDueAt, reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
+import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
 import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
@@ -26,6 +26,7 @@ import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, createSchoolItem, listSchoolItems, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
+import { movedSchoolWhen, schoolWhen } from "@wonderhome/core/school/times";
 
 import { prepareReview } from "./home-send-review";
 
@@ -118,6 +119,8 @@ async function autoApply(
     title: title.slice(0, 160),
     notes: extracted?.notes ?? undefined,
     dueDate: extracted?.dueDate ?? undefined,
+    dueTime: extracted?.dueTime ?? undefined,
+    endTime: extracted?.endTime ?? undefined,
     childMemberId: item.subject?.selected?.memberId,
     schoolKind: SCHOOL_ITEM_KINDS.find((schoolKind) => schoolKind === extracted?.schoolKind),
     subject: extracted?.subject ?? undefined,
@@ -260,7 +263,9 @@ const routeSchema = z.object({
   amount: z.union([z.coerce.number().min(0).max(10_000_000), z.literal("")]).optional(),
   currency: z.string().trim().max(8).optional(),
   dueDate: z.string().optional(),
-  // school
+  // school — a local start and end ("HH:MM"); empty means all day.
+  dueTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
+  endTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
   childMemberId: z.uuid().optional(),
   schoolKind: z.enum(SCHOOL_ITEM_KINDS).optional(),
   subject: z.string().trim().max(60).optional(),
@@ -300,9 +305,6 @@ export type RouteHomeItemState = { error?: string; notice?: string; reconciliati
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type Membership = Awaited<ReturnType<typeof requireMembership>>;
 
-function schoolDueAt(date: string | undefined | null): string | null {
-  return date ? new Date(date).toISOString() : null;
-}
 
 /**
  * Updating or cancelling a record already on record (§10) — through the same
@@ -318,13 +320,19 @@ async function reviseExisting(
   if (input.kind === "school_item") {
     const existing = (await listSchoolItems(supabase, householdId)).find((item) => item.id === input.existingId);
     if (!existing) throw new Error("existing school item not found");
-    const previous = { dueAt: existing.dueAt?.toISOString() ?? null, status: existing.status };
+    const previous = { dueAt: existing.dueAt?.toISOString() ?? null, dueTimeKnown: existing.dueTimeKnown, endsAt: existing.endsAt?.toISOString() ?? null, status: existing.status };
     if (input.decision === "cancel") {
       await cancelSchoolItem(supabase, householdId, existing.id);
       return { routedTable: "school_items", routedId: existing.id, changeType: "cancelled", previous, domain: "school_item" };
     }
-    const dueAt = input.dueDate ? movedDueAt(previous.dueAt, input.dueDate, membership.household.timezone) : previous.dueAt;
-    await updateSchoolItem(supabase, householdId, existing.id, { dueAt });
+    // A new time from the notice wins; otherwise a moved day keeps the time it had (14-014).
+    const timezone = membership.household.timezone;
+    const when = !input.dueDate
+      ? { dueAt: previous.dueAt, dueTimeKnown: existing.dueTimeKnown, endsAt: previous.endsAt }
+      : input.dueTime
+        ? schoolWhen({ date: input.dueDate, time: input.dueTime, endTime: input.endTime, timezone })
+        : movedSchoolWhen(existing, input.dueDate, timezone);
+    await updateSchoolItem(supabase, householdId, existing.id, when);
     return { routedTable: "school_items", routedId: existing.id, changeType: "updated", previous, domain: "school_item" };
   }
   if (input.kind === "bill") {
@@ -369,7 +377,7 @@ async function createNew(supabase: Supabase, membership: Membership, input: Rout
       title: input.title,
       subject: input.subject || null,
       detail: input.notes || null,
-      dueAt: schoolDueAt(input.dueDate),
+      ...schoolWhen({ date: input.dueDate, time: input.dueTime, endTime: input.endTime, timezone: membership.household.timezone }),
       estimatedMinutes: null,
     });
     return { routedTable: "school_items", routedId: created.id };
@@ -460,6 +468,8 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     amount: formData.get("amount") || undefined,
     currency: formData.get("currency") || undefined,
     dueDate: formData.get("dueDate") || undefined,
+    dueTime: formData.get("dueTime") ?? undefined,
+    endTime: formData.get("endTime") ?? undefined,
     childMemberId: formData.get("childMemberId") || undefined,
     schoolKind: formData.get("schoolKind") || undefined,
     subject: formData.get("subject") || undefined,
@@ -651,7 +661,11 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
 
     if (change.changeType === "updated") {
       if (change.domain === "school_item") {
-        await updateSchoolItem(supabase, householdId, change.entityId, { dueAt: (previous.dueAt as string | null | undefined) ?? null });
+        const dueAt = (previous.dueAt as string | null | undefined) ?? null;
+        // Changes recorded before 14-014 kept no time flag: read it the way a
+        // portal's due date is read, midnight UTC being a day.
+        const dueTimeKnown = typeof previous.dueTimeKnown === "boolean" ? previous.dueTimeKnown : Boolean(dueAt && !dueAt.includes("T00:00:00"));
+        await updateSchoolItem(supabase, householdId, change.entityId, { dueAt, dueTimeKnown, endsAt: (previous.endsAt as string | null | undefined) ?? null });
       } else if (change.domain === "bill") {
         await updateObligation(supabase, {
           id: change.entityId,

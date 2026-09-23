@@ -138,7 +138,7 @@ describe("HB-012 — the same real-world thing under different names", () => {
   const E = GOLDEN_HOUSEHOLDS.E;
   const ptmItem: SchoolItem = {
     id: "e-s-ptm", childMemberId: "e-tara", kind: "event", title: "Parent-teacher meeting", subject: null, detail: null, dueAt: new Date("2026-09-25T05:00:00Z"),
-    estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
+    dueTimeKnown: true, endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
   };
   const reconcile = (records: ContextRecords, title: string, date: string | null = "2026-09-25", change: "new" | "update" | "cancellation" = "new") =>
     reconcileAgainstRecords(records, E.id, { kind: "school_item", title, date, subjectMemberId: "e-tara", change }, { timezone: E.timezone, now: E.now });
@@ -225,7 +225,7 @@ describe("HB-008 — the same kind of fact, told apart by where it came from", (
   it("manual entry, a HomeSend email, something said to HomeTalk and a connected service each explain themselves differently", () => {
     const connected: SchoolItem = {
       id: "a-s-classroom", childMemberId: "a-asmi", kind: "homework", title: "Hindi reading", subject: "Hindi", detail: null, dueAt: new Date("2026-09-25T09:00:00Z"),
-      estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: "google_classroom", externalId: "cw-1",
+      dueTimeKnown: true, endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: "google_classroom", externalId: "cw-1",
     };
     const household = withRecords(A, {
       schoolItems: [...(A.records.schoolItems ?? []), connected],
@@ -399,7 +399,7 @@ describe("E2E-001 (live finding) — a broad question whose answer was withheld 
   it("\"What is happening on Saturday?\" with only a child's Sports Day on record names it, whatever the model says", async () => {
     const sportsDay: SchoolItem = {
       id: "x-sports", childMemberId: "a-asmi", kind: "event", title: "Sports Day", subject: null, detail: null, dueAt: new Date("2026-09-26T00:00:00Z"),
-      estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
+      dueTimeKnown: false, endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
     };
     const household = withRecords(A, { events: [], schoolItems: [sportsDay] });
     const kunal = memberOf(household, "a-kunal");
@@ -424,7 +424,7 @@ describe("E2E-004 (live finding) — a question that names one thing is answered
   it("\"What time is the parent-teacher meeting?\" is the meeting at 5pm — not a list with a child's Sports Day and the groceries", async () => {
     const sportsDay: SchoolItem = {
       id: "x-sports", childMemberId: "a-asmi", kind: "event", title: "Sports Day", subject: null, detail: null, dueAt: new Date("2026-09-26T00:00:00Z"),
-      estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
+      dueTimeKnown: false, endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
     };
     const meeting: FamilyEvent = {
       id: "x-ptm", title: "Parent-teacher meeting", kind: "school_event", startsAt: new Date("2026-09-25T11:30:00Z"), endsAt: new Date("2026-09-25T12:30:00Z"),

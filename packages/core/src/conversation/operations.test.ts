@@ -294,7 +294,23 @@ describe("the §21 domain actions — each through its own domain service", () =
       context(),
     );
     // 17:00 in Kolkata, on the new day.
-    expect(school.updateSchoolItem).toHaveBeenCalledWith(expect.anything(), "hh-1", "s-sci", { dueAt: "2026-09-25T11:30:00.000Z" });
+    expect(school.updateSchoolItem).toHaveBeenCalledWith(expect.anything(), "hh-1", "s-sci", { dueAt: "2026-09-25T11:30:00.000Z", dueTimeKnown: true, endsAt: null });
+  });
+
+  it("an all-day item moved to another day stays all-day — it is never given a time nobody said (14-014)", async () => {
+    await executeIntent(
+      intent({ action: "adjust_schedule", target: { kind: "event" }, parameters: { schoolItemId: "s-sci", title: "Science project", childName: "Manan", dueAt: "2026-09-29T00:00:00.000Z", dueTimeKnown: false, endsAt: null, toResolved: { date: "2026-09-25", label: "Fri 25 Sep", precision: "day" } } }),
+      context(),
+    );
+    expect(school.updateSchoolItem).toHaveBeenCalledWith(expect.anything(), "hh-1", "s-sci", { dueAt: "2026-09-25T00:00:00.000Z", dueTimeKnown: false, endsAt: null });
+  });
+
+  it("a timed event moved to another day keeps its start and its length", async () => {
+    await executeIntent(
+      intent({ action: "adjust_schedule", target: { kind: "event" }, parameters: { schoolItemId: "s-sci", title: "PTM", childName: "Manan", dueAt: "2026-09-29T03:30:00.000Z", dueTimeKnown: true, endsAt: "2026-09-29T05:30:00.000Z", toResolved: { date: "2026-09-25", label: "Fri 25 Sep", precision: "day" } } }),
+      context(),
+    );
+    expect(school.updateSchoolItem).toHaveBeenCalledWith(expect.anything(), "hh-1", "s-sci", { dueAt: "2026-09-25T03:30:00.000Z", dueTimeKnown: true, endsAt: "2026-09-25T05:30:00.000Z" });
   });
 
   it("a repair is logged against the household's own appliance, and nobody is contacted", async () => {

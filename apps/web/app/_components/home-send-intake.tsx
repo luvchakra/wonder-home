@@ -82,6 +82,8 @@ export type HomeSendExtractionFields = {
   amount: number | null;
   currency: string | null;
   dueDate: string | null;
+  dueTime?: string | null;
+  endTime?: string | null;
   schoolKind: string | null;
   subject: string | null;
   quantity: number | null;
@@ -459,6 +461,10 @@ export function HomeSendConfirmFields({
           </div>
           <Field label="Subject (optional)" name="subject" defaultValue={prefill?.subject ?? ""} autoComplete="off" />
           <Field label="Due (optional)" name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Starts (optional)" name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint="Leave empty for all day." />
+            <Field label="Ends (optional)" name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />
+          </div>
         </>
       ) : kind === "health_document" ? (
         <>

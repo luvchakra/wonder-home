@@ -358,7 +358,7 @@ export async function homeTalkTurn(input: {
     ingredients: (of) => ingredientNames(supabase, householdId, of).catch(() => []),
     schoolItems: () =>
       (schoolRead ??= listSchoolItems(supabase, householdId)
-        .then((items) => items.map((entry) => ({ id: entry.id, title: entry.title, childMemberId: entry.childMemberId, dueAt: entry.dueAt?.toISOString() ?? null, status: entry.status })))
+        .then((items) => items.map((entry) => ({ id: entry.id, title: entry.title, childMemberId: entry.childMemberId, dueAt: entry.dueAt?.toISOString() ?? null, status: entry.status, dueTimeKnown: entry.dueTimeKnown, endsAt: entry.endsAt?.toISOString() ?? null })))
         .catch(() => [])),
     assets: () => (assetRead ??= listAssets(supabase, householdId).then((items) => items.filter((entry) => entry.status === "active").map((entry) => ({ id: entry.id, name: entry.name }))).catch(() => [])),
   });

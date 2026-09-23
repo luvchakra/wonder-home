@@ -29,7 +29,7 @@ export async function listSchoolItems(
   let query = supabase
     .from("school_items")
     .select(
-      "id, child_member_id, kind, title, subject, detail, due_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id",
+      "id, child_member_id, kind, title, subject, detail, due_at, due_time_known, ends_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id",
     )
     .eq("household_id", householdId)
     .order("due_at", { ascending: true, nullsFirst: false });
@@ -51,6 +51,8 @@ function toItem(row: Row): SchoolItem {
     subject: (row.subject as string | null) ?? null,
     detail: (row.detail as string | null) ?? null,
     dueAt: row.due_at ? new Date(row.due_at as string) : null,
+    dueTimeKnown: Boolean(row.due_time_known),
+    endsAt: row.ends_at ? new Date(row.ends_at as string) : null,
     estimatedMinutes: (row.estimated_minutes as number | null) ?? null,
     estimateSource: (row.estimate_source as SchoolItem["estimateSource"]) ?? null,
     status: row.status as SchoolItemStatus,
@@ -68,6 +70,9 @@ export type CreateSchoolItemInput = {
   subject?: string | null;
   detail?: string | null;
   dueAt?: string | null;
+  /** True only when a time of day was actually given (see `school/times.ts`). */
+  dueTimeKnown?: boolean;
+  endsAt?: string | null;
   estimatedMinutes?: number | null;
 };
 
@@ -85,6 +90,8 @@ async function createSchoolItemImpl(
       subject: input.subject ?? null,
       detail: input.detail ?? null,
       due_at: input.dueAt ?? null,
+      due_time_known: Boolean(input.dueAt && input.dueTimeKnown),
+      ends_at: input.dueAt && input.dueTimeKnown ? (input.endsAt ?? null) : null,
       estimated_minutes: input.estimatedMinutes ?? null,
       // A household typing in an estimate is a person confirming it, which is a
       // stronger source than anything WonderHome infers.
@@ -135,6 +142,9 @@ export type UpdateSchoolItemInput = {
   subject?: string | null;
   detail?: string | null;
   dueAt?: string | null;
+  /** Sent together with `dueAt`: whether it carries a real time of day, and when it ends. */
+  dueTimeKnown?: boolean;
+  endsAt?: string | null;
   estimatedMinutes?: number | null;
 };
 
@@ -155,7 +165,13 @@ async function updateSchoolItemImpl(
   if (input.title !== undefined) patch.title = input.title;
   if (input.subject !== undefined) patch.subject = input.subject;
   if (input.detail !== undefined) patch.detail = input.detail;
-  if (input.dueAt !== undefined) patch.due_at = input.dueAt;
+  if (input.dueAt !== undefined) {
+    patch.due_at = input.dueAt;
+    // A new "when" replaces the whole of the old one: a day with no time is
+    // all-day again, and an end never outlives the start it belonged to.
+    patch.due_time_known = Boolean(input.dueAt && input.dueTimeKnown);
+    patch.ends_at = input.dueAt && input.dueTimeKnown ? (input.endsAt ?? null) : null;
+  }
   if (input.estimatedMinutes !== undefined) {
     patch.estimated_minutes = input.estimatedMinutes;
     // A household correcting the estimate is a person confirming it, same as at creation.
@@ -397,6 +413,8 @@ function schoolItemColumns(item: TranslatedSchoolItem) {
     title: item.title,
     subject: item.subject,
     due_at: item.dueAt ? item.dueAt.toISOString() : null,
+    due_time_known: Boolean(item.dueAt && item.dueTimeKnown),
+    ends_at: item.dueAt && item.dueTimeKnown ? (item.endsAt?.toISOString() ?? null) : null,
     estimated_minutes: item.estimatedMinutes,
     estimate_source: item.estimateSource,
     provider: item.provider,

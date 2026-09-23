@@ -89,7 +89,7 @@ function event(id: string, title: string, participants: string[], startsAt: stri
 }
 
 function schoolItem(id: string, childMemberId: string, title: string, subject: string, dueAt: string): SchoolItem {
-  return { id, childMemberId, kind: "homework", title, subject, detail: null, dueAt: new Date(dueAt), estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null };
+  return { id, childMemberId, kind: "homework", title, subject, detail: null, dueAt: new Date(dueAt), dueTimeKnown: !dueAt.includes("T00:00:00"), endsAt: null, estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null };
 }
 
 function consumable(id: string, name: string, extra: Partial<Consumable> = {}): Consumable {

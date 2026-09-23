@@ -168,8 +168,8 @@ const HOMESEND: HomeSendCase[] = [
     id: "HS-04", surface: "homesend", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "A shared school link with a new event is proposed as a new item, never applied to anyone unnamed (§5).",
     source: { channel: "link", text: "Annual Day on 2 October at 10am for all students." },
-    reading: { kind: "school_item", title: "Annual Day", schoolKind: "event", dueDate: "2026-10-02" },
-    expected: { interpretation: "school_item", date: "2026-10-02", match: { outcome: "new" }, safety: { consequential: false, executed: false } },
+    reading: { kind: "school_item", title: "Annual Day", schoolKind: "event", dueDate: "2026-10-02", dateText: "on 2 October at 10am" },
+    expected: { interpretation: "school_item", date: "2026-10-02", time: "10:00", match: { outcome: "new" }, safety: { consequential: false, executed: false } },
   },
   {
     id: "HS-05", surface: "homesend", household: "B", category: "duplicates", actor: "b-arjun", autonomy: "execute",
