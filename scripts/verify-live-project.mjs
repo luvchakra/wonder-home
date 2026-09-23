@@ -539,6 +539,22 @@ async function main() {
   const anonBusy = await anon.rpc("busy_windows", { p_household_id: nobody, p_from: new Date().toISOString(), p_to: new Date().toISOString() });
   check("anonymous cannot read free/busy", anonBusy.error?.code === "42501", anonBusy.error?.code ?? "no error");
 
+  // Correction evidence and approval fingerprints (20260924140000, Wave 5
+  // §13, §20): the server can read both; nobody signed out can read or
+  // plant evidence.
+  const serverCorrections = await admin.from("ai_corrections").select("id").limit(1);
+  check("the server can read correction evidence", !serverCorrections.error, serverCorrections.error?.code ?? "ok");
+  const anonCorrections = await anon.from("ai_corrections").select("id").limit(1);
+  check(
+    "anonymous cannot read correction evidence",
+    Boolean(anonCorrections.error) || (Array.isArray(anonCorrections.data) && anonCorrections.data.length === 0),
+    anonCorrections.error ? anonCorrections.error.code : `${anonCorrections.data?.length ?? "?"} rows`,
+  );
+  const plantedCorrection = await anon.from("ai_corrections").insert({ household_id: nobody, surface: "hometalk", source_type: "conversation_action", error_type: "wrong_date", field: "when" });
+  check("anonymous cannot plant correction evidence", Boolean(plantedCorrection.error), plantedCorrection.error?.code ?? "inserted");
+  const fingerprints = await admin.from("conversation_actions").select("approval_fingerprint").limit(1);
+  check("conversation actions carry an approval fingerprint", !fingerprints.error, fingerprints.error?.code ?? "ok");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

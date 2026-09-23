@@ -9,7 +9,9 @@ import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation, listObligations, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
+import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
@@ -20,6 +22,7 @@ import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestO
 import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { log } from "@wonderhome/core/observability/logger";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, createSchoolItem, listSchoolItems, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 
@@ -562,6 +565,25 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
         });
         needsAdded += 1;
       }
+    }
+
+    // What the person fixed before confirming is evaluation evidence (Wave 5
+    // §13): kept append-only, best-effort, never at the cost of the review.
+    if (intake?.extracted) {
+      const read = intake.extracted;
+      const number = (value: unknown) => (value === "" || value === undefined || value === null ? null : Number(value));
+      const evidence = homesendCorrectionEvidence(
+        { kind: intake.classifiedKind, title: read.title, date: (input.kind === "health_document" ? read.documentDate : read.dueDate) ?? null, amount: number(read.amount), quantity: number(read.quantity) },
+        { kind: input.kind, title: input.title, date: (input.kind === "health_document" ? input.documentDate : input.dueDate) || null, amount: number(input.amount), quantity: number(input.quantity) },
+      );
+      await recordCorrectionEvidence(createAdminClient(), {
+        householdId: input.householdId,
+        surface: "homesend",
+        sourceType: "home_send_item",
+        sourceId: input.itemId,
+        memberId: membership.memberId,
+        evidence,
+      }).catch((error) => log.warn("correction evidence not recorded", { reason: error instanceof Error ? error.message : "unknown" }));
     }
 
     revalidateDomains();

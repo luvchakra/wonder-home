@@ -6,6 +6,10 @@ import { ApiError } from "../api/errors";
 import type { HouseholdIntent } from "./intent";
 import { claimFor, isReviewable, reconcileMemory, reviewPlacementFor, type Memory } from "./memory";
 import type { ActionPreview, Proposal } from "./proposal";
+import { checkApproval, proposalFingerprint } from "./approval";
+
+/** How long a proposal waits for a yes (the engine's PROPOSAL_TTL_MINUTES). */
+const APPROVAL_TTL_MINUTES = 10;
 
 /**
  * Reading and writing conversations (module 04).
@@ -31,6 +35,14 @@ export type ConversationAction = {
    * about a change that did not happen (Wave 4 §12).
    */
   unchanged?: boolean;
+  /**
+   * What exactly this proposal would do, hashed (Wave 5 §20). The client
+   * sends it back with an approval, and an approval for anything else is
+   * refused.
+   */
+  fingerprint?: string | null;
+  /** Set when an approval was refused, and why. Nothing ran. */
+  refused?: "expired" | "changed" | "stale";
 };
 
 export type ConversationMessage = {
@@ -86,7 +98,7 @@ export async function listMessages(
       .limit(limit),
     supabase
       .from("conversation_actions")
-      .select("id, message_id, action_type, approval_status, payload, result, created_at")
+      .select("id, message_id, action_type, approval_status, payload, result, created_at, approval_fingerprint")
       .eq("household_id", householdId)
       .eq("session_id", sessionId),
   ]);
@@ -461,19 +473,63 @@ export async function recordProposal(
       outcome_key: input.intent.target.reference ?? null,
       payload: { preview, parameters: input.intent.parameters, kind: input.proposal.kind },
       approval_status: status,
+      approval_fingerprint: proposalFingerprint({ actionType: input.intent.action, outcomeKey: input.intent.target.reference ?? null, parameters: input.intent.parameters }),
     })
-    .select("id, action_type, approval_status, payload, created_at")
+    .select("id, action_type, approval_status, payload, created_at, approval_fingerprint")
     .single();
 
   if (error) throw new Error(`recordProposal failed: ${error.code ?? "unknown"}`);
   return toAction(data as Row);
 }
 
-/** A person's decision on a proposal. Only ever from proposed. */
+/**
+ * A person's decision on a proposal. Only ever from proposed.
+ *
+ * An approval binds to the exact proposal (Wave 5 §20). It is honoured only
+ * inside the proposal's time limit, while the stored proposal still matches
+ * its fingerprint, and — when the client says what it showed — only for
+ * that version. Otherwise the proposal is closed as expired, and the action
+ * comes back with `refused` set, so nothing runs and a new approval is
+ * asked for.
+ */
 export async function decideAction(
   admin: SupabaseClient,
-  input: { householdId: string; actionId: string; memberId: string; decision: "approved" | "rejected" },
+  input: { householdId: string; actionId: string; memberId: string; decision: "approved" | "rejected"; seen?: string | null; now?: Date },
 ): Promise<ConversationAction | null> {
+  if (input.decision === "approved") {
+    const { data: row } = await admin
+      .from("conversation_actions")
+      .select("action_type, outcome_key, payload, approval_status, approval_fingerprint, created_at")
+      .eq("id", input.actionId)
+      .eq("household_id", input.householdId)
+      .maybeSingle();
+    if (!row || row.approval_status !== "proposed") return null;
+    const payload = (row.payload as Row | null) ?? {};
+    const check = checkApproval({
+      stored: {
+        actionType: row.action_type as string,
+        outcomeKey: (row.outcome_key as string | null) ?? null,
+        parameters: (payload.parameters as Record<string, unknown> | undefined) ?? {},
+        fingerprint: (row.approval_fingerprint as string | null) ?? null,
+        createdAt: new Date(row.created_at as string),
+      },
+      seen: input.seen ?? null,
+      now: input.now ?? new Date(),
+      ttlMinutes: APPROVAL_TTL_MINUTES,
+    });
+    if (!check.ok) {
+      const { data: closed } = await admin
+        .from("conversation_actions")
+        .update({ approval_status: "expired", decided_by_member_id: input.memberId, decided_at: new Date().toISOString(), result: { reason: `approval_${check.reason}` } })
+        .eq("id", input.actionId)
+        .eq("household_id", input.householdId)
+        .eq("approval_status", "proposed")
+        .select("id, action_type, approval_status, payload, created_at, approval_fingerprint")
+        .maybeSingle();
+      return closed ? { ...toAction(closed as Row), refused: check.reason } : null;
+    }
+  }
+
   const { data, error } = await admin
     .from("conversation_actions")
     .update({
@@ -484,7 +540,7 @@ export async function decideAction(
     .eq("id", input.actionId)
     .eq("household_id", input.householdId)
     .eq("approval_status", "proposed")
-    .select("id, action_type, approval_status, payload, created_at")
+    .select("id, action_type, approval_status, payload, created_at, approval_fingerprint")
     .maybeSingle();
 
   if (error) throw new Error(`decideAction failed: ${error.code ?? "unknown"}`);
@@ -620,6 +676,7 @@ function toAction(row: Row): ConversationAction {
     status: row.approval_status as ConversationAction["status"],
     preview: (payload.preview as ActionPreview | null) ?? null,
     createdAt: new Date(row.created_at as string),
+    fingerprint: (row.approval_fingerprint as string | null | undefined) ?? null,
     ...(unchangedResult(row.result) ? { unchanged: true } : {}),
   };
 }

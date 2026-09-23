@@ -31,7 +31,8 @@ Use Supabase PostgreSQL as used by the WonderArk core architecture, with `@supab
 ## Conversation & AI
 - `conversation_sessions`
 - `conversation_messages`
-- `conversation_actions`
+- `conversation_actions` (with `approval_fingerprint`: an approval binds to the exact proposal, Wave 5 §20)
+- `ai_corrections`: append-only correction evidence, one row per corrected field, admin-readable, server-written (Wave 5 §13)
 - `agent_runs`
 - `approvals`
 - `audit_events`

@@ -14,6 +14,7 @@ import { forgetHouseholdContext, householdContext, householdMemory, type Househo
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type RuntimeContext, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { approvalRefusal } from "@wonderhome/core/conversation/approval";
 import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
 import { heldBecause, leansOnEarlier, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
 import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
@@ -45,6 +46,8 @@ import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal";
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { hometalkCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
+import { log } from "@wonderhome/core/observability/logger";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
@@ -85,6 +88,8 @@ const sayScheme = z.object({
 const decideScheme = z.object({
   actionId: z.uuid(),
   decision: z.enum(["approved", "rejected"]),
+  /** The fingerprint of the proposal the person was shown (Wave 5 §20). */
+  fingerprint: z.string().regex(/^fp-[0-9a-f]{16}$/).optional(),
 });
 
 /** Ending a live conversation (item 6): recap what was said and what it led to. */
@@ -147,14 +152,16 @@ export async function POST(request: Request, { params }: Params) {
     const admin = createAdminClient();
 
     if ("actionId" in body) {
-      const action = await decideAction(admin, { householdId, actionId: body.actionId, memberId: membership.memberId, decision: body.decision });
+      const action = await decideAction(admin, { householdId, actionId: body.actionId, memberId: membership.memberId, decision: body.decision, seen: body.fingerprint ?? null });
       if (!action) throw ApiError.notFound("That proposal is no longer waiting for a decision.");
 
       const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: "text" });
       const people = await listPeople(supabase, householdId);
-      const settled = body.decision === "approved"
-        ? await carryOutApproved({ admin, supabase, householdId, membership, action, people })
-        : { text: "Understood. I have left that alone.", action };
+      const settled = action.refused
+        ? { text: approvalRefusal(action.refused), action }
+        : body.decision === "approved"
+          ? await carryOutApproved({ admin, supabase, householdId, membership, action, people })
+          : { text: "Understood. I have left that alone.", action };
       const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: action.id } });
 
       return { reply: { id: messageId, text: settled.text, action: settled.action } };
@@ -360,7 +367,9 @@ export async function POST(request: Request, { params }: Params) {
         for (const entry of [...open].reverse()) {
           const decided = await decideAction(admin, { householdId, actionId: entry.id, memberId: membership.memberId, decision: approve ? "approved" : "rejected" });
           if (!decided) continue;
-          const settled = approve ? await carryOutApproved({ admin, supabase, householdId, membership, action: decided, people }) : { text: `Left alone: ${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}.`, action: decided, focus: [] as FocusEntity[] };
+          const settled = decided.refused
+            ? { text: approvalRefusal(decided.refused), action: decided, focus: [] as FocusEntity[] }
+            : approve ? await carryOutApproved({ admin, supabase, householdId, membership, action: decided, people }) : { text: `Left alone: ${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}.`, action: decided, focus: [] as FocusEntity[] };
           const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: decided.id, ...(settled.focus.length > 0 ? { focus: settled.focus } : {}) } });
           replies.push({ id, text: settled.text, action: settled.action, preview: null, proposal: approve ? "approve" : "reject", mode: modeFor(approve ? "approve" : "reject", settled.action.status === "executed") });
         }
@@ -529,6 +538,27 @@ export async function POST(request: Request, { params }: Params) {
     if (corrected && correcting?.status === "proposed" && result.kind === "reply" && result.proposal.kind !== "clarify") {
       await decideAction(admin, { householdId, actionId: correcting.actionId, memberId: membership.memberId, decision: "rejected" }).catch(() => null);
     }
+    // The correction is evaluation evidence too (Wave 5 §13): what was
+    // understood, what the person said instead, and what kind of mistake
+    // that was, kept append-only. Best-effort — never at the cost of the turn.
+    if (correctionNote && correcting && result.kind === "reply") {
+      const evidence = hometalkCorrectionEvidence(correcting, result.intent);
+      if (evidence.length > 0) {
+        void understandingOf(admin, correcting.actionId)
+          .then((understandingSource) =>
+            recordCorrectionEvidence(admin, {
+              householdId,
+              surface: "hometalk",
+              sourceType: "conversation_action",
+              sourceId: correcting!.actionId,
+              memberId: membership.memberId,
+              understandingSource,
+              evidence,
+            }),
+          )
+          .catch((error) => log.warn("correction evidence not recorded", { reason: error instanceof Error ? error.message : "unknown" }));
+      }
+    }
 
     // What this turn was about, persisted on its reply for the next turn's
     // "that" (Wave 4 §8, §16): grounded mentions, what a proposal is about,
@@ -686,7 +716,10 @@ export async function POST(request: Request, { params }: Params) {
         memberId: membership.memberId,
         decision: result.kind === "approve" ? "approved" : "rejected",
       });
-      if (result.kind === "approve" && action) {
+      if (action?.refused) {
+        text = approvalRefusal(action.refused);
+        await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
+      } else if (result.kind === "approve" && action) {
         const settled = await carryOutApproved({ admin, supabase, householdId, membership, action, people });
         text = settled.text;
         action = settled.action;
@@ -729,6 +762,15 @@ export async function POST(request: Request, { params }: Params) {
  * is told exactly that. "It is on its way" was the one sentence this route
  * must never say about something that did not move.
  */
+/** Whether a model or the rules understood the turn that made a proposal — from its reply's own metadata. */
+async function understandingOf(admin: ReturnType<typeof createAdminClient>, actionId: string): Promise<"model" | "rules" | null> {
+  const { data: action } = await admin.from("conversation_actions").select("message_id").eq("id", actionId).maybeSingle();
+  if (!action?.message_id) return null;
+  const { data: message } = await admin.from("conversation_messages").select("source:metadata->>understanding").eq("id", action.message_id).maybeSingle();
+  const source = (message as { source?: string | null } | null)?.source;
+  return source === "model" || source === "rules" ? source : null;
+}
+
 async function carryOutApproved(input: {
   admin: ReturnType<typeof createAdminClient>;
   supabase: Supabase;

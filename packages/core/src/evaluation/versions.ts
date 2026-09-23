@@ -1,8 +1,5 @@
 import { createHash } from "node:crypto";
-import { z } from "zod";
 
-import { INTAKE_SYSTEM_PROMPT } from "../ai/classify-intake";
-import { ANSWER_SYSTEM_PROMPT, INTENT_OUTPUT_SCHEMA, systemFor } from "../ai/model-client";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS } from "./households";
 import type { EvalCase } from "./types";
 
@@ -26,9 +23,7 @@ function shortHash(value: unknown): string {
   return createHash("sha256").update(typeof value === "string" ? value : JSON.stringify(value)).digest("hex").slice(0, 12);
 }
 
-export function promptVersion(): string {
-  return `p-${shortHash([systemFor(undefined), ANSWER_SYSTEM_PROMPT, INTAKE_SYSTEM_PROMPT, z.toJSONSchema(INTENT_OUTPUT_SCHEMA)])}`;
-}
+export { promptVersion } from "./prompt-version";
 
 export function contextVersion(): string {
   // Household A seen by its head: the widest view of the richest household.
