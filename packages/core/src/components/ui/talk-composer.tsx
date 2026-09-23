@@ -13,6 +13,7 @@ import {
 
 import { cn } from "../../lib/cn";
 import { BrandMark } from "./brand";
+import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
 import { useSpeechToText, type SpeechToTextState } from "./use-speech-to-text";
 
@@ -93,6 +94,8 @@ export function TalkComposer({
   liveConversationAvailable = false,
   serverVoice = false,
   voiceLanguage = "en-IN",
+  liveEngine = "wonderhome",
+  onLiveTranscript,
   className,
 }: {
   onSend: (text: string, channel: "text" | "voice", confidence?: number) => void;
@@ -121,6 +124,14 @@ export function TalkComposer({
   /** A speech provider is configured, so the server listens and speaks. */
   serverVoice?: boolean;
   voiceLanguage?: string;
+  /**
+   * Who runs a live conversation (voice phase 3): WonderHome's own listen/
+   * speak loop, or Gemini Live calling HomeTalk's tools. The page decides,
+   * from the household's setting and the server's own availability check.
+   */
+  liveEngine?: "wonderhome" | "gemini_live";
+  /** Gemini Live only: each side's words, once per utterance, for the conversation on screen. */
+  onLiveTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
   className?: string;
 }) {
   const [value, setValue] = useState(initialValue);
@@ -143,12 +154,18 @@ export function TalkComposer({
     onError,
   });
 
-  const live = useLiveVoice({
+  const ownLive = useLiveVoice({
     lang: voiceLanguage,
     server,
     onUtterance: onLiveTurn ?? (async () => ""),
     onError,
   });
+  const geminiLive = useGeminiLive({ householdId, onTranscript: onLiveTranscript, onError });
+  // One live control either way; only what runs behind it differs.
+  const live =
+    liveEngine === "gemini_live"
+      ? { ...geminiLive, state: geminiLive.state === "connecting" ? ("thinking" as const) : geminiLive.state }
+      : ownLive;
 
   useEffect(() => {
     const element = textareaRef.current;

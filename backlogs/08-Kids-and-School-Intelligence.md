@@ -12,6 +12,7 @@
 | 6 | P1 | 08-006 | Document workspace | Done | documents by reference, guardian-gated in the API and in RLS |
 | 7 | P1 | 08-007 | School summaries | Done | only messages that ask something surface; a newsletter is filed |
 | 8 | P2 | 08-008 | Deep portal automation | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
+| 9 | P2 | 08-009 | Add a child from a school notice | Not Started | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -199,6 +200,23 @@ Implement Kids & School Intelligence as a first-class WonderHome domain. The mod
 - Child views show age-appropriate work and parents receive escalation only when defined risk thresholds are crossed.
 - Guardian authorization controls access to school documents, communications and child data at both API and database layers.
 - Connector failures are visible as integration health issues and never fabricate school data or silently mark work complete.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 08-009 — Add a child from a school notice
+**Epic:** Kids & School
+**Priority:** P2
+**Goal:** When a school notice names a child the household has not added yet, let the reviewer add them right there.
+
+**Acceptance criteria**
+- The school review offers "add this child" when no child matches, with the name prefilled.
+- Adding follows the same guardian rules as the Family screen; the notice is then confirmed for that child.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

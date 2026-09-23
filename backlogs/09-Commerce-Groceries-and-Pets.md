@@ -12,6 +12,7 @@
 | 6 | P1 | 09-006 | Order tracking | Done | only a real transition moves an outcome, so a poll cannot duplicate a notification |
 | 7 | P1 | 09-007 | Pet supply prediction | Done | pet supplies use the same depletion model, scoped to the animal |
 | 8 | P2 | 09-008 | Merchant optimization | Done | cheapest that can actually deliver in time; stale prices are excluded |
+| 9 | P1 | 09-009 | A receipt becomes purchase history | Not Started | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -200,6 +201,24 @@ Implement Commerce, Groceries & Pet Supplies as a first-class WonderHome domain.
 - Purchase execution checks household spending, product and merchant policies server-side and uses idempotency for retries.
 - Order status changes can resolve or replan dependent household outcomes without generating duplicate notifications.
 - Pet supplies use the same actionable depletion model but remain scoped to the relevant pet and household.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 09-009 — A receipt becomes purchase history
+**Epic:** Commerce
+**Priority:** P1
+**Goal:** Turn a receipt a household sends in into recorded purchases, so depletion and "when do we run out" learn from real buying.
+
+**Acceptance criteria**
+- A receipt sent through HomeSend is read as purchases (items, quantities, amount, date, merchant), never as a bill to pay.
+- Each purchase is confirmed by a person before it is written to `consumable_purchases`, and can be undone.
+- A receipt item matching a tracked consumable updates that consumable's history; an unknown item is offered as a new one.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

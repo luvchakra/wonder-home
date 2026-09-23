@@ -1,4 +1,6 @@
-import type { ContextDomain } from "../context/types";
+import type { ContentClass } from "../ai/privacy";
+import { contentClassFor } from "../context/privacy";
+import type { ContextDomain, HouseholdContextItem } from "../context/types";
 import type { IntentAction } from "../conversation/intent";
 
 /**
@@ -126,3 +128,18 @@ export function voiceAllowsAction(action: IntentAction, scopes: readonly VoiceSc
 
 /** What a voice link says when an action is outside it. Never "not allowed" without where it is allowed. */
 export const VOICE_NOT_ALLOWED = "I can't do that from this voice assistant. You can do it in the WonderHome app.";
+
+/** What an external channel may reach: a voice link's scopes and, for a provider-voiced channel, the content classes it may hear. */
+export type ChannelLimits = { scopes: readonly VoiceScope[]; classes?: readonly ContentClass[] };
+
+/**
+ * A household's facts narrowed to what a channel may reach: the domains its
+ * scopes open (voice phase 2) and, where the channel's own provider hears
+ * every answer — Gemini Voice — only the content classes the household
+ * agreed may go to a model provider (voice phase 3).
+ */
+export function narrowToChannel<T extends Pick<HouseholdContextItem, "domain" | "privacyClass">>(items: readonly T[], limits: ChannelLimits): T[] {
+  const open = domainsFor(limits.scopes);
+  const classes = limits.classes ? new Set(limits.classes) : null;
+  return items.filter((item) => open.has(item.domain) && (!classes || classes.has(contentClassFor(item.privacyClass))));
+}

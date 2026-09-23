@@ -20,6 +20,21 @@ export const VOICE_PROVIDERS = ["browser", "google"] as const;
 export type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
 
 /**
+ * Which engine runs a live, hands-free conversation (voice phase 3).
+ * WonderHome's own listens and speaks itself and sends each sentence to
+ * HomeTalk; Gemini Live is Google's real-time voice, which can only reach
+ * the household through HomeTalk's allowlisted tools. A preference, never a
+ * permission: whether Gemini Live may run is re-checked on the server.
+ */
+export const LIVE_ENGINES = ["wonderhome", "gemini_live"] as const;
+export type LiveEngine = (typeof LIVE_ENGINES)[number];
+
+export const LIVE_ENGINE_LABELS: Record<LiveEngine, { name: string; detail: string }> = {
+  wonderhome: { name: "WonderHome", detail: "WonderHome listens and answers with the voice set below." },
+  gemini_live: { name: "Gemini Live", detail: "Google's real-time voice: quicker back-and-forth, and you can talk over it. It answers only through WonderHome." },
+};
+
+/**
  * Google's voice families, cheapest and plainest first.
  *
  * The tier decides both how human it sounds and what it costs, and those
@@ -138,6 +153,8 @@ export const voiceSettingsSchema = z.object({
    * default can never be a control that does nothing.
    */
   provider: z.enum(VOICE_PROVIDERS).default("google"),
+  /** Which engine runs live conversation. */
+  liveEngine: z.enum(LIVE_ENGINES).default("wonderhome"),
 
   // What it sounds like.
   /** Spoken language and accent. */

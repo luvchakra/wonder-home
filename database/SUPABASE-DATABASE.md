@@ -33,6 +33,7 @@ Use Supabase PostgreSQL as used by the WonderArk core architecture, with `@supab
 - `conversation_messages`
 - `conversation_actions` (with `approval_fingerprint`: an approval binds to the exact proposal, Wave 5 §20). `rejected` and `expired` are terminal: a trigger refuses any later change of `approval_status`, so a turned-down proposal can never be executed (test spec AG-005)
 - `external_voice_identities`: an Alexa or Gemini Voice account linked to one member, with the scopes they chose; readable by that member and the household's admins, created by the server after consent, revoked only through `public.revoke_voice_identity` (voice phase 2)
+- `household_voice_settings.live_engine`: which engine runs live conversation in the app, `wonderhome` (default: HomeTalk turns) or `gemini_live` (Google's Live API, reaching the household only through HomeTalk's allowlisted tools). A preference under the table's existing RLS; whether Gemini Live may run is re-checked server-side on every session and tool call (voice phase 3)
 - `voice_oauth_grants`: OAuth codes and access/refresh tokens WonderHome issued to a voice provider, stored only as SHA-256 hashes; no session can read it
 - `ai_corrections`: append-only correction evidence, one row per corrected field, admin-readable, server-written (Wave 5 §13)
 - `agent_runs`

@@ -1283,6 +1283,46 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/voice/gemini/session": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Whether Gemini voice may run for this household (voice phase 3)",
+          description:
+            "Reads the rollout flag, the conversation.voice entitlement, whose AI key would answer (it must be Google's) and the household's data-use agreement (it must let content go to Google). Returns { available: true } or { available: false, code, reason } in the household's own words. Not authorization: re-checked on every session and tool call.",
+          responses: {
+            "200": { description: "Availability, and the reason when it is not" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Open a Gemini Live session: a short-lived, single-use token (voice phase 3)",
+          description:
+            "Mints a Gemini Live API ephemeral token for the signed-in member: one use, a new session within 60 seconds, 15 minutes long, and locked to WonderHome's instructions and allowlisted HomeTalk tools, so the page holding it can add nothing. The long-lived key never leaves the server. Returns token, model, expiry and a sessionId the page sends with each tool call. Refused when Gemini voice is not available; rate-limited per member (voice.session).",
+          responses: {
+            "200": { description: "token, model, expiresAt, newSessionBy, sessionId" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "422": { description: "Google did not issue a token just now" },
+            "429": { description: "Too many sessions opened in a short time" },
+          },
+        },
+      },
+      "/households/{householdId}/voice/gemini/tool": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Answer one Gemini voice tool call through HomeTalk (voice phase 3)",
+          description:
+            "Body { sessionId, callId, name, args }. An allowlisted tool becomes the words a member could have said, and runs as a HomeTalk gateway turn on channel gemini_voice under the member's own session: the same understanding, permission, entitlement and autonomy gates and executors as every channel, narrowed to the voice scopes and content classes the household agreed may reach Google. An unknown tool, a missing argument or a household that has since turned Gemini voice off is refused. Returns { success, status: answered|completed|needs_approval|needs_clarification|denied|failed, userMessage, actionId? } — success is the executor's, never the model's. A redelivered call (same sessionId and callId) replays its first answer.",
+          responses: {
+            "200": { description: "HomeTalk's decision, and the words for Gemini to say" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/households/{householdId}/plan": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

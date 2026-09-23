@@ -7,6 +7,7 @@ import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repos
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { Sparkles } from "lucide-react";
 
+import { geminiLiveGate } from "../_lib/gemini-live";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
 
@@ -38,6 +39,11 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // have to be true: Google chosen with no key anywhere behind it would be
   // a control that does nothing.
   const serverVoice = voiceSettings.provider === "google" && (await speechKeySource(membership.household.id)) !== "none";
+  // Gemini Live only where the household chose it and the server agrees it
+  // may run now — key, consent, plan and flag. Anything else is WonderHome's
+  // own live loop, so the control never leads somewhere that cannot answer.
+  const liveEngine =
+    voiceSettings.liveEngine === "gemini_live" && (await geminiLiveGate(supabase, membership.household.id)).availability.available ? "gemini_live" : "wonderhome";
 
   let initialMessages: AssistantMessage[] = [];
   if (entitlement.allowed) {
@@ -67,6 +73,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           liveConversationAvailable={liveConversationAvailable}
           serverVoice={serverVoice}
           voiceLanguage={voiceSettings.language}
+          liveEngine={liveEngine}
           kids={kids}
         />
       ) : (

@@ -363,6 +363,25 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   is swept both opportunistically on every share request and for real by
   `/platform/retention`.
 
+**Voice channels are doors into HomeTalk, never second brains**
+(`design/voice-integration/`). Every channel — the app, Gemini Voice,
+Alexa — asks through one gateway (`hometalk/gateway.ts`, the canonical
+`hometalk/contract.ts`): an adapter proves who is speaking and renders the
+answer, and `completed` is only ever the executor's own record. An external
+assistant is linked to one member (`voicelink/`: OAuth with S256 PKCE,
+hashed tokens, scopes that only narrow, payments and orders never by
+voice) and its turns run under that member's own RLS session. Gemini Voice
+(`voicelink/gemini-live.ts`) holds only a single-use Live token locked to
+WonderHome's instructions and a fixed allowlist of tools; each tool call is
+turned into words a member could have said and answered by the gateway on
+channel `gemini_voice`, narrowed to the content classes the household lets
+reach a model provider (Gemini hears every answer). A new voice capability
+is a new allowlisted tool that maps to a HomeTalk utterance — never a tool
+that reaches a table. Alexa (`/api/v1/voice/alexa`) is verified as Amazon
+documents and stays inert until a person creates the skill and sets
+`ALEXA_*`; Gemini Live runs only where the household's key is Google's and
+its data-use agreement allows it, re-checked on every tool call.
+
 **One evaluation across all three** (Wave 5, spec
 `design/AI-EVALUATION-WAVE-5.md`, `packages/core/src/evaluation/`):
 `npm run eval` runs the golden cases through the real HomeTalk, HomeSend

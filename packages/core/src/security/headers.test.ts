@@ -19,12 +19,12 @@ describe("security headers", () => {
     expect(asMap({ development: true })).not.toHaveProperty("Strict-Transport-Security");
   });
 
-  it("allows the browser to reach the configured Supabase origin and nothing else", () => {
+  it("allows the browser to reach the configured Supabase origin and the Gemini Live socket, and nothing else", () => {
     const csp = asMap({ development: false, supabaseOrigin: "https://example.supabase.co" })[
       "Content-Security-Policy"
     ];
-    expect(csp).toMatch(/connect-src 'self' https:\/\/example\.supabase\.co/);
-    expect(csp).not.toContain("ws:");
+    expect(csp).toMatch(/connect-src 'self' https:\/\/example\.supabase\.co wss:\/\/generativelanguage\.googleapis\.com;/);
+    expect(csp).not.toMatch(/connect-src[^;]* ws:/);
   });
 
   it("keeps microphone available for voice but denies camera, geolocation and payment", () => {

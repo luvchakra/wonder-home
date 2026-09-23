@@ -68,6 +68,7 @@ export function Assistant({
   liveConversationAvailable = false,
   serverVoice = false,
   voiceLanguage = "en-IN",
+  liveEngine = "wonderhome",
   kids = [],
 }: {
   householdId: string;
@@ -80,6 +81,8 @@ export function Assistant({
   /** This household has a speech provider configured, so the server does the listening. */
   serverVoice?: boolean;
   voiceLanguage?: string;
+  /** Who runs a live conversation: WonderHome's own loop, or Gemini Live calling HomeTalk's tools (voice phase 3). */
+  liveEngine?: "wonderhome" | "gemini_live";
   /** For HomeSend's school-item confirm step ("who is this for"). */
   kids?: { id: string; displayName: string }[];
 }) {
@@ -228,6 +231,25 @@ export function Assistant({
       return replyText ? plainText(replyText) : "";
     },
     [send],
+  );
+
+  /**
+   * Gemini Live's words on each side, as they were said. HomeTalk keeps its
+   * own record of every tool call it answered; these are what was heard and
+   * spoken around them, shown so the conversation reads on screen too.
+   */
+  const handleLiveTranscript = useCallback(
+    (entry: { role: "member" | "assistant"; text: string }) => {
+      setMessages((current) =>
+        current.concat({
+          id: `live-${Date.now()}-${current.length}`,
+          role: entry.role,
+          text: entry.text,
+          speaker: entry.role === "member" ? firstName : "WonderHome",
+        }),
+      );
+    },
+    [firstName],
   );
 
   /** Ends a live session: fetches the recap for everything said since it began, and posts it as a message. */
@@ -484,6 +506,8 @@ export function Assistant({
           liveConversationAvailable={liveConversationAvailable}
           serverVoice={serverVoice}
           voiceLanguage={voiceLanguage}
+          liveEngine={liveEngine}
+          onLiveTranscript={handleLiveTranscript}
         />
         <p className="mt-1.5 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
           WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.

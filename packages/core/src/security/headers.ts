@@ -14,8 +14,14 @@ export type SecurityHeaderOptions = {
 
 export type HeaderTuple = { key: string; value: string };
 
+/** The Gemini Live API's websocket origin — the one third party the page itself connects to. */
+export const GEMINI_LIVE_ORIGIN = "wss://generativelanguage.googleapis.com";
+
 function contentSecurityPolicy({ supabaseOrigin, development }: SecurityHeaderOptions): string {
-  const connect = ["'self'", supabaseOrigin, development ? "ws: http://localhost:*" : null]
+  // Gemini Voice (voice phase 3): the page talks to Google's Live API over
+  // one websocket, with a short-lived single-use token our server minted —
+  // never a key. Only that endpoint's origin, never Google at large.
+  const connect = ["'self'", supabaseOrigin, GEMINI_LIVE_ORIGIN, development ? "ws: http://localhost:*" : null]
     .filter(Boolean)
     .join(" ");
   // A member's photo is served from Supabase Storage as a signed URL on the
