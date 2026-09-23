@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 185 |
+| Total stories | 186 |
 | Done | 175 |
-| In Progress | 0 |
+| In Progress | 1 |
 | Blocked | 0 |
 | Not Started | 10 |
-| Completion | 94.6% |
+| Completion | 94.1% |
 | Current module | 14 AI Orchestration & Learning |
-| Current story | 14-012 HomeTalk 2.0 — contextual conversational operations (Done) |
+| Current story | 14-013 Unified AI evaluation, reliability & production hardening (In Progress) |
 | Last updated | 2026-09-23 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 12 | 10 | 1 | 1 | 11 | In Progress |
+| 14 | AI Orchestration & Learning | 13 | 11 | 1 | 1 | 11 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
