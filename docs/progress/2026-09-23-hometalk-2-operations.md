@@ -109,7 +109,7 @@ executor's own result (`alreadyTracked`), through `unchangedResult`.
   - the migration, embed, boundary and secret lints;
   - the tracker and brand checks, and the security check;
   - 2115 unit tests;
-  - the database tests, the build and Playwright.
+  - 414 database tests, the build, and 364 Playwright tests.
 
   43 unit tests are new since part 1: `corrections.test.ts`,
   `decompose.test.ts` and `operations.test.ts` (executors against stubbed
