@@ -3,6 +3,7 @@ import type { AutonomyMode } from "../household/autonomy";
 import type { PermissionContext } from "../identity/permissions";
 import { answerClarification, clarificationFrom, escalatedQuestion, type PendingClarification } from "./clarify";
 import { resolveFixtureIntent } from "./fixtures";
+import { needsGrounding, type Grounding } from "./grounding";
 import {
   isConsequential,
   resolveShortReply,
@@ -11,6 +12,7 @@ import {
 } from "./intent";
 import { extractMemory, type Memory } from "./memory";
 import { needsRecording, proposeFromIntent, type ActionPreview, type Proposal } from "./proposal";
+import type { FocusEntity } from "./references";
 import { resolveRuleIntent } from "./rules";
 
 /**
@@ -93,6 +95,13 @@ export type TurnInput = {
    * same question is never asked twice (story 04-011).
    */
   clarifying?: PendingClarification | null;
+  /**
+   * Grounding (Wave 4): turns an understood intent into the household's
+   * own records — a member id, a local date, what "that" was — or into one
+   * focused question. Runs before any proposal exists, and never
+   * authorizes anything. Absent, the intent goes on exactly as understood.
+   */
+  ground?: (intent: HouseholdIntent) => Grounding | Promise<Grounding>;
   now?: Date;
 };
 
@@ -110,6 +119,8 @@ export type TurnResult =
       memory: Memory | null;
       /** Set when this turn asked a question, for the next turn to answer. */
       clarification?: PendingClarification | null;
+      /** What this turn was about, for the next turn's "that" (Wave 4 §8, §16). */
+      focus?: FocusEntity[];
     };
 
 export async function converse(input: TurnInput): Promise<TurnResult> {
@@ -193,6 +204,35 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
     };
   }
 
+  // Grounding (Wave 4 §6–§8): what was meant, given this household. A
+  // mention becomes a member, a phrase a date, "that" the thing it was — or
+  // the turn asks one focused question. Nothing is proposed from an intent
+  // that still carries a guess.
+  let focus: FocusEntity[] = [];
+  if (input.ground && needsGrounding(intent)) {
+    const grounding = await input.ground(intent);
+    if (grounding.kind === "clarify") {
+      const repeated =
+        input.clarifying !== null &&
+        input.clarifying !== undefined &&
+        input.clarifying.action === grounding.intent.action &&
+        input.clarifying.parameters.awaiting === grounding.awaiting;
+      const question = repeated ? escalatedQuestion({ ...input.clarifying!, parameters: grounding.intent.parameters }) : grounding.question;
+      return {
+        kind: "reply",
+        intent: grounding.intent,
+        proposal: { kind: "clarify", question },
+        text: question,
+        record: false,
+        memory: null,
+        clarification: clarificationFrom({ intent: grounding.intent, question, utterance: input.utterance, previous: input.clarifying ?? null }),
+        focus: grounding.candidates,
+      };
+    }
+    intent = grounding.intent;
+    focus = grounding.focus;
+  }
+
   const proposed = proposeFromIntent(intent, {
     actor: input.actor,
     autonomy: input.autonomyFor(intent.target.reference ?? null),
@@ -227,6 +267,7 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
             previous: input.clarifying ?? null,
           })
         : null,
+    focus,
   };
 }
 

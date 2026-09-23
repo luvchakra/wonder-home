@@ -13,6 +13,7 @@ import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
 import { linkTo } from "./reply-format";
+import { resolveDay } from "./temporal";
 
 /**
  * Carrying an understood request out (product-direction update §7: the
@@ -214,7 +215,7 @@ async function recordAbsence(intent: HouseholdIntent, context: ExecutionContext)
   return {
     ok: true,
     text: `Noted — **${member.displayName}** is away ${describeDate(onDate, when, context.timezone)}. I will re-check what they usually handle that day; see ${linkTo("/family", "Family")}.`,
-    result: { memberId: member.id, onDate },
+    result: { memberId: member.id, memberName: member.displayName, onDate },
   };
 }
 
@@ -520,43 +521,14 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-
 /**
- * "today", "tomorrow", "day after tomorrow", a weekday → an ISO date in the
- * household's own timezone. Pure, so the arithmetic is testable without a
- * clock. Anything it cannot pin to one day returns null, and the caller asks.
+ * One local day for a phrase — today, tomorrow, "next Friday", "tomorrow
+ * after school" — through the one temporal resolver (Wave 4 §7), so every
+ * write and every reply agree on what a phrase means. A range ("next week")
+ * is not one day: null, and the caller asks.
  */
 export function resolveWhen(when: string, now: Date, timezone: string): string | null {
-  const word = when.trim().toLowerCase().replace(/^(?:on|this|next)\s+/, "");
-  const today = isoDateIn(now, timezone);
-
-  if (word === "today" || word === "tonight" || word === "") return today;
-  if (word === "tomorrow") return addDays(today, 1);
-  if (word === "day after tomorrow" || word === "day after") return addDays(today, 2);
-
-  const weekday = WEEKDAYS.findIndex((name) => name === word || name.slice(0, 3) === word.slice(0, 3));
-  if (weekday >= 0) {
-    const current = new Date(`${today}T12:00:00Z`).getUTCDay();
-    const ahead = (weekday - current + 7) % 7;
-    return addDays(today, ahead);
-  }
-
-  return null;
-}
-
-function isoDateIn(now: Date, timezone: string): string {
-  try {
-    return new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-  } catch {
-    return now.toISOString().slice(0, 10);
-  }
-}
-
-function addDays(isoDate: string, days: number): string {
-  const date = new Date(`${isoDate}T12:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
+  return resolveDay(when.trim() === "" ? "today" : when, { timezone, now });
 }
 
 function describeDate(isoDate: string, when: string, timezone: string): string {

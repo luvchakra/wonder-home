@@ -238,7 +238,18 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
 - **HomeTalk** (`/ai`, `packages/core/src/components/ui/talk-composer.tsx`)
   is where a household talks or types to WonderHome — the one door (rule
   13). Every turn goes through the same conversation engine
-  (`conversation/engine.ts`) whether spoken or typed.
+  (`conversation/engine.ts`) whether spoken or typed. Since HomeTalk 2.0
+  (spec `design/HOMETALK-2.0-WAVE-4.md`) every action intent is grounded
+  before a proposal exists (`conversation/grounding.ts`): a person
+  mention becomes a member id through the Wave 1 resolver, a date phrase
+  becomes a local day through `conversation/temporal.ts` (the model names
+  the phrase, deterministic code decides the day, in the household's
+  timezone), and "that/it/them/the other one" resolves through
+  `conversation/references.ts` in the spec's order — pending question,
+  pending proposal, recent conversation and recent HomeSend by recency.
+  Anything still uncertain becomes one focused question, never a guess;
+  each turn persists what it was about (its focus) for the next turn's
+  "that".
 - **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`'s
   `understand`/answer-composition seam) is the reasoning behind a reply: a
   real model call, gated by the same consent/minimisation/entitlement

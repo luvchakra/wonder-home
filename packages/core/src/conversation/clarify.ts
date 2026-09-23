@@ -1,4 +1,5 @@
 import type { HouseholdIntent, IntentTarget } from "./intent";
+import { chooseCandidate, readFocus } from "./references";
 
 /**
  * Answering the question WonderHome just asked (story 04-011).
@@ -118,6 +119,12 @@ export function answerClarification(
   utterance: string,
   context: { actorMemberId: string; channel: "text" | "voice" },
 ): HouseholdIntent | null {
+  // A grounding question (Wave 4): who, which day, or which of these.
+  const awaiting = pending.parameters.awaiting;
+  if (awaiting === "member" || awaiting === "day" || awaiting === "referent") {
+    return answerGroundingQuestion(pending, utterance, context);
+  }
+
   switch (pending.action) {
     case "order_items":
     case "add_to_list": {
@@ -134,7 +141,8 @@ export function answerClarification(
           pending.target.kind === "unspecified"
             ? { kind: "list", reference: "groceries" }
             : pending.target,
-        parameters: { ...pending.parameters, items },
+        // One named thing is one item — the shape the grocery write takes.
+        parameters: { ...withoutGroundingState(pending.parameters), items, ...(items.length === 1 ? { item: items[0] } : {}) },
         // High, and deliberately so: the household has now said this twice.
         // Treating a repeated answer as still uncertain is the behaviour
         // that made this loop in the first place.
@@ -147,6 +155,61 @@ export function answerClarification(
   }
 }
 
+/** How long an answer to each grounding question can plausibly be. */
+const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent: 6 };
+
+/** Words that make a reply a request of its own rather than an answer. */
+const NEW_REQUEST = /\b(?:is|are|was|were|will|won'?t|isn'?t|can'?t|add|put|pay|order|need|remind|move|plan|book|remove|mark|log|record|cancel|what|when|who|how|why)\b/i;
+
+/** A pending clarification's bookkeeping, which must not ride into the answered intent. */
+function withoutGroundingState(parameters: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...parameters };
+  delete rest.awaiting;
+  delete rest.candidates;
+  return rest;
+}
+
+/**
+ * The answer to "Who did you mean?", "Which day?" or "Do you mean X or Y?",
+ * folded back into the request that asked it. The answer is not trusted as
+ * resolved here — the next grounding pass resolves it like any other
+ * mention, so a second unclear answer gets the escalated question, never a
+ * guess.
+ */
+function answerGroundingQuestion(
+  pending: PendingClarification,
+  utterance: string,
+  context: { actorMemberId: string; channel: "text" | "voice" },
+): HouseholdIntent | null {
+  const answer = stripFiller(utterance)
+    .replace(/[.!?]+$/, "")
+    .replace(/^(?:no,?\s+)?(?:i meant|i mean|it'?s|it is|for)\s+/i, "")
+    .trim();
+  // An answer names someone, a day or one of the choices. A whole new request
+  // ("Sunita is away next Friday") is somebody moving on, and must be read
+  // as that request — never swallowed as the answer to the last question.
+  if (!answer || answer.split(/\s+/).length > (awaitingWordLimit[String(pending.parameters.awaiting)] ?? 4) || NEW_REQUEST.test(answer)) return null;
+  const { awaiting, candidates } = pending.parameters;
+  const rest = withoutGroundingState(pending.parameters);
+  const base = { actorMemberId: context.actorMemberId, channel: context.channel, utterance, action: pending.action, confidence: 0.9 };
+
+  if (awaiting === "member") {
+    const choice = chooseCandidate(answer, readFocus(candidates));
+    const reference = choice?.label ?? answer;
+    return { ...base, target: { kind: "member", reference: reference.toLowerCase() }, parameters: { ...rest, ...(choice?.entityId ? { memberId: choice.entityId } : {}) } };
+  }
+  if (awaiting === "day") {
+    return { ...base, target: pending.target, parameters: { ...rest, when: answer } };
+  }
+  // A choice between named candidates.
+  const choice = chooseCandidate(answer, readFocus(candidates));
+  if (!choice) return null;
+  if (pending.action === "make_payment") {
+    return { ...base, target: { kind: "bill", reference: choice.label }, parameters: { ...rest, billLabel: choice.label, ...(choice.entityId ? { billId: choice.entityId } : {}) } };
+  }
+  return { ...base, target: pending.target, parameters: { ...rest, item: choice.label } };
+}
+
 /**
  * The second ask, which must not be the first ask again.
  *
@@ -155,6 +218,18 @@ export function answerClarification(
  * a different question, not a louder one.
  */
 export function escalatedQuestion(pending: PendingClarification): string {
+  switch (pending.parameters.awaiting) {
+    case "member":
+      return 'I still cannot tell who you mean. Say their name as your household has it — for example "Asmi" — and I will take it from there.';
+    case "day":
+      return 'I still cannot pin that to one day. Say a single day — "tomorrow", "next Friday" or a date like "2 Oct".';
+    case "referent": {
+      const named = readFocus(pending.parameters.candidates).map((candidate) => `"${candidate.label}"`);
+      return named.length > 0
+        ? `I still cannot tell which one. Say ${named.join(" or ")}, or name the thing you mean.`
+        : "I still cannot tell which one you mean. Name the thing itself and I will take it from there.";
+    }
+  }
   switch (pending.action) {
     case "order_items":
     case "add_to_list":

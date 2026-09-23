@@ -97,7 +97,7 @@ export async function findPendingByContentHash(supabase: SupabaseClient, househo
 export async function listHomeSendItems(
   supabase: SupabaseClient,
   householdId: string,
-  options?: { status?: HomeSendStatus },
+  options?: { status?: HomeSendStatus; since?: Date; limit?: number },
 ): Promise<HomeSendItem[]> {
   let query = supabase
     .from("home_send_items")
@@ -105,6 +105,8 @@ export async function listHomeSendItems(
     .eq("household_id", householdId)
     .order("created_at", { ascending: false });
   if (options?.status) query = query.eq("status", options.status);
+  if (options?.since) query = query.gte("created_at", options.since.toISOString());
+  if (options?.limit) query = query.limit(options.limit);
 
   const { data, error } = await query;
   if (error) throw new Error(`listHomeSendItems failed: ${error.code ?? "unknown"}`);

@@ -11,7 +11,7 @@
 | Not Started | 10 |
 | Completion | 94.6% |
 | Current module | 14 AI Orchestration & Learning |
-| Current story | 14-011 HomeSend 2.0 — multimodal intake & reconciliation (Done) |
+| Current story | 14-012 HomeTalk 2.0 — contextual conversational operations (In Progress) |
 | Last updated | 2026-09-23 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 11 | 9 | 1 | 1 | 10 | In Progress |
+| 14 | AI Orchestration & Learning | 12 | 10 | 1 | 1 | 10 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -212,4 +212,5 @@ disagree again.)
 | 2026-09-23 | 14 | 14-011 | In Progress | 1917 unit (homesend 179), 53 HomeSend database, 123/123 live | HomeSend 2.0 part 1 — one pipeline for every input (`homesend/ingest.ts`) ending in the canonical `IntakeUnderstanding`; PDF, TXT/CSV, SSRF-safe links and confidence-gated voice notes added; types decided from bytes; prompt-injection defense; content-hash idempotency; "Failed safely" inbox. Migration applied live. Fixed: Server Action body limit was Next's 1 MB default, refusing most phone photos. Browser-verified at 360px and desktop; QA household, files and user removed. Parts 2 (email attachments, entity resolution, update/cancel reconciliation, multi-impact review) and 3 (confirmation strategy, metrics) next |
 | 2026-09-23 | 14 | 14-011 | In Progress | 1940 unit (reconcile/resolve 16, email gateway 21), 57 HomeSend database, 125/125 live | HomeSend 2.0 part 2 — entity resolution through the Wave 1 resolver ("Who is this for — Asmi or Manan?"), reconciliation (duplicate/update/cancellation/conflict) with updates and cancellations through the domain services and exact undo (`homesend_changes.change_type`/`previous`, applied live), several needs per notice each undone on its own, the §13 review UI, email 2.0 (every recipient, HTML bodies, attachments as their own items, idempotent retries). Browser-verified at 360px and desktop; QA data removed after merge (PR #113) |
 | 2026-09-23 | 14 | 14-011 | Done | 2003 unit (confirmation 11, metrics 7, §20 matrix 42), 60 HomeSend database, 130/130 live | HomeSend 2.0 part 3 — §12 confirmation strategy (auto-apply only under the household's own "execute" setting for a clear, member-sent, new grocery or school item; bills and health documents always wait; one question when unsure), review outcomes kept in closed words (applied live), §19 metrics (counts out of counts, platform-admin endpoint), and the §20 acceptance matrix, one test per row. Story complete; live email still waits on a Resend account and receiving domain |
+| 2026-09-23 | 14 | 14-012 | In Progress | 2072 unit (temporal 11, references 15, grounding 18), 414 database, 364 E2E, live QA on a synthetic household | HomeTalk 2.0 part 1 — grounding: one timezone-aware temporal resolver (`conversation/temporal.ts`, this/next Friday, weekend, next week, after school, before dinner, explicit dates), every action intent grounded before a proposal (`conversation/grounding.ts`: people through the Wave 1 resolver with one focused question when two fit), "that/it/them/him/the other one" through `conversation/references.ts` in the spec's priority order with the "white T-shirt from the school notice or printer paper?" question, per-turn focus persisted on the reply; previews name the grounded person and day |
 | 2026-09-23 | 11 / 01 | enhancement | Done | 2003 unit, 403 database, 364 E2E (after merging main), lint/typecheck/build/security clean | Transactions carry their own payee, kind and owner (`obligation_history` columns + same-household owner trigger), prefilled from the bill and editable via a new Edit control; helpers (and any member) get gender and notes on Add helper and the profile editor. Migration `20260923100000` applied live and confirmed. Browser QA not run — no service-role credential in this sandbox |
