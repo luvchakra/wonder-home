@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-23 | [HomeSend 2.0, part 1: one pipeline for every input — Wave 3 (story 14-011)](2026-09-23-homesend-2-one-pipeline.md) |
 | 2026-09-23 | [CLAUDE.md: remove test data once the merge lands](2026-09-23-claude-md-post-merge-test-data-cleanup.md) |
 | 2026-09-23 | [HomeBrain 2.0, part 2: current truth and HomeBrain Review — Wave 2 (story 14-010)](2026-09-23-homebrain-2-current-truth-review.md) |
 | 2026-09-23 | [HomeBrain 2.0, part 1: grounded reasoning — Wave 2 (story 14-010)](2026-09-23-homebrain-2-grounded-reasoning.md) |

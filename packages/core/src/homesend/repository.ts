@@ -4,12 +4,14 @@ import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import type {
   HomeSendExtraction,
+  HomeSendFailureReason,
   HomeSendItem,
   HomeSendKind,
   HomeSendSecurityStatus,
   HomeSendSource,
   HomeSendStatus,
 } from "./items";
+import type { IntakeUnderstanding } from "./understanding";
 
 /**
  * Reading and writing HomeSend intake (Phase C).
@@ -39,12 +41,42 @@ function fromRow(row: Row): HomeSendItem {
     securityStatus: row.security_status as HomeSendSecurityStatus,
     externalId: (row.external_id as string | null) ?? null,
     senderAddress: (row.sender_address as string | null) ?? null,
+    contentType: (row.content_type as string | null) ?? null,
+    contentHash: (row.content_hash as string | null) ?? null,
+    sourceUrl: (row.source_url as string | null) ?? null,
+    subject: (row.subject as string | null) ?? null,
+    parentItemId: (row.parent_item_id as string | null) ?? null,
+    understanding: (row.understanding as IntakeUnderstanding | null) ?? null,
+    transcriptConfidence: row.transcript_confidence === null || row.transcript_confidence === undefined ? null : Number(row.transcript_confidence),
+    failureReason: (row.failure_reason as HomeSendFailureReason | null) ?? null,
     createdAt: row.created_at as string,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, created_at";
+  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, content_type, content_hash, source_url, subject, parent_item_id, understanding, transcript_confidence, failure_reason, created_at";
+
+/** Items still waiting on a person — "Needs your review" (§14). */
+export const PENDING_STATUSES: readonly HomeSendStatus[] = ["received", "classified"];
+
+/**
+ * The item already waiting with exactly this content, if someone sends the
+ * same thing twice (§15). Only a pending one counts: something routed or
+ * dismissed last week, sent again today, is a fresh intake.
+ */
+export async function findPendingByContentHash(supabase: SupabaseClient, householdId: string, contentHash: string): Promise<HomeSendItem | null> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .select(SELECT_COLUMNS)
+    .eq("household_id", householdId)
+    .eq("content_hash", contentHash)
+    .in("status", [...PENDING_STATUSES])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`findPendingByContentHash failed: ${error.code ?? "unknown"}`);
+  return data ? fromRow(data as Row) : null;
+}
 
 export async function listHomeSendItems(
   supabase: SupabaseClient,
@@ -79,6 +111,12 @@ export type CreateHomeSendItemInput = {
   rawText?: string | null;
   /** Defaults to `not_applicable` (pasted text has no file to check). */
   securityStatus?: HomeSendSecurityStatus;
+  contentType?: string | null;
+  contentHash?: string | null;
+  sourceUrl?: string | null;
+  transcriptConfidence?: number | null;
+  /** Set when the item failed safely on arrival: it is kept, in "Failed safely", never classified. */
+  failureReason?: HomeSendFailureReason | null;
 };
 
 export async function createHomeSendItem(
@@ -97,6 +135,12 @@ export async function createHomeSendItem(
       file_path: input.filePath ?? null,
       raw_text: input.rawText ?? null,
       security_status: securityStatus,
+      content_type: input.contentType ?? null,
+      content_hash: input.contentHash ?? null,
+      source_url: input.sourceUrl ?? null,
+      transcript_confidence: input.transcriptConfidence ?? null,
+      status: input.failureReason ? "failed" : "received",
+      failure_reason: input.failureReason ?? null,
     })
     .select(SELECT_COLUMNS)
     .single();
@@ -134,6 +178,8 @@ export type CreateEmailHomeSendItemInput = {
   externalId: string;
   senderAddress: string | null;
   rawText: string;
+  subject?: string | null;
+  contentHash?: string | null;
 };
 
 /**
@@ -160,6 +206,8 @@ export async function createEmailHomeSendItem(
         raw_text: input.rawText,
         external_id: input.externalId,
         sender_address: input.senderAddress,
+        subject: input.subject ?? null,
+        content_hash: input.contentHash ?? null,
         security_status: "not_applicable",
       },
       { onConflict: "household_id,external_id", ignoreDuplicates: true },
@@ -195,11 +243,22 @@ export async function setHomeSendClassification(
   supabase: SupabaseClient,
   householdId: string,
   itemId: string,
-  input: { classifiedKind: HomeSendKind; extracted: HomeSendExtraction },
+  input: {
+    classifiedKind: HomeSendKind;
+    extracted: HomeSendExtraction;
+    understanding?: IntakeUnderstanding | null;
+    /** A transcript or a fetched page's text, saved alongside its reading. */
+    rawText?: string | null;
+    transcriptConfidence?: number | null;
+  },
 ): Promise<void> {
+  const update: Record<string, unknown> = { status: "classified", classified_kind: input.classifiedKind, extracted: input.extracted };
+  if (input.understanding !== undefined) update.understanding = input.understanding;
+  if (input.rawText) update.raw_text = input.rawText;
+  if (input.transcriptConfidence !== undefined) update.transcript_confidence = input.transcriptConfidence;
   const { error } = await supabase
     .from("home_send_items")
-    .update({ status: "classified", classified_kind: input.classifiedKind, extracted: input.extracted })
+    .update(update)
     .eq("household_id", householdId)
     .eq("id", itemId);
 
@@ -214,7 +273,7 @@ export async function routeHomeSendItem(
 ): Promise<void> {
   const { error } = await supabase
     .from("home_send_items")
-    .update({ status: "routed", routed_table: input.routedTable, routed_id: input.routedId })
+    .update({ status: "routed", routed_table: input.routedTable, routed_id: input.routedId, routed_at: new Date().toISOString() })
     .eq("household_id", householdId)
     .eq("id", itemId);
 
@@ -258,4 +317,24 @@ export async function markHomeSendUndone(
     .eq("id", itemId);
 
   if (error) throw new Error(`markHomeSendUndone failed: ${error.code ?? "unknown"}`);
+}
+
+/**
+ * An item that arrived but cannot go on — refused, unreadable, a link that
+ * would not open, a voice note nothing could hear. It is kept and shown
+ * under "Failed safely" (§14), never deleted: a provider outage or a bad
+ * file must never lose what a household sent.
+ */
+export async function markHomeSendFailed(
+  supabase: SupabaseClient,
+  householdId: string,
+  itemId: string,
+  reason: HomeSendFailureReason,
+  extra?: { rawText?: string | null; understanding?: IntakeUnderstanding | null },
+): Promise<void> {
+  const update: Record<string, unknown> = { status: "failed", failure_reason: reason };
+  if (extra?.rawText) update.raw_text = extra.rawText;
+  if (extra?.understanding) update.understanding = extra.understanding;
+  const { error } = await supabase.from("home_send_items").update(update).eq("household_id", householdId).eq("id", itemId);
+  if (error) throw new Error(`markHomeSendFailed failed: ${error.code ?? "unknown"}`);
 }

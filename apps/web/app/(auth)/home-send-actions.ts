@@ -11,34 +11,43 @@ import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
-import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
-import { createHomeSendItem, dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
-import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
+import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
+import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, createSchoolItem } from "@wonderhome/core/school/repository";
 
 /**
- * HomeSend v1 (Phase C): upload a photo/file, or paste a forwarded message,
- * classify it, and — once a person confirms — route it into the real domain
- * table. Every step here mirrors `school-actions.ts`'s screenshot-import
- * shape: classification only ever fills a confirm form, and the confirm
- * form's own submit is what writes anything. No real WhatsApp/email webhook
- * exists yet (no provider credentials, per CLAUDE.md) — `source` only names
- * the two channels that genuinely run today.
+ * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
+ * note, or paste a message or a link. Each goes through the one pipeline in
+ * `homesend/ingest.ts` — secure intake, normalize, understand — and every
+ * one ends in the same confirm step: nothing is written into a domain table
+ * until a person has reviewed it, the same shape `school-actions.ts`'s
+ * screenshot import has always had.
  */
 
 export type SendHomeItemState = {
   error?: string;
   notice?: string;
-  item?: { id: string; classifiedKind: HomeSendKind; extracted: HomeSendExtraction | null; reconciliation?: Pick<HomeSendReconciliation, "verdict" | "message"> | null };
+  /** What happens next: review it, check a transcript, or it failed safely. */
+  state?: IngestState;
+  duplicate?: boolean;
+  heard?: IngestOutcome["heard"];
+  item?: {
+    id: string;
+    classifiedKind: HomeSendKind;
+    extracted: HomeSendExtraction | null;
+    understanding?: IntakeUnderstanding | null;
+    reconciliation?: Pick<HomeSendReconciliation, "verdict" | "message"> | null;
+  };
 };
 
 /**
- * What was just classified, checked against what the household already has
+ * What was just understood, checked against what the household already has
  * (Wave 1 §7) — so the confirm step can say "this looks like the
  * electricity bill already on record" before anyone presses Add.
  */
@@ -67,67 +76,51 @@ async function withReconciliation(
   return found ? { ...state, item: { ...item, reconciliation: { verdict: found.verdict, message: found.message } } } : state;
 }
 
-const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
-const UPLOAD_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+function toState(outcome: IngestOutcome): SendHomeItemState {
+  return { notice: outcome.notice, state: outcome.state, duplicate: outcome.duplicate, heard: outcome.heard, item: outcome.item };
+}
 
-/** The upload half of sending something in: a photo or file. */
+function revalidateHomeSend() {
+  revalidatePath("/ai");
+  revalidatePath("/home-send");
+}
+
+/**
+ * What one upload form may send — the Server Action body limit in
+ * `next.config.ts`, which sits under the hosting platform's own 4.5 MB
+ * request ceiling. The pipeline has its own per-kind limits beyond this.
+ */
+const UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
+
+/** The upload half of sending something in: a photo, PDF, text file or voice note. */
 export async function uploadHomeSendItemAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
   const householdId = formData.get("householdId");
   if (typeof householdId !== "string") return { error: "Please try again." };
 
-  const photo = formData.get("photo");
-  if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a photo or file first." };
-  if (!UPLOAD_CONTENT_TYPES.has(photo.type)) return { error: "Please send a JPEG, PNG or WebP image." };
-  if (photo.size > UPLOAD_MAX_BYTES) return { error: "That file is too large — please use one under 8MB." };
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo or file first." };
+  if (file.size > UPLOAD_MAX_BYTES) return { error: "That file is too large — please use one under 4MB." };
 
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
-
-    const buffer = Buffer.from(await photo.arrayBuffer());
-    const securityStatus = await assessUploadSecurity(photo.type, buffer);
-
-    const itemId = crypto.randomUUID();
-    const path = `${householdId}/${itemId}`;
-    // Stored either way — the private bucket is the quarantine. Only
-    // classification is skipped for a rejected file, never the record that
-    // it was sent (CLAUDE.md's "security failure -> quarantine; no AI").
-    const { error: uploadError } = await supabase.storage.from("home-send").upload(path, photo, { contentType: photo.type });
-    if (uploadError) throw new Error(`home-send upload failed: ${uploadError.message}`);
-
-    await createHomeSendItem(supabase, {
-      id: itemId,
-      householdId,
-      createdByMemberId: membership.memberId,
-      source: "manual_upload",
-      filePath: path,
-      securityStatus,
-    });
-
-    if (securityStatus === "rejected") {
-      revalidatePath("/ai");
-      revalidatePath("/home-send");
-      return {
-        notice: "That file didn't read as a real image, so WonderHome kept it without looking inside — please try a different photo.",
-        item: { id: itemId, classifiedKind: "unknown", extracted: null },
-      };
-    }
-
-    const classified = await classifyAndSave(supabase, householdId, itemId, {
-      image: { mediaType: photo.type as "image/jpeg" | "image/png" | "image/webp", base64: buffer.toString("base64") },
-    });
-    const state = await withReconciliation(supabase, householdId, membership.household.timezone, classified);
-    revalidatePath("/ai");
-    revalidatePath("/home-send");
+    const outcome = await ingestFile(
+      supabase,
+      { householdId, memberId: membership.memberId },
+      { bytes: new Uint8Array(await file.arrayBuffer()), claimedType: file.type, filename: file.name || null },
+    );
+    const state = await withReconciliation(supabase, householdId, membership.household.timezone, toState(outcome));
+    revalidateHomeSend();
     return state;
   } catch (thrown) {
+    if (thrown instanceof IngestRejected) return { error: thrown.message };
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }
 }
 
-/** The paste half: a forwarded message, typed or pasted as plain text. */
+/** The paste half: a forwarded message, or a link, typed or pasted as plain text. */
 export async function pasteHomeSendItemAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
-  const parsed = z.object({ householdId: z.uuid(), text: z.string().trim().min(1, { error: "Paste something first." }).max(4000) }).safeParse({
+  const parsed = z.object({ householdId: z.uuid(), text: z.string().trim().min(1, { error: "Paste something first." }).max(12000) }).safeParse({
     householdId: formData.get("householdId"),
     text: formData.get("text"),
   });
@@ -136,22 +129,38 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
-
-    const itemId = crypto.randomUUID();
-    await createHomeSendItem(supabase, {
-      id: itemId,
-      householdId: parsed.data.householdId,
-      createdByMemberId: membership.memberId,
-      source: "pasted_text",
-      rawText: parsed.data.text,
-    });
-
-    const classified = await classifyAndSave(supabase, parsed.data.householdId, itemId, { text: parsed.data.text });
-    const state = await withReconciliation(supabase, parsed.data.householdId, membership.household.timezone, classified);
-    revalidatePath("/ai");
-    revalidatePath("/home-send");
+    const outcome = await ingestText(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, { text: parsed.data.text });
+    const state = await withReconciliation(supabase, parsed.data.householdId, membership.household.timezone, toState(outcome));
+    revalidateHomeSend();
     return state;
   } catch (thrown) {
+    if (thrown instanceof IngestRejected) return { error: thrown.message };
+    return { error: toErrorBody(thrown, "homesend").body.error.message };
+  }
+}
+
+/**
+ * A voice note WonderHome was not sure it heard right (§17): the household
+ * confirms the transcript or types what was said, and only then is it read.
+ */
+export async function confirmTranscriptAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
+  const parsed = z
+    .object({ householdId: z.uuid(), itemId: z.uuid(), text: z.string().trim().min(1, { error: "Type what the voice note said first." }).max(4000) })
+    .safeParse({ householdId: formData.get("householdId"), itemId: formData.get("itemId"), text: formData.get("text") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const item = await getHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId);
+    if (!item || item.source !== "audio_note") return { error: "That voice note is not part of this household." };
+    if (item.status !== "received" && item.status !== "classified") return { error: "That voice note has already been handled." };
+    const outcome = await confirmTranscript(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, { itemId: item.id, text: parsed.data.text });
+    const state = await withReconciliation(supabase, parsed.data.householdId, membership.household.timezone, toState(outcome));
+    revalidateHomeSend();
+    return state;
+  } catch (thrown) {
+    if (thrown instanceof IngestRejected) return { error: thrown.message };
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }
 }

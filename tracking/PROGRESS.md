@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 183 |
+| Total stories | 184 |
 | Done | 173 |
-| In Progress | 0 |
+| In Progress | 1 |
 | Blocked | 0 |
 | Not Started | 10 |
-| Completion | 94.5% |
+| Completion | 94.0% |
 | Current module | 14 AI Orchestration & Learning |
-| Current story | 14-010 HomeBrain 2.0 — grounded household reasoning (Done) |
+| Current story | 14-011 HomeSend 2.0 — multimodal intake & reconciliation (In Progress) |
 | Last updated | 2026-09-23 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 10 | 8 | 1 | 1 | 9 | In Progress |
+| 14 | AI Orchestration & Learning | 11 | 9 | 1 | 1 | 9 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -209,3 +209,4 @@ disagree again.)
 | 2026-09-23 | 14 | 14-009 | Done | 53 context unit (1699 total), 381 database, lint/typecheck/build/security clean | Household Context & Grounding Engine (Wave 1): `packages/core/src/context/` — canonical `HouseholdContextItem`s with provenance, freshness, tiers and privacy class, built from every shipped domain through the member's own RLS client; retrieval API; candidate-based resolution that clarifies instead of guessing; six-verdict matching; conflicts. HomeBrain's context (`brain.ts` now a façade over the engine, answers ranked by question relevance), HomeTalk's resolution (absence for "Dad"/"the cook", grocery duplicates, health issues) and HomeSend's reconciliation (duplicate/update/contradiction shown on the confirm step, "add it anyway" to override) share it. Context invalidated after every successful write (`auditChange` plus wrappers on every non-audited repository write). Fixed along the way: HomeSend's confirm form never read the health document's subject/type/date. Live count-only leakage check: impersonated member sees 0 of the other households' rows across all 29 tables read. No migration. Browser QA and `verify:live` not run — no service-role credential in this sandbox |
 | 2026-09-23 | 14 | 14-010 | In Progress | 63 HomeBrain unit + 12 rules/engine (full suite green), lint/typecheck clean | HomeBrain 2.0 part 1 — grounded reasoning core: `packages/core/src/homebrain/` (question reading with cross-domain connection, follow-ups and focused clarification; the `GroundedFact` contract; §14 prompt contract with cited facts; post-generation validation with one tighter regeneration, deterministic fallback and honest "not on record"; "why?" answers from recorded evidence; modes with "done" only after an executor confirms). The conversation route answers every question through it, with or without a model. Part 2 (corrections, HomeTalk memories ↔ HomeBrain Review) next. |
 | 2026-09-23 | 14 | 14-010 | Done | 1800+ unit (homebrain/context/conversation 340+), 10 certification database, 117/117 live | HomeBrain 2.0 part 2 — current truth and HomeBrain Review: preferences keyed by subject and object so a correction supersedes the older observation with history kept; HomeTalk preferences written to HomeBrain Review as linked `certification_items` (migration `20260923120000_homebrain_review_links_memories.sql` backfills existing ones, applied live); Review confirm/correct/remove update the memory HomeBrain reads; Review beliefs are HomeBrain facts with provenance; screen renamed HomeBrain Review with source, when learned, confidence and confirmation. Live bug fixed: "Add a belief" was always refused by RLS (member client on a SELECT-only table). Browser-verified at 360px and desktop with a QA household, removed afterward |
+| 2026-09-23 | 14 | 14-011 | In Progress | 1917 unit (homesend 179), 53 HomeSend database, 123/123 live | HomeSend 2.0 part 1 — one pipeline for every input (`homesend/ingest.ts`) ending in the canonical `IntakeUnderstanding`; PDF, TXT/CSV, SSRF-safe links and confidence-gated voice notes added; types decided from bytes; prompt-injection defense; content-hash idempotency; "Failed safely" inbox. Migration applied live. Fixed: Server Action body limit was Next's 1 MB default, refusing most phone photos. Browser-verified at 360px and desktop; QA household, files and user removed. Parts 2 (email attachments, entity resolution, update/cancel reconciliation, multi-impact review) and 3 (confirmation strategy, metrics) next |

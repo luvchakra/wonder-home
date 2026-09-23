@@ -100,7 +100,13 @@ describe("fetchReceivedEmail", () => {
     const fakeFetch = (async () =>
       new Response(JSON.stringify({ id: "e1", from: "sender@example.com", subject: "Hi", text: "Hello" }), { status: 200 })) as typeof fetch;
     const result = await fetchReceivedEmail("e1", "re_x", fakeFetch);
-    expect(result).toEqual({ id: "e1", from: "sender@example.com", subject: "Hi", text: "Hello" });
+    expect(result).toEqual({ id: "e1", from: "sender@example.com", subject: "Hi", text: "Hello", html: null });
+  });
+
+  it("keeps the HTML part of an HTML-only email, so it can be reduced to text rather than dropped", async () => {
+    const fakeFetch = (async () =>
+      new Response(JSON.stringify({ id: "e2", from: "school@example.org", subject: "Notice", text: null, html: "<p>Sports Day</p>" }), { status: 200 })) as typeof fetch;
+    expect(await fetchReceivedEmail("e2", "re_x", fakeFetch)).toEqual({ id: "e2", from: "school@example.org", subject: "Notice", text: null, html: "<p>Sports Day</p>" });
   });
 
   it("returns null on a non-2xx response", async () => {

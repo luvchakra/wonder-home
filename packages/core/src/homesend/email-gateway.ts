@@ -100,7 +100,8 @@ const ReceivedEmailSchema = z.object({
   id: z.string(),
   from: z.string(),
   subject: z.string().nullable().optional(),
-  text: z.string().nullable(),
+  text: z.string().nullable().optional().default(null),
+  html: z.string().nullable().optional().default(null),
 });
 
 export type ReceivedEmail = z.infer<typeof ReceivedEmailSchema>;
