@@ -357,7 +357,7 @@ const RULES: readonly Rule[] = [
   // --- Absence ------------------------------------------------------------------
   {
     pattern: new RegExp(
-      `^((?:the |my |our )?(?:[A-Za-z]+)(?: one| kid| child| boy| girl)?)\\s+(?:won'?t be (?:here|in|around|coming|available)|isn'?t (?:here|coming|available|in)|is (?:away|off|out|unavailable|on leave|not (?:coming|available|here|in|around)|sick|unwell|ill|travelling|traveling)|will be (?:away|off|out|unavailable)|can'?t (?:come|make it)|has (?:the day )?off|is taking (?:the day |a day |leave )?off)(?:\\s+(${WHEN_WORDS}))?$`,
+      `^((?:the |my |our )?(?:[A-Za-z]+)(?: one| kid| child| boy| girl)?)\\s+(?:won'?t be (?:here|in|around|coming|available|home|at home|back)|isn'?t (?:here|coming|available|in|home)|is (?:off sick|out sick|home sick|away|off|out|unavailable|on leave|not (?:coming|available|here|in|around|home)|sick|unwell|ill|travelling|traveling)|will be (?:away|off|out|unavailable)|can'?t (?:come|make it)|has (?:the day )?off|is taking (?:the day |a day |leave )?off)(?:\\s+(${WHEN_WORDS}))?$`,
       "i",
     ),
     read: (match) => ({

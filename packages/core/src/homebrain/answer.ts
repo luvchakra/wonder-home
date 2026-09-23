@@ -90,12 +90,15 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
   const pool = facts.filter((fact) => {
     if (!fact.relevant || fact.score < 0.5) return false;
     if (fact.domain !== "conflict" && BACKGROUND.has(fact.domain)) return false;
-    if (reading.time && fact.date && !inWindow(fact.date, reading.time)) return false;
+    // A question about a day is answered with what falls on it: an undated
+    // standing fact is never presented as "tomorrow".
+    if (reading.time && !(fact.date && inWindow(fact.date, reading.time))) return false;
     return true;
   });
   if (pool.length === 0) return null;
 
-  const who = reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
+  // "For Kunal" would undersell an answer that also carries his children's plans.
+  const who = (reading.dependants ?? []).length > 0 ? "" : reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
   const lead = who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
   return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${fact.statement}`).join("\n")}`;
 }

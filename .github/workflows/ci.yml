@@ -75,6 +75,9 @@ jobs:
       - name: P0 security suite
         run: npm run security
 
+      - name: AI evaluation — golden households, release gates
+        run: npm run eval
+
   # The ~1300-test unit suite, split out so it runs in parallel with lint
   # and db-tests rather than behind lint's fast static checks.
   unit-tests:

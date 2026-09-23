@@ -246,7 +246,6 @@ export async function reconcileHomeSend(
   },
 ): Promise<HomeSendReconciliation | null> {
   if (!candidate.title.trim()) return null;
-  const now = options.now ?? new Date();
   let records: ContextRecords;
   try {
     records = await readDomain(supabase, householdId, candidate);
@@ -256,7 +255,23 @@ export async function reconcileHomeSend(
     // still goes through the domain's own create, which has its own guards.
     return null;
   }
+  return reconcileAgainstRecords(records, householdId, candidate, options);
+}
 
+/**
+ * The decision itself, over records already read: the same function the
+ * live path uses after reading the database, and the one the evaluation
+ * framework (Wave 5) runs against a golden household's records — so what is
+ * measured is what ships.
+ */
+export function reconcileAgainstRecords(
+  records: ContextRecords,
+  householdId: string,
+  candidate: HomeSendCandidate,
+  options: { timezone: string; now?: Date; memberNames?: ReadonlyMap<string, string> },
+): HomeSendReconciliation | null {
+  if (!candidate.title.trim()) return null;
+  const now = options.now ?? new Date();
   const items = applyFreshness(buildContextItems(records, { householdId, householdName: "", timezone: options.timezone, now, viewerMemberId: "" }), now);
   const incoming: IncomingFact = {
     domain: DOMAIN_FOR_KIND[candidate.kind],

@@ -335,6 +335,8 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 
 **Progress**
 - Started 2026-09-23.
+- Part 1 (2026-09-23): the evaluation framework, `packages/core/src/evaluation/`, run by `npm run eval` in CI and `verify`. It covers golden households A–E and 45 cases across the three surfaces. It adds the §2 staged comparison, the §10 taxonomy, the §8 metrics, the §9 Unsafe Action Rate, content-hashed prompt/context/dataset versions, the §21 gates and the §22 artifact (`docs/ai-releases/`). The golden set found five HomeBrain and HomeTalk defects, which were fixed. Note: `docs/progress/2026-09-23-wave5-evaluation-framework.md`.
+- Remaining: part 2 covers correction evidence, the approval fingerprint and rate metrics; part 3 covers limits, email telemetry, failure codes, idempotency and retries.
 
 **Definition of Done**
 - One unified evaluation framework, synthetic golden households, common infrastructure across the three surfaces.

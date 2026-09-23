@@ -66,6 +66,11 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
   const budget = options.budget ?? 40;
   const ranked = findRelevantFacts({ items: [...items] }, reading.retrievalText, { budget: items.length });
   const people = new Set(reading.people.map((person) => person.memberId));
+  // A parent asking about their own day asks about their children's too —
+  // except their health: "my checkup" is never a child's.
+  const dependants = new Set(reading.dependants ?? []);
+  const concerns = (item: HouseholdContextItem) =>
+    item.subjectMemberIds.some((member) => people.has(member) || (item.domain !== "health" && dependants.has(member)));
   // A question about one part of the home ("health appointments") is not
   // answered with everything about the person asking — only the parts it is
   // unmistakably about, what those connect to, and the calendar.
@@ -112,7 +117,11 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
       !entry.reasons.includes("about someone or something named in the question") &&
       item.tier !== 1 &&
       !reading.focus.has(item.domain) &&
-      !reading.connected.has(item.domain);
+      !reading.connected.has(item.domain) &&
+      // A question that names a day is linked to what falls on it by the day
+      // itself, not by a common word: "what do I need to remember tomorrow?"
+      // is about tomorrow's karate class.
+      !(reading.time && date && DATED_DOMAINS.has(item.domain) && inWindow(date, reading.time));
     if (weakOnly && score > 0.3) {
       score = 0.3;
       reasons.push("only a common word linked it to the question");
@@ -120,7 +129,7 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
 
     // A named person narrows personal facts to them — Asmi's question is not
     // answered with Manan's homework. Unassigned facts stay.
-    if (score > 0 && people.size > 0 && PERSONAL_DOMAINS.has(item.domain) && item.subjectMemberIds.length > 0 && !item.subjectMemberIds.some((member) => people.has(member)) && item.tier !== 1) {
+    if (score > 0 && people.size > 0 && PERSONAL_DOMAINS.has(item.domain) && item.subjectMemberIds.length > 0 && !concerns(item) && item.tier !== 1) {
       score = 0;
       reasons.splice(0, reasons.length, "about someone the question did not ask about");
     }
