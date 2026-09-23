@@ -117,7 +117,7 @@ const AREAS = [
     why: "Nothing about a household reaches a provider it has not agreed to, and never more than the turn needs.",
     unit: ["packages/core/src/ai/privacy.test.ts"],
     e2e: [],
-    expected: 27,
+    expected: 31,
   },
   {
     key: "audit",

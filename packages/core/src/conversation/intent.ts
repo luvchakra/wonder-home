@@ -30,9 +30,9 @@ export const INTENT_ACTIONS = [
   "log_health_issue",
   /** "My headache is gone" — resolves an open health issue for the speaker. */
   "resolve_health_issue",
-  /** "My BP was 128 over 82 this morning" — recognized, but vitals tracking (story 21-007) is not built yet, so this is never claimed as done. */
+  /** "My BP was 128 over 82 this morning" — records a real vital reading via the governed health service. */
   "log_vital",
-  /** "I want to walk three times a week" — recognized, but fitness tracking (story 21-008) is not built yet, so this is never claimed as done. */
+  /** "I want to walk three times a week" — sets a real, consistency-oriented fitness goal via the governed health service; never scored, never a leaderboard entry. */
   "set_fitness_goal",
   /** A hello, a thank-you, or "what can you do?" — answered warmly, never as a failure to understand. */
   "greet",

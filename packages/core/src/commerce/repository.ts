@@ -12,6 +12,7 @@ import {
 } from "./consumables";
 import { evaluatePurchase, type PolicyDecision, type PurchasePolicy, type PurchaseRequest } from "./policy";
 import { idempotencyKeyFor, isLate, type Order, type OrderStatus } from "./orders";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading and writing the shopping domain (module 09).
@@ -65,7 +66,7 @@ export type CreateConsumableInput = {
   daysPerUnit?: number | null;
 };
 
-export async function createConsumable(
+async function createConsumableImpl(
   supabase: SupabaseClient,
   input: CreateConsumableInput,
 ): Promise<{ id: string }> {
@@ -107,7 +108,7 @@ export type UpdateConsumableInput = {
 };
 
 /** Changing what was told about something already tracked — never touches purchase history. */
-export async function updateConsumable(
+async function updateConsumableImpl(
   supabase: SupabaseClient,
   input: UpdateConsumableInput,
 ): Promise<void> {
@@ -140,7 +141,7 @@ export async function updateConsumable(
  * up for the same reason a stood-down policy's name does
  * (`consumables_active_name_unique`, a partial index like the policy's own).
  */
-export async function retireConsumable(
+async function retireConsumableImpl(
   supabase: SupabaseClient,
   input: { id: string; householdId: string },
 ): Promise<void> {
@@ -246,7 +247,7 @@ export async function shoppingAgenda(
  * anything that cannot justify itself is skipped rather than written with a
  * vague explanation.
  */
-export async function refreshSuggestions(
+async function refreshSuggestionsImpl(
   supabase: SupabaseClient,
   householdId: string,
   now: Date = new Date(),
@@ -293,7 +294,7 @@ export type PreparedOrder = {
  * decision first, which is the sequence the acceptance criteria require and
  * also the only sequence a family would forgive.
  */
-export async function prepareOrder(
+async function prepareOrderImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -335,3 +336,11 @@ export async function prepareOrder(
     placed: false,
   };
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createConsumable = invalidatesContext(createConsumableImpl, (_supabase, input) => input.householdId);
+export const updateConsumable = invalidatesContext(updateConsumableImpl, (_supabase, input) => input.householdId);
+export const retireConsumable = invalidatesContext(retireConsumableImpl, (_supabase, input) => input.householdId);
+export const refreshSuggestions = invalidatesContext(refreshSuggestionsImpl, (_supabase, householdId) => householdId);
+export const prepareOrder = invalidatesContext(prepareOrderImpl, (_supabase, input) => input.householdId);

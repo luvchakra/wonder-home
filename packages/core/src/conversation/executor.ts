@@ -2,8 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
-import { createConsumable } from "../commerce/repository";
+import { createConsumable, listConsumables } from "../commerce/repository";
+import { buildContextItems, personItems, type PersonLike } from "../context/builders";
+import { matchIncoming } from "../context/matching";
+import { resolveEntity, resolvePerson } from "../context/resolution";
 import { createAppointment, type AppointmentType } from "../health/appointments";
+import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
@@ -32,7 +36,8 @@ export type ExecutionContext = {
   supabase: SupabaseClient;
   householdId: string;
   actorMemberId: string;
-  members: readonly { id: string; displayName: string }[];
+  /** Everyone in the household — with the profile words (nickname, "Dad") the resolver matches on, where known. */
+  members: readonly PersonLike[];
   timezone: string;
   now?: Date;
   /** Only `check_agents` needs these — who is asking, for the tool gate a run checks per step. */
@@ -62,6 +67,14 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
     case "log_vital":
       return typeof intent.parameters.vital === "string" && typeof intent.parameters.reading === "string";
+    case "set_fitness_goal":
+      return (
+        typeof intent.parameters.activity === "string" &&
+        intent.parameters.activity.trim().length > 0 &&
+        typeof intent.parameters.count === "number" &&
+        intent.parameters.count > 0 &&
+        (intent.parameters.timesPer === "day" || intent.parameters.timesPer === "week" || intent.parameters.timesPer === "month")
+      );
     default:
       return false;
   }
@@ -80,8 +93,6 @@ export function notYetDoable(action: HouseholdIntent["action"]): string {
       return `Approved. Moving it on the family calendar is done under ${linkTo("/family", "Family")} for now — I have not moved anything myself.`;
     case "plan_event":
       return `Approved. I have not put anything on the calendar myself yet — add it under ${linkTo("/family", "Family")} and I will keep an eye on it.`;
-    case "set_fitness_goal":
-      return `Noted, though fitness goals aren't tracked yet — I have not set anything up on my own.`;
     default:
       return "Approved — noted, though there is nothing I can do about this on my own yet.";
   }
@@ -104,6 +115,8 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
         return await resolveHealthIssue(intent, context);
       case "log_vital":
         return await logVital(intent, context);
+      case "set_fitness_goal":
+        return await setFitnessGoal(intent, context);
       case "set_preference":
         return {
           ok: true,
@@ -132,6 +145,21 @@ async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext
   const name = raw.charAt(0).toUpperCase() + raw.slice(1);
   if (!name) return { ok: false, reason: "What should I add?" };
 
+  // "Milk" when "Amul milk" is already tracked is the same milk, not a new
+  // item — checked by the context engine's matcher, the same one HomeSend
+  // uses, so the two can never disagree about what is already on the list.
+  const tracked = await listConsumables(context.supabase, context.householdId).catch(() => []);
+  const known = buildContextItems({ consumables: tracked }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now: context.now ?? new Date(), viewerMemberId: context.actorMemberId });
+  const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
+  if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate")) {
+    const title = String(match.item.attributes.title ?? name);
+    return {
+      ok: true,
+      text: `**${title}** is already on the ${linkTo("/groceries", "groceries")}, so there was nothing to add.`,
+      result: { name: title, alreadyTracked: true, consumableId: match.item.entityId },
+    };
+  }
+
   try {
     const { id } = await createConsumable(context.supabase, {
       householdId: context.householdId,
@@ -156,11 +184,19 @@ async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext
 async function recordAbsence(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
   const reference = intent.target.reference ?? "";
   const memberId = typeof intent.parameters.memberId === "string" ? intent.parameters.memberId : null;
-  const member =
-    context.members.find((entry) => entry.id === memberId) ??
-    context.members.find((entry) => firstName(entry.displayName) === reference.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  // A model that already mapped the reference to a member is trusted only as
+  // far as that id is someone in this household; otherwise the context
+  // engine resolves "Sunita", "Dad" or "the helper" — and asks rather than
+  // guesses when it cannot tell.
+  let member = context.members.find((entry) => entry.id === memberId);
   if (!member) {
-    return { ok: false, reason: `I do not know anyone called “${reference}” in this household. Who did you mean?` };
+    const resolution = resolvePerson(reference, personItems(context.members, { householdId: context.householdId, now: context.now ?? new Date() }), { viewerMemberId: context.actorMemberId });
+    member = resolution.selected ? context.members.find((entry) => entry.id === resolution.selected!.memberId) : undefined;
+    if (!member) {
+      if (resolution.ambiguous) return { ok: false, reason: resolution.question ?? "Who did you mean?" };
+      const suggestion = resolution.candidates[0] ? ` ${resolution.question}` : " Who did you mean?";
+      return { ok: false, reason: `I do not know anyone called “${reference}” in this household.${suggestion}` };
+    }
   }
 
   const when = typeof intent.parameters.when === "string" ? intent.parameters.when : "today";
@@ -268,7 +304,11 @@ async function resolveHealthIssue(intent: HouseholdIntent, context: ExecutionCon
     memberId: context.actorMemberId,
     statuses: ["mentioned", "active", "monitoring"],
   });
-  const match = open.find((issue) => issue.label.toLowerCase().includes(label) || label.includes(issue.label.toLowerCase()));
+  const now = context.now ?? new Date();
+  const items = buildContextItems({ healthIssues: open }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now, viewerMemberId: context.actorMemberId });
+  const resolution = resolveEntity(label, items, { timezone: context.timezone, now, entityTypes: ["health_issue"] });
+  if (resolution.ambiguous) return { ok: false, reason: resolution.question ?? "Which one did you mean?" };
+  const match = resolution.selected ? open.find((issue) => issue.id === resolution.selected!.entityId) : undefined;
   if (!match) {
     return { ok: false, reason: `I do not have an open record of "${label}" for you — check ${linkTo("/health", "Health & Fitness")} to see what is tracked.` };
   }
@@ -324,6 +364,65 @@ async function logVital(intent: HouseholdIntent, context: ExecutionContext): Pro
     text: `Noted — ${valueText}. See ${linkTo("/health", "Health & Fitness")}.`,
     result: { vitalId: vital.id, vitalType: parsed.vitalType },
   };
+}
+
+/**
+ * "I want to walk three times a week" — a real, consistency-oriented goal
+ * (story 21-008) via the same `createFitnessGoal` the Health & Fitness
+ * screen's own form calls. Never scored, never a leaderboard entry — the
+ * reply states the goal back, nothing more.
+ */
+async function setFitnessGoal(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const activityText = typeof intent.parameters.activity === "string" ? intent.parameters.activity.trim() : "";
+  const count = typeof intent.parameters.count === "number" ? intent.parameters.count : 0;
+  const timesPer = intent.parameters.timesPer;
+
+  if (!activityText || count <= 0 || (timesPer !== "day" && timesPer !== "week" && timesPer !== "month")) {
+    return { ok: false, reason: "What would you like the goal to be, and how often?" };
+  }
+
+  const { activityType, customLabel } = mapFitnessActivity(activityText);
+
+  const goal = await createFitnessGoal(
+    context.supabase,
+    { householdId: context.householdId, memberId: context.actorMemberId },
+    {
+      memberId: context.actorMemberId,
+      activityType,
+      customLabel,
+      targetCount: count,
+      frequencyPeriod: timesPer as FitnessFrequencyPeriod,
+      privacyScope: "private",
+      providerId: "home_talk",
+    },
+  );
+
+  const label = (activityType === "other" ? customLabel : FITNESS_ACTIVITY_LABEL[activityType]) ?? activityText;
+  return {
+    ok: true,
+    text: `Goal set — ${label.toLowerCase()} ${count} time${count === 1 ? "" : "s"} a ${timesPer}. See ${linkTo("/health", "Health & Fitness")}.`,
+    result: { goalId: goal.id, activityType },
+  };
+}
+
+const ACTIVITY_KEYWORDS: [RegExp, FitnessActivityType][] = [
+  [/\b(walks?|walking)\b/, "walk"],
+  [/\b(runs?|running|jog(?:ging)?)\b/, "run"],
+  [/\b(cycl(?:e|ing)|bik(?:e|ing))\b/, "cycle"],
+  [/\bswim(?:ming)?\b/, "swim"],
+  [/\byoga\b/, "yoga"],
+  [/\b(strength training|weights?|weightlifting|lifting|gym)\b/, "strength_training"],
+  [/\b(stretch(?:es|ing)?)\b/, "stretching"],
+  [/\b(sports?|football|basketball|tennis|soccer|cricket|badminton)\b/, "sports"],
+];
+
+/** Free text ("walk", "go for a run", "play tennis") → a known activity type, or `other` with the household's own words kept as the label. */
+export function mapFitnessActivity(text: string): { activityType: FitnessActivityType; customLabel: string | null } {
+  const normalized = text.trim().toLowerCase();
+  for (const [pattern, activityType] of ACTIVITY_KEYWORDS) {
+    if (pattern.test(normalized)) return { activityType, customLabel: null };
+  }
+  return { activityType: "other", customLabel: capitalize(text.trim()) };
 }
 
 const VITAL_WORD_TO_TYPE: Record<string, VitalType> = {
@@ -419,10 +518,6 @@ function timezoneOffsetMinutes(date: Date, timeZone: string): number {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function firstName(displayName: string): string {
-  return (displayName.split(/\s+/)[0] ?? displayName).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];

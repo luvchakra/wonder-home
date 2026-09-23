@@ -37,7 +37,7 @@ function presentationFor(kind: string | null): { icon: typeof Wallet; tone: Icon
   return KIND_PRESENTATION[kind ?? "unknown"] ?? KIND_PRESENTATION.unknown!;
 }
 
-type OpenItem = { id: string; classifiedKind: string; extracted: HomeSendItem["extracted"] };
+type OpenItem = { id: string; classifiedKind: string; extracted: HomeSendItem["extracted"]; reconciliation?: { verdict: string; message: string } | null };
 
 /**
  * HomeSend's own screen: a drop zone (plus click-to-browse, since drag has
@@ -189,6 +189,7 @@ export function HomeSendInbox({
               routeAction={routeAction}
               routeError={routeState.error}
               notice={uploadState.notice || pasteState.notice}
+              reconciliation={routeState.reconciliation ?? openItem.reconciliation ?? null}
               busy={routing || dismissing}
             />
             <form action={dismissAction}>

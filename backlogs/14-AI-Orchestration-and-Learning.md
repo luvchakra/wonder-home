@@ -12,6 +12,7 @@
 | 6 | P0 | 14-006 | Learning boundaries | Done | Authorization outside the model; approval binds to the exact action |
 | 7 | P1 | 14-007 | Multi-agent coordination | Done | `specialists.ts`: named specialists (meals, pets, home, bills, groceries) each propose `PlannedStep`s from `HomeAssessment`s for the existing governed tool registry; a contract (`grocery_list`) is how a meal or pet need it cannot itself fulfil is handed to groceries, which consolidates every producer's list into one deduplicated set of steps. `coordinate()` runs them in order and returns one plan; `AgentRun` gained a `contracts` field and `agent_runs.contracts` column to record what was handed off, alongside the plan `authorizeToolCall` still gates step by step |
 | 8 | P2 | 14-008 | Predictive intelligence | Not Started | |
+| 9 | P0 | 14-009 | Household context & grounding engine (Wave 1) | Done | `packages/core/src/context/`: a derived, rebuildable layer over the domain repositories, read only through the member's own RLS client (never the service role, never `.rpc`). One canonical `HouseholdContextItem` per fact with provenance, freshness (current/stale/historical/superseded/unknown), tier 1–4 and privacy class; health's private/selected_family/household_operational scopes preserved with no admin shortcut. Retrieval API (`resolvePerson`, `resolveEntity`, `resolveReference`, `findRelevantFacts`, `findPotentialMatches`, `findPotentialConflicts`, `getCurrentState`, `getRecentChanges`, `getSupportingEvidence`); resolution never silently picks a low-confidence consequential target — it resolves, clarifies or asks. HomeBrain's context and question relevance, HomeTalk's person/grocery/health-issue resolution and HomeSend's duplicate reconciliation all go through it; every successful write invalidates it. 14 golden scenarios + 18 engine tests; live count-only check: an impersonated member sees 0 rows from 12 other households across all 29 tables the engine reads |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -22,6 +23,7 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 
 - **Epic 14-E01 — Governed AI Orchestration:** stories 14-001 through 14-005.
 - **Epic 14-E06 — Learning, Multi-Agent Coordination & Prediction:** stories 14-006 through 14-008.
+- **Epic 14-E09 — Household Context & Grounding:** story 14-009.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -199,6 +201,28 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - Agent failures are recoverable: partial work is recorded, completed side effects are not repeated, and the household is told only when intervention is needed.
 - Confirmed household facts are never silently overwritten by model inference; learned patterns remain distinguishable and reviewable.
 - AI evaluation fixtures cover realistic multi-domain household scenarios, including ambiguous requests, notification suppression and unsafe action attempts.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 14-009 — Household context & grounding engine (Wave 1)
+**Epic:** Household Context & Grounding
+**Priority:** P0
+**Goal:** Give HomeTalk, HomeBrain and HomeSend one shared, authorized, provenance-linked understanding of the household, so a reply is grounded in what is actually recorded and a reference resolves to the right person or thing.
+
+**Acceptance criteria**
+- A derived, rebuildable context layer reads every shipped domain through the member's own RLS-bound client; no model and no context code queries Supabase directly or through the service role.
+- Every fact is a canonical `HouseholdContextItem` carrying provenance (source, evidence, confirmation), freshness, a context tier and a privacy class — never chain-of-thought.
+- Entity resolution returns candidates: one strong candidate resolves, several ask which, a weak one asks to confirm; a low-confidence consequential target is never silently selected.
+- Incoming facts are matched as exact_match, likely_duplicate, likely_update, related_but_different, contradiction or no_match; an older source never overrides a newer record.
+- Health privacy scopes (private, selected_family, household_operational) hold with no household-administrator shortcut.
+- The context is invalidated after any successful mutation.
+- The council's 14 golden scenarios pass, and a live check shows no cross-household leakage.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

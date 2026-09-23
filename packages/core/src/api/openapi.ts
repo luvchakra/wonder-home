@@ -1069,6 +1069,110 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/health/fitness/goals": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's fitness goals",
+          description: "Optionally filtered by `memberId` and `status` (repeatable). RLS (`wh.may_see_health`) decides which goals the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+          ],
+          responses: {
+            "200": { description: "The visible goals" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Set a consistency-oriented fitness goal",
+          description:
+            "Only for the caller themselves, or a child they guard. An activity, how many times, and how often — never scored, never a leaderboard entry. `providerId` defaults to `manual`; a provider with no live connection (Apple HealthKit, Android Health Connect, a wearable) is refused.",
+          responses: {
+            "201": { description: "The new goal" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/fitness/goals/{goalId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "goalId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One fitness goal",
+          responses: {
+            "200": { description: "The goal" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Update, dismiss or bring back a fitness goal",
+          description: "The body's `action` field discriminates: `update` changes target/frequency/preferred time/notes, `dismiss` removes it and `reactivate` brings it back — never a hard delete.",
+          responses: {
+            "200": { description: "The updated goal" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/households/{householdId}/health/fitness/sessions": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "A household's logged fitness sessions",
+          description: "Optionally filtered by `memberId`, `goalId`, `status` (repeatable) and `limit`. RLS (`wh.may_see_health`) decides which sessions the caller sees.",
+          parameters: [
+            { name: "memberId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "goalId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer" } },
+          ],
+          responses: {
+            "200": { description: "The visible sessions" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+        post: {
+          summary: "Log a single activity",
+          description:
+            "Only for the caller themselves, or a child they guard. Always what actually happened — activity, duration and, optionally, distance — and may optionally name the goal it counts toward. `providerId` defaults to `manual`; a provider with no live connection is refused.",
+          responses: {
+            "201": { description: "The new session" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/health/fitness/sessions/{sessionId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "sessionId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "One fitness session",
+          responses: {
+            "200": { description: "The session" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Correct, archive or bring back a session",
+          description: "The body's `action` field discriminates: `update` corrects duration/distance/notes, `archive` removes it and `reactivate` brings it back — never a hard delete.",
+          responses: {
+            "200": { description: "The updated session" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/households/{householdId}/family": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

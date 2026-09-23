@@ -11,6 +11,7 @@
     "./privacy/*": "./src/privacy/*.ts",
     "./brand/*": "./src/brand/*.ts",
     "./conversation/*": "./src/conversation/*.ts",
+    "./context/*": "./src/context/*.ts",
     "./household/*": "./src/household/*.ts",
     "./home/*": "./src/home/*.ts",
     "./help/*": "./src/help/*.ts",

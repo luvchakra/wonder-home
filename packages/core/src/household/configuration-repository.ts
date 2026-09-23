@@ -22,6 +22,7 @@ import {
   type PolicyCondition,
   type ResponsibilityInput,
 } from "./configuration";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading and writing the household's operating model (story 02-001).
@@ -48,7 +49,7 @@ export type SavedChange = {
   downstream: string[];
 };
 
-export async function saveResponsibility(
+async function saveResponsibilityImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -99,7 +100,7 @@ export async function saveResponsibility(
   };
 }
 
-export async function savePlaybookItem(
+async function savePlaybookItemImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -155,7 +156,7 @@ export async function savePlaybookItem(
 }
 
 /** Pauses or resumes a playbook item. Paused stays on record; the planner just stops planning around it. */
-export async function setPlaybookItemActive(
+async function setPlaybookItemActiveImpl(
   supabase: SupabaseClient,
   input: { householdId: string; actorMemberId: string; outcomeKey: string; active: boolean },
 ): Promise<void> {
@@ -187,7 +188,7 @@ export async function setPlaybookItemActive(
  * all`), and deleting frees the outcome key to be assigned again from
  * scratch rather than leaving a dead "Nobody yet" row nothing can replace.
  */
-export async function removeResponsibility(
+async function removeResponsibilityImpl(
   supabase: SupabaseClient,
   input: { householdId: string; actorMemberId: string; outcomeKey: string },
 ): Promise<void> {
@@ -208,7 +209,7 @@ export async function removeResponsibility(
 }
 
 /** Stands a policy down. Its versions stay on record; nothing is in force under that name afterwards. */
-export async function retirePolicy(
+async function retirePolicyImpl(
   supabase: SupabaseClient,
   input: { householdId: string; actorMemberId: string; policyId: string },
 ): Promise<void> {
@@ -310,7 +311,7 @@ export async function listPlaybookOutcomes(
  * so "which rule was in force" always has one answer, and "which rules have
  * ever been in force" still has all of them.
  */
-export async function savePolicy(
+async function savePolicyImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -504,7 +505,7 @@ export async function policyVersions(
  * path here: the moment a sentence can reach a write a form cannot, the
  * validation stops being the truth about what a household can configure.
  */
-export async function applyConfigurationChange(
+async function applyConfigurationChangeImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -575,3 +576,13 @@ async function audit(
     // recordAuditEvent already logs; a trail gap must not fail the change.
   }
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const saveResponsibility = invalidatesContext(saveResponsibilityImpl, (_supabase, input) => input.householdId);
+export const savePlaybookItem = invalidatesContext(savePlaybookItemImpl, (_supabase, input) => input.householdId);
+export const setPlaybookItemActive = invalidatesContext(setPlaybookItemActiveImpl, (_supabase, input) => input.householdId);
+export const removeResponsibility = invalidatesContext(removeResponsibilityImpl, (_supabase, input) => input.householdId);
+export const retirePolicy = invalidatesContext(retirePolicyImpl, (_supabase, input) => input.householdId);
+export const savePolicy = invalidatesContext(savePolicyImpl, (_supabase, input) => input.householdId);
+export const applyConfigurationChange = invalidatesContext(applyConfigurationChangeImpl, (_supabase, input) => input.householdId);

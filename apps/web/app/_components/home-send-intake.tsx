@@ -85,6 +85,7 @@ export function HomeSendConfirmStep({
   routeAction,
   routeError,
   notice,
+  reconciliation,
   busy,
 }: {
   item: { id: string };
@@ -95,6 +96,8 @@ export function HomeSendConfirmStep({
   routeAction: (formData: FormData) => void;
   routeError?: string;
   notice?: string;
+  /** A record this already looks like (Wave 1 §7) — shown, never silently duplicated. */
+  reconciliation?: { verdict: string; message: string } | null;
   busy: boolean;
 }) {
   const [kind, setKind] = useState(defaultKind);
@@ -112,6 +115,19 @@ export function HomeSendConfirmStep({
             <Sparkles aria-hidden className="size-3.5" /> {notice}
           </span>
         </Alert>
+      ) : null}
+
+      {reconciliation ? (
+        <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
+          <p className="text-sm">
+            <span className="block font-medium">{reconciliation.verdict === "likely_update" || reconciliation.verdict === "contradiction" ? "This may already be on record, with different details" : "This may already be on record"}</span>
+            <span className="block text-xs text-[var(--wh-foreground-subtle)]">{reconciliation.message}</span>
+          </p>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="confirmDuplicate" className="mt-0.5" />
+            <span>It&apos;s a different one — add it anyway</span>
+          </label>
+        </div>
       ) : null}
 
       <div className="space-y-1.5">
