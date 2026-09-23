@@ -70,6 +70,13 @@ const DAY_KEY: Partial<Record<HouseholdIntent["action"], (typeof DATE_KEYS)[numb
   adjust_schedule: "to",
 };
 
+/** Actions whose target is fixed by what they are — the same target the rules give them. */
+const IMPLICIT_TARGET: Partial<Record<HouseholdIntent["action"], HouseholdIntent["target"]>> = {
+  set_reminder: { kind: "outcome", reference: "reminders" },
+  raise_service_request: { kind: "outcome", reference: "home" },
+  plan_meal: { kind: "outcome", reference: "meals" },
+};
+
 const SAID_DAY = new RegExp(`\\b(${TEMPORAL_PHRASE})\\b`, "i");
 
 /**
@@ -120,6 +127,13 @@ const PERSON_ANAPHOR = /^(?:him|her|he|she|them|they|the other one|the other chi
 
 export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): Promise<Grounding> {
   let grounded: HouseholdIntent = recoverSaidDay({ ...intent, parameters: { ...intent.parameters }, target: { ...intent.target } });
+  // Some actions' target is the action itself: a reminder is always the
+  // speaker's own, a service request is always about the home. A model that
+  // called it "unspecified" left nothing to choose between, so asking "which
+  // one did you mean?" would be a question with no answer (live Gemini run,
+  // 23 Sep 2026: "remind me to call the plumber tomorrow at 9am").
+  const implicit = IMPLICIT_TARGET[grounded.action];
+  if (implicit && grounded.target.kind === "unspecified") grounded = { ...grounded, target: { ...implicit } };
   const focus: FocusEntity[] = [];
   const at = env.now.toISOString();
 

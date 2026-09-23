@@ -15,6 +15,12 @@
 | 9 | P1 | 04-009 | A voice the household chooses | Done | Google Cloud Speech behind a provider contract, on the deployment's own key; every voice and recognition control, with the browser as the free fallback |
 | 10 | P0 | 04-010 | One composer, four states | Done | Speak-to-text and live conversation as separate, adjacent controls; explicit state machine with its own test |
 | 11 | P0 | 04-011 | Never ask the same question twice | Done | A clarifying question is answered by the next turn, and never repeated verbatim |
+| 12 | P0 | 04-012 | One HomeTalk gateway for every channel | Done | Voice phase 1 (`design/voice-integration/01…`): `hometalk/contract.ts` + `hometalk/gateway.ts` — one canonical request/response for web, Gemini Voice and Alexa; "completed" only from the executor's own record; idempotent per delivery (PR #131) |
+| 13 | P0 | 04-013 | Linked voice assistants: identity, OAuth, scopes | Done | Voice phase 2: `external_voice_identities` + `voice_oauth_grants` (hashed), S256 PKCE, scopes only narrow, payments/orders never by voice, turns under the member's own RLS session, `/settings/voice-assistants` to revoke (PR #131) |
+| 14 | P0 | 04-014 | Gemini Voice: Gemini Live as a HomeTalk channel | Done | Voice phase 3: `voicelink/gemini-live.ts` (12 allowlisted tools, each only words a member could say to HomeTalk), single-use Live tokens locked to that config, `/voice/gemini/session` + `/voice/gemini/tool`, facts narrowed to the content classes the household lets reach Google, `useGeminiLive` behind the one live control, `live_engine` voice setting. Live-verified token → Gemini Live → tool → HomeTalk → spoken answer; in-browser mic audio not exercisable in the sandbox (its proxy has no WebSocket upgrades) |
+| 15 | P1 | 04-015 | Alexa as a HomeTalk channel | Done | Voice phase 4: `/api/v1/voice/alexa` verified as Amazon documents (cert chain, signature, timestamp, skill id), carrier-word interaction model; inert until a person creates the skill and sets `ALEXA_*` (`integrations/alexa/README.md`) |
+| 16 | P0 | 04-016 | Unified voice experience and capability matrix | Not Started | Voice phase 5 (`design/voice-integration/05-unified-voice-ux-and-capabilities.md`) |
+| 17 | P0 | 04-017 | Voice evaluation, metrics and release gates | Not Started | Voice phase 6 (`design/voice-integration/06-voice-integration-evaluation-and-hardening.md`) |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -26,6 +32,7 @@ Implement Conversation, Voice & Text as a first-class WonderHome domain. The mod
 - **Epic 04-E01 — Conversation Understanding & Safe Actions:** stories 04-001 through 04-004.
 - **Epic 04-E05 — Voice & Text Experience:** stories 04-005 through 04-006.
 - **Epic 04-E07 — Memory & Conversational Configuration:** stories 04-007 through 04-008.
+- **Epic 04-E12 — Voice Channels (voice integration, `design/voice-integration/`):** stories 04-012 through 04-017.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -280,6 +287,115 @@ responsibilities .
 - Only the most recent question is treated as open; an older one has been overtaken.
 - An answer that resolves a clarification is treated as confident — somebody who has said a thing twice has been clear.
 - A resolved intent still passes every entitlement, autonomy and approval gate; nothing here shortcuts consent.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-012 — One HomeTalk gateway for every channel
+**Epic:** Voice Channels
+**Priority:** P0
+**Goal:** Give every channel — the app, Gemini Voice, Alexa — one canonical way to ask HomeTalk and one structured answer back.
+
+**Acceptance criteria**
+- A channel adapter only proves who is speaking and renders the answer; it never decides what happened.
+- `completed` is read only from the governed executor's own record; a failed or unrecorded execution is `failed`, never "done".
+- A redelivered request with the same request id replays its first answer and runs once.
+- A session that is not the member the request names, or a household the member is not in, changes nothing and says so.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-013 — Linked voice assistants: identity, OAuth, scopes
+**Epic:** Voice Channels
+**Priority:** P0
+**Goal:** Link an external voice assistant to one member with least privilege, and let them revoke it.
+
+**Acceptance criteria**
+- Linking is OAuth 2.0 with S256 PKCE; codes and tokens are stored only as SHA-256 hashes; a replayed code revokes the link's tokens.
+- Scopes only narrow what the member could do in the app; payments, orders and access changes are never available by voice.
+- A voice turn runs under the member's own RLS session, never a service role.
+- Every member can see and revoke their links; an admin can revoke any link in the household.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-014 — Gemini Voice: Gemini Live as a HomeTalk channel
+**Epic:** Voice Channels
+**Priority:** P0
+**Goal:** Let a member hold a real-time spoken conversation through Gemini Live without Gemini becoming a second HomeBrain.
+
+**Acceptance criteria**
+- Gemini receives only narrow, domain-specific tools; each call becomes words a member could have said and runs as a HomeTalk gateway turn.
+- The browser holds only a short-lived, single-use token locked to WonderHome's instructions and tools — never a key.
+- The tool result is HomeTalk's decision; success is the executor's, never the model's.
+- Gemini only hears facts whose content class the household lets reach a model provider; school, money and health scopes follow the same agreement.
+- Availability (flag, plan, a Google key, consent) is checked when a session opens and again on every tool call.
+- A provider failure, timeout or closed session ends safely: nothing changed, the composer returns to idle, typing still works.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-015 — Alexa as a HomeTalk channel
+**Epic:** Voice Channels
+**Priority:** P1
+**Goal:** Answer the WonderHome Alexa skill through HomeTalk, proved to be Amazon's before it is read.
+
+**Acceptance criteria**
+- Requests are verified as Amazon documents: certificate URL, chain and domain, signature over the raw body, timestamp and skill id.
+- The speaker is whoever the WonderHome access token belongs to, never Amazon's account id.
+- Inert until the skill id and OAuth settings are configured by a person; nothing claims a live integration before then.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-016 — Unified voice experience and capability matrix
+**Epic:** Voice Channels
+**Priority:** P0
+**Goal:** One voice experience across the app, Gemini and Alexa, with a capability matrix that says what each channel may do.
+
+**Acceptance criteria**
+- Per `design/voice-integration/05-unified-voice-ux-and-capabilities.md`.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-017 — Voice evaluation, metrics and release gates
+**Epic:** Voice Channels
+**Priority:** P0
+**Goal:** Voice golden scenarios, per-channel metrics and release gates alongside the Wave 5 evaluation.
+
+**Acceptance criteria**
+- Per `design/voice-integration/06-voice-integration-evaluation-and-hardening.md`.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

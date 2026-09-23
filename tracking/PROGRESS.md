@@ -28,17 +28,17 @@ disagree again.)
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 8 | Done |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 8 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 6 | In Progress |
-| 04 | Conversation, Voice & Text | 8 | 7 | 1 | 0 | 8 | Done |
+| 04 | Conversation, Voice & Text | 17 | 14 | 3 | 0 | 15 | In Progress |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
-| 08 | Kids & School Intelligence | 8 | 5 | 2 | 1 | 8 | Done |
-| 09 | Commerce, Groceries & Pet Supplies | 8 | 4 | 3 | 1 | 8 | Done |
+| 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 8 | In Progress |
+| 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 8 | In Progress |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 13 | 11 | 1 | 1 | 12 | In Progress |
+| 14 | AI Orchestration & Learning | 14 | 11 | 2 | 1 | 12 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -217,3 +217,8 @@ disagree again.)
 | 2026-09-23 | 14 | 14-012 | Done | 2159 unit (§22 evaluation matrix 30), full verify gate, live QA on a synthetic household with each write checked in the database | HomeTalk 2.0 part 3 — model contract: named nullable parameters (the open record reached Anthropic as an always-empty object, so a model could never say the item or the day), no id field and server-only keys stripped from model output (§19), runtime context in the system prompt (§17, minimised like the utterance), phrases-only references (§5); "I think you mean …"/"I found two possibilities …" (§20); all §21 examples through their own domain services (school done/move, remove from list, service request, protected family time); HomeTalk↔HomeSend shared-truth tests (§15) |
 | 2026-09-23 | 14 | 14-013 | Done | 2219 unit in 145 files (hardening 12, idempotency +2, agent-run lock), 431 database (hardening RLS 8), security 12/12 (untrusted intake 79, AI release safety 33, abuse and retries 27), eval 45/45 with 0/13 unsafe, verify:live 145/145, live QA on a synthetic household | Wave 5 part 3 — production hardening: service-role-only rate limits (`public.rate_limit_hit`, fail-open), PDF/audio/webhook payload limits, model and voice timeouts, forwarded-email telemetry (`homesend_email_events`) with §14 alert thresholds, failed classifications retried through `jobs`, cron routes answer Vercel Cron's GET, partial success said plainly, idempotency reservations and an agent-run lock. Operations gate stays "not yet" (no rendered dashboard or alert delivery) |
 | 2026-09-23 | 11 / 01 | enhancement | Done | 2003 unit, 403 database, 364 E2E (after merging main), lint/typecheck/build/security clean | Transactions carry their own payee, kind and owner (`obligation_history` columns + same-household owner trigger), prefilled from the bill and editable via a new Edit control; helpers (and any member) get gender and notes on Add helper and the profile editor. Migration `20260923100000` applied live and confirmed. Browser QA not run — no service-role credential in this sandbox |
+| 2026-09-23 | 04 | 04-012 | Done | gateway unit tests, 442 database, live signed-in run | One HomeTalk gateway for every channel (voice phase 1, PR #131) |
+| 2026-09-23 | 04 | 04-013 | Done | voice-link RLS 8, OAuth unit tests, live link and revoke | Linked voice assistants with S256 PKCE, hashed tokens, narrowing scopes (voice phase 2, PR #131) |
+| 2026-09-23 | 04 | 04-015 | Done | Alexa unit tests (certificate, signature, timestamp, carriers) | Alexa skill endpoint; inert until a person creates the skill (voice phase 4, PR #131) |
+| 2026-09-24 | 04 | 04-014 | Done | 2367 unit (Gemini Live 17, PCM 5, live messages 5, reminder grounding 1), 443 database (live-engine RLS), security 12/12, eval 45/45 with 0/13 unsafe, verify:live 150/150, live Gemini Live run through the real routes, browser QA at 360px and desktop | Gemini Voice: single-use Live tokens locked to 12 allowlisted HomeTalk tools, tool calls answered by the HomeTalk gateway on channel gemini_voice under the member's session, facts narrowed to the content classes the household lets reach Google, `useGeminiLive` behind the one live control, `live_engine` setting (migration `20260926090000`, applied live). Fixed on the way: a model-read reminder asked "Which one did you mean?"; a failed Live connect left the composer "Thinking…" |
+| 2026-09-24 | 08 / 09 / 14 | 08-009, 09-009, 14-014 | Not Started | — | Follow-ups from the test-spec live run: add a child from a school notice; receipts become purchase history (E2E-002); HomeSend keeps the time of day |

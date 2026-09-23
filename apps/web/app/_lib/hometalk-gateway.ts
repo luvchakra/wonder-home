@@ -2,7 +2,7 @@ import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import type { HomeTalkRequest, HomeTalkResponse } from "@wonderhome/core/hometalk/contract";
 import { runHomeTalkGateway } from "@wonderhome/core/hometalk/gateway";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import type { VoiceScope } from "@wonderhome/core/voicelink/scopes";
+import type { ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
 import { homeTalkTurn, type Supabase } from "@/app/_lib/hometalk-turn";
 
@@ -15,8 +15,8 @@ import { homeTalkTurn, type Supabase } from "@/app/_lib/hometalk-turn";
 export function handleHomeTalkRequest(
   request: HomeTalkRequest,
   session: { supabase: Supabase },
-  /** A linked voice assistant's scopes; absent only for the household's own app. */
-  limits?: { scopes: readonly VoiceScope[] },
+  /** What the channel may reach — a linked assistant's scopes, a provider-voiced channel's content classes. Absent only for the household's own app. */
+  limits?: ChannelLimits,
 ): Promise<HomeTalkResponse> {
   return runHomeTalkGateway(request, {
     membership: (householdId) => requireMembership(session.supabase, householdId),

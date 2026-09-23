@@ -35,6 +35,8 @@ export const RATE_LIMITS = {
   "voice.token": { max: 120, windowSeconds: 600 },
   /** Requests from a linked voice assistant, per link: a speaker in a kitchen, not a script. */
   "voice.request": { max: 60, windowSeconds: 600 },
+  /** Gemini voice sessions opened, per member (voice phase 3): each mints a provider token. */
+  "voice.session": { max: 20, windowSeconds: 600 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

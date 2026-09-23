@@ -13,6 +13,7 @@ import { MicVocal, Sparkles } from "lucide-react";
 
 import { removeVoiceKeyAction, saveVoice, saveVoiceKeyAction } from "../../(auth)/voice-actions";
 import { VoiceSettingsForm } from "../../_components/voice-forms";
+import { geminiLiveGate } from "../../_lib/gemini-live";
 import { formatDate, requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Voice" };
@@ -39,10 +40,11 @@ export default async function VoiceSettingsPage() {
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
 
-  const [settings, entitlement, credential] = await Promise.all([
+  const [settings, entitlement, credential, gemini] = await Promise.all([
     loadVoiceSettings(supabase, householdId),
     may(supabase, householdId, "conversation.voice"),
     voiceCredentialStatus(supabase, householdId),
+    geminiLiveGate(supabase, householdId),
   ]);
 
   // Whose key would answer, without reading either of them here: the
@@ -108,6 +110,7 @@ export default async function VoiceSettingsPage() {
                 ownKeySetOn={credential.updatedAt ? formatDate(membership.household.timezone, credential.updatedAt) : null}
                 sourceTitle={source.title}
                 sourceDetail={source.detail}
+                geminiLive={{ available: gemini.availability.available, reason: gemini.availability.available ? null : gemini.availability.reason }}
               />
             ) : (
               <Card>

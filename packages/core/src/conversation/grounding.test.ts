@@ -173,6 +173,20 @@ describe("the whole turn: grounding sits between understanding and any proposal"
     expect(next.kind === "reply" && next.intent.parameters).toMatchObject({ memberId: "m-sunita", whenResolved: expect.objectContaining({ date: "2026-10-02" }) });
   });
 
+  it("a model that leaves a reminder's target unspecified is not asked \"which one?\" — a reminder is always the speaker's own", async () => {
+    // Live Gemini run, 23 Sep 2026: "Remind me to call the plumber tomorrow at 9am" came back "Which one did you mean?".
+    for (const action of ["set_reminder", "raise_service_request"] as const) {
+      const turn = await converse({
+        ...base,
+        utterance: "Remind me to call the plumber tomorrow at 9am",
+        ground: (understood) => groundIntent(understood, env()),
+        understand: () => intent({ action, target: { kind: "unspecified" }, parameters: { what: "call the plumber", when: "tomorrow", time: "9am", appliance: "sink" } }),
+      });
+      expect(turn.kind === "reply" && turn.text, action).not.toBe("Which one did you mean?");
+      expect(turn.kind === "reply" && turn.intent.target.kind, action).toBe("outcome");
+    }
+  });
+
   it("the same grounding question is never asked twice", async () => {
     const first = await converse({ ...base, utterance: "zorawar is away tomorrow", ground: (understood) => groundIntent(understood, env()), understand: () => intent({ target: { kind: "member", reference: "zorawar" } }) });
     const again = await converse({ ...base, utterance: "zoro", clarifying: first.kind === "reply" ? first.clarification : null, ground: (understood) => groundIntent(understood, env()) });

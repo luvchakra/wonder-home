@@ -129,6 +129,7 @@ const SHIPPED_COLUMNS = [
   { table: "home_send_items", column: "review_corrected" },
   { table: "home_send_items", column: "reviewed_at" },
   { table: "health_appointments", column: "checkup_id" },
+  { table: "household_voice_settings", column: "live_engine" },
 ];
 
 /**

@@ -11,11 +11,13 @@
  *   link it is, or an admin; it stops every grant at once and keeps the row.
  * - The grants table (hashed codes and tokens) is unreadable to every session.
  * - A link can only name a member of its own household.
+ * - The live-engine choice (Gemini Voice, phase 3) is an admin's preference,
+ *   readable by every member, and only a known engine.
  */
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_voice_links_test";
@@ -114,4 +116,18 @@ test("an active provider account links to one member at a time", () => {
   psql(`update public.external_voice_identities set provider_subject = 'amzn1.account.X' where id = '${first}';`, options);
   const second = link(otherHousehold, outsiderMember);
   assert.throws(() => psql(`update public.external_voice_identities set provider_subject = 'amzn1.account.X' where id = '${second}';`, options), /duplicate key/);
+});
+
+test("Gemini Voice's live-engine choice is an admin's preference, and only a known engine (voice phase 3)", () => {
+  // Every existing household keeps WonderHome's own live loop.
+  asProfile(HEAD, `insert into public.household_voice_settings (household_id) values ('${household}');`, options);
+  assert.equal(psql(`select live_engine from public.household_voice_settings where household_id = '${household}';`, options), "wonderhome");
+  asProfile(HEAD, `update public.household_voice_settings set live_engine = 'gemini_live' where household_id = '${household}';`, options);
+  assert.equal(asProfile(PARTNER, `select live_engine from public.household_voice_settings where household_id = '${household}';`, options), "gemini_live");
+  assert.ok(
+    deniedForUpdate(PARTNER, `update public.household_voice_settings set live_engine = 'wonderhome' where household_id = '${household}';`, `select live_engine from public.household_voice_settings where household_id = '${household}';`, "gemini_live", options),
+    "a member who is not an admin changed the live engine",
+  );
+  assert.throws(() => asProfile(HEAD, `update public.household_voice_settings set live_engine = 'some_other_engine' where household_id = '${household}';`, options), /check constraint/);
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.household_voice_settings where household_id = '${household}';`, options), "0");
 });

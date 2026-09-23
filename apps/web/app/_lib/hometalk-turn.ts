@@ -61,7 +61,7 @@ import { requireMembership } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 
-import { agendaAllows, domainsFor, VOICE_NOT_ALLOWED, voiceAllowsAction, type VoiceScope } from "@wonderhome/core/voicelink/scopes";
+import { agendaAllows, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
 import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
 
@@ -139,9 +139,12 @@ export async function homeTalkTurn(input: {
    * A linked voice assistant's scopes (voice phase 2). They only narrow:
    * an action outside them is refused before it is asked about, approved or
    * carried out, and facts from domains outside them never reach an answer.
-   * Absent for the household's own app.
+   * `classes`, when set, narrows the facts again to the content classes the
+   * household agreed may reach a model provider — for a channel whose
+   * provider hears every answer (Gemini Voice, voice phase 3). Absent for
+   * the household's own app.
    */
-  limits?: { scopes: readonly VoiceScope[] };
+  limits?: ChannelLimits;
   /** The channel this turn came through, for the audit trail: "web" unless a gateway channel says otherwise. */
   source?: string;
 }) {
@@ -1241,9 +1244,8 @@ async function consequentialEntitlements(
   };
 }
 
-/** A household's facts narrowed to what a voice link's scopes open (voice phase 2). Unchanged without limits. */
-function scopedContext(context: HouseholdContext, limits: { scopes: readonly VoiceScope[] } | undefined): HouseholdContext {
+/** A household's facts narrowed to what a channel may reach (voice phases 2–3). Unchanged without limits. */
+function scopedContext(context: HouseholdContext, limits: ChannelLimits | undefined): HouseholdContext {
   if (!limits) return context;
-  const open = domainsFor(limits.scopes);
-  return { ...context, snapshot: { ...context.snapshot, items: context.snapshot.items.filter((item) => open.has(item.domain)) } };
+  return { ...context, snapshot: { ...context.snapshot, items: narrowToChannel(context.snapshot.items, limits) } };
 }

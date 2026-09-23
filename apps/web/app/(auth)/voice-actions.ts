@@ -38,6 +38,7 @@ function readSettings(formData: FormData) {
 
   return voiceSettingsSchema.safeParse({
     provider: text("provider"),
+    liveEngine: text("liveEngine"),
     language: text("language"),
     // "Choose for me" posts an empty value, which means no named voice.
     voiceName: text("voiceName") ?? null,

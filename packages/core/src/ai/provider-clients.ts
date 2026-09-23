@@ -24,6 +24,8 @@ export const MODEL_TIMEOUT_MS = {
   compose: 15_000,
   classify: 30_000,
   vision: 30_000,
+  /** Minting a short-lived Live API token (Gemini Voice): one small request. */
+  live_token: 10_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

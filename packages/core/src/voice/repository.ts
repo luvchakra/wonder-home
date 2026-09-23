@@ -65,7 +65,7 @@ export async function saveVoiceSettings(
     eventType: "voice.settings_changed",
     targetTable: "household_voice_settings",
     targetId: input.householdId,
-    metadata: { provider: input.settings.provider, language: input.settings.language, tier: input.settings.tier },
+    metadata: { provider: input.settings.provider, liveEngine: input.settings.liveEngine, language: input.settings.language, tier: input.settings.tier },
   });
 }
 
@@ -186,6 +186,7 @@ async function readVoiceKey(householdId: string): Promise<string | null> {
 function fromRow(row: Row): Record<string, unknown> {
   return {
     provider: row.provider,
+    liveEngine: row.live_engine ?? "wonderhome",
     language: row.language,
     voiceName: row.voice_name ?? null,
     gender: row.gender,
@@ -208,6 +209,7 @@ function fromRow(row: Row): Record<string, unknown> {
 function toRow(settings: VoiceSettings): Row {
   return {
     provider: settings.provider,
+    live_engine: settings.liveEngine,
     language: settings.language,
     voice_name: settings.voiceName,
     gender: settings.gender,

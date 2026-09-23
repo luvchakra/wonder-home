@@ -27,6 +27,7 @@ import {
   RECOGNITION_MODEL_LABELS,
   TIER_LABELS,
   VOICE_GENDERS,
+  LIVE_ENGINE_LABELS,
   VOICE_LANGUAGES,
   VOICE_TIERS,
   type VoiceSettings,
@@ -70,6 +71,7 @@ export function VoiceSettingsForm({
   ownKeySetOn,
   sourceTitle,
   sourceDetail,
+  geminiLive,
 }: {
   householdId: string;
   settings: VoiceSettings;
@@ -83,6 +85,8 @@ export function VoiceSettingsForm({
   ownKeySetOn: string | null;
   sourceTitle: string;
   sourceDetail: string;
+  /** Whether Gemini Live may run for this household, and why not when it may not — the server's own check. */
+  geminiLive: { available: boolean; reason: string | null };
 }) {
   const [state, action] = useActionState(save, {});
   const [provider, setProvider] = useState(settings.provider);
@@ -208,6 +212,26 @@ export function VoiceSettingsForm({
             {speechAvailable ? (
               <option value="google">Google Cloud Speech (recommended)</option>
             ) : null}
+          </Select>
+        </section>
+
+        <section className="space-y-4">
+          <SectionHeader title="Live conversation" />
+          <Select
+            label="Who runs a live conversation"
+            name="liveEngine"
+            defaultValue={settings.liveEngine}
+            hint={
+              geminiLive.available
+                ? `${LIVE_ENGINE_LABELS.gemini_live.detail} Google hears what you say and what WonderHome answers, and only what your data-use settings let it.`
+                : `${LIVE_ENGINE_LABELS.wonderhome.detail}${geminiLive.reason ? ` Gemini Live is not available: ${geminiLive.reason}` : ""}`
+            }
+          >
+            <option value="wonderhome">{LIVE_ENGINE_LABELS.wonderhome.name}</option>
+            <option value="gemini_live" disabled={!geminiLive.available}>
+              {LIVE_ENGINE_LABELS.gemini_live.name}
+              {geminiLive.available ? "" : " (not available)"}
+            </option>
           </Select>
         </section>
 

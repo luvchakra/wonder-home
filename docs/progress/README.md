@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Gemini Voice: Gemini Live as a HomeTalk channel — single-use tokens, allowlisted tools, consent-narrowed facts; two defects fixed (voice phase 3, story 04-014)](2026-09-24-gemini-voice-live.md) |
 | 2026-09-23 | [The HomeTalk / HomeSend / HomeBrain test specification: 97 cases mapped, gaps closed, 13 defects fixed, live E2E run](2026-09-23-test-spec-hometalk-homesend-homebrain.md) |
 | 2026-09-23 | [Voice: one HomeTalk gateway, linked voice identities with OAuth, and Alexa as a channel (phases 1, 2, 4)](2026-09-23-voice-hometalk-gateway-linking-alexa.md) |
 | 2026-09-23 | [Wave 5, part 3: production hardening — rate and payload limits, timeouts, email monitoring, retries, idempotency (story 14-013 Done)](2026-09-23-wave5-production-hardening.md) |
