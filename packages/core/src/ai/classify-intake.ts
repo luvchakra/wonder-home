@@ -215,7 +215,7 @@ const EXTRACTION_JSON_SCHEMA = {
   ],
 } as const;
 
-const SYSTEM_PROMPT = `You read one thing a household sent to WonderHome — a photo, a PDF, a text file, a forwarded email, a web page someone shared, or a voice note's transcript — and work out which of these it is, then extract only what is actually shown or written.
+export const INTAKE_SYSTEM_PROMPT = `You read one thing a household sent to WonderHome — a photo, a PDF, a text file, a forwarded email, a web page someone shared, or a voice note's transcript — and work out which of these it is, then extract only what is actually shown or written.
 
 kind is exactly one of:
 - bill: an invoice, receipt, payment reminder or utility/subscription/fee statement.
@@ -321,7 +321,7 @@ export async function classifyIntake(
         const response = await client.messages.parse({
           model: CLAUDE_MODEL,
           max_tokens: 2048,
-          system: SYSTEM_PROMPT,
+          system: INTAKE_SYSTEM_PROMPT,
           messages: [{ role: "user", content }],
           output_config: { format: zodOutputFormat(IntakeExtractionSchema), effort: "low" },
         });
@@ -340,7 +340,7 @@ export async function classifyIntake(
           model: GEMINI_MODEL,
           contents: [{ role: "user", parts }],
           config: {
-            systemInstruction: SYSTEM_PROMPT,
+            systemInstruction: INTAKE_SYSTEM_PROMPT,
             responseMimeType: "application/json",
             responseJsonSchema: EXTRACTION_JSON_SCHEMA,
             thinkingConfig: { thinkingBudget: 0 },
@@ -354,7 +354,7 @@ export async function classifyIntake(
         const completion = await client.chat.completions.parse({
           model: OPENAI_MODEL,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: INTAKE_SYSTEM_PROMPT },
             {
               role: "user",
               content:

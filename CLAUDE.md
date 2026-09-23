@@ -363,6 +363,20 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   is swept both opportunistically on every share request and for real by
   `/platform/retention`.
 
+**One evaluation across all three** (Wave 5, spec
+`design/AI-EVALUATION-WAVE-5.md`, `packages/core/src/evaluation/`):
+`npm run eval` runs the golden cases through the real HomeTalk, HomeSend
+and HomeBrain pipelines against synthetic golden households A–E, never
+production data. Every stage a case states is compared, and each mismatch
+gets a §10 error type. Metrics are counts out of counts, and every run
+records its prompt, context and dataset versions. The blocking release
+gates fail CI, and an Unsafe Action Rate above zero is one of them.
+`--provider configured` runs the same cases through the configured model,
+and `--write` records the release artifact in `docs/ai-releases/`. When the
+golden set catches a defect, fix the product. Never loosen an expectation
+to pass. Add a case whenever an understanding, a reconciliation or an
+answer rule changes.
+
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
 runs the household's actual domains: `ai/gather-assessments.ts` merges
 every domain's `*Agenda()` read into one `HomeAssessment[]`,

@@ -38,7 +38,7 @@ export type HomeBrainTurn = {
   sentHistory: readonly ConversationTurn[];
   /** Every fact this viewer may see — the context engine's viewer-filtered snapshot. */
   items: readonly HouseholdContextItem[];
-  viewer: { memberId: string; roleLabel: string };
+  viewer: { memberId: string; roleLabel: string; guardianOf?: readonly string[] };
   timezone: string;
   now: Date;
   /** The household's data-use policy and people, for the consent gate. */
@@ -69,6 +69,7 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
     timezone: turn.timezone,
     now: turn.now,
     previousQuestion: turn.previousQuestion,
+    guardianOf: turn.viewer.guardianOf ?? [],
   });
   const base = { reading, facts: [] as GroundedFact[], factsSent: 0, validation: { attempts: 0, rejected: [] as ViolationKind[] } };
 

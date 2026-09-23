@@ -28,7 +28,8 @@
     "tracker": "node scripts/build-progress.mjs",
     "brand": "node --experimental-strip-types --no-warnings scripts/build-brand-assets.ts",
     "security": "node scripts/security-suite.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run lint:migrations && npm run lint:embeds && npm run lint:boundaries && npm run lint:secrets && npm run tracker -- --check && npm run brand -- --check && npm run security && npm run test && npm run test:db && npm run build && E2E_SKIP_BUILD=1 npm run test:e2e"
+    "eval": "node scripts/eval.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run lint:migrations && npm run lint:embeds && npm run lint:boundaries && npm run lint:secrets && npm run tracker -- --check && npm run brand -- --check && npm run security && npm run eval && npm run test && npm run test:db && npm run build && E2E_SKIP_BUILD=1 npm run test:e2e"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

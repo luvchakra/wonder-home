@@ -59,6 +59,12 @@ export type BrainReading = {
   broad: boolean;
   /** Set when a person could not be resolved: the one question to ask instead of answering. */
   clarification: string | null;
+  /**
+   * The children the asker looks after, when the question is about the asker
+   * alone ("what do I need to remember tomorrow?"): a parent's day includes
+   * their children's plans. Never used for health — "my checkup" is mine.
+   */
+  dependants: string[];
 };
 
 /**
@@ -112,6 +118,8 @@ export type ReadOptions = {
   now: Date;
   /** The member's previous question in this conversation, for a follow-up to inherit from. */
   previousQuestion?: string | null;
+  /** The children this member is a guardian of — the context scope's own `guardianOf`. */
+  guardianOf?: readonly string[];
 };
 
 export function readBrainQuestion(question: string, items: readonly HouseholdContextItem[], options: ReadOptions): BrainReading {
@@ -145,9 +153,12 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
       clarification ??= resolved.question;
     }
   }
+  let dependants: string[] = [];
   if (SELF_WORDS.test(text)) {
     const self = resolvePerson("me", items, { viewerMemberId: options.viewerMemberId }).selected;
+    const aboutOnlyMe = people.length === 0;
     if (self && !people.some((person) => person.memberId === self.memberId)) people.push(self);
+    if (self && aboutOnlyMe) dependants = [...(options.guardianOf ?? [])];
   }
 
   const retrievalText = [text, ...people.map((person) => person.displayName)].join(" ");
@@ -178,6 +189,9 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     if (timeWindow(text, options) && !domains.has("meals")) connected.add("meals");
   }
   if (MEAL_TIME_WORDS.test(text) && /\b(?:make|cook|have)\b/i.test(text) && !domains.has("groceries")) connected.add("groceries");
+  // "What's on tomorrow?" is a household's day, and school work due that day
+  // is part of it — the date window still keeps next week's project out.
+  if (domains.has("calendar") && timeWindow(text, options) && !domains.has("school")) connected.add("school");
   if (wantsConflicts) {
     for (const next of ["calendar", "absences"] as const) if (!domains.has(next)) connected.add(next);
   }
@@ -193,6 +207,7 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     wantsConflicts,
     broad: read.broad && people.length === 0,
     clarification,
+    dependants,
   };
 }
 

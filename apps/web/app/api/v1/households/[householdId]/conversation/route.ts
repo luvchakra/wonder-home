@@ -828,7 +828,7 @@ async function askHomeBrain(input: {
       previousQuestion: input.previousQuestion,
       sentHistory: input.routing.history ?? [],
       items: context.snapshot.items,
-      viewer: { memberId: input.membership.memberId, roleLabel: input.view.roleLabel },
+      viewer: { memberId: input.membership.memberId, roleLabel: input.view.roleLabel, guardianOf: context.snapshot.scope.viewer.guardianOf },
       timezone: input.membership.household.timezone,
       now: new Date(),
       policy: input.routing.policy,
