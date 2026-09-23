@@ -474,6 +474,20 @@ describes — HomeSend and manual entry are Inputs, HomeBrain is Understand,
 ## External providers
 Never invent credentials or claim a live integration. Build provider-neutral interfaces and deterministic mocks/fixtures first. A real provider is considered live only after credentials, authentication, contract behavior and integration tests are configured.
 
+Weather (story 17-007) is the first provider that needs no household
+credential: Open-Meteo sits behind the 13-005 `WeatherProvider` port
+(`home/open-meteo.ts`), and `home/weather-service.ts`'s `householdWeather`
+is the one way in. It checks, in order, that the deployment has a
+provider, that an Admin chose an area and that the plan includes
+`home.weather`. The area is stored only as coordinates rounded to about a
+kilometre (`weather_locations`). The forecast is fetched at most hourly and
+kept on that row by the server. An outage is recorded on the integration
+row and never on household state. Weather is off unless the deployment
+sets `WONDERHOME_WEATHER_PROVIDER=open-meteo`. `OPEN_METEO_API_KEY` moves
+requests to Open-Meteo's commercial endpoint, and whether production needs
+that key is a person's call. Weather speaks only when it changes a
+decision, such as washing that won't dry. It never gives a forecast readout.
+
 ## Non-functional gates
 Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests are release blockers. Core API targets are p95 <=500ms reads and <=800ms ordinary writes excluding external provider latency.
 

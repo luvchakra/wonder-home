@@ -1,6 +1,9 @@
 import { CalendarDays, CloudSun, CreditCard, GraduationCap, Home, Mail, MessageCircle, Plug, ShieldCheck, ShoppingBasket } from "lucide-react";
 import type { ComponentType } from "react";
 
+import { may } from "@wonderhome/core/billing/repository";
+import { weatherProviderFromEnv } from "@wonderhome/core/home/open-meteo";
+import { describeHouseholdWeather, householdWeather } from "@wonderhome/core/home/weather-service";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
@@ -10,7 +13,8 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { formatDate, requireSession } from "../../_lib/session";
+import { WeatherArea } from "../../_components/weather-area";
+import { formatDate, formatTime, requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Integrations" };
 export const dynamic = "force-dynamic";
@@ -46,7 +50,18 @@ export default async function IntegrationsPage() {
     );
   }
 
-  const integrations = await listIntegrations(supabase, membership.household.id).catch(() => []);
+  const householdId = membership.household.id;
+  // Weather is the one provider a deployment can switch on without a
+  // household credential (story 17-007), so its area is chosen right here.
+  const weatherOn = weatherProviderFromEnv() !== null;
+  const [integrations, weather, weatherEntitled] = await Promise.all([
+    listIntegrations(supabase, householdId).catch(() => []),
+    weatherOn ? householdWeather(supabase, householdId) : Promise.resolve(null),
+    // Asked on its own: with no area chosen yet, the weather answer is "no
+    // area" before the plan is ever consulted, and an Admin should not be
+    // offered a search their plan will refuse to save.
+    weatherOn ? may(supabase, householdId, "home.weather").then((decision) => decision.allowed, () => false) : Promise.resolve(false),
+  ]);
   const attention = integrations.filter((integration) => integration.needsAttention);
 
   return (
@@ -105,6 +120,39 @@ export default async function IntegrationsPage() {
             })}
           </div>
         </section>
+
+        {weatherOn ? (
+          <section id="weather">
+            <SectionHeader title="Weather" />
+            <Card className="flex gap-3 p-4">
+              <IconTile icon={CloudSun} tone="money" size="lg" />
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-sm font-semibold">Plan around the weather</p>
+                <p className="text-xs text-[var(--wh-foreground-muted)]">
+                  {!weatherEntitled
+                    ? "Weather-aware planning is not part of your plan. It comes with Pro and Max."
+                    : "Laundry that won't dry and outdoor jobs in the rain get moved before they go wrong. Nothing changes on a fine day."}
+                </p>
+                {!weatherEntitled ? null : (
+                  <div className="pt-3">
+                    <WeatherArea
+                      householdId={householdId}
+                      area={
+                        weather && weather.state !== "off"
+                          ? {
+                              label: weather.place,
+                              summary: describeHouseholdWeather(weather),
+                              checked: weather.state === "ready" ? `${formatDate(timezone, weather.fetchedAt, "long")}, ${formatTime(timezone, weather.fetchedAt)}` : null,
+                            }
+                          : null
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </Card>
+          </section>
+        ) : null}
 
         <Card className="flex items-start gap-3 bg-[var(--wh-primary-soft)]/50 p-4">
           <Plug aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-primary)]" />

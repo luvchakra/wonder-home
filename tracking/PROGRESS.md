@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 195 |
-| Done | 183 |
+| Done | 184 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 11 |
-| Completion | 93.8% |
-| Current module | 09 Commerce, Groceries & Pets |
-| Current story | — (09-009 Done; 04-017 waits on a person; next: 08-009) |
+| Not Started | 10 |
+| Completion | 94.4% |
+| Current module | 17 External Integrations |
+| Current story | — (17-007 Done; 04-017 waits on a person; next: 20-006) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -41,7 +41,7 @@ disagree again.)
 | 14 | AI Orchestration & Learning | 14 | 11 | 2 | 1 | 12 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
-| 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
+| 17 | External Integrations | 8 | 5 | 2 | 1 | 6 | In Progress |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 5 | In Progress |
@@ -226,3 +226,4 @@ disagree again.)
 | 2026-09-24 | 04 | 04-017 | In Progress | voice gate in eval (15/15 Gemini sentences, 4/4 Alexa phrases, 22/22 actions placed, 11/11 app-only refused), channel metrics 5 unit + 3 gateway, 1 database, verify:live 153/153, live rows checked | Voice phase 6: golden voice scenarios and a blocking eval gate, `hometalk_channel_events` telemetry (migration `20260926110000`, applied live) with the spec's per-channel metrics, per-session tool-call cap, structured Gemini tool sentences read by the rules first. Needs a person: a real Alexa run, a device-level Gemini Live run, a rendered dashboard with alert delivery |
 | 2026-09-24 | 14 | 14-014 | Done | 2444 unit (intake time 23, school times 8, HomeTalk move 2), 446 database (school time constraints), eval 45/45 with 0/13 unsafe deterministic and on Gemini, verify:live 155/155, browser QA at 360px and desktop, real Gemini classifications | HomeSend reads the time of day: `timeFromDateText` reads only unmistakable clock times from the notice's own date words; `school_items.due_time_known` + `ends_at` (migration `20260927090000`, applied live, existing timed rows backfilled); add/edit/HomeSend review forms carry Starts/Ends; all-day items never show a time and read their day in UTC; a moved item keeps its time. Found live: Gemini dropped the time from `dateText` — prompt now asks for it |
 | 2026-09-24 | 09 | 09-009 | Done | 2466 unit (receipts 15, intake receipt 7, HS-14 golden case), 450 database (commerce purchases 3, HomeSend receipt kind + purchase change), eval 46/46 with 0/14 unsafe deterministic and on Gemini, verify:live 157/157, browser QA at 360px and desktop, real Gemini receipt readings | A receipt becomes purchase history: new HomeSend kind `receipt` (never a bill), read with shop, day and lines; each line is matched to a tracked item only when plain (`commerce/receipts.ts`'s `matchConsumable`), started as new, or left out, and confirmed by a person before `consumable_purchases` is written; the consumable's last purchase and inferred rate refresh from its history; every line undoes on its own (`homesend_changes` domain `purchase`, migration `20260927100000`, applied live); Groceries shows each item's recent purchases |
+| 2026-09-24 | 17 | 17-007 | Done | 2494 unit (Open-Meteo 18, weather service 13), 457 database (7 new weather-area RLS), eval 46/46 with 0/14 unsafe, verify:live 159/159, a real Open-Meteo forecast and geocoding through the dev server, browser QA at 360px and desktop | Weather as a planning signal: Open-Meteo behind the provider-neutral weather port (`home/open-meteo.ts`), an Admin-chosen area stored only as coordinates rounded to ~1 km (`weather_locations`, migration `20260927110000`, applied live), the forecast cached hourly on that row by the server, the `home.weather` entitlement decided on the server path, outages recorded on the connection and never on household state (last forecast serves up to 6 h), `homeAgenda` plans laundry around it and Home & Upkeep says so only when it changes a decision; connect/disconnect audited (`integration.disconnected` now built). Off unless a deployment sets `WONDERHOME_WEATHER_PROVIDER=open-meteo` — production needs a person's call on Open-Meteo's commercial terms (`OPEN_METEO_API_KEY`) |

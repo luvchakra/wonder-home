@@ -107,7 +107,15 @@ Two things were found live and fixed:
 
 ## Test data cleanup
 
-After the merge, the QA account `279680ea-bfb9-4906-84e8-38476c7d3ce9` and its
-household `de4571ea-cf56-4919-96d9-78ac7199d2b0` ("Receipt QA Home") are
-deleted, together with this session's rate-limit counters. The result is
-recorded below.
+Ran after PR #136 merged:
+- Deleted the QA account `279680ea-bfb9-4906-84e8-38476c7d3ce9` with
+  `qa-test-user.mjs`.
+- Deleted its household `de4571ea-cf56-4919-96d9-78ac7199d2b0` ("Receipt QA
+  Home"): audit and channel events first, then the household, which cascades
+  its consumables, purchases, HomeSend items and changes.
+- Deleted this session's rate-limit counters.
+- Deleted the local screenshots and QA scripts.
+
+SQL counts for the household, consumables, purchases, HomeSend items, audit
+rows, counters and the auth user are all 0. No files were uploaded; the
+receipts were pasted text.

@@ -7,7 +7,8 @@ import { assessLaundry, type LaundryNeed, type LaundryState } from "./laundry";
 import { petAgenda, type Pet, type PetCareKind, type PetCareNeed } from "./pets";
 import { assessServiceRequest, openRequestAssetIds, type ServiceRequest, type ServiceStatus } from "./services";
 import type { DeviceSignal, SignalKind } from "./signals";
-import { dryingConditions, type WeatherWindow } from "./weather";
+import { dryingConditions, type DryingConditions, type WeatherWindow } from "./weather";
+import { householdWeather, type HouseholdWeather } from "./weather-service";
 import { invalidatesContext } from "../context/invalidation";
 
 /**
@@ -381,6 +382,12 @@ export type HomeAgenda = {
    * actually cares about.
    */
   checked: number;
+  /**
+   * The weather this agenda was planned under (story 17-007), and what it
+   * meant for drying. `off`/`unavailable` means ordinary conditions were
+   * assumed — the lists above are still right, just less sharp.
+   */
+  weather: { status: HouseholdWeather["state"]; place: string | null; drying: DryingConditions };
 };
 
 /**
@@ -396,7 +403,13 @@ export async function homeAgenda(
   options: { now?: Date; forecast?: readonly WeatherWindow[]; someoneAvailable?: boolean } = {},
 ): Promise<HomeAgenda> {
   const now = options.now ?? new Date();
-  const conditions = dryingConditions(options.forecast ?? []);
+  // A caller that passes a forecast (a test, an evaluation) is planned under
+  // exactly that; everyone else gets the household's own weather, when it is
+  // switched on, entitled and answering.
+  const weather: HouseholdWeather = options.forecast
+    ? { state: "ready", place: "", windows: [...options.forecast], fetchedAt: now, stale: false }
+    : await householdWeather(supabase, householdId, { now });
+  const conditions = dryingConditions(weather.state === "ready" ? weather.windows : []);
 
   const [assets, requests, laundry, pets, signals] = await Promise.all([
     listAssets(supabase, householdId),
@@ -431,6 +444,11 @@ export async function homeAgenda(
     services: requests
       .map((request) => assessServiceRequest(request, now))
       .filter((assessment) => assessment.notable),
+    weather: {
+      status: weather.state,
+      place: weather.state === "off" ? null : weather.place || null,
+      drying: conditions,
+    },
   };
 }
 

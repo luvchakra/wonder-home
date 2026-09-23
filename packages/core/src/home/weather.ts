@@ -27,6 +27,13 @@ export type WeatherWindow = {
 export type WeatherQuery = {
   /** Coarse location: a household's city, never a precise address. */
   locality: string;
+  /**
+   * The same place as coordinates, rounded to two decimals (about a
+   * kilometre) before they are stored, so a forecast request can never carry
+   * more than the area the household chose (story 17-007).
+   */
+  latitude?: number;
+  longitude?: number;
   from: Date;
   hours: number;
 };

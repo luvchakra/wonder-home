@@ -99,6 +99,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/integrations/repository.ts",
   },
   {
+    event: "integration.disconnected",
+    because: "Household data stops flowing to or from a provider — a decision someone made about the household.",
+    recordedIn: "packages/core/src/integrations/repository.ts",
+  },
+  {
     event: "ai.key_set",
     because: "Changes which company's servers answer for this household.",
     recordedIn: "packages/core/src/ai/credentials.ts",
@@ -432,7 +437,6 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
 export const NOT_YET_BUILT: readonly { event: AuditEventType; story: string }[] = [
   { event: "member.removed", story: "removing a member is not built" },
   { event: "child.updated", story: "editing a child's record is not built" },
-  { event: "integration.disconnected", story: "nothing disconnects an account yet; module 17" },
   {
     event: "household.updated",
     story: "no household-level setting (name, timezone, currency…) is editable yet — the Key Member designation that used to emit this was removed",
