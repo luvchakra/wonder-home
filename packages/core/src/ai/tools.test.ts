@@ -76,6 +76,18 @@ describe("every call is re-checked, independently", () => {
     const result = authorizeToolCall("outcomes.replan", ctx({ autonomy: "approve" }));
     expect(result.allowed === true && result.requiresApproval).toBe(true);
   });
+
+  it("adding to the groceries list is governed by the outcome's autonomy — it writes a real row, so it is not a draft", () => {
+    expect(findTool("list.add_item")?.actionKind).toBe("change");
+    const observe = authorizeToolCall("list.add_item", ctx({ autonomy: "observe" }));
+    expect(observe.allowed === false && observe.code).toBe("autonomy_forbids");
+    for (const autonomy of ["prepare", "approve"] as const) {
+      const result = authorizeToolCall("list.add_item", ctx({ autonomy }));
+      expect(result.allowed === true && result.requiresApproval, autonomy).toBe(true);
+    }
+    const execute = authorizeToolCall("list.add_item", ctx({ autonomy: "execute" }));
+    expect(execute.allowed === true && execute.requiresApproval).toBe(false);
+  });
 });
 
 describe("the tools an agent is offered", () => {

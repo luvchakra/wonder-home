@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { createAdminClient } from "../db/admin";
 import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import {
   checkEntitlement,
@@ -183,7 +184,18 @@ export async function consume(
   supabase: SupabaseClient,
   householdId: string,
   feature: FeatureKey | string,
-  options: { amount?: number; now?: Date } = {},
+  options: {
+    amount?: number;
+    now?: Date;
+    /**
+     * Who records the usage. `public.record_usage` is granted to the
+     * service role only — metering is the server's to record, never a
+     * member's — so this defaults to the admin client. The household was
+     * already authorised by the caller; the subscription read above still
+     * goes through the member's own client.
+     */
+    meter?: Pick<SupabaseClient, "rpc">;
+  } = {},
 ): Promise<EntitlementDecision> {
   const now = options.now ?? new Date();
   const amount = options.amount ?? 1;
@@ -199,7 +211,8 @@ export async function consume(
     return { allowed: true, remaining: null, reason: "Included in this plan." };
   }
 
-  const { data, error } = await supabase.rpc("record_usage", {
+  const meter = options.meter ?? createAdminClient();
+  const { data, error } = await meter.rpc("record_usage", {
     p_household_id: householdId,
     p_feature_key: feature,
     p_period_start: periodStart(entry.period, now).toISOString(),

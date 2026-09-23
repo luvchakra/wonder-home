@@ -50,7 +50,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     name: "list.add_item",
     description: "Add something to a household list",
     requires: null,
-    actionKind: "draft",
+    // Not a draft: the executor really writes a grocery item, so it answers
+    // to the household's autonomy setting like any other change — observe
+    // means it does not happen, approve means a person says yes first.
+    actionKind: "change",
     risk: "safe",
     reversible: true,
   },

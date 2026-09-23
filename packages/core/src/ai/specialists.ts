@@ -182,6 +182,8 @@ export const billsSpecialist: Specialist = ({ assessments }) => {
  * into one list rather than one call per producer, because a shopper reading
  * three near-duplicate entries for "cat food" is worse served than one.
  */
+export const GROCERIES_OUTCOME_KEY = "groceries.stocked";
+
 export const groceriesSpecialist: Specialist = ({ inbox }) => {
   const lists = inbox.filter((c) => c.type === "grocery_list");
   if (lists.length === 0) return EMPTY;
@@ -197,7 +199,9 @@ export const groceriesSpecialist: Specialist = ({ inbox }) => {
       steps.push({
         toolName: "list.add_item",
         rationale: (contract.payload.reason as string | undefined) ?? `Needed for ${item.name}.`,
-        arguments: { name: item.name, quantity: item.quantity, unit: item.unit },
+        // The household outcome whose autonomy setting governs this step —
+        // what the Manage Household screen lets a household configure.
+        arguments: { name: item.name, quantity: item.quantity, unit: item.unit, outcomeKey: GROCERIES_OUTCOME_KEY },
       });
     }
   }

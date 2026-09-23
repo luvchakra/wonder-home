@@ -338,7 +338,12 @@ every domain's `*Agenda()` read into one `HomeAssessment[]`,
 `ai/orchestrator.ts`'s `executeStep()`/`advance()` run each step through
 `ai/tools.ts`'s `authorizeToolCall()` (scope → entitlement → permission →
 autonomy, in that order) and `household/autonomy.ts`'s per-outcome
-autonomy setting, `ai/executors.ts` performs the write for a step that is
+autonomy setting — read by `household/autonomy-lookup.ts` through the
+server-only `public.autonomy_for` wrapper, and "observe" on any error,
+timeout or unknown value, never a default of "execute" (PostgREST only
+resolves RPCs in `public`, so a `wh.*` function the app calls by RPC
+needs a narrow, explicitly granted wrapper, never an exposed `wh`) —
+`ai/executors.ts` performs the write for a step that is
 actually authorized to execute, and `ai/run.ts`'s `runHouseholdAgents()`
 ties a run together — triggered today from HomeTalk (a "check on things"
 utterance) or `POST /households/{householdId}/agents/run`, with automatic/

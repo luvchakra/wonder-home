@@ -37,6 +37,8 @@ export type ProposedAction = {
   kind:
     | "read"
     | "draft"
+    /** A reversible change to the household's own records — adding to a list. Governed by the outcome's autonomy, unlike a draft. */
+    | "change"
     | "schedule"
     | "notify"
     | "order"
