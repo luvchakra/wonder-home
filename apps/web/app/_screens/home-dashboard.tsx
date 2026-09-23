@@ -21,6 +21,7 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
+import { CozyCornerIllustration } from "@wonderhome/core/ui/cozy-corner-illustration";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
 import {
   ExpandableMetricGrid,
@@ -46,7 +47,7 @@ import { NewEventForm } from "../_components/new-event-form";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
-import { formatDate, formatTime, greetingFor, type Session } from "../_lib/session";
+import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
 import { iconForOutcome } from "../_lib/outcome-icons";
 
@@ -226,13 +227,39 @@ export function HomeDashboard({ session }: { session: Session }) {
   return (
     <AppShell active="home" viewer={viewer} secondary={secondary} pathname="/">
       <div className="space-y-6">
-        <header className="wh-rise space-y-1">
-          <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
-          <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
-            {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
-          </h1>
-          <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
+        <header className="wh-rise flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
+            <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
+              {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
+            </h1>
+            <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
+          </div>
+
+          {/* A warm corner illustration (rule 8) with the brand's handwritten
+              line over it, and — the true thing this screen actually knows,
+              never an invented temperature (rule 9: WonderHome has no
+              weather provider) — today's date and the household's name,
+              linking to Today. */}
+          <div className="relative shrink-0 overflow-hidden rounded-[var(--wh-radius-lg)] sm:w-[22rem]">
+            <CozyCornerIllustration className="w-full" />
+            <ScriptAccent size="sm" tilt={false} heart className="absolute top-3 left-4 max-w-[8.5rem] leading-[1.15]">
+              Happier Homes
+              <br />
+              Happier Humans!
+            </ScriptAccent>
+            <Link
+              href="/today"
+              className="absolute top-3 right-3 flex items-center gap-2 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/90 px-3 py-2 shadow-[var(--wh-shadow-card)] backdrop-blur-sm transition-colors hover:bg-[var(--wh-surface)]"
+            >
+              <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
+              <span className="min-w-0 text-left">
+                <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
+                <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
+              </span>
+            </Link>
+          </div>
         </header>
 
         <Suspense fallback={<LoadingState rows={4} label="Checking on the household" />}>
