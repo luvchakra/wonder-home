@@ -277,7 +277,8 @@ export async function markActionResult(
     .eq("id", input.actionId);
 
   if (error) throw new Error(`markActionResult failed: ${error.code ?? "unknown"}`);
-  if (input.status === "executed" && input.audit) {
+  // "Already on the list" ran and changed nothing: not a change to audit.
+  if (input.status === "executed" && input.audit && !unchangedResult(input.result)) {
     await auditChange({
       householdId: input.audit.householdId,
       actorMemberId: input.audit.actorMemberId,

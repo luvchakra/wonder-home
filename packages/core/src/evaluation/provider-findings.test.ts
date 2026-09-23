@@ -48,6 +48,20 @@ describe("HomeSend dates: the model names the phrase, WonderHome decides the day
     expect(groundIntakeDate(unanchored, { now: A.now, timezone: null }).dueDate).toBeNull();
   });
 
+  it("reads a date the way a school writes it — weekday, date and time together (live E2E-001, 23 Sep 2026)", () => {
+    const due = (dateText: string) => groundIntakeDate(reading({ kind: "school_item", title: "Sports Day", dateText }), reference).dueDate;
+    expect(due("this Saturday, 26 September")).toBe("2026-09-26");
+    expect(due("Saturday 26 September at 9:00 am")).toBe("2026-09-26");
+    expect(due("on Monday 5th October 2026")).toBe("2026-10-05");
+    expect(due("September 30th")).toBe("2026-09-30");
+    expect(due("Saturday at 9am")).toBe("2026-09-26");
+  });
+
+  it("a weekday and a date that disagree decide nothing: the person fills it in", () => {
+    // 26 September 2026 is a Saturday.
+    expect(groundIntakeDate(reading({ kind: "school_item", title: "Sports Day", dateText: "Friday, 26 September" }), reference).dueDate).toBeNull();
+  });
+
   it("never gives a grocery item or an unknown a date", () => {
     expect(groundIntakeDate(reading({ kind: "grocery_item", title: "Milk", dateText: "tomorrow" }), reference).dueDate).toBeNull();
   });

@@ -90,7 +90,12 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
     // whose answer was withheld is answered from the facts themselves.
     const sentIds = new Set(sent.map((fact) => fact.id));
     const answering = answeringFacts(facts, reading);
-    const withheld = !reading.broad && answering.some((fact) => !sentIds.has(fact.contextId));
+    // A broad question about a day counts too: "what is happening on
+    // Saturday?" whose only answer is a child's Sports Day was answered
+    // "nothing is scheduled" by a real model never shown it (live E2E-001,
+    // 23 Sep 2026). A broad question with no day ("what time is the
+    // meeting?") keeps the model, which answers from what it may see.
+    const withheld = (!reading.broad || reading.time !== null) && answering.some((fact) => !sentIds.has(fact.contextId));
     if (sent.length > 0 && !withheld) {
       const compose = turn.compose;
       const localNow = describeLocalNow(turn.now, turn.timezone);

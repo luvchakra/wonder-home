@@ -103,6 +103,17 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
  * answer must not be missing.
  */
 export function answeringFacts(facts: readonly GroundedFact[], reading: BrainReading): GroundedFact[] {
+  const pool = relevantAnswers(facts, reading);
+  // A question that names the thing ("what time is the parent-teacher
+  // meeting?") is answered by that thing. What merely connects to it — the
+  // groceries a school event might need, another child's Sports Day — is
+  // still offered to a model, but is not what the answer is, and a fact
+  // withheld from the model among those is no reason to drop the model.
+  const named = pool.filter((fact) => fact.reasons.includes("named in the question"));
+  return named.length > 0 ? named : pool;
+}
+
+function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading): GroundedFact[] {
   return facts.filter((fact) => {
     if (!fact.relevant || fact.score < 0.5) return false;
     if (fact.domain !== "conflict" && BACKGROUND.has(fact.domain)) return false;

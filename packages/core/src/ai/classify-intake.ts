@@ -11,7 +11,7 @@ import type { ModelProvider } from "./model-key";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 import { fenceUntrusted, UNTRUSTED_CONTENT_RULE } from "../homesend/injection";
 import { isoDateIn } from "../context/format";
-import { resolveDay } from "../conversation/temporal";
+import { resolveDay, TEMPORAL_PHRASE } from "../conversation/temporal";
 
 /**
  * HomeSend's classifier (Phase C): reading a photo, file or pasted forward
@@ -229,11 +229,11 @@ const EXTRACTION_JSON_SCHEMA = {
 export const INTAKE_SYSTEM_PROMPT = `You read one thing a household sent to WonderHome — a photo, a PDF, a text file, a forwarded email, a web page someone shared, or a voice note's transcript — and work out which of these it is, then extract only what is actually shown or written.
 
 kind is exactly one of:
-- bill: an invoice, receipt, payment reminder or utility/subscription/fee statement.
+- bill: something the household still has to pay — an invoice, a payment reminder, a utility/subscription/fee statement. A receipt or payment confirmation for something already paid ("PAID", "Thank you for your payment", a shop till receipt) is not a bill: it asks nothing to be paid.
 - school_item: homework, a worksheet, an exam notice, a school event or a notice from a school.
 - grocery_item: a single product, a shopping-list line, or a photo of one item to buy or restock.
 - health_document: a lab result, prescription, imaging report, vaccination certificate, discharge summary, referral, insurance document or appointment/visit summary — anything about one person's health.
-- unknown: anything else, or content you cannot make out well enough to classify.
+- unknown: anything else — including a receipt for something already paid, which you still summarise ("A FreshMart receipt for milk and eggs, already paid") — or content you cannot make out well enough to classify.
 
 Never invent a title, amount, date, name or note the source does not show. If it is blurry, unrelated, or you cannot make out any actionable content, set readable to false, kind to "unknown", leave every other field null or empty, and set confidence to "low".
 
@@ -336,14 +336,51 @@ export function groundIntakeDate(extraction: IntakeExtraction, context: Pick<Int
   if (!context?.timezone || !extraction.readable || !extraction.dateText) return extraction;
   const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" ? "documentDate" : null;
   if (!field) return extraction;
-  const phrase = extraction.dateText.replace(/^(?:due|until|till|before|by|on)\s+/i, "").trim();
-  let day: string | null = null;
-  try {
-    day = resolveDay(phrase, { timezone: context.timezone, now: context.now ?? new Date() });
-  } catch {
-    day = null;
-  }
+  const day = dayFromDateText(extraction.dateText, { timezone: context.timezone, now: context.now ?? new Date() });
   return day ? { ...extraction, [field]: day } : extraction;
+}
+
+const MONTH_NAME = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const EXPLICIT_DATE = new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_NAME}\\b(?:,?\\s+\\d{4})?|\\b${MONTH_NAME}\\s+\\d{1,2}(?:st|nd|rd|th)?\\b(?:,?\\s+\\d{4})?`, "i");
+const SAID_DAY = new RegExp(`\\b${TEMPORAL_PHRASE}\\b`, "i");
+
+/**
+ * The one day a date phrase from source content names — "this Saturday,
+ * 26 September at 9:00 am" as a school writes it, not only the tidy
+ * "26 September". An explicit date is the most specific thing said; a
+ * weekday or "tomorrow" stands in only when there is none. When the two are
+ * both there and disagree ("Friday, 26 September" when the 26th is a
+ * Saturday), nobody can tell which the sender meant, so no day is decided
+ * and the person fills it in — never a guess.
+ */
+export function dayFromDateText(dateText: string, options: { timezone: string; now: Date }): string | null {
+  const resolve = (phrase: string | undefined | null): string | null => {
+    if (!phrase?.trim()) return null;
+    try {
+      return resolveDay(phrase.trim(), options);
+    } catch {
+      return null;
+    }
+  };
+  const phrase = dateText.replace(/^(?:due|until|till|before|by|on)\s+/i, "").trim();
+  const whole = resolve(phrase);
+  if (whole) return whole;
+  const explicit = resolve(EXPLICIT_DATE.exec(phrase)?.[0]);
+  const said = SAID_DAY.exec(phrase)?.[0] ?? null;
+  const relative = resolve(said);
+  if (explicit && said) {
+    // "Monday 5 October" names a weekday the date should fall on, not the
+    // coming Monday; "tomorrow, 26 September" names the day itself.
+    const weekday = WEEKDAY_NAMES.findIndex((name) => new RegExp(`\\b${name.slice(0, 3)}`, "i").test(said));
+    const agrees = weekday >= 0 && !/\b(?:today|tonight|tomorrow|yesterday)\b/i.test(said) ? new Date(`${explicit}T12:00:00Z`).getUTCDay() === weekday : relative === null || relative === explicit;
+    return agrees ? explicit : null;
+  }
+  if (explicit) return explicit;
+  // A weekday or "tomorrow" alone decides the day only when it is the whole
+  // phrase, give or take a time of day ("Saturday at 9am") — never the
+  // "Monday" inside "the second Monday of next month".
+  const rest = said ? phrase.replace(said, " ").replace(/\b(?:at|from|by)?\s*\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/gi, " ") : phrase;
+  return /[a-z]{2,}/i.test(rest.replace(/\b(?:on|this|the|at|by|in|morning|afternoon|evening|noon)\b/gi, " ")) ? null : relative;
 }
 
 /**

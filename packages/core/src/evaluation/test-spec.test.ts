@@ -11,6 +11,7 @@ import { answerWithHomeBrain } from "../homebrain/turn";
 import { attachHomeSendEvidence, describeProvenance, explainProvenance } from "../context/provenance";
 import type { HealthRecord } from "../health/records";
 import type { HomeSendItem } from "../homesend/items";
+import type { FamilyEvent } from "../family/schedule";
 import { reconcileAgainstRecords } from "../homesend/reconcile";
 import type { SchoolItem } from "../school/items";
 import { percentile, summariseLatency } from "./metrics";
@@ -391,5 +392,52 @@ describe("PERF-004 — an understanding that throws never fails the turn or writ
   it("a payment request is never carried out on the back of a failure", async () => {
     const result = await turn("Pay the electricity bill");
     expect(result.kind === "reply" && result.proposal.kind).not.toBe("executed");
+  });
+});
+
+describe("E2E-001 (live finding) — a broad question whose answer was withheld from the model is answered from the facts", () => {
+  it("\"What is happening on Saturday?\" with only a child's Sports Day on record names it, whatever the model says", async () => {
+    const sportsDay: SchoolItem = {
+      id: "x-sports", childMemberId: "a-asmi", kind: "event", title: "Sports Day", subject: null, detail: null, dueAt: new Date("2026-09-26T00:00:00Z"),
+      estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
+    };
+    const household = withRecords(A, { events: [], schoolItems: [sportsDay] });
+    const kunal = memberOf(household, "a-kunal");
+    let modelSawIt = false;
+    const answer = await answerWithHomeBrain({
+      question: "What is happening on Saturday?", sentQuestion: "What is happening on Saturday?", previousQuestion: null, sentHistory: [],
+      items: contextItemsFor(household, kunal.id), viewer: { memberId: kunal.id, roleLabel: "Adult", guardianOf: viewerFor(household, kunal.id).guardianOf },
+      timezone: household.timezone, now: household.now, policy: DEFAULT_DATA_USE, people: peopleOf(household),
+      compose: async (request) => {
+        modelSawIt = request.facts.some((fact) => /Sports Day/.test(fact.text));
+        return { text: "There is nothing scheduled on the family calendar for Saturday.", mode: "answer", grounded: true, usedFacts: [] };
+      },
+      factBudget: 40,
+    });
+    expect(modelSawIt).toBe(false);
+    expect(answer.source).toBe("deterministic");
+    expect(answer.text ?? "").toMatch(/Sports Day/);
+  });
+});
+
+describe("E2E-004 (live finding) — a question that names one thing is answered about that thing", () => {
+  it("\"What time is the parent-teacher meeting?\" is the meeting at 5pm — not a list with a child's Sports Day and the groceries", async () => {
+    const sportsDay: SchoolItem = {
+      id: "x-sports", childMemberId: "a-asmi", kind: "event", title: "Sports Day", subject: null, detail: null, dueAt: new Date("2026-09-26T00:00:00Z"),
+      estimatedMinutes: null, estimateSource: null, status: "pending", completedAt: null, provider: null, externalId: null,
+    };
+    const meeting: FamilyEvent = {
+      id: "x-ptm", title: "Parent-teacher meeting", kind: "school_event", startsAt: new Date("2026-09-25T11:30:00Z"), endsAt: new Date("2026-09-25T12:30:00Z"),
+      protected: false, ownerMemberId: "a-kunal", status: "confirmed", actionState: null, actionDueAt: null, participants: [{ memberId: "a-kunal", response: "yes", required: true }],
+    };
+    const household = withRecords(A, { events: [meeting], schoolItems: [sportsDay], meals: [], obligations: [] });
+    const kunal = memberOf(household, "a-kunal");
+    const answer = await answerWithHomeBrain({
+      question: "What time is the parent-teacher meeting?", sentQuestion: "What time is the parent-teacher meeting?", previousQuestion: null, sentHistory: [],
+      items: contextItemsFor(household, kunal.id), viewer: { memberId: kunal.id, roleLabel: "Adult", guardianOf: viewerFor(household, kunal.id).guardianOf },
+      timezone: household.timezone, now: household.now, policy: DEFAULT_DATA_USE, people: peopleOf(household), compose: null, factBudget: 40,
+    });
+    expect(answer.text ?? "").toMatch(/Parent-teacher meeting[^\n]*5:00pm/);
+    expect(answer.text ?? "").not.toMatch(/Sports Day|Milk|Atta/);
   });
 });

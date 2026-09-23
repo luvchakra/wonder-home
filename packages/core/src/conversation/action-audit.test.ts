@@ -27,6 +27,15 @@ describe("DATA-005 — what HomeTalk changed is audited with its channel", () =>
     ]);
   });
 
+  it("an add that found it already there changed nothing, so it is not audited as a change (live E2E-003)", async () => {
+    audited.length = 0;
+    await markActionResult(admin().client, {
+      actionId: "act-3", status: "executed", result: { alreadyTracked: true },
+      audit: { householdId: "h-1", actorMemberId: "m-1", actionType: "add_to_list", source: "web", modality: "text" },
+    });
+    expect(audited).toEqual([]);
+  });
+
   it("a failed action changed nothing, so there is nothing to audit", async () => {
     audited.length = 0;
     await markActionResult(admin().client, {
