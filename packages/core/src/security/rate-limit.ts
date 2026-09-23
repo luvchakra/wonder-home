@@ -39,6 +39,8 @@ export const RATE_LIMITS = {
   "voice.session": { max: 20, windowSeconds: 600 },
   /** Tool calls within one Gemini Live session: a long, lively conversation, not a loop (voice phase 6 cost control). */
   "voice.tool": { max: 120, windowSeconds: 900 },
+  /** Area searches for weather, per member (story 17-007): each is an outbound geocoding call. */
+  "weather.search": { max: 30, windowSeconds: 600 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

@@ -356,7 +356,7 @@ export function buildOpenApiDocument(): Json {
         get: {
           summary: "What the home domain needs from this household",
           description:
-            "Maintenance, laundry, pet care and service requests that currently need a person. Empty is the expected answer for a household where things are working.",
+            "Maintenance, laundry, pet care and service requests that currently need a person. Empty is the expected answer for a household where things are working. `weather` says what the plan was made under (story 17-007): `ready` with the household's area and what it means for drying, or `off`/`unavailable`, when ordinary conditions were assumed. Weather is decided on the server — the `home.weather` entitlement, a configured provider and an Admin-chosen area — so this route never plans with weather the app would refuse.",
           responses: {
             "200": { description: "The home agenda" },
             "403": { $ref: "#/components/responses/Forbidden" },

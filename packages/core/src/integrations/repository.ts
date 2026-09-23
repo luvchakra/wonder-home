@@ -127,6 +127,44 @@ export async function connectIntegration(
 }
 
 /**
+ * Ends a connection (the contract's `revoke`, story 17-007).
+ *
+ * The row goes, not just its status: a household that switched something off
+ * is not a connection "needing attention", and leaving a revoked row behind
+ * would put it under "Needs you" as if access had been lost. Recorded in the
+ * household's trail like connecting was.
+ */
+export async function disconnectIntegration(
+  supabase: SupabaseClient,
+  input: { householdId: string; kind: ConnectorKind; provider: string; actorMemberId?: string | null },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("integrations")
+    .delete()
+    .eq("household_id", input.householdId)
+    .eq("kind", input.kind)
+    .eq("provider", input.provider)
+    .select("id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can disconnect an account.");
+    throw new Error(`disconnectIntegration failed: ${error.code ?? "unknown"}`);
+  }
+
+  const id = ((data ?? [])[0] as Row | undefined)?.id as string | undefined;
+  if (!id) return;
+
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.actorMemberId ?? null,
+    eventType: "integration.disconnected",
+    targetTable: "integrations",
+    targetId: id,
+    metadata: { provider: input.provider, kind: input.kind },
+  });
+}
+
+/**
  * Records what a sync did to a connection's health.
  *
  * Only the connection row changes here. Whatever the sync imported is written

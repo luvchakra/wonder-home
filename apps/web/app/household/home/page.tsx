@@ -1,4 +1,4 @@
-import { CircleCheck, PawPrint, Shirt, Wrench } from "lucide-react";
+import { CircleCheck, CloudRain, PawPrint, Shirt, Wrench } from "lucide-react";
 
 import type { HomeAssessment } from "@wonderhome/core/home/assessment";
 import { homeAgenda } from "@wonderhome/core/home/repository";
@@ -84,6 +84,8 @@ export default async function HomeUpkeepPage() {
   const admin = isHouseholdAdmin(membership);
   const timezone = membership.household.timezone;
   const needsYouItems = sections.flatMap((section) => section.items);
+  const weatherChangesPlans =
+    agenda.weather.status === "ready" && (!agenda.weather.drying.outdoorViable || agenda.weather.drying.hoursMultiplier > 1);
 
   const metrics: ExpandableMetric[] = [
     {
@@ -133,6 +135,18 @@ export default async function HomeUpkeepPage() {
         </header>
 
         <ExpandableMetricGrid pairs metrics={metrics} />
+
+        {/* Weather speaks only when it changes a decision (story 17-007): a
+            fine day, an outage or weather switched off says nothing here. */}
+        {weatherChangesPlans ? (
+          <Card className="flex items-start gap-3 p-4">
+            <IconTile icon={CloudRain} tone="money" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium break-words">Weather{agenda.weather.place ? ` in ${agenda.weather.place}` : ""}</p>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{agenda.weather.drying.reason}{agenda.laundry.length > 0 ? " Laundry below is planned around it." : ""}</p>
+            </div>
+          </Card>
+        ) : null}
 
         {sections.length === 0 ? (
           <EmptyState

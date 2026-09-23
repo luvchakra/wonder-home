@@ -347,3 +347,90 @@ test("the server can ingest a signal and the household can read it", () => {
     "another household could read these readings",
   );
 });
+
+// Story 17-007: the household's weather area. Choosing what leaves the
+// household is an Admin's decision; every member plans around the answer.
+
+test("an Admin can choose the household's weather area, and every member can read it", () => {
+  asProfile(
+    HEAD,
+    `insert into public.weather_locations (household_id, label, latitude, longitude, timezone, set_by_member_id)
+     values ('${household}', 'Pune, Maharashtra, India', 18.52, 73.86, 'Asia/Kolkata', '${headMember}');`,
+    options,
+  );
+  assert.equal(asProfile(PARTNER, `select label from public.weather_locations;`, options), "Pune, Maharashtra, India");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.weather_locations;`, options), "0", "another household could read this area");
+});
+
+test("the area can never be finer than about a kilometre", () => {
+  assert.equal(
+    asProfile(HEAD, `update public.weather_locations set latitude = 18.519572 where household_id = '${household}' returning latitude;`, options),
+    "18.52",
+    "a precise coordinate was stored",
+  );
+});
+
+test("a member who is not an Admin cannot change or remove the area", () => {
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.weather_locations set label = 'Somewhere else' where household_id = '${household}';`,
+      `select label from public.weather_locations where household_id = '${household}';`,
+      "Pune, Maharashtra, India",
+      options,
+    ),
+    "a non-Admin changed where the household's weather comes from",
+  );
+  asProfile(PARTNER, `delete from public.weather_locations where household_id = '${household}';`, options);
+  assert.equal(asProfile(HEAD, `select count(*) from public.weather_locations;`, options), "1", "a non-Admin switched weather off");
+});
+
+test("an outsider cannot set, change or remove another household's area", () => {
+  assert.ok(
+    deniedForProfile(
+      OUTSIDER,
+      `insert into public.weather_locations (household_id, label, latitude, longitude, set_by_member_id)
+       values ('${household}', 'Elsewhere', 1, 1, '${otherMember}');`,
+      options,
+    ),
+    "an outsider set another household's weather area",
+  );
+  assert.ok(
+    deniedForUpdate(
+      OUTSIDER,
+      `update public.weather_locations set label = 'Elsewhere' where household_id = '${household}';`,
+      `select label from public.weather_locations where household_id = '${household}';`,
+      "Pune, Maharashtra, India",
+      options,
+    ),
+    "an outsider changed another household's weather area",
+  );
+});
+
+test("an Admin cannot record the choice as somebody else's", () => {
+  assert.ok(
+    deniedForProfile(
+      OUTSIDER,
+      `insert into public.weather_locations (household_id, label, latitude, longitude, set_by_member_id)
+       values ('${otherHousehold}', 'Mumbai', 19.08, 72.88, '${headMember}');`,
+      options,
+    ),
+    "the area was recorded as set by a member of another household",
+  );
+});
+
+test("a stored forecast must be a list and say when it was fetched", () => {
+  assert.ok(
+    deniedForProfile(HEAD, `update public.weather_locations set forecast = '{"rain": 1}'::jsonb, forecast_fetched_at = now() where household_id = '${household}';`, options),
+    "a forecast that is not a list was stored",
+  );
+  assert.ok(
+    deniedForProfile(HEAD, `update public.weather_locations set forecast = '[]'::jsonb, forecast_fetched_at = null where household_id = '${household}';`, options),
+    "a forecast with no fetch time was stored",
+  );
+});
+
+test("an Admin can switch weather off", () => {
+  asProfile(HEAD, `delete from public.weather_locations where household_id = '${household}';`, options);
+  assert.equal(asProfile(HEAD, `select count(*) from public.weather_locations;`, options), "0");
+});

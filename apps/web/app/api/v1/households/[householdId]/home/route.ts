@@ -21,8 +21,9 @@ export async function GET(request: Request, { params }: Params) {
     const supabase = await createClient();
     await requireMembership(supabase, householdId);
 
-    // No forecast is passed: weather-aware planning is entitlement-gated and
-    // has no live provider, so drying is assessed under ordinary conditions.
+    // The household's own weather is used when the deployment has a provider,
+    // an Admin chose an area and the plan includes it (story 17-007) — decided
+    // inside, so this route cannot plan with weather the screen would refuse.
     return await homeAgenda(supabase, householdId);
   })(request);
 }
