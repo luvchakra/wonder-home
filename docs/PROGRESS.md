@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**189 of 195 stories done — 96.9%**
+**190 of 195 stories done — 97.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 189 |
+| Done | 190 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 5 |
+| Not Started | 4 |
 
 ## By module
 
@@ -31,7 +31,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
-| 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
+| 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
 | 08 Kids & School Intelligence | `██████████` | 9 | 9 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 8 | 8 | — |
@@ -53,7 +53,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
@@ -178,7 +177,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 07 — Househelper & Home Operations
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -189,7 +188,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-005` Helper privacy | P0 | Done | Outcomes and windows, never per-chore status |
 | `07-006` Optional daily summary | P1 | Done | `buildDailySummary`: one digest of what was unusual, built only from exceptions `handleHelperException` already routed to `tell_household` and an absence left uncovered — a handled exception or a fully-covered absence stays silent, matching the module's own rule that normal work needs no update. Opt-in by construction: nothing depends on anyone reading it, and a quiet day says so in one line rather than nothing |
 | `07-007` Pattern learning | P1 | Done | Normal timing is already covered by reusing 03-007's `findTimingPattern` directly — it operates on any `Outcome[]`, helper-owned outcomes included. New: `findMissPattern`/`proposeMissPattern` call a recurring miss only when the same exception kind keeps recurring for one outcome (≥3 occurrences, ≥0.6 concentration), and never propose anything once the household has confirmed a fact about it — the same confirmed-rule gate 03-007 uses |
-| `07-008` Service marketplace | P2 | Not Started | — |
+| `07-008` Service marketplace | P2 | Done | `backup_services` (Admin-only, retired never deleted) names the outside services a household can call and the outcomes each covers; `planBackupCoverage` turns the next fortnight's helper absences into only the outcomes left uncovered — a member's backup is handled and silent — each `arranged`, `service_available` or `nobody`; one tap arranges cover as an ordinary 13-006 service request (provider, contact, household's next move), one open cover per outcome and day by unique index. Nothing is booked on anyone's behalf: no marketplace/booking provider is connected. Househelper Overview leads with "While they're away"; Tasks keeps the services (add/edit/retire/restore); `/households/{id}/backup-services` and `/backup-services/cover` |
 
 ### 08 — Kids & School Intelligence
 

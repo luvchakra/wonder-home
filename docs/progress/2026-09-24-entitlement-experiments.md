@@ -93,4 +93,22 @@ that. The same service answers the screen and the API.
 
 ## Test data cleanup
 
-Recorded after the merge, below.
+Ran after PR #142 merged. Stories 20-007 and 20-008 were QA'd with the same
+account, so one cleanup covers both. Removed:
+
+- the QA household "Policy QA Home" (`098048e0-b1b0-425b-87d4-35e8c7e8fe7b`),
+  its audit row, its usage counters and its rate-limit and burst counters;
+- the two policy events and the two QA experiments (`qa_trial_deep`,
+  `qa_control_text`) with their six events;
+- the temporary `operator` row in `platform_admins`;
+- the `verify.live` counter row;
+- the QA account `a2fb27ea-69ff-4b93-970d-ca36094e58e2`, deleted with
+  `node scripts/qa-test-user.mjs delete`. Two accounts created by mistake
+  moments earlier (`cce4be2c-…`, `080dcb69-…`) were deleted at once, before
+  they were used.
+
+The `pro` plan's text-conversation policy had already been cleared through
+the API. A SQL count afterwards found no experiments, experiment or policy
+events, plan policies, household, members, counters, profile or auth user
+left, and no `qa-verify-` account at all. The dev server was stopped and
+the scratch QA scripts and screenshots removed. Nothing was left behind.

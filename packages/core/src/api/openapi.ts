@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { createAssetSchema, createServiceRequestSchema } from "../home/schemas";
+import { arrangeCoverSchema, createBackupServiceSchema } from "../household/backup-services";
 import { createHouseholdSchema } from "../identity/schemas";
 import { API_ERROR_CODES } from "./errors";
 
@@ -404,6 +405,53 @@ export function buildOpenApiDocument(): Json {
             "201": { description: "The new request" },
             "400": { $ref: "#/components/responses/BadRequest" },
             "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/backup-services": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Backup services, and the coming fortnight's cover",
+          description:
+            "The household's backup services — people outside it who can cover an outcome when a helper is away — and, for the next 14 days, every outcome an absence leaves uncovered: `arranged`, `service_available` (with the services that fit) or `nobody` (story 07-008). An outcome a household member already backs up is not listed. Admin only.",
+          responses: { "200": { description: "Services and cover" }, "403": { $ref: "#/components/responses/Forbidden" } },
+        },
+        post: {
+          summary: "Add a backup service",
+          description: "Admin only. `covers` lists the outcome keys it can cover. A service is retired rather than deleted, so a cover request keeps its provider.",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: toJsonSchema(createBackupServiceSchema) } },
+          },
+          responses: {
+            "201": { description: "The new service" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "409": { description: "A service with that name already exists" },
+          },
+        },
+      },
+      "/households/{householdId}/backup-services/cover": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Arrange a backup service to cover a day",
+          description:
+            "Creates a service request with the service's name and contact and the household's move next — nothing is booked on anyone's behalf, since no booking provider is connected. One open cover per outcome and day: asking again returns the first (200) rather than a second (201). Admin only.",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: toJsonSchema(arrangeCoverSchema) } },
+          },
+          responses: {
+            "200": { description: "Already arranged; the existing request" },
+            "201": { description: "Arranged" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "The service is retired, or not set up to cover that outcome" },
           },
         },
       },

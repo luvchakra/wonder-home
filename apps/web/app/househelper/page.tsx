@@ -2,10 +2,18 @@ import {
   CalendarDays,
   CalendarOff,
   HandHeart,
+  LifeBuoy,
   ListChecks,
   ShieldOff,
   UserPlus,
 } from "lucide-react";
+
+import {
+  arrangedCover,
+  listBackupServices,
+  planBackupCoverage,
+  type BackupService,
+} from "@wonderhome/core/household/backup-services";
 
 import {
   isHouseholdAdmin,
@@ -28,6 +36,11 @@ import {
   RecordLeaveButton,
   WeeklyPatternButton,
 } from "../_components/helper-forms";
+import {
+  AddBackupServiceButton,
+  ArrangeCoverButton,
+  BackupServiceRowControls,
+} from "../_components/backup-service-forms";
 import { MemberDetail } from "../_components/member-detail";
 import { formatDate, requireSession } from "../_lib/session";
 
@@ -164,6 +177,50 @@ export default async function HousehelperPage({
   const mayEdit = (memberId: string) =>
     admin || memberId === membership.memberId;
 
+  // Backup cover (story 07-008): Admin only, because which outside service
+  // stands in for a helper is the Admin's arrangement, and RLS says so too.
+  const coverUntil = new Date(now.getTime() + 14 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const [backupServices, arranged] = admin
+    ? await Promise.all([
+        listBackupServices(supabase, householdId).catch(
+          () => [] as BackupService[],
+        ),
+        arrangedCover(supabase, householdId, today).catch(
+          () => new Set<string>(),
+        ),
+      ])
+    : [[] as BackupService[], new Set<string>()];
+  const helperOutcomes = responsibilities
+    .filter((r) => r.primary_member_id && helperIds.has(r.primary_member_id))
+    .map((r) => ({ key: r.outcome_key, name: nameOfOutcome(r) }));
+  const coverage = admin
+    ? planBackupCoverage({
+        absences: exceptions
+          .filter(
+            (e) =>
+              !e.available &&
+              helperIds.has(e.member_id) &&
+              e.on_date <= coverUntil,
+          )
+          .map((e) => ({
+            memberId: e.member_id,
+            onDate: e.on_date,
+            reason: e.reason,
+          })),
+        responsibilities: responsibilities.map((r) => ({
+          outcomeKey: r.outcome_key,
+          outcomeName: nameOfOutcome(r),
+          primaryMemberId: r.primary_member_id,
+          backupMemberId: r.backup_member_id,
+          priority: r.priority,
+        })),
+        services: backupServices,
+        arranged,
+      })
+    : [];
+
   const expectedToday = (memberId: string) => {
     const exception = exceptions.find(
       (e) => e.member_id === memberId && e.on_date === today,
@@ -243,6 +300,51 @@ export default async function HousehelperPage({
             title="No househelper yet"
             description="Add the people who help at home. WonderHome tracks their days and who covers when they are away — nothing more."
           />
+        ) : null}
+
+        {active === "overview" && coverage.length > 0 ? (
+          <section>
+            <SectionHeader title="While they're away" count={coverage.filter((item) => item.state !== "arranged").length} />
+            <Card className="p-2">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {coverage.map((item) => (
+                  <ActionRow
+                    key={`${item.outcomeKey}@${item.date}`}
+                    icon={LifeBuoy}
+                    tone="people"
+                    title={item.outcomeName}
+                    meta={`${nameOf(item.helperMemberId) ?? "Your helper"} is away ${formatDate(timezone, new Date(`${item.date}T12:00:00Z`))} — ${
+                      item.state === "arranged"
+                        ? "cover is arranged"
+                        : item.state === "service_available"
+                          ? "nobody at home covers it"
+                          : "nobody covers it yet"
+                    }`}
+                    action={
+                      item.state === "arranged" ? (
+                        <Badge tone="handled">Arranged</Badge>
+                      ) : item.state === "service_available" ? (
+                        <ArrangeCoverButton
+                          householdId={householdId}
+                          outcomeKey={item.outcomeKey}
+                          outcomeName={item.outcomeName}
+                          date={item.date}
+                          services={item.services.map((service) => ({
+                            id: service.id,
+                            name: service.name,
+                          }))}
+                        />
+                      ) : (
+                        <PillLink href="/househelper?tab=tasks" tone="soft">
+                          Find cover
+                        </PillLink>
+                      )
+                    }
+                  />
+                ))}
+              </ul>
+            </Card>
+          </section>
         ) : null}
 
         {active === "overview" && helpers.length > 0 ? (
@@ -609,6 +711,63 @@ export default async function HousehelperPage({
                 </ul>
               </Card>
             )}
+
+            {admin ? (
+              <section>
+                <SectionHeader
+                  title="Backup services"
+                  action={
+                    <AddBackupServiceButton
+                      householdId={householdId}
+                      outcomes={helperOutcomes}
+                    />
+                  }
+                />
+                {backupServices.length === 0 ? (
+                  <p className="text-sm text-[var(--wh-foreground-muted)]">
+                    Someone outside the household you can call when your
+                    helper is away and nobody at home covers it — a cleaning
+                    service, a cook who fills in. WonderHome suggests them for
+                    exactly the days they&apos;re needed.
+                  </p>
+                ) : (
+                  <Card className="p-2">
+                    <ul className="divide-y divide-[var(--wh-border)]">
+                      {backupServices.map((service) => (
+                        <ActionRow
+                          key={service.id}
+                          icon={LifeBuoy}
+                          tone={service.active ? "people" : "neutral"}
+                          title={service.name}
+                          meta={[
+                            service.active ? null : "Retired",
+                            service.contact,
+                            service.covers.length === 0
+                              ? "covers nothing yet"
+                              : `covers ${service.covers
+                                  .map(
+                                    (key) =>
+                                      helperOutcomes.find((o) => o.key === key)
+                                        ?.name ?? key.replace(/[._]/g, " "),
+                                  )
+                                  .join(", ")}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                          action={
+                            <BackupServiceRowControls
+                              householdId={householdId}
+                              service={service}
+                              outcomes={helperOutcomes}
+                            />
+                          }
+                        />
+                      ))}
+                    </ul>
+                  </Card>
+                )}
+              </section>
+            ) : null}
           </>
         ) : null}
 
