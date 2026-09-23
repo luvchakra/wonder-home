@@ -58,6 +58,23 @@ describe("the platform's own key", () => {
       platformKey({ WONDERHOME_AI_KEY: "k-0123456789012345678", WONDERHOME_AI_PROVIDER: "wishful" }),
     ).toMatchObject({ provider: "anthropic" });
   });
+
+  it("reads the names an operator actually writes, so a Gemini key is never sent to Anthropic", () => {
+    const key = "k-0123456789012345678";
+    expect(platformKey({ WONDERHOME_AI_KEY: key, WONDERHOME_AI_PROVIDER: "gemini" })).toMatchObject({ provider: "google" });
+    expect(platformKey({ WONDERHOME_AI_KEY: key, WONDERHOME_AI_PROVIDER: " Gemini " })).toMatchObject({ provider: "google" });
+    expect(platformKey({ WONDERHOME_AI_KEY: key, WONDERHOME_AI_PROVIDER: "Claude" })).toMatchObject({ provider: "anthropic" });
+    expect(platformKey({ WONDERHOME_AI_KEY: key, WONDERHOME_AI_PROVIDER: "chatgpt" })).toMatchObject({ provider: "openai" });
+  });
+
+  it("falls back to the provider the key's own prefix names, before assuming Anthropic", () => {
+    expect(platformKey({ WONDERHOME_AI_KEY: "AIza-test-key-not-real" })).toMatchObject({ provider: "google" });
+    expect(platformKey({ WONDERHOME_AI_KEY: "AIza-test-key-not-real", WONDERHOME_AI_PROVIDER: "wishful" })).toMatchObject({ provider: "google" });
+    expect(platformKey({ WONDERHOME_AI_KEY: "sk-ant-test-not-real" })).toMatchObject({ provider: "anthropic" });
+    expect(platformKey({ WONDERHOME_AI_KEY: "sk-test-not-real" })).toMatchObject({ provider: "openai" });
+    // A name the operator did write, and we do recognise, still wins.
+    expect(platformKey({ WONDERHOME_AI_KEY: "AIza-test-key-not-real", WONDERHOME_AI_PROVIDER: "anthropic" })).toMatchObject({ provider: "anthropic" });
+  });
 });
 
 describe("what a household is told about it", () => {
