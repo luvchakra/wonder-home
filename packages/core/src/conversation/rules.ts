@@ -114,6 +114,34 @@ function item(value: string): string {
     .trim();
 }
 
+const REMIND_WHEN = `(?:${WHEN_WORDS})(?:\\s+(?:morning|afternoon|evening|night|after school|before dinner))?|after school|before dinner|this (?:morning|afternoon|evening)|in the (?:morning|afternoon|evening)`;
+
+const TIME_WORDS = "\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?|noon|midday";
+
+/** A reminder's parameters: what, and when as the household said it. */
+function reminder(what: string, when: string | undefined, time: string | undefined): Record<string, unknown> {
+  return {
+    what: what.trim().replace(/[.!]+$/, ""),
+    ...(when ? { when: when.trim().toLowerCase() } : {}),
+    ...(time ? { time: time.trim().toLowerCase() } : {}),
+  };
+}
+
+/**
+ * "Milk and bananas" is two things to add, not one called "milk and
+ * bananas" — split the way an order's items are, so each is matched,
+ * added or found already there on its own.
+ */
+function withItems(intent: Omit<HouseholdIntent, "actorMemberId" | "channel" | "utterance" | "understanding">) {
+  if (intent.action !== "add_to_list" || typeof intent.parameters.item !== "string") return intent;
+  if (!/,|;|&|\band\b|\bplus\b/i.test(intent.parameters.item)) return intent;
+  const items = extractItems(intent.parameters.item);
+  if (items.length < 2) return intent;
+  const parameters: Record<string, unknown> = { ...intent.parameters, items };
+  delete parameters.item;
+  return { ...intent, parameters };
+}
+
 const RULES: readonly Rule[] = [
   // --- "Why?" — answered from what was recorded (HomeBrain 2.0, Wave 2 §10) --
   {
@@ -241,6 +269,28 @@ const RULES: readonly Rule[] = [
     },
   },
 
+  // --- Lists: what a meal needs (Wave 4 §11) ---------------------------------
+  {
+    // "Make sure we have everything" — for the meal just planned, or the one
+    // named. Grounding turns it into that recipe's ingredients, or asks.
+    pattern: /^(?:make sure|check|see)(?: that| if)? we(?:'ve| have)?(?: got| have)? (?:everything|all the ingredients|what we need)(?: (?:we need )?(?:for|to make) (.+))?$/i,
+    read: (match) => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: match[1] ? item(match[1]) : "that" }, confidence: 0.86 }),
+  },
+  {
+    pattern: new RegExp(`^(?:add|get|buy|put)\\s+(?:everything|all the ingredients|the ingredients|what we need)(?: we need)? (?:for|to make) (.+?)(?:\\s+(?:to|on) (?:the |my |our )?(?:${LIST_WORDS}))?$`, "i"),
+    read: (match) => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: item(match[1]!) }, confidence: 0.9 }),
+  },
+
+  // --- Reminders (Wave 4 §10) ---------------------------------------------------
+  {
+    pattern: new RegExp(`^remind me (?:to|about|that) (.+?)(?:\\s+(${REMIND_WHEN}))?(?:\\s+at\\s+(${TIME_WORDS}))?$`, "i"),
+    read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[1]!, match[2], match[3]), confidence: 0.9 }),
+  },
+  {
+    pattern: new RegExp(`^remind me (${REMIND_WHEN})(?:\\s+at\\s+(${TIME_WORDS}))? (?:to|about|that) (.+)$`, "i"),
+    read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[3]!, match[1], match[2]), confidence: 0.9 }),
+  },
+
   // --- Lists: add something --------------------------------------------------
   {
     pattern: new RegExp(`^(?:add|put|get|buy|pick up|we need|need|i need|we're out of|we are out of|out of)\\s+(.+?)\\s+(?:to|on|in|onto|into|for)\\s+(?:the |my |our )?(?:${LIST_WORDS})(?: too| as well| also)?$`, "i"),
@@ -257,6 +307,16 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:we(?:'re| are) )?out of\s+(.+)$/i,
     read: (match) => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: item(match[1]!) }, confidence: 0.88 }),
+  },
+  {
+    // "Add milk and bananas" — no list named, so only plainly a thing or
+    // two: anything with a destination or a time in it is some other request.
+    pattern: /^add\s+(?:some |a |an |more )?(.+)$/i,
+    read: (match) => {
+      const what = item(match[1]!);
+      if (/\b(?:to|into|onto|on|in|for|as|at|by|reminder|appointment|event|meeting|note|calendar|tomorrow|today|tonight)\b/i.test(what) || what.split(" ").length > 8) return null;
+      return { action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: what }, confidence: 0.86 };
+    },
   },
   {
     pattern: /^(?:we need|i need|need|buy|get)\s+(?:some |a |an |more )?(.+)$/i,
@@ -555,7 +615,7 @@ export function resolveRuleIntent(
     const read = rule.read(match, text);
     if (!read) continue;
     return {
-      ...read,
+      ...withItems(read),
       actorMemberId: context.actorMemberId,
       channel: context.channel,
       utterance,
@@ -581,6 +641,7 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "ask_status",
   "check_agents",
   "add_to_list",
+  "set_reminder",
   "record_absence",
   "make_payment",
   "order_items",

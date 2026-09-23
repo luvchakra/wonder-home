@@ -2,18 +2,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
-import { createConsumable, listConsumables } from "../commerce/repository";
+import { createConsumable, listConsumables, retireConsumable } from "../commerce/repository";
 import { buildContextItems, personItems, type PersonLike } from "../context/builders";
 import { matchIncoming } from "../context/matching";
 import { resolveEntity, resolvePerson } from "../context/resolution";
 import { createAppointment, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
+import { attachIngredients, createMeal } from "../meals/repository";
+import type { MealSlot } from "../meals/meals";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
+import { joinWords } from "./proposal";
 import { linkTo } from "./reply-format";
-import { resolveDay } from "./temporal";
+import { resolveDay, resolveTemporal } from "./temporal";
 
 /**
  * Carrying an understood request out (product-direction update §7: the
@@ -43,6 +46,13 @@ export type ExecutionContext = {
   now?: Date;
   /** Only `check_agents` needs these — who is asking, for the tool gate a run checks per step. */
   actor?: RunActor;
+  /**
+   * The service-role client, for the one write a member cannot make with
+   * their own: a reminder to themself (`notifications` has no INSERT policy
+   * for anyone, so nothing can manufacture an interruption). Used only for
+   * a row whose recipient is the speaker.
+   */
+  admin?: SupabaseClient;
 };
 
 export type ExecutionResult =
@@ -53,7 +63,11 @@ export type ExecutionResult =
 export function canExecute(intent: HouseholdIntent): boolean {
   switch (intent.action) {
     case "add_to_list":
-      return typeof intent.parameters.item === "string" && intent.parameters.item.trim().length > 0;
+      return itemsOf(intent).length > 0;
+    case "plan_meal":
+      return typeof (intent.parameters.mealName ?? intent.parameters.what) === "string" && Boolean(intent.parameters.windowResolved ?? intent.parameters.whenResolved);
+    case "set_reminder":
+      return typeof intent.parameters.what === "string" && intent.parameters.what.trim().length > 0 && typeof intent.parameters.when === "string";
     case "record_absence":
       return intent.target.kind === "member" && Boolean(intent.target.reference);
     case "set_preference":
@@ -100,10 +114,41 @@ export function notYetDoable(action: HouseholdIntent["action"]): string {
 }
 
 export async function executeIntent(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  // A correction of something already done (Wave 4 §9): undo the earlier
+  // write through its own domain service first, then make the corrected
+  // one — never a silent overwrite. If the earlier write cannot be undone,
+  // nothing changes at all, and the reply says so.
+  const corrects = readCorrects(intent.parameters.corrects);
+  if (corrects) {
+    let undone: { ok: true; text: string; keep?: string[] } | { ok: false; reason: string };
+    try {
+      undone = await undoForCorrection(corrects, intent, context);
+    } catch {
+      undone = { ok: false, reason: "I could not undo the earlier change, so I left everything as it was." };
+    }
+    if (!undone.ok) return { ok: false, reason: undone.reason };
+    // What the correction left as it was ("bananas" in "not milk, almond
+    // milk") stays on the list untouched, and is not added a second time.
+    const kept = new Set((undone.keep ?? []).map((name) => name.toLowerCase()));
+    const rest = kept.size > 0 ? itemsOf(intent).filter((name) => !kept.has(name.toLowerCase())) : null;
+    const next = rest ? await runIntent({ ...intent, parameters: { ...intent.parameters, items: rest, item: undefined } }, context) : await runIntent(intent, context);
+    if (!next.ok) {
+      return { ok: false, reason: `${undone.text ? `${undone.text} ` : ""}But the corrected change did not go through: ${next.reason}` };
+    }
+    return { ok: true, text: `${undone.text ? `${undone.text} ` : ""}${next.text}`, result: { ...next.result, corrected: corrects.actionId } };
+  }
+  return runIntent(intent, context);
+}
+
+async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
   try {
     switch (intent.action) {
       case "add_to_list":
         return await addToGroceries(intent, context);
+      case "plan_meal":
+        return await planMeal(intent, context);
+      case "set_reminder":
+        return await setReminder(intent, context);
       case "record_absence":
         return await recordAbsence(intent, context);
       case "check_agents":
@@ -134,6 +179,60 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
   }
 }
 
+type CorrectsRecordShape = { actionId: string; actionType: string; result: Record<string, unknown> };
+
+/** The server-built record of what a corrective intent replaces — never read from a model. */
+function readCorrects(value: unknown): CorrectsRecordShape | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record.actionId !== "string" || typeof record.actionType !== "string") return null;
+  return { actionId: record.actionId, actionType: record.actionType, result: (record.result as Record<string, unknown> | null) ?? {} };
+}
+
+/**
+ * Undoes what an earlier HomeTalk action actually wrote, through the same
+ * domain service a person's own undo would use. Only the kinds of write
+ * that have such a service; anything else is said so and left alone.
+ */
+async function undoForCorrection(
+  corrects: CorrectsRecordShape,
+  intent: HouseholdIntent,
+  context: ExecutionContext,
+): Promise<{ ok: true; text: string; keep?: string[] } | { ok: false; reason: string }> {
+  const result = corrects.result;
+  switch (corrects.actionType) {
+    case "add_to_list": {
+      // Only what HomeTalk itself added comes off; what was already on the
+      // list before it touched it was never ours to take back — and what the
+      // corrected request still names stays exactly where it is.
+      const all = addedItems(result);
+      if (all === null) return { ok: false, reason: "I could not find what I added earlier, so I left the list as it was." };
+      const wanted = new Set(itemsOf(intent).map((name) => name.toLowerCase()));
+      const earlier = Array.isArray(result.items) ? (result.items as { name?: unknown }[]).map((entry) => String(entry.name ?? "")) : typeof result.name === "string" ? [result.name] : [];
+      const keep = earlier.filter((name) => wanted.has(name.toLowerCase()));
+      const added = all.filter((entry) => !wanted.has(entry.name.toLowerCase()));
+      if (added.length === 0) return { ok: true, text: "", keep };
+      for (const entry of added) await retireConsumable(context.supabase, { id: entry.consumableId, householdId: context.householdId });
+      return { ok: true, text: `Took ${joinWords(added.map((entry) => `**${entry.name}**`))} off the ${linkTo("/groceries", "groceries")}.`, keep };
+    }
+    case "set_reminder": {
+      if (typeof result.notificationId !== "string") return { ok: false, reason: "I could not find the reminder I set earlier, so I left it as it was." };
+      const { error } = await context.supabase.from("notifications").update({ status: "expired" }).eq("id", result.notificationId).eq("household_id", context.householdId);
+      if (error) return { ok: false, reason: "I could not cancel the earlier reminder, so I left everything as it was." };
+      return { ok: true, text: "Cancelled the earlier reminder." };
+    }
+    case "record_absence": {
+      if (typeof result.memberId !== "string" || typeof result.onDate !== "string") {
+        return { ok: false, reason: "I could not find the absence I noted earlier, so I left it as it was." };
+      }
+      await recordAvailabilityException(context.supabase, { householdId: context.householdId, memberId: result.memberId, onDate: result.onDate, available: true, reason: null });
+      return { ok: true, text: `**${String(result.memberName ?? "They")}** is no longer marked away on ${describeDate(result.onDate, "", context.timezone)}.` };
+    }
+    default:
+      return { ok: false, reason: "I cannot change that one from here yet, so I left it as it was. You can change it on its own screen." };
+  }
+}
+
 async function runAgentCheck(context: ExecutionContext): Promise<ExecutionResult> {
   if (!context.actor) return { ok: false, reason: "I could not tell who was asking, so I did not run a check." };
 
@@ -141,45 +240,203 @@ async function runAgentCheck(context: ExecutionContext): Promise<ExecutionResult
   return { ok: true, text: summary.headline, result: { runId: summary.runId, executed: summary.executed, awaitingApproval: summary.awaitingApproval, refused: summary.refused } };
 }
 
+/** The things an add names — one item or several — in the household's words. */
+function itemsOf(intent: HouseholdIntent): string[] {
+  const raw = Array.isArray(intent.parameters.items)
+    ? intent.parameters.items
+    : typeof intent.parameters.items === "string"
+      ? [intent.parameters.items]
+      : typeof intent.parameters.item === "string"
+        ? [intent.parameters.item]
+        : [];
+  const seen = new Set<string>();
+  return raw
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0 && !seen.has(value.toLowerCase()) && (seen.add(value.toLowerCase()), true));
+}
+
+type AddedItem = { name: string; consumableId: string | null; alreadyTracked: boolean };
+
+/** What an earlier add actually wrote, newest shape or the single-item one; null when unreadable. */
+function addedItems(result: Record<string, unknown>): { name: string; consumableId: string }[] | null {
+  const entries: AddedItem[] = Array.isArray(result.items)
+    ? (result.items as AddedItem[])
+    : typeof result.name === "string"
+      ? [{ name: result.name, consumableId: typeof result.consumableId === "string" ? result.consumableId : null, alreadyTracked: result.alreadyTracked === true }]
+      : [];
+  if (entries.length === 0) return null;
+  const ours = entries.filter((entry) => !entry.alreadyTracked);
+  if (ours.some((entry) => typeof entry.consumableId !== "string")) return null;
+  return ours.map((entry) => ({ name: entry.name, consumableId: entry.consumableId! }));
+}
+
+/**
+ * "Add milk and bananas" — each item matched, added or found already there
+ * on its own, so one already on the list never hides the other, and the
+ * reply says exactly which was which.
+ */
 async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
-  const raw = String(intent.parameters.item ?? "").trim();
-  const name = raw.charAt(0).toUpperCase() + raw.slice(1);
-  if (!name) return { ok: false, reason: "What should I add?" };
+  const names = itemsOf(intent).map((raw) => raw.charAt(0).toUpperCase() + raw.slice(1));
+  if (names.length === 0) return { ok: false, reason: "What should I add?" };
 
   // "Milk" when "Amul milk" is already tracked is the same milk, not a new
   // item — checked by the context engine's matcher, the same one HomeSend
   // uses, so the two can never disagree about what is already on the list.
   const tracked = await listConsumables(context.supabase, context.householdId).catch(() => []);
   const known = buildContextItems({ consumables: tracked }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now: context.now ?? new Date(), viewerMemberId: context.actorMemberId });
-  const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
-  if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate")) {
-    const title = String(match.item.attributes.title ?? name);
-    return {
-      ok: true,
-      text: `**${title}** is already on the ${linkTo("/groceries", "groceries")}, so there was nothing to add.`,
-      result: { name: title, alreadyTracked: true, consumableId: match.item.entityId },
-    };
+
+  const entries: AddedItem[] = [];
+  for (const name of names) {
+    const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
+    if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate")) {
+      entries.push({ name: String(match.item.attributes.title ?? name), consumableId: match.item.entityId, alreadyTracked: true });
+      continue;
+    }
+    try {
+      const { id } = await createConsumable(context.supabase, { householdId: context.householdId, name, category: "grocery", unit: "item", typicalQuantity: 1 });
+      entries.push({ name, consumableId: id, alreadyTracked: false });
+    } catch (thrown) {
+      if (thrown instanceof ApiError && thrown.code === "conflict") {
+        entries.push({ name, consumableId: null, alreadyTracked: true });
+        continue;
+      }
+      // Something already added stays added and is said so; the rest is not claimed.
+      if (entries.some((entry) => !entry.alreadyTracked)) {
+        return { ok: true, text: `${describeAdds(entries, intent)} I could not add ${joinWords(names.slice(entries.length).map((rest) => `**${rest}**`))} just now.`, result: addResult(entries) };
+      }
+      throw thrown;
+    }
   }
 
-  try {
-    const { id } = await createConsumable(context.supabase, {
-      householdId: context.householdId,
-      name,
-      category: "grocery",
-      unit: "item",
-      typicalQuantity: 1,
-    });
-    return {
-      ok: true,
-      text: `Added **${name}** to the ${linkTo("/groceries", "groceries")}. Once I see it bought a few times I will work out how often you need it.`,
-      result: { consumableId: id, name },
-    };
-  } catch (thrown) {
-    if (thrown instanceof ApiError && thrown.code === "conflict") {
-      return { ok: true, text: `**${name}** is already on the ${linkTo("/groceries", "groceries")}, so there was nothing to add.`, result: { name, alreadyTracked: true } };
-    }
-    throw thrown;
+  return { ok: true, text: describeAdds(entries, intent), result: addResult(entries) };
+}
+
+function addResult(entries: AddedItem[]): Record<string, unknown> {
+  const single = entries.length === 1 ? entries[0]! : null;
+  return {
+    items: entries,
+    ...(single ? { name: single.name, ...(single.consumableId ? { consumableId: single.consumableId } : {}) } : {}),
+    // Nothing written at all is the one honest "nothing to change" (§12).
+    alreadyTracked: entries.every((entry) => entry.alreadyTracked),
+  };
+}
+
+function describeAdds(entries: AddedItem[], intent: HouseholdIntent): string {
+  const groceries = linkTo("/groceries", "groceries");
+  const added = entries.filter((entry) => !entry.alreadyTracked).map((entry) => `**${entry.name}**`);
+  const there = entries.filter((entry) => entry.alreadyTracked).map((entry) => `**${entry.name}**`);
+  const forMeal = typeof intent.parameters.forMeal === "string" ? intent.parameters.forMeal : null;
+  // WonderHome sees the list, not the cupboard — "make sure we have
+  // everything" is answered from what it can actually see, and says so.
+  const lead = forMeal ? `I cannot see what is in the kitchen, so I checked what ${forMeal.toLowerCase()} needs against the ${groceries}: ` : "";
+  if (added.length === 0) {
+    return `${lead}${forMeal ? `${joinWords(there)} ${there.length === 1 ? "is" : "are"} already on it, so there was nothing to add.` : `${joinWords(there)} ${there.length === 1 ? "is" : "are"} already on the ${groceries}, so there was nothing to add.`}`;
   }
+  const addedLine = forMeal ? `added ${joinWords(added)}` : `Added ${joinWords(added)} to the ${groceries}`;
+  const thereLine = there.length > 0 ? `; ${joinWords(there)} ${there.length === 1 ? "was" : "were"} already there` : "";
+  const learn = !forMeal && added.length === 1 && there.length === 0 ? " Once I see it bought a few times I will work out how often you need it." : "";
+  return `${lead}${addedLine}${thereLine}.${learn}`;
+}
+
+/** "tomorrow (Thu 24 Sep)" reads as it is; a bare date reads "on Fri 25 Sep". */
+function onDay(label: string): string {
+  return /^(?:today|tonight|tomorrow|yesterday|this|next|day after)\b/i.test(label) ? label : `on ${label}`;
+}
+
+/** When a meal of the day is usually ready, local time: the family's "by when". */
+const READY_BY: Record<MealSlot, { hour: number; minute: number }> = {
+  breakfast: { hour: 8, minute: 0 },
+  lunch: { hour: 13, minute: 0 },
+  snack: { hour: 17, minute: 0 },
+  dinner: { hour: 20, minute: 0 },
+};
+
+/**
+ * "Plan pasta for tonight" — a real meal on the household's plan, through
+ * the same `createMeal` the Meals screen uses, with its recipe's
+ * ingredients copied on where the household has a recipe for it.
+ */
+async function planMeal(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const day = (intent.parameters.windowResolved ?? intent.parameters.whenResolved) as { date?: string; label?: string } | undefined;
+  if (!day?.date) return { ok: false, reason: "Which day should I plan it for?" };
+  const slot = (["breakfast", "lunch", "snack", "dinner"].includes(String(intent.parameters.slot)) ? intent.parameters.slot : "dinner") as MealSlot;
+  const raw = String(intent.parameters.mealName ?? intent.parameters.what ?? "").trim();
+  const name = raw.charAt(0).toUpperCase() + raw.slice(1);
+  if (!name) return { ok: false, reason: "What should I plan?" };
+  const recipeId = typeof intent.parameters.recipeId === "string" ? intent.parameters.recipeId : null;
+  const ready = READY_BY[slot];
+
+  const { id } = await createMeal(context.supabase, {
+    householdId: context.householdId,
+    name,
+    slot,
+    onDate: day.date,
+    readyBy: zonedTimeToUtcIso(day.date, ready.hour, ready.minute, context.timezone),
+    recipeId,
+  });
+  const attached = recipeId ? (await attachIngredients(context.supabase, context.householdId, id, recipeId)).attached : 0;
+
+  const when = day.label ? day.label.replace(/^on /, "") : describeDate(day.date, "", context.timezone);
+  const meals = linkTo("/meals", "Meals");
+  const ingredients = recipeId
+    ? attached > 0
+      ? ` Its recipe's ${attached} ingredient${attached === 1 ? " is" : "s are"} on the meal, so I can check them against the list.`
+      : " Its recipe has no ingredients listed yet."
+    : ` There is no recipe for it on record, so I do not know what it needs — add one under ${meals} and I can check next time.`;
+  return {
+    ok: true,
+    text: `Planned **${name}** for ${slot} ${/^(?:today|tonight|tomorrow|this|next)\b/.test(when) ? when : `on ${when}`}.${ingredients} See ${meals}.`,
+    result: { mealId: id, name, slot, onDate: day.date, recipeId, ingredients: attached },
+  };
+}
+
+/**
+ * "Remind me to buy them tomorrow" — a real reminder, to the speaker only:
+ * a notification addressed to them and held until its time, when it shows
+ * under Notifications. Nobody else is told anything.
+ */
+async function setReminder(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  if (!context.admin) return { ok: false, reason: "I could not set a reminder just now." };
+  const now = context.now ?? new Date();
+  const when = String(intent.parameters.when ?? "");
+  const resolved = resolveTemporal(when, { timezone: context.timezone, now });
+  if (!resolved || resolved.precision === "range") return { ok: false, reason: `When should I remind you? Say "tomorrow", "Friday evening" or a date.` };
+
+  const said = typeof intent.parameters.time === "string" ? intent.parameters.time.trim().toLowerCase() : null;
+  const time = said === "noon" || said === "midday" ? { hour: 12, minute: 0 } : said ? parseTimeOfDay(said) : null;
+  if (said && !time) return { ok: false, reason: `What time should I remind you — for example "9am" or "6:30pm"?` };
+  // A day alone means the morning; a part of the day, its start.
+  const at = time ?? (resolved.window ? { hour: Number(resolved.window.from.slice(0, 2)), minute: Number(resolved.window.from.slice(3, 5)) } : { hour: 9, minute: 0 });
+  const dueIso = zonedTimeToUtcIso(resolved.date, at.hour, at.minute, context.timezone);
+  const due = new Date(Math.max(Date.parse(dueIso), now.getTime()));
+
+  const what = String(intent.parameters.what ?? "").trim().replace(/[.!]+$/, "");
+  const title = `Reminder: ${what.charAt(0).toUpperCase()}${what.slice(1)}`.slice(0, 160);
+  const { data, error } = await context.admin
+    .from("notifications")
+    .insert({
+      household_id: context.householdId,
+      recipient_member_id: context.actorMemberId,
+      type: "action",
+      priority: "normal",
+      thread_key: `reminder:${crypto.randomUUID()}`,
+      title,
+      body: `You asked HomeTalk to remind you ${onDay(resolved.label.replace(/\s*\(.*\)$/, ""))}.`.slice(0, 500),
+      action: null,
+      decision_factors: { source: "home_talk", requestedBy: context.actorMemberId, phrase: when },
+      scheduled_for: due.toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, reason: "I could not set that reminder just now, and nothing was saved." };
+
+  const whenText = `${onDay(resolved.label)} at ${formatHourMinute(at.hour, at.minute)}`;
+  return {
+    ok: true,
+    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.`,
+    result: { notificationId: (data as { id: string }).id, what, remindAt: due.toISOString() },
+  };
 }
 
 async function recordAbsence(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {

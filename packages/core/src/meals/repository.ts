@@ -451,6 +451,33 @@ export async function listRecipeChoices(
   );
 }
 
+/** The household's recipes by name — what "plan pasta" can mean (Wave 4 §11). */
+export async function listRecipeNames(supabase: SupabaseClient, householdId: string): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase.from("recipes").select("id, name").eq("household_id", householdId);
+  if (error) throw new Error(`listRecipeNames failed: ${error.code ?? "unknown"}`);
+  return ((data as Row[] | null) ?? []).map((row) => ({ id: row.id as string, name: row.name as string }));
+}
+
+/**
+ * What a planned meal needs — or, before it is planned, its recipe — by
+ * ingredient name: what "make sure we have everything" is checked against.
+ */
+export async function ingredientNames(
+  supabase: SupabaseClient,
+  householdId: string,
+  of: { mealId?: string | null; recipeId?: string | null },
+): Promise<string[]> {
+  const query = of.mealId
+    ? supabase.from("meal_ingredient_needs").select("name").eq("household_id", householdId).eq("meal_id", of.mealId)
+    : of.recipeId
+      ? supabase.from("recipe_ingredients").select("name").eq("household_id", householdId).eq("recipe_id", of.recipeId)
+      : null;
+  if (!query) return [];
+  const { data, error } = await query;
+  if (error) throw new Error(`ingredientNames failed: ${error.code ?? "unknown"}`);
+  return ((data as Row[] | null) ?? []).map((row) => row.name as string);
+}
+
 export type MealSuggestion = {
   choice: PlanChoice;
   /** Essential ingredients of the chosen recipe that are running low — surfaced immediately, not buried in a shopping list. */

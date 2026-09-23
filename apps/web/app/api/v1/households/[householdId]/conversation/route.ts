@@ -12,10 +12,12 @@ import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
-import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
+import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
-import { groundIntent } from "@wonderhome/core/conversation/grounding";
-import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
+import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
+import { heldBecause, leansOnEarlier, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
+import { groundIntent, type GroundingEnv } from "@wonderhome/core/conversation/grounding";
+import { classifyShortReply, type HouseholdIntent } from "@wonderhome/core/conversation/intent";
 import { attributeMemory } from "@wonderhome/core/conversation/memory";
 import {
   beginEditMessage,
@@ -25,17 +27,20 @@ import {
   listMessages,
   loadAction,
   markActionResult,
+  openProposals,
   openSession,
   pendingAction,
   pendingClarification,
+  recentExecutedActions,
   recentFocus,
   recentTurns,
   recordMessage,
   recordProposal,
   remember,
+  unchangedResult,
   type ConversationAction,
 } from "@wonderhome/core/conversation/repository";
-import { focusFromProposal, focusFromResult, homeSendFocus, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
+import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal";
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
@@ -43,6 +48,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
+import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
 import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
@@ -91,34 +97,18 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** Feature keys a consequential intent needs, beyond the conversation itself. */
 const FEATURE_FOR_ACTION: Partial<
-  Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking">
+  Record<HouseholdIntent["action"], "finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking" | "meals.planning">
 > = {
   make_payment: "finance.bills",
   order_items: "commerce.orders",
   plan_event: "family.events",
+  plan_meal: "meals.planning",
   check_agents: "ai.agent_runs",
   record_health_appointment: "health.tracking",
   log_health_issue: "health.tracking",
   resolve_health_issue: "health.tracking",
   log_vital: "health.tracking",
   set_fitness_goal: "health.tracking",
-};
-
-/** The target kind each recorded action type implies, for carrying an approved proposal out. */
-const TARGET_KIND_FOR_ACTION: Record<string, IntentTarget["kind"]> = {
-  record_absence: "member",
-  assign_responsibility: "member",
-  add_to_list: "list",
-  order_items: "list",
-  make_payment: "bill",
-  plan_event: "event",
-  adjust_schedule: "event",
-  set_preference: "outcome",
-  record_health_appointment: "member",
-  log_health_issue: "member",
-  resolve_health_issue: "member",
-  log_vital: "member",
-  set_fitness_goal: "member",
 };
 
 export async function GET(request: Request, { params }: Params) {
@@ -254,9 +244,48 @@ export async function POST(request: Request, { params }: Params) {
           agenda: { needsYou: agenda.needsYou, handled: agenda.handled, checked: agenda.checked, unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label) },
         }),
       }));
-    const mayBeQuestion = routing.compose !== undefined || quick.action === "ask_status" || quick.action === "unknown";
+    // A request with several parts (Wave 4 §10) is carried out part by part
+    // below; a correction is always one request about one earlier one.
+    const parts = readCorrection(body.utterance) ? [body.utterance] : splitRequest(body.utterance);
+    const mayBeQuestion = parts.length === 1 && (routing.compose !== undefined || quick.action === "ask_status" || quick.action === "unknown");
     const brainRead = mayBeQuestion ? readBrain() : null;
     brainRead?.catch(() => undefined);
+
+    // Corrections (Wave 4 §9): "No, I meant Manan", "actually make that
+    // Friday", "not milk, almond milk" — read against what this conversation
+    // was just doing: the proposal still waiting for a yes and what HomeTalk
+    // did here in the last half hour, newest first. The first of those the
+    // correction actually fits, and changes, is the one it corrects ("not
+    // milk" is about the add, not the reminder made after it). Never against
+    // anything the household did not just ask for. What comes out is an
+    // ordinary intent: grounded, gated and executed like any other, and an
+    // executed original is undone through its own service.
+    const correction = readCorrection(body.utterance);
+    let correcting: CorrectableAction | null = null;
+    let corrected: HouseholdIntent | null = null;
+    if (correction) {
+      // A proposal past its time limit is not what anyone is talking about
+      // any more — the same window a "yes" has.
+      const live = pending && pending.createdAt.getTime() > Date.now() - PROPOSAL_TTL_MINUTES * 60_000 ? pending : null;
+      const stored = live ? await loadAction(admin, { householdId, actionId: live.id }).catch(() => null) : null;
+      const done = await recentExecutedActions(admin, { sessionId, since: new Date(Date.now() - 30 * 60_000) }).catch(() => []);
+      const subjects: (CorrectableAction & { at: number })[] = [
+        ...(stored && stored.status === "proposed" && live
+          ? [{ actionId: stored.id, actionType: stored.actionType, outcomeKey: stored.outcomeKey, parameters: stored.parameters, status: "proposed" as const, result: null, at: live.createdAt.getTime() }]
+          : []),
+        ...done.map((entry) => ({ actionId: entry.id, actionType: entry.actionType, outcomeKey: entry.outcomeKey, parameters: entry.parameters, status: "executed" as const, result: entry.result, at: entry.at.getTime() })),
+      ].sort((a, b) => b.at - a.at);
+      for (const subject of subjects) {
+        const next = applyCorrection(correction, subject, { actorMemberId: membership.memberId, channel: body.channel, utterance: body.utterance, timezone: membership.household.timezone, now: new Date() });
+        // A correction that would change nothing about a request ("make
+        // that Friday" to something already on Friday) is not about it.
+        if (next && describeCorrection(subject, next) !== null) {
+          correcting = subject;
+          corrected = next;
+          break;
+        }
+      }
+    }
 
     // Grounding (Wave 4): the household's people for "Asmi", "Dad", "the
     // older one"; and — only if a turn says "that" or "him" — what the
@@ -266,27 +295,18 @@ export async function POST(request: Request, { params }: Params) {
     const references = () =>
       (referenceRead ??= loadReferences({ admin, supabase, householdId, sessionId, pending, clarifying, now: turnStartedAt }));
     const peopleItems = personItems(people, { householdId, now: turnStartedAt });
-
-    const result = await converse({
-      utterance: body.utterance,
-      channel: body.channel,
-      transcriptConfidence: body.transcriptConfidence,
-      actor,
-      pending: pending ? pendingFrom(pending) : null,
-      autonomyFor,
-      entitledFor: (intent) => {
-        const needed = FEATURE_FOR_ACTION[intent.action];
-        return needed ? entitled[needed] : true;
-      },
-      executable: canExecute,
-      sessionId,
-      understand: plainQuestion ? undefined : routing.understand,
-      history: routing.history,
-      clarifying,
-      ground: (intent) =>
-        groundIntent(intent, { people: peopleItems, viewerMemberId: membership.memberId, timezone: membership.household.timezone, now: turnStartedAt, references }),
+    // Recipes and what a meal needs, read only when a plan might be a meal
+    // or "make sure we have everything" needs the list (Wave 4 §11).
+    let recipeRead: Promise<{ id: string; name: string }[]> | null = null;
+    const groundingEnv = (read: () => Promise<ReferenceState>): GroundingEnv => ({
+      people: peopleItems,
+      viewerMemberId: membership.memberId,
+      timezone: membership.household.timezone,
+      now: turnStartedAt,
+      references: read,
+      recipes: () => (recipeRead ??= listRecipeNames(supabase, householdId).catch(() => [])),
+      ingredients: (of) => ingredientNames(supabase, householdId, of).catch(() => []),
     });
-    const understoodAt = Date.now();
 
     const execution: ExecutionContext = {
       supabase,
@@ -295,7 +315,180 @@ export async function POST(request: Request, { params }: Params) {
       members: people,
       timezone: membership.household.timezone,
       actor: { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType },
+      admin,
     };
+
+    // Several proposals waiting at once — from a request with several parts
+    // — and a bare "yes" or "no": which one is not ours to guess. "Yes to
+    // both" settles them all, each through its own governed write.
+    const shortReply = classifyShortReply(body.utterance);
+    const allOfThem = body.utterance.trim().split(/\s+/).length <= 5 && /\b(?:both|all(?: of them)?|everything)\b/i.test(body.utterance) && /^(?:yes|yeah|yep|ok(?:ay)?|sure|go ahead|do|no|nope|cancel|both|all)\b/i.test(body.utterance.trim());
+    if (!corrected && pending && (shortReply !== "unclear" || allOfThem)) {
+      const open = await openProposals(admin, sessionId, new Date(Date.now() - PROPOSAL_TTL_MINUTES * 60_000)).catch(() => []);
+      if (open.length > 1) {
+        const memberMessageId = await memberMessageWrite;
+        await metering;
+        if (!allOfThem) {
+          const list = open.map((entry) => `"${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}"`);
+          const text = `${open.length === 2 ? "Two" : String(open.length)} things are waiting for your answer: ${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}. Use the buttons on the one you mean, or say "${shortReply === "decline" ? "no" : "yes"} to ${open.length === 2 ? "both" : "all"}".`;
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { proposal: "clarify", intent: "unknown", mode: "clarify", provider: routing.code } });
+          return { sessionId, memberMessageId, reply: { id, text, action: null, preview: null, proposal: "clarify", mode: "clarify" }, privacy: { provider: routing.code, disclosure: routing.disclosure } };
+        }
+        const approve = !/^(?:no|nope|cancel)\b/i.test(body.utterance.trim());
+        const replies = [];
+        for (const entry of [...open].reverse()) {
+          const decided = await decideAction(admin, { householdId, actionId: entry.id, memberId: membership.memberId, decision: approve ? "approved" : "rejected" });
+          if (!decided) continue;
+          const settled = approve ? await carryOutApproved({ admin, supabase, householdId, membership, action: decided, people }) : { text: `Left alone: ${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}.`, action: decided, focus: [] as FocusEntity[] };
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: settled.text, metadata: { decidedActionId: decided.id, ...(settled.focus.length > 0 ? { focus: settled.focus } : {}) } });
+          replies.push({ id, text: settled.text, action: settled.action, preview: null, proposal: approve ? "approve" : "reject", mode: modeFor(approve ? "approve" : "reject", settled.action.status === "executed") });
+        }
+        if (replies.length > 0) {
+          return { sessionId, memberMessageId, reply: replies[replies.length - 1], replies, privacy: { provider: routing.code, disclosure: routing.disclosure } };
+        }
+      }
+    }
+
+    // A request with several parts (Wave 4 §10): each part understood,
+    // grounded, gated and carried out on its own, and written as its own
+    // reply with its own preview. A part that leans on an earlier one
+    // ("buy them") reads only what the earlier parts actually wrote, and is
+    // held when any of them did not happen — a failed or unapproved action
+    // is never the premise for the next.
+    if (parts.length > 1) {
+      const memberMessageId = await memberMessageWrite;
+      await metering;
+      const replies: { id: string; text: string; action: ConversationAction | null; preview: ReturnType<typeof previewOf>; proposal: string; mode: BrainMode }[] = [];
+      const earlier: { part: string; outcome: PartOutcome }[] = [];
+      const written: FocusEntity[] = [];
+
+      for (const [index, part] of parts.entries()) {
+        const held = heldBecause(part, earlier);
+        if (held) {
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: held, metadata: { part, outcome: "held", mode: "answer", provider: routing.code } });
+          replies.push({ id, text: held, action: null, preview: null, proposal: "held", mode: "answer" });
+          earlier.push({ part, outcome: "held" });
+          continue;
+        }
+
+        // The current request comes first (§8): "them" is what the parts
+        // before it wrote, not something older in the conversation.
+        const read = leansOnEarlier(part) && written.length > 0 ? async () => ({ ...NO_REFERENCES, conversation: [...written] }) : references;
+        const turn = await converse({
+          utterance: part,
+          channel: body.channel,
+          transcriptConfidence: body.transcriptConfidence,
+          actor,
+          pending: null,
+          autonomyFor,
+          entitledFor: (intent) => {
+            const needed = FEATURE_FOR_ACTION[intent.action];
+            return needed ? entitled[needed] : true;
+          },
+          executable: canExecute,
+          sessionId,
+          understand: routing.understandPart?.(part),
+          history: routing.history,
+          clarifying: null,
+          ground: (intent) => groundIntent(intent, groundingEnv(read)),
+        });
+
+        if (turn.kind !== "reply") {
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: turn.text, metadata: { part, kind: turn.kind, mode: "clarify", provider: routing.code } });
+          replies.push({ id, text: turn.text, action: null, preview: null, proposal: turn.kind, mode: "clarify" });
+          earlier.push({ part, outcome: "asked" });
+          continue;
+        }
+
+        let text = turn.text;
+        let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
+        let partOutcome: PartOutcome =
+          turn.proposal.kind === "clarify" ? "asked" : turn.proposal.kind === "answer" ? "answered" : turn.proposal.kind === "executed" ? "done" : turn.proposal.kind === "refused" ? "failed" : "waiting";
+        const focus: FocusEntity[] = [...(turn.focus ?? [])];
+        if (turn.record) {
+          focus.push(...focusFromProposal({ actionType: turn.intent.action, parameters: turn.intent.parameters, targetReference: turn.intent.target.reference ?? null, at: new Date().toISOString() }));
+        }
+        if (turn.memory) await remember(admin, householdId, attributeMemory(turn.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
+        if (turn.proposal.kind === "executed") {
+          const done = await executeIntent(turn.intent, execution);
+          text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+          outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
+          partOutcome = done.ok ? "done" : "failed";
+          if (done.ok) {
+            const wrote = focusFromResult(turn.intent.action, done.result, new Date().toISOString());
+            focus.push(...wrote);
+            written.push(...wrote);
+            forgetHouseholdContext(householdId);
+          }
+        }
+
+        // A question in the middle of a request is answered before anything
+        // after it is done — and the question stays the last thing said, so
+        // the next turn is read as its answer.
+        const rest = parts.slice(index + 1);
+        if (partOutcome === "asked" && rest.length > 0) {
+          text = `${text}\n\nI have not done ${rest.map((entry) => `"${entry}"`).join(" or ")} yet — ask me again once this is settled.`;
+        }
+
+        const mode = modeFor(turn.proposal.kind, outcome ? outcome.status === "executed" : null);
+        const id = await recordMessage(admin, {
+          householdId,
+          sessionId,
+          role: "assistant",
+          content: text,
+          metadata: {
+            part,
+            proposal: turn.proposal.kind,
+            intent: turn.intent.action,
+            understanding: turn.intent.understanding?.source ?? null,
+            ...(turn.clarification ? { clarify: turn.clarification } : {}),
+            mode,
+            ...(focus.length > 0 ? { focus: focus.slice(0, 8) } : {}),
+            provider: routing.code,
+            providerItemsSent: routing.itemsSent,
+          },
+        });
+        let action: ConversationAction | null = null;
+        if (turn.record) {
+          action = await recordProposal(admin, { householdId, sessionId, messageId: id, intent: turn.intent, proposal: turn.proposal });
+          if (outcome) {
+            await markActionResult(admin, { actionId: action.id, ...outcome });
+            action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
+          }
+        }
+        replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode });
+        earlier.push({ part, outcome: partOutcome });
+        if (partOutcome === "asked") break;
+      }
+
+      return {
+        sessionId,
+        memberMessageId,
+        reply: replies[replies.length - 1],
+        replies,
+        privacy: { provider: routing.code, disclosure: routing.disclosure },
+      };
+    }
+
+    const result = await converse({
+      utterance: body.utterance,
+      channel: body.channel,
+      transcriptConfidence: body.transcriptConfidence,
+      actor,
+      pending: pending && !corrected ? pendingFrom(pending) : null,
+      autonomyFor,
+      entitledFor: (intent) => {
+        const needed = FEATURE_FOR_ACTION[intent.action];
+        return needed ? entitled[needed] : true;
+      },
+      executable: canExecute,
+      sessionId,
+      understand: corrected ? () => corrected : plainQuestion ? undefined : routing.understand,
+      history: routing.history,
+      clarifying: corrected ? null : clarifying,
+      ground: (intent) => groundIntent(intent, groundingEnv(references)),
+    });
+    const understoodAt = Date.now();
 
     // What the assistant says: the engine's line, unless something real
     // happened this turn — a question answered from the household's own
@@ -305,6 +498,13 @@ export async function POST(request: Request, { params }: Params) {
     let brain: { source: HomeBrainAnswer["source"] | "evidence"; factsSent: number } = { source: "none", factsSent: 0 };
 
     let composedAt = understoodAt;
+
+    // A proposal the correction replaced is closed as rejected, so only the
+    // corrected one can be approved; the reply says what changed.
+    const correctionNote = corrected && correcting && result.kind === "reply" ? describeCorrection(correcting, result.intent) : null;
+    if (corrected && correcting?.status === "proposed" && result.kind === "reply" && result.proposal.kind !== "clarify") {
+      await decideAction(admin, { householdId, actionId: correcting.actionId, memberId: membership.memberId, decision: "rejected" }).catch(() => null);
+    }
 
     // What this turn was about, persisted on its reply for the next turn's
     // "that" (Wave 4 §8, §16): grounded mentions, what a proposal is about,
@@ -393,6 +593,10 @@ export async function POST(request: Request, { params }: Params) {
       forgetHouseholdContext(householdId);
     }
 
+    if (correctionNote && result.kind === "reply" && result.proposal.kind !== "clarify") {
+      text = `Changed: ${correctionNote}. ${text}`;
+    }
+
     const memberMessageId = await memberMessageWrite;
     await metering;
 
@@ -468,7 +672,7 @@ export async function POST(request: Request, { params }: Params) {
       action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal });
       if (outcome) {
         await markActionResult(admin, { actionId: action.id, ...outcome });
-        action = { ...action, status: outcome.status };
+        action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
       }
     }
 
@@ -529,6 +733,7 @@ async function carryOutApproved(input: {
     actorMemberId: input.membership.memberId,
     members: input.people,
     timezone: input.membership.household.timezone,
+    admin: input.admin,
   });
   const status = done.ok ? "executed" : "failed";
   await markActionResult(input.admin, { actionId: input.action.id, status, result: done.ok ? done.result : { reason: done.reason } });
@@ -536,7 +741,7 @@ async function carryOutApproved(input: {
 
   return {
     text: done.ok ? done.text : `I have your go-ahead, and it did not go through: ${done.reason}`,
-    action: { ...input.action, status },
+    action: { ...input.action, status, ...(done.ok && unchangedResult(done.result) ? { unchanged: true } : {}) },
     focus: done.ok ? focusFromResult(intent.action, done.result, new Date().toISOString()) : [],
   };
 }
@@ -732,6 +937,8 @@ async function decideProviderRouting(
   itemsSent: number;
   disclosure: string[];
   understand?: Understanding;
+  /** One part of a request with several (Wave 4 §10), minimised and sent on its own. */
+  understandPart?: (part: string) => Understanding;
   history?: ConversationTurn[];
   /** The household's data-use policy — the gate HomeBrain's facts pass through. */
   policy: DataUsePolicy;
@@ -796,10 +1003,9 @@ async function decideProviderRouting(
 
   // The model sees the pseudonymised text and answers about placeholders;
   // what it answers is mapped back to the household here, on this server.
-  const understand: Understanding = async (_utterance, context) => {
-    const intent = await provider.understand(sentUtterance, { ...context, history: sentHistory });
+  const toHousehold = (intent: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
     if (intent.target.kind === "member" && intent.target.reference) {
-      const mapped = unpseudonymise(intent.target.reference, minimised.pseudonyms, people);
+      const mapped = unpseudonymise(intent.target.reference, pseudonyms, people);
       return {
         ...intent,
         target: { kind: "member", reference: mapped.reference },
@@ -807,6 +1013,17 @@ async function decideProviderRouting(
       };
     }
     return intent;
+  };
+  const understand: Understanding = async (_utterance, context) =>
+    toHousehold(await provider.understand(sentUtterance, { ...context, history: sentHistory }), minimised.pseudonyms);
+  // One part of a longer request goes through the same minimisation on its
+  // own, so the model reads only that part — and a part the household's
+  // consent will not let leave is read by the rules instead.
+  const understandPart = (part: string): Understanding => async (_utterance, context) => {
+    const alone = minimiseContext([{ id: "utterance", contentClass: "general", need: "what was asked", text: part, relevant: true }], { policy, people });
+    const sent = alone.included.find((entry) => entry.id === "utterance")?.text;
+    if (!sent) return resolveDeterministicIntent(part, context);
+    return toHousehold(await provider.understand(sent, { ...context, history: sentHistory }), alone.pseudonyms);
   };
 
 
@@ -817,6 +1034,7 @@ async function decideProviderRouting(
       `What you said${sentHistory.length > 0 ? `, and the last ${sentHistory.length} turn${sentHistory.length === 1 ? "" : "s"} of this conversation,` : ""} went to ${provider.name} to understand your request. Names were replaced with roles first.`,
     ],
     understand,
+    understandPart,
     history: sentHistory,
     policy,
     sentUtterance,
@@ -848,13 +1066,14 @@ async function autonomyLookup(supabase: Supabase, householdId: string) {
 async function consequentialEntitlements(
   supabase: Supabase,
   householdId: string,
-): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking", boolean>> {
-  const [bills, orders, events, agentRuns, health] = await Promise.all([
+): Promise<Record<"finance.bills" | "commerce.orders" | "family.events" | "ai.agent_runs" | "health.tracking" | "meals.planning", boolean>> {
+  const [bills, orders, events, agentRuns, health, meals] = await Promise.all([
     may(supabase, householdId, "finance.bills"),
     may(supabase, householdId, "commerce.orders"),
     may(supabase, householdId, "family.events"),
     may(supabase, householdId, "ai.agent_runs"),
     may(supabase, householdId, "health.tracking"),
+    may(supabase, householdId, "meals.planning"),
   ]);
   return {
     "finance.bills": bills.allowed,
@@ -862,6 +1081,7 @@ async function consequentialEntitlements(
     "family.events": events.allowed,
     "ai.agent_runs": agentRuns.allowed,
     "health.tracking": health.allowed,
+    "meals.planning": meals.allowed,
   };
 }
 

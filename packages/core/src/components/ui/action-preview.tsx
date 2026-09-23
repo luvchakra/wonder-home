@@ -14,7 +14,7 @@ import { Badge } from "./pill";
  * nobody mistakes "will do" for "did".
  */
 export type ActionPreviewProps = {
-  state: "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "refused";
+  state: "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "unchanged" | "refused";
   understood: string;
   plan: readonly string[];
   impact: string;
@@ -30,6 +30,8 @@ const STATE: Record<ActionPreviewProps["state"], { label: string; tone: "attenti
   approved: { label: "Approved", tone: "handled" },
   rejected: { label: "Left alone", tone: "neutral" },
   executed: { label: "Done", tone: "handled" },
+  // The step ran and found nothing to write. Never "Done" (Wave 4 §12).
+  unchanged: { label: "Nothing to change", tone: "neutral" },
   refused: { label: "Not allowed", tone: "risk" },
 };
 
@@ -56,7 +58,7 @@ export function ActionPreview({ state, understood, plan, impact, reversible, con
         <Row icon={CircleHelp} label="What I understood">
           {understood}
         </Row>
-        <Row icon={ListChecks} label={state === "executed" ? "What I did" : state === "approved" ? "What I will do" : "What I plan to do"}>
+        <Row icon={ListChecks} label={state === "executed" ? "What I did" : state === "unchanged" ? "What I found" : state === "approved" ? "What I will do" : "What I plan to do"}>
           <ul className="list-disc space-y-0.5 pl-4">
             {plan.map((step) => (
               <li key={step}>{step}</li>

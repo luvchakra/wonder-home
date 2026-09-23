@@ -44,11 +44,25 @@ export type GroundingEnv = {
   now: Date;
   /** Read on demand — most turns never need it. */
   references: () => Promise<ReferenceState>;
+  /** The household's recipes, read only when a plan might be a meal. */
+  recipes?: () => Promise<readonly { id: string; name: string }[]>;
+  /** The ingredient names of a planned meal or a recipe, for "make sure we have everything". */
+  ingredients?: (of: { mealId?: string | null; recipeId?: string | null }) => Promise<string[]>;
 };
 
 /** Parameters that carry a date phrase, and whether the action needs exactly one day from it. */
 const DATE_KEYS = ["when", "date", "since", "to", "window"] as const;
-const NEEDS_ONE_DAY: ReadonlySet<HouseholdIntent["action"]> = new Set(["record_absence", "record_health_appointment"]);
+const NEEDS_ONE_DAY: ReadonlySet<HouseholdIntent["action"]> = new Set(["record_absence", "record_health_appointment", "set_reminder"]);
+
+/** The meals a plan can be for, and the words that say so. */
+const SLOT_WORDS: Record<string, "breakfast" | "lunch" | "snack" | "dinner"> = {
+  breakfast: "breakfast",
+  lunch: "lunch",
+  snack: "snack",
+  snacks: "snack",
+  dinner: "dinner",
+  supper: "dinner",
+};
 
 /** Actions whose target is a member of the household, to be resolved to one. */
 const MEMBER_TARGET: ReadonlySet<HouseholdIntent["action"]> = new Set(["record_absence", "assign_responsibility"]);
@@ -140,6 +154,80 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     }
   }
 
+  // --- A plan that is a meal (§11): "plan pasta for tonight" ---------------
+  if (grounded.action === "plan_event" && typeof grounded.parameters.what === "string") {
+    const meal = await asMeal(grounded.parameters.what, env);
+    if (meal) {
+      grounded = {
+        ...grounded,
+        action: "plan_meal",
+        target: { kind: "outcome", reference: "meals" },
+        parameters: { ...grounded.parameters, ...meal },
+      };
+    }
+  }
+  if (grounded.action === "plan_meal") {
+    const day = (grounded.parameters.windowResolved ?? grounded.parameters.whenResolved) as { date?: string; precision?: string; window?: { from: string } | null } | undefined;
+    const what = String(grounded.parameters.mealName ?? grounded.parameters.what ?? "the meal");
+    if (!day?.date || day.precision === "range") {
+      return clarify(grounded, "day", `Which day should I plan ${what.toLowerCase()} for?`, []);
+    }
+    if (typeof grounded.parameters.slot !== "string") grounded.parameters.slot = slotFor(day.window?.from ?? null);
+    focus.push({ entityType: "meal", entityId: null, label: what, source: "mention", at });
+  }
+
+  // --- What a meal needs (§11): "make sure we have everything" -------------
+  if (grounded.action === "add_to_list" && typeof grounded.parameters.ingredientsOf === "string") {
+    const of = grounded.parameters.ingredientsOf.trim();
+    let subject: { label: string; mealId: string | null; recipeId: string | null } | null = null;
+    if (anaphorOf(of) || /^(?:it|dinner|lunch|breakfast|the meal|tonight'?s dinner)$/i.test(of)) {
+      const resolved = resolveAnaphor("singular", await env.references(), { kinds: ["meal"], now: env.now });
+      if (resolved.kind === "resolved") subject = { label: resolved.entities[0]!.label, mealId: resolved.entities[0]!.entityId, recipeId: null };
+      else if (resolved.kind === "ambiguous") return clarify(grounded, "referent", resolved.question, resolved.candidates);
+    } else {
+      const recipe = matchRecipe(of, (await env.recipes?.()) ?? []);
+      subject = { label: recipe?.name ?? of, mealId: null, recipeId: recipe?.id ?? null };
+    }
+    if (!subject) {
+      return clarify(grounded, "item", 'Everything for which meal? Name it, or tell me what to put on the list.', []);
+    }
+    const names = subject.mealId || subject.recipeId ? ((await env.ingredients?.({ mealId: subject.mealId, recipeId: subject.recipeId })) ?? []) : [];
+    if (names.length === 0) {
+      return clarify(
+        { ...grounded, parameters: { ...grounded.parameters, forMeal: subject.label } },
+        "item",
+        `I do not know what goes into ${subject.label.toLowerCase()} — there is no recipe for it on record. What should I put on the list for it?`,
+        [],
+      );
+    }
+    const next: Record<string, unknown> = { ...grounded.parameters, items: names, forMeal: subject.label };
+    delete next.item;
+    delete next.ingredientsOf;
+    grounded = { ...grounded, parameters: next };
+    focus.push({ entityType: "meal", entityId: subject.mealId, label: subject.label, source: "mention", at });
+  }
+
+  // --- A reminder (§10): when, and what "them" was --------------------------
+  if (grounded.action === "set_reminder") {
+    if (typeof grounded.parameters.when !== "string" || !grounded.parameters.when.trim()) {
+      return clarify(grounded, "day", "When should I remind you — later today, tomorrow, or another day?", []);
+    }
+    const what = typeof grounded.parameters.what === "string" ? grounded.parameters.what : "";
+    const pointer = /\b(them|those|these|it|that|this)\b/i.exec(what);
+    if (pointer) {
+      const kind = anaphorOf(pointer[1]!)!;
+      const resolved = resolveAnaphor(kind, await env.references(), { kinds: ["thing", "consumable", "meal", "bill", "school_item"], now: env.now });
+      if (resolved.kind === "resolved") {
+        const labels = resolved.entities.map((entity) => entity.label.toLowerCase());
+        grounded.parameters = { ...grounded.parameters, what: what.replace(pointer[0], joinLabels(labels)), referred: pointer[1] };
+        focus.push(...resolved.entities.map((entity) => ({ ...entity, source: "mention" as const, at })));
+      } else if (resolved.kind === "ambiguous") {
+        return clarify(grounded, "referent", resolved.question, resolved.candidates);
+      }
+      // Nothing to point at: the reminder keeps the household's own words.
+    }
+  }
+
   if (grounded.action === "make_payment") {
     const said = (grounded.target.reference ?? "").trim();
     const anaphor = !said || grounded.target.kind === "unspecified" ? "singular" : anaphorOf(said);
@@ -205,6 +293,57 @@ async function personFromReference(said: string, env: GroundingEnv): Promise<Per
   }
   const candidates = [newest, ...sameMoment].filter((entity): entity is FocusEntity => Boolean(entity)).slice(0, 3);
   return { kind: "ask", question: candidates.length > 1 ? whichOf(candidates).replace(/^Do you mean/, "Who do you mean —") : `Who do you mean by "${said}"?`, candidates };
+}
+
+/**
+ * Whether "plan X" is a meal: it names a meal of the day ("pasta for
+ * dinner") or one of the household's own recipes. Anything else stays a
+ * plan on the family calendar — a guess that "a picnic" is dinner would be
+ * worse than asking.
+ */
+async function asMeal(what: string, env: GroundingEnv): Promise<Record<string, unknown> | null> {
+  const words = what.toLowerCase();
+  const slotWord = Object.keys(SLOT_WORDS).find((word) => new RegExp(`\\b${word}\\b`).test(words));
+  const dish = words
+    .replace(/\b(?:for|on|at)\s+(?:breakfast|lunch|snacks?|dinner|supper)\b/g, "")
+    .replace(/\b(?:breakfast|lunch|snacks?|dinner|supper)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const recipe = dish ? matchRecipe(dish, (await env.recipes?.()) ?? []) : null;
+  if (!slotWord && !recipe) return null;
+  const name = recipe?.name ?? (dish ? dish.charAt(0).toUpperCase() + dish.slice(1) : null);
+  if (!name) return null;
+  return {
+    mealName: name,
+    ...(recipe ? { recipeId: recipe.id } : {}),
+    ...(slotWord ? { slot: SLOT_WORDS[slotWord] } : {}),
+  };
+}
+
+/** A recipe by its name, or by the dish it is named after ("pasta" → "Tomato pasta" when only one fits). */
+function matchRecipe(said: string, recipes: readonly { id: string; name: string }[]): { id: string; name: string } | null {
+  const normal = (text: string) => text.toLowerCase().replace(/[^a-z0-9 ]+/g, "").replace(/^(?:the|a|an|some)\s+/, "").trim();
+  const wanted = normal(said);
+  if (!wanted) return null;
+  const exact = recipes.find((recipe) => normal(recipe.name) === wanted);
+  if (exact) return exact;
+  const containing = recipes.filter((recipe) => new RegExp(`\\b${wanted.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(normal(recipe.name)));
+  return containing.length === 1 ? containing[0]! : null;
+}
+
+/** The meal of the day a time window points at: evening is dinner. */
+function slotFor(from: string | null): "breakfast" | "lunch" | "snack" | "dinner" {
+  if (!from) return "dinner";
+  const hour = Number(from.slice(0, 2));
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 17) return "snack";
+  return "dinner";
+}
+
+function joinLabels(labels: readonly string[]): string {
+  if (labels.length <= 1) return labels[0] ?? "";
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
 }
 
 function withMember(intent: HouseholdIntent, item: HouseholdContextItem): HouseholdIntent {

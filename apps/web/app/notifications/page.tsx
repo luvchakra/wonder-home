@@ -23,6 +23,7 @@ type Row = {
   body: string;
   action: { action: string; target?: string } | null;
   created_at: string;
+  scheduled_for: string;
 };
 
 /**
@@ -35,17 +36,20 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const { supabase, membership, viewer, secondary } = session;
   const timezone = membership.household.timezone;
 
+  // What is due: the in-app inbox is where a notification is delivered, so
+  // one held for later — a reminder for tomorrow — appears once its time
+  // comes, and not before.
   const { data } = await supabase
     .from("notifications")
-    .select("id, type, status, thread_key, title, body, action, created_at")
+    .select("id, type, status, thread_key, title, body, action, created_at, scheduled_for")
     .eq("recipient_member_id", membership.memberId)
-    .neq("status", "generated")
-    .order("created_at", { ascending: false })
+    .lte("scheduled_for", new Date().toISOString())
+    .order("scheduled_for", { ascending: false })
     .limit(60);
 
   const all = ((data as Row[] | null) ?? []).filter((row) => row.status !== "expired" || row.type === "completion");
   const active = tab === "action" || tab === "decision" || tab === "updates" ? tab : "all";
-  const open = (row: Row) => row.status === "delivered" || row.status === "seen";
+  const open = (row: Row) => row.status === "generated" || row.status === "delivered" || row.status === "seen";
 
   const shown = all.filter((row) => {
     if (active === "action") return row.type === "action" || row.type === "risk";
@@ -95,7 +99,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                     status={row.status}
                     title={row.title}
                     body={row.body}
-                    when={isToday(new Date(row.created_at), now, timezone) ? formatTime(timezone, new Date(row.created_at)) : formatDate(timezone, new Date(row.created_at))}
+                    when={isToday(new Date(row.scheduled_for), now, timezone) ? formatTime(timezone, new Date(row.scheduled_for)) : formatDate(timezone, new Date(row.scheduled_for))}
                     icon={presentation.icon}
                     tone={presentation.tone}
                     action={
@@ -129,7 +133,7 @@ function groupByDay(rows: Row[], timezone: string): { label: string; rows: Row[]
   const now = new Date();
   const groups = new Map<string, Row[]>();
   for (const row of rows) {
-    const at = new Date(row.created_at);
+    const at = new Date(row.scheduled_for);
     const label = isToday(at, now, timezone) ? "Today" : formatDate(timezone, at) === formatDate(timezone, new Date(now.getTime() - 86_400_000)) ? "Yesterday" : "Earlier";
     groups.set(label, [...(groups.get(label) ?? []), row]);
   }

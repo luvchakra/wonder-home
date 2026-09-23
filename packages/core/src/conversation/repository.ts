@@ -25,6 +25,12 @@ export type ConversationAction = {
   status: "proposed" | "approved" | "rejected" | "executed" | "failed" | "expired";
   preview: ActionPreview | null;
   createdAt: Date;
+  /**
+   * The step ran, and there was nothing to write — the thing was already on
+   * record. Read from the executor's own result, so a card never says "Done"
+   * about a change that did not happen (Wave 4 §12).
+   */
+  unchanged?: boolean;
 };
 
 export type ConversationMessage = {
@@ -80,7 +86,7 @@ export async function listMessages(
       .limit(limit),
     supabase
       .from("conversation_actions")
-      .select("id, message_id, action_type, approval_status, payload, created_at")
+      .select("id, message_id, action_type, approval_status, payload, result, created_at")
       .eq("household_id", householdId)
       .eq("session_id", sessionId),
   ]);
@@ -125,6 +131,39 @@ export async function recentTurns(
   return (((data as Row[] | null) ?? []) as { role: "member" | "assistant"; content: string }[])
     .map((row) => ({ role: row.role, text: row.content }))
     .reverse();
+}
+
+/**
+ * What HomeTalk actually did in this session recently, newest first — what
+ * "No, I meant Manan" corrects once nothing is waiting for a yes (Wave 4
+ * §9). Several, because one request can do several things: "not milk,
+ * almond milk" corrects the add, not the reminder made after it. Carries
+ * the executor's own result, so an undo takes back exactly the row written.
+ */
+export async function recentExecutedActions(
+  admin: SupabaseClient,
+  input: { sessionId: string; since: Date; limit?: number },
+): Promise<{ id: string; actionType: string; outcomeKey: string | null; parameters: Record<string, unknown>; result: Record<string, unknown>; at: Date }[]> {
+  const { data } = await admin
+    .from("conversation_actions")
+    .select("id, action_type, outcome_key, payload, result, created_at, updated_at")
+    .eq("session_id", input.sessionId)
+    .eq("approval_status", "executed")
+    .gte("updated_at", input.since.toISOString())
+    .order("updated_at", { ascending: false })
+    .limit(input.limit ?? 5);
+
+  return ((data as Row[] | null) ?? []).map((row) => {
+    const payload = (row.payload as Row | null) ?? {};
+    return {
+      id: row.id as string,
+      actionType: row.action_type as string,
+      outcomeKey: (row.outcome_key as string | null) ?? null,
+      parameters: (payload.parameters as Record<string, unknown> | undefined) ?? {},
+      result: (row.result as Record<string, unknown> | null) ?? {},
+      at: new Date(row.updated_at as string),
+    };
+  });
 }
 
 /**
@@ -247,6 +286,31 @@ export async function pendingAction(
   const payload = (data.payload as Row | null) ?? {};
   const preview = payload.preview as ActionPreview | undefined;
   return { id: data.id as string, summary: preview?.summary ?? "that", createdAt: new Date(data.created_at as string) };
+}
+
+/**
+ * Every proposal in this conversation still waiting for a yes, newest
+ * first — more than one when a request had several parts (Wave 4 §10), so
+ * a bare "yes" can ask which rather than approve only the newest.
+ */
+export async function openProposals(
+  admin: SupabaseClient,
+  sessionId: string,
+  since: Date,
+): Promise<{ id: string; summary: string; createdAt: Date }[]> {
+  const { data } = await admin
+    .from("conversation_actions")
+    .select("id, payload, created_at")
+    .eq("session_id", sessionId)
+    .eq("approval_status", "proposed")
+    .gte("created_at", since.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  return ((data as Row[] | null) ?? []).map((row) => {
+    const preview = ((row.payload as Row | null) ?? {}).preview as ActionPreview | undefined;
+    return { id: row.id as string, summary: preview?.summary ?? "that", createdAt: new Date(row.created_at as string) };
+  });
 }
 
 /**
@@ -556,5 +620,11 @@ function toAction(row: Row): ConversationAction {
     status: row.approval_status as ConversationAction["status"],
     preview: (payload.preview as ActionPreview | null) ?? null,
     createdAt: new Date(row.created_at as string),
+    ...(unchangedResult(row.result) ? { unchanged: true } : {}),
   };
+}
+
+/** Whether an executor's result says nothing was written — "already on the list". */
+export function unchangedResult(result: unknown): boolean {
+  return Boolean(result && typeof result === "object" && (result as Row).alreadyTracked === true);
 }

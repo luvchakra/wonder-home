@@ -109,7 +109,9 @@ async function countUnread(supabase: SupabaseClient, memberId: string): Promise<
     .from("notifications")
     .select("id", { count: "exact", head: true })
     .eq("recipient_member_id", memberId)
-    .in("status", ["generated", "delivered"]);
+    .in("status", ["generated", "delivered"])
+    // Held for later (a reminder for tomorrow) is not unread yet.
+    .lte("scheduled_for", new Date().toISOString());
   return count ?? 0;
 }
 

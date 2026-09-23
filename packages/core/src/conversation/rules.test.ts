@@ -206,6 +206,7 @@ describe("what it does not know", () => {
         "what's going on",
         "check on things",
         "add milk to the list",
+        "remind me to buy milk tomorrow",
         "Sunita is away tomorrow",
         "pay the water bill",
         "order rice",
@@ -343,5 +344,30 @@ describe("a person's stance on a thing (Wave 2 §8)", () => {
   it("does not take requests or questions for preferences", () => {
     expect(read("Add mushrooms to the list").action).toBe("add_to_list");
     expect(read("What does Asmi like?").action).not.toBe("set_preference");
+  });
+});
+
+describe("Wave 4: several things, reminders and what a meal needs", () => {
+  it("\"add milk and bananas\" is two things to add, each on its own", () => {
+    expect(read("Add milk and bananas")).toMatchObject({ action: "add_to_list", parameters: { items: ["milk", "bananas"] } });
+    expect(read("we need milk, eggs and bread")).toMatchObject({ action: "add_to_list", parameters: { items: ["milk", "eggs", "bread"] } });
+    expect(read("add almond milk")).toMatchObject({ action: "add_to_list", parameters: { item: "almond milk" } });
+  });
+
+  it("\"add\" with a destination or a time in it is not read as a grocery", () => {
+    expect(read("add Asmi to swimming").action).not.toBe("add_to_list");
+    expect(read("add a dentist appointment tomorrow").action).not.toBe("add_to_list");
+  });
+
+  it("reads a reminder's what, day and time, whichever order they come in", () => {
+    expect(read("remind me to buy them tomorrow")).toMatchObject({ action: "set_reminder", parameters: { what: "buy them", when: "tomorrow" } });
+    expect(read("Remind me tomorrow at 6pm to call the plumber")).toMatchObject({ action: "set_reminder", parameters: { what: "call the plumber", when: "tomorrow", time: "6pm" } });
+    expect(read("remind me to pack the kit bag after school")).toMatchObject({ action: "set_reminder", parameters: { what: "pack the kit bag", when: "after school" } });
+    expect(read("Remind me to call the plumber tomorrow evening")).toMatchObject({ action: "set_reminder", parameters: { what: "call the plumber", when: "tomorrow evening" } });
+  });
+
+  it("\"make sure we have everything\" asks for what a meal needs", () => {
+    expect(read("make sure we have everything")).toMatchObject({ action: "add_to_list", parameters: { ingredientsOf: "that" } });
+    expect(read("add everything we need for pasta")).toMatchObject({ action: "add_to_list", parameters: { ingredientsOf: "pasta" } });
   });
 });
