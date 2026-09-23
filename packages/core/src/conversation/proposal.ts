@@ -159,24 +159,41 @@ export function buildPreview(
   };
 }
 
+/**
+ * The grounded value when grounding produced one (Wave 4): the member's
+ * name as the household has it, the resolved day with its date — so what a
+ * person approves names exactly what will be written, never the raw words.
+ */
+function groundedName(intent: HouseholdIntent, fallback: string): string {
+  return typeof intent.parameters.memberName === "string" ? intent.parameters.memberName : (intent.target.reference ?? fallback);
+}
+
+function groundedWhen(intent: HouseholdIntent, key: string): string {
+  const resolved = intent.parameters[`${key}Resolved`] as { label?: unknown } | undefined;
+  if (resolved && typeof resolved.label === "string") {
+    return /^(?:today|tonight|tomorrow|yesterday|this|next)\b/.test(resolved.label) ? resolved.label : `on ${resolved.label}`;
+  }
+  return String(intent.parameters[key] ?? "");
+}
+
 function summarize(intent: HouseholdIntent): string {
   switch (intent.action) {
     case "record_absence":
-      return `Record that ${intent.target.reference ?? "someone"} is away ${String(intent.parameters.when ?? "")}`.trim();
+      return `Record that ${groundedName(intent, "someone")} is away ${groundedWhen(intent, "when")}`.trim();
     case "add_to_list":
       return `Add ${String(intent.parameters.item ?? "an item")} to the ${intent.target.reference ?? "list"}`;
     case "plan_event":
-      return `Plan something for ${String(intent.parameters.window ?? "the family")}`;
+      return `Plan something for ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "the family")}`;
     case "adjust_schedule":
-      return `Move ${intent.target.reference ?? "that"} to ${String(intent.parameters.to ?? "a new time")}`;
+      return `Move ${intent.target.reference ?? "that"} to ${intent.parameters.toResolved ? groundedWhen(intent, "to").replace(/^on /, "") : String(intent.parameters.to ?? "a new time")}`;
     case "set_preference":
       return `Remember that ${intent.utterance.replace(/\.$/, "")}`;
     case "make_payment":
-      return `Pay the ${intent.target.reference ?? "bill"}`;
+      return `Pay the ${typeof intent.parameters.billLabel === "string" ? intent.parameters.billLabel : (intent.target.reference ?? "bill")}`;
     case "order_items":
       return "Place the order";
     case "assign_responsibility":
-      return `Make ${intent.target.reference ?? "them"} responsible for ${String(intent.parameters.outcomeKey ?? "this")}`;
+      return `Make ${groundedName(intent, "them")} responsible for ${String(intent.parameters.outcomeKey ?? "this")}`;
     case "record_health_appointment":
       return `Book a ${String(intent.parameters.typeText ?? "health")} appointment`;
     case "log_health_issue":

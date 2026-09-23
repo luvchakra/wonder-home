@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PendingClarification } from "./clarify";
+import { readFocus, type FocusEntity } from "./references";
 
 import { ApiError } from "../api/errors";
 import type { HouseholdIntent } from "./intent";
@@ -124,6 +125,23 @@ export async function recentTurns(
   return (((data as Row[] | null) ?? []) as { role: "member" | "assistant"; content: string }[])
     .map((row) => ({ role: row.role, text: row.content }))
     .reverse();
+}
+
+/**
+ * What the last few assistant turns were about (Wave 4 §8, §16), newest
+ * first — the focus each turn wrote on its own message. Read by a turn that
+ * says "that" or "them"; a turn that names things never reads it.
+ */
+export async function recentFocus(admin: SupabaseClient, sessionId: string, limit = 4): Promise<FocusEntity[]> {
+  const { data } = await admin
+    .from("conversation_messages")
+    .select("metadata, created_at")
+    .eq("session_id", sessionId)
+    .eq("role", "assistant")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return ((data as Row[] | null) ?? []).flatMap((row) => readFocus((row.metadata as Row | null)?.focus));
 }
 
 /**

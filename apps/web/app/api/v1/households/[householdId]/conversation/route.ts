@@ -11,9 +11,10 @@ import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
-import type { PersonLike } from "@wonderhome/core/context/builders";
+import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
-import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { canExecute, executeIntent, notYetDoable, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { groundIntent } from "@wonderhome/core/conversation/grounding";
 import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
 import { attributeMemory } from "@wonderhome/core/conversation/memory";
 import {
@@ -27,17 +28,21 @@ import {
   openSession,
   pendingAction,
   pendingClarification,
+  recentFocus,
   recentTurns,
   recordMessage,
   recordProposal,
   remember,
   type ConversationAction,
 } from "@wonderhome/core/conversation/repository";
+import { focusFromProposal, focusFromResult, homeSendFocus, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
+import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal";
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
+import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
 import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
@@ -253,6 +258,15 @@ export async function POST(request: Request, { params }: Params) {
     const brainRead = mayBeQuestion ? readBrain() : null;
     brainRead?.catch(() => undefined);
 
+    // Grounding (Wave 4): the household's people for "Asmi", "Dad", "the
+    // older one"; and — only if a turn says "that" or "him" — what the
+    // conversation, the waiting proposal and recent HomeSend were about.
+    const turnStartedAt = new Date();
+    let referenceRead: Promise<ReferenceState> | null = null;
+    const references = () =>
+      (referenceRead ??= loadReferences({ admin, supabase, householdId, sessionId, pending, clarifying, now: turnStartedAt }));
+    const peopleItems = personItems(people, { householdId, now: turnStartedAt });
+
     const result = await converse({
       utterance: body.utterance,
       channel: body.channel,
@@ -269,6 +283,8 @@ export async function POST(request: Request, { params }: Params) {
       understand: plainQuestion ? undefined : routing.understand,
       history: routing.history,
       clarifying,
+      ground: (intent) =>
+        groundIntent(intent, { people: peopleItems, viewerMemberId: membership.memberId, timezone: membership.household.timezone, now: turnStartedAt, references }),
     });
     const understoodAt = Date.now();
 
@@ -289,6 +305,16 @@ export async function POST(request: Request, { params }: Params) {
     let brain: { source: HomeBrainAnswer["source"] | "evidence"; factsSent: number } = { source: "none", factsSent: 0 };
 
     let composedAt = understoodAt;
+
+    // What this turn was about, persisted on its reply for the next turn's
+    // "that" (Wave 4 §8, §16): grounded mentions, what a proposal is about,
+    // and — added below — what an executor actually wrote.
+    const turnFocus: FocusEntity[] = result.kind === "reply" ? [...(result.focus ?? [])] : [];
+    if (result.kind === "reply" && result.record) {
+      turnFocus.push(
+        ...focusFromProposal({ actionType: result.intent.action, parameters: result.intent.parameters, targetReference: result.intent.target.reference ?? null, at: new Date().toISOString() }),
+      );
+    }
 
     // What this turn is (Wave 2 §11): answer, clarify, prepare, approval, or
     // done — and "done" only once an executor has confirmed the change.
@@ -358,6 +384,9 @@ export async function POST(request: Request, { params }: Params) {
       const done = await executeIntent(result.intent, execution);
       text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
       outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
+      // What was actually written — the row, not what was asked for — is
+      // what the next turn's "it" means.
+      if (done.ok) turnFocus.push(...focusFromResult(result.intent.action, done.result, new Date().toISOString()));
       if (done.ok) forgetHouseholdContext(householdId);
     } else if (result.kind === "reply" && result.memory) {
       await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
@@ -401,6 +430,9 @@ export async function POST(request: Request, { params }: Params) {
               mode,
             }
           : { kind: result.kind }),
+        // What this turn was about (Wave 4 §16): ids and labels only,
+        // never the text around them, for the next turn's "that".
+        ...(turnFocus.length > 0 ? { focus: turnFocus.slice(0, 8) } : {}),
         // Why this turn did or did not reach a model provider (15-005). A
         // code and a count, never the content either way.
         provider: routing.code,
@@ -428,7 +460,9 @@ export async function POST(request: Request, { params }: Params) {
         text = settled.text;
         action = settled.action;
         mode = modeFor("approve", action.status === "executed");
-        await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
+        const { data: written } = await admin.from("conversation_messages").select("metadata").eq("id", replyId).maybeSingle();
+        const metadata = { ...((written?.metadata as Record<string, unknown> | null) ?? {}), ...(settled.focus.length > 0 ? { focus: settled.focus } : {}) };
+        await admin.from("conversation_messages").update({ content: text, metadata }).eq("id", replyId);
       }
     } else if (result.kind === "reply" && result.record) {
       action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal });
@@ -471,9 +505,9 @@ async function carryOutApproved(input: {
   membership: HouseholdMembership;
   action: ConversationAction;
   people: Person[];
-}): Promise<{ text: string; action: ConversationAction }> {
+}): Promise<{ text: string; action: ConversationAction; focus: FocusEntity[] }> {
   const stored = await loadAction(input.admin, { householdId: input.householdId, actionId: input.action.id });
-  if (!stored) return { text: "I have your go-ahead, but I could not find what it was for, so nothing was changed.", action: input.action };
+  if (!stored) return { text: "I have your go-ahead, but I could not find what it was for, so nothing was changed.", action: input.action, focus: [] };
 
   const intent: HouseholdIntent = {
     action: stored.actionType as HouseholdIntent["action"],
@@ -486,7 +520,7 @@ async function carryOutApproved(input: {
   };
 
   if (!canExecute(intent)) {
-    return { text: notYetDoable(intent.action), action: input.action };
+    return { text: notYetDoable(intent.action), action: input.action, focus: [] };
   }
 
   const done = await executeIntent(intent, {
@@ -503,6 +537,7 @@ async function carryOutApproved(input: {
   return {
     text: done.ok ? done.text : `I have your go-ahead, and it did not go through: ${done.reason}`,
     action: { ...input.action, status },
+    focus: done.ok ? focusFromResult(intent.action, done.result, new Date().toISOString()) : [],
   };
 }
 
@@ -515,7 +550,7 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
   const when = typeof intent.parameters.when === "string" ? intent.parameters.when : null;
   const now = new Date();
 
-  const events = when ? await listEvents(supabase, householdId, windowFor(when, now)).catch(() => []) : null;
+  const events = when ? await listEvents(supabase, householdId, windowFor(when, now, membership.household.timezone)).catch(() => []) : null;
 
   const placeOf = (need: { subjectKey: string }) => {
     const domain = agenda.domains.find((entry) => entry.needs.some((candidate) => candidate.subjectKey === need.subjectKey));
@@ -581,33 +616,26 @@ function looksLikeQuestion(utterance: string): boolean {
   return text.endsWith("?") || /^(?:what|which|who|whom|whose|when|where|why|how|is|are|am|was|were|do|does|did|can|could|will|would|should|have|has|any|anything)\b/.test(text);
 }
 
-function windowFor(when: string, now: Date): { from: Date; to: Date } {
-  const day = 86_400_000;
-  const startOf = (offsetDays: number) => {
-    const date = new Date(now.getTime() + offsetDays * day);
-    date.setHours(0, 0, 0, 0);
-    return date;
-  };
-  switch (when.toLowerCase()) {
-    case "tomorrow":
-      return { from: startOf(1), to: startOf(2) };
-    case "this week":
-    case "next week":
-      return { from: startOf(when.toLowerCase() === "next week" ? 7 : 0), to: startOf(when.toLowerCase() === "next week" ? 14 : 7) };
-    case "this weekend":
-      return { from: startOf(0), to: startOf(7) };
-    case "this month":
-    case "next month": {
-      const base = when.toLowerCase() === "next month" ? new Date(now.getFullYear(), now.getMonth() + 1, 1) : new Date(now.getFullYear(), now.getMonth(), 1);
-      const from = new Date(base);
-      from.setHours(0, 0, 0, 0);
-      const to = new Date(base.getFullYear(), base.getMonth() + 1, 1);
-      to.setHours(0, 0, 0, 0);
-      return { from, to };
-    }
-    default:
-      return { from: startOf(0), to: startOf(1) };
+/**
+ * The local days a "when" covers, as the instants the events query needs —
+ * through the one temporal resolver (Wave 4 §7), in the household's zone,
+ * so "tomorrow" is the household's tomorrow and not the server's.
+ */
+function windowFor(when: string, now: Date, timezone: string): { from: Date; to: Date } {
+  const phrase = when.toLowerCase().trim();
+  const midnight = (isoDate: string) => new Date(zonedTimeToUtcIso(isoDate, 0, 0, timezone));
+
+  if (phrase === "this month" || phrase === "next month") {
+    const today = resolveTemporal("today", { timezone, now })!.date;
+    const [year, month] = today.split("-").map(Number) as [number, number];
+    const start = phrase === "next month" ? (month === 12 ? [year + 1, 1] : [year, month + 1]) : [year, month];
+    const end = start[1] === 12 ? [start[0]! + 1, 1] : [start[0]!, start[1]! + 1];
+    const iso = ([y, m]: number[]) => `${y}-${String(m).padStart(2, "0")}-01`;
+    return { from: midnight(iso(start)), to: midnight(iso(end)) };
   }
+
+  const resolved = resolveTemporal(phrase, { timezone, now }) ?? resolveTemporal("today", { timezone, now })!;
+  return { from: midnight(resolved.date), to: midnight(addDays(resolved.endDate, 1)) };
 }
 
 /**
@@ -615,6 +643,40 @@ function windowFor(when: string, now: Date): { from: Date; to: Date } {
  * placeholders, and the words the family uses for them (nickname,
  * "Dad", date of birth for "the older one") for the context engine's resolver.
  */
+/**
+ * What "that", "it" and "them" can point at this turn (Wave 4 §8), in the
+ * spec's priority order: the question just asked, the proposal waiting for
+ * a yes, recent conversation, recent HomeSend. Read only when a turn needs
+ * it. A failed read is an empty tier, never a failed turn — the reference
+ * then resolves to a question rather than a guess.
+ */
+async function loadReferences(input: {
+  admin: ReturnType<typeof createAdminClient>;
+  supabase: Supabase;
+  householdId: string;
+  sessionId: string;
+  pending: { id: string; createdAt: Date } | null;
+  clarifying: { parameters: Record<string, unknown> } | null;
+  now: Date;
+}): Promise<ReferenceState> {
+  const [proposal, conversation, homeSendItems] = await Promise.all([
+    input.pending ? loadAction(input.admin, { householdId: input.householdId, actionId: input.pending.id }).catch(() => null) : Promise.resolve(null),
+    recentFocus(input.admin, input.sessionId).catch(() => []),
+    // The member's own client: HomeSend is read under their RLS, exactly as
+    // the HomeSend screen reads it.
+    listHomeSendItems(input.supabase, input.householdId, { since: new Date(input.now.getTime() - 24 * 60 * 60_000), limit: 5 }).catch(() => []),
+  ]);
+
+  return {
+    clarification: readFocus(input.clarifying?.parameters.candidates),
+    proposal: proposal
+      ? focusFromProposal({ actionType: proposal.actionType, parameters: proposal.parameters, targetReference: proposal.outcomeKey, at: input.pending!.createdAt.toISOString() })
+      : [],
+    conversation,
+    homesend: homeSendFocus(homeSendItems),
+  };
+}
+
 async function listPeople(supabase: Supabase, householdId: string): Promise<(Person & PersonLike)[]> {
   const { data } = await supabase
     .from("household_members")
