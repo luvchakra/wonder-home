@@ -149,3 +149,26 @@ describe("what the assistant says", () => {
     expect(replyFor({ kind: "executed", preview })).toMatch(/^Done/);
   });
 });
+
+describe("HomeBrain 2.0 modes in the engine (Wave 2 §11)", () => {
+  it("never says done on a yes — the route says what actually ran", async () => {
+    const pending = pendingFrom({ id: "a-1", summary: "Pay the electricity bill", createdAt: NOW });
+    const result = await converse(turn({ utterance: "yes", pending }));
+    expect(result.kind).toBe("approve");
+    expect(result.text).not.toMatch(/\bdone\b/i);
+  });
+
+  it("reads 'why are you asking me this?' as a question about the question, not its answer", async () => {
+    const result = await converse(
+      turn({
+        utterance: "Why are you asking me this?",
+        clarifying: { action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: {}, question: "Which items should I add?", utterance: "add stuff", asked: 1 },
+      }),
+    );
+    expect(result.kind).toBe("reply");
+    if (result.kind !== "reply") return;
+    expect(result.intent.action).toBe("ask_status");
+    expect(result.intent.parameters.explain).toBe("why_question");
+  });
+});
+

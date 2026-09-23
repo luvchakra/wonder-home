@@ -301,3 +301,29 @@ describe("health (story 21-006)", () => {
     expect(read("I have a meeting at 3").action).not.toBe("log_health_issue");
   });
 });
+
+describe("'why?' questions (HomeBrain 2.0, Wave 2 §10)", () => {
+  it.each([
+    ["Why are you asking for approval?", "why_approval"],
+    ["why do you need my ok", "why_approval"],
+    ["Why are you asking me this?", "why_question"],
+    ["Why didn't you add that?", "why_not_done"],
+    ["Why do you think this is for Asmi?", "why_person"],
+    ["Where did this date come from?", "source"],
+    ["How do you know that?", "source"],
+    ["What did I just send you?", "sent"],
+    ["What did WonderHome change after I sent it?", "changed_after_send"],
+    ["What changed since yesterday?", "recent_changes"],
+  ])("reads %j as an explanation request, answered from evidence", (utterance, topic) => {
+    const intent = read(utterance);
+    expect(intent.action).toBe("ask_status");
+    expect(intent.parameters).toMatchObject({ scope: "explain", explain: topic });
+    // An explanation is a read: proposing it can never become a change.
+    expect(proposeFromIntent(intent, { actor: { roles: ["adult"], memberType: "adult" }, autonomy: "execute", entitled: true }).kind).toBe("answer");
+  });
+
+  it("leaves ordinary questions and requests alone", () => {
+    expect(read("What's going on?").parameters.explain).toBeUndefined();
+    expect(read("Add milk to the list").action).not.toBe("ask_status");
+  });
+});

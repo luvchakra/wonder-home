@@ -1,6 +1,7 @@
 import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments";
-import type { HouseholdIntent, IntentAction } from "./intent";
+import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
+import type { HouseholdIntent, IntentAction } from "./intent";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -113,6 +114,26 @@ function item(value: string): string {
 }
 
 const RULES: readonly Rule[] = [
+  // --- "Why?" — answered from what was recorded (HomeBrain 2.0, Wave 2 §10) --
+  {
+    // "Why are you asking for approval?", "Where did this date come from?",
+    // "What did I just send you?" are questions about WonderHome's own
+    // record, not about the home: read first, so no status rule below takes
+    // "what changed since yesterday" for a general catch-up. The answer is
+    // assembled from evidence on the server; nothing here decides it.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const why = readWhyQuestion(utterance);
+      if (!why) return null;
+      return {
+        action: "ask_status",
+        target: { kind: "unspecified" },
+        parameters: { scope: "explain", explain: why.topic, ...(why.subject ? { subject: why.subject } : {}) },
+        confidence: 0.96,
+      };
+    },
+  },
+
   // --- Greetings, thanks, help ---------------------------------------------
   {
     pattern: /^(?:hi|hello|hey|hiya|good (?:morning|afternoon|evening|night)|namaste)(?:\s+(?:there|wonderhome))?$/i,

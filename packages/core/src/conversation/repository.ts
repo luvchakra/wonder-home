@@ -232,6 +232,38 @@ export async function pendingAction(
 }
 
 /**
+ * The last thing this conversation proposed or did, as it was recorded —
+ * what HomeBrain's "why?" answers cite (Wave 2 §10). The reason is the one
+ * written into the preview when it was proposed, and the failure is the one
+ * the executor reported; nothing here is reconstructed after the fact.
+ */
+export async function latestAction(
+  admin: SupabaseClient,
+  sessionId: string,
+): Promise<{ summary: string | null; actionType: string; status: string; kind: string | null; because: string | null; failure: string | null } | null> {
+  const { data } = await admin
+    .from("conversation_actions")
+    .select("action_type, approval_status, payload, result")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  const payload = (data.payload as Row | null) ?? {};
+  const preview = payload.preview as ActionPreview | null | undefined;
+  const result = (data.result as Row | null) ?? {};
+  return {
+    summary: preview?.summary ?? null,
+    actionType: data.action_type as string,
+    status: data.approval_status as string,
+    kind: typeof payload.kind === "string" ? payload.kind : null,
+    because: preview?.because ?? null,
+    failure: typeof result.reason === "string" ? result.reason : null,
+  };
+}
+
+/**
  * Undoing the last thing a member said, so it can be said again differently
  * (story 04-003's "actually" — as a structural edit rather than a new turn).
  *

@@ -244,7 +244,17 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   real model call, gated by the same consent/minimisation/entitlement
   checks a fixture-resolved intent already passed through, never trusted
   with a decision — every downstream authorization gate runs on its output
-  exactly as it runs on a deterministic one.
+  exactly as it runs on a deterministic one. Since HomeBrain 2.0
+  (`packages/core/src/homebrain/`, spec `design/HOMEBRAIN-2.0-WAVE-2.md`)
+  a model only ever sees `GroundedFact`s (opaque `F`-ids, cited back in
+  `usedFacts`), and no model answer reaches a person unvalidated:
+  `homebrain/validate.ts` refuses unsupported names, dates, amounts,
+  events, health claims, integration claims and "I've done it" claims,
+  then `homebrain/answer.ts` regenerates once with tighter context, then
+  answers deterministically from the same facts, then says honestly that
+  nothing is on record. "Why?" questions are answered from recorded
+  evidence in `homebrain/why.ts`, never by a model. Add to the validator
+  when a new kind of invention shows up; never route an answer around it.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the

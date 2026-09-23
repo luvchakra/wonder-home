@@ -12,6 +12,7 @@
     "./brand/*": "./src/brand/*.ts",
     "./conversation/*": "./src/conversation/*.ts",
     "./context/*": "./src/context/*.ts",
+    "./homebrain/*": "./src/homebrain/*.ts",
     "./household/*": "./src/household/*.ts",
     "./home/*": "./src/home/*.ts",
     "./help/*": "./src/help/*.ts",
