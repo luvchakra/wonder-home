@@ -43,6 +43,6 @@ comment on table public.plan_policy_events is
 create index plan_policy_events_plan_idx on public.plan_policy_events (plan_key, created_at desc);
 
 alter table public.plan_policy_events enable row level security;
--- No policies: only the service role reads or writes it.
+-- Only the service role reads or writes it (deny-all policy in 20260927140100).
 
 notify pgrst, 'reload schema';

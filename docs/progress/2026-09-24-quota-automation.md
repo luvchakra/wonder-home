@@ -23,8 +23,11 @@ Where it lives:
   - three nullable columns on `plan_features`, with checks: a burst needs
     both parts, a window of 10 s to a day, positive numbers, and a fair-use
     level never above the allowance;
-  - the append-only `plan_policy_events`, with RLS on and no policies, so
-    only the service role reaches it.
+  - the append-only `plan_policy_events`, reachable only by the service
+    role: RLS is on, with an explicit deny-all policy for `anon` and
+    `authenticated` (follow-up migration `20260927140100`, also applied
+    live). CI's tenant-isolation suite requires every table to have a
+    policy, and caught the first version without one.
   - Every plan starts with no policy, so nothing changed for any household
     when it landed.
 - **`packages/core/src/billing/policies.ts`**:

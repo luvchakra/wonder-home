@@ -28,6 +28,7 @@ const NON_TENANT_TABLES = new Set([
   "profiles", // a person, who may belong to several households
   "plans", // platform-level plan catalogue
   "plan_features", // what a plan allows; a property of the plan, not of a tenant
+  "plan_policy_events", // staff changes to a plan's usage policy; a plan belongs to no household
   "platform_admins", // the separate platform-admin boundary
   "homesend_share_handoffs", // a share sheet staged before sign-in; no household is known yet
   "rate_limit_counters", // counters keyed by bucket and subject (member, household or IP hash); some subjects have no household
