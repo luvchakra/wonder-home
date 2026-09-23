@@ -70,5 +70,11 @@ the Family and Househelper tabs and in Settings), and asked on "Add a helper".
 
 ## QA cleanup
 
-The QA household is shared with the agent-autonomy fix (PR #117). It is removed
-after this merge, and the final report lists what was removed.
+Ran after PR #117 and PR #118 merged:
+- **Account:** QA account `7832775b-a358-4680-b044-b59132503078` deleted with `qa-test-user.mjs delete`.
+- **Household:** QA household `5fce589b-6c93-4149-aade-cce47bf3eac4` deleted. Its rows were removed with it: 3 members, 2 pets, 1 consumable, 3 agent runs and 3 tool calls, 1 notification, 1 usage counter, and conversation and audit rows.
+- **Stray accounts:** two accounts created by mistake (`5014daae-…`, `1b87ac0e-…`) were deleted immediately. The older QA account `42dc16e3-…` was deleted on request.
+- **Local:** scratch scripts and screenshots removed, and no dev server left running.
+- **Confirmed:** a SQL check finds no `qa-verify-*` user and no row in either household.
+
+**Left in place:** two "Chakrabarty Family" households with no login members, `5024f9f5-d6e8-42d8-a5eb-44f42f04b5eb` and `4f8bb194-043a-4690-8340-00b9bb5dc076`. Nothing proves this session created them. Each can be removed with `delete from public.households where id = '<id>';` once someone confirms they are test data.
