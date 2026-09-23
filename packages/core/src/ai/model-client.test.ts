@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { INTENT_ACTIONS } from "../conversation/intent";
-import { intentFromModelOutput, systemFor, withoutServerOnly } from "./model-client";
+import { intentFromModelOutput, readIntentOutput, systemFor, tidyIntentOutput, withoutServerOnly } from "./model-client";
 
 /** The model's structured output as a lenient parse sees it: details not stated are simply absent. */
 type Loose = Parameters<typeof intentFromModelOutput>[0];
@@ -137,5 +137,47 @@ describe("every provider can be given this schema", () => {
     // with no properties that could only ever be empty.
     expect(anthropic).toMatch(/"parameters":\{"type":"object","properties":\{"item"/);
     expect(() => zodResponseFormat(INTENT_OUTPUT_SCHEMA, "household_intent")).not.toThrow();
+  });
+});
+
+describe("one detail a model got wrong costs that detail, not the whole understanding", () => {
+  const answer = (parameters: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+    JSON.stringify({ action: "record_absence", target: { kind: "member", reference: "the little one" }, parameters, confidence: 0.8, ...extra });
+
+  it("an empty string, an unknown slot or an over-long phrase becomes 'not stated', and the rest is kept", () => {
+    const parsed = readIntentOutput("google", answer({ when: "tomorrow", time: "", window: "   ", slot: "evening", timesPer: "fortnight", what: "x".repeat(301), symptom: "sick" }));
+    expect(parsed).not.toBeNull();
+    expect(parsed?.action).toBe("record_absence");
+    expect(parsed?.target).toEqual({ kind: "member", reference: "the little one" });
+    expect(parsed?.parameters).toMatchObject({ when: "tomorrow", time: null, window: null, slot: null, timesPer: null, what: null, symptom: "sick" });
+  });
+
+  it("a list keeps its real items and drops the blank ones", () => {
+    const parsed = readIntentOutput("anthropic", JSON.stringify({ action: "add_to_list", target: { kind: "list", reference: "" }, parameters: { items: ["coriander", "", "  ", "lemons"] }, confidence: 0.9, references: [{ phrase: "", confidence: 2 }, { phrase: "our shopping", confidence: 1.5 }] }));
+    expect(parsed?.parameters.items).toEqual(["coriander", "lemons"]);
+    expect(parsed?.target.reference).toBeNull();
+    expect(parsed?.references).toEqual([{ phrase: "our shopping", confidence: 1 }]);
+  });
+
+  it("a slot named in any case is read, and a number or flag of the wrong type is dropped", () => {
+    const parsed = readIntentOutput("openai", answer({ slot: "Dinner", count: "two", amount: 42.5, protected: "yes" }));
+    expect(parsed?.parameters).toMatchObject({ slot: "dinner", count: null, amount: 42.5, protected: null });
+  });
+
+  it("what the turn cannot do without is still checked strictly", () => {
+    expect(readIntentOutput("google", answer({}, { action: "delete_everything" }))).toBeNull();
+    expect(readIntentOutput("google", answer({}, { target: { kind: "planet" } }))).toBeNull();
+    expect(readIntentOutput("google", answer({}, { confidence: "high" }))).toBeNull();
+    expect(readIntentOutput("google", "not json")).toBeNull();
+    expect(readIntentOutput("google", undefined)).toBeNull();
+  });
+
+  it("a confidence outside 0–1 is clamped rather than rejected", () => {
+    expect(readIntentOutput("google", answer({}, { confidence: 1.2 }))?.confidence).toBe(1);
+  });
+
+  it("keys the schema does not name — an id included — never survive the repair", () => {
+    const tidied = tidyIntentOutput({ action: "add_to_list", target: { kind: "list" }, parameters: { item: "milk", memberId: "m-1", recipeId: "r-1" }, confidence: 0.9 }) as { parameters: Record<string, unknown> };
+    expect(tidied.parameters).toEqual({ item: "milk" });
   });
 });
