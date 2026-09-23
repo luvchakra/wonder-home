@@ -88,6 +88,14 @@ export const AUDIT_EVENTS = [
   "health.routine_completed",
   "health.routine_dismissed",
   "health.routine_reactivated",
+  "health.fitness_goal_created",
+  "health.fitness_goal_updated",
+  "health.fitness_goal_dismissed",
+  "health.fitness_goal_reactivated",
+  "health.fitness_session_logged",
+  "health.fitness_session_updated",
+  "health.fitness_session_archived",
+  "health.fitness_session_reactivated",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];

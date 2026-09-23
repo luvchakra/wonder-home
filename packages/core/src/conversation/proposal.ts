@@ -71,10 +71,9 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   record_health_appointment: "schedule",
   log_health_issue: "draft",
   resolve_health_issue: "draft",
-  // Recognized, never claimed as done: no vitals/fitness write exists yet
-  // (stories 21-007/21-008). "draft" keeps the autonomy gate harmless so the
-  // honest "not yet doable" reply comes from the executor, never a refusal
-  // that implies the household did something wrong by asking.
+  // "draft" is the right autonomy kind for a personal health note: low-stakes,
+  // self-directed, reversible — the executor writes it for real, but the
+  // autonomy gate stays harmless rather than treating it like a payment.
   log_vital: "draft",
   set_fitness_goal: "draft",
   greet: "read",
@@ -214,6 +213,8 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Record it under Health & Fitness, private to you unless you choose to share it"];
     case "resolve_health_issue":
       return ["Mark it resolved under Health & Fitness"];
+    case "set_fitness_goal":
+      return ["Set the goal under Health & Fitness, private to you unless you choose to share it"];
     default:
       return [summarize(intent)];
   }

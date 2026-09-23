@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canExecute, notYetDoable, parseVitalReading, resolveWhen, zonedTimeToUtcIso } from "./executor";
+import { canExecute, mapFitnessActivity, notYetDoable, parseVitalReading, resolveWhen, zonedTimeToUtcIso } from "./executor";
 import type { HouseholdIntent } from "./intent";
 
 const intent = (over: Partial<HouseholdIntent>): HouseholdIntent => ({
@@ -33,7 +33,7 @@ describe("what can be carried out today", () => {
     expect(canExecute(intent({ action: "record_absence", target: { kind: "unspecified" } }))).toBe(false);
   });
 
-  it("books an appointment, logs an issue, resolves one, and logs a vital — but never a fitness goal (21-006/21-007)", () => {
+  it("books an appointment, logs an issue, resolves one, logs a vital, and sets a fitness goal (21-006/21-007/21-008)", () => {
     expect(canExecute(intent({ action: "record_health_appointment", parameters: { appointmentType: "dentist" } }))).toBe(true);
     expect(canExecute(intent({ action: "record_health_appointment", parameters: {} }))).toBe(false);
     expect(canExecute(intent({ action: "log_health_issue", parameters: { label: "headache" } }))).toBe(true);
@@ -42,12 +42,28 @@ describe("what can be carried out today", () => {
     expect(canExecute(intent({ action: "resolve_health_issue", parameters: {} }))).toBe(false);
     expect(canExecute(intent({ action: "log_vital", parameters: { vital: "bp", reading: "128/82" } }))).toBe(true);
     expect(canExecute(intent({ action: "log_vital", parameters: {} }))).toBe(false);
+    expect(canExecute(intent({ action: "set_fitness_goal", parameters: { activity: "walk", count: 3, timesPer: "week" } }))).toBe(true);
     expect(canExecute(intent({ action: "set_fitness_goal", parameters: { activity: "walk" } }))).toBe(false);
+    expect(canExecute(intent({ action: "set_fitness_goal", parameters: { activity: "", count: 3, timesPer: "week" } }))).toBe(false);
+    expect(canExecute(intent({ action: "set_fitness_goal", parameters: { activity: "walk", count: 0, timesPer: "week" } }))).toBe(false);
+    expect(canExecute(intent({ action: "set_fitness_goal", parameters: { activity: "walk", count: 3, timesPer: "fortnight" } }))).toBe(false);
+  });
+});
+
+describe("mapping a spoken activity (21-008) — a known set, or the household's own words kept", () => {
+  it("recognizes the common activities", () => {
+    expect(mapFitnessActivity("walk")).toEqual({ activityType: "walk", customLabel: null });
+    expect(mapFitnessActivity("go for a run")).toEqual({ activityType: "run", customLabel: null });
+    expect(mapFitnessActivity("cycling")).toEqual({ activityType: "cycle", customLabel: null });
+    expect(mapFitnessActivity("swim")).toEqual({ activityType: "swim", customLabel: null });
+    expect(mapFitnessActivity("yoga")).toEqual({ activityType: "yoga", customLabel: null });
+    expect(mapFitnessActivity("lift weights")).toEqual({ activityType: "strength_training", customLabel: null });
+    expect(mapFitnessActivity("stretching")).toEqual({ activityType: "stretching", customLabel: null });
+    expect(mapFitnessActivity("play tennis")).toEqual({ activityType: "sports", customLabel: null });
   });
 
-  it("is honest that a fitness goal points back to the Health screen, not 'on its way'", () => {
-    expect(notYetDoable("set_fitness_goal")).not.toMatch(/on its way/);
-    expect(notYetDoable("set_fitness_goal")).not.toMatch(/Health & Fitness/);
+  it("keeps the household's own words for anything it does not recognize", () => {
+    expect(mapFitnessActivity("pilates")).toEqual({ activityType: "other", customLabel: "Pilates" });
   });
 });
 

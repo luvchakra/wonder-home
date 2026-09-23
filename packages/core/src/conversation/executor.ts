@@ -4,6 +4,7 @@ import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
 import { createConsumable } from "../commerce/repository";
 import { createAppointment, type AppointmentType } from "../health/appointments";
+import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
@@ -62,6 +63,14 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
     case "log_vital":
       return typeof intent.parameters.vital === "string" && typeof intent.parameters.reading === "string";
+    case "set_fitness_goal":
+      return (
+        typeof intent.parameters.activity === "string" &&
+        intent.parameters.activity.trim().length > 0 &&
+        typeof intent.parameters.count === "number" &&
+        intent.parameters.count > 0 &&
+        (intent.parameters.timesPer === "day" || intent.parameters.timesPer === "week" || intent.parameters.timesPer === "month")
+      );
     default:
       return false;
   }
@@ -80,8 +89,6 @@ export function notYetDoable(action: HouseholdIntent["action"]): string {
       return `Approved. Moving it on the family calendar is done under ${linkTo("/family", "Family")} for now — I have not moved anything myself.`;
     case "plan_event":
       return `Approved. I have not put anything on the calendar myself yet — add it under ${linkTo("/family", "Family")} and I will keep an eye on it.`;
-    case "set_fitness_goal":
-      return `Noted, though fitness goals aren't tracked yet — I have not set anything up on my own.`;
     default:
       return "Approved — noted, though there is nothing I can do about this on my own yet.";
   }
@@ -104,6 +111,8 @@ export async function executeIntent(intent: HouseholdIntent, context: ExecutionC
         return await resolveHealthIssue(intent, context);
       case "log_vital":
         return await logVital(intent, context);
+      case "set_fitness_goal":
+        return await setFitnessGoal(intent, context);
       case "set_preference":
         return {
           ok: true,
@@ -324,6 +333,65 @@ async function logVital(intent: HouseholdIntent, context: ExecutionContext): Pro
     text: `Noted — ${valueText}. See ${linkTo("/health", "Health & Fitness")}.`,
     result: { vitalId: vital.id, vitalType: parsed.vitalType },
   };
+}
+
+/**
+ * "I want to walk three times a week" — a real, consistency-oriented goal
+ * (story 21-008) via the same `createFitnessGoal` the Health & Fitness
+ * screen's own form calls. Never scored, never a leaderboard entry — the
+ * reply states the goal back, nothing more.
+ */
+async function setFitnessGoal(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const activityText = typeof intent.parameters.activity === "string" ? intent.parameters.activity.trim() : "";
+  const count = typeof intent.parameters.count === "number" ? intent.parameters.count : 0;
+  const timesPer = intent.parameters.timesPer;
+
+  if (!activityText || count <= 0 || (timesPer !== "day" && timesPer !== "week" && timesPer !== "month")) {
+    return { ok: false, reason: "What would you like the goal to be, and how often?" };
+  }
+
+  const { activityType, customLabel } = mapFitnessActivity(activityText);
+
+  const goal = await createFitnessGoal(
+    context.supabase,
+    { householdId: context.householdId, memberId: context.actorMemberId },
+    {
+      memberId: context.actorMemberId,
+      activityType,
+      customLabel,
+      targetCount: count,
+      frequencyPeriod: timesPer as FitnessFrequencyPeriod,
+      privacyScope: "private",
+      providerId: "home_talk",
+    },
+  );
+
+  const label = (activityType === "other" ? customLabel : FITNESS_ACTIVITY_LABEL[activityType]) ?? activityText;
+  return {
+    ok: true,
+    text: `Goal set — ${label.toLowerCase()} ${count} time${count === 1 ? "" : "s"} a ${timesPer}. See ${linkTo("/health", "Health & Fitness")}.`,
+    result: { goalId: goal.id, activityType },
+  };
+}
+
+const ACTIVITY_KEYWORDS: [RegExp, FitnessActivityType][] = [
+  [/\b(walks?|walking)\b/, "walk"],
+  [/\b(runs?|running|jog(?:ging)?)\b/, "run"],
+  [/\b(cycl(?:e|ing)|bik(?:e|ing))\b/, "cycle"],
+  [/\bswim(?:ming)?\b/, "swim"],
+  [/\byoga\b/, "yoga"],
+  [/\b(strength training|weights?|weightlifting|lifting|gym)\b/, "strength_training"],
+  [/\b(stretch(?:es|ing)?)\b/, "stretching"],
+  [/\b(sports?|football|basketball|tennis|soccer|cricket|badminton)\b/, "sports"],
+];
+
+/** Free text ("walk", "go for a run", "play tennis") → a known activity type, or `other` with the household's own words kept as the label. */
+export function mapFitnessActivity(text: string): { activityType: FitnessActivityType; customLabel: string | null } {
+  const normalized = text.trim().toLowerCase();
+  for (const [pattern, activityType] of ACTIVITY_KEYWORDS) {
+    if (pattern.test(normalized)) return { activityType, customLabel: null };
+  }
+  return { activityType: "other", customLabel: capitalize(text.trim()) };
 }
 
 const VITAL_WORD_TO_TYPE: Record<string, VitalType> = {

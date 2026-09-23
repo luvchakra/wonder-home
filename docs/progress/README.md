@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-23 | [Story 21-008: fitness & connected-health scaffolding](2026-09-23-fitness-and-connected-health-scaffolding.md) |
 | 2026-09-22 | [Home: greeting header, Today's focus and Family moment per mockup](2026-09-22-home-page-mockup-refresh.md) |
 | 2026-09-22 | [Chevron-expandable stat cards, Bills paid-on, Househelper multi-add](2026-09-22-expandable-metric-cards-and-batch-fixes.md) |
 | 2026-09-22 | [Bills & Finance detail, multi-engagement househelpers, and Key Member removal](2026-09-22-bills-detail-helper-engagements-key-member-removal.md) |

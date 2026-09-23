@@ -90,6 +90,8 @@ const SHIPPED_TABLES = [
   "health_records",
   "health_measurement_routines",
   "health_vitals",
+  "health_fitness_goals",
+  "health_fitness_sessions",
 ];
 
 /**
@@ -404,6 +406,44 @@ async function main() {
     "anonymous cannot create a vital",
     Boolean(forgedHealthVital.error),
     forgedHealthVital.error?.code ?? "no error",
+  );
+
+  // Fitness goals & sessions (story 21-008) — same RLS shape as health_profiles.
+  const fitnessGoals = await anon.from("health_fitness_goals").select("id, activity_type").limit(1);
+  check(
+    "anonymous cannot read a household's fitness goals",
+    Boolean(fitnessGoals.error) || (Array.isArray(fitnessGoals.data) && fitnessGoals.data.length === 0),
+    fitnessGoals.error ? fitnessGoals.error.code : `${fitnessGoals.data?.length ?? "?"} rows`,
+  );
+  const forgedFitnessGoal = await anon.from("health_fitness_goals").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    activity_type: "walk",
+    target_count: 3,
+    frequency_period: "week",
+  });
+  check(
+    "anonymous cannot create a fitness goal",
+    Boolean(forgedFitnessGoal.error),
+    forgedFitnessGoal.error?.code ?? "no error",
+  );
+
+  const fitnessSessions = await anon.from("health_fitness_sessions").select("id, activity_type").limit(1);
+  check(
+    "anonymous cannot read a household's fitness sessions",
+    Boolean(fitnessSessions.error) || (Array.isArray(fitnessSessions.data) && fitnessSessions.data.length === 0),
+    fitnessSessions.error ? fitnessSessions.error.code : `${fitnessSessions.data?.length ?? "?"} rows`,
+  );
+  const forgedFitnessSession = await anon.from("health_fitness_sessions").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    member_id: "00000000-0000-4000-8000-000000000000",
+    activity_type: "walk",
+    duration_minutes: 30,
+  });
+  check(
+    "anonymous cannot create a fitness session",
+    Boolean(forgedFitnessSession.error),
+    forgedFitnessSession.error?.code ?? "no error",
   );
 
   // Step-up verifications (story 15-007). The table has no INSERT policy at
