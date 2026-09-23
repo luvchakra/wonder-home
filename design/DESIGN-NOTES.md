@@ -468,6 +468,7 @@ All of it lives in `@wonderhome/core/ui/*` and no screen invents its own:
 | `Timeline` | The day as a vertical timeline |
 | `CalendarItem`, `ResponsibilityCard`, `HandledList` | Domain rows |
 | `HomeIllustration` | The original warm-house-and-tree illustration (rule 8). Moved here from `apps/web` once the nav drawer needed the same decoration the Home screen and the landing page already used, rather than a second one invented for it |
+| `CozyCornerIllustration` | A second original illustration (rule 8) — a sleeping cat, a mug, a stack of books and a plant by a sunlit window — for Home's greeting header, with the brand's handwritten line laid over it and a date/household-name chip on top (never an invented temperature: WonderHome has no weather provider, so this shows the one thing it genuinely knows) |
 | `NotificationCard`, `CertificationItem`, `ActionPreview` | Threaded notification, a belief with provenance, an approval card |
 | `ProgressRing` | A percentage that is arithmetic, with real text in the middle |
 | `SearchBar` | Search that submits to the assistant, because search and ask are the same thing |
