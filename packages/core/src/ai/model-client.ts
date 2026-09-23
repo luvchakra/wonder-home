@@ -195,10 +195,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** What a model writes when it means "nobody said": "none", "N/A", "unknown". Never a real detail. */
+const PLACEHOLDER = /^(?:none|n\/?a|null|nil|unknown|unspecified|not (?:specified|stated|given|mentioned)|nothing|-+)$/i;
+
 function tidyText(value: unknown, limit: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
-  return trimmed.length > 0 && trimmed.length <= limit ? trimmed : null;
+  return trimmed.length > 0 && trimmed.length <= limit && !PLACEHOLDER.test(trimmed) ? trimmed : null;
 }
 
 function tidyItems(value: unknown): string[] | null {
@@ -249,7 +252,7 @@ Available actions:
 - ask_status: a question that changes nothing — "what's going on", "what needs my attention", "how is X going", "what's on tomorrow". parameters.when holds a day word when one was said; parameters.scope is "schedule" for a question about a day's plans, "home" otherwise.
 - plan_event: propose a family or social event or outing, or keep time free ("protect Saturday evening for family time"). parameters.window is the time window as said; parameters.what what it is for.
 - plan_meal: plan a meal of the day ("plan pasta for dinner tonight"). parameters.what is the dish as said, parameters.slot "breakfast", "lunch", "snack" or "dinner" when said, parameters.when the day as said.
-- set_reminder: remind the speaker themself about something at a time ("remind me to buy them tomorrow"). parameters.what is what to be reminded of, in the speaker's words; parameters.when the day or part of the day as said; parameters.time a time of day if said.
+- set_reminder: remind the speaker themself about something at a time ("remind me to buy them tomorrow"). parameters.what is what to be reminded of, in the speaker's words; parameters.when the day or part of the day exactly as said ("tomorrow", "this evening", "tomorrow morning", "tonight"); parameters.time a time of day if said.
 - adjust_schedule: move or change the time of something already planned, including a child's school work ("move Manan's science project to Friday"). parameters.to is the new time as said; parameters.what is what moves, as said.
 - remove_from_list: take something off a household list ("remove the bananas"). parameters.item, or parameters.items for several.
 - complete_school_item: mark a child's school work done ("mark Asmi's worksheet complete"). target.reference is the child's placeholder when named; parameters.title is the work as said.
@@ -263,7 +266,7 @@ Available actions:
 
 target.kind is whichever the request is really about. target.reference is a short lowercase token for what was named — a person's placeholder exactly as it appears ("child a"), a list name ("groceries"), an outcome-style key — omit it entirely when target.kind is "unspecified".
 
-parameters holds whatever concrete detail was actually given, as plain key/value pairs. Never invent a value nobody stated.
+parameters holds whatever concrete detail was actually given, as plain key/value pairs. Set only the parameters the chosen action uses and the sentence actually stated; every other parameter is null — never "none", "n/a", false or a guess. Never invent a value nobody stated.
 
 confidence is 0 to 1. A vague or ambiguous request for something consequential — paying, ordering, reassigning, rescheduling — should get a LOW confidence rather than a guessed target. The household would rather be asked than have you guess wrong about money or responsibility.
 

@@ -207,6 +207,22 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
     } else if (fallback.parameters.clarify) {
       intent = fallback;
     }
+  } else if (!answered && intent.understanding?.source === "model") {
+    // The model and the rules can agree on what was asked while the model
+    // leaves out a detail the rules read straight from the words — "remind
+    // me to pick up coriander this evening" came back from a real model
+    // with no day at all, and the turn asked "when?". Where both read the
+    // same action, the rules fill only what the model left unsaid; nothing
+    // the model did say is overwritten, and nothing is added that the
+    // household's own words do not carry.
+    const rules = resolveRuleIntent(input.utterance, context);
+    if (rules.action === intent.action) {
+      const filled: Record<string, unknown> = { ...intent.parameters };
+      for (const [key, value] of Object.entries(rules.parameters)) {
+        if (key !== "clarify" && (filled[key] === undefined || filled[key] === null)) filled[key] = value;
+      }
+      intent = { ...intent, parameters: filled };
+    }
   }
 
   // A shaky transcript of something consequential is read back, never acted on.

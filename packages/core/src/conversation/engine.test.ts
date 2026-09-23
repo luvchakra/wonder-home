@@ -139,6 +139,52 @@ describe("a live provider behind the same seam", () => {
     if (result.kind !== "reply") return;
     expect(result.intent.action).toBe("ask_status");
   });
+
+  const modelSaid = (action: "set_reminder" | "add_to_list", parameters: Record<string, unknown>): TurnInput["understand"] =>
+    async (utterance, context) => ({
+      action,
+      actorMemberId: context.actorMemberId,
+      target: { kind: "unspecified" },
+      parameters,
+      confidence: 0.9,
+      channel: context.channel,
+      utterance,
+      understanding: { source: "model", provider: "google" },
+    });
+
+  it("a detail the model left out is read from the words when the rules agree on what was asked", async () => {
+    const result = await converse(
+      turn({
+        utterance: "remind me to pick up some coriander this evening",
+        understand: modelSaid("set_reminder", { what: "pick up some coriander" }),
+      }),
+    );
+
+    expect(result.kind).toBe("reply");
+    if (result.kind !== "reply") return;
+    expect(result.intent.action).toBe("set_reminder");
+    expect(result.intent.parameters).toMatchObject({ what: "pick up some coriander", when: "this evening" });
+  });
+
+  it("what the model did say is never overwritten, and a different reading adds nothing", async () => {
+    const kept = await converse(
+      turn({
+        utterance: "remind me to pick up some coriander this evening",
+        understand: modelSaid("set_reminder", { what: "buy coriander", when: "tonight" }),
+      }),
+    );
+    if (kept.kind !== "reply") throw new Error("expected a reply");
+    expect(kept.intent.parameters).toMatchObject({ what: "buy coriander", when: "tonight" });
+
+    const other = await converse(
+      turn({
+        utterance: "remind me to pick up some coriander this evening",
+        understand: modelSaid("add_to_list", { item: "coriander" }),
+      }),
+    );
+    if (other.kind !== "reply") throw new Error("expected a reply");
+    expect(other.intent.parameters).toEqual({ item: "coriander" });
+  });
 });
 
 describe("what the assistant says", () => {

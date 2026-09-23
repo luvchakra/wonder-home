@@ -181,3 +181,15 @@ describe("one detail a model got wrong costs that detail, not the whole understa
     expect(tidied.parameters).toEqual({ item: "milk" });
   });
 });
+
+describe("a model's placeholder is not a detail", () => {
+  it("\"none\", \"N/A\" or \"unknown\" becomes 'not stated'", () => {
+    const parsed = readIntentOutput("google", JSON.stringify({ action: "set_reminder", target: { kind: "unspecified" }, parameters: { what: "pick up coriander", symptom: "none", asset: "N/A", scope: "Unknown", title: "not specified" }, confidence: 0.9 }));
+    expect(parsed?.parameters).toMatchObject({ what: "pick up coriander", symptom: null, asset: null, scope: null, title: null });
+  });
+
+  it("the system prompt tells the model to leave what was not said as null", () => {
+    expect(systemFor(undefined)).toMatch(/every other parameter is null/);
+    expect(systemFor(undefined)).toMatch(/"this evening"/);
+  });
+});
