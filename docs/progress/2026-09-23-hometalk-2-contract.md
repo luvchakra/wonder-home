@@ -139,8 +139,80 @@ proposal) on one fixed household:
 - **Browser:** checked at 360px and 1280px, with no horizontal scroll. The
   "I think you mean Asmi" reply and its preview render cleanly.
 - **Model path:** no model key is configured locally. The provider path is
-  covered by the schema, SDK-helper, stripping and prompt tests; the
-  post-merge production check is recorded below.
+  covered by the schema, SDK-helper, stripping and prompt tests. The
+  post-merge production check is recorded under "Production model check"
+  below: it could not verify the path, because the platform key is
+  rejected.
+
+## Production model check (after merge)
+
+Two turns were sent as the QA household on home.wonderapps.biz. The
+deployment was `dpl_E8FK25pLoypnXBaBGL2oJhs19DfM`, on commit `78dd29d`. The
+phrasings were chosen so that only a model would read them:
+- "could you pop some coriander and a couple of lemons onto our shopping"
+- "Sunita won't make it in on the day after tomorrow"
+
+**Result: the model was never reached.** The runtime log shows `[conversation]
+model provider failed { provider: 'anthropic', error: 'Error', status: 401 }`.
+
+**This is not the new schema.** A 401 is Anthropic refusing the key itself,
+before the request is read. An invalid schema would be a 400. Every model
+turn that has worked in production came from the one household that set
+its own Google key (the last on 22 September). The QA household has no key
+of its own, so it falls back to WonderHome's platform key:
+- `WONDERHOME_AI_KEY`, a sensitive Vercel variable last changed on
+  22 September;
+- `WONDERHOME_AI_PROVIDER`, which resolves to `anthropic`.
+
+Anthropic rejects that key. No platform-key model turn appears in the
+seven-day log.
+
+**What the household saw was honest.**
+- The rules safety net read neither sentence, as intended.
+- The first turn said "I could not reach my model just now".
+- The second did not repeat the same question (story 04-011).
+
+**The schema, checked offline:**
+- `zodOutputFormat` moves every `min`/`max` into the field's description.
+- Its output uses only `$defs`, `$ref`, `anyOf` and enums, all of which
+  Anthropic's structured outputs support.
+- Gemini gets a hand-written schema with every field optional, and is read
+  leniently.
+
+**Needs a person.**
+1. Replace `WONDERHOME_AI_KEY` in Vercel with a valid Anthropic key, or set
+   `WONDERHOME_AI_PROVIDER` to match the key that is there.
+2. Redeploy.
+3. Send one model-shaped turn and confirm the assistant message's
+   `metadata.understanding` is `model` with non-empty stored parameters.
+
+No session has, or should invent, that credential.
+
+## QA cleanup (after the Wave 4 merge)
+
+The QA data from all three parts of Wave 4 has been removed from the live
+project.
+- **Household.** "Wave4 QA Home" (`84165c18-1d87-4e64-a5b3-2988802380fa`)
+  was deleted, and everything in it with it:
+  - members, conversations, actions and reminders;
+  - the `pro` subscription row;
+  - the Tomato pasta recipe and its ingredients;
+  - both school items and the washing machine;
+  - events, meals, list items and the service request.
+- **QA account.** `6219b771-a2ce-465b-a4b0-3a6f70b191a5` was deleted with
+  `scripts/qa-test-user.mjs`.
+- **Storage.** Nothing was uploaded under the household's prefix.
+- **Local.** The scratchpad QA scripts and screenshots are gone, and no dev
+  server is running.
+
+**Confirmed:** a count over every `household_id` table in `public` and `wh`
+finds 0 rows for that household, and the auth user no longer exists.
+
+Two "Chakrabarty Family" households are left alone:
+`5024f9f5-d6e8-42d8-a5eb-44f42f04b5eb` and
+`4f8bb194-043a-4690-8340-00b9bb5dc076`. Nothing proves this session created
+them. If an owner confirms they are test data, remove each with
+`delete from households where id = '<id>';`.
 
 ## Still open
 
