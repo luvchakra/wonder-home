@@ -227,38 +227,49 @@ export function HomeDashboard({ session }: { session: Session }) {
   return (
     <AppShell active="home" viewer={viewer} secondary={secondary} pathname="/">
       <div className="space-y-6">
-        <header className="wh-rise flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1 space-y-1">
+        {/* The greeting sits directly over a warm corner illustration (rule
+            8) rather than beside it — a left-to-right scrim keeps the text
+            legible over the artwork in both themes, and the illustration's
+            own busy content is drawn into its right ~60% for exactly this
+            reason. The date/household chip is the true thing this screen
+            actually knows, never an invented temperature (rule 9:
+            WonderHome has no weather provider). */}
+        <header className="wh-rise relative min-h-[15.5rem] overflow-hidden rounded-[var(--wh-radius-lg)] sm:min-h-[16rem]">
+          <CozyCornerIllustration className="absolute inset-0 h-full w-full" />
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(to right, var(--wh-surface) 0%, var(--wh-surface) 38%, transparent 68%)" }}
+          />
+
+          {/* Hidden below `sm`: at phone widths the greeting text block
+              (max-w-[80%] below) has nowhere for this to sit without
+              overlapping it — the illustration itself is mostly cropped
+              out of frame there too, so there is no clear region left. */}
+          <ScriptAccent size="sm" heart className="absolute top-5 left-[40%] hidden max-w-[10rem] leading-[1.15] sm:block">
+            Happier Homes
+            <br />
+            Happier Humans!
+          </ScriptAccent>
+
+          <Link
+            href="/today"
+            className="absolute top-4 right-4 flex items-center gap-2 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/90 px-3 py-2 shadow-[var(--wh-shadow-card)] backdrop-blur-sm transition-colors hover:bg-[var(--wh-surface)]"
+          >
+            <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
+            <span className="min-w-0 text-left">
+              <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
+              <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
+            </span>
+          </Link>
+
+          <div className="relative z-10 max-w-[80%] space-y-1 p-5 sm:max-w-[42%] sm:p-6">
             <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
             <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
               {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
             </h1>
             <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
             <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
-          </div>
-
-          {/* A warm corner illustration (rule 8) with the brand's handwritten
-              line over it, and — the true thing this screen actually knows,
-              never an invented temperature (rule 9: WonderHome has no
-              weather provider) — today's date and the household's name,
-              linking to Today. */}
-          <div className="relative shrink-0 overflow-hidden rounded-[var(--wh-radius-lg)] sm:w-[22rem]">
-            <CozyCornerIllustration className="w-full" />
-            <ScriptAccent size="sm" tilt={false} heart className="absolute top-3 left-4 max-w-[8.5rem] leading-[1.15]">
-              Happier Homes
-              <br />
-              Happier Humans!
-            </ScriptAccent>
-            <Link
-              href="/today"
-              className="absolute top-3 right-3 flex items-center gap-2 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/90 px-3 py-2 shadow-[var(--wh-shadow-card)] backdrop-blur-sm transition-colors hover:bg-[var(--wh-surface)]"
-            >
-              <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
-              <span className="min-w-0 text-left">
-                <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
-                <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
-              </span>
-            </Link>
           </div>
         </header>
 
