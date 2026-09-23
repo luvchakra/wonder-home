@@ -110,6 +110,18 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
     return { kind: "answer", summary: greetingFor(intent) };
   }
 
+  // What this person can never do is refused before any question about it:
+  // a child asking to pay a bill is told no, not asked which bill (a real
+  // model once left the details out and the child got "which bill, and for
+  // how much?"). Entitlement still waits until after clarification — an
+  // ambiguous request is not an entitlement question — but who is asking is
+  // known before anything is asked. A feature outside the plan still says so
+  // first, as it always has.
+  const required = REQUIRED_PERMISSION[intent.action];
+  if (context.entitled && required && !can(context.actor, required)) {
+    return { kind: "refused", reason: refusalFor(intent) };
+  }
+
   const disposition = disposeIntent(intent);
   if (disposition.kind === "clarify") {
     return { kind: "clarify", question: disposition.question };
@@ -125,7 +137,6 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
     };
   }
 
-  const required = REQUIRED_PERMISSION[intent.action];
   if (required && !can(context.actor, required)) {
     return { kind: "refused", reason: refusalFor(intent) };
   }

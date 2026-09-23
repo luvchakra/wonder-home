@@ -11,7 +11,7 @@ const actor = { householdId: HOUSEHOLD, memberId: MEMBER };
 function reading(over: Partial<IntakeExtraction>): IntakeExtraction {
   return {
     readable: true, kind: "unknown", title: null, notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: null,
-    schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null,
+    schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, dateText: null,
     subjectMemberName: null, summary: null, people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
     ...over,
   };

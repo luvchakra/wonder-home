@@ -4,7 +4,7 @@ import { describeLocalNow } from "../context/format";
 import { isoDay } from "../context/normalize";
 import type { HouseholdContextItem } from "../context/types";
 import type { ConversationTurn } from "../conversation/engine";
-import { composeFromFacts, composeGrounded, unknownAnswer } from "./answer";
+import { answeringFacts, composeFromFacts, composeGrounded, unknownAnswer } from "./answer";
 import { gateCandidates, groundFacts, type GroundedFact } from "./grounding";
 import { readBrainQuestion, type BrainReading } from "./question";
 import type { ViolationKind } from "./validate";
@@ -83,7 +83,15 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
   if (turn.compose) {
     const minimised = minimiseContext(gateCandidates(facts), { policy: { ...turn.policy, maxItems: Math.max(turn.policy.maxItems, turn.factBudget) }, people: turn.people });
     const sent = minimised.included.map((entry) => ({ id: entry.id, text: entry.text }));
-    if (sent.length > 0) {
+    // A fact that answers the question but may not leave (a child's, a
+    // bill's, under the household's data-use policy) means a model can only
+    // give part of the answer — or, as a real one did, say "I do not have any
+    // information about Asmi" while WonderHome has it. A specific question
+    // whose answer was withheld is answered from the facts themselves.
+    const sentIds = new Set(sent.map((fact) => fact.id));
+    const answering = answeringFacts(facts, reading);
+    const withheld = !reading.broad && answering.some((fact) => !sentIds.has(fact.contextId));
+    if (sent.length > 0 && !withheld) {
       const compose = turn.compose;
       const localNow = describeLocalNow(turn.now, turn.timezone);
       let lastRequestSize = sent.length;
@@ -99,7 +107,9 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
       validation.rejected = [...new Set(outcome.rejected.map((violation) => violation.kind))];
       factsSent = lastRequestSize;
 
-      if (outcome.status === "accepted") {
+      // "Not on record" from a model is not the last word when the record
+      // plainly has the answer.
+      if (outcome.status === "accepted" && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
         return {
           reading,
           facts,

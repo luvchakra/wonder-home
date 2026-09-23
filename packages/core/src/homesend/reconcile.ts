@@ -43,7 +43,7 @@ export type HomeSendReconciliation = {
   message: string;
   /** The existing record's id within its own table. */
   existingId: string;
-  existing: { title: string; date: string | null; status: string | null; subjectName: string | null; amountMinor: number | null };
+  existing: { title: string; date: string | null; status: string | null; subjectMemberId: string | null; subjectName: string | null; amountMinor: number | null };
   proposal: HomeSendProposal;
 };
 
@@ -145,6 +145,7 @@ function existingOf(item: HouseholdContextItem, names: ReadonlyMap<string, strin
     title: typeof attributes.title === "string" ? attributes.title : item.summary,
     date: typeof attributes.date === "string" ? attributes.date : null,
     status: typeof attributes.status === "string" ? attributes.status : null,
+    subjectMemberId: subjectId ?? null,
     subjectName: subjectId ? (names.get(subjectId) ?? null) : null,
     amountMinor: typeof attributes.amountMinor === "number" ? attributes.amountMinor : null,
   };

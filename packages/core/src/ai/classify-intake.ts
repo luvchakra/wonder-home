@@ -10,6 +10,8 @@ import { CLAUDE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 import { fenceUntrusted, UNTRUSTED_CONTENT_RULE } from "../homesend/injection";
+import { isoDateIn } from "../context/format";
+import { resolveDay } from "../conversation/temporal";
 
 /**
  * HomeSend's classifier (Phase C): reading a photo, file or pasted forward
@@ -69,6 +71,13 @@ const IntakeExtractionSchema = z.object({
   // health_document fields
   healthRecordType: z.enum(RECORD_TYPES).nullable(),
   documentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  /**
+   * The words the content uses for this item's date, exactly as written
+   * ("tomorrow", "Saturday", "5 October", "27/09"). The model only names
+   * the phrase; `groundIntakeDate` decides the day, in the household's
+   * timezone, the same way HomeTalk's temporal grounding does.
+   */
+  dateText: z.string().trim().max(80).nullable(),
   /** A name as printed/written on the document — never a member id; the confirm screen matches it to a household member, or asks when it cannot. */
   subjectMemberName: z.string().trim().max(120).nullable(),
   // Wave 3 (§8): the richer reading every input shares.
@@ -128,6 +137,7 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
       category: null,
       healthRecordType: null,
       documentDate: null,
+      dateText: null,
       subjectMemberName: null,
       summary: null,
       people: [],
@@ -160,6 +170,7 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     category: raw.kind === "grocery_item" ? raw.category : null,
     healthRecordType: raw.kind === "health_document" ? raw.healthRecordType : null,
     documentDate: raw.kind === "health_document" ? raw.documentDate : null,
+    dateText: raw.kind === "unknown" || raw.kind === "grocery_item" ? null : withoutIds(raw.dateText ?? null),
     subjectMemberName: raw.kind === "health_document" ? withoutIds(raw.subjectMemberName) : null,
     summary: withoutIds(raw.summary ?? null),
     people: (raw.people ?? []).filter((name) => !UUID_LIKE.test(name)).slice(0, 8),
@@ -193,6 +204,7 @@ const EXTRACTION_JSON_SCHEMA = {
     category: { type: "string", nullable: true },
     healthRecordType: { type: "string", enum: RECORD_TYPES, nullable: true },
     documentDate: { type: "string", nullable: true },
+    dateText: { type: "string", nullable: true },
     subjectMemberName: { type: "string", nullable: true },
     summary: { type: "string", nullable: true },
     people: { type: "array", items: { type: "string" } },
@@ -210,7 +222,7 @@ const EXTRACTION_JSON_SCHEMA = {
   required: [
     "readable", "kind", "title", "notes", "billKind", "payee", "amount", "currency", "dueDate",
     "schoolKind", "subject", "quantity", "unit", "category", "healthRecordType", "documentDate",
-    "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
+    "dateText", "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
   ],
 } as const;
 
@@ -225,9 +237,11 @@ kind is exactly one of:
 
 Never invent a title, amount, date, name or note the source does not show. If it is blurry, unrelated, or you cannot make out any actionable content, set readable to false, kind to "unknown", leave every other field null or empty, and set confidence to "low".
 
-Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due) or a school_item (when it is due, or the day the event or exam happens), as a calendar date in YYYY-MM-DD form, only when the source states one clearly enough to resolve to an actual date — a bare "Friday" with no date anywhere is not enough; leave it null and mention what it said in notes instead. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg").
+Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due) or a school_item (when it is due, or the day the event or exam happens), as a calendar date in YYYY-MM-DD form, only when the source writes out a full date with its year. Whenever the content names the day in any other way — "tomorrow", "Saturday", "next Friday", "5 October", "27/09" — copy those exact words into dateText and leave the calendar arithmetic to WonderHome; never work out a date yourself from a weekday or a date without a year. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg").
 
-healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date), in YYYY-MM-DD form, only when clearly shown. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
+healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date, an appointment date), in YYYY-MM-DD form, only when a full date with its year is shown; otherwise put the words used for it in dateText. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
+
+dateText: for a bill, school_item or health_document, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. Null when the content names no date, and always null for grocery_item and unknown.
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
@@ -261,6 +275,15 @@ export type IntakeSource = { image: ExtractedImage } | { document: ExtractedDocu
 
 /** Where the content came from, told to the model as context — the subject and sender are untrusted too, so they travel inside the fence. */
 export type IntakeContext = {
+  /**
+   * When the content was written or arrived, and the household's timezone.
+   * WonderHome's own facts, never the content's: they are told to the
+   * model outside the untrusted fence, and they are what a date phrase is
+   * resolved against — "tomorrow" in a message from last Thursday means
+   * last Friday, not tomorrow.
+   */
+  now?: Date;
+  timezone?: string | null;
   channel?: string;
   subject?: string | null;
   from?: string | null;
@@ -280,12 +303,47 @@ function contextLines(context: IntakeContext | undefined): string {
   return lines.length > 0 ? fenceUntrusted(lines.join("\n"), "where it came from") : "";
 }
 
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+
+/** The reference day, from WonderHome itself — so it sits outside the fence. */
+function referenceLine(context: IntakeContext | undefined): string {
+  if (!context?.now || !context.timezone) return "";
+  const day = isoDateIn(context.now, context.timezone);
+  const weekday = WEEKDAY_NAMES[new Date(`${day}T12:00:00Z`).getUTCDay()];
+  return `Reference day (from WonderHome, not from the content): ${weekday} ${day}, in the household's timezone ${context.timezone}. Relative dates in the content are relative to this day.`;
+}
+
 function textPrompt(source: { text: string }, context: IntakeContext | undefined): string {
-  return [userPrompt(), contextLines(context), fenceUntrusted(source.text)].filter(Boolean).join("\n\n");
+  return [userPrompt(), referenceLine(context), contextLines(context), fenceUntrusted(source.text)].filter(Boolean).join("\n\n");
 }
 
 function attachmentPrompt(context: IntakeContext | undefined): string {
-  return [userPrompt(), contextLines(context), "The content is the attached file."].filter(Boolean).join("\n\n");
+  return [userPrompt(), referenceLine(context), contextLines(context), "The content is the attached file."].filter(Boolean).join("\n\n");
+}
+
+/**
+ * Temporal grounding for HomeSend (the Wave 4 §7 rule, applied to intake):
+ * the model names the date phrase, deterministic code decides the day.
+ *
+ * `dateText` is resolved by `conversation/temporal.ts` against when the
+ * content was written, in the household's timezone. When it resolves, that
+ * day wins over any date the model worked out itself. When it does not (a
+ * format the resolver does not read), the model's full date is kept only
+ * if the model gave one. Without a timezone nothing is grounded, and the
+ * reading is returned unchanged.
+ */
+export function groundIntakeDate(extraction: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone"> | undefined): IntakeExtraction {
+  if (!context?.timezone || !extraction.readable || !extraction.dateText) return extraction;
+  const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" ? "documentDate" : null;
+  if (!field) return extraction;
+  const phrase = extraction.dateText.replace(/^(?:due|until|till|before|by|on)\s+/i, "").trim();
+  let day: string | null = null;
+  try {
+    day = resolveDay(phrase, { timezone: context.timezone, now: context.now ?? new Date() });
+  } catch {
+    day = null;
+  }
+  return day ? { ...extraction, [field]: day } : extraction;
 }
 
 /**
@@ -325,7 +383,7 @@ export async function classifyIntake(
           output_config: { format: zodOutputFormat(IntakeExtractionSchema), effort: "low" },
         });
         if (response.stop_reason === "refusal" || !response.parsed_output) return null;
-        return sanitizeIntakeExtraction(response.parsed_output);
+        return groundIntakeDate(sanitizeIntakeExtraction(response.parsed_output), context);
       }
       case "google": {
         const client = geminiClient(apiKey, "classify");
@@ -346,7 +404,7 @@ export async function classifyIntake(
           },
         });
         const parsed = response.text ? IntakeExtractionSchema.safeParse(JSON.parse(response.text)) : null;
-        return parsed?.success ? sanitizeIntakeExtraction(parsed.data) : null;
+        return parsed?.success ? groundIntakeDate(sanitizeIntakeExtraction(parsed.data), context) : null;
       }
       case "openai": {
         const client = openaiClient(apiKey, "classify");
@@ -373,7 +431,7 @@ export async function classifyIntake(
           response_format: zodResponseFormat(IntakeExtractionSchema, "intake_extraction"),
         });
         const parsed = completion.choices[0]?.message.parsed;
-        return parsed ? sanitizeIntakeExtraction(parsed) : null;
+        return parsed ? groundIntakeDate(sanitizeIntakeExtraction(parsed), context) : null;
       }
     }
   } catch (thrown) {

@@ -7,7 +7,7 @@ import { AUTO_APPLY_OUTCOMES, decideConfirmation, type ConfirmationDecision } fr
 import type { HouseholdContextItem } from "@wonderhome/core/context/types";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
-import { resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
+import { adoptMatchedSubject, resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView } from "@wonderhome/core/identity/views";
@@ -106,7 +106,8 @@ export async function prepareReview(
     return null;
   });
 
-  const subject = resolution?.subject ?? null;
+  // Who it is for: what the content said, or else whose record it matched.
+  const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
   const autonomy = checked ? await autonomyFor(supabase, membership.household.id, kind) : "observe";
   return { subject, reconciliation, understanding, confirmation: confirm(subject, reconciliation, understanding, autonomy) };
 }

@@ -20,6 +20,7 @@ import { heldBecause, leansOnEarlier, partialSummary, splitRequest, type PartOut
 import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
 import { classifyShortReply, type HouseholdIntent } from "@wonderhome/core/conversation/intent";
 import { attributeMemory } from "@wonderhome/core/conversation/memory";
+import { localDateTime, pendingWords, roleWords } from "@wonderhome/core/conversation/moment";
 import {
   beginEditMessage,
   currentSessionId,
@@ -226,7 +227,7 @@ export async function POST(request: Request, { params }: Params) {
     const moment = {
       role: roleWords(membership),
       localDateTime: localDateTime(new Date(), membership.household.timezone),
-      pending: clarifying ? `a question: "${clarifying.question}"` : pending ? `a yes or no on "${pending.summary}"` : null,
+      pending: pendingWords(clarifying ? { question: clarifying.question } : pending ? { summary: pending.summary } : null),
       recent: [...new Set(lastFocus.map((entity) => entity.label))].slice(0, 5),
     };
     const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, moment);
@@ -1154,23 +1155,6 @@ async function decideProviderRouting(
 }
 
 /** Who is speaking, as a role the model may know — never a name. */
-function roleWords(membership: HouseholdMembership): string {
-  if (membership.memberType === "child") return "a child of the household";
-  if (membership.memberType === "helper") return "a helper who works for the household";
-  return membership.roles.includes("head") || membership.roles.includes("administrator") ? "an adult who runs the household" : "an adult of the household";
-}
-
-/** "Wednesday 23 September 2026, 18:10 (Asia/Kolkata)" — the household's own clock. */
-function localDateTime(now: Date, timezone: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: timezone }).formatToParts(now);
-    const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
-    return `${part("weekday")} ${part("day")} ${part("month")} ${part("year")}, ${part("hour")}:${part("minute")} (${timezone})`;
-  } catch {
-    return now.toISOString();
-  }
-}
-
 /**
  * How many facts may go in one answer. The policy's own `maxItems` was set
  * for a single utterance and a few turns of history; a whole home is more

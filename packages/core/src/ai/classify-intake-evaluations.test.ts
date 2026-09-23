@@ -48,6 +48,7 @@ describe("HomeSend classify-intake golden scenario evaluations", () => {
       category: null,
       healthRecordType: null,
       documentDate: null,
+      dateText: null,
       subjectMemberName: null,
       summary: null,
       people: [],
