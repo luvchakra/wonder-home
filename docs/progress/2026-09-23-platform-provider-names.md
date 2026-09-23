@@ -109,3 +109,47 @@ Other changes:
 - Typecheck, lint and the secret scan passed.
 - 2167 unit tests passed.
 - The production re-check after merge is recorded below.
+
+## Production re-check after #125, and a third fix
+
+Re-run on deployment `112687b`. **No turn was unparseable**, and there was
+no `model output unparseable` log line.
+
+| Said | Result |
+|---|---|
+| "the little one is off sick tomorrow" | "I think you mean Manan (you said "the little one") — if not, say who." Then "record that Manan is away tomorrow (Thu 24 Sep)", waiting for a yes. This is the §20 medium-confidence line on a real model. |
+| "we're running low on atta, better grab some" | Atta was added. |
+| "Asmi's got a dentist visit next Thursday" | Understood as `record_health_appointment`, then refused as "not part of your current plan". That is correct for the QA household's free plan. |
+| "remind me to pick up some coriander on the way home this evening" | Understood as `set_reminder`, but it asked "When should I remind you?". |
+
+**What the reminder showed.** The model's parameters carried no day at all.
+They did carry placeholders: `symptom: "none"`, `asset: "coriander"` and
+`timesPer: "day"`. The deterministic rules read the same sentence as
+`set_reminder` with `when: "this evening"`. They were never consulted,
+because they only step in when the model says `unknown`.
+
+**Third fix:**
+- `conversation/engine.ts`: when a model's understanding and the rules
+  agree on the action, the rules fill **only the parameters the model left
+  unsaid**. Nothing the model said is overwritten. When the two read
+  different actions, nothing is added.
+- `tidyIntentOutput` now also treats placeholder words as "not stated":
+  "none", "N/A", "unknown", "not specified" and the like.
+- The prompt now asks for unstated parameters to be null, never "none",
+  false or a guess. It also asks for a reminder's part of the day to stay
+  in `when`, exactly as said.
+
+**Verified:**
+- 4 new tests: 2 in `engine.test.ts` (fill-only-gaps, never overwrite or
+  cross actions) and 2 in `model-client.test.ts` (placeholders, prompt
+  lines).
+- Typecheck, lint and the secret scan passed.
+- 2171 unit tests passed.
+
+## QA data for this note
+
+- **QA account:** `570355fb-4015-490c-a8d0-923ced397303`.
+- **Household:** "Model QA Home" (`4d47c1de-f7c8-45f9-b0ac-7c12c2b3d8a9`).
+
+Both are removed after the final production check. The cleanup is recorded
+below.
