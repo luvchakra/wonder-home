@@ -118,11 +118,11 @@ proposal) on one fixed household:
 
 - **Gates:**
   - `npm run verify` passed (typecheck, lint, the migration, embed,
-    boundary and secret lints, tracker, brand, security). Test counts: 2166
+    boundary and secret lints, tracker, brand, security). Test counts: 2159
     unit, 414 database, 364 Playwright, plus the build.
-  - 94 unit tests are new since part 2: `evaluation.test.ts` (30), the
-    `operations.test.ts`, `model-client.test.ts` and `rules.test.ts`
-    additions, and the rest of the conversation tests.
+  - 44 unit tests are new since part 2: `evaluation.test.ts` (30), and
+    additions to `operations.test.ts`, `model-client.test.ts` and
+    `rules.test.ts`.
   - No migration was needed.
 - **Live QA** through the real signed-in route on the QA household, with
   school items and a washing machine seeded. Every write was checked in the
