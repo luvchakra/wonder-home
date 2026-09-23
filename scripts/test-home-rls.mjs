@@ -434,3 +434,79 @@ test("an Admin can switch weather off", () => {
   asProfile(HEAD, `delete from public.weather_locations where household_id = '${household}';`, options);
   assert.equal(asProfile(HEAD, `select count(*) from public.weather_locations;`, options), "0");
 });
+
+// Backup services (story 07-008).
+
+let backupServiceId = "";
+
+test("only an Admin keeps and sees the household's backup services", () => {
+  backupServiceId = asProfile(
+    HEAD,
+    `insert into public.backup_services (household_id, name, contact, covers, created_by_member_id)
+     values ('${household}', 'Sparkle Cleaning', '+91 98000 00000', '{home.cleaning,meals.dinner}', '${headMember}') returning id;`,
+    options,
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.backup_services;`, options), "1");
+  assert.equal(asProfile(PARTNER, `select count(*) from public.backup_services;`, options), "0", "a member who is not an Admin saw the backup services");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.backup_services;`, options), "0");
+  assert.ok(
+    deniedForProfile(PARTNER, `insert into public.backup_services (household_id, name) values ('${household}', 'Planted by a member');`, options),
+    "a member who is not an Admin added a backup service",
+  );
+  assert.ok(
+    deniedForProfile(OUTSIDER, `insert into public.backup_services (household_id, name) values ('${household}', 'Planted by an outsider');`, options),
+  );
+  asProfile(PARTNER, `update public.backup_services set name = 'Renamed' where id = '${backupServiceId}';`, options);
+  assert.equal(psql(`select name from public.backup_services where id = '${backupServiceId}';`, options), "Sparkle Cleaning");
+});
+
+test("a backup service's name is one per household, and what it covers is a list of outcome keys", () => {
+  assert.throws(
+    () => asProfile(HEAD, `insert into public.backup_services (household_id, name) values ('${household}', '  sparkle cleaning ');`, options),
+    /backup_services_name_idx/,
+  );
+  assert.throws(
+    () => asProfile(HEAD, `insert into public.backup_services (household_id, name, covers) values ('${household}', 'Odd', '{"Not A Key"}');`, options),
+    /check constraint/,
+  );
+});
+
+test("cover is arranged once per outcome and day, and a cancelled one frees the day", () => {
+  const arrange = () =>
+    asProfile(
+      HEAD,
+      `insert into public.service_requests (household_id, subject, provider_name, backup_service_id, cover_outcome_key, cover_on, next_action, next_action_by)
+       values ('${household}', 'Cover clean home on 2026-09-30', 'Sparkle Cleaning', '${backupServiceId}', 'home.cleaning', '2026-09-30', 'Confirm with Sparkle Cleaning', 'household') returning id;`,
+      options,
+    );
+  const first = arrange();
+  assert.throws(() => arrange(), /service_requests_one_open_cover_idx/);
+  asProfile(HEAD, `update public.service_requests set status = 'cancelled', next_action = null, next_action_by = null where id = '${first}';`, options);
+  arrange();
+  assert.equal(
+    psql(`select count(*) from public.service_requests where cover_outcome_key = 'home.cleaning' and cover_on = '2026-09-30';`, options),
+    "2",
+  );
+
+  assert.throws(
+    () => asProfile(HEAD, `insert into public.service_requests (household_id, subject, cover_outcome_key) values ('${household}', 'Half a cover', 'home.cleaning');`, options),
+    /service_requests_cover_is_whole/,
+  );
+});
+
+test("a cover request cannot name another household's backup service", () => {
+  const theirs = asProfile(
+    OUTSIDER,
+    `insert into public.backup_services (household_id, name) values ('${otherHousehold}', 'Their cleaner') returning id;`,
+    options,
+  );
+  assert.throws(
+    () =>
+      asProfile(
+        HEAD,
+        `insert into public.service_requests (household_id, subject, backup_service_id) values ('${household}', 'Borrowed', '${theirs}');`,
+        options,
+      ),
+    /not part of household/,
+  );
+});

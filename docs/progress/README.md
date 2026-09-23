@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Backup services: only the outcomes an absence leaves uncovered, the right outside service offered for exactly those days, one tap to arrange it as a service request (story 07-008 Done, module 07 complete)](2026-09-24-backup-services.md) |
 | 2026-09-24 | [Controlled entitlement experiments: a stable hashed share of a plan gets one feature changed, applied inside the one entitlement service, frozen once running, visible to the household (story 20-008 Done, module 20 complete)](2026-09-24-entitlement-experiments.md) |
 | 2026-09-24 | [Fair-use and burst policies as plan data: a burst refuses for its window, past fair use HomeTalk answers from the rules and says so, staff changes kept (story 20-007 Done)](2026-09-24-quota-automation.md) |
 | 2026-09-24 | [WhatsApp as a notification channel: Cloud API template adapter, delivery wired into new notifications, a signed webhook for delivery reports and STOP (story 17-006 Done)](2026-09-24-whatsapp-channel.md) |

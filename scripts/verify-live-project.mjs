@@ -27,6 +27,7 @@ const SHIPPED_TABLES = [
   "plan_policy_events",
   "entitlement_experiments",
   "entitlement_experiment_events",
+  "backup_services",
   "profiles",
   "households",
   "household_members",
@@ -145,6 +146,9 @@ const SHIPPED_COLUMNS = [
   { table: "plan_features", column: "burst_limit" },
   { table: "plan_features", column: "burst_window_seconds" },
   { table: "plan_features", column: "fair_use_limit" },
+  { table: "service_requests", column: "cover_outcome_key" },
+  { table: "service_requests", column: "cover_on" },
+  { table: "service_requests", column: "backup_service_id" },
 ];
 
 /**
