@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-23 | [Wave 5, part 3: production hardening — rate and payload limits, timeouts, email monitoring, retries, idempotency (story 14-013 Done)](2026-09-23-wave5-production-hardening.md) |
 | 2026-09-23 | [Wave 5, part 2: corrections as evidence, approvals bound to the exact proposal, production quality metrics (story 14-013)](2026-09-23-wave5-corrections-approvals-metrics.md) |
 | 2026-09-23 | [Wave 5, part 1: one evaluation framework for HomeTalk, HomeSend and HomeBrain — golden households, metrics, gates, release artifact (story 14-013)](2026-09-23-wave5-evaluation-framework.md) |
 | 2026-09-23 | [The platform AI key reaches the provider it belongs to, and one bad model field no longer discards a turn](2026-09-23-platform-provider-names.md) |

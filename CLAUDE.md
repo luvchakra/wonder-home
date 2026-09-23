@@ -384,6 +384,25 @@ exact proposal through `conversation/approval.ts`: a fingerprint of the
 action, its target and every parameter. A stale, changed or timed-out
 approval is refused and closed, never carried out. Production quality
 (§23) is counted from closed words only, in `evaluation/production.ts`.
+Production hardening (Wave 5 §14–§17):
+- **Rate limits.** Every rate limit goes through `security/rate-limit.ts`'s
+  `hitRateLimit`, which reaches the service-role-only
+  `public.rate_limit_hit`. It fails open, because it throttles abuse and is
+  not an authorization gate. Its refusal says the pause is temporary and
+  that nothing was lost.
+- **Timeouts.** Every model client comes from `ai/provider-clients.ts`, with
+  a timeout and a single retry. Never construct an SDK client elsewhere.
+- **Forwarded email.** Each delivery leaves closed-word events in
+  `homesend_email_events` (`homesend/email-monitoring.ts`), and the §14
+  alert thresholds are evaluated over the last hour.
+- **Failed classifications.** A failed classification is kept and retried
+  through `jobs` (`homesend/retry-queue.ts`, one waiting job per item,
+  dead after five tries).
+- **Cron.** A cron route exports `GET` as well as `POST`, because Vercel
+  Cron sends GET.
+- **Duplicate requests.** An idempotency key is reserved while its request
+  is in flight, so a double tap is refused rather than run twice. A
+  household runs one agent pass at a time.
 
 Underneath HomeTalk and HomeBrain, a real governed multi-agent pipeline
 runs the household's actual domains: `ai/gather-assessments.ts` merges

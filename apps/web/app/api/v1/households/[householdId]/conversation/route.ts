@@ -16,7 +16,7 @@ import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDetermin
 import { canExecute, executeIntent, notYetDoable, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import { approvalRefusal } from "@wonderhome/core/conversation/approval";
 import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
-import { heldBecause, leansOnEarlier, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
+import { heldBecause, leansOnEarlier, partialSummary, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
 import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
 import { classifyShortReply, type HouseholdIntent } from "@wonderhome/core/conversation/intent";
 import { attributeMemory } from "@wonderhome/core/conversation/memory";
@@ -48,6 +48,7 @@ import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { hometalkCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { log } from "@wonderhome/core/observability/logger";
+import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
@@ -192,6 +193,9 @@ export async function POST(request: Request, { params }: Params) {
     const feature = body.channel === "voice" ? "conversation.voice" : "conversation.text";
     const entitlement = await may(supabase, householdId, feature);
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
+    // Faster than anyone talks, slower than a script (Wave 5 §15). Counted
+    // per member, before anything is read, written or sent anywhere.
+    if (!(await hitRateLimit(admin, "hometalk.turn", membership.memberId))) throw new ApiError("rate_limited", rateLimitMessage("hometalk.turn"));
 
     const [entitled, sessionId, autonomyFor, people] = await Promise.all([
       consequentialEntitlements(supabase, householdId),
@@ -494,6 +498,12 @@ export async function POST(request: Request, { params }: Params) {
         if (partOutcome === "asked") break;
       }
 
+      const summary = partialSummary(earlier);
+      if (summary) {
+        const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: summary, metadata: { kind: "partial_summary", mode: "answer", provider: routing.code } });
+        replies.push({ id, text: summary, action: null, preview: null, proposal: "summary", mode: "answer" });
+      }
+
       return {
         sessionId,
         memberMessageId,
@@ -601,9 +611,14 @@ export async function POST(request: Request, { params }: Params) {
       // consent lets them go, validated before anyone reads it, otherwise
       // from the facts themselves. The agenda summary stays the answer to
       // "what's going on?", where nothing narrower applies.
-      const agenda = brainRead ? (await brainRead.catch(() => null))?.agenda ?? (await householdAgenda(supabase, householdId, view)) : await householdAgenda(supabase, householdId, view);
+      // Context unavailable (Wave 5 §16): if the home itself cannot be read,
+      // say so plainly rather than failing the whole turn.
+      const agenda =
+        (brainRead ? (await brainRead.catch(() => null))?.agenda : null) ?? (await householdAgenda(supabase, householdId, view).catch(() => null));
       const [fallback, answered] = await Promise.all([
-        answerStatus(supabase, householdId, membership, result.intent, agenda),
+        agenda
+          ? answerStatus(supabase, householdId, membership, result.intent, agenda).catch(() => HOME_UNREADABLE)
+          : Promise.resolve(HOME_UNREADABLE),
         askHomeBrain({ routing, question: body.utterance, previousQuestion, people, view, membership, read: brainRead }),
       ]);
       composedAt = Date.now();
@@ -762,6 +777,9 @@ export async function POST(request: Request, { params }: Params) {
  * is told exactly that. "It is on its way" was the one sentence this route
  * must never say about something that did not move.
  */
+/** What a status question gets when the home itself could not be read just now. Nothing was changed. */
+const HOME_UNREADABLE = "I could not read the household's details just now, so I cannot say what is going on. Nothing was changed — try again in a moment.";
+
 /** Whether a model or the rules understood the turn that made a proposal — from its reply's own metadata. */
 async function understandingOf(admin: ReturnType<typeof createAdminClient>, actionId: string): Promise<"model" | "rules" | null> {
   const { data: action } = await admin.from("conversation_actions").select("message_id").eq("id", actionId).maybeSingle();
@@ -1047,6 +1065,18 @@ async function decideProviderRouting(
 
   if (!decision.ok) {
     return { code: decision.code, itemsSent: 0, disclosure: [decision.reason], policy };
+  }
+
+  // Model calls are budgeted per household (Wave 5 §15). Past the budget the
+  // turn is answered by the rules, and the household is told so. Nothing is
+  // refused, and nothing leaves.
+  if (!(await hitRateLimit(createAdminClient(), "ai.model", householdId))) {
+    return {
+      code: "not_transmitted_rate_limited",
+      itemsSent: 0,
+      disclosure: ["This household has asked a lot in the last hour, so this turn was answered from WonderHome's own rules. Nothing was sent to a model."],
+      policy,
+    };
   }
 
   const sentUtterance = minimised.included.find((entry) => entry.id === "utterance")?.text ?? utterance;

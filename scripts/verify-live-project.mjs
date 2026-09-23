@@ -555,6 +555,25 @@ async function main() {
   const fingerprints = await admin.from("conversation_actions").select("approval_fingerprint").limit(1);
   check("conversation actions carry an approval fingerprint", !fingerprints.error, fingerprints.error?.code ?? "ok");
 
+  // Rate limits, email telemetry and the job queue wrappers (20260924150000,
+  // Wave 5 §14–§17). The limiter check spends one hit in a bucket of its
+  // own, so it never touches a real member's limit. `claim_jobs` is not
+  // called here: claiming would take real queued work.
+  const serverLimit = await admin.rpc("rate_limit_hit", { p_bucket: "verify.live", p_subject: "verify-live", p_window_seconds: 60, p_max: 1000 });
+  check("the server can count a rate-limit hit", !serverLimit.error && serverLimit.data === true, serverLimit.error?.code ?? `value=${JSON.stringify(serverLimit.data)}`);
+  const anonLimit = await anon.rpc("rate_limit_hit", { p_bucket: "verify.live", p_subject: "verify-live", p_window_seconds: 60, p_max: 1000 });
+  check("anonymous cannot spend or probe a rate limit", anonLimit.error?.code === "42501", anonLimit.error?.code ?? "no error");
+  const serverEmailEvents = await admin.from("homesend_email_events").select("id").limit(1);
+  check("the server can read email forwarding telemetry", !serverEmailEvents.error, serverEmailEvents.error?.code ?? "ok");
+  const anonEmailEvents = await anon.from("homesend_email_events").select("id").limit(1);
+  check(
+    "anonymous cannot read email forwarding telemetry",
+    Boolean(anonEmailEvents.error) || (Array.isArray(anonEmailEvents.data) && anonEmailEvents.data.length === 0),
+    anonEmailEvents.error ? anonEmailEvents.error.code : `${anonEmailEvents.data?.length ?? "?"} rows`,
+  );
+  const anonClaim = await anon.rpc("claim_jobs", { p_worker_id: "verify-live", p_limit: 1, p_lease_seconds: 5 });
+  check("anonymous cannot claim queued work", anonClaim.error?.code === "42501", anonClaim.error?.code ?? "no error");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

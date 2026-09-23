@@ -136,3 +136,66 @@ describe("withIdempotency", () => {
     expect(operation).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("in-flight reservation (Wave 5 §17)", () => {
+  function reservingStore() {
+    const rows = new Map<string, { requestHash: string; response: RecordedResponse }>();
+    const store: IdempotencyStore = {
+      async lookup(key, endpoint) {
+        return rows.get(`${endpoint}:${key}`) ?? null;
+      },
+      async record({ key, endpoint, requestHash, response }) {
+        rows.set(`${endpoint}:${key}`, { requestHash, response });
+      },
+      async reserve({ key, endpoint, requestHash }) {
+        if (rows.has(`${endpoint}:${key}`)) return false;
+        rows.set(`${endpoint}:${key}`, { requestHash, response: { status: 102, body: null } });
+        return true;
+      },
+      async release(key, endpoint) {
+        const row = rows.get(`${endpoint}:${key}`);
+        if (row?.response.status === 102) rows.delete(`${endpoint}:${key}`);
+      },
+    };
+    return { store, rows };
+  }
+
+  it("a retry that arrives while the first attempt is still working does not run it again", async () => {
+    const { store } = reservingStore();
+    let runs = 0;
+    let finishFirst!: () => void;
+    const first = withIdempotency(store, { key: "turn-abc-123456", endpoint: "POST /x", body: { a: 1 } }, async () => {
+      runs += 1;
+      await new Promise<void>((resolve) => (finishFirst = resolve));
+      return { status: 200, body: { ok: 1 } };
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await expect(
+      withIdempotency(store, { key: "turn-abc-123456", endpoint: "POST /x", body: { a: 1 } }, async () => {
+        runs += 1;
+        return { status: 200, body: { ok: 2 } };
+      }),
+    ).rejects.toThrow(/still being handled/);
+    finishFirst();
+    expect(await first).toEqual({ status: 200, body: { ok: 1 } });
+    expect(runs).toBe(1);
+    // Once it finished, a retry gets the recorded answer and nothing runs.
+    expect(await withIdempotency(store, { key: "turn-abc-123456", endpoint: "POST /x", body: { a: 1 } }, async () => ({ status: 200, body: { ok: 3 } }))).toEqual({
+      status: 200,
+      body: { ok: 1 },
+    });
+  });
+
+  it("a failed attempt gives the key back, so a proper retry runs", async () => {
+    const { store, rows } = reservingStore();
+    await expect(withIdempotency(store, { key: "turn-def-123456", endpoint: "POST /x", body: {} }, async () => { throw new Error("boom"); })).rejects.toThrow("boom");
+    expect(rows.size).toBe(0);
+    const failedStatus = await withIdempotency(store, { key: "turn-def-123456", endpoint: "POST /x", body: {} }, async () => ({ status: 503, body: null }));
+    expect(failedStatus.status).toBe(503);
+    expect(rows.size).toBe(0);
+    expect(await withIdempotency(store, { key: "turn-def-123456", endpoint: "POST /x", body: {} }, async () => ({ status: 201, body: { made: true } }))).toEqual({
+      status: 201,
+      body: { made: true },
+    });
+  });
+});

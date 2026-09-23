@@ -1,7 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { GoogleGenAI } from "@google/genai";
-import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
@@ -10,6 +8,7 @@ import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget, type Understan
 import { describeReplyFormat } from "../conversation/reply-format";
 import type { ModelDraft } from "../homebrain/answer";
 import type { ModelProvider } from "./model-key";
+import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 
 /**
  * A real model behind the `understand` seam (product-direction update,
@@ -445,7 +444,7 @@ function logProviderFailure(provider: UnderstandingTrace["provider"], thrown: un
  * failure, so the reply and the log both tell the truth about it.
  */
 export function createClaudeUnderstanding(apiKey: string): Understanding {
-  const client = new Anthropic({ apiKey });
+  const client = anthropicClient(apiKey, "understand");
   const trace: UnderstandingTrace = { source: "model", provider: "anthropic" };
 
   return async (utterance, context) => {
@@ -483,7 +482,7 @@ export function createClaudeUnderstanding(apiKey: string): Understanding {
  * `IntentOutputSchema` here.
  */
 export function createGeminiUnderstanding(apiKey: string): Understanding {
-  const client = new GoogleGenAI({ apiKey });
+  const client = geminiClient(apiKey, "understand");
   const trace: UnderstandingTrace = { source: "model", provider: "google" };
 
   return async (utterance, context) => {
@@ -524,7 +523,7 @@ export function createGeminiUnderstanding(apiKey: string): Understanding {
  * returns an already schema-validated `.parsed` value directly.
  */
 export function createOpenAIUnderstanding(apiKey: string): Understanding {
-  const client = new OpenAI({ apiKey });
+  const client = openaiClient(apiKey, "understand");
   const trace: UnderstandingTrace = { source: "model", provider: "openai" };
 
   return async (utterance, context) => {
@@ -655,7 +654,7 @@ export function answerFromModelOutput(parsed: z.infer<typeof AnswerOutputSchema>
 export function createAnswerComposer(provider: ModelProvider, apiKey: string): AnswerComposer {
   switch (provider) {
     case "anthropic": {
-      const client = new Anthropic({ apiKey });
+      const client = anthropicClient(apiKey, "compose");
       return async (input) => {
         try {
           const response = await client.messages.parse({
@@ -674,7 +673,7 @@ export function createAnswerComposer(provider: ModelProvider, apiKey: string): A
       };
     }
     case "google": {
-      const client = new GoogleGenAI({ apiKey });
+      const client = geminiClient(apiKey, "compose");
       return async (input) => {
         try {
           const response = await client.models.generateContent({
@@ -691,7 +690,7 @@ export function createAnswerComposer(provider: ModelProvider, apiKey: string): A
       };
     }
     case "openai": {
-      const client = new OpenAI({ apiKey });
+      const client = openaiClient(apiKey, "compose");
       return async (input) => {
         try {
           const completion = await client.chat.completions.parse({

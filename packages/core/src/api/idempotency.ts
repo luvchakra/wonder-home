@@ -71,7 +71,21 @@ export type IdempotencyStore = {
     requestHash: string;
     response: RecordedResponse;
   }): Promise<void>;
+  /**
+   * Claims the key before the operation runs (Wave 5 §17), so a retry that
+   * arrives while the first attempt is still working does not run it a
+   * second time. False when someone else already holds it. Optional:
+   * without it, only completed responses are deduplicated.
+   */
+  reserve?(input: { key: string; endpoint: string; requestHash: string }): Promise<boolean>;
+  /** Gives the key back after a failure, so a proper retry can run. */
+  release?(key: string, endpoint: string): Promise<void>;
 };
+
+/** The status a reservation carries while its request is still being handled. */
+export const IN_FLIGHT_STATUS = 102;
+/** How long a reservation holds before it counts as abandoned (a crashed request must not block the key for a day). */
+export const IN_FLIGHT_SECONDS = 120;
 
 /**
  * Runs `operation` at most once per key.
@@ -90,27 +104,47 @@ export async function withIdempotency<T>(
   }
 
   const requestHash = await fingerprint(input.endpoint, input.body);
-  const existing = await store.lookup(input.key, input.endpoint);
-
-  if (existing) {
+  const replay = (existing: { requestHash: string; response: RecordedResponse }): RecordedResponse => {
     if (existing.requestHash !== requestHash) {
       throw new ApiError(
         "conflict",
         "This Idempotency-Key was already used with a different request body.",
       );
     }
+    if (existing.response.status === IN_FLIGHT_STATUS) {
+      throw new ApiError("conflict", "That request is still being handled. Try again in a moment.");
+    }
     return existing.response;
+  };
+
+  const existing = await store.lookup(input.key, input.endpoint);
+  if (existing) return replay(existing);
+
+  if (store.reserve && !(await store.reserve({ key: input.key, endpoint: input.endpoint, requestHash }))) {
+    // Someone else claimed it between the lookup and now.
+    const winner = await store.lookup(input.key, input.endpoint);
+    if (winner) return replay(winner);
+    throw new ApiError("conflict", "That request is still being handled. Try again in a moment.");
   }
 
-  const { status, body } = await operation();
+  let outcome: RecordedResponse;
+  try {
+    const { status, body } = await operation();
+    outcome = { status, body };
+  } catch (thrown) {
+    await store.release?.(input.key, input.endpoint).catch(() => undefined);
+    throw thrown;
+  }
 
   // Only successful outcomes are worth replaying: a failure should be allowed
   // to be retried properly rather than permanently cached as an error.
-  if (status < 400) {
-    await store.record({ key: input.key, endpoint: input.endpoint, requestHash, response: { status, body } });
+  if (outcome.status < 400) {
+    await store.record({ key: input.key, endpoint: input.endpoint, requestHash, response: outcome });
+  } else {
+    await store.release?.(input.key, input.endpoint).catch(() => undefined);
   }
 
-  return { status, body };
+  return outcome;
 }
 
 /** Supabase-backed store. Scoped to one household, so keys cannot collide across tenants. */
@@ -140,6 +174,18 @@ export function supabaseIdempotencyStore(
 
     async record({ key, endpoint, requestHash, response }) {
       const expiresAt = new Date(Date.now() + IDEMPOTENCY_TTL_HOURS * 3_600_000).toISOString();
+      // Completes this request's own reservation when it holds one.
+      const { data: completed, error: updateError } = await supabase
+        .from("idempotency_keys")
+        .update({ response_status: response.status, response_body: response.body, expires_at: expiresAt })
+        .eq("household_id", householdId)
+        .eq("key", key)
+        .eq("endpoint", endpoint)
+        .eq("request_hash", requestHash)
+        .eq("response_status", IN_FLIGHT_STATUS)
+        .select("id");
+      if (!updateError && (completed?.length ?? 0) > 0) return;
+
       const { error } = await supabase.from("idempotency_keys").insert({
         household_id: householdId,
         key,
@@ -154,6 +200,42 @@ export function supabaseIdempotencyStore(
       if (error && error.code !== "23505") {
         throw new Error(`idempotency record failed: ${error.code ?? "unknown"}`);
       }
+    },
+
+    async reserve({ key, endpoint, requestHash }) {
+      const row = {
+        household_id: householdId,
+        key,
+        endpoint,
+        request_hash: requestHash,
+        response_status: IN_FLIGHT_STATUS,
+        response_body: null,
+        expires_at: new Date(Date.now() + IN_FLIGHT_SECONDS * 1000).toISOString(),
+      };
+      const { error } = await supabase.from("idempotency_keys").insert(row);
+      if (!error) return true;
+      if (error.code !== "23505") throw new Error(`idempotency reserve failed: ${error.code ?? "unknown"}`);
+      // Held by an expired row (a request that crashed, or a replay window
+      // that ended): clear it and try once more. A live one stays and wins.
+      await supabase
+        .from("idempotency_keys")
+        .delete()
+        .eq("household_id", householdId)
+        .eq("key", key)
+        .eq("endpoint", endpoint)
+        .lte("expires_at", new Date().toISOString());
+      const retry = await supabase.from("idempotency_keys").insert(row);
+      return !retry.error;
+    },
+
+    async release(key, endpoint) {
+      await supabase
+        .from("idempotency_keys")
+        .delete()
+        .eq("household_id", householdId)
+        .eq("key", key)
+        .eq("endpoint", endpoint)
+        .eq("response_status", IN_FLIGHT_STATUS);
     },
   };
 }

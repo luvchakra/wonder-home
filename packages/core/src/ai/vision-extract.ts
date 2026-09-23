@@ -1,13 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { GoogleGenAI } from "@google/genai";
-import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
 import { SCHOOL_ITEM_KINDS } from "../school/items";
 import { CLAUDE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
+import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 
 /**
  * Reading a photo of a piece of school work, so a household can fill the
@@ -86,7 +84,7 @@ export async function extractSchoolItemFromImage(
   try {
     switch (provider) {
       case "anthropic": {
-        const client = new Anthropic({ apiKey });
+        const client = anthropicClient(apiKey, "vision");
         const response = await client.messages.parse({
           model: CLAUDE_MODEL,
           max_tokens: 1024,
@@ -106,7 +104,7 @@ export async function extractSchoolItemFromImage(
         return response.parsed_output;
       }
       case "google": {
-        const client = new GoogleGenAI({ apiKey });
+        const client = geminiClient(apiKey, "vision");
         const response = await client.models.generateContent({
           model: GEMINI_MODEL,
           contents: [{ role: "user", parts: [{ inlineData: { mimeType: image.mediaType, data: image.base64 } }, { text: userPrompt() }] }],
@@ -121,7 +119,7 @@ export async function extractSchoolItemFromImage(
         return parsed?.success ? parsed.data : null;
       }
       case "openai": {
-        const client = new OpenAI({ apiKey });
+        const client = openaiClient(apiKey, "vision");
         const completion = await client.chat.completions.parse({
           model: OPENAI_MODEL,
           messages: [

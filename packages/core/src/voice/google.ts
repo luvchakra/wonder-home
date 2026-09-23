@@ -1,6 +1,9 @@
 import { VoiceError, type AudioClip, type SpeechProvider, type SpokenReply, type Transcript, type VoiceOption } from "./provider";
 import { listeningLanguage, type ListeningDevice, type VoiceGender, type VoiceSettings, type VoiceTier } from "./settings";
 
+/** How long one speech call may take before it counts as unavailable. */
+const VOICE_TIMEOUT_MS = 20_000;
+
 /**
  * Google Cloud Speech, behind the provider contract (story 04-009).
  *
@@ -261,6 +264,9 @@ async function call<T>(fetchImpl: typeof fetch, url: string, body: unknown): Pro
       method: body === undefined ? "GET" : "POST",
       headers: body === undefined ? undefined : { "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
+      // A stalled speech call must not hold the request for minutes (Wave 5
+      // §15); a timeout is "unavailable" like any other failure to reach it.
+      signal: AbortSignal.timeout(VOICE_TIMEOUT_MS),
     });
   } catch {
     throw new VoiceError("unavailable", "Google's speech service could not be reached.", true);

@@ -509,10 +509,10 @@ export function buildOpenApiDocument(): Json {
         get: {
           summary: "HomeSend outcome metrics",
           description:
-            "Platform-wide HomeSend metrics (Wave 3 §19): intake by source, parsing success, entity resolution and ambiguity, duplicate detection, proposal acceptance, correction, downstream write success, safe rejection, queue depth and time to outcome — each a count and the count it is out of. Read only from closed-word columns, never household content. Requires `ai_operations.read`. `days` sets the window (1–365, default 30).",
+            "Platform-wide HomeSend metrics (Wave 3 §19): intake by source, parsing success, entity resolution and ambiguity, duplicate detection, proposal acceptance, correction, downstream write success, safe rejection, queue depth and time to outcome — each a count and the count it is out of. Read only from closed-word columns, never household content. Requires `ai_operations.read`. `days` sets the window (1–365, default 30). `email` is forwarding observed end to end over the last 24 hours (Wave 5 §14):\n\n- delivery events by kind (delivered, signature failures, unrouted, duplicates, fetch, attachment and classification failures, rate-limited, retries queued, processed);\n- processing latency;\n- the forwarded review queue;\n- routed and rejected rates;\n- the alert conditions firing now (repeated provider failure, large backlog, duplicate spike, attachment failures).",
           parameters: [{ name: "days", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 365 } }],
           responses: {
-            "200": { description: "The metrics for the window" },
+            "200": { description: "The metrics for the window, and email forwarding monitoring" },
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
           },
@@ -1335,6 +1335,15 @@ export function buildOpenApiDocument(): Json {
         },
       },
       "/platform/retention": {
+        get: {
+          summary: "The same run, as Vercel Cron calls it",
+          description: "Vercel Cron calls a path with GET. This is the POST handler behind the same shared secret, so the scheduled run actually runs.",
+          responses: {
+            "200": { description: "The run completed" },
+            "207": { description: "The run completed with at least one part that could not" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
         post: {
           summary: "Apply the retention schedule",
           description:
@@ -1347,6 +1356,15 @@ export function buildOpenApiDocument(): Json {
         },
       },
       "/platform/webhook-delivery": {
+        get: {
+          summary: "The same run, as Vercel Cron calls it",
+          description: "Vercel Cron calls a path with GET. This is the POST handler behind the same shared secret, so the scheduled run actually runs.",
+          responses: {
+            "200": { description: "The run completed" },
+            "207": { description: "The run completed with at least one part that could not" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
         post: {
           summary: "Drain the outbound webhook delivery queue",
           description:

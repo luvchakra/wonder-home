@@ -23,6 +23,7 @@ import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSend
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
+import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, createSchoolItem, listSchoolItems, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 
@@ -170,6 +171,7 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
+    if (!(await hitRateLimit(createAdminClient(), "homesend.intake", membership.memberId))) return { error: rateLimitMessage("homesend.intake") };
     const outcome = await ingestFile(
       supabase,
       { householdId, memberId: membership.memberId },
@@ -195,7 +197,14 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
-    const outcome = await ingestText(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, { text: parsed.data.text });
+    const admin = createAdminClient();
+    if (!(await hitRateLimit(admin, "homesend.intake", membership.memberId))) return { error: rateLimitMessage("homesend.intake") };
+    const outcome = await ingestText(
+      supabase,
+      { householdId: parsed.data.householdId, memberId: membership.memberId },
+      { text: parsed.data.text },
+      { limit: (bucket) => hitRateLimit(admin, bucket, membership.memberId) },
+    );
     const state = await withReview(supabase, membership, toState(outcome));
     revalidateHomeSend();
     return state;
