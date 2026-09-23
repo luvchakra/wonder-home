@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { IntakeExtraction } from "../ai/classify-intake";
-import { confirmTranscript, ingestFile, ingestLink, ingestText, IngestRejected, type IngestDeps } from "./ingest";
+import { confirmTranscript, ingestEmailAttachment, ingestFile, ingestLink, ingestText, IngestRejected, type IngestDeps } from "./ingest";
 import { fakeSupabase } from "./testing";
 
 const HOUSEHOLD = "11111111-1111-4111-8111-111111111111";
@@ -212,5 +212,63 @@ describe("voice notes (Wave 3 §3, §17)", () => {
     const outcome = await ingestFile(db.client, actor, { bytes: m4a, claimedType: "audio/mp4", filename: "memo.m4a" });
     expect(outcome).toMatchObject({ state: "failed", failureReason: "unsupported_type" });
     expect(outcome.notice).toMatch(/m4a/);
+  });
+});
+
+describe("email attachments (Wave 3 §7)", () => {
+  const EMAIL_ID = "44444444-4444-4444-8444-444444444444";
+  const scan: IngestDeps["scan"] = async () => ({ scanned: false });
+  function withEmail() {
+    return fakeSupabase({
+      home_send_items: [{ id: EMAIL_ID, household_id: HOUSEHOLD, created_by_member_id: null, source: "email", raw_text: "See the attached circular.", status: "classified", external_id: "e3" }],
+    });
+  }
+
+  it("keeps each attachment as its own item on its email, with no acting member", async () => {
+    const db = withEmail();
+    const { classify, seen } = model();
+    const outcome = await ingestEmailAttachment(
+      db.client,
+      { householdId: HOUSEHOLD, parentItemId: EMAIL_ID, externalId: "e3:att-1", bytes: PDF, claimedType: "application/pdf", filename: "circular.pdf", subject: "Sports Day", sender: "office@school.example.org" },
+      { classify, scan },
+    );
+    expect(outcome.state).toBe("needs_review");
+    const attachment = db.tables.home_send_items?.find((row) => row.id === outcome.itemId);
+    expect(attachment).toMatchObject({ source: "email_attachment", parent_item_id: EMAIL_ID, external_id: "e3:att-1", created_by_member_id: null, subject: "Sports Day" });
+    expect(seen[0]?.[2]).toMatchObject({ channel: "an attachment to a forwarded email", subject: "Sports Day", from: "office@school.example.org" });
+  });
+
+  it("fails a malicious attachment safely without touching the email's own text", async () => {
+    const db = withEmail();
+    const { classify, seen } = model();
+    const outcome = await ingestEmailAttachment(
+      db.client,
+      { householdId: HOUSEHOLD, parentItemId: EMAIL_ID, externalId: "e3:att-2", bytes: PDF, claimedType: "application/pdf", filename: "invoice.pdf" },
+      { classify, scan: async () => ({ scanned: true, clean: false }) },
+    );
+    expect(outcome).toMatchObject({ state: "failed", failureReason: "security_rejected" });
+    expect(seen).toHaveLength(0);
+    expect(db.tables.home_send_items?.find((row) => row.id === EMAIL_ID)).toMatchObject({ status: "classified", raw_text: "See the attached circular." });
+  });
+
+  it("fails an unreadable attachment safely", async () => {
+    const db = withEmail();
+    const outcome = await ingestEmailAttachment(
+      db.client,
+      { householdId: HOUSEHOLD, parentItemId: EMAIL_ID, externalId: "e3:att-3", bytes: new Uint8Array([1, 2, 3, 4]), claimedType: "application/pdf", filename: "broken.pdf" },
+      { scan },
+    );
+    expect(outcome).toMatchObject({ state: "failed", failureReason: "security_rejected" });
+  });
+
+  it("never keeps the same attachment twice when the webhook is retried (§15)", async () => {
+    const db = withEmail();
+    const { classify, seen } = model();
+    const input = { householdId: HOUSEHOLD, parentItemId: EMAIL_ID, externalId: "e3:att-1", bytes: PDF, claimedType: "application/pdf" };
+    const first = await ingestEmailAttachment(db.client, input, { classify, scan });
+    const second = await ingestEmailAttachment(db.client, input, { classify, scan });
+    expect(second).toMatchObject({ duplicate: true, itemId: first.itemId });
+    expect(db.tables.home_send_items?.filter((row) => row.external_id === "e3:att-1")).toHaveLength(1);
+    expect(seen).toHaveLength(1);
   });
 });

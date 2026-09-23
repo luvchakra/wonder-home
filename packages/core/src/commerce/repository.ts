@@ -26,6 +26,14 @@ import { invalidatesContext } from "../context/invalidation";
 
 type Row = Record<string, unknown>;
 
+/** Names for specific consumables, retired ones included — a HomeSend change can name an item it later undid. */
+export async function consumableNames(supabase: SupabaseClient, householdId: string, ids: readonly string[]): Promise<Record<string, string>> {
+  if (ids.length === 0) return {};
+  const { data, error } = await supabase.from("consumables").select("id, name").eq("household_id", householdId).in("id", [...ids]);
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((row) => [String(row.id), String(row.name)]));
+}
+
 export async function listConsumables(
   supabase: SupabaseClient,
   householdId: string,

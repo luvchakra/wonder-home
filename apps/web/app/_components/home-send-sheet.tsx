@@ -185,6 +185,7 @@ export function HomeSendSheet({
             busy={routing || dismissing}
             understanding={item.understanding}
             receivedAt={new Date().toISOString()}
+            subject={item.subject ?? null}
           />
         )}
 

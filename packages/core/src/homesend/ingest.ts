@@ -9,7 +9,7 @@ import { FAILURE_REASON_COPY } from "./items";
 import { fetchLinkSafely, LINK_FAILURE_COPY, type LinkContent } from "./link-fetch";
 import { platformMalwareScanConfig, scanForMalware, type MalwareScanOutcome } from "./malware-scan";
 import { asLoneUrl, contentHash, decodeTextFile, detectIntakeFile, MAX_BYTES, normalizeText, type IntakeFileType } from "./normalize";
-import { createHomeSendItem, findPendingByContentHash, markHomeSendFailed, setHomeSendClassification } from "./repository";
+import { createHomeSendItem, findByExternalId, findPendingByContentHash, markHomeSendFailed, setHomeSendClassification } from "./repository";
 import { buildUnderstanding, unreadableUnderstanding, type IntakeUnderstanding, type UnderstandingMeta } from "./understanding";
 
 /**
@@ -282,12 +282,60 @@ export type IngestFileInput = {
  * scanner flagged, is ever read.
  */
 export async function ingestFile(supabase: SupabaseClient, actor: IngestActor, input: IngestFileInput, deps: IngestDeps = {}): Promise<IngestOutcome> {
+  return ingestFileFor(supabase, { householdId: actor.householdId, memberId: actor.memberId, parentItemId: null, externalId: null }, input, deps);
+}
+
+/**
+ * A file that came with a forwarded email (§7): treated exactly like any
+ * other HomeSend file — type from its bytes, security checks, quarantine,
+ * understanding — and kept as its own item, attached to its email. A
+ * malicious or unreadable attachment fails safely on its own; the email's
+ * text is already kept and is never lost because of it. Called with the
+ * admin client from the webhook, which has no member session.
+ */
+export async function ingestEmailAttachment(
+  supabase: SupabaseClient,
+  input: IngestFileInput & { householdId: string; parentItemId: string; externalId: string; subject?: string | null; sender?: string | null },
+  deps: IngestDeps = {},
+): Promise<IngestOutcome> {
+  const existing = await findByExternalId(supabase, input.householdId, input.externalId).catch(() => null);
+  if (existing) {
+    return {
+      itemId: existing.id,
+      duplicate: true,
+      state: existing.status === "failed" ? "failed" : "needs_review",
+      notice: "Already received.",
+      item: { id: existing.id, classifiedKind: existing.classifiedKind ?? "unknown", extracted: existing.extracted, understanding: existing.understanding },
+    };
+  }
+  return ingestFileFor(
+    supabase,
+    { householdId: input.householdId, memberId: null, parentItemId: input.parentItemId, externalId: input.externalId, subject: input.subject ?? null, sender: input.sender ?? null },
+    input,
+    deps,
+  );
+}
+
+type FileOwner = {
+  householdId: string;
+  memberId: string | null;
+  parentItemId: string | null;
+  externalId: string | null;
+  subject?: string | null;
+  sender?: string | null;
+};
+
+async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: IngestFileInput, deps: IngestDeps): Promise<IngestOutcome> {
+  const actor = { householdId: owner.householdId, memberId: owner.memberId ?? "" };
+  const isAttachment = owner.parentItemId !== null;
   if (input.bytes.length === 0) throw new IngestRejected("That file is empty.");
   if (input.bytes.length > MAX_BYTES.audio) throw new IngestRejected("That file is too large — please use one under 10MB.");
 
   const hash = await contentHash(input.bytes);
-  const duplicate = await existingDuplicate(supabase, actor.householdId, hash);
-  if (duplicate) return duplicate;
+  if (!isAttachment) {
+    const duplicate = await existingDuplicate(supabase, actor.householdId, hash);
+    if (duplicate) return duplicate;
+  }
 
   const detected = detectIntakeFile(input.bytes, input.claimedType, input.filename ?? null);
   if (detected.ok && input.bytes.length > MAX_BYTES[detected.family]) {
@@ -318,33 +366,45 @@ export async function ingestFile(supabase: SupabaseClient, actor: IngestActor, i
   await createHomeSendItem(supabase, {
     id: itemId,
     householdId: actor.householdId,
-    createdByMemberId: actor.memberId,
-    source: family === "audio" ? "audio_note" : "manual_upload",
+    createdByMemberId: owner.memberId,
+    source: isAttachment ? "email_attachment" : family === "audio" ? "audio_note" : "manual_upload",
     filePath: path,
     securityStatus: failureReason === "security_rejected" ? "rejected" : "clean",
     contentType: storedType,
     contentHash: hash,
     failureReason,
+    parentItemId: owner.parentItemId,
+    externalId: owner.externalId,
+    subject: owner.subject ?? null,
+    senderAddress: owner.sender ?? null,
   });
   if (failureReason || !detected.ok) return failedOutcome(itemId, failureReason ?? "unsupported_type", notice);
 
-  const context: IntakeContext = { channel: family === "audio" ? "a voice note" : "an uploaded file", filename: input.filename ?? null };
+  const channel: HomeSendSource = isAttachment ? "email_attachment" : "manual_upload";
+  const context: IntakeContext = {
+    channel: isAttachment ? "an attachment to a forwarded email" : family === "audio" ? "a voice note" : "an uploaded file",
+    filename: input.filename ?? null,
+    subject: owner.subject ?? null,
+    from: owner.sender ?? null,
+  };
   const base64 = () => Buffer.from(input.bytes).toString("base64");
 
   switch (detected.family) {
     case "image":
-      return understand(supabase, actor.householdId, itemId, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64: base64() } }, channel: "manual_upload", context, contentType: detected.type }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64: base64() } }, channel, context, contentType: detected.type }, deps);
     case "document":
-      return understand(supabase, actor.householdId, itemId, { source: { document: { mediaType: "application/pdf", base64: base64() } }, channel: "manual_upload", context, contentType: detected.type }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { document: { mediaType: "application/pdf", base64: base64() } }, channel, context, contentType: detected.type }, deps);
     case "text": {
       const text = normalizeText(decodeTextFile(input.bytes) ?? "");
       if (!text) {
         await markHomeSendFailed(supabase, actor.householdId, itemId, "unreadable");
         return failedOutcome(itemId, "unreadable");
       }
-      return understand(supabase, actor.householdId, itemId, { source: { text }, channel: "manual_upload", context, text, contentType: detected.type }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { text }, channel, context, text, contentType: detected.type }, deps);
     }
     case "audio":
+      // A voice note forwarded by email is still a voice note: heard, gated
+      // on its transcript, never acted on when uncertain.
       return hearVoiceNote(supabase, actor, itemId, { base64: base64(), mimeType: detected.type }, deps);
   }
 }

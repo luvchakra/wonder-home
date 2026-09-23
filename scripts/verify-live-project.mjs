@@ -119,6 +119,8 @@ const SHIPPED_COLUMNS = [
   { table: "home_send_items", column: "transcript_confidence" },
   { table: "home_send_items", column: "parent_item_id" },
   { table: "homesend_share_handoffs", column: "ip_hash" },
+  { table: "homesend_changes", column: "change_type" },
+  { table: "homesend_changes", column: "previous" },
   { table: "health_appointments", column: "checkup_id" },
 ];
 

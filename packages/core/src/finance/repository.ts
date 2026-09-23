@@ -171,6 +171,27 @@ async function cancelObligationImpl(
   }
 }
 
+/**
+ * Puts a cancelled bill back the way it was — HomeSend's undo of a
+ * cancellation it made (Wave 3 §10). Only ever from `cancelled`.
+ */
+async function restoreObligationImpl(
+  supabase: SupabaseClient,
+  input: { id: string; householdId: string; status: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("obligations")
+    .update({ status: input.status })
+    .eq("id", input.id)
+    .eq("household_id", input.householdId)
+    .eq("status", "cancelled");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can change a bill.");
+    throw new Error(`restoreObligation failed: ${error.code ?? "unknown"}`);
+  }
+}
+
 /** Intents that are approved or in flight, so a settled bill stays quiet. */
 async function arrangedObligationIds(
   supabase: SupabaseClient,
@@ -482,6 +503,7 @@ function obligationColumns(obligation: ImportedObligation) {
 export const createObligation = invalidatesContext(createObligationImpl, (_supabase, input) => input.householdId);
 export const updateObligation = invalidatesContext(updateObligationImpl, (_supabase, input) => input.householdId);
 export const cancelObligation = invalidatesContext(cancelObligationImpl, (_supabase, input) => input.householdId);
+export const restoreObligation = invalidatesContext(restoreObligationImpl, (_supabase, input) => input.householdId);
 export const recordAmount = invalidatesContext(recordAmountImpl, (_supabase, input) => input.householdId);
 export const removeTransaction = invalidatesContext(removeTransactionImpl, (_supabase, input) => input.householdId);
 export const applyObligationSyncPlan = invalidatesContext(applyObligationSyncPlanImpl, (_supabase, input) => input.householdId);
