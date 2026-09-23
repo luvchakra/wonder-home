@@ -69,6 +69,12 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   // A reminder to the speaker themself: nobody else is told anything, and it
   // can be cancelled — as harmless as a note.
   set_reminder: "draft",
+  // Taking something off the list, ticking off homework and logging a
+  // repair are the household's own low-stakes records, each undoable on its
+  // screen — as harmless as adding to the list.
+  remove_from_list: "draft",
+  complete_school_item: "draft",
+  raise_service_request: "draft",
   adjust_schedule: "schedule",
   set_preference: "draft",
   make_payment: "payment",
@@ -193,13 +199,27 @@ function summarize(intent: HouseholdIntent): string {
         ? `Add what ${intent.parameters.forMeal} needs to the ${intent.target.reference ?? "list"}: ${what}`
         : `Add ${what} to the ${intent.target.reference ?? "list"}`;
     }
+    case "remove_from_list": {
+      const items = listItems(intent);
+      return `Take ${items.length > 0 ? joinWords(items) : "that"} off the ${intent.target.reference ?? "list"}`;
+    }
+    case "complete_school_item":
+      return `Mark ${typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : ""}${String(intent.parameters.title ?? "that")} done`;
+    case "raise_service_request":
+      return `Log a service request${typeof intent.parameters.assetName === "string" ? ` for the ${intent.parameters.assetName.toLowerCase()}` : ""}`;
     case "plan_meal":
       return `Plan ${String(intent.parameters.mealName ?? intent.parameters.what ?? "a meal")} for ${String(intent.parameters.slot ?? "dinner")} ${groundedWhen(intent, intent.parameters.windowResolved ? "window" : "when")}`.trim();
     case "set_reminder":
       return `Remind you ${groundedWhen(intent, "when")}${typeof intent.parameters.time === "string" ? ` at ${intent.parameters.time}` : ""} to ${String(intent.parameters.what ?? "do that")}`.replace(/\s+/g, " ");
     case "plan_event":
+      if (typeof intent.parameters.what === "string" && intent.parameters.protected === true) {
+        return `Keep ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "that time")} free for ${intent.parameters.what}`;
+      }
       return `Plan something for ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "the family")}`;
     case "adjust_schedule":
+      if (typeof intent.parameters.schoolItemId === "string") {
+        return `Move ${typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : ""}${String(intent.parameters.title ?? "that")} to ${intent.parameters.toResolved ? groundedWhen(intent, "to").replace(/^on /, "") : String(intent.parameters.to ?? "a new day")}`;
+      }
       return `Move ${intent.target.reference ?? "that"} to ${intent.parameters.toResolved ? groundedWhen(intent, "to").replace(/^on /, "") : String(intent.parameters.to ?? "a new time")}`;
     case "set_preference":
       return `Remember that ${intent.utterance.replace(/\.$/, "")}`;
@@ -230,6 +250,12 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Put the meal on the household's plan", "Copy its recipe's ingredients onto it, where there is a recipe"];
     case "set_reminder":
       return ["Show you a reminder under Notifications at that time — only you see it"];
+    case "remove_from_list":
+      return ["Take it off the groceries — you can add it back any time"];
+    case "complete_school_item":
+      return ["Mark it done under Kids & School"];
+    case "raise_service_request":
+      return ["Log the request under Home & Upkeep — nobody is contacted until you choose who"];
     case "record_absence":
       return [
         "Mark them unavailable for that day",

@@ -16,15 +16,22 @@ const commerce = vi.hoisted(() => ({
 }));
 const meals = vi.hoisted(() => ({ createMeal: vi.fn(), attachIngredients: vi.fn() }));
 const helpers = vi.hoisted(() => ({ recordAvailabilityException: vi.fn() }));
+const school = vi.hoisted(() => ({ completeSchoolItem: vi.fn(), updateSchoolItem: vi.fn(), listSchoolItems: vi.fn() }));
+const home = vi.hoisted(() => ({ createServiceRequest: vi.fn() }));
+const family = vi.hoisted(() => ({ createEvent: vi.fn() }));
 
 vi.mock("../commerce/repository", () => commerce);
 vi.mock("../meals/repository", () => meals);
 vi.mock("../household/helpers-repository", () => helpers);
+vi.mock("../school/repository", () => school);
+vi.mock("../home/repository", () => home);
+vi.mock("../family/repository", () => family);
 
 import { canExecute, executeIntent, type ExecutionContext } from "./executor";
 import type { HouseholdIntent } from "./intent";
 import { focusFromResult } from "./references";
 import { unchangedResult } from "./repository";
+import { reconcileHomeSend } from "../homesend/reconcile";
 
 // Wednesday 23 September 2026, 10:00 in Kolkata.
 const NOW = new Date("2026-09-23T04:30:00Z");
@@ -257,5 +264,76 @@ describe("a reminder's wording", () => {
     const done = await executeIntent(intent({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: { what: "buy jam", when: "friday" } }), context({ admin: admin.client }));
     expect(done.ok && done.text).toMatch(/^I will remind you on Fri 25 Sep at 9am/);
     expect(admin.writes[0]!.row.body).toBe("You asked HomeTalk to remind you on Fri 25 Sep.");
+  });
+});
+
+describe("the §21 domain actions — each through its own domain service", () => {
+  it("\"remove the bananas\" retires the tracked item; one not on the list is said so, nothing else touched", async () => {
+    commerce.listConsumables.mockResolvedValue([consumable("c-ban", "Bananas")]);
+    const done = await executeIntent(intent({ action: "remove_from_list", parameters: { items: ["bananas", "caviar"] } }), context());
+    expect(commerce.retireConsumable).toHaveBeenCalledTimes(1);
+    expect(commerce.retireConsumable).toHaveBeenCalledWith(expect.anything(), { id: "c-ban", householdId: "hh-1" });
+    expect(done.ok && done.text).toMatch(/^Took \*\*Bananas\*\* off the .* \*\*Caviar\*\* was not on the/);
+  });
+
+  it("removing something that was never there changes nothing, and says so (§12)", async () => {
+    const done = await executeIntent(intent({ action: "remove_from_list", parameters: { item: "caviar" } }), context());
+    expect(commerce.retireConsumable).not.toHaveBeenCalled();
+    expect(done.ok && unchangedResult(done.result)).toBe(true);
+  });
+
+  it("\"mark Asmi's worksheet complete\" is the School service's own done", async () => {
+    const done = await executeIntent(intent({ action: "complete_school_item", target: { kind: "member", reference: "asmi" }, parameters: { schoolItemId: "s-ws", title: "Maths worksheet", childName: "Asmi" } }), context());
+    expect(school.completeSchoolItem).toHaveBeenCalledWith(expect.anything(), "s-ws");
+    expect(done.ok && done.text).toMatch(/^Marked Asmi's \*\*Maths worksheet\*\* done/);
+  });
+
+  it("\"move Manan's science project to Friday\" keeps the time of day it was due", async () => {
+    await executeIntent(
+      intent({ action: "adjust_schedule", target: { kind: "event" }, parameters: { schoolItemId: "s-sci", title: "Science project", childName: "Manan", dueAt: "2026-09-29T11:30:00.000Z", toResolved: { date: "2026-09-25", label: "Fri 25 Sep", precision: "day" } } }),
+      context(),
+    );
+    // 17:00 in Kolkata, on the new day.
+    expect(school.updateSchoolItem).toHaveBeenCalledWith(expect.anything(), "hh-1", "s-sci", { dueAt: "2026-09-25T11:30:00.000Z" });
+  });
+
+  it("a repair is logged against the household's own appliance, and nobody is contacted", async () => {
+    home.createServiceRequest.mockResolvedValue({ id: "sr-1" });
+    const done = await executeIntent(intent({ action: "raise_service_request", target: { kind: "outcome", reference: "home" }, parameters: { assetId: "a-wm", assetName: "Washing machine", symptom: "is making that noise" } }), context());
+    expect(home.createServiceRequest).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ assetId: "a-wm", subject: "Washing machine is making that noise", nextActionBy: "household" }));
+    expect(done.ok && done.text).toMatch(/Nobody has been contacted/);
+  });
+
+  it("protected family time is a real, owned block on the calendar", async () => {
+    family.createEvent.mockResolvedValue({ id: "ev-1" });
+    const done = await executeIntent(
+      intent({ action: "plan_event", target: { kind: "event" }, parameters: { what: "family time", protected: true, windowResolved: { date: "2026-09-26", label: "Saturday evening (Sat 26 Sep)", window: { from: "17:00", to: "21:00" }, precision: "part_of_day" } } }),
+      context(),
+    );
+    expect(family.createEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ title: "Family time", kind: "family_time", protected: true, ownerMemberId: "m-priya", startsAt: "2026-09-26T11:30:00.000Z", endsAt: "2026-09-26T15:30:00.000Z" }));
+    expect(done.ok && done.text).toMatch(/^Saturday evening, 5pm–9pm, is now kept free for \*\*family time\*\* on the family calendar/);
+  });
+
+  it("\"sometime this weekend\" is not a time, so nothing goes on the calendar", () => {
+    expect(canExecute(intent({ action: "plan_event", target: { kind: "event" }, parameters: { what: "a picnic", windowResolved: { date: "2026-09-26", endDate: "2026-09-27", precision: "range", window: null } } }))).toBe(false);
+  });
+});
+
+describe("HomeTalk and HomeSend share one truth about the list (§15)", () => {
+  it("what HomeTalk added is what HomeSend reconciliation sees as already on record", async () => {
+    // HomeTalk adds milk…
+    const added = await executeIntent(intent({ parameters: { item: "milk" } }), context());
+    expect(added.ok).toBe(true);
+    // …and the same consumables table is what a forwarded "buy milk" is checked against.
+    commerce.listConsumables.mockResolvedValue([consumable("c-1", "Milk")]);
+    const reconciled = await reconcileHomeSend({} as SupabaseClient, "hh-1", { kind: "grocery_item", title: "Milk" }, { timezone: "Asia/Kolkata", now: NOW });
+    expect(reconciled?.proposal.type).toBe("duplicate");
+  });
+
+  it("and what HomeSend put on the list is what HomeTalk will not add twice", async () => {
+    commerce.listConsumables.mockResolvedValue([consumable("c-2", "Amul milk")]);
+    const done = await executeIntent(intent({ parameters: { item: "milk" } }), context());
+    expect(commerce.createConsumable).not.toHaveBeenCalled();
+    expect(done.ok && unchangedResult(done.result)).toBe(true);
   });
 });

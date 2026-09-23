@@ -23,6 +23,12 @@ export const INTENT_ACTIONS = [
   "plan_meal",
   /** "Remind me to buy them tomorrow" — a real in-app reminder to the speaker, due at that time (Wave 4 §10). */
   "set_reminder",
+  /** "Remove the bananas" — takes something off the list through the same retire a person's own remove uses. */
+  "remove_from_list",
+  /** "Mark Asmi's worksheet complete" — an open school item marked done through the School service. */
+  "complete_school_item",
+  /** "The washing machine is making that noise again" — a service request logged against the appliance. */
+  "raise_service_request",
   "adjust_schedule",
   "set_preference",
   "make_payment",
@@ -55,6 +61,8 @@ export type UnderstandingTrace = {
   provider?: "anthropic" | "google" | "openai";
   /** Set when a model was asked and did not answer usably. */
   failure?: "provider_error" | "unparseable";
+  /** The words the model said pointed at something (§5) — phrases only, never an id it resolved. */
+  references?: string[];
 };
 
 export type IntentTarget = {

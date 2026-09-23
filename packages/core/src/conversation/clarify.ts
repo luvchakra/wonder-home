@@ -126,6 +126,31 @@ export function answerClarification(
   }
 
   switch (pending.action) {
+    // A free answer to "which dish?", "what needs a repair?" or "which piece
+    // of school work?" when there was nothing on record to offer.
+    case "plan_meal":
+    case "raise_service_request":
+    case "complete_school_item": {
+      const answer = stripFiller(utterance).replace(/[.!?]+$/, "").replace(/^(?:the|a|an)\s+/i, "").trim();
+      if (!answer || answer.split(/\s+/).length > 6 || NEW_REQUEST.test(answer)) return null;
+      const rest = withoutGroundingState(pending.parameters);
+      const named =
+        pending.action === "plan_meal"
+          ? { what: answer, mealName: answer.charAt(0).toUpperCase() + answer.slice(1), diet: undefined }
+          : pending.action === "raise_service_request"
+            ? { asset: answer }
+            : { title: answer };
+      return {
+        actorMemberId: context.actorMemberId,
+        channel: context.channel,
+        utterance,
+        action: pending.action,
+        target: pending.target,
+        parameters: Object.fromEntries(Object.entries({ ...rest, ...named }).filter(([, value]) => value !== undefined)),
+        confidence: 0.9,
+      };
+    }
+
     case "order_items":
     case "add_to_list": {
       const items = extractItems(utterance);
@@ -217,6 +242,19 @@ function answerGroundingQuestion(
   if (!choice) return null;
   if (pending.action === "make_payment") {
     return { ...base, target: { kind: "bill", reference: choice.label }, parameters: { ...rest, billLabel: choice.label, ...(choice.entityId ? { billId: choice.entityId } : {}) } };
+  }
+  // The chosen record, by the id the question offered — which grounding
+  // checks again against what is actually open before anything is done.
+  if (pending.action === "complete_school_item" || pending.action === "adjust_schedule") {
+    return { ...base, target: pending.target, parameters: { ...rest, title: choice.label, ...(choice.entityId ? { schoolItemId: choice.entityId } : {}) } };
+  }
+  if (pending.action === "raise_service_request") {
+    return { ...base, target: pending.target, parameters: { ...rest, asset: choice.label } };
+  }
+  if (pending.action === "plan_meal") {
+    const withoutDiet = { ...rest };
+    delete withoutDiet.diet;
+    return { ...base, target: pending.target, parameters: { ...withoutDiet, what: choice.label, mealName: choice.label, ...(choice.entityId ? { recipeId: choice.entityId } : {}) } };
   }
   return { ...base, target: pending.target, parameters: { ...rest, item: choice.label } };
 }

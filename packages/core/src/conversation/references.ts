@@ -205,6 +205,13 @@ export function focusFromResult(action: string, result: Record<string, unknown>,
       const name = text("name");
       return name ? [{ entityType: "consumable", entityId: id("consumableId"), label: name, source: "action_result", at }] : [];
     }
+    case "complete_school_item":
+    case "adjust_schedule":
+      return id("schoolItemId") ? [{ entityType: "school_item", entityId: id("schoolItemId"), label: text("title") ?? "that", source: "action_result", at }] : [];
+    case "raise_service_request":
+      return id("serviceRequestId") ? [{ entityType: "home_asset", entityId: id("assetId"), label: text("assetName") ?? "that", source: "action_result", at }] : [];
+    case "plan_event":
+      return id("eventId") ? [{ entityType: "family_event", entityId: id("eventId"), label: text("title") ?? "that", source: "action_result", at }] : [];
     case "plan_meal":
       return id("mealId") ? [{ entityType: "meal", entityId: id("mealId"), label: text("name") ?? "the meal", source: "action_result", at }] : [];
     case "set_reminder":
