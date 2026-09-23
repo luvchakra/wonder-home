@@ -1412,6 +1412,20 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/voice/alexa": {
+        post: {
+          summary: "Alexa skill endpoint — HomeTalk over Alexa (voice phase 4)",
+          description:
+            "Amazon's request to the WonderHome custom skill. Proved to be Alexa's before it is read: SignatureCertChainUrl (https, s3.amazonaws.com, /echo.api/, port 443), a certificate in date that names echo-api.amazon.com and chains to a trusted root, an RSA-SHA256 Signature-256 over the raw body, a timestamp within 150 seconds, and this skill's own application id. The speaker is whoever the WonderHome access token issued through account linking belongs to; the turn runs as that member under their own RLS and scopes, through the same HomeTalk gateway as every channel. Answers in Alexa's response format. Inert until ALEXA_SKILL_ID is set.",
+          security: [],
+          responses: {
+            "200": { description: "An Alexa response: speech, a reprompt when a question or approval is waiting, or the account-linking card" },
+            "400": { description: "Not provably from Alexa (certificate, signature, timestamp or skill id)" },
+            "401": { description: "Alexa is not configured on this deployment" },
+            "413": { description: "Body larger than an Alexa request ever is" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
