@@ -825,6 +825,10 @@ async function carryOutApproved(input: {
 }): Promise<{ text: string; action: ConversationAction; focus: FocusEntity[] }> {
   const stored = await loadAction(input.admin, { householdId: input.householdId, actionId: input.action.id });
   if (!stored) return { text: "I have your go-ahead, but I could not find what it was for, so nothing was changed.", action: input.action, focus: [] };
+  // Only what was just approved is carried out: a proposal turned down,
+  // timed out or already done never runs (AG-005; the database holds the
+  // same line for rejected and expired).
+  if (stored.status !== "approved") return { text: "That is no longer waiting for your go-ahead, so nothing was changed.", action: input.action, focus: [] };
 
   const intent: HouseholdIntent = {
     action: stored.actionType as HouseholdIntent["action"],

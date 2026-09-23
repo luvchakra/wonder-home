@@ -74,6 +74,8 @@ export function explainProvenance(item: HouseholdContextItem, timezone: string):
   if (item.source.type.startsWith("memories")) {
     return item.confirmed ? "Something the household told WonderHome and confirmed." : "Something WonderHome picked up and has not had confirmed yet.";
   }
+  const provider = item.attributes.provider;
+  if (typeof provider === "string" && provider.trim()) return `Imported from ${provider.replace(/_/g, " ")}, a connected service.`;
   if (!item.confirmed) return "Something WonderHome worked out, not something a person entered.";
   return "Entered by the household.";
 }

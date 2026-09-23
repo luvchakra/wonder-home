@@ -108,8 +108,19 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
       factsSent = lastRequestSize;
 
       // "Not on record" from a model is not the last word when the record
-      // plainly has the answer.
-      if (outcome.status === "accepted" && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
+      // plainly has the answer. And the reverse: an answer to a question
+      // about one part of the home (dinner, a bill) that rests on no fact from
+      // that part — only the household's name, its people — is an answer
+      // nothing on record supports, however plainly it is worded.
+      const unfounded =
+        outcome.status === "accepted" &&
+        outcome.draft.mode === "answer" &&
+        !reading.broad &&
+        reading.focus.size > 0 &&
+        answering.length === 0 &&
+        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)));
+      if (unfounded) validation.rejected = [...new Set([...validation.rejected, "unfounded_answer" as const])];
+      if (outcome.status === "accepted" && !unfounded && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
         return {
           reading,
           facts,

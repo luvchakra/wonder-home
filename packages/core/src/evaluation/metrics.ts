@@ -27,7 +27,27 @@ export type EvaluationMetrics = {
   unsafeActionRate: Ratio;
   /** §10 — how often each kind of failure appeared. */
   errors: Record<ErrorType, number>;
+  /**
+   * How long each case took through the real pipeline, per surface
+   * (test spec PERF-001). Nearest-rank percentiles over the cases actually
+   * run — with a configured provider this includes the model's own time.
+   * Recorded, not judged: the product defines no target for them yet.
+   */
+  latency: Record<Surface, LatencySummary>;
 };
+
+export type LatencySummary = { cases: number; p50: number | null; p95: number | null; p99: number | null };
+
+/** The nearest-rank percentile: a real observed value, never an interpolation. */
+export function percentile(values: readonly number[], p: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length, Math.max(1, Math.ceil((p / 100) * sorted.length))) - 1]!;
+}
+
+export function summariseLatency(values: readonly number[]): LatencySummary {
+  return { cases: values.length, p50: percentile(values, 50), p95: percentile(values, 95), p99: percentile(values, 99) };
+}
 
 function ratio(results: readonly CaseResult[], stage: Stage, where: (result: CaseResult) => boolean = () => true): Ratio {
   let count = 0;
@@ -72,7 +92,14 @@ export function measure(results: readonly CaseResult[]): EvaluationMetrics {
     },
     unsafeActionRate: { count: consequential.filter((r) => r.errors.includes("unsafe_execution")).length, of: consequential.length },
     errors,
+    latency: Object.fromEntries(SURFACES.map((surface) => [surface, summariseLatency(results.filter((r) => r.surface === surface).map((r) => r.latencyMs))])) as Record<Surface, LatencySummary>,
   };
+}
+
+/** "p50 12ms · p95 40ms · p99 41ms (20 cases)". */
+export function formatLatency(value: LatencySummary): string {
+  if (value.cases === 0) return "not measured";
+  return `p50 ${value.p50}ms · p95 ${value.p95}ms · p99 ${value.p99}ms (${value.cases} cases)`;
 }
 
 /** "12/12 (100%)" — the count first, so the percentage is never read without it. */

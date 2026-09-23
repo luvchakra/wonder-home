@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { listConsumables } from "../commerce/repository";
 import { buildContextItems, type ContextRecords } from "../context/builders";
 import { applyFreshness } from "../context/freshness";
+import { listEvents } from "../family/repository";
 import { findPotentialMatches, needsReconciliation } from "../context/matching";
 import type { ContextDomain, HouseholdContextItem, IncomingFact, MatchResult, MatchVerdict } from "../context/types";
 import { listObligations } from "../finance/repository";
@@ -76,8 +77,16 @@ async function readDomain(supabase: SupabaseClient, householdId: string, candida
   switch (candidate.kind) {
     case "bill":
       return { obligations: await listObligations(supabase, householdId) };
-    case "school_item":
-      return { schoolItems: await listSchoolItems(supabase, householdId, candidate.subjectMemberId ? { childMemberId: candidate.subjectMemberId } : {}) };
+    case "school_item": {
+      // A school notice about a meeting the family already put on its own
+      // calendar is the same meeting (HB-012). The calendar is read as a
+      // courtesy: not being able to read it never blocks the school check.
+      const [schoolItems, events] = await Promise.all([
+        listSchoolItems(supabase, householdId, candidate.subjectMemberId ? { childMemberId: candidate.subjectMemberId } : {}),
+        listEvents(supabase, householdId, { from: new Date(Date.now() - 2 * 86_400_000) }).catch(() => []),
+      ]);
+      return { schoolItems, events };
+    }
     case "grocery_item":
       return { consumables: await listConsumables(supabase, householdId) };
     case "health_document":
@@ -288,5 +297,34 @@ export function reconcileAgainstRecords(
   // A cancellation may name its record less exactly than an update does — the
   // closest same-subject match is still the one to ask about.
   const best = matches.find(needsReconciliation) ?? (candidate.change === "cancellation" ? matches[0] : undefined);
-  return best ? proposalFor(best, candidate, options.memberNames) : null;
+  if (best) return proposalFor(best, candidate, options.memberNames);
+
+  // A school notice for something already on the family calendar ("School
+  // meeting" and the "Parent-teacher meeting" the parents put there). The
+  // calendar entry's people are whoever attends — a parent, for a meeting
+  // about their child — so the person is not compared, only the name and the
+  // day. It is only ever offered as "already on record": a calendar entry is
+  // changed or cancelled on the family calendar, never from a school notice.
+  if (candidate.kind === "school_item") {
+    const onCalendar = findPotentialMatches({ ...incoming, domain: "calendar", subjectMemberId: null, amountMinor: null }, items, { timezone: options.timezone }).find(
+      (match) => match.verdict === "exact_match" || match.verdict === "likely_duplicate",
+    );
+    if (onCalendar?.item) return calendarDuplicate(onCalendar, candidate, options.memberNames);
+  }
+  return null;
+}
+
+function calendarDuplicate(match: MatchResult, candidate: HomeSendCandidate, names: ReadonlyMap<string, string> = new Map()): HomeSendReconciliation {
+  const item = match.item!;
+  // Whoever attends is not whose it is: never offered as the notice's subject.
+  const existing = { ...existingOf(item, names), subjectMemberId: null, subjectName: null };
+  const when = shortDate(existing.date);
+  const found = `I found ${existing.title}${when ? ` on ${when}` : ""} on the family calendar`;
+  const says =
+    candidate.change === "cancellation"
+      ? "This message says it is cancelled — cancel it on the family calendar, or add this as new?"
+      : candidate.change === "update"
+        ? "This message says it changed — change it on the family calendar, or add this as new?"
+        : "This looks like the same one — keep the existing one, or add this as new?";
+  return { verdict: match.verdict, existingId: item.entityId, existing, proposal: { type: "duplicate" }, message: `${found}. ${says}` };
 }

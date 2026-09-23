@@ -1,4 +1,4 @@
-import { formatRatio, measure, type EvaluationMetrics } from "./metrics";
+import { formatLatency, formatRatio, measure, type EvaluationMetrics } from "./metrics";
 import type { CaseResult, EvalCase, EvaluationRun } from "./types";
 
 /**
@@ -95,7 +95,7 @@ export function releaseArtifact(run: EvaluationRun, metrics: EvaluationMetrics, 
     "",
     "## By surface",
     "",
-    ...Object.entries(metrics.bySurface).map(([surface, value]) => `- ${surface}: ${formatRatio(value)}`),
+    ...Object.entries(metrics.bySurface).map(([surface, value]) => `- ${surface}: ${formatRatio(value)} · ${formatLatency(metrics.latency[surface as keyof typeof metrics.latency])}`),
     "",
     "## Accuracy (§8)",
     "",

@@ -10,7 +10,7 @@
  * What it looks for is what an invented answer is made of:
  *
  *  - a person, place or thing named nowhere in the facts or the question;
- *  - a date, a weekday or an amount that no fact carries;
+ *  - a date, a weekday, a clock time or an amount that no fact carries;
  *  - an event ("a party on Friday") the facts never mention;
  *  - a diagnosis, a dose or a treatment — HomeBrain manages a household's
  *    records, it does not practise medicine (§13);
@@ -27,11 +27,14 @@
 export type ViolationKind =
   | "unsupported_name"
   | "unsupported_date"
+  | "unsupported_time"
   | "unsupported_amount"
   | "unsupported_event"
   | "unsupported_health_claim"
   | "unsupported_integration"
   | "unsupported_action"
+  /** An answer to a question about one part of the home that cites nothing from that part (`turn.ts`). */
+  | "unfounded_answer"
   | "unknown_fact";
 
 export type Violation = { kind: ViolationKind; value: string };
@@ -162,6 +165,12 @@ export function validateAnswer(draft: AnswerDraft, context: ValidationContext): 
     if (!weekdays.has(index)) flag("unsupported_date", match[0]);
   }
 
+  // --- Clock times -------------------------------------------------------------
+  const supportedTimes = clockTimesIn(corpus);
+  for (const { text: said, minutes } of clockTimesIn(normalise(text))) {
+    if (!minutes.some((value) => supportedTimes.some((time) => time.minutes.includes(value)))) flag("unsupported_time", said);
+  }
+
   // --- Amounts -----------------------------------------------------------------
   const supportedAmounts = amountsIn(corpus);
   const usedAmounts = amountsIn(normalise(context.facts.filter((fact) => draft.usedFacts.includes(fact.id)).map((fact) => fact.text).join("\n")));
@@ -214,6 +223,8 @@ export function describeViolations(violations: readonly Violation[]): string[] {
         return `"${value}" is not named in any fact.`;
       case "unsupported_date":
         return `"${value}" is not a date any fact gives.`;
+      case "unsupported_time":
+        return `"${value}" is not a time any fact gives.`;
       case "unsupported_amount":
         return `The amount ${value} is not in any fact.`;
       case "unsupported_event":
@@ -224,6 +235,8 @@ export function describeViolations(violations: readonly Violation[]): string[] {
         return `"${value}" describes a connected service no fact records.`;
       case "unsupported_action":
         return `"${value}" claims something was done; nothing has been done in answering a question.`;
+      case "unfounded_answer":
+        return `Nothing on record answers "${value}".`;
       case "unknown_fact":
         return `${value} is not one of the facts given.`;
     }
@@ -293,6 +306,28 @@ function shift(iso: string, days: number): Date {
   const date = new Date(`${iso}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date;
+}
+
+/**
+ * Clock times, as minutes past midnight: "7:30pm", "7 pm", "19:30". A bare
+ * "10:30" (the first half of "10:30–11:30am") could be either half of the
+ * day, so it carries both readings and matches either.
+ */
+function clockTimesIn(text: string): { text: string; minutes: number[] }[] {
+  const out: { text: string; minutes: number[] }[] = [];
+  for (const match of text.matchAll(/\b(\d{1,2})(?::(\d{2}))?\s?(a\.?m\.?|p\.?m\.?)(?![a-z])|\b(\d{1,2}):(\d{2})\b/gi)) {
+    const hour = Number(match[1] ?? match[4]);
+    const minute = Number(match[2] ?? match[5] ?? 0);
+    if (hour > 23 || minute > 59) continue;
+    const meridiem = match[3]?.replace(/\./g, "").toLowerCase();
+    if (meridiem) {
+      if (hour < 1 || hour > 12) continue;
+      out.push({ text: match[0].trim(), minutes: [((hour % 12) + (meridiem === "pm" ? 12 : 0)) * 60 + minute] });
+    } else {
+      out.push({ text: match[0].trim(), minutes: hour <= 12 ? [(hour % 12) * 60 + minute, ((hour % 12) + 12) * 60 + minute] : [hour * 60 + minute] });
+    }
+  }
+  return out;
 }
 
 /** Amounts with a currency mark or word: "₹1,200", "rs 450", "1200 rupees", "$20". */
