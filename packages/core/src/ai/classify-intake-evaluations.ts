@@ -40,6 +40,12 @@ function extraction(over: Partial<IntakeExtraction>): IntakeExtraction {
     healthRecordType: null,
     documentDate: null,
     subjectMemberName: null,
+    summary: null,
+    people: [],
+    facts: [],
+    needs: [],
+    change: "new",
+    confidence: "medium",
     secondary: null,
     ...over,
   };
@@ -160,7 +166,7 @@ export const CLASSIFY_INTAKE_SCENARIOS: readonly ClassifyIntakeScenario[] = [
       amount: 50,
       secondary: { reason: "Should not survive.", title: "Should not survive" },
     }),
-    expected: extraction({ readable: false, kind: "unknown" }),
+    expected: extraction({ readable: false, kind: "unknown", confidence: "low" }),
   },
   {
     id: "CI-08",
@@ -214,6 +220,68 @@ export const CLASSIFY_INTAKE_SCENARIOS: readonly ClassifyIntakeScenario[] = [
       secondary: { reason: "Hallucinated — health documents never get a secondary.", title: "Should not survive" },
     }),
     expected: extraction({ kind: "health_document", title: "Discharge summary", healthRecordType: "discharge_summary" }),
+  },
+  // Wave 3 (§8, §11, §16): the richer reading, held to the same backstop.
+  {
+    id: "CI-W3-01",
+    description: "A school notice asking for two things keeps both needs, and the first stays the v1 secondary.",
+    raw: extraction({
+      kind: "school_item",
+      title: "Sports Day",
+      schoolKind: "event",
+      dueDate: "2026-09-26",
+      people: ["Asmi"],
+      needs: [
+        { reason: "Sports Day asks for a white T-shirt.", title: "White T-shirt" },
+        { reason: "Sports Day asks for sports shoes.", title: "Sports shoes" },
+      ],
+      confidence: "high",
+    }),
+    expected: extraction({
+      kind: "school_item",
+      title: "Sports Day",
+      schoolKind: "event",
+      dueDate: "2026-09-26",
+      people: ["Asmi"],
+      needs: [
+        { reason: "Sports Day asks for a white T-shirt.", title: "White T-shirt" },
+        { reason: "Sports Day asks for sports shoes.", title: "Sports shoes" },
+      ],
+      confidence: "high",
+      secondary: { reason: "Sports Day asks for a white T-shirt.", title: "White T-shirt" },
+    }),
+  },
+  {
+    id: "CI-W3-02",
+    description: "Needs on a grocery item are dropped — only a bill or school notice implies a second need.",
+    raw: extraction({ kind: "grocery_item", title: "Milk", needs: [{ reason: "Also wanted.", title: "Bread" }] }),
+    expected: extraction({ kind: "grocery_item", title: "Milk" }),
+  },
+  {
+    id: "CI-W3-03",
+    description: "A model that hands back a database id has it dropped, wherever it put it (§8).",
+    raw: extraction({
+      kind: "health_document",
+      title: "Lab report",
+      healthRecordType: "lab_result",
+      subjectMemberName: "member 3f2b8c1e-9d4a-4b7e-8f21-0a1b2c3d4e5f",
+      people: ["Asmi", "3f2b8c1e-9d4a-4b7e-8f21-0a1b2c3d4e5f"],
+      notes: "Route to 3f2b8c1e-9d4a-4b7e-8f21-0a1b2c3d4e5f",
+    }),
+    expected: extraction({
+      kind: "health_document",
+      title: "Lab report",
+      healthRecordType: "lab_result",
+      subjectMemberName: null,
+      people: ["Asmi"],
+      notes: null,
+    }),
+  },
+  {
+    id: "CI-W3-04",
+    description: "A school event's date survives — the Science Exhibition example needs it to reconcile (§10).",
+    raw: extraction({ kind: "school_item", title: "Science Exhibition", schoolKind: "event", dueDate: "2026-09-29", change: "update", people: ["Asmi"] }),
+    expected: extraction({ kind: "school_item", title: "Science Exhibition", schoolKind: "event", dueDate: "2026-09-29", change: "update", people: ["Asmi"] }),
   },
 ] as const;
 

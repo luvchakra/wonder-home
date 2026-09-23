@@ -1,8 +1,9 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
+import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
@@ -69,6 +70,147 @@ export type HomeSendExtractionFields = {
   secondary: { reason: string; title: string } | null;
 } | null;
 
+const CHANNEL_LABEL: Record<string, string> = {
+  manual_upload: "A file you sent",
+  pasted_text: "Something you pasted",
+  link: "A web page",
+  audio_note: "A voice note",
+  email: "A forwarded email",
+  email_attachment: "An email attachment",
+};
+
+const CONTENT_LABEL: Record<string, string> = {
+  "application/pdf": "A PDF you sent",
+  "text/plain": "A text file you sent",
+  "text/csv": "A spreadsheet (CSV) you sent",
+  "image/jpeg": "A photo you sent",
+  "image/png": "A photo you sent",
+  "image/webp": "A photo you sent",
+};
+
+const CONFIDENCE_LABEL: Record<IntakeUnderstanding["confidence"], string> = { high: "High", medium: "Medium", low: "Low" };
+
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "School email · 23 Sep" (§13): where it came from and when, in words. */
+export function describeSource(
+  understanding: Pick<IntakeUnderstanding, "provenance"> | null | undefined,
+  options: { contentType?: string | null; receivedAt?: string | null } = {},
+): string {
+  const provenance = understanding?.provenance;
+  let label = provenance ? (CHANNEL_LABEL[provenance.channel] ?? "Something you sent") : "Something you sent";
+  const contentType = options.contentType ?? provenance?.contentType ?? null;
+  if (provenance?.channel === "manual_upload" && contentType && CONTENT_LABEL[contentType]) label = CONTENT_LABEL[contentType]!;
+  if (provenance?.channel === "link" && provenance.url) {
+    try {
+      label = `A web page on ${new URL(provenance.url).hostname}`;
+    } catch {
+      // keep the plain label
+    }
+  }
+  if (provenance?.channel === "email" && provenance.subject) label = `A forwarded email: "${provenance.subject}"`;
+  const when = options.receivedAt ? new Date(options.receivedAt) : null;
+  // One fixed format ("23 Sep", as §13 writes it), so the server's render and the browser's agree.
+  const day = when && !Number.isNaN(when.getTime()) ? `${when.getUTCDate()} ${SHORT_MONTHS[when.getUTCMonth()]}` : null;
+  return day ? `${label} · ${day}` : label;
+}
+
+/**
+ * "What I found" (§13): the summary, where it came from, how sure WonderHome
+ * is — in words, never a bare score — and, when the content tried to
+ * instruct WonderHome, that those instructions were ignored.
+ */
+export function HomeSendFindings({
+  understanding,
+  contentType,
+  receivedAt,
+}: {
+  understanding: IntakeUnderstanding | null | undefined;
+  contentType?: string | null;
+  receivedAt?: string | null;
+}) {
+  if (!understanding) return null;
+  const needs = understanding.candidateActions.filter((action) => action.type === "add_household_need");
+  return (
+    <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3 text-sm">
+      <p className="font-medium">What I found</p>
+      {understanding.readable && understanding.contentSummary ? <p>{understanding.contentSummary}</p> : <p className="text-[var(--wh-foreground-muted)]">WonderHome couldn&apos;t read this on its own — fill in what it is below.</p>}
+      {needs.length > 1 ? (
+        <p className="text-xs text-[var(--wh-foreground-muted)]">
+          It also asks for {needs.map((need) => String(need.fields.title)).join(", ")}.
+        </p>
+      ) : null}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+        <dt className="text-[var(--wh-foreground-subtle)]">Source</dt>
+        <dd>{describeSource(understanding, { contentType, receivedAt })}</dd>
+        {understanding.readable ? (
+          <>
+            <dt className="text-[var(--wh-foreground-subtle)]">Confidence</dt>
+            <dd>{CONFIDENCE_LABEL[understanding.confidence]}</dd>
+          </>
+        ) : null}
+        {understanding.provenance.transcriptConfidence !== null && understanding.provenance.transcriptConfidence < 1 ? (
+          <>
+            <dt className="text-[var(--wh-foreground-subtle)]">Heard</dt>
+            <dd>From a voice note — check names and dates</dd>
+          </>
+        ) : null}
+      </dl>
+      {understanding.safety.instructionsIgnored ? (
+        <p className="flex items-start gap-1.5 text-xs text-[var(--wh-foreground-muted)]">
+          <ShieldCheck aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          <span>This contained instructions aimed at WonderHome. They were ignored — nothing you&apos;re sent can tell WonderHome what to do.</span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A voice note WonderHome is not sure it heard right (§17): it shows what
+ * it heard and waits — the household confirms it or types what was said,
+ * and only then is it read.
+ */
+export function TranscriptCheck({
+  householdId,
+  itemId,
+  heard,
+  action,
+  error,
+  busy,
+}: {
+  householdId: string;
+  itemId: string;
+  heard: { text: string; prompt: string };
+  action: (formData: FormData) => void;
+  error?: string;
+  busy: boolean;
+}) {
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="itemId" value={itemId} />
+      {error ? <Alert>{error}</Alert> : null}
+      <p className="flex items-start gap-2 text-sm">
+        <Mic aria-hidden className="mt-0.5 size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+        <span>{heard.prompt}</span>
+      </p>
+      <label htmlFor={`heard-${itemId}`} className="block text-sm font-medium">What I heard</label>
+      <textarea
+        id={`heard-${itemId}`}
+        name="text"
+        rows={4}
+        required
+        defaultValue={heard.text}
+        className="block w-full resize-none rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
+      />
+      <Button type="submit" disabled={busy} className="w-full">
+        {busy ? "Reading…" : "That's what was said"}
+      </Button>
+    </form>
+  );
+}
+
 /**
  * The confirm form for one classified item — shared by `HomeSendSheet` (the
  * composer's paperclip) and the `/home-send` page's own inbox, so the same
@@ -87,6 +229,9 @@ export function HomeSendConfirmStep({
   notice,
   reconciliation,
   busy,
+  understanding,
+  contentType,
+  receivedAt,
 }: {
   item: { id: string };
   defaultKind: string;
@@ -99,6 +244,10 @@ export function HomeSendConfirmStep({
   /** A record this already looks like (Wave 1 §7) — shown, never silently duplicated. */
   reconciliation?: { verdict: string; message: string } | null;
   busy: boolean;
+  /** The canonical reading (Wave 3 §8), shown as "What I found". */
+  understanding?: IntakeUnderstanding | null;
+  contentType?: string | null;
+  receivedAt?: string | null;
 }) {
   const [kind, setKind] = useState(defaultKind);
   const [includeSecondary, setIncludeSecondary] = useState(false);
@@ -116,6 +265,8 @@ export function HomeSendConfirmStep({
           </span>
         </Alert>
       ) : null}
+
+      <HomeSendFindings understanding={understanding} contentType={contentType} receivedAt={receivedAt} />
 
       {reconciliation ? (
         <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">

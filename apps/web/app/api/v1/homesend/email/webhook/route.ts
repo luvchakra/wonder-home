@@ -6,8 +6,9 @@ import {
   platformResendConfig,
   verifySvixSignature,
 } from "@wonderhome/core/homesend/email-gateway";
-import type { HomeSendExtraction } from "@wonderhome/core/homesend/items";
-import { createEmailHomeSendItem, setHomeSendClassification } from "@wonderhome/core/homesend/repository";
+import { understand } from "@wonderhome/core/homesend/ingest";
+import { contentHash, htmlToText, normalizeText } from "@wonderhome/core/homesend/normalize";
+import { createEmailHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -91,9 +92,12 @@ export async function POST(request: Request): Promise<Response> {
       headers: { "content-type": "application/json; charset=utf-8" },
     });
   }
-  if (!email.text || email.text.trim().length === 0) {
-    // Nothing to classify (an HTML-only email with no text part, say) — ack
-    // rather than retry forever on a message that will never have text.
+  // The plain-text part when there is one; otherwise the HTML part, reduced
+  // to text first — never handed to a model as markup (Wave 3 §6).
+  const body = email.text?.trim() ? normalizeText(email.text) : email.html ? htmlToText(email.html).text : "";
+  if (!body) {
+    // Nothing readable at all — ack rather than retry forever on a message
+    // that will never have text.
     return new Response(null, { status: 200 });
   }
 
@@ -101,67 +105,31 @@ export async function POST(request: Request): Promise<Response> {
     householdId,
     externalId: email.id,
     senderAddress: email.from,
-    rawText: email.text.slice(0, 4000),
+    rawText: body,
+    subject: email.subject?.trim().slice(0, 300) || null,
+    contentHash: await contentHash(body),
   });
   if (duplicate) {
     return new Response(null, { status: 200 });
   }
 
-  await classifyEmailIntake(supabase, householdId, item.id, email.text.slice(0, 4000));
+  try {
+    // The same understanding step every other HomeSend input ends in. The
+    // sender and subject are evidence, told to the model as untrusted
+    // context — never proof of which household member sent it.
+    await understand(supabase, householdId, item.id, {
+      source: { text: body },
+      channel: "email",
+      context: { channel: "a forwarded email", subject: email.subject ?? null, from: email.from },
+      text: body,
+    });
+  } catch (thrown) {
+    // Understanding is a convenience, not the point of this request — the
+    // item is already safely persisted and still reachable for manual entry.
+    log.warn("homesend email webhook: understanding failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+  }
 
   return new Response(null, { status: 200 });
-}
-
-/**
- * The same "read the household's own AI key, fall back to the platform key,
- * or leave it for a person to fill in by hand" bargain
- * `home-send-actions.ts`'s `classifyAndSave` keeps for uploads/paste —
- * reimplemented here rather than shared, because this call has no `File`,
- * no session, and always the admin client, so generalizing the existing
- * helper would cost more than the dozen lines it saves.
- */
-async function classifyEmailIntake(
-  supabase: ReturnType<typeof createAdminClient>,
-  householdId: string,
-  itemId: string,
-  text: string,
-): Promise<void> {
-  try {
-    const { readHouseholdKey } = await import("@wonderhome/core/ai/credentials");
-    const { resolveModelKey, platformKey } = await import("@wonderhome/core/ai/model-key");
-    const { classifyIntake } = await import("@wonderhome/core/ai/classify-intake");
-
-    const householdKey = await readHouseholdKey(householdId).catch(() => null);
-    const key = resolveModelKey(householdKey, platformKey());
-    if (key.source === "none" || !key.provider || !key.key) return;
-
-    const extraction = await classifyIntake(key.provider, key.key, { text });
-    if (!extraction || !extraction.readable) return;
-
-    const extracted: HomeSendExtraction = {
-      title: extraction.title,
-      notes: extraction.notes,
-      billKind: extraction.billKind,
-      payee: extraction.payee,
-      amount: extraction.amount,
-      currency: extraction.currency,
-      dueDate: extraction.dueDate,
-      schoolKind: extraction.schoolKind,
-      subject: extraction.subject,
-      quantity: extraction.quantity,
-      unit: extraction.unit,
-      category: extraction.category,
-      healthRecordType: extraction.healthRecordType,
-      documentDate: extraction.documentDate,
-      subjectMemberName: extraction.subjectMemberName,
-      secondary: extraction.secondary,
-    };
-    await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: extraction.kind, extracted });
-  } catch (thrown) {
-    // Classification is a convenience, not the point of this request — the
-    // item is already safely persisted and still reachable for manual entry.
-    log.warn("homesend email webhook: classification failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
-  }
 }
 
 export const dynamic = "force-dynamic";

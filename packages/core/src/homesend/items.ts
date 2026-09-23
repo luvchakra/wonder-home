@@ -1,3 +1,5 @@
+import type { IntakeUnderstanding } from "./understanding";
+
 /**
  * HomeSend as WonderHome models it (Phase C).
  *
@@ -5,11 +7,36 @@
  * file the same way `school/items.ts` is split from `school/repository.ts`.
  */
 
-export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text", "email"] as const;
+export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text", "email", "audio_note", "link", "email_attachment"] as const;
 export type HomeSendSource = (typeof HOME_SEND_SOURCES)[number];
 
-export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed", "undone"] as const;
+export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed", "undone", "failed"] as const;
 export type HomeSendStatus = (typeof HOME_SEND_STATUSES)[number];
+
+/** Why an item failed safely (Wave 3 §14): kept, never classified, and listed under "Failed safely". */
+export const HOME_SEND_FAILURE_REASONS = [
+  "security_rejected",
+  "unsupported_type",
+  "unreadable",
+  "too_large",
+  "link_blocked",
+  "link_unreachable",
+  "transcription_unavailable",
+  "transcription_failed",
+] as const;
+export type HomeSendFailureReason = (typeof HOME_SEND_FAILURE_REASONS)[number];
+
+/** What the inbox says for each — plain, and never which internal check tripped beyond what helps. */
+export const FAILURE_REASON_COPY: Record<HomeSendFailureReason, string> = {
+  security_rejected: "Didn't pass the safety check, so WonderHome kept it without looking inside.",
+  unsupported_type: "WonderHome can't read this kind of file yet.",
+  unreadable: "WonderHome couldn't read anything in it.",
+  too_large: "Too large to read.",
+  link_blocked: "That link isn't a public web page, so WonderHome didn't open it.",
+  link_unreachable: "That link couldn't be opened.",
+  transcription_unavailable: "Voice notes need a speech service, and none is set up yet.",
+  transcription_failed: "WonderHome couldn't make out the voice note.",
+};
 
 export const HOME_SEND_KINDS = ["bill", "school_item", "grocery_item", "health_document", "unknown"] as const;
 export type HomeSendKind = (typeof HOME_SEND_KINDS)[number];
@@ -46,6 +73,12 @@ export type HomeSendExtraction = {
   documentDate: string | null;
   subjectMemberName: string | null;
   secondary: HomeSendSecondaryExtraction | null;
+  // Wave 3 (§8). Optional: items classified before it carry none of these.
+  summary?: string | null;
+  people?: string[];
+  needs?: HomeSendSecondaryExtraction[];
+  change?: "new" | "update" | "cancellation";
+  confidence?: "high" | "medium" | "low";
 };
 
 export type HomeSendItem = {
@@ -66,6 +99,19 @@ export type HomeSendItem = {
   externalId: string | null;
   /** Who sent it in, for an email. Never a household member's own address by design. */
   senderAddress: string | null;
+  /** What kind of file it really is, decided from its bytes. */
+  contentType: string | null;
+  contentHash: string | null;
+  /** The address a link item was sent as. */
+  sourceUrl: string | null;
+  /** An email's subject line. */
+  subject: string | null;
+  /** The email an attachment came with. */
+  parentItemId: string | null;
+  /** The canonical reading (`understanding.ts`), null until understood. */
+  understanding: IntakeUnderstanding | null;
+  transcriptConfidence: number | null;
+  failureReason: HomeSendFailureReason | null;
   createdAt: string;
 };
 

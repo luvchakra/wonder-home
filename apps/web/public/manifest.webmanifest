@@ -43,7 +43,7 @@
       "files": [
         {
           "name": "photo",
-          "accept": ["image/jpeg", "image/png", "image/webp"]
+          "accept": ["image/jpeg", "image/png", "image/webp", "application/pdf", "text/plain", "text/csv", "audio/*", ".pdf", ".txt", ".csv"]
         }
       ]
     }

@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
-import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
+import { ingestFile, ingestText, IngestRejected } from "@wonderhome/core/homesend/ingest";
 import { clientIpFromHeaders, hashClientIp, mayCreateShareHandoff } from "@wonderhome/core/homesend/rate-limit";
-import { createHomeSendItem } from "@wonderhome/core/homesend/repository";
-import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
 import { countRecentShareHandoffs, createShareHandoff, pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { listMemberships } from "@wonderhome/core/identity/households";
 
@@ -26,8 +24,8 @@ import { listMemberships } from "@wonderhome/core/identity/households";
  * back through `/sign-in?next=...`, which the `/home-send` page resumes.
  */
 
-const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
-const UPLOAD_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+/** The hosting platform's request ceiling, less multipart overhead — what the type of file is, the pipeline decides from its bytes. */
+const UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
 
 function redirectTo(path: string, origin: string): NextResponse {
   return NextResponse.redirect(new URL(path, origin), 303);
@@ -46,10 +44,7 @@ export async function POST(request: Request): Promise<Response> {
   const shared = formData.get("photo");
   const photo = shared instanceof File && shared.size > 0 ? shared : null;
 
-  if (photo) {
-    if (!UPLOAD_CONTENT_TYPES.has(photo.type)) return redirectTo("/home-send?shareError=type", origin);
-    if (photo.size > UPLOAD_MAX_BYTES) return redirectTo("/home-send?shareError=size", origin);
-  }
+  if (photo && photo.size > UPLOAD_MAX_BYTES) return redirectTo("/home-send?shareError=size", origin);
   if (!photo && combinedText.length === 0) return redirectTo("/home-send", origin);
 
   const user = await getVerifiedUser();
@@ -61,41 +56,18 @@ export async function POST(request: Request): Promise<Response> {
 
   if (user && membership) {
     const supabase = await createClient();
-    const householdId = membership.household.id;
-    const itemId = crypto.randomUUID();
-
-    if (photo) {
-      const buffer = Buffer.from(await photo.arrayBuffer());
-      const securityStatus = await assessUploadSecurity(photo.type, buffer);
-      const path = `${householdId}/${itemId}`;
-      const { error: uploadError } = await supabase.storage.from("home-send").upload(path, photo, { contentType: photo.type });
-      if (uploadError) return redirectTo("/home-send?shareError=upload", origin);
-
-      await createHomeSendItem(supabase, {
-        id: itemId,
-        householdId,
-        createdByMemberId: membership.memberId,
-        source: "manual_upload",
-        filePath: path,
-        securityStatus,
-      });
-
-      if (securityStatus !== "rejected") {
-        await classifyAndSave(supabase, householdId, itemId, {
-          image: { mediaType: photo.type as "image/jpeg" | "image/png" | "image/webp", base64: buffer.toString("base64") },
-        });
+    const actor = { householdId: membership.household.id, memberId: membership.memberId };
+    try {
+      // The same one pipeline every other HomeSend input goes through; a
+      // file it refuses is still kept, failed safely, in the inbox.
+      if (photo) {
+        await ingestFile(supabase, actor, { bytes: new Uint8Array(await photo.arrayBuffer()), claimedType: photo.type, filename: photo.name || null });
+      } else {
+        await ingestText(supabase, actor, { text: combinedText });
       }
-    } else {
-      await createHomeSendItem(supabase, {
-        id: itemId,
-        householdId,
-        createdByMemberId: membership.memberId,
-        source: "pasted_text",
-        rawText: combinedText,
-      });
-      await classifyAndSave(supabase, householdId, itemId, { text: combinedText });
+    } catch (thrown) {
+      return redirectTo(`/home-send?shareError=${thrown instanceof IngestRejected ? "size" : "upload"}`, origin);
     }
-
     return redirectTo("/home-send", origin);
   }
 

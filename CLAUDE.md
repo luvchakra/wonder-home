@@ -258,9 +258,22 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the
-  inbound intake channel: a photo, a file, a pasted forward or a forwarded
-  email, classified and routed into a real domain table only once a
-  person confirms it. Every routed item can be undone
+  inbound intake channel: a photo, a PDF, a text file, a voice note, a
+  shared link, a pasted forward or a forwarded email, classified and
+  routed into a real domain table only once a person confirms it. Since
+  HomeSend 2.0 (spec `design/HOMESEND-2.0-WAVE-3.md`) every one of those
+  goes through one pipeline, `homesend/ingest.ts` (secure intake →
+  normalize → understand), and ends in the same canonical
+  `IntakeUnderstanding` (`homesend/understanding.ts`) — a new input type
+  is a new `ingest*` entry point into that pipeline, never a second one.
+  A file's type is decided from its bytes (`normalize.ts`), a link is only
+  ever fetched through `link-fetch.ts` (public addresses only, DNS checked
+  and pinned, every redirect re-checked), an uncertain voice transcript is
+  shown and confirmed, never acted on (`audio.ts`), and all of it is
+  untrusted content: `injection.ts` fences it for the model and flags
+  instructions aimed at WonderHome, which are ignored and said so.
+  Whatever cannot go on is kept and shown under "Failed safely", never
+  dropped. Every routed item can be undone
   (`homesend/changes.ts`), the same domain service a manual remove would
   use, never a raw delete. A real Resend inbound-email webhook
   (`POST /api/v1/homesend/email/webhook`, `homesend/email-gateway.ts`)
