@@ -1,8 +1,10 @@
-import { CalendarDays, CloudSun, CreditCard, GraduationCap, Home, Mail, MessageCircle, Plug, ShieldCheck, ShoppingBasket } from "lucide-react";
+import { CalendarDays, CloudSun, Cpu, CreditCard, GraduationCap, Home, Mail, MessageCircle, Plug, ShieldCheck, ShoppingBasket } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { listDevices } from "@wonderhome/core/home/device-repository";
 import { weatherProviderFromEnv } from "@wonderhome/core/home/open-meteo";
+import { listAssets } from "@wonderhome/core/home/repository";
 import { describeHouseholdWeather, householdWeather } from "@wonderhome/core/home/weather-service";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -13,6 +15,7 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { DeviceLinkControls } from "../../_components/device-link-controls";
 import { WeatherArea } from "../../_components/weather-area";
 import { formatDate, formatTime, requireSession } from "../../_lib/session";
 
@@ -54,14 +57,19 @@ export default async function IntegrationsPage() {
   // Weather is the one provider a deployment can switch on without a
   // household credential (story 17-007), so its area is chosen right here.
   const weatherOn = weatherProviderFromEnv() !== null;
-  const [integrations, weather, weatherEntitled] = await Promise.all([
+  const [integrations, weather, weatherEntitled, devices, assets] = await Promise.all([
     listIntegrations(supabase, householdId).catch(() => []),
     weatherOn ? householdWeather(supabase, householdId) : Promise.resolve(null),
     // Asked on its own: with no area chosen yet, the weather answer is "no
     // area" before the plan is ever consulted, and an Admin should not be
     // offered a search their plan will refuse to save.
     weatherOn ? may(supabase, householdId, "home.weather").then((decision) => decision.allowed, () => false) : Promise.resolve(false),
+    // Story 17-008: what a connected device provider has reported. `null` is
+    // "could not be read", which the section says, rather than an empty list.
+    listDevices(supabase, householdId).catch(() => null),
+    listAssets(supabase, householdId).catch(() => []),
   ]);
+  const smartHome = integrations.filter((integration) => integration.kind === "smart_home");
   const attention = integrations.filter((integration) => integration.needsAttention);
 
   return (
@@ -120,6 +128,39 @@ export default async function IntegrationsPage() {
             })}
           </div>
         </section>
+
+        {smartHome.length > 0 || (devices && devices.length > 0) ? (
+          <section id="devices">
+            <SectionHeader title="Devices" count={devices?.length || undefined} />
+            <Card className="p-2">
+              {devices === null ? (
+                <p className="px-2 py-3 text-sm text-[var(--wh-foreground-muted)]">Your devices could not be loaded just now. Nothing about them has changed — try again in a moment.</p>
+              ) : devices.length === 0 ? (
+                <p className="px-2 py-3 text-sm text-[var(--wh-foreground-muted)]">No devices have reported yet. Each one appears here after a sync, and its readings only count once you say which appliance it is.</p>
+              ) : (
+                <ul className="divide-y divide-[var(--wh-border)]">
+                  {devices.map((device) => (
+                    <li key={device.id} className="flex items-start gap-3 px-2 py-3">
+                      <IconTile icon={Cpu} tone={device.ignored ? "neutral" : "ai"} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium break-words">{device.label}</p>
+                        <p className="text-xs text-[var(--wh-foreground-muted)]">
+                          {device.status}
+                          {device.lastReadingAt ? ` Last reported ${formatDate(timezone, device.lastReadingAt, "long")}, ${formatTime(timezone, device.lastReadingAt)}.` : ""}
+                        </p>
+                      </div>
+                      <DeviceLinkControls
+                        householdId={householdId}
+                        device={{ id: device.id, label: device.label, assetId: device.assetId, ignored: device.ignored }}
+                        assets={assets.filter((asset) => asset.status !== "retired").map((asset) => ({ id: asset.id, name: asset.name }))}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
+        ) : null}
 
         {weatherOn ? (
           <section id="weather">

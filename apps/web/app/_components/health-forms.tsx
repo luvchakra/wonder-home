@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, UserX } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { HealthConsent } from "@wonderhome/core/health/repository";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -207,7 +207,7 @@ export function RevokeHealthConsentButton({
           const formData = new FormData();
           formData.set("householdId", householdId);
           formData.set("consentId", consent.id);
-          formAction(formData);
+          startTransition(() => formAction(formData));
         }}
       >
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}

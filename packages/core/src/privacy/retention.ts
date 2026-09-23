@@ -66,8 +66,9 @@ export const RETENTION: Record<RetentionClass, RetentionRule> = {
   },
   integration_events: {
     days: 60,
-    label: "Records of syncing with connected accounts",
-    because: "They exist to debug a sync that went wrong. A two-month-old sync is not being debugged.",
+    label: "Records of syncing with connected accounts, and device readings",
+    because:
+      "They exist to debug a sync that went wrong, and a device reading stops meaning anything within days. A two-month-old sync is not being debugged.",
   },
   usage: {
     days: 400,

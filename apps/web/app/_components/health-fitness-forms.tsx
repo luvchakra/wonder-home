@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "@wonderhome/core/health/fitness";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -207,7 +207,7 @@ export function GoalActions({
     const formData = new FormData();
     formData.set("householdId", householdId);
     formData.set("goalId", goal.id);
-    action(formData);
+    startTransition(() => action(formData));
   };
 
   if (goal.status === "dismissed") {
@@ -406,7 +406,7 @@ export function SessionActions({
     const formData = new FormData();
     formData.set("householdId", householdId);
     formData.set("sessionId", session.id);
-    action(formData);
+    startTransition(() => action(formData));
   };
 
   if (session.status === "archived") {

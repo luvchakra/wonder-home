@@ -28,6 +28,7 @@ const SHIPPED_TABLES = [
   "entitlement_experiments",
   "entitlement_experiment_events",
   "backup_services",
+  "home_device_links",
   "profiles",
   "households",
   "household_members",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { SchoolItem } from "@wonderhome/core/school/items";
 import { localTimeValue, schoolDateValue, schoolTimeWords } from "@wonderhome/core/school/times";
@@ -172,7 +172,7 @@ function CancelSchoolItemControl({
           const formData = new FormData();
           formData.set("householdId", householdId);
           formData.set("itemId", itemId);
-          formAction(formData);
+          startTransition(() => formAction(formData));
         }}
       >
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}

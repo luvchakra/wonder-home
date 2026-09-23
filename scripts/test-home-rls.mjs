@@ -510,3 +510,91 @@ test("a cover request cannot name another household's backup service", () => {
     /not part of household/,
   );
 });
+
+// Device links (story 17-008): a sync creates them, an Admin decides only
+// which appliance each is and whether to ignore it.
+let integrationId = "";
+let linkId = "";
+
+test("a device link is seen by the household, and only a sync can create one", () => {
+  integrationId = psql(
+    `insert into public.integrations (household_id, kind, provider, status, scopes)
+     values ('${household}', 'smart_home', 'fixture', 'connected', '{devices.read}') returning id;`,
+    options,
+  );
+  linkId = psql(
+    `insert into public.home_device_links (household_id, integration_id, external_device_id, device_key, label)
+     values ('${household}', '${integrationId}', 'washer-7f3a', 'fixture:washer-7f3a', 'Bosch washer') returning id;`,
+    options,
+  );
+
+  assert.equal(asProfile(HEAD, `select count(*) from public.home_device_links;`, options), "1");
+  assert.equal(asProfile(PARTNER, `select count(*) from public.home_device_links;`, options), "1", "a member could not see the household's devices");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.home_device_links;`, options), "0", "another household saw these devices");
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.home_device_links (household_id, integration_id, external_device_id, device_key, label)
+       values ('${household}', '${integrationId}', 'planted', 'fixture:planted', 'Planted');`,
+      options,
+    ),
+    "an Admin invented a device from a session",
+  );
+  assert.ok(deniedForProfile(HEAD, `delete from public.home_device_links where id = '${linkId}';`, options), "an Admin deleted a device from a session");
+});
+
+test("an Admin says which appliance a device is, and nothing else about it", () => {
+  asProfile(HEAD, `update public.home_device_links set asset_id = '${assetId}' where id = '${linkId}';`, options);
+  assert.equal(psql(`select asset_id from public.home_device_links where id = '${linkId}';`, options), assetId);
+
+  asProfile(HEAD, `update public.home_device_links set ignored = true where id = '${linkId}';`, options);
+  assert.equal(psql(`select ignored from public.home_device_links where id = '${linkId}';`, options), "t");
+
+  assert.ok(
+    deniedForProfile(HEAD, `update public.home_device_links set device_key = 'fixture:other' where id = '${linkId}';`, options),
+    "an Admin changed which readings a device's key collects",
+  );
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.home_device_links set ignored = false where id = '${linkId}';`,
+      `select ignored from public.home_device_links where id = '${linkId}';`,
+      "t",
+      options,
+    ),
+    "a member who is not an Admin changed a device",
+  );
+  assert.ok(
+    deniedForUpdate(
+      OUTSIDER,
+      `update public.home_device_links set asset_id = null where id = '${linkId}';`,
+      `select asset_id from public.home_device_links where id = '${linkId}';`,
+      assetId,
+      options,
+    ),
+  );
+});
+
+test("a device cannot be linked to another household's appliance", () => {
+  const theirs = asProfile(OUTSIDER, `insert into public.home_assets (household_id, name) values ('${otherHousehold}', 'Their dryer') returning id;`, options);
+  assert.throws(
+    () => asProfile(HEAD, `update public.home_device_links set asset_id = '${theirs}' where id = '${linkId}';`, options),
+    /not part of household/,
+  );
+});
+
+test("the same reading is recorded once, however many times a provider sends it", () => {
+  const insert = () =>
+    psql(
+      `insert into public.home_device_signals (household_id, asset_id, device_key, kind, observed_at, value, confidence)
+       values ('${household}', '${assetId}', 'fixture:washer-7f3a', 'power_draw', '2026-09-24T08:30:00Z', 540, 0.8);`,
+      options,
+    );
+  insert();
+  assert.throws(() => insert(), /home_device_signals_reading_unique/);
+});
+
+test("disconnecting the provider takes its devices with it", () => {
+  psql(`delete from public.integrations where id = '${integrationId}';`, options);
+  assert.equal(psql(`select count(*) from public.home_device_links where integration_id = '${integrationId}';`, options), "0");
+});
