@@ -57,10 +57,39 @@ export function platformKey(
   const key = env.WONDERHOME_AI_KEY?.trim();
   if (!key) return null;
 
-  const named = env.WONDERHOME_AI_PROVIDER?.trim().toLowerCase();
-  const provider = MODEL_PROVIDERS.find((candidate) => candidate === named) ?? "anthropic";
+  const named = env.WONDERHOME_AI_PROVIDER?.trim().toLowerCase() ?? "";
+  const provider = PROVIDER_NAMES[named] ?? providerOfKey(key) ?? "anthropic";
 
   return { provider, key };
+}
+
+/**
+ * What an operator might reasonably write for each provider. "gemini" is
+ * what anyone holding a Gemini key types; reading it as "not a provider"
+ * once sent a Google key to Anthropic, which refused it with a 401 and left
+ * every household without a key of its own understanding nothing.
+ */
+const PROVIDER_NAMES: Record<string, ModelProvider> = {
+  anthropic: "anthropic",
+  claude: "anthropic",
+  google: "google",
+  gemini: "google",
+  "google gemini": "google",
+  openai: "openai",
+  gpt: "openai",
+  chatgpt: "openai",
+};
+
+/**
+ * The provider a key's own format names, when the environment does not
+ * name one we recognise. Only the documented prefixes count; anything else
+ * is not guessed at.
+ */
+function providerOfKey(key: string): ModelProvider | null {
+  if (key.startsWith("sk-ant-")) return "anthropic";
+  if (key.startsWith("AIza")) return "google";
+  if (key.startsWith("sk-")) return "openai";
+  return null;
 }
 
 /** What a household is told about where its assistant's intelligence comes from. */

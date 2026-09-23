@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-23 | [The platform AI key reaches the provider it belongs to ("gemini" was read as Anthropic)](2026-09-23-platform-provider-names.md) |
 | 2026-09-23 | [HomeTalk 2.0, part 3: model contract, confidence, the §21 examples and the §22 matrix — Wave 4 (story 14-012 Done)](2026-09-23-hometalk-2-contract.md) |
 | 2026-09-23 | [HomeTalk 2.0, part 2: corrections, multi-step and cross-domain requests — Wave 4 (story 14-012)](2026-09-23-hometalk-2-operations.md) |
 | 2026-09-23 | [HomeTalk 2.0, part 1: grounding — dates, people and "that" — Wave 4 (story 14-012)](2026-09-23-hometalk-2-grounding.md) |
