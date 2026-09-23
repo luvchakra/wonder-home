@@ -13,6 +13,7 @@
 | 7 | P1 | 14-007 | Multi-agent coordination | Done | `specialists.ts`: named specialists (meals, pets, home, bills, groceries) each propose `PlannedStep`s from `HomeAssessment`s for the existing governed tool registry; a contract (`grocery_list`) is how a meal or pet need it cannot itself fulfil is handed to groceries, which consolidates every producer's list into one deduplicated set of steps. `coordinate()` runs them in order and returns one plan; `AgentRun` gained a `contracts` field and `agent_runs.contracts` column to record what was handed off, alongside the plan `authorizeToolCall` still gates step by step |
 | 8 | P2 | 14-008 | Predictive intelligence | Not Started | |
 | 9 | P0 | 14-009 | Household context & grounding engine (Wave 1) | Done | `packages/core/src/context/`: a derived, rebuildable layer over the domain repositories, read only through the member's own RLS client (never the service role, never `.rpc`). One canonical `HouseholdContextItem` per fact with provenance, freshness (current/stale/historical/superseded/unknown), tier 1–4 and privacy class; health's private/selected_family/household_operational scopes preserved with no admin shortcut. Retrieval API (`resolvePerson`, `resolveEntity`, `resolveReference`, `findRelevantFacts`, `findPotentialMatches`, `findPotentialConflicts`, `getCurrentState`, `getRecentChanges`, `getSupportingEvidence`); resolution never silently picks a low-confidence consequential target — it resolves, clarifies or asks. HomeBrain's context and question relevance, HomeTalk's person/grocery/health-issue resolution and HomeSend's duplicate reconciliation all go through it; every successful write invalidates it. 14 golden scenarios + 18 engine tests; live count-only check: an impersonated member sees 0 rows from 12 other households across all 29 tables the engine reads |
+| 10 | P0 | 14-010 | HomeBrain 2.0 — grounded household reasoning (Wave 2) | In Progress | Spec: `design/HOMEBRAIN-2.0-WAVE-2.md`. Part 1 (grounded reasoning core) done: `packages/core/src/homebrain/` — question reading (intent/entity/time/domain hints, cross-domain connection, follow-ups, ambiguity → one focused question), the `GroundedFact` contract (opaque `F`-ids, sources, confidence, privacy class), the §14 prompt contract with cited `usedFacts`, post-generation validation (unsupported names/dates/amounts/events/health/integration/"done" claims) with one tighter regeneration then a deterministic answer then an honest "not on record", deterministic "why?" answers from recorded evidence, and the five modes (done only after an executor confirms). Part 2 (corrections superseding learned facts, HomeTalk memories ↔ HomeBrain Review) pending |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -229,6 +230,30 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
 - API/OpenAPI and Supabase migrations/RLS are updated where applicable.
 - Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 14-010 — HomeBrain 2.0: grounded household reasoning (Wave 2)
+**Epic:** Household Context & Grounding
+**Priority:** P0
+**Spec:** `design/HOMEBRAIN-2.0-WAVE-2.md` (Product Council approved)
+**Goal:** Make HomeBrain the household's reasoning layer — "WonderHome knows how our household works" — answering from what WonderHome knows, not from what a model can imagine.
+
+**Acceptance criteria**
+- HomeBrain uses Wave 1 retrieval and grounding; the model receives only `GroundedFact`s (opaque id, statement, sources, confidence, privacy class) that passed the consent gate.
+- Cross-domain questions connect the parts of the home they span (school → household need, meals → groceries, appointment → calendar) without exposing private appointment details.
+- Contextual references and follow-ups resolve through the context engine; an ambiguous person produces one focused clarification, never a guess.
+- Every model answer is validated for unsupported names, dates, amounts, events, health claims, provider/integration claims and claims of completed actions; a failing answer is regenerated once with tighter context, then answered deterministically, then honestly declined — never silently accepted.
+- "Why?" questions are answered from observable evidence (recorded reasons, provenance, HomeSend intakes), never chain-of-thought.
+- Modes: answer, clarify, prepare, approval, done — "done" only after a governed executor confirms the change.
+- A confirmed correction supersedes an older learned observation, with history kept; HomeBrain Review exposes fact, source, when learned, confidence, confirmation, edit and remove.
+- HomeTalk and HomeSend changes become visible to HomeBrain; privacy boundaries hold; health stays privacy-scoped and non-diagnostic; every existing gate stays green.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass, including the §16 evaluation questions.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
 

@@ -3,14 +3,14 @@ import { z } from "zod";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, restoreNames, routeToProvider, unpseudonymise, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, routeToProvider, unpseudonymise, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
-import { describeLocalNow, factsFor, forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
+import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import type { PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
@@ -19,6 +19,7 @@ import {
   beginEditMessage,
   currentSessionId,
   decideAction,
+  latestAction,
   listMessages,
   loadAction,
   markActionResult,
@@ -36,6 +37,9 @@ import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
+import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
+import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
+import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -204,7 +208,7 @@ export async function POST(request: Request, { params }: Params) {
       recentTurns(admin, sessionId, 6),
       pendingClarification(admin, sessionId),
     ]);
-    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, membership.household.timezone);
+    const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people);
     const startedAt = Date.now();
 
     // Recording what was said and metering it need nothing from the answer,
@@ -230,18 +234,22 @@ export async function POST(request: Request, { params }: Params) {
     // understood — the two need nothing from each other, and together they
     // are most of a turn.
     const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
-    const brainRead = routing.answer
-      ? householdMemory(householdId, `agenda:${membership.memberId}`, () => householdAgenda(supabase, householdId, view)).then(async (agenda) => ({
-          agenda,
-          context: await householdContext(supabase, {
-            householdId,
-            householdName: membership.household.name,
-            timezone: membership.household.timezone,
-            viewer: view,
-            agenda: { needsYou: agenda.needsYou, handled: agenda.handled, checked: agenda.checked, unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label) },
-          }),
-        }))
-      : null;
+    // Any question may be answered from the facts, with or without a model
+    // (a deterministic answer needs them too), so the read starts whenever
+    // the turn might be one.
+    const readBrain = () =>
+      householdMemory(householdId, `agenda:${membership.memberId}`, () => householdAgenda(supabase, householdId, view)).then(async (agenda) => ({
+        agenda,
+        context: await householdContext(supabase, {
+          householdId,
+          householdName: membership.household.name,
+          timezone: membership.household.timezone,
+          viewer: view,
+          agenda: { needsYou: agenda.needsYou, handled: agenda.handled, checked: agenda.checked, unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label) },
+        }),
+      }));
+    const mayBeQuestion = routing.compose !== undefined || quick.action === "ask_status" || quick.action === "unknown";
+    const brainRead = mayBeQuestion ? readBrain() : null;
     brainRead?.catch(() => undefined);
 
     const result = await converse({
@@ -277,42 +285,72 @@ export async function POST(request: Request, { params }: Params) {
     // state, or a write that went through (or did not).
     let text = result.text;
     let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
-    let brain: { source: "model" | "deterministic" | "none"; factsSent: number } = { source: "none", factsSent: 0 };
+    let brain: { source: HomeBrainAnswer["source"] | "evidence"; factsSent: number } = { source: "none", factsSent: 0 };
 
     let composedAt = understoodAt;
 
-    if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
-      // A question about the home: answered from everything the home holds
-      // (the HomeBrain), composed by the model where the household's
-      // consent lets the facts go; otherwise from the deterministic summary.
+    // What this turn is (Wave 2 §11): answer, clarify, prepare, approval, or
+    // done — and "done" only once an executor has confirmed the change.
+    let brainAnswer: HomeBrainAnswer | null = null;
+    let explained = false;
+    const previousQuestion = [...history].reverse().find((turn) => turn.role === "member")?.text ?? null;
+    const lastAssistantText = [...history].reverse().find((turn) => turn.role === "assistant")?.text ?? null;
+
+    if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain === "string") {
+      // "Why?", "where did this come from?", "what did I just send?" — from
+      // the recorded evidence, assembled here; never a model (§10).
+      const [read, recorded] = await Promise.all([(brainRead ?? readBrain()).catch(() => null), latestAction(admin, sessionId)]);
+      composedAt = Date.now();
+      text = explain({
+        topic: result.intent.parameters.explain as WhyTopic,
+        subject: typeof result.intent.parameters.subject === "string" ? result.intent.parameters.subject : null,
+        items: read?.context.snapshot.items ?? [],
+        viewerMemberId: membership.memberId,
+        timezone: membership.household.timezone,
+        now: new Date(),
+        lastAssistantText,
+        lastAction: recorded,
+        clarifying: clarifying ? { question: clarifying.question, utterance: clarifying.utterance, action: clarifying.action } : null,
+      }).text;
+      explained = true;
+      brain = { source: "evidence", factsSent: 0 };
+    } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
+      // A question about the home: HomeBrain answers from the facts this
+      // member may see — composed by the model where the household's
+      // consent lets them go, validated before anyone reads it, otherwise
+      // from the facts themselves. The agenda summary stays the answer to
+      // "what's going on?", where nothing narrower applies.
       const agenda = brainRead ? (await brainRead.catch(() => null))?.agenda ?? (await householdAgenda(supabase, householdId, view)) : await householdAgenda(supabase, householdId, view);
-      const [fallback, composed] = await Promise.all([
+      const [fallback, answered] = await Promise.all([
         answerStatus(supabase, householdId, membership, result.intent, agenda),
-        answerFromBrain({ routing, question: body.utterance, view, read: brainRead }),
+        askHomeBrain({ routing, question: body.utterance, previousQuestion, people, view, membership, read: brainRead }),
       ]);
       composedAt = Date.now();
-      text = fallback;
-      if (composed) {
-        text = composed.text;
-        brain = { source: "model", factsSent: composed.factsSent };
-      } else {
-        brain = { source: "deterministic", factsSent: 0 };
-      }
+      brainAnswer = answered;
+      text = answered?.text ?? fallback;
+      brain = answered?.text ? { source: answered.source, factsSent: answered.factsSent } : { source: "deterministic", factsSent: answered?.factsSent ?? 0 };
     } else if (
       result.kind === "reply" &&
       result.intent.action === "unknown" &&
       result.proposal.kind === "clarify" &&
       !result.intent.understanding?.failure &&
-      typeof result.intent.parameters.clarify !== "string" &&
-      routing.answer
+      typeof result.intent.parameters.clarify !== "string"
     ) {
       // Not a request the engine knows, and not a model outage: before saying
       // "I did not follow that", see whether the home's own facts answer it.
-      const composed = await answerFromBrain({ routing, question: body.utterance, view, read: brainRead });
+      const answered = await askHomeBrain({ routing, question: body.utterance, previousQuestion, people, view, membership, read: brainRead });
       composedAt = Date.now();
-      if (composed?.grounded) {
-        text = composed.text;
-        brain = { source: "model", factsSent: composed.factsSent };
+      const usable =
+        answered?.text &&
+        ((answered.source === "model" || answered.source === "model_regenerated") && answered.mode === "answer" ||
+          answered.reading.followUp ||
+          looksLikeQuestion(body.utterance));
+      if (answered && usable) {
+        brainAnswer = answered;
+        text = answered.text!;
+        brain = { source: answered.source, factsSent: answered.factsSent };
+      } else if (answered) {
+        brain = { source: "none", factsSent: answered.factsSent };
       }
     } else if (result.kind === "reply" && result.proposal.kind === "executed") {
       if (result.memory) await remember(admin, householdId, result.memory);
@@ -327,6 +365,20 @@ export async function POST(request: Request, { params }: Params) {
 
     const memberMessageId = await memberMessageWrite;
     await metering;
+
+    // The question left open for the next turn: the engine's own, unless
+    // HomeBrain answered instead; and one asked earlier stays open while the
+    // member asks why it was asked.
+    const openQuestion =
+      result.kind !== "reply" ? null : explained ? (result.intent.parameters.explain === "why_question" ? clarifying : null) : brainAnswer ? null : (result.clarification ?? null);
+    let mode: BrainMode =
+      result.kind === "confirm_transcript"
+        ? "clarify"
+        : result.kind !== "reply"
+          ? "answer"
+          : brainAnswer
+            ? (brainAnswer.mode === "clarify" ? "clarify" : "answer")
+            : modeFor(result.proposal.kind, outcome ? outcome.status === "executed" : null);
 
     let action: ConversationAction | null = null;
     const replyId = await recordMessage(admin, {
@@ -344,7 +396,8 @@ export async function POST(request: Request, { params }: Params) {
               // What this turn asked, for the next one to answer. Absent
               // whenever the turn did not ask anything, which is what
               // closes the question rather than leaving it open forever.
-              ...(result.clarification ? { clarify: result.clarification } : {}),
+              ...(openQuestion ? { clarify: openQuestion } : {}),
+              mode,
             }
           : { kind: result.kind }),
         // Why this turn did or did not reach a model provider (15-005). A
@@ -352,6 +405,9 @@ export async function POST(request: Request, { params }: Params) {
         provider: routing.code,
         providerItemsSent: routing.itemsSent + brain.factsSent,
         brain: brain.source,
+        // What HomeBrain's validation refused, if anything (Wave 2 §7): codes
+        // and a count of drafts, never the draft itself.
+        ...(brainAnswer && brainAnswer.validation.attempts > 0 ? { brainValidation: brainAnswer.validation } : {}),
         // Where the time went, in milliseconds: understanding (the first
         // model call, or none), composing (the brain read plus the second
         // call), and the whole turn so far. Numbers only.
@@ -370,6 +426,7 @@ export async function POST(request: Request, { params }: Params) {
         const settled = await carryOutApproved({ admin, supabase, householdId, membership, action, people });
         text = settled.text;
         action = settled.action;
+        mode = modeFor("approve", action.status === "executed");
         await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
       }
     } else if (result.kind === "reply" && result.record) {
@@ -389,6 +446,7 @@ export async function POST(request: Request, { params }: Params) {
         action,
         preview: result.kind === "reply" ? previewOf(result.proposal) : null,
         proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
+        mode,
       },
       /** What, if anything, left this household this turn (15-005). */
       privacy: {
@@ -414,7 +472,7 @@ async function carryOutApproved(input: {
   people: Person[];
 }): Promise<{ text: string; action: ConversationAction }> {
   const stored = await loadAction(input.admin, { householdId: input.householdId, actionId: input.action.id });
-  if (!stored) return { text: "Done — I have your go-ahead.", action: input.action };
+  if (!stored) return { text: "I have your go-ahead, but I could not find what it was for, so nothing was changed.", action: input.action };
 
   const intent: HouseholdIntent = {
     action: stored.actionType as HouseholdIntent["action"],
@@ -475,32 +533,51 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
 }
 
 /**
- * A question answered from the HomeBrain (product-direction v4 §5, Wave 1).
+ * A question answered by HomeBrain (product-direction v4 §5, Wave 1, Wave 2).
  *
- * Every domain this member may see is read by the context engine into
- * facts, each carrying its consent class; the engine picks the ones this
- * question needs and marks the rest not relevant; the gate keeps only what
- * the household has agreed may leave and replaces names with roles; the
- * model composes an answer from those facts alone; the names go back in
- * here. Null when the household's policy lets nothing go, no provider is
- * configured, or the model did not answer — the caller keeps its
- * deterministic line in every such case.
+ * The context engine read every domain this member may see; HomeBrain reads
+ * the question, grounds it in the facts it needs, sends only what the
+ * household's consent lets go (names replaced with roles), validates what
+ * comes back, and otherwise answers from the facts themselves. Null only if
+ * the read itself failed — the caller keeps its own line then.
  */
-async function answerFromBrain(input: {
+async function askHomeBrain(input: {
   routing: Awaited<ReturnType<typeof decideProviderRouting>>;
   question: string;
+  previousQuestion: string | null;
+  people: Person[];
   view: PersonalView;
+  membership: HouseholdMembership;
   /** The read that started while the request was being understood. */
   read: Promise<{ agenda: HouseholdAgenda; context: HouseholdContext }> | null;
-}): Promise<{ text: string; grounded: boolean; factsSent: number } | null> {
-  if (!input.routing.answer || !input.read) return null;
+}): Promise<HomeBrainAnswer | null> {
+  if (!input.read) return null;
   try {
     const { context } = await input.read;
-    return await input.routing.answer(input.question, factsFor(context, input.question), input.view.roleLabel);
+    return await answerWithHomeBrain({
+      question: input.question,
+      sentQuestion: input.routing.sentUtterance ?? input.question,
+      previousQuestion: input.previousQuestion,
+      sentHistory: input.routing.history ?? [],
+      items: context.snapshot.items,
+      viewer: { memberId: input.membership.memberId, roleLabel: input.view.roleLabel },
+      timezone: input.membership.household.timezone,
+      now: new Date(),
+      policy: input.routing.policy,
+      people: input.people,
+      compose: input.routing.compose ?? null,
+      factBudget: FACT_BUDGET,
+    });
   } catch (thrown) {
     console.error("[conversation] HomeBrain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
     return null;
   }
+}
+
+/** Whether an utterance is asking something, rather than telling or requesting. */
+function looksLikeQuestion(utterance: string): boolean {
+  const text = utterance.trim().toLowerCase();
+  return text.endsWith("?") || /^(?:what|which|who|whom|whose|when|where|why|how|is|are|am|was|were|do|does|did|can|could|will|would|should|have|has|any|anything)\b/.test(text);
 }
 
 function windowFor(when: string, now: Date): { from: Date; to: Date } {
@@ -587,15 +664,18 @@ async function decideProviderRouting(
   utterance: string,
   history: readonly ConversationTurn[],
   people: Person[],
-  timezone: string,
 ): Promise<{
   code: string;
   itemsSent: number;
   disclosure: string[];
   understand?: Understanding;
   history?: ConversationTurn[];
-  /** Answers a question from the home's facts, through the same gate, with names restored. */
-  answer?: (question: string, facts: readonly ContextCandidate[], viewer: string) => Promise<{ text: string; grounded: boolean; factsSent: number } | null>;
+  /** The household's data-use policy — the gate HomeBrain's facts pass through. */
+  policy: DataUsePolicy;
+  /** What was said, as it may leave the household (pseudonymised), when it may. */
+  sentUtterance?: string;
+  /** Drafts an answer from grounded facts. Absent when nothing may be sent or no provider is wired. */
+  compose?: AnswerComposer;
 }> {
   const [policy, householdKey] = await Promise.all([
     loadDataUse(supabase, householdId),
@@ -624,7 +704,7 @@ async function decideProviderRouting(
   });
 
   if (!decision.ok) {
-    return { code: decision.code, itemsSent: 0, disclosure: [decision.reason] };
+    return { code: decision.code, itemsSent: 0, disclosure: [decision.reason], policy };
   }
 
   const sentUtterance = minimised.included.find((entry) => entry.id === "utterance")?.text ?? utterance;
@@ -647,6 +727,7 @@ async function decideProviderRouting(
       code: "not_transmitted_no_client",
       itemsSent: 0,
       disclosure: [`No ${decision.provider} client is wired up yet. Nothing about your home was sent, and the assistant answered from its own rules.`],
+      policy,
     };
   }
 
@@ -665,7 +746,6 @@ async function decideProviderRouting(
     return intent;
   };
 
-  const answer = answerThroughGate({ compose: provider.compose, policy, people, question: sentUtterance, history: sentHistory, timezone });
 
   return {
     code: "transmitted",
@@ -675,35 +755,9 @@ async function decideProviderRouting(
     ],
     understand,
     history: sentHistory,
-    answer,
-  };
-}
-
-/**
- * The HomeBrain's facts, through the same consent gate as the
- * utterance: only the classes the household agreed to, names replaced on the
- * way out and restored on the way back. The model never sees who anyone is.
- */
-function answerThroughGate(input: {
-  compose: AnswerComposer;
-  policy: DataUsePolicy;
-  people: Person[];
-  question: string;
-  history: ConversationTurn[];
-  timezone: string;
-}) {
-  return async (_question: string, facts: readonly ContextCandidate[], viewer: string) => {
-    const minimised = minimiseContext(facts, { policy: { ...input.policy, maxItems: Math.max(input.policy.maxItems, FACT_BUDGET) }, people: input.people });
-    if (minimised.included.length === 0) return null;
-    const composed = await input.compose({
-      question: input.question,
-      facts: minimised.included.map((entry) => entry.text),
-      history: input.history,
-      viewer,
-      localNow: describeLocalNow(new Date(), input.timezone),
-    });
-    if (!composed) return null;
-    return { text: restoreNames(composed.text, minimised.pseudonyms, input.people), grounded: composed.grounded, factsSent: minimised.included.length };
+    policy,
+    sentUtterance,
+    compose: provider.compose,
   };
 }
 

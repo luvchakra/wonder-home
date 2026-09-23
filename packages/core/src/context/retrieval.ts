@@ -37,7 +37,7 @@ import type { ContextDomain, ContextScope, HouseholdContextItem, IncomingFact, S
  */
 
 /** The words that put a question in a domain. */
-const DOMAIN_WORDS: Partial<Record<ContextDomain, readonly string[]>> = {
+export const DOMAIN_WORDS: Partial<Record<ContextDomain, readonly string[]>> = {
   bills: ["bill", "bills", "pay", "paid", "payment", "due", "electricity", "rent", "fee", "fees", "emi", "insurance", "subscription", "money", "owe", "spend", "spent", "amount"],
   school: ["homework", "school", "exam", "test", "project", "worksheet", "teacher", "assignment", "study", "studies", "class", "tuition"],
   groceries: ["grocery", "groceries", "milk", "buy", "shop", "shopping", "stock", "supplies", "run", "running", "out", "need", "needs", "order"],

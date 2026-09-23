@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { ConversationTurn, Understanding } from "../conversation/engine";
 import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget, type UnderstandingTrace } from "../conversation/intent";
 import { describeReplyFormat } from "../conversation/reply-format";
+import type { ModelDraft } from "../homebrain/answer";
 import type { ModelProvider } from "./model-key";
 
 /**
@@ -310,68 +311,100 @@ export function createOpenAIUnderstanding(apiKey: string): Understanding {
 
 /**
  * The second thing a model does for the household (product-direction v4 §5,
- * the HomeBrain): answer a question from what the home actually
- * contains, in plain words.
+ * the HomeBrain; Wave 2 §6 and §14): answer a question from what the home
+ * actually contains, in plain words.
  *
  * Understanding (above) turns a sentence into a request. This turns a
- * question plus the facts the server gathered — and the consent gate let
- * through — into a reply. The model is told the facts are the whole world:
- * it may not invent a bill, a person or a plan that is not listed, may not
- * claim to have done anything, and must say plainly when the facts do not
- * cover the question. People appear as placeholders; the server puts the
- * names back afterwards (`restoreNames`).
+ * question plus the grounded facts the server gathered — and the consent gate
+ * let through — into a draft reply. Each fact arrives with an opaque id
+ * ("F3") the model cites back; the draft is then validated against exactly
+ * those facts (`homebrain/validate.ts`) before anybody sees it, so the prompt
+ * below is the first line of defence, not the only one. People appear as
+ * placeholders; the server puts the names back afterwards (`restoreNames`).
  */
 export type AnswerInput = {
   question: string;
-  /** Pseudonymised facts, one line each, already past the consent gate. */
-  facts: readonly string[];
+  /** Pseudonymised facts, each with the id the model cites, already past the consent gate. */
+  facts: readonly { id: string; text: string }[];
   history?: readonly ConversationTurn[];
   /** The viewer's role, so the answer can be framed for them. */
   viewer: string;
   /** Local date and time in the household's zone, spelled out. */
   localNow: string;
+  /** On a regeneration: what the previous draft said that no fact supports. */
+  problems?: readonly string[];
 };
 
-export type AnswerComposer = (input: AnswerInput) => Promise<{ text: string; grounded: boolean } | null>;
+export type AnswerComposer = (input: AnswerInput) => Promise<ModelDraft | null>;
 
 const AnswerOutputSchema = z.object({
-  /** The reply, in plain prose. */
+  /** The reply, in plain prose — or the one question to ask, when mode is "clarify". */
   answer: z.string().trim().min(1).max(1200),
+  /** answer: the facts answer it. clarify: one thing must be asked first. unknown: the facts do not cover it. */
+  mode: z.enum(["answer", "clarify", "unknown"]),
   /** Whether the facts actually covered the question. */
   grounded: z.boolean(),
+  /** The ids of the facts the answer rests on, e.g. ["F2", "F5"]. */
+  usedFacts: z.array(z.string()).max(40),
 });
 
 const ANSWER_JSON_SCHEMA = {
   type: "object",
-  properties: { answer: { type: "string" }, grounded: { type: "boolean" } },
-  required: ["answer", "grounded"],
+  properties: {
+    answer: { type: "string" },
+    mode: { type: "string", enum: ["answer", "clarify", "unknown"] },
+    grounded: { type: "boolean" },
+    usedFacts: { type: "array", items: { type: "string" } },
+  },
+  required: ["answer", "mode", "grounded", "usedFacts"],
 } as const;
 
-const ANSWER_SYSTEM_PROMPT = `You are WonderHome, a household's own assistant, answering one question from a member of the household.
+/**
+ * The HomeBrain prompt contract (Wave 2 §14). Every clause is one the
+ * council asked for; the validator enforces the ones that can be checked.
+ * No system secret, credential or reasoning trace is ever part of it.
+ */
+export const ANSWER_SYSTEM_PROMPT = `You are WonderHome, a household's own assistant, answering one question from a member of the household.
 
-You are given FACTS: everything relevant that WonderHome currently knows about this home, one per line. The facts are the whole world. Never invent a person, a bill, an event, a meal, an item or a plan that is not in them. Never claim that you did, changed, paid, ordered, sent or scheduled anything — you only describe what is known. If the question asks you to do something, say what you can see about it and that the household can ask you to do it as a separate request.
+You are given FACTS, one per line, each with an id like [F3]. These rules are absolute:
+- The facts are the whole world you know. Anything not in them is unknown to you, and you say so rather than guess.
+- Never invent a person, a bill, an event, a meal, an item, an amount, a date or a plan that is not in the facts.
+- Never claim that you did, changed, added, paid, ordered, sent, booked or scheduled anything. Answering a question changes nothing. If the question asks you to do something, say what you can see about it and that the household can ask you to do it as a separate request.
+- Do not infer sensitive details — health, money, where someone is, a child's private matters — beyond what a fact states.
+- Health facts are household records, not symptoms to interpret: never diagnose, never suggest a medicine, a dose or a treatment.
+- Never say a calendar, email, shop or other service is connected or synced unless a fact says so.
+- When facts disagree or a fact is marked as possibly out of date, say which one you are relying on and why (for example, that it was confirmed or is more recent).
+- When one missing detail decides the answer (which child, which day), ask one short, specific question instead of answering — set mode to "clarify".
+
+Connect facts across parts of the home when the question needs it: "can we make tonight's dinner?" is about the meal plan and the groceries; "what does Child A need for Saturday?" can be school work, the calendar and supplies together.
 
 People appear as placeholders such as "Adult A", "Child B" or "Helper A". Use the placeholders exactly as written; the household's own system replaces them with names afterwards.
 
-Answer the question that was actually asked, for the person asking (their role is given). Be warm, specific and brief: at most about 120 words. Lead with what matters most to them. When the facts do not cover the question, say so in one plain sentence and say what would help — never pad with generalities and never repeat the same summary for different questions.
+Answer the question that was actually asked, for the person asking (their role is given). Be warm, specific and brief: at most about 120 words. Lead with what matters most to them. When the facts do not cover the question, set mode to "unknown" and say so in one plain sentence, with what would help — never pad with generalities.
 
 ${describeReplyFormat()}
 
-Set grounded to true when the facts answered the question, false when they did not.`;
+Set usedFacts to the ids of every fact your answer relies on. Set grounded to true when the facts answered the question, false when they did not.`;
 
 function answerMessages(input: AnswerInput): { role: "user" | "assistant"; content: string }[] {
-  const facts = input.facts.length > 0 ? input.facts.map((fact) => `- ${fact}`).join("\n") : "- (WonderHome has not been told anything about this home yet.)";
-  const briefing = `Now: ${input.localNow}.\nAsking: ${input.viewer}.\n\nFACTS:\n${facts}`;
+  const facts = input.facts.length > 0 ? input.facts.map((fact) => `[${fact.id}] ${fact.text}`).join("\n") : "(WonderHome has not been told anything about this home yet.)";
+  const problems =
+    input.problems && input.problems.length > 0
+      ? `\n\nYOUR PREVIOUS ANSWER WAS NOT USED, because it said things the facts do not support:\n${input.problems.map((problem) => `- ${problem}`).join("\n")}\nAnswer again using only the facts below. If they do not answer the question, set mode to "unknown".`
+      : "";
+  const briefing = `Now: ${input.localNow}.\nAsking: ${input.viewer}.${problems}\n\nFACTS:\n${facts}`;
   const turns = conversationMessages(input.history, input.question);
   const last = turns[turns.length - 1]!;
   return [...turns.slice(0, -1), { role: "user", content: `${briefing}\n\nQUESTION: ${last.content}` }];
 }
 
-/** Pure mapping from what a model returned to what the route uses. */
-export function answerFromModelOutput(parsed: z.infer<typeof AnswerOutputSchema> | null): { text: string; grounded: boolean } | null {
+/** Pure mapping from what a model returned to a draft for validation. */
+export function answerFromModelOutput(parsed: z.infer<typeof AnswerOutputSchema> | null): ModelDraft | null {
   if (!parsed) return null;
   const text = parsed.answer.replace(/\s+\n/g, "\n").trim();
-  return text ? { text, grounded: parsed.grounded } : null;
+  if (!text) return null;
+  const usedFacts = [...new Set(parsed.usedFacts.map((id) => id.trim().replace(/^\[|\]$/g, "").toUpperCase()).filter((id) => /^F\d+$/.test(id)))];
+  return { text, mode: parsed.mode, grounded: parsed.grounded && parsed.mode === "answer", usedFacts };
 }
 
 /**
