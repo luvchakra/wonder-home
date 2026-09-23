@@ -139,6 +139,7 @@ export function HomeSendSheet({
             routeAction={routeAction}
             routeError={routeState.error}
             notice={uploadState.notice || pasteState.notice}
+            reconciliation={routeState.reconciliation ?? item.reconciliation ?? null}
             busy={routing || dismissing}
           />
         )}

@@ -8,6 +8,7 @@ import { petAgenda, type Pet, type PetCareKind, type PetCareNeed } from "./pets"
 import { assessServiceRequest, openRequestAssetIds, type ServiceRequest, type ServiceStatus } from "./services";
 import type { DeviceSignal, SignalKind } from "./signals";
 import { dryingConditions, type WeatherWindow } from "./weather";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading and writing the home domain (module 13).
@@ -60,7 +61,7 @@ export type CreateAssetInput = {
   responsibleMemberId?: string | null;
 };
 
-export async function createAsset(
+async function createAssetImpl(
   supabase: SupabaseClient,
   input: CreateAssetInput,
 ): Promise<{ id: string }> {
@@ -134,7 +135,7 @@ export type CreateServiceRequestInput = {
   nextActionBy?: "household" | "provider" | null;
 };
 
-export async function createServiceRequest(
+async function createServiceRequestImpl(
   supabase: SupabaseClient,
   input: CreateServiceRequestInput,
 ): Promise<{ id: string }> {
@@ -263,7 +264,7 @@ export type CreatePetInput = {
   notes?: string | null;
 };
 
-export async function createPet(supabase: SupabaseClient, input: CreatePetInput): Promise<{ id: string }> {
+async function createPetImpl(supabase: SupabaseClient, input: CreatePetInput): Promise<{ id: string }> {
   const { data, error } = await supabase
     .from("pets")
     .insert({
@@ -295,7 +296,7 @@ export type UpdatePetInput = {
   notes?: string | null;
 };
 
-export async function updatePet(
+async function updatePetImpl(
   supabase: SupabaseClient,
   householdId: string,
   petId: string,
@@ -319,7 +320,7 @@ export async function updatePet(
 }
 
 /** The other half of adding a pet (rule 12): retiring it, never a hard delete — `pet_care_needs` keeps its history against this row. */
-export async function setPetActive(
+async function setPetActiveImpl(
   supabase: SupabaseClient,
   householdId: string,
   petId: string,
@@ -427,3 +428,11 @@ export async function homeAgenda(
       .filter((assessment) => assessment.notable),
   };
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createAsset = invalidatesContext(createAssetImpl, (_supabase, input) => input.householdId);
+export const createServiceRequest = invalidatesContext(createServiceRequestImpl, (_supabase, input) => input.householdId);
+export const createPet = invalidatesContext(createPetImpl, (_supabase, input) => input.householdId);
+export const updatePet = invalidatesContext(updatePetImpl, (_supabase, householdId) => householdId);
+export const setPetActive = invalidatesContext(setPetActiveImpl, (_supabase, householdId) => householdId);

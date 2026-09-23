@@ -7,6 +7,7 @@ import { assessCommunication, type SchoolCommunication } from "./communications"
 import type { ExistingSchoolItemImport, SchoolItemsSyncPlan } from "./school-sync";
 import type { TranslatedSchoolItem } from "./connector";
 import { assessDeadline, childView, type SchoolItem, type SchoolItemKind, type SchoolItemStatus } from "./items";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading and writing school work (module 08).
@@ -70,7 +71,7 @@ export type CreateSchoolItemInput = {
   estimatedMinutes?: number | null;
 };
 
-export async function createSchoolItem(
+async function createSchoolItemImpl(
   supabase: SupabaseClient,
   input: CreateSchoolItemInput,
 ): Promise<{ id: string }> {
@@ -111,7 +112,7 @@ export async function createSchoolItem(
  * anything a portal reported, and the database's own constraint refuses a
  * completion that does not say who said so.
  */
-export async function completeSchoolItem(
+async function completeSchoolItemImpl(
   supabase: SupabaseClient,
   itemId: string,
   source: "member_confirmed" | "provider_confirmed" = "member_confirmed",
@@ -142,7 +143,7 @@ export type UpdateSchoolItemInput = {
  * household correcting what it already entered, the same way
  * `updateMemberProfile` lets it correct a person's details.
  */
-export async function updateSchoolItem(
+async function updateSchoolItemImpl(
   supabase: SupabaseClient,
   householdId: string,
   itemId: string,
@@ -184,7 +185,7 @@ export async function updateSchoolItem(
  * one look the same afterwards, which is correct, since neither is live
  * work anymore).
  */
-export async function cancelSchoolItem(
+async function cancelSchoolItemImpl(
   supabase: SupabaseClient,
   householdId: string,
   itemId: string,
@@ -331,7 +332,7 @@ export async function listImportedSchoolItems(
  * to 'cancelled' — never to 'done' or 'submitted', which only a person or a
  * provider-confirmed completion (never written here) may set.
  */
-export async function applySchoolItemsSyncPlan(
+async function applySchoolItemsSyncPlanImpl(
   supabase: SupabaseClient,
   input: { householdId: string; integrationId: string; plan: SchoolItemsSyncPlan },
 ): Promise<void> {
@@ -375,3 +376,11 @@ function schoolItemColumns(item: TranslatedSchoolItem) {
     provider: item.provider,
   };
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createSchoolItem = invalidatesContext(createSchoolItemImpl, (_supabase, input) => input.householdId);
+export const completeSchoolItem = invalidatesContext(completeSchoolItemImpl, () => null);
+export const updateSchoolItem = invalidatesContext(updateSchoolItemImpl, (_supabase, householdId) => householdId);
+export const cancelSchoolItem = invalidatesContext(cancelSchoolItemImpl, (_supabase, householdId) => householdId);
+export const applySchoolItemsSyncPlan = invalidatesContext(applySchoolItemsSyncPlanImpl, (_supabase, input) => input.householdId);

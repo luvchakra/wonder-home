@@ -14,6 +14,7 @@ import {
   type ObligationKind,
   type ObligationStatus,
 } from "./payments";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading bills and preparing payments (module 11).
@@ -71,7 +72,7 @@ export type CreateObligationInput = {
  * A bill typed in by hand — "member_stated", the table's own default source,
  * same standing as the email connector's "imported" or a provider's own feed.
  */
-export async function createObligation(
+async function createObligationImpl(
   supabase: SupabaseClient,
   input: CreateObligationInput,
 ): Promise<{ id: string }> {
@@ -118,7 +119,7 @@ export type UpdateObligationInput = {
 };
 
 /** Changing what a hand-typed bill says — the other half of `createObligation` (CLAUDE.md's "every entity can be added, updated and removed"). */
-export async function updateObligation(
+async function updateObligationImpl(
   supabase: SupabaseClient,
   input: UpdateObligationInput,
 ): Promise<void> {
@@ -151,7 +152,7 @@ export async function updateObligation(
  * never a hard delete (CLAUDE.md principle 12): its payment/transaction
  * history stays intact and explained rather than orphaned.
  */
-export async function cancelObligation(
+async function cancelObligationImpl(
   supabase: SupabaseClient,
   input: { id: string; householdId: string },
 ): Promise<void> {
@@ -253,7 +254,7 @@ export async function financeAgenda(
  * The anomaly is written as a review, never as a block: the payment path is
  * untouched by it, which is what the acceptance criterion requires.
  */
-export async function recordAmount(
+async function recordAmountImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -326,7 +327,7 @@ export async function recordAmount(
  * bill definition, which stands down rather than disappearing, a single
  * recorded amount is closer to a typo that should just go away).
  */
-export async function removeTransaction(
+async function removeTransactionImpl(
   supabase: SupabaseClient,
   input: { householdId: string; obligationId: string; periodLabel: string },
 ): Promise<void> {
@@ -350,7 +351,7 @@ export async function removeTransaction(
  * The intent is created awaiting approval; approving it, and the step-up that
  * approval requires, are separate deliberate acts.
  */
-export async function prepareIntent(
+async function prepareIntentImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -423,7 +424,7 @@ export async function listImportedObligations(
  * changes, so a bill a person already marked paid stays paid even if a
  * corrected copy of the same email arrives later.
  */
-export async function applyObligationSyncPlan(
+async function applyObligationSyncPlanImpl(
   supabase: SupabaseClient,
   input: {
     householdId: string;
@@ -475,3 +476,13 @@ function obligationColumns(obligation: ImportedObligation) {
     recurrence: obligation.recurrence,
   };
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createObligation = invalidatesContext(createObligationImpl, (_supabase, input) => input.householdId);
+export const updateObligation = invalidatesContext(updateObligationImpl, (_supabase, input) => input.householdId);
+export const cancelObligation = invalidatesContext(cancelObligationImpl, (_supabase, input) => input.householdId);
+export const recordAmount = invalidatesContext(recordAmountImpl, (_supabase, input) => input.householdId);
+export const removeTransaction = invalidatesContext(removeTransactionImpl, (_supabase, input) => input.householdId);
+export const applyObligationSyncPlan = invalidatesContext(applyObligationSyncPlanImpl, (_supabase, input) => input.householdId);
+export const prepareIntent = invalidatesContext(prepareIntentImpl, (_supabase, input) => input.householdId);

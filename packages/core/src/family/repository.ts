@@ -13,6 +13,7 @@ import {
   type GiftPlan,
   type Window,
 } from "./schedule";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading the family calendar (module 12).
@@ -108,7 +109,7 @@ export type CreateEventInput = {
   participantMemberIds?: readonly string[];
 };
 
-export async function createEvent(
+async function createEventImpl(
   supabase: SupabaseClient,
   input: CreateEventInput,
 ): Promise<{ id: string }> {
@@ -159,7 +160,7 @@ export async function createEvent(
  * preparation, travel — has been dealt with. The household does the replying
  * or the buying; WonderHome only stops asking.
  */
-export async function settleEventAction(
+async function settleEventActionImpl(
   supabase: SupabaseClient,
   input: { householdId: string; eventId: string },
 ): Promise<void> {
@@ -183,7 +184,7 @@ export const GIFT_STEPS = ["chosen", "ordered", "given"] as const;
 export type GiftStep = (typeof GIFT_STEPS)[number];
 
 /** Moves a gift along: needed → chosen → ordered → given. Wrapped is skipped on purpose — nobody wants to be asked about wrapping paper. */
-export async function advanceGift(
+async function advanceGiftImpl(
   supabase: SupabaseClient,
   input: { householdId: string; giftId: string; step: GiftStep },
 ): Promise<void> {
@@ -204,7 +205,7 @@ export async function advanceGift(
  * decided it is not a problem. Neither moves a commitment on its own — the
  * proposal was always a suggestion somebody accepts, never an automatic edit.
  */
-export async function resolveConflict(
+async function resolveConflictImpl(
   supabase: SupabaseClient,
   input: { householdId: string; conflictId: string; memberId: string; outcome: "resolved" | "declined" },
 ): Promise<void> {
@@ -308,7 +309,7 @@ export async function listImportedEvents(
  * here can set `protected`: the column is not written, so it keeps whatever a
  * person set.
  */
-export async function applyCalendarPlan(
+async function applyCalendarPlanImpl(
   supabase: SupabaseClient,
   input: { householdId: string; integrationId: string; plan: ReconciliationPlan },
 ): Promise<void> {
@@ -369,3 +370,11 @@ function eventColumns(event: ImportedEvent) {
     owner_member_id: event.ownerMemberId,
   };
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createEvent = invalidatesContext(createEventImpl, (_supabase, input) => input.householdId);
+export const settleEventAction = invalidatesContext(settleEventActionImpl, (_supabase, input) => input.householdId);
+export const applyCalendarPlan = invalidatesContext(applyCalendarPlanImpl, (_supabase, input) => input.householdId);
+export const advanceGift = invalidatesContext(advanceGiftImpl, (_supabase, input) => input.householdId);
+export const resolveConflict = invalidatesContext(resolveConflictImpl, (_supabase, input) => input.householdId);

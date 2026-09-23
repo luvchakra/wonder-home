@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import type { Engagement } from "./helpers";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Writing a househelper's arrangement (module 07).
@@ -16,7 +17,7 @@ import type { Engagement } from "./helpers";
  * different kind of help, its own start date and notes) is a separate row,
  * not an overwrite of whatever the person already has recorded.
  */
-export async function createHelperEngagement(
+async function createHelperEngagementImpl(
   supabase: SupabaseClient,
   input: { householdId: string; memberId: string; engagement: Engagement; startedOn: string | null; notes: string | null },
 ): Promise<void> {
@@ -35,7 +36,7 @@ export async function createHelperEngagement(
 }
 
 /** Changing one already-recorded engagement — never touches any other engagement the same person has. */
-export async function updateHelperEngagement(
+async function updateHelperEngagementImpl(
   supabase: SupabaseClient,
   input: { id: string; householdId: string; engagement: Engagement; startedOn: string | null; notes: string | null },
 ): Promise<void> {
@@ -52,7 +53,7 @@ export async function updateHelperEngagement(
 }
 
 /** Removing one engagement — the person and their other engagements, if any, are untouched. */
-export async function removeHelperEngagement(
+async function removeHelperEngagementImpl(
   supabase: SupabaseClient,
   input: { id: string; householdId: string },
 ): Promise<void> {
@@ -73,7 +74,7 @@ export async function removeHelperEngagement(
  * stated at once, so the form can show every day and the household is never
  * left with Tuesday from last year and Thursday from this one.
  */
-export async function replaceAvailabilityPattern(
+async function replaceAvailabilityPatternImpl(
   supabase: SupabaseClient,
   input: { householdId: string; memberId: string; windows: { dayOfWeek: number; startTime: string; endTime: string }[] },
 ): Promise<void> {
@@ -106,7 +107,7 @@ export async function replaceAvailabilityPattern(
 }
 
 /** One day that differs from the pattern: away, or an extra day. */
-export async function recordAvailabilityException(
+async function recordAvailabilityExceptionImpl(
   supabase: SupabaseClient,
   input: { householdId: string; memberId: string; onDate: string; available: boolean; reason: string | null },
 ): Promise<void> {
@@ -126,3 +127,11 @@ export async function recordAvailabilityException(
     throw new Error(`recordAvailabilityException failed: ${error.code ?? "unknown"}`);
   }
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createHelperEngagement = invalidatesContext(createHelperEngagementImpl, (_supabase, input) => input.householdId);
+export const updateHelperEngagement = invalidatesContext(updateHelperEngagementImpl, (_supabase, input) => input.householdId);
+export const removeHelperEngagement = invalidatesContext(removeHelperEngagementImpl, (_supabase, input) => input.householdId);
+export const replaceAvailabilityPattern = invalidatesContext(replaceAvailabilityPatternImpl, (_supabase, input) => input.householdId);
+export const recordAvailabilityException = invalidatesContext(recordAvailabilityExceptionImpl, (_supabase, input) => input.householdId);
