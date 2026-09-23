@@ -106,3 +106,14 @@
 - **Migrations:**
   - `supabase/migrations/20260926100000_conversation_session_surface.sql`
   - `supabase/migrations/20260926110000_hometalk_channel_events.sql`
+
+## Test data cleanup
+
+Ran after PR #133 merged:
+- QA account `80d4bb89-9ed3-4d88-82e1-53f3b470191e`, deleted with `qa-test-user.mjs delete`.
+- Household `efca6ba4-089f-4bb4-8963-d0e5e9b5af18` ("Gemini QA Home"), with its audit events and channel events.
+- This session's `rate_limit_counters` rows: `ai.model`, `hometalk.turn`, `voice.session`, `voice.tool` and `verify.live`.
+
+SQL counts confirm none of it remains: households, members, sessions, channel events, audit events, Storage objects, the auth user, the profile and the rate-limit rows are all 0.
+
+The scratchpad scripts and screenshots were deleted, and the dev server had already been stopped.
