@@ -87,7 +87,34 @@ const BACKGROUND = new Set(["household", "people", "pets"]);
  */
 export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainReading, options: { limit?: number } = {}): string | null {
   const limit = options.limit ?? 6;
-  const pool = facts.filter((fact) => {
+  const pool = answeringFacts(facts, reading);
+  if (pool.length === 0) return null;
+
+  // "For Kunal" would undersell an answer that also carries his children's plans.
+  const who = (reading.dependants ?? []).length > 0 ? "" : reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
+  const lead = who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
+  return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${fact.statement}`).join("\n")}`;
+}
+
+/**
+ * The facts that actually answer the question: relevant, specific (not the
+ * household's name or headcount), and — for a question about a day — on
+ * that day. What a deterministic answer is made of, and what a model's
+ * answer must not be missing.
+ */
+export function answeringFacts(facts: readonly GroundedFact[], reading: BrainReading): GroundedFact[] {
+  const pool = relevantAnswers(facts, reading);
+  // A question that names the thing ("what time is the parent-teacher
+  // meeting?") is answered by that thing. What merely connects to it — the
+  // groceries a school event might need, another child's Sports Day — is
+  // still offered to a model, but is not what the answer is, and a fact
+  // withheld from the model among those is no reason to drop the model.
+  const named = pool.filter((fact) => fact.reasons.includes("named in the question"));
+  return named.length > 0 ? named : pool;
+}
+
+function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading): GroundedFact[] {
+  return facts.filter((fact) => {
     if (!fact.relevant || fact.score < 0.5) return false;
     if (fact.domain !== "conflict" && BACKGROUND.has(fact.domain)) return false;
     // A question about a day is answered with what falls on it: an undated
@@ -95,12 +122,6 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
     if (reading.time && !(fact.date && inWindow(fact.date, reading.time))) return false;
     return true;
   });
-  if (pool.length === 0) return null;
-
-  // "For Kunal" would undersell an answer that also carries his children's plans.
-  const who = (reading.dependants ?? []).length > 0 ? "" : reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
-  const lead = who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
-  return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${fact.statement}`).join("\n")}`;
 }
 
 /** What to say when nothing on record answers the question. Honest, specific, and never padded. */

@@ -30,6 +30,30 @@ const VARIANT_WORDS = new Set([
   "frozen", "powder", "powdered", "condensed",
 ]);
 
+/**
+ * Different names a household gives the same kind of occasion. Kept small and
+ * explicit, like `VARIANT_WORDS`: each line is one thing a school, a parent
+ * and a forwarded notice all call by a different name — "PTM", "parent
+ * meeting", "school meeting" — not a way to make every two titles alike.
+ * Two titles on one line are nearly the same name; the date, the person and
+ * the household's own confirmation still decide the rest.
+ */
+const SAME_THING_NAMES: readonly (readonly string[])[] = [
+  ["parent teacher meeting", "parent teacher conference", "parent meeting", "school meeting", "teacher meeting", "ptm", "pta meeting", "pt meeting"],
+  ["sport day", "sport meet", "athletic meet"],
+  ["annual day", "annual function"],
+];
+
+function sameThingByName(left: string, right: string): boolean {
+  const phrase = (value: string) => ` ${tokens(value).join(" ")} `;
+  const a = phrase(left);
+  const b = phrase(right);
+  return SAME_THING_NAMES.some((names) => {
+    const forms = names.map(phrase);
+    return forms.some((form) => a.includes(form)) && forms.some((form) => b.includes(form));
+  });
+}
+
 /** Kinds of thing that recur: two with different dates are two occurrences, not an update. */
 const RECURRING_DOMAINS = new Set(["bills", "calendar", "meals", "school"]);
 const UPDATE_WINDOW_DAYS = 14;
@@ -37,6 +61,8 @@ const UPDATE_WINDOW_DAYS = 14;
 type Comparison = {
   item: HouseholdContextItem;
   titleSimilarity: number;
+  /** Whether the two are known names for the same kind of occasion ("PTM" and "parent-teacher meeting"). */
+  sameThing: boolean;
   /** Similarity once variety words are set aside: "almond milk" against "Amul Milk" is still milk. */
   coreSimilarity: number;
   sameSubject: boolean | null;
@@ -51,9 +77,29 @@ function titlesOf(item: HouseholdContextItem): string[] {
   return [title, ...item.aliases].filter((value): value is string => Boolean(value));
 }
 
+/**
+ * How alike a title is to one of a record's other names. An alias the
+ * incoming title merely contains is usually the record's category
+ * ("homework", "school event"), not its name: "Science homework" contains
+ * "homework" and is still not "Maths homework". So containment only counts
+ * one way — the incoming title inside the alias ("Maths" in "Maths
+ * homework") — and otherwise it is plain word overlap.
+ */
+function aliasSimilarity(incoming: string, alias: string): number {
+  const mine = new Set(tokens(incoming));
+  const theirs = new Set(tokens(alias));
+  if (mine.size === 0 || theirs.size === 0) return 0;
+  if ([...mine].every((word) => theirs.has(word))) return similarity(incoming, alias);
+  let shared = 0;
+  for (const word of mine) if (theirs.has(word)) shared += 1;
+  return shared / (mine.size + theirs.size - shared);
+}
+
 function compare(incoming: IncomingFact, item: HouseholdContextItem, timezone: string): Comparison {
   const titles = titlesOf(item);
-  const titleSimilarity = Math.max(0, ...titles.map((title) => similarity(incoming.title, title)));
+  const ownTitle = typeof item.attributes.title === "string" ? item.attributes.title : null;
+  const titleSimilarity = Math.max(0, ...(ownTitle ? [similarity(incoming.title, ownTitle)] : []), ...item.aliases.map((alias) => aliasSimilarity(incoming.title, alias)));
+  const sameThing = titles.some((title) => sameThingByName(incoming.title, title));
   const primary = typeof item.attributes.title === "string" ? item.attributes.title : (titles[0] ?? "");
   const variant = [...extraTokens(incoming.title, primary), ...extraTokens(primary, incoming.title)].some((word) => VARIANT_WORDS.has(word));
   const core = (title: string) => tokens(title).filter((word) => !VARIANT_WORDS.has(word)).join(" ");
@@ -70,7 +116,7 @@ function compare(incoming: IncomingFact, item: HouseholdContextItem, timezone: s
   const incomingPayee = incoming.attributes?.payee;
   const payeeMatches = typeof incomingPayee === "string" && typeof item.attributes.payee === "string" && similarity(incomingPayee, item.attributes.payee) >= 0.8;
 
-  return { item, titleSimilarity, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches };
+  return { item, titleSimilarity, sameThing, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches };
 }
 
 /**
@@ -89,9 +135,9 @@ function recordIsNewerThanSource(item: HouseholdContextItem, incoming: IncomingF
 }
 
 function verdictFor(comparison: Comparison, incoming: IncomingFact): { verdict: MatchVerdict; confidence: number; reasons: string[] } {
-  const { item, titleSimilarity, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches } = comparison;
+  const { item, titleSimilarity, sameThing, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches } = comparison;
   const reasons: string[] = [];
-  const effective = payeeMatches ? Math.max(titleSimilarity, 0.85) : titleSimilarity;
+  const effective = payeeMatches || sameThing ? Math.max(titleSimilarity, 0.85) : titleSimilarity;
   if (payeeMatches) reasons.push("the same payee");
 
   // A different variety of the same thing is worth naming even when the
@@ -102,6 +148,7 @@ function verdictFor(comparison: Comparison, incoming: IncomingFact): { verdict: 
   if (effective < 0.5) return { verdict: "no_match", confidence: 0, reasons: [] };
   if (titleSimilarity >= 0.95) reasons.push("the same name");
   else if (titleSimilarity >= 0.8) reasons.push("nearly the same name");
+  else if (sameThing) reasons.push("another name for the same thing");
   else reasons.push("a similar name");
 
   if (variant) return { verdict: "related_but_different", confidence: 0.6, reasons: [...reasons, "a different variety"] };

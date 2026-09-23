@@ -19,6 +19,7 @@ import { log } from "../observability/logger";
  */
 
 export const AUDIT_EVENTS = [
+  "hometalk.executed",
   "household.created",
   "household.updated",
   "member.added",
@@ -59,6 +60,8 @@ export const AUDIT_EVENTS = [
   "homesend.address_revoked",
   "webhook.subscription_created",
   "webhook.secret_rotated",
+  "voice_link.created",
+  "voice_link.revoked",
   "webhook.subscription_disabled",
   "webhook.subscription_enabled",
   "health.profile_updated",

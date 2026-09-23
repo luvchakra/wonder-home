@@ -4,7 +4,7 @@ import { describeLocalNow } from "../context/format";
 import { isoDay } from "../context/normalize";
 import type { HouseholdContextItem } from "../context/types";
 import type { ConversationTurn } from "../conversation/engine";
-import { composeFromFacts, composeGrounded, unknownAnswer } from "./answer";
+import { answeringFacts, composeFromFacts, composeGrounded, unknownAnswer } from "./answer";
 import { gateCandidates, groundFacts, type GroundedFact } from "./grounding";
 import { readBrainQuestion, type BrainReading } from "./question";
 import type { ViolationKind } from "./validate";
@@ -83,15 +83,34 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
   if (turn.compose) {
     const minimised = minimiseContext(gateCandidates(facts), { policy: { ...turn.policy, maxItems: Math.max(turn.policy.maxItems, turn.factBudget) }, people: turn.people });
     const sent = minimised.included.map((entry) => ({ id: entry.id, text: entry.text }));
-    if (sent.length > 0) {
+    // A fact that answers the question but may not leave (a child's, a
+    // bill's, under the household's data-use policy) means a model can only
+    // give part of the answer — or, as a real one did, say "I do not have any
+    // information about Asmi" while WonderHome has it. A specific question
+    // whose answer was withheld is answered from the facts themselves.
+    const sentIds = new Set(sent.map((fact) => fact.id));
+    const answering = answeringFacts(facts, reading);
+    // A broad question about a day counts too: "what is happening on
+    // Saturday?" whose only answer is a child's Sports Day was answered
+    // "nothing is scheduled" by a real model never shown it (live E2E-001,
+    // 23 Sep 2026). A broad question with no day ("what time is the
+    // meeting?") keeps the model, which answers from what it may see.
+    const withheld = (!reading.broad || reading.time !== null) && answering.some((fact) => !sentIds.has(fact.contextId));
+    if (sent.length > 0 && !withheld) {
       const compose = turn.compose;
       const localNow = describeLocalNow(turn.now, turn.timezone);
       let lastRequestSize = sent.length;
       const outcome = await composeGrounded({
         facts: sent,
-        compose: (request) => {
+        compose: async (request) => {
           lastRequestSize = request.facts.length;
-          return compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems });
+          // A composer that throws — a timeout, an outage it did not catch
+          // itself — is a model with no answer, never an error the person sees.
+          try {
+            return await compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems });
+          } catch {
+            return null;
+          }
         },
         validation: { question: turn.sentQuestion, history: turn.sentHistory.map((entry) => entry.text), localNow, today: isoDay(turn.now, turn.timezone) },
       });
@@ -99,7 +118,20 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
       validation.rejected = [...new Set(outcome.rejected.map((violation) => violation.kind))];
       factsSent = lastRequestSize;
 
-      if (outcome.status === "accepted") {
+      // "Not on record" from a model is not the last word when the record
+      // plainly has the answer. And the reverse: an answer to a question
+      // about one part of the home (dinner, a bill) that rests on no fact from
+      // that part — only the household's name, its people — is an answer
+      // nothing on record supports, however plainly it is worded.
+      const unfounded =
+        outcome.status === "accepted" &&
+        outcome.draft.mode === "answer" &&
+        !reading.broad &&
+        reading.focus.size > 0 &&
+        answering.length === 0 &&
+        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)));
+      if (unfounded) validation.rejected = [...new Set([...validation.rejected, "unfounded_answer" as const])];
+      if (outcome.status === "accepted" && !unfounded && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
         return {
           reading,
           facts,

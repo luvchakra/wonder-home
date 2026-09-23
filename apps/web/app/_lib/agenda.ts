@@ -80,7 +80,18 @@ export async function householdAgenda(supabase: SupabaseClient, householdId: str
   })));
 
   const domains = (await Promise.all(readers.map((read) => read()))).filter((domain): domain is DomainSummary => domain !== null);
+  return fromDomains(domains);
+}
 
+/**
+ * The same agenda with only some domains in it — a linked voice assistant
+ * hears only the domains its scopes open (voice phase 2).
+ */
+export function narrowAgenda(agenda: HouseholdAgenda, keep: (key: DomainSummary["key"]) => boolean): HouseholdAgenda {
+  return fromDomains(agenda.domains.filter((domain) => keep(domain.key)));
+}
+
+function fromDomains(domains: DomainSummary[]): HouseholdAgenda {
   const needsYou = domains
     .flatMap((domain) => domain.needs)
     .sort((a, b) => RISK_ORDER[a.riskLevel] - RISK_ORDER[b.riskLevel] || (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"));

@@ -95,3 +95,36 @@ export function resolveIntakePeople(
   }
   return { references, subject: none };
 }
+
+/**
+ * Who an item is for, when the content never says but it matched a record
+ * already on file: the person that record belongs to. "Your dentist
+ * appointment is confirmed for 27 September" names nobody, yet if it is the
+ * dentist appointment already on Kunal's record, it is Kunal's — that is
+ * evidence, not a guess. A name the content did use is never overridden,
+ * a personal kind is the only kind this applies to, and a match outside the
+ * people the item could be for changes nothing. It only fills a gap:
+ * when the household would have been asked to choose, it still is.
+ */
+export function adoptMatchedSubject(
+  kind: HomeSendKind,
+  subject: SubjectResolution,
+  matchedMemberId: string | null | undefined,
+  items: readonly HouseholdContextItem[],
+): SubjectResolution {
+  // Anything already a choice between people stays a question: with three
+  // children and no name, "the maths worksheet" is asked about even when one
+  // child's worksheet is on record (the golden set's HS-02 and HS-11).
+  if (!PERSONAL_KINDS.has(kind) || !matchedMemberId || subject.selected || subject.said !== null) return subject;
+  if (subject.question !== null || subject.candidates.length > 0) return subject;
+  const item = items.find((entry) => entry.entityType === "member" && entry.entityId === matchedMemberId);
+  if (!item) return subject;
+  const person: IntakePerson = {
+    memberId: matchedMemberId,
+    displayName: String(item.attributes.displayName ?? item.summary),
+    memberType: (item.attributes.memberType as IntakePerson["memberType"]) ?? "adult",
+  };
+  if (kind === "school_item" && person.memberType !== "child") return subject;
+  if (kind === "health_document" && person.memberType === "helper") return subject;
+  return { said: null, selected: person, candidates: [person], question: null };
+}

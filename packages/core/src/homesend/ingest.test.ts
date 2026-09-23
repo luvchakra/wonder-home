@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { IntakeExtraction } from "../ai/classify-intake";
 import { confirmTranscript, ingestEmailAttachment, ingestFile, ingestLink, ingestText, IngestRejected, type IngestDeps } from "./ingest";
+import { MAX_BYTES } from "./normalize";
 import { fakeSupabase } from "./testing";
 
 const HOUSEHOLD = "11111111-1111-4111-8111-111111111111";
@@ -11,7 +12,7 @@ const actor = { householdId: HOUSEHOLD, memberId: MEMBER };
 function reading(over: Partial<IntakeExtraction>): IntakeExtraction {
   return {
     readable: true, kind: "unknown", title: null, notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: null,
-    schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null,
+    schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, dateText: null,
     subjectMemberName: null, summary: null, people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
     ...over,
   };
@@ -140,6 +141,30 @@ describe("HomeSend's one pipeline (Wave 3 §1, §21)", () => {
     await expect(ingestFile(db.client, actor, { bytes: new Uint8Array(), claimedType: "image/png" })).rejects.toBeInstanceOf(IngestRejected);
     await expect(ingestFile(db.client, actor, { bytes: new Uint8Array(11 * 1024 * 1024), claimedType: "image/png" })).rejects.toBeInstanceOf(IngestRejected);
     expect(db.tables.home_send_items).toHaveLength(0);
+  });
+
+  it("HS-017: a photo exactly at the limit is taken in; one byte over is refused with a plain reason, before anything is kept", async () => {
+    const atLimit = new Uint8Array(MAX_BYTES.image);
+    atLimit.set(PNG);
+    const db = fakeSupabase();
+    const outcome = await ingestFile(db.client, actor, { bytes: atLimit, claimedType: "image/png", filename: "big.png" }, { classify: model().classify, scan: async () => ({ scanned: false }) });
+    expect(outcome.state).toBe("needs_review");
+    expect(db.uploads).toHaveLength(1);
+
+    const over = new Uint8Array(MAX_BYTES.image + 1);
+    over.set(PNG);
+    const refused = fakeSupabase();
+    const error = await ingestFile(refused.client, actor, { bytes: over, claimedType: "image/png" }).catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(IngestRejected);
+    expect((error as Error).message).toBe("That file is too large — please use one under 8MB.");
+    expect(refused.tables.home_send_items ?? []).toHaveLength(0);
+    expect(refused.uploads).toHaveLength(0);
+  });
+
+  it("HS-017: a text file over its own, smaller limit is refused with its own reason", async () => {
+    const text = new TextEncoder().encode("a".repeat(MAX_BYTES.text + 1));
+    const error = await ingestFile(fakeSupabase().client, actor, { bytes: text, claimedType: "text/plain", filename: "notes.txt" }).catch((thrown: unknown) => thrown);
+    expect((error as Error).message).toBe("That text file is too large — please paste the part that matters.");
   });
 
   it("leaves an item for a person to fill in when no model is set up, or the model fails", async () => {

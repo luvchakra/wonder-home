@@ -550,6 +550,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           title: item.title,
           kind: item.kind,
           subject: item.subject,
+          provider: item.provider,
           date: item.dueAt ? isoDateIn(item.dueAt, options.timezone) : null,
           dueAt: item.dueAt?.toISOString() ?? null,
           status: item.status,
@@ -916,11 +917,16 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     for (const item of records.homeSendItems.slice(0, MAX_PER_LIST)) {
       const title = item.extracted?.title ?? null;
       const kind = item.classifiedKind && item.classifiedKind !== "unknown" ? words(item.classifiedKind) : "something WonderHome could not read";
+      // What a waiting item says, date included, so "moved to the 29th" is
+      // seen as a claim still to be confirmed — never as the day on record.
+      const said = item.extracted?.dueDate ?? item.extracted?.documentDate ?? null;
+      const waiting = item.status !== "routed" && item.status !== "dismissed" && item.status !== "undone";
+      const saidDay = waiting && said && /^\d{4}-\d{2}-\d{2}/.test(said) ? `, for ${dateOf(new Date(`${said.slice(0, 10)}T12:00:00Z`))}` : "";
       add({
         domain: "homesend",
         entityType: "homesend_item",
         entityId: item.id,
-        summary: `Something sent to HomeSend on ${dateOf(new Date(item.createdAt))} was read as ${kind}${title ? `: ${title}` : ""}${item.status === "routed" ? ", and added" : item.status === "dismissed" ? ", and set aside" : item.status === "undone" ? ", and later undone" : ", and is waiting for someone to confirm it"}.`,
+        summary: `Something sent to HomeSend on ${dateOf(new Date(item.createdAt))} was read as ${kind}${title ? `: ${title}` : ""}${saidDay}${item.status === "routed" ? ", and added" : item.status === "dismissed" ? ", and set aside" : item.status === "undone" ? ", and later undone" : ", and is waiting for someone to confirm it"}.`,
         need: "what was sent in to HomeSend",
         privacyClass: homeSendClass(item.classifiedKind),
         subjectMemberIds: [item.createdByMemberId],

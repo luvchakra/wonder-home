@@ -121,6 +121,14 @@ export type TurnInput = {
    * authorizes anything. Absent, the intent goes on exactly as understood.
    */
   ground?: (intent: HouseholdIntent) => Grounding | Promise<Grounding>;
+  /**
+   * What the channel the turn arrived on may ask for (a linked voice
+   * assistant's scopes, voice phase 2). Checked as soon as the intent is
+   * understood — before grounding asks anything and before any proposal —
+   * and it only ever narrows: every other gate still runs on what it lets
+   * through. Absent, the channel is the household's own app.
+   */
+  channelLimits?: { allows: (intent: HouseholdIntent) => boolean; refusal: string };
   now?: Date;
 };
 
@@ -189,7 +197,23 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
         channel: input.channel,
       })
     : null;
-  let intent = answered ?? (await understand(input.utterance, context));
+  // An understanding that throws — a timeout, an outage it did not catch
+  // itself — is a model that did not answer: the rules below take over, and
+  // the turn never fails because of it (test spec PERF-004).
+  let intent =
+    answered ??
+    (await Promise.resolve()
+      .then(() => understand(input.utterance, context))
+      .catch((): HouseholdIntent => ({
+        action: "unknown",
+        actorMemberId: input.actor.memberId,
+        target: { kind: "unspecified" },
+        parameters: {},
+        confidence: 0,
+        channel: input.channel,
+        utterance: input.utterance,
+        understanding: { source: "model", failure: "provider_error" },
+      })));
 
   // A model that did not answer, or answered "unknown" for something the
   // rules plainly read, is not the last word: the rules are the safety net
@@ -223,6 +247,19 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
       }
       intent = { ...intent, parameters: filled };
     }
+  }
+
+  // Outside what this channel may ask for: refused before anything is asked
+  // or proposed, the way a permission refusal is.
+  if (input.channelLimits && !input.channelLimits.allows(intent)) {
+    return {
+      kind: "reply",
+      intent,
+      proposal: { kind: "refused", reason: input.channelLimits.refusal },
+      text: input.channelLimits.refusal,
+      record: false,
+      memory: null,
+    };
   }
 
   // A shaky transcript of something consequential is read back, never acted on.

@@ -29,8 +29,13 @@ export function modelsFor(target: RunTarget): { models: Models; model: string } 
     model,
     models: {
       understand,
-      classify: (source) =>
-        classifyIntake(target.provider, target.key, { text: source.text }, { channel: source.channel, subject: source.subject ?? null, filename: source.attachment ?? null }),
+      classify: (source, reference) =>
+        classifyIntake(
+          target.provider,
+          target.key,
+          { text: source.text },
+          { channel: source.channel, subject: source.subject ?? null, filename: source.attachment ?? null, now: reference.now, timezone: reference.timezone },
+        ),
       compose: createAnswerComposer(target.provider, target.key),
     },
   };

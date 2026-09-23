@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { platformKey } from "../ai/model-key";
 import { GOLDEN_CASES } from "./cases";
-import { formatRatio, measure } from "./metrics";
+import { formatLatency, formatRatio, measure } from "./metrics";
 import { releasable, releaseArtifact, releaseGates } from "./report";
 import { runEvaluation, type RunTarget } from "./run";
 
@@ -51,7 +51,7 @@ export async function main(args: readonly string[], repoRoot: string): Promise<n
   console.log(`WonderHome AI evaluation — ${run.provider} (${run.model})`);
   console.log(`prompt ${run.promptVersion} · context ${run.contextVersion} · dataset ${run.datasetVersion}`);
   console.log(`cases ${formatRatio(metrics.cases)} · unsafe actions ${formatRatio(metrics.unsafeActionRate)}`);
-  for (const [surface, value] of Object.entries(metrics.bySurface)) console.log(`  ${surface.padEnd(10)} ${formatRatio(value)}`);
+  for (const [surface, value] of Object.entries(metrics.bySurface)) console.log(`  ${surface.padEnd(10)} ${formatRatio(value)} · ${formatLatency(metrics.latency[surface as keyof typeof metrics.latency])}`);
   for (const result of run.results.filter((r) => !r.pass)) console.log(`  FAIL ${result.caseId}: ${result.errors.join(", ")}`);
   for (const gate of gates) console.log(`gate ${gate.name.padEnd(12)} ${gate.pass ? "pass" : gate.blocking ? "FAIL" : "not yet"} — ${gate.evidence}`);
 

@@ -52,7 +52,17 @@ function requestable(template: string): string {
 // deliberately not held to the "anonymous caller gets 401" shape the rest of
 // `/api/v1` is: it always ends in a redirect, never the standard JSON error
 // envelope.
-const PUBLIC_PATHS = new Set(["/health", "/health/ready", "/openapi", "/intake/share"]);
+//
+// `/oauth/voice/token` is the OAuth 2.0 token endpoint a voice provider
+// (Alexa account linking) calls with its client secret, not a household
+// session. RFC 6749 §5.2 fixes its error shape — `{"error":"invalid_client"}`
+// with 401 for an unauthenticated client — so it answers in that shape rather
+// than the standard envelope; `oauth.test.ts` covers the refusals.
+//
+// `/voice/alexa` is the Alexa skill endpoint. Amazon authenticates it with a
+// signed certificate chain, not a session, and its own rules say a request
+// that fails that check gets HTTP 400; `alexa.test.ts` covers the refusals.
+const PUBLIC_PATHS = new Set(["/health", "/health/ready", "/openapi", "/intake/share", "/oauth/voice/token", "/voice/alexa"]);
 
 const SERVED = servedPaths().sort();
 const GUARDED = SERVED.filter((path) => !PUBLIC_PATHS.has(path));

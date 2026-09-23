@@ -4,12 +4,13 @@ import type { AnswerComposer } from "../ai/model-client";
 import { converse, type Understanding } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
+import { localDateTime, pendingWords, roleWords } from "../conversation/moment";
 import { isConsequential, type HouseholdIntent } from "../conversation/intent";
 import { answerWithHomeBrain } from "../homebrain/turn";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
-import { resolveIntakePeople } from "../homesend/resolve";
+import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { compareStages } from "./compare";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
@@ -30,7 +31,7 @@ export type Models = {
   /** HomeTalk's understanding. Absent: the deterministic rules. */
   understand?: Understanding;
   /** HomeSend's reading of the source. Absent: the case's recorded reading. */
-  classify?: (source: HomeSendCase["source"]) => Promise<IntakeExtraction | null>;
+  classify?: (source: HomeSendCase["source"], reference: { now: Date; timezone: string }) => Promise<IntakeExtraction | null>;
   /** HomeBrain's answer composer. Absent: the deterministic answer. */
   compose?: AnswerComposer;
 };
@@ -90,6 +91,13 @@ export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Pro
     sessionId: `eval-${c.id}`,
     now: household.now,
     ground: (intent) => groundIntent(intent, groundingEnvFor(household, who.id, c.references)),
+    // The moment exactly as the conversation route tells it to a model.
+    runtime: {
+      role: roleWords(who),
+      localDateTime: localDateTime(household.now, household.timezone),
+      pending: pendingWords(c.references?.proposal?.[0] ? { summary: c.references.proposal[0].label } : null),
+      recent: [...new Set([...(c.references?.conversation ?? []), ...(c.references?.homesend ?? [])].map((spec) => spec.label))].slice(0, 5),
+    },
     ...(c.simulate ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: models.understand } : {}),
   });
 
@@ -126,7 +134,7 @@ export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Pro
 
 export const BLANK_READING: IntakeExtraction = {
   readable: true, kind: "unknown", title: null, notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: null,
-  schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null,
+  schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, dateText: null,
   subjectMemberName: null, summary: null, people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
 };
 
@@ -134,7 +142,9 @@ const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", grocery_item: 
 
 export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Promise<Observation> {
   const household = GOLDEN_HOUSEHOLDS[c.household];
-  const reading = models.classify ? await models.classify(c.source) : { ...BLANK_READING, ...c.reading };
+  // A date phrase is resolved against when the content was written, in the household's timezone.
+  const reference = { now: c.source.capturedAt ? new Date(c.source.capturedAt) : household.now, timezone: household.timezone };
+  const reading = models.classify ? await models.classify(c.source, reference) : { ...BLANK_READING, ...c.reading };
   if (!reading) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
 
   const injection = detectInstructionInjection(c.source.text, c.source.subject);
@@ -171,12 +181,15 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
         )
       : null;
 
+  // Who it is for: what the content said, or else whose record it matched.
+  const subject = adoptMatchedSubject(kind, resolution.subject, reconciliation?.existingId ? reconciliation.existing.subjectMemberId : null, items);
+
   const decision = decideConfirmation({
     kind,
     extracted: { title: reading.title, needs: reading.needs, confidence: reading.confidence },
     understanding,
     reconciliation,
-    subject: resolution.subject,
+    subject,
     memberInitiated: c.memberInitiated ?? c.source.channel !== "email",
     autonomy: c.autonomy ?? "observe",
   });
@@ -188,7 +201,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     ...understanding.candidateActions.map((action) => `${action.type}: ${Object.values(action.fields).filter((value) => value !== null).join(", ")}`),
     `Source: ${[provenance.channel, provenance.subject, provenance.filename].filter(Boolean).join(" — ")}`,
     reconciliation?.message,
-    resolution.subject.question,
+    subject.question,
     decision.reason,
     decision.question,
   ].filter((part): part is string => typeof part === "string" && part.length > 0);
@@ -197,7 +210,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     ...EMPTY,
     interpretation: kind,
     date,
-    entity: resolution.subject.question ? "ask" : (resolution.subject.selected?.memberId ?? null),
+    entity: subject.question ? "ask" : (subject.selected?.memberId ?? null),
     match: { outcome: proposal, recordId: reconciliation?.existingId ?? null },
     conflict: proposal === "conflict",
     action: decision.mode,

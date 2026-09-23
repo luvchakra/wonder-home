@@ -574,6 +574,24 @@ async function main() {
   const anonClaim = await anon.rpc("claim_jobs", { p_worker_id: "verify-live", p_limit: 1, p_lease_seconds: 5 });
   check("anonymous cannot claim queued work", anonClaim.error?.code === "42501", anonClaim.error?.code ?? "no error");
 
+  // Voice links and their OAuth grants (20260925100000, voice phase 2).
+  const serverLinks = await admin.from("external_voice_identities").select("id").limit(1);
+  check("the server can read voice links", !serverLinks.error, serverLinks.error?.code ?? "ok");
+  const anonLinks = await anon.from("external_voice_identities").select("id").limit(1);
+  check(
+    "anonymous cannot read voice links",
+    Boolean(anonLinks.error) || (Array.isArray(anonLinks.data) && anonLinks.data.length === 0),
+    anonLinks.error ? anonLinks.error.code : `${anonLinks.data?.length ?? "?"} rows`,
+  );
+  const anonGrants = await anon.from("voice_oauth_grants").select("id").limit(1);
+  check(
+    "anonymous cannot read voice OAuth grants",
+    Boolean(anonGrants.error) || (Array.isArray(anonGrants.data) && anonGrants.data.length === 0),
+    anonGrants.error ? anonGrants.error.code : `${anonGrants.data?.length ?? "?"} rows`,
+  );
+  const anonRevoke = await anon.rpc("revoke_voice_identity", { p_identity_id: "00000000-0000-4000-8000-000000000000" });
+  check("anonymous cannot revoke a voice link", anonRevoke.error?.code === "42501", anonRevoke.error?.code ?? "no error");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

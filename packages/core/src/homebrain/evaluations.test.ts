@@ -537,6 +537,8 @@ describe("Post-generation validation", () => {
     ["an unsupported date", "The bill is due on 30 Sep.", "unsupported_date"],
     ["an unsupported weekday", "Sports Day is on Monday.", "unsupported_date"],
     ["an unsupported amount", "The bill is ₹3,100.", "unsupported_amount"],
+    ["an unsupported time", "Sports Day starts at 7:30pm.", "unsupported_time"],
+    ["an unsupported bare time", "Sports Day starts at 10:15.", "unsupported_time"],
     ["an unsupported event", "There is also a birthday party on Saturday.", "unsupported_event"],
     ["a diagnosis", "Child A might have a fever, so take paracetamol.", "unsupported_health_claim"],
     ["a dose", "Give 250 mg before the appointment.", "unsupported_health_claim"],
@@ -548,6 +550,12 @@ describe("Post-generation validation", () => {
     const result = validateAnswer(draft(text), VALIDATION);
     expect(result.ok).toBe(false);
     expect(result.violations.map((violation) => violation.kind)).toContain(kind);
+  });
+
+  it("accepts a time the facts give, however it is written", () => {
+    for (const text of ["Sports Day is at 9:00am.", "Sports Day is at 9am.", "Sports Day is at 9 a.m.", "Sports Day starts at 09:00.", "It is 11:30am now."]) {
+      expect(validateAnswer(draft(text, ["F2"]), VALIDATION), text).toEqual({ ok: true, violations: [] });
+    }
   });
 
   it("rejects a cited fact that was never given", () => {

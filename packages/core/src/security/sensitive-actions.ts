@@ -214,6 +214,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/webhooks/repository.ts",
   },
   {
+    event: "hometalk.executed",
+    because: "Something said or typed to WonderHome changed the household — recorded with the channel it came through, so a voice assistant's change is told apart from the app's.",
+    recordedIn: "packages/core/src/conversation/repository.ts",
+  },
+  {
+    event: "voice_link.created",
+    because: "A voice assistant can now speak for a member of this household, within the scopes they chose.",
+    recordedIn: "apps/web/app/(auth)/voice-link-actions.ts",
+  },
+  {
+    event: "voice_link.revoked",
+    because: "A voice assistant stopped speaking for a member — every token it held stopped at once.",
+    recordedIn: "apps/web/app/(auth)/voice-link-actions.ts",
+  },
+  {
     event: "webhook.subscription_disabled",
     because: "Stops an external system receiving this household's events. As worth recording as turning it on.",
     recordedIn: "packages/core/src/webhooks/repository.ts",
@@ -531,6 +546,12 @@ export function describeAuditEvent(
       return { title: "A webhook was set up", detail: stringOr(metadata.url, null) };
     case "webhook.secret_rotated":
       return { title: "A webhook's signing secret was rotated", detail: "The old secret stopped working." };
+    case "hometalk.executed":
+      return { title: "WonderHome made a change someone asked for", detail: typeof metadata.source === "string" ? `Asked through ${metadata.source === "web" ? "the app" : metadata.source.replace(/_/g, " ")}${metadata.modality === "voice" ? " by voice" : ""}.` : null };
+    case "voice_link.created":
+      return { title: "A voice assistant was linked", detail: Array.isArray(metadata.scopes) ? `It may: ${(metadata.scopes as unknown[]).filter((scope): scope is string => typeof scope === "string").join(", ")}` : null };
+    case "voice_link.revoked":
+      return { title: "A voice assistant was unlinked", detail: "Every token it held stopped working." };
     case "webhook.subscription_disabled":
       return { title: "A webhook was turned off", detail: null };
     case "webhook.subscription_enabled":

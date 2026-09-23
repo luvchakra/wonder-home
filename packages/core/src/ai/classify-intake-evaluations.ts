@@ -39,6 +39,7 @@ function extraction(over: Partial<IntakeExtraction>): IntakeExtraction {
     category: null,
     healthRecordType: null,
     documentDate: null,
+    dateText: null,
     subjectMemberName: null,
     summary: null,
     people: [],

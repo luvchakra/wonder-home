@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { auditChange } from "../api/audit";
 import type { PendingClarification } from "./clarify";
 import { readFocus, type FocusEntity } from "./references";
 
@@ -249,10 +250,26 @@ export async function loadAction(
   };
 }
 
-/** What happened when a proposal was carried out — or why it was not. */
+/** Who a carried-out action was for, and how it arrived — for the household's audit trail. */
+export type ActionAudit = {
+  householdId: string;
+  actorMemberId: string;
+  actionType: string;
+  /** The channel the turn came through: "web", or a HomeTalk gateway channel ("alexa", "gemini_voice"). */
+  source: string;
+  modality: "text" | "voice";
+};
+
+/**
+ * What happened when a proposal was carried out — or why it was not.
+ *
+ * A change that actually happened is also written to the household's audit
+ * trail with the channel it came through (test spec DATA-005): "added milk"
+ * said to Alexa is told apart from the same words typed in the app.
+ */
 export async function markActionResult(
   admin: SupabaseClient,
-  input: { actionId: string; status: "executed" | "failed"; result: Record<string, unknown> },
+  input: { actionId: string; status: "executed" | "failed"; result: Record<string, unknown>; audit?: ActionAudit },
 ): Promise<void> {
   const { error } = await admin
     .from("conversation_actions")
@@ -260,6 +277,17 @@ export async function markActionResult(
     .eq("id", input.actionId);
 
   if (error) throw new Error(`markActionResult failed: ${error.code ?? "unknown"}`);
+  // "Already on the list" ran and changed nothing: not a change to audit.
+  if (input.status === "executed" && input.audit && !unchangedResult(input.result)) {
+    await auditChange({
+      householdId: input.audit.householdId,
+      actorMemberId: input.audit.actorMemberId,
+      eventType: "hometalk.executed",
+      targetTable: "conversation_actions",
+      targetId: input.actionId,
+      metadata: { action: input.audit.actionType, source: input.audit.source, modality: input.audit.modality },
+    });
+  }
 }
 
 /** The member's most recent open session, if they have one. */

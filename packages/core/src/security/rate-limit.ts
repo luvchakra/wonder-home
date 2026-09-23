@@ -31,6 +31,10 @@ export const RATE_LIMITS = {
   "homesend.link": { max: 15, windowSeconds: 600 },
   /** Forwarded emails processed, per household per hour. */
   "homesend.email": { max: 60, windowSeconds: 3600 },
+  /** OAuth token requests, per voice client (voice phase 2). */
+  "voice.token": { max: 120, windowSeconds: 600 },
+  /** Requests from a linked voice assistant, per link: a speaker in a kitchen, not a script. */
+  "voice.request": { max: 60, windowSeconds: 600 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

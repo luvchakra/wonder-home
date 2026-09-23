@@ -205,6 +205,48 @@ test("nobody can approve their own proposal by writing to the table", () => {
   );
 });
 
+test("a rejected or expired proposal never executes — not even through the service role (AG-005)", () => {
+  for (const closed of ["rejected", "expired"]) {
+    const id = psql(
+      `insert into public.conversation_actions (household_id, session_id, action_type, payload, approval_status)
+       values ('${household}', '${sharedSession}', 'make_payment', '{}'::jsonb, 'proposed') returning id;`,
+      options,
+    );
+    psql(`update public.conversation_actions set approval_status = '${closed}' where id = '${id}';`, options);
+    for (const next of ["approved", "executed", "proposed", "failed"]) {
+      assert.throws(() => psql(`update public.conversation_actions set approval_status = '${next}' where id = '${id}';`, options), /cannot become/, `${closed} became ${next}`);
+    }
+    assert.equal(psql(`select approval_status from public.conversation_actions where id = '${id}';`, options), closed);
+    // Its record may still be annotated; only the decision is fixed.
+    psql(`update public.conversation_actions set result = '{"note":"kept"}'::jsonb where id = '${id}';`, options);
+  }
+});
+
+test("an approved proposal still runs to executed or failed", () => {
+  const id = psql(
+    `insert into public.conversation_actions (household_id, session_id, action_type, payload, approval_status)
+     values ('${household}', '${sharedSession}', 'add_to_list', '{}'::jsonb, 'proposed') returning id;`,
+    options,
+  );
+  psql(`update public.conversation_actions set approval_status = 'approved' where id = '${id}';`, options);
+  psql(`update public.conversation_actions set approval_status = 'executed' where id = '${id}';`, options);
+  assert.equal(psql(`select approval_status from public.conversation_actions where id = '${id}';`, options), "executed");
+});
+
+test("an approval is decided once: a second yes finds nothing waiting, so nothing runs twice (HT-008)", () => {
+  const id = psql(
+    `insert into public.conversation_actions (household_id, session_id, action_type, payload, approval_status)
+     values ('${household}', '${sharedSession}', 'make_payment', '{}'::jsonb, 'proposed') returning id;`,
+    options,
+  );
+  // decideAction's own statement: only ever from proposed.
+  const decide = () => psql(`update public.conversation_actions set approval_status = 'approved' where id = '${id}' and approval_status = 'proposed' returning id;`, options);
+  assert.equal(decide(), id);
+  psql(`update public.conversation_actions set approval_status = 'executed' where id = '${id}';`, options);
+  assert.equal(decide(), "", "a second approval found the action waiting again");
+  assert.equal(psql(`select approval_status from public.conversation_actions where id = '${id}';`, options), "executed");
+});
+
 test("a session cannot be opened for a member of another household", () => {
   // profiles.id references auth.users, so the account has to exist first.
   psql(

@@ -110,6 +110,16 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
   };
 }
 
+/** The household's timezone, or null when it cannot be read (then no date phrase is grounded). */
+async function householdTimezone(supabase: SupabaseClient, householdId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase.from("households").select("timezone").eq("id", householdId).maybeSingle();
+    return typeof data?.timezone === "string" && data.timezone ? data.timezone : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---- default providers -----------------------------------------------------
 
 const defaultClassify: NonNullable<IngestDeps["classify"]> = async (householdId, source, context) => {
@@ -185,9 +195,17 @@ export async function understand(
     injection,
   });
 
+  // The reference day a date phrase is resolved against — when the content
+  // arrived, in the household's own timezone (Wave 4 §7 applied to intake).
+  const context: IntakeContext = {
+    ...input.context,
+    now: input.context?.now ?? new Date(),
+    timezone: input.context?.timezone ?? (await householdTimezone(supabase, householdId)),
+  };
+
   let result: ClassifyResult;
   try {
-    result = await classify(householdId, input.source, input.context ?? {});
+    result = await classify(householdId, input.source, context);
   } catch {
     result = null;
   }

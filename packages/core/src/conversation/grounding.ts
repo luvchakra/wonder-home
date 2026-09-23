@@ -2,7 +2,7 @@ import { resolvePerson } from "../context/resolution";
 import type { HouseholdContextItem } from "../context/types";
 import { isConsequential, type HouseholdIntent } from "./intent";
 import { anaphorOf, resolveAnaphor, whichOf, type FocusEntity, type ReferenceState } from "./references";
-import { resolveTemporal } from "./temporal";
+import { resolveTemporal, TEMPORAL_PHRASE } from "./temporal";
 
 /**
  * Grounding (Wave 4 §6–§8): what the household *meant*, given this
@@ -60,6 +60,33 @@ export type SchoolItemRef = { id: string; title: string; childMemberId: string; 
 const DATE_KEYS = ["when", "date", "since", "to", "window"] as const;
 const NEEDS_ONE_DAY: ReadonlySet<HouseholdIntent["action"]> = new Set(["record_absence", "record_health_appointment", "set_reminder"]);
 
+/** Actions that carry a day, and the parameter the day belongs in. */
+const DAY_KEY: Partial<Record<HouseholdIntent["action"], (typeof DATE_KEYS)[number]>> = {
+  plan_meal: "when",
+  plan_event: "when",
+  set_reminder: "when",
+  record_absence: "when",
+  record_health_appointment: "when",
+  adjust_schedule: "to",
+};
+
+const SAID_DAY = new RegExp(`\\b(${TEMPORAL_PHRASE})\\b`, "i");
+
+/**
+ * The day the person said, when an understanding named the action but left
+ * the day out, or filed it under a parameter it does not belong to (a model
+ * once put "tonight" in `symptom`). It is read from the person's own words
+ * with the same phrase pattern the rules use, then resolved like any other
+ * phrase — the day is still decided here, never by the model.
+ */
+function recoverSaidDay(intent: HouseholdIntent): HouseholdIntent {
+  const key = DAY_KEY[intent.action];
+  if (!key || DATE_KEYS.some((dateKey) => typeof intent.parameters[dateKey] === "string" && String(intent.parameters[dateKey]).trim())) return intent;
+  const said = SAID_DAY.exec(intent.utterance ?? "");
+  if (!said?.[1]) return intent;
+  return { ...intent, parameters: { ...intent.parameters, [key]: said[1].trim().toLowerCase() } };
+}
+
 /** The meals a plan can be for, and the words that say so. */
 const SLOT_WORDS: Record<string, "breakfast" | "lunch" | "snack" | "dinner"> = {
   breakfast: "breakfast",
@@ -92,7 +119,7 @@ export function confidenceLead(intent: HouseholdIntent): string | null {
 const PERSON_ANAPHOR = /^(?:him|her|he|she|them|they|the other one|the other child|the other kid|the other)$/i;
 
 export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): Promise<Grounding> {
-  let grounded: HouseholdIntent = { ...intent, parameters: { ...intent.parameters }, target: { ...intent.target } };
+  let grounded: HouseholdIntent = recoverSaidDay({ ...intent, parameters: { ...intent.parameters }, target: { ...intent.target } });
   const focus: FocusEntity[] = [];
   const at = env.now.toISOString();
 
@@ -234,6 +261,9 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     }
   }
   if (grounded.action === "plan_meal") {
+    // A meal plan's target is the meals outcome by definition; a model that
+    // called it "unspecified" did not leave anything open to ask about.
+    if (grounded.target.kind === "unspecified") grounded = { ...grounded, target: { kind: "outcome", reference: "meals" } };
     const day = (grounded.parameters.windowResolved ?? grounded.parameters.whenResolved) as { date?: string; precision?: string; window?: { from: string } | null; label?: string } | undefined;
     const what = String(grounded.parameters.mealName ?? grounded.parameters.what ?? "the meal");
     if (!day?.date || day.precision === "range") {
@@ -335,10 +365,37 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
       } else if (resolved.kind === "ambiguous") {
         return clarify(grounded, "referent", resolved.question.replace(/^Do you mean/, "Which bill do you mean —").replace(/\?$/, "?"), resolved.candidates);
       }
+    } else if (said) {
+      // A model given the conversation may resolve "that bill" itself and
+      // name it ("electricity"). When that name is exactly one bill already
+      // in play — just asked about, proposed, talked about or sent in — it is
+      // the same certainty as the reference resolving here, and earns the
+      // same treatment: which bill is settled, the payment still waits for
+      // a person's yes and every finance gate.
+      const state = await env.references();
+      const key = billKey(said);
+      const named = [...state.clarification, ...state.proposal, ...state.conversation, ...state.homesend].filter(
+        (entity, index, all) => entity.entityType === "bill" && billKey(entity.label) === key && all.findIndex((other) => other.entityType === "bill" && (other.entityId ?? other.label) === (entity.entityId ?? entity.label)) === index,
+      );
+      if (key && named.length === 1) {
+        const bill = named[0]!;
+        grounded = {
+          ...grounded,
+          target: { kind: "bill", reference: bill.label },
+          parameters: { ...grounded.parameters, billLabel: bill.label, ...(bill.entityId ? { billId: bill.entityId } : {}) },
+          confidence: Math.max(grounded.confidence, 0.8),
+        };
+        focus.push({ ...bill, source: "mention", at });
+      }
     }
   }
 
   return { kind: "grounded", intent: grounded, focus };
+}
+
+/** "The Electricity bill", "electricity" and "Electricity Bill" are one name. */
+function billKey(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\b(?:the|my|our|bill)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 
 /** Whether an intent is one grounding has anything to do for. */

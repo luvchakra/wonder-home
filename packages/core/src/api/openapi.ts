@@ -1398,6 +1398,34 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/oauth/voice/token": {
+        post: {
+          summary: "OAuth 2.0 token endpoint for linked voice assistants (voice phase 2)",
+          description:
+            "Where a voice provider (Alexa account linking) exchanges an authorization code for tokens, and refreshes them. Authenticated by the provider's client secret (HTTP Basic, or client_id/client_secret in the form body), never a household session. Form-encoded, per RFC 6749: grant_type authorization_code (code, redirect_uri, code_verifier when the code carried a PKCE challenge) or refresh_token. A code works once; a code or refresh token presented twice revokes every token of that link. Only SHA-256 hashes of codes and tokens are stored. Errors use RFC 6749's closed words. Inert until ALEXA_OAUTH_CLIENT_ID, ALEXA_OAUTH_CLIENT_SECRET and ALEXA_OAUTH_REDIRECT_URIS are set.",
+          security: [],
+          responses: {
+            "200": { description: "access_token (1 hour), refresh_token, token_type Bearer, and the scopes the member granted" },
+            "400": { description: "invalid_request, invalid_grant or unsupported_grant_type" },
+            "401": { description: "invalid_client" },
+            "429": { description: "temporarily_unavailable — too many token requests for this client" },
+          },
+        },
+      },
+      "/voice/alexa": {
+        post: {
+          summary: "Alexa skill endpoint — HomeTalk over Alexa (voice phase 4)",
+          description:
+            "Amazon's request to the WonderHome custom skill. Proved to be Alexa's before it is read: SignatureCertChainUrl (https, s3.amazonaws.com, /echo.api/, port 443), a certificate in date that names echo-api.amazon.com and chains to a trusted root, an RSA-SHA256 Signature-256 over the raw body, a timestamp within 150 seconds, and this skill's own application id. The speaker is whoever the WonderHome access token issued through account linking belongs to; the turn runs as that member under their own RLS and scopes, through the same HomeTalk gateway as every channel. Answers in Alexa's response format. Inert until ALEXA_SKILL_ID is set.",
+          security: [],
+          responses: {
+            "200": { description: "An Alexa response: speech, a reprompt when a question or approval is waiting, or the account-linking card" },
+            "400": { description: "Not provably from Alexa (certificate, signature, timestamp or skill id)" },
+            "401": { description: "Alexa is not configured on this deployment" },
+            "413": { description: "Body larger than an Alexa request ever is" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
