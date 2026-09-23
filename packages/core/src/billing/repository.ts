@@ -15,6 +15,7 @@ import {
   type PlanFeature,
   type Subscription,
 } from "./entitlements";
+import { applyExperiments, runningExperiments } from "./experiments";
 import { BURST_MESSAGE, burstBucket, describePolicy, fairUseState, needsCounting } from "./policies";
 import {
   assessPlanChange,
@@ -78,12 +79,17 @@ export const loadSubscription = cache(async (
 
   if (featureError) throw new Error(`loadSubscription failed: ${featureError.code ?? "unknown"}`);
 
-  const features: PlanFeature[] = (featureRows ?? []).map(featureFromRow);
+  const planFeatures: PlanFeature[] = (featureRows ?? []).map(featureFromRow);
 
   // No plan_features rows at all means the catalogue has not been seeded, which
   // is a deployment fault rather than a household on an empty plan. Reporting
   // "no subscription" is the honest answer and fails closed.
-  if (features.length === 0) return null;
+  if (planFeatures.length === 0) return null;
+
+  // Running experiments on this plan (story 20-008), applied here so every
+  // answer built on this subscription — `may`, `consume`, the usage screen —
+  // is the same answer.
+  const features = applyExperiments(planKey, planFeatures, await runningExperiments(supabase, planKey), householdId);
 
   return {
     planKey,
@@ -126,6 +132,8 @@ export type FeatureUsage = {
   fairUseLimit: number | null;
   /** The plan's burst and fair-use policies for this feature, as sentences. */
   policies: string[];
+  /** A running experiment set this feature for the household, not its plan (story 20-008). */
+  trial: boolean;
 };
 
 /**
@@ -159,6 +167,7 @@ export async function usageSummary(
       used,
       fairUseLimit: feature.fairUseLimit ?? null,
       policies: describePolicy(feature),
+      trial: feature.experimentKey !== undefined,
     });
   }
 

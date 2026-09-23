@@ -518,6 +518,55 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/experiments": {
+        get: {
+          summary: "Entitlement experiments",
+          description:
+            "Every entitlement experiment, newest first (story 20-008). For any that has started, how many households are in each group and what each group used of the feature this period — counts only, recomputed from the frozen terms. Requires `subscription.manage`; a caller who is not staff receives 404 rather than 403.",
+          responses: {
+            "200": { description: "The experiments, with results for any that have started" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        post: {
+          summary: "Draft an entitlement experiment",
+          description:
+            "Creates a draft that changes one feature — on, off, or a different allowance — for `treatmentPercent` of the households on `planKeys`. Nothing changes for any household until it is started. Which side a household is on is a stable hash of the experiment and the household, decided inside the one entitlement service. Requires a reason code and `subscription.manage`.",
+          responses: {
+            "200": { description: "The draft" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "An experiment with that key already exists" },
+            "422": { description: "The draft is not coherent, said in words" },
+          },
+        },
+      },
+      "/platform-admin/experiments/{experimentKey}": {
+        parameters: [{ name: "experimentKey", in: "path", required: true, schema: { type: "string" } }],
+        get: {
+          summary: "One entitlement experiment",
+          description: "The experiment's terms, status and results. Requires `subscription.manage`.",
+          responses: {
+            "200": { description: "The experiment" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+        patch: {
+          summary: "Start or stop an entitlement experiment",
+          description:
+            "Moves a draft to `running`, or a running experiment to `stopped` — never back. Its terms are frozen once it starts, by the database as well as here. Stopping returns every household to its plan as sold and removes nothing anyone made meanwhile. Requires a reason code and `subscription.manage`; every move is kept in `entitlement_experiment_events`.",
+          responses: {
+            "200": { description: "The experiment after the move" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "Not a move the experiment's status allows" },
+          },
+        },
+      },
       "/platform-admin/ai-operations": {
         get: {
           summary: "AI operations overview",

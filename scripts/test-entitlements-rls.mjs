@@ -502,3 +502,63 @@ test("a burst policy is counted in the same fixed-window counters as every rate 
   assert.equal(hit(), "f", "a third use inside a burst of two was allowed");
   psql(`delete from public.rate_limit_counters where bucket = 'plan.burst.conversation.text';`, options);
 });
+
+test("a household reads a running experiment's terms, never its description, drafts or history", () => {
+  psql(
+    `insert into public.entitlement_experiments (key, feature_key, description, plan_keys, treatment_percent, treatment_enabled, treatment_limit)
+     values ('voice_on_free', 'conversation.voice', 'Staff notes: does voice bring Free households back?', '{free}', 10, true, 20),
+            ('quiet_draft', 'conversation.voice', 'A draft nobody should see yet.', '{free}', 50, true, null);
+     update public.entitlement_experiments set status = 'running', started_at = now() where key = 'voice_on_free';`,
+    options,
+  );
+
+  assert.equal(
+    asProfile(HEAD, `select key || ':' || treatment_percent from public.entitlement_experiments;`, options),
+    "voice_on_free:10",
+    "a household saw a draft, or not the running experiment",
+  );
+  assert.ok(
+    deniedForProfile(HEAD, `select description from public.entitlement_experiments;`, options),
+    "a household read staff's description",
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.entitlement_experiments (key, feature_key, description, plan_keys, treatment_percent, treatment_enabled)
+       values ('my_own_trial', 'integrations.deep', 'A household granting itself a feature.', '{free}', 100, true);`,
+      options,
+    ),
+    "a household created its own experiment",
+  );
+  assert.ok(
+    deniedForProfile(HEAD, `update public.entitlement_experiments set treatment_percent = 100;`, options),
+    "a household widened an experiment to itself",
+  );
+  assert.equal(psql(`select treatment_percent from public.entitlement_experiments where key = 'voice_on_free';`, options), "10");
+
+  psql(
+    `insert into public.entitlement_experiment_events (experiment_key, action, reason_code) values ('voice_on_free', 'started', 'feature_trial');`,
+    options,
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.entitlement_experiment_events;`, options), "0");
+});
+
+test("an experiment's terms are frozen once it starts, and it only moves draft → running → stopped", () => {
+  assert.throws(
+    () => psql(`update public.entitlement_experiments set treatment_percent = 90 where key = 'voice_on_free';`, options),
+    /terms cannot change once it has started/,
+  );
+  assert.throws(
+    () => psql(`update public.entitlement_experiments set status = 'draft', started_at = null where key = 'voice_on_free';`, options),
+    /draft → running → stopped/,
+  );
+  // A draft's terms may still change.
+  psql(`update public.entitlement_experiments set treatment_percent = 25 where key = 'quiet_draft';`, options);
+
+  psql(`update public.entitlement_experiments set status = 'stopped', stopped_at = now() where key = 'voice_on_free';`, options);
+  assert.throws(
+    () => psql(`update public.entitlement_experiments set status = 'running', stopped_at = null where key = 'voice_on_free';`, options),
+    /draft → running → stopped/,
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.entitlement_experiments;`, options), "0", "a stopped experiment still applied");
+});

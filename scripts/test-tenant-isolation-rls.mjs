@@ -29,6 +29,8 @@ const NON_TENANT_TABLES = new Set([
   "plans", // platform-level plan catalogue
   "plan_features", // what a plan allows; a property of the plan, not of a tenant
   "plan_policy_events", // staff changes to a plan's usage policy; a plan belongs to no household
+  "entitlement_experiments", // an experiment spans every household on the plans it names; assignment is computed, not stored
+  "entitlement_experiment_events", // staff changes to an experiment; platform-level like the experiment itself
   "platform_admins", // the separate platform-admin boundary
   "homesend_share_handoffs", // a share sheet staged before sign-in; no household is known yet
   "rate_limit_counters", // counters keyed by bucket and subject (member, household or IP hash); some subjects have no household

@@ -9,6 +9,7 @@ import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
+import { describeTrial } from "@wonderhome/core/billing/experiments";
 import { listPlans, loadSubscription, usageSummary } from "@wonderhome/core/billing/repository";
 import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -71,6 +72,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const metered = usage.features.filter((feature) => feature.used !== null && (feature.limit !== null || feature.fairUseLimit !== null));
   // What the plan says about spikes and heavy use (story 20-007), in words.
   const policyLines = usage.features.flatMap((feature) => feature.policies);
+  // A trial is never hidden from the household it applies to (story 20-008).
+  const trialLines = usage.features.filter((feature) => feature.trial).map((feature) => describeTrial(feature.featureKey));
 
   // Which key actually answers for this household, decided in one place so
   // the screen can never disagree with the server about it.
@@ -189,7 +192,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </Card>
         </section>
 
-        {metered.length > 0 ? (
+        {metered.length > 0 || trialLines.length > 0 ? (
           <section>
             <SectionHeader title="Usage this period" />
             <MetricGrid
@@ -199,9 +202,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   : { label: `${feature.label} this period, fair use ${feature.fairUseLimit}`, value: `${feature.used}` },
               )}
             />
-            {policyLines.length > 0 ? (
+            {policyLines.length + trialLines.length > 0 ? (
               <ul className="mt-3 space-y-1 text-sm text-[var(--wh-foreground-muted)]">
-                {policyLines.map((line) => (
+                {[...policyLines, ...trialLines].map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
