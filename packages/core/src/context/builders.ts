@@ -53,6 +53,20 @@ export type MemoryRecord = {
   updatedAt?: string;
 };
 
+/** A belief the household holds in HomeBrain Review with no HomeTalk memory behind it — added there, or a correction made there. */
+export type BeliefRecord = {
+  id: string;
+  category: string;
+  claim: string;
+  scope: "household" | "member";
+  memberId: string | null;
+  sourceType: string;
+  sourceDetail: string | null;
+  status: string;
+  createdAt: string;
+  reviewedAt: string | null;
+};
+
 export type AbsenceRecord = { memberId: string; onDate: string; available: boolean; reason: string | null };
 
 export type OutcomeRecord = {
@@ -110,6 +124,7 @@ export type ContextRecords = {
   responsibilities?: readonly ResponsibilityRow[];
   outcomes?: readonly OutcomeRecord[];
   memories?: readonly MemoryRecord[];
+  beliefs?: readonly BeliefRecord[];
   events?: readonly FamilyEvent[];
   absences?: readonly AbsenceRecord[];
   schoolItems?: readonly SchoolItem[];
@@ -829,7 +844,11 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         domain: "preferences",
         entityType: "memory",
         entityId: memory.id ?? `${memory.scope}:${memory.memberId ?? "household"}:${memory.key}:${memory.status}`,
-        summary: `${about ? `${about}: ` : ""}${humanKey(memory.key)} — ${describeValue(memory.value)}${confirmed ? " (confirmed)" : ""}.`,
+        // A stated preference reads as what was said ("Asmi doesn't like
+        // mushrooms"); a keyed routine keeps its label ("Meals dinner — 8pm").
+        summary: memory.key.startsWith("pref.") && statementOf(memory.value)
+          ? `${capitalize(statementOf(memory.value)!.replace(/\.$/, ""))}${confirmed ? " (confirmed)" : ""}.`
+          : `${about ? `${about}: ` : ""}${humanKey(memory.key)} — ${describeValue(memory.value)}${confirmed ? " (confirmed)" : ""}.`,
         need: "what the household prefers",
         privacyClass: memory.scope === "member" && isChild(memory.memberId) ? "child" : "general",
         subjectMemberIds: [memory.memberId],
@@ -843,8 +862,31 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         // A preference still held is how the home works today; only a
         // superseded one (freshness.ts) becomes history.
         tier: 2,
-        aliases: [humanKey(memory.key)],
+        aliases: [humanKey(memory.key), objectOf(memory.value)],
         identityKey: `memory:${memory.scope}:${memory.memberId ?? "household"}:${memory.key}`,
+      });
+    }
+  }
+  if (records.beliefs) {
+    for (const belief of records.beliefs.slice(0, MAX_PER_LIST * 2)) {
+      const confirmed = belief.status === "confirmed";
+      add({
+        domain: "preferences",
+        entityType: "belief",
+        entityId: belief.id,
+        summary: `${belief.claim.replace(/\.$/, "")}${confirmed ? " (confirmed)" : ""}.`,
+        need: "what the household has told WonderHome",
+        privacyClass:
+          belief.category === "finance" ? "financial" : belief.category === "education" || (belief.scope === "member" && isChild(belief.memberId)) ? "child" : "general",
+        subjectMemberIds: [belief.memberId],
+        attributes: { title: belief.claim, category: belief.category, status: belief.status, sourceDetail: belief.sourceDetail },
+        source: { type: "certification_items", sourceId: belief.id, capturedAt: belief.reviewedAt ?? belief.createdAt },
+        confidence: confirmed ? 1 : 0.6,
+        confirmed,
+        authority: confirmed ? 3 : 2,
+        freshnessAt: belief.reviewedAt ?? belief.createdAt,
+        tier: 2,
+        aliases: [belief.claim.replace(/\.$/, "")],
       });
     }
   }
@@ -1070,3 +1112,14 @@ function addDays(isoDate: string, days: number): string {
 function unique(values: readonly (string | null | undefined)[]): string[] {
   return Array.from(new Set(values.filter((value): value is string => typeof value === "string" && value.trim().length > 0)));
 }
+
+function statementOf(value: unknown): string | null {
+  const record = value as Record<string, unknown> | null;
+  return typeof record?.statement === "string" && record.statement.trim() ? record.statement.trim() : null;
+}
+
+function objectOf(value: unknown): string | null {
+  const record = value as Record<string, unknown> | null;
+  return typeof record?.object === "string" ? record.object : null;
+}
+

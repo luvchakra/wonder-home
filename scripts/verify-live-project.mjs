@@ -112,7 +112,15 @@ const SHIPPED_COLUMNS = [
   { table: "households", column: "key_member_id" },
   { table: "home_send_items", column: "security_status" },
   { table: "home_send_items", column: "external_id" },
+  { table: "home_send_items", column: "understanding" },
+  { table: "home_send_items", column: "content_hash" },
+  { table: "home_send_items", column: "failure_reason" },
+  { table: "home_send_items", column: "source_url" },
+  { table: "home_send_items", column: "transcript_confidence" },
+  { table: "home_send_items", column: "parent_item_id" },
   { table: "homesend_share_handoffs", column: "ip_hash" },
+  { table: "homesend_changes", column: "change_type" },
+  { table: "homesend_changes", column: "previous" },
   { table: "health_appointments", column: "checkup_id" },
 ];
 

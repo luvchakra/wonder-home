@@ -244,13 +244,36 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   real model call, gated by the same consent/minimisation/entitlement
   checks a fixture-resolved intent already passed through, never trusted
   with a decision — every downstream authorization gate runs on its output
-  exactly as it runs on a deterministic one.
+  exactly as it runs on a deterministic one. Since HomeBrain 2.0
+  (`packages/core/src/homebrain/`, spec `design/HOMEBRAIN-2.0-WAVE-2.md`)
+  a model only ever sees `GroundedFact`s (opaque `F`-ids, cited back in
+  `usedFacts`), and no model answer reaches a person unvalidated:
+  `homebrain/validate.ts` refuses unsupported names, dates, amounts,
+  events, health claims, integration claims and "I've done it" claims,
+  then `homebrain/answer.ts` regenerates once with tighter context, then
+  answers deterministically from the same facts, then says honestly that
+  nothing is on record. "Why?" questions are answered from recorded
+  evidence in `homebrain/why.ts`, never by a model. Add to the validator
+  when a new kind of invention shows up; never route an answer around it.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the
-  inbound intake channel: a photo, a file, a pasted forward or a forwarded
-  email, classified and routed into a real domain table only once a
-  person confirms it. Every routed item can be undone
+  inbound intake channel: a photo, a PDF, a text file, a voice note, a
+  shared link, a pasted forward or a forwarded email, classified and
+  routed into a real domain table only once a person confirms it. Since
+  HomeSend 2.0 (spec `design/HOMESEND-2.0-WAVE-3.md`) every one of those
+  goes through one pipeline, `homesend/ingest.ts` (secure intake →
+  normalize → understand), and ends in the same canonical
+  `IntakeUnderstanding` (`homesend/understanding.ts`) — a new input type
+  is a new `ingest*` entry point into that pipeline, never a second one.
+  A file's type is decided from its bytes (`normalize.ts`), a link is only
+  ever fetched through `link-fetch.ts` (public addresses only, DNS checked
+  and pinned, every redirect re-checked), an uncertain voice transcript is
+  shown and confirmed, never acted on (`audio.ts`), and all of it is
+  untrusted content: `injection.ts` fences it for the model and flags
+  instructions aimed at WonderHome, which are ignored and said so.
+  Whatever cannot go on is kept and shown under "Failed safely", never
+  dropped. Every routed item can be undone
   (`homesend/changes.ts`), the same domain service a manual remove would
   use, never a raw delete. A real Resend inbound-email webhook
   (`POST /api/v1/homesend/email/webhook`, `homesend/email-gateway.ts`)
@@ -347,6 +370,17 @@ All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_mi
 
 ## Opening and merging pull requests
 Always open a PR for finished work pushed to a story/feature branch — never ask first, and never leave pushed commits sitting on a branch with no PR against them. Once that PR (or any PR against this repo, whether opened this session or found already open) has CI green on its current head — every required check passing, no merge conflict — merge it, again without asking. Still hold off merging when there's an open review thread that hasn't been addressed, or when the PR is explicitly marked draft/WIP.
+
+## Cleaning up test data after the merge
+The work isn't finished until its test data is gone. Once the PR has merged into `main`, remove everything the session created to test it, in that same session and before reporting the work done:
+
+- **QA accounts.** Delete every account made with `node scripts/qa-test-user.mjs create`, using `node scripts/qa-test-user.mjs delete <user-id>`.
+- **QA households.** Delete each QA household and every row created in it, on the live project and on any preview branch.
+- **Seeded or hand-inserted rows.** Remove any rows added directly with `execute_sql` to set up a scenario.
+- **Stored files.** Remove files uploaded to Storage buckets during testing, such as HomeSend and avatar uploads.
+- **Local debris.** Delete scratch files, screenshots and QA helper scripts left in the working tree, and stop any dev server the session started.
+
+Then confirm it is gone: a SQL count, or a `qa-test-user.mjs` lookup, should find nothing left. Only delete what this session created itself, tracked by the user ids and household ids it printed along the way. When you can't prove a leftover test account or row belongs to this session, leave it in place and name it in your report, with the id and the command that would remove it. Never delete it on a guess. The progress note for the work says the cleanup ran, or lists what was left behind and why.
 
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.

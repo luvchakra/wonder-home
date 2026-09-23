@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { dispatchWebhookEvent } from "../webhooks/dispatch";
-import type { HomeSendChange, HomeSendChangeDomain } from "./items";
+import type { HomeSendChange, HomeSendChangeDomain, HomeSendChangeType } from "./items";
 
 /**
  * What a routed HomeSend item actually wrote (HomeSend Phase 1 — undo;
@@ -30,11 +30,13 @@ function fromRow(row: Row): HomeSendChange {
     createdAt: row.created_at as string,
     undoneAt: (row.undone_at as string | null) ?? null,
     undoneByMemberId: (row.undone_by_member_id as string | null) ?? null,
+    changeType: ((row.change_type as HomeSendChangeType | undefined) ?? "created"),
+    previous: (row.previous as Record<string, unknown> | null) ?? null,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, intake_id, domain, entity_id, created_by_member_id, created_at, undone_at, undone_by_member_id";
+  "id, household_id, intake_id, domain, entity_id, created_by_member_id, created_at, undone_at, undone_by_member_id, change_type, previous";
 
 export async function listHomeSendChanges(supabase: SupabaseClient, householdId: string): Promise<HomeSendChange[]> {
   const { data, error } = await supabase
@@ -86,6 +88,9 @@ export type RecordHomeSendChangeInput = {
   domain: HomeSendChangeDomain;
   entityId: string;
   createdByMemberId: string;
+  /** Defaults to `created`. An update or a cancellation must say what it replaced, so undo can put it back (§10). */
+  changeType?: HomeSendChangeType;
+  previous?: Record<string, unknown> | null;
 };
 
 export async function recordHomeSendChange(
@@ -100,6 +105,8 @@ export async function recordHomeSendChange(
       domain: input.domain,
       entity_id: input.entityId,
       created_by_member_id: input.createdByMemberId,
+      change_type: input.changeType ?? "created",
+      previous: input.changeType && input.changeType !== "created" ? (input.previous ?? {}) : null,
     })
     .select(SELECT_COLUMNS)
     .single();
@@ -112,7 +119,7 @@ export async function recordHomeSendChange(
     eventType: "homesend.applied",
     targetTable: input.domain,
     targetId: input.entityId,
-    metadata: { intakeId: input.intakeId },
+    metadata: { intakeId: input.intakeId, changeType: input.changeType ?? "created" },
   });
 
   await dispatchWebhookEvent({

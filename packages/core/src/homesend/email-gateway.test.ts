@@ -3,9 +3,11 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
+  fetchReceivedAttachment,
   fetchReceivedEmail,
   parseEmailReceivedEvent,
   platformResendConfig,
+  toEmailSource,
   verifySvixSignature,
 } from "./email-gateway";
 
@@ -100,7 +102,13 @@ describe("fetchReceivedEmail", () => {
     const fakeFetch = (async () =>
       new Response(JSON.stringify({ id: "e1", from: "sender@example.com", subject: "Hi", text: "Hello" }), { status: 200 })) as typeof fetch;
     const result = await fetchReceivedEmail("e1", "re_x", fakeFetch);
-    expect(result).toEqual({ id: "e1", from: "sender@example.com", subject: "Hi", text: "Hello" });
+    expect(result).toMatchObject({ id: "e1", from: "sender@example.com", subject: "Hi", text: "Hello", html: null, attachments: [] });
+  });
+
+  it("keeps the HTML part of an HTML-only email, so it can be reduced to text rather than dropped", async () => {
+    const fakeFetch = (async () =>
+      new Response(JSON.stringify({ id: "e2", from: "school@example.org", subject: "Notice", text: null, html: "<p>Sports Day</p>" }), { status: 200 })) as typeof fetch;
+    expect(await fetchReceivedEmail("e2", "re_x", fakeFetch)).toMatchObject({ id: "e2", from: "school@example.org", subject: "Notice", text: null, html: "<p>Sports Day</p>" });
   });
 
   it("returns null on a non-2xx response", async () => {
@@ -118,5 +126,83 @@ describe("fetchReceivedEmail", () => {
       throw new Error("network down");
     }) as typeof fetch;
     expect(await fetchReceivedEmail("e1", "re_x", fakeFetch)).toBeNull();
+  });
+});
+
+describe("the email contract (Wave 3 §6)", () => {
+  it("turns a provider message into the provider-neutral EmailSource", async () => {
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          id: "e3",
+          from: "office@school.example.org",
+          to: ["hs-abc@inbox.example"],
+          cc: ["hs-def@inbox.example"],
+          created_at: "2026-09-23T08:00:00Z",
+          subject: "  Science Exhibition moved  ",
+          text: "It moved to 29 September.",
+          html: null,
+          attachments: [{ id: "att-1", filename: "circular.pdf", content_type: "application/pdf", size: 1200 }],
+        }),
+        { status: 200 },
+      )) as typeof fetch;
+    const received = await fetchReceivedEmail("e3", "re_x", fakeFetch);
+    expect(received).not.toBeNull();
+    expect(toEmailSource(received!)).toEqual({
+      externalId: "e3",
+      from: "office@school.example.org",
+      to: ["hs-abc@inbox.example"],
+      cc: ["hs-def@inbox.example"],
+      subject: "Science Exhibition moved",
+      receivedAt: "2026-09-23T08:00:00Z",
+      text: "It moved to 29 September.",
+      html: null,
+      attachmentIds: ["att-1"],
+      attachments: [{ id: "att-1", filename: "circular.pdf", contentType: "application/pdf", size: 1200 }],
+    });
+  });
+});
+
+describe("fetchReceivedAttachment (Wave 3 §7)", () => {
+  const PDF = new TextEncoder().encode("%PDF-1.4 circular");
+
+  function provider(meta: Record<string, unknown>, bytes: Uint8Array = PDF) {
+    const calls: string[] = [];
+    const fakeFetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.startsWith("https://api.resend.com/")) return new Response(JSON.stringify(meta), { status: 200 });
+      return new Response(new Blob([bytes as Uint8Array<ArrayBuffer>]), { status: 200 });
+    }) as typeof fetch;
+    return { fakeFetch, calls };
+  }
+
+  it("fetches the metadata, then the bytes from the signed link", async () => {
+    const { fakeFetch, calls } = provider({ id: "att-1", filename: "circular.pdf", content_type: "application/pdf", size: PDF.length, download_url: "https://inbound-cdn.resend.com/att-1?sig=x" });
+    const result = await fetchReceivedAttachment("e3", "att-1", "re_x", 1024 * 1024, fakeFetch);
+    expect(result).toMatchObject({ ok: true, filename: "circular.pdf", contentType: "application/pdf" });
+    expect(calls).toEqual(["https://api.resend.com/emails/receiving/e3/attachments/att-1", "https://inbound-cdn.resend.com/att-1?sig=x"]);
+  });
+
+  it("never follows a download link to anywhere but the provider", async () => {
+    const { fakeFetch, calls } = provider({ id: "att-1", download_url: "http://169.254.169.254/latest/meta-data/" });
+    expect(await fetchReceivedAttachment("e3", "att-1", "re_x", 1024, fakeFetch)).toEqual({ ok: false, reason: "unavailable" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("refuses an attachment over the limit, declared or actual", async () => {
+    const declared = provider({ id: "a", size: 5000, download_url: "https://inbound-cdn.resend.com/a" });
+    expect(await fetchReceivedAttachment("e3", "a", "re_x", 1000, declared.fakeFetch)).toEqual({ ok: false, reason: "too_large" });
+    const actual = provider({ id: "a", download_url: "https://inbound-cdn.resend.com/a" }, new Uint8Array(2000));
+    expect(await fetchReceivedAttachment("e3", "a", "re_x", 1000, actual.fakeFetch)).toEqual({ ok: false, reason: "too_large" });
+  });
+
+  it("says unavailable, never throws, when the provider fails", async () => {
+    const failing = (async () => new Response("no", { status: 500 })) as typeof fetch;
+    expect(await fetchReceivedAttachment("e3", "a", "re_x", 1000, failing)).toEqual({ ok: false, reason: "unavailable" });
+    const throwing = (async () => {
+      throw new Error("down");
+    }) as typeof fetch;
+    expect(await fetchReceivedAttachment("e3", "a", "re_x", 1000, throwing)).toEqual({ ok: false, reason: "unavailable" });
   });
 });

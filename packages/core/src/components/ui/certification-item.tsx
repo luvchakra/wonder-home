@@ -23,6 +23,10 @@ export type CertificationItemProps = {
   risk: "low" | "medium" | "high" | "critical";
   /** Preformatted, since only the page knows the household's timezone. Null when never reviewed. */
   lastReviewed: string | null;
+  /** When WonderHome first learned it, preformatted. */
+  learnedAt?: string | null;
+  /** How sure WonderHome is, in words — never a number it cannot explain. */
+  confidence?: string | null;
   /** Why it needs a look right now, when it does — the alert's own explanation. */
   reason?: string;
   /** Review controls: Confirm, Correct, Remove. */
@@ -72,6 +76,8 @@ export function CertificationItem({
   category,
   risk,
   lastReviewed,
+  learnedAt,
+  confidence,
   reason,
   controls,
   badgeLabel,
@@ -98,6 +104,8 @@ export function CertificationItem({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
           <Fact label="Source" value={sourceLabel} />
           <Fact label="Category" value={category} />
+          <Fact label="When learned" value={learnedAt ?? null} />
+          <Fact label="Confidence" value={confidence ?? null} />
           <div>
             <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">How much it matters</dt>
             <dd className="text-sm">

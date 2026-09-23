@@ -96,14 +96,65 @@ export function parseEmailReceivedEvent(rawBody: string): EmailReceivedEvent | n
   return parsed.success ? parsed.data : null;
 }
 
+const AttachmentMetaSchema = z.object({
+  id: z.string().min(1),
+  filename: z.string().nullable().optional().default(null),
+  content_type: z.string().nullable().optional().default(null),
+  size: z.number().nullable().optional().default(null),
+});
+
 const ReceivedEmailSchema = z.object({
   id: z.string(),
   from: z.string(),
+  to: z.array(z.string()).optional().default([]),
+  cc: z.array(z.string()).nullable().optional().default([]),
+  created_at: z.string().nullable().optional().default(null),
   subject: z.string().nullable().optional(),
-  text: z.string().nullable(),
+  text: z.string().nullable().optional().default(null),
+  html: z.string().nullable().optional().default(null),
+  attachments: z.array(AttachmentMetaSchema).nullable().optional().default([]),
 });
 
 export type ReceivedEmail = z.infer<typeof ReceivedEmailSchema>;
+
+/**
+ * The internal email contract (Wave 3 §6) — provider-neutral, so nothing
+ * past this file knows Resend's field names. The sender is evidence of who
+ * forwarded it, never proof of which household member did.
+ */
+export type EmailSource = {
+  externalId: string;
+  from: string | null;
+  to: string[];
+  cc: string[];
+  subject: string | null;
+  receivedAt: string | null;
+  text: string | null;
+  html: string | null;
+  attachmentIds: string[];
+  attachments: { id: string; filename: string | null; contentType: string | null; size: number | null }[];
+};
+
+export function toEmailSource(email: ReceivedEmail): EmailSource {
+  const attachments = (email.attachments ?? []).map((attachment) => ({
+    id: attachment.id,
+    filename: attachment.filename ?? null,
+    contentType: attachment.content_type ?? null,
+    size: attachment.size ?? null,
+  }));
+  return {
+    externalId: email.id,
+    from: email.from || null,
+    to: email.to ?? [],
+    cc: email.cc ?? [],
+    subject: email.subject?.trim() || null,
+    receivedAt: email.created_at ?? null,
+    text: email.text ?? null,
+    html: email.html ?? null,
+    attachmentIds: attachments.map((attachment) => attachment.id),
+    attachments,
+  };
+}
 
 /**
  * The second call: fetches the email's actual content by id. Real Resend
@@ -128,5 +179,60 @@ export async function fetchReceivedEmail(
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
+  }
+}
+
+const AttachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string().nullable().optional().default(null),
+  content_type: z.string().nullable().optional().default(null),
+  size: z.number().nullable().optional().default(null),
+  download_url: z.string(),
+});
+
+/** The one host an attachment's download link may point at — a payload can never redirect this fetch elsewhere. */
+function isProviderDownloadUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" && (url.hostname === "resend.com" || url.hostname.endsWith(".resend.com"));
+  } catch {
+    return false;
+  }
+}
+
+export type FetchedAttachment =
+  | { ok: true; filename: string | null; contentType: string; bytes: Uint8Array }
+  | { ok: false; reason: "unavailable" | "too_large" };
+
+/**
+ * Fetches one attachment of a received email: its metadata (which carries a
+ * short-lived signed download link), then its bytes, bounded by `limit`.
+ * Never throws; `unavailable` means "try again later" (the webhook answers
+ * non-2xx so the provider retries), `too_large` is final.
+ */
+export async function fetchReceivedAttachment(
+  emailId: string,
+  attachmentId: string,
+  apiKey: string,
+  limit: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<FetchedAttachment> {
+  try {
+    const response = await fetchImpl(
+      `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}/attachments/${encodeURIComponent(attachmentId)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } },
+    );
+    if (!response.ok) return { ok: false, reason: "unavailable" };
+    const parsed = AttachmentSchema.safeParse(await response.json());
+    if (!parsed.success || !isProviderDownloadUrl(parsed.data.download_url)) return { ok: false, reason: "unavailable" };
+    if (parsed.data.size != null && parsed.data.size > limit) return { ok: false, reason: "too_large" };
+
+    const download = await fetchImpl(parsed.data.download_url);
+    if (!download.ok) return { ok: false, reason: "unavailable" };
+    const bytes = new Uint8Array(await download.arrayBuffer());
+    if (bytes.length > limit) return { ok: false, reason: "too_large" };
+    return { ok: true, filename: parsed.data.filename ?? null, contentType: parsed.data.content_type ?? "application/octet-stream", bytes };
+  } catch {
+    return { ok: false, reason: "unavailable" };
   }
 }

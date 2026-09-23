@@ -6,128 +6,114 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { may } from "@wonderhome/core/billing/repository";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
-import { cancelObligation, createObligation } from "@wonderhome/core/finance/repository";
+import { cancelObligation, createObligation, listObligations, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
-import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
-import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
-import { createHomeSendItem, dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
-import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
+import { movedDueAt, reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
+import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
+import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
+import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
-import { cancelSchoolItem, createSchoolItem } from "@wonderhome/core/school/repository";
+import { cancelSchoolItem, createSchoolItem, listSchoolItems, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
+
+import { prepareReview } from "./home-send-review";
 
 /**
- * HomeSend v1 (Phase C): upload a photo/file, or paste a forwarded message,
- * classify it, and — once a person confirms — route it into the real domain
- * table. Every step here mirrors `school-actions.ts`'s screenshot-import
- * shape: classification only ever fills a confirm form, and the confirm
- * form's own submit is what writes anything. No real WhatsApp/email webhook
- * exists yet (no provider credentials, per CLAUDE.md) — `source` only names
- * the two channels that genuinely run today.
+ * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
+ * note, or paste a message or a link. Each goes through the one pipeline in
+ * `homesend/ingest.ts` — secure intake, normalize, understand — and every
+ * one ends in the same confirm step: nothing is written into a domain table
+ * until a person has reviewed it, the same shape `school-actions.ts`'s
+ * screenshot import has always had.
  */
 
 export type SendHomeItemState = {
   error?: string;
   notice?: string;
-  item?: { id: string; classifiedKind: HomeSendKind; extracted: HomeSendExtraction | null; reconciliation?: Pick<HomeSendReconciliation, "verdict" | "message"> | null };
+  /** What happens next: review it, check a transcript, or it failed safely. */
+  state?: IngestState;
+  duplicate?: boolean;
+  heard?: IngestOutcome["heard"];
+  item?: {
+    id: string;
+    classifiedKind: HomeSendKind;
+    extracted: HomeSendExtraction | null;
+    understanding?: IntakeUnderstanding | null;
+    reconciliation?: HomeSendReconciliation | null;
+    /** Who it is for, resolved through the household's own people (§9). */
+    subject?: SubjectResolution | null;
+  };
 };
 
 /**
- * What was just classified, checked against what the household already has
- * (Wave 1 §7) — so the confirm step can say "this looks like the
- * electricity bill already on record" before anyone presses Add.
+ * What was just understood, made ready for review (Wave 3 §9, §10): who it
+ * is for, and whether it is already on record — so the confirm step can say
+ * "I found Asmi's existing Science Exhibition for 28 Sep" before anyone
+ * presses Add.
  */
-async function withReconciliation(
+async function withReview(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  householdId: string,
-  timezone: string,
+  membership: Awaited<ReturnType<typeof requireMembership>>,
   state: SendHomeItemState,
 ): Promise<SendHomeItemState> {
   const item = state.item;
-  const kind = item?.classifiedKind;
-  if (!item || !kind || kind === "unknown" || !item.extracted?.title) return state;
-  const found = await reconcileHomeSend(
-    supabase,
-    householdId,
-    {
-      kind,
-      title: item.extracted.title,
-      date: item.extracted.dueDate ?? item.extracted.documentDate ?? null,
-      amount: item.extracted.amount,
-      payee: item.extracted.payee,
-      capturedAt: new Date().toISOString(),
-    },
-    { timezone },
-  ).catch(() => null);
-  return found ? { ...state, item: { ...item, reconciliation: { verdict: found.verdict, message: found.message } } } : state;
+  if (!item) return state;
+  const review = await prepareReview(supabase, membership, { classifiedKind: item.classifiedKind, extracted: item.extracted, understanding: item.understanding ?? null }).catch(() => null);
+  if (!review) return state;
+  return { ...state, item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject } };
 }
 
-const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
-const UPLOAD_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+function toState(outcome: IngestOutcome): SendHomeItemState {
+  return { notice: outcome.notice, state: outcome.state, duplicate: outcome.duplicate, heard: outcome.heard, item: outcome.item };
+}
 
-/** The upload half of sending something in: a photo or file. */
+function revalidateHomeSend() {
+  revalidatePath("/ai");
+  revalidatePath("/home-send");
+}
+
+/**
+ * What one upload form may send — the Server Action body limit in
+ * `next.config.ts`, which sits under the hosting platform's own 4.5 MB
+ * request ceiling. The pipeline has its own per-kind limits beyond this.
+ */
+const UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
+
+/** The upload half of sending something in: a photo, PDF, text file or voice note. */
 export async function uploadHomeSendItemAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
   const householdId = formData.get("householdId");
   if (typeof householdId !== "string") return { error: "Please try again." };
 
-  const photo = formData.get("photo");
-  if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a photo or file first." };
-  if (!UPLOAD_CONTENT_TYPES.has(photo.type)) return { error: "Please send a JPEG, PNG or WebP image." };
-  if (photo.size > UPLOAD_MAX_BYTES) return { error: "That file is too large — please use one under 8MB." };
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo or file first." };
+  if (file.size > UPLOAD_MAX_BYTES) return { error: "That file is too large — please use one under 4MB." };
 
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
-
-    const buffer = Buffer.from(await photo.arrayBuffer());
-    const securityStatus = await assessUploadSecurity(photo.type, buffer);
-
-    const itemId = crypto.randomUUID();
-    const path = `${householdId}/${itemId}`;
-    // Stored either way — the private bucket is the quarantine. Only
-    // classification is skipped for a rejected file, never the record that
-    // it was sent (CLAUDE.md's "security failure -> quarantine; no AI").
-    const { error: uploadError } = await supabase.storage.from("home-send").upload(path, photo, { contentType: photo.type });
-    if (uploadError) throw new Error(`home-send upload failed: ${uploadError.message}`);
-
-    await createHomeSendItem(supabase, {
-      id: itemId,
-      householdId,
-      createdByMemberId: membership.memberId,
-      source: "manual_upload",
-      filePath: path,
-      securityStatus,
-    });
-
-    if (securityStatus === "rejected") {
-      revalidatePath("/ai");
-      revalidatePath("/home-send");
-      return {
-        notice: "That file didn't read as a real image, so WonderHome kept it without looking inside — please try a different photo.",
-        item: { id: itemId, classifiedKind: "unknown", extracted: null },
-      };
-    }
-
-    const classified = await classifyAndSave(supabase, householdId, itemId, {
-      image: { mediaType: photo.type as "image/jpeg" | "image/png" | "image/webp", base64: buffer.toString("base64") },
-    });
-    const state = await withReconciliation(supabase, householdId, membership.household.timezone, classified);
-    revalidatePath("/ai");
-    revalidatePath("/home-send");
+    const outcome = await ingestFile(
+      supabase,
+      { householdId, memberId: membership.memberId },
+      { bytes: new Uint8Array(await file.arrayBuffer()), claimedType: file.type, filename: file.name || null },
+    );
+    const state = await withReview(supabase, membership, toState(outcome));
+    revalidateHomeSend();
     return state;
   } catch (thrown) {
+    if (thrown instanceof IngestRejected) return { error: thrown.message };
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }
 }
 
-/** The paste half: a forwarded message, typed or pasted as plain text. */
+/** The paste half: a forwarded message, or a link, typed or pasted as plain text. */
 export async function pasteHomeSendItemAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
-  const parsed = z.object({ householdId: z.uuid(), text: z.string().trim().min(1, { error: "Paste something first." }).max(4000) }).safeParse({
+  const parsed = z.object({ householdId: z.uuid(), text: z.string().trim().min(1, { error: "Paste something first." }).max(12000) }).safeParse({
     householdId: formData.get("householdId"),
     text: formData.get("text"),
   });
@@ -136,22 +122,38 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
-
-    const itemId = crypto.randomUUID();
-    await createHomeSendItem(supabase, {
-      id: itemId,
-      householdId: parsed.data.householdId,
-      createdByMemberId: membership.memberId,
-      source: "pasted_text",
-      rawText: parsed.data.text,
-    });
-
-    const classified = await classifyAndSave(supabase, parsed.data.householdId, itemId, { text: parsed.data.text });
-    const state = await withReconciliation(supabase, parsed.data.householdId, membership.household.timezone, classified);
-    revalidatePath("/ai");
-    revalidatePath("/home-send");
+    const outcome = await ingestText(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, { text: parsed.data.text });
+    const state = await withReview(supabase, membership, toState(outcome));
+    revalidateHomeSend();
     return state;
   } catch (thrown) {
+    if (thrown instanceof IngestRejected) return { error: thrown.message };
+    return { error: toErrorBody(thrown, "homesend").body.error.message };
+  }
+}
+
+/**
+ * A voice note WonderHome was not sure it heard right (§17): the household
+ * confirms the transcript or types what was said, and only then is it read.
+ */
+export async function confirmTranscriptAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
+  const parsed = z
+    .object({ householdId: z.uuid(), itemId: z.uuid(), text: z.string().trim().min(1, { error: "Type what the voice note said first." }).max(4000) })
+    .safeParse({ householdId: formData.get("householdId"), itemId: formData.get("itemId"), text: formData.get("text") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const item = await getHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId);
+    if (!item || item.source !== "audio_note") return { error: "That voice note is not part of this household." };
+    if (item.status !== "received" && item.status !== "classified") return { error: "That voice note has already been handled." };
+    const outcome = await confirmTranscript(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, { itemId: item.id, text: parsed.data.text });
+    const state = await withReview(supabase, membership, toState(outcome));
+    revalidateHomeSend();
+    return state;
+  } catch (thrown) {
+    if (thrown instanceof IngestRejected) return { error: thrown.message };
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }
 }
@@ -159,6 +161,14 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
 const routeSchema = z.object({
   householdId: z.uuid(),
   itemId: z.uuid(),
+  /**
+   * What the person decided (Wave 3 §10, §13): add it as new, update or
+   * cancel the record it matched, or keep the existing one and change
+   * nothing. The last three only ever act on `existingId`, which the server
+   * re-checks is part of this household before touching it.
+   */
+  decision: z.enum(["add", "update", "cancel", "keep"]).default("add"),
+  existingId: z.uuid().optional(),
   kind: z.enum(["bill", "school_item", "grocery_item", "health_document"]),
   title: z.string().trim().min(1, { error: "What is it?" }).max(160),
   notes: z.string().trim().max(2000).optional(),
@@ -182,30 +192,159 @@ const routeSchema = z.object({
   subjectMemberId: z.uuid().optional(),
   healthRecordType: z.enum(RECORD_TYPES).optional(),
   documentDate: z.string().optional(),
-  // secondary: a second, different-domain need the same content also implies
-  // (always a grocery suggestion — see ai/classify-intake.ts). Optional and
-  // only ever written when the household explicitly ticks the box for it.
-  // No notes field: createConsumable has nowhere to put one.
-  includeSecondary: z.literal("on").optional(),
-  secondaryTitle: z.string().trim().max(160).optional(),
+  // Needs the same content implies (§11): each ticked one becomes its own
+  // grocery row, separately undoable. Nothing unticked is ever written.
+  needs: z.array(z.string().trim().min(1).max(160)).max(5).default([]),
   // Set once the person has seen a reconciliation candidate and said this
   // really is a different one.
   confirmDuplicate: z.literal("on").optional(),
 });
 
+type RouteInput = z.infer<typeof routeSchema>;
+
 /**
  * The confirm step's own submit: writes into the real domain table via that
- * domain's already-governed create function, then marks the intake item
- * routed. Nothing before this point ever wrote a bill, school item or
- * grocery row — this is the one place that does, and only once a person has
- * reviewed the fields.
+ * domain's already-governed service, then marks the intake item routed.
+ * Nothing before this point ever wrote a bill, school item or grocery row —
+ * this is the one place that does, and only once a person has reviewed it.
  */
-export type RouteHomeItemState = { error?: string; notice?: string; reconciliation?: Pick<HomeSendReconciliation, "verdict" | "message"> };
+export type RouteHomeItemState = { error?: string; notice?: string; reconciliation?: HomeSendReconciliation };
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+type Membership = Awaited<ReturnType<typeof requireMembership>>;
+
+function schoolDueAt(date: string | undefined | null): string | null {
+  return date ? new Date(date).toISOString() : null;
+}
+
+/**
+ * Updating or cancelling a record already on record (§10) — through the same
+ * governed service a manual edit or remove uses, keeping what it replaced so
+ * undo can put it back exactly.
+ */
+async function reviseExisting(
+  supabase: Supabase,
+  membership: Membership,
+  input: RouteInput & { existingId: string; decision: "update" | "cancel" },
+): Promise<{ routedTable: string; routedId: string; changeType: "updated" | "cancelled"; previous: Record<string, unknown>; domain: "bill" | "school_item" }> {
+  const householdId = input.householdId;
+  if (input.kind === "school_item") {
+    const existing = (await listSchoolItems(supabase, householdId)).find((item) => item.id === input.existingId);
+    if (!existing) throw new Error("existing school item not found");
+    const previous = { dueAt: existing.dueAt?.toISOString() ?? null, status: existing.status };
+    if (input.decision === "cancel") {
+      await cancelSchoolItem(supabase, householdId, existing.id);
+      return { routedTable: "school_items", routedId: existing.id, changeType: "cancelled", previous, domain: "school_item" };
+    }
+    const dueAt = input.dueDate ? movedDueAt(previous.dueAt, input.dueDate, membership.household.timezone) : previous.dueAt;
+    await updateSchoolItem(supabase, householdId, existing.id, { dueAt });
+    return { routedTable: "school_items", routedId: existing.id, changeType: "updated", previous, domain: "school_item" };
+  }
+  if (input.kind === "bill") {
+    const existing = (await listObligations(supabase, householdId)).find((bill) => bill.id === input.existingId);
+    if (!existing) throw new Error("existing bill not found");
+    const previous = { dueOn: existing.dueOn, amountMinor: existing.amountMinor, status: existing.status };
+    if (input.decision === "cancel") {
+      await cancelObligation(supabase, { id: existing.id, householdId });
+      return { routedTable: "obligations", routedId: existing.id, changeType: "cancelled", previous, domain: "bill" };
+    }
+    await updateObligation(supabase, {
+      id: existing.id,
+      householdId,
+      dueOn: input.dueDate || existing.dueOn,
+      amountMinor: input.amount ? Math.round(Number(input.amount) * 100) : existing.amountMinor,
+    });
+    return { routedTable: "obligations", routedId: existing.id, changeType: "updated", previous, domain: "bill" };
+  }
+  throw new Error("only a bill or a school item can be updated or cancelled from HomeSend");
+}
+
+async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<{ routedTable: string; routedId: string } | { error: string }> {
+  const householdId = input.householdId;
+  if (input.kind === "bill") {
+    const created = await createObligation(supabase, {
+      householdId,
+      name: input.title,
+      kind: input.billKind ?? "other",
+      payee: input.payee || null,
+      amountMinor: input.amount ? Math.round(Number(input.amount) * 100) : null,
+      currency: input.currency || null,
+      dueOn: input.dueDate || null,
+    });
+    return { routedTable: "obligations", routedId: created.id };
+  }
+  if (input.kind === "school_item") {
+    if (!input.childMemberId) return { error: "Choose who this is for." };
+    const created = await createSchoolItem(supabase, {
+      householdId,
+      childMemberId: input.childMemberId,
+      kind: input.schoolKind ?? "homework",
+      title: input.title,
+      subject: input.subject || null,
+      detail: input.notes || null,
+      dueAt: schoolDueAt(input.dueDate),
+      estimatedMinutes: null,
+    });
+    return { routedTable: "school_items", routedId: created.id };
+  }
+  if (input.kind === "health_document") {
+    const entitlement = await may(supabase, householdId, "health.tracking");
+    if (!entitlement.allowed) return { error: entitlement.reason };
+
+    // No selection means "for me" — the extracted subjectMemberName is a
+    // hint the confirm screen shows, never something trusted to pick an
+    // identity on its own; RLS is what actually decides whether this
+    // member (self, or a child the actor guards) is one they may file for.
+    const subjectMemberId = input.subjectMemberId || membership.memberId;
+
+    let filePath: string | null = null;
+    const item = await getHomeSendItem(supabase, householdId, input.itemId);
+    if (item?.filePath) {
+      const { data: downloaded, error: downloadError } = await supabase.storage.from("home-send").download(item.filePath);
+      if (downloadError) throw new Error(`home-send download failed: ${downloadError.message}`);
+      const newPath = `${householdId}/${crypto.randomUUID()}`;
+      const { error: uploadError } = await supabase.storage.from("health-records").upload(newPath, downloaded);
+      if (uploadError) throw new Error(`health-records upload failed: ${uploadError.message}`);
+      filePath = newPath;
+    }
+
+    const created = await createRecord(supabase, { householdId, memberId: membership.memberId }, {
+      memberId: subjectMemberId,
+      label: input.title,
+      recordType: input.healthRecordType ?? "other",
+      documentDate: input.documentDate || null,
+      filePath,
+      notes: input.notes || null,
+      privacyScope: "private",
+      sourceType: "home_send_document",
+    });
+    return { routedTable: "health_records", routedId: created.id };
+  }
+  const created = await createConsumable(supabase, {
+    householdId,
+    name: input.title,
+    category: input.category || CONSUMABLE_CATEGORIES[0],
+    unit: input.unit || "unit",
+    typicalQuantity: input.quantity ? Number(input.quantity) : 1,
+  });
+  return { routedTable: "consumables", routedId: created.id };
+}
+
+function revalidateDomains() {
+  revalidatePath("/ai");
+  revalidatePath("/home-send");
+  revalidatePath("/bills");
+  revalidatePath("/school");
+  revalidatePath("/groceries");
+  revalidatePath("/health");
+}
 
 export async function routeHomeSendItemAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
   const parsed = routeSchema.safeParse({
     householdId: formData.get("householdId"),
     itemId: formData.get("itemId"),
+    decision: formData.get("decision") || undefined,
+    existingId: formData.get("existingId") || undefined,
     kind: formData.get("kind"),
     title: formData.get("title"),
     notes: formData.get("notes") || undefined,
@@ -223,151 +362,113 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     subjectMemberId: formData.get("subjectMemberId") || undefined,
     healthRecordType: formData.get("healthRecordType") || undefined,
     documentDate: formData.get("documentDate") || undefined,
-    includeSecondary: formData.get("includeSecondary") || undefined,
-    secondaryTitle: formData.get("secondaryTitle") || undefined,
-    secondaryNotes: formData.get("secondaryNotes") || undefined,
+    needs: formData.getAll("need").filter((value): value is string => typeof value === "string" && value.trim().length > 0),
     confirmDuplicate: formData.get("confirmDuplicate") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  const input = parsed.data;
 
   try {
     const supabase = await createClient();
-    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, input.householdId);
 
-    // Never a quiet second copy (Wave 1 §7): if this is already on record,
-    // or looks like newer details for something that is, the person sees
-    // which record and decides — nothing is written until they say it is a
-    // different one.
-    if (parsed.data.confirmDuplicate !== "on") {
-      const intake = await getHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId).catch(() => null);
-      const found = await reconcileHomeSend(
-        supabase,
-        parsed.data.householdId,
-        {
-          kind: parsed.data.kind,
-          title: parsed.data.title,
-          date: parsed.data.kind === "health_document" ? parsed.data.documentDate || null : parsed.data.dueDate || null,
-          amount: parsed.data.amount ? Number(parsed.data.amount) : null,
-          payee: parsed.data.payee || null,
-          subjectMemberId: parsed.data.kind === "school_item" ? parsed.data.childMemberId || null : parsed.data.kind === "health_document" ? parsed.data.subjectMemberId || null : null,
-          capturedAt: intake?.createdAt ?? null,
-        },
-        { timezone: membership.household.timezone },
-      ).catch(() => null);
-      if (found) return { reconciliation: { verdict: found.verdict, message: found.message } };
+    // "Keep existing" (§13): the record on file stands and nothing is
+    // written; the intake is set aside as handled.
+    if (input.decision === "keep") {
+      await dismissHomeSendItem(supabase, input.householdId, input.itemId, membership.memberId);
+      revalidateDomains();
+      return { notice: "Kept the existing one — nothing changed." };
     }
 
     let routedTable: string;
     let routedId: string;
 
-    if (parsed.data.kind === "bill") {
-      const created = await createObligation(supabase, {
-        householdId: parsed.data.householdId,
-        name: parsed.data.title,
-        kind: parsed.data.billKind ?? "other",
-        payee: parsed.data.payee || null,
-        amountMinor: parsed.data.amount ? Math.round(Number(parsed.data.amount) * 100) : null,
-        currency: parsed.data.currency || null,
-        dueOn: parsed.data.dueDate || null,
+    if (input.decision === "update" || input.decision === "cancel") {
+      if (!input.existingId) return { error: "Please try again." };
+      if (input.kind !== "bill" && input.kind !== "school_item") return { error: "Only a bill or school item can be updated from here." };
+      const revised = await reviseExisting(supabase, membership, { ...input, existingId: input.existingId, decision: input.decision });
+      routedTable = revised.routedTable;
+      routedId = revised.routedId;
+      await routeHomeSendItem(supabase, input.householdId, input.itemId, { routedTable, routedId });
+      await recordHomeSendChange(supabase, {
+        householdId: input.householdId,
+        intakeId: input.itemId,
+        domain: revised.domain,
+        entityId: routedId,
+        createdByMemberId: membership.memberId,
+        changeType: revised.changeType,
+        previous: revised.previous,
       });
-      routedTable = "obligations";
-      routedId = created.id;
-    } else if (parsed.data.kind === "school_item") {
-      if (!parsed.data.childMemberId) return { error: "Choose who this is for." };
-      const created = await createSchoolItem(supabase, {
-        householdId: parsed.data.householdId,
-        childMemberId: parsed.data.childMemberId,
-        kind: parsed.data.schoolKind ?? "homework",
-        title: parsed.data.title,
-        subject: parsed.data.subject || null,
-        detail: parsed.data.notes || null,
-        dueAt: parsed.data.dueDate ? new Date(parsed.data.dueDate).toISOString() : null,
-        estimatedMinutes: null,
-      });
-      routedTable = "school_items";
-      routedId = created.id;
-    } else if (parsed.data.kind === "health_document") {
-      const entitlement = await may(supabase, parsed.data.householdId, "health.tracking");
-      if (!entitlement.allowed) return { error: entitlement.reason };
-
-      // No selection means "for me" — the extracted subjectMemberName is a
-      // hint the confirm screen shows, never something trusted to pick an
-      // identity on its own; RLS is what actually decides whether this
-      // member (self, or a child the actor guards) is one they may file for.
-      const subjectMemberId = parsed.data.subjectMemberId || membership.memberId;
-
-      let filePath: string | null = null;
-      const item = await getHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId);
-      if (item?.filePath) {
-        const { data: downloaded, error: downloadError } = await supabase.storage.from("home-send").download(item.filePath);
-        if (downloadError) throw new Error(`home-send download failed: ${downloadError.message}`);
-        const newPath = `${parsed.data.householdId}/${crypto.randomUUID()}`;
-        const { error: uploadError } = await supabase.storage.from("health-records").upload(newPath, downloaded);
-        if (uploadError) throw new Error(`health-records upload failed: ${uploadError.message}`);
-        filePath = newPath;
+    } else {
+      // Never a quiet second copy (Wave 1 §7, Wave 3 §10): if this is
+      // already on record, or looks like newer details for something that
+      // is, the person sees which record and decides — nothing is written
+      // until they say it is a different one.
+      if (input.confirmDuplicate !== "on") {
+        const intake = await getHomeSendItem(supabase, input.householdId, input.itemId).catch(() => null);
+        const found = await reconcileHomeSend(
+          supabase,
+          input.householdId,
+          {
+            kind: input.kind,
+            title: input.title,
+            date: input.kind === "health_document" ? input.documentDate || null : input.dueDate || null,
+            amount: input.amount ? Number(input.amount) : null,
+            payee: input.payee || null,
+            subjectMemberId: input.kind === "school_item" ? input.childMemberId || null : input.kind === "health_document" ? input.subjectMemberId || null : null,
+            capturedAt: intake?.createdAt ?? null,
+            change: intake?.extracted?.change ?? "new",
+          },
+          { timezone: membership.household.timezone },
+        ).catch(() => null);
+        if (found) return { reconciliation: found };
       }
 
-      const created = await createRecord(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, {
-        memberId: subjectMemberId,
-        label: parsed.data.title,
-        recordType: parsed.data.healthRecordType ?? "other",
-        documentDate: parsed.data.documentDate || null,
-        filePath,
-        notes: parsed.data.notes || null,
-        privacyScope: "private",
-        sourceType: "home_send_document",
-      });
-      routedTable = "health_records";
-      routedId = created.id;
-    } else {
-      const created = await createConsumable(supabase, {
-        householdId: parsed.data.householdId,
-        name: parsed.data.title,
-        category: parsed.data.category || CONSUMABLE_CATEGORIES[0],
-        unit: parsed.data.unit || "unit",
-        typicalQuantity: parsed.data.quantity ? Number(parsed.data.quantity) : 1,
-      });
-      routedTable = "consumables";
-      routedId = created.id;
-    }
-
-    await routeHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId, { routedTable, routedId });
-    await recordHomeSendChange(supabase, {
-      householdId: parsed.data.householdId,
-      intakeId: parsed.data.itemId,
-      domain: parsed.data.kind,
-      entityId: routedId,
-      createdByMemberId: membership.memberId,
-    });
-
-    // A second, different-domain need the same content also implied — a
-    // school notice that also asks for a specific item, say. Only ever a
-    // grocery suggestion, and only ever written once the household ticks
-    // the box for it too (never auto-added alongside the primary).
-    if (parsed.data.kind !== "grocery_item" && parsed.data.includeSecondary === "on" && parsed.data.secondaryTitle) {
-      const secondaryConsumable = await createConsumable(supabase, {
-        householdId: parsed.data.householdId,
-        name: parsed.data.secondaryTitle,
-        category: CONSUMABLE_CATEGORIES[0],
-        unit: "unit",
-        typicalQuantity: 1,
-      });
+      const created = await createNew(supabase, membership, input);
+      if ("error" in created) return { error: created.error };
+      routedTable = created.routedTable;
+      routedId = created.routedId;
+      await routeHomeSendItem(supabase, input.householdId, input.itemId, { routedTable, routedId });
       await recordHomeSendChange(supabase, {
-        householdId: parsed.data.householdId,
-        intakeId: parsed.data.itemId,
-        domain: "grocery_item",
-        entityId: secondaryConsumable.id,
+        householdId: input.householdId,
+        intakeId: input.itemId,
+        domain: input.kind,
+        entityId: routedId,
         createdByMemberId: membership.memberId,
       });
     }
 
-    revalidatePath("/ai");
-    revalidatePath("/home-send");
-    revalidatePath("/bills");
-    revalidatePath("/school");
-    revalidatePath("/groceries");
-    revalidatePath("/health");
-    return { notice: "Added. WonderHome will track it from here." };
+    // What else the same content asked for (§11) — each ticked need its own
+    // grocery row and its own change, so each can be undone on its own.
+    let needsAdded = 0;
+    if (input.kind !== "grocery_item") {
+      for (const title of [...new Set(input.needs)]) {
+        const consumable = await createConsumable(supabase, {
+          householdId: input.householdId,
+          name: title,
+          category: CONSUMABLE_CATEGORIES[0],
+          unit: "unit",
+          typicalQuantity: 1,
+        });
+        await recordHomeSendChange(supabase, {
+          householdId: input.householdId,
+          intakeId: input.itemId,
+          domain: "grocery_item",
+          entityId: consumable.id,
+          createdByMemberId: membership.memberId,
+        });
+        needsAdded += 1;
+      }
+    }
+
+    revalidateDomains();
+    const main =
+      input.decision === "update"
+        ? "Updated the existing one."
+        : input.decision === "cancel"
+          ? "Cancelled the existing one."
+          : "Added. WonderHome will track it from here.";
+    return { notice: needsAdded > 0 ? `${main} ${needsAdded === 1 ? "One thing" : `${needsAdded} things`} added to Groceries too.` : main };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }
@@ -394,7 +495,12 @@ export async function dismissHomeSendItemAction(_previous: RouteHomeItemState, f
 
 const undoSchema = z.object({ householdId: z.uuid(), changeId: z.uuid() });
 
-/** Undoing having sent something in (CLAUDE.md rule 12): reverses the one write routing made, through the same domain service a manual remove would use. */
+/**
+ * Undoing what sending something in did (CLAUDE.md rule 12, Wave 3 §10):
+ * reverses exactly the one change — removes what it created, or puts back
+ * what it updated or cancelled — through the same domain service a manual
+ * edit or remove would use.
+ */
 export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
   const parsed = undoSchema.safeParse({ householdId: formData.get("householdId"), changeId: formData.get("changeId") });
   if (!parsed.success) return { error: "Please try again." };
@@ -402,35 +508,50 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
+    const householdId = parsed.data.householdId;
 
-    const change = await getHomeSendChange(supabase, parsed.data.householdId, parsed.data.changeId);
+    const change = await getHomeSendChange(supabase, householdId, parsed.data.changeId);
     if (!change) return { error: "That is not part of this household." };
     if (change.undoneAt) return { error: "Already undone." };
+    const previous = change.previous ?? {};
 
-    if (change.domain === "bill") {
-      await cancelObligation(supabase, { id: change.entityId, householdId: parsed.data.householdId });
+    if (change.changeType === "updated") {
+      if (change.domain === "school_item") {
+        await updateSchoolItem(supabase, householdId, change.entityId, { dueAt: (previous.dueAt as string | null | undefined) ?? null });
+      } else if (change.domain === "bill") {
+        await updateObligation(supabase, {
+          id: change.entityId,
+          householdId,
+          dueOn: (previous.dueOn as string | null | undefined) ?? null,
+          amountMinor: (previous.amountMinor as number | null | undefined) ?? null,
+        });
+      }
+    } else if (change.changeType === "cancelled") {
+      const status = typeof previous.status === "string" ? previous.status : null;
+      if (change.domain === "school_item") {
+        await restoreSchoolItem(supabase, householdId, change.entityId, (status && status !== "cancelled" ? status : "pending") as "pending");
+      } else if (change.domain === "bill") {
+        await restoreObligation(supabase, { id: change.entityId, householdId, status: status && status !== "cancelled" ? status : "expected" });
+      }
+    } else if (change.domain === "bill") {
+      await cancelObligation(supabase, { id: change.entityId, householdId });
     } else if (change.domain === "school_item") {
-      await cancelSchoolItem(supabase, parsed.data.householdId, change.entityId);
+      await cancelSchoolItem(supabase, householdId, change.entityId);
     } else if (change.domain === "health_document") {
-      await archiveRecord(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, change.entityId);
+      await archiveRecord(supabase, { householdId, memberId: membership.memberId }, change.entityId);
     } else {
-      await retireConsumable(supabase, { id: change.entityId, householdId: parsed.data.householdId });
+      await retireConsumable(supabase, { id: change.entityId, householdId });
     }
 
-    await undoHomeSendChange(supabase, parsed.data.householdId, change.id, membership.memberId);
+    await undoHomeSendChange(supabase, householdId, change.id, membership.memberId);
 
-    // An intake with a secondary alongside its primary is not fully undone
-    // until both are — undoing one of two leaves the other genuinely live.
-    const stillActive = await hasActiveHomeSendChanges(supabase, parsed.data.householdId, change.intakeId);
-    if (!stillActive) await markHomeSendUndone(supabase, parsed.data.householdId, change.intakeId);
+    // An intake with needs alongside its primary is not fully undone until
+    // all of them are — undoing one leaves the others genuinely live.
+    const stillActive = await hasActiveHomeSendChanges(supabase, householdId, change.intakeId);
+    if (!stillActive) await markHomeSendUndone(supabase, householdId, change.intakeId);
 
-    revalidatePath("/ai");
-    revalidatePath("/home-send");
-    revalidatePath("/bills");
-    revalidatePath("/school");
-    revalidatePath("/groceries");
-    revalidatePath("/health");
-    return { notice: "Undone. WonderHome forgot it again." };
+    revalidateDomains();
+    return { notice: change.changeType === "created" ? "Undone. WonderHome forgot it again." : "Undone. The record is back the way it was." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }

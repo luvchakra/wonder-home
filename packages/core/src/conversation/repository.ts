@@ -3,7 +3,7 @@ import type { PendingClarification } from "./clarify";
 
 import { ApiError } from "../api/errors";
 import type { HouseholdIntent } from "./intent";
-import { reconcileMemory, type Memory } from "./memory";
+import { claimFor, isReviewable, reconcileMemory, reviewPlacementFor, type Memory } from "./memory";
 import type { ActionPreview, Proposal } from "./proposal";
 
 /**
@@ -232,6 +232,38 @@ export async function pendingAction(
 }
 
 /**
+ * The last thing this conversation proposed or did, as it was recorded —
+ * what HomeBrain's "why?" answers cite (Wave 2 §10). The reason is the one
+ * written into the preview when it was proposed, and the failure is the one
+ * the executor reported; nothing here is reconstructed after the fact.
+ */
+export async function latestAction(
+  admin: SupabaseClient,
+  sessionId: string,
+): Promise<{ summary: string | null; actionType: string; status: string; kind: string | null; because: string | null; failure: string | null } | null> {
+  const { data } = await admin
+    .from("conversation_actions")
+    .select("action_type, approval_status, payload, result")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  const payload = (data.payload as Row | null) ?? {};
+  const preview = payload.preview as ActionPreview | null | undefined;
+  const result = (data.result as Row | null) ?? {};
+  return {
+    summary: preview?.summary ?? null,
+    actionType: data.action_type as string,
+    status: data.approval_status as string,
+    kind: typeof payload.kind === "string" ? payload.kind : null,
+    because: preview?.because ?? null,
+    failure: typeof result.reason === "string" ? result.reason : null,
+  };
+}
+
+/**
  * Undoing the last thing a member said, so it can be said again differently
  * (story 04-003's "actually" — as a structural edit rather than a new turn).
  *
@@ -380,11 +412,20 @@ export async function decideAction(
 /**
  * Remembers something a person stated, reconciled against what is already
  * believed. A confirmed fact is never quietly replaced.
+ *
+ * Every belief HomeTalk learns also becomes a HomeBrain Review item (Wave 2
+ * §8, §9), linked by `memory_id`, so the household can see it, confirm it,
+ * correct it or remove it — and a change of mind ("actually Asmi is okay
+ * with mushrooms now") marks the old item corrected, with who said so, in
+ * the same history Review's own corrections write to. Written with the
+ * admin client: the review tables are read-only to members by design, and
+ * this runs only after the turn's own authorization.
  */
 export async function remember(
   admin: SupabaseClient,
   householdId: string,
   memory: Memory,
+  statedBy?: { memberId: string; displayName: string },
 ): Promise<void> {
   const { data: existingRow } = await admin
     .from("memories")
@@ -418,19 +459,75 @@ export async function remember(
     await admin.from("memories").update({ status: "superseded" }).eq("id", existing.id);
   }
 
-  const { error } = await admin.from("memories").insert({
+  const { data: inserted, error } = await admin
+    .from("memories")
+    .insert({
+      household_id: householdId,
+      scope: update.memory.scope,
+      member_id: update.memory.memberId,
+      category: update.memory.category,
+      key: update.memory.key,
+      value: update.memory.value,
+      source_type: update.memory.sourceType,
+      source_id: update.memory.sourceId,
+      confidence: update.memory.confidence,
+      status: update.memory.status,
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) throw new Error(`remember failed: ${error?.code ?? "unknown"}`);
+
+  if (!isReviewable(update.memory)) return;
+
+  const now = new Date().toISOString();
+  const claim = claimFor(update.memory);
+  const placement = reviewPlacementFor(update.memory);
+
+  // What it replaces, in Review: retired as corrected, never deleted.
+  let replaced: { id: string; claim: string; status: string } | null = null;
+  if (update.kind === "supersede" && existing) {
+    const { data: previous } = await admin
+      .from("certification_items")
+      .select("id, claim, status")
+      .eq("household_id", householdId)
+      .eq("memory_id", existing.id)
+      .in("status", ["learned", "confirmed", "needs_review"])
+      .limit(1)
+      .maybeSingle();
+    if (previous) {
+      replaced = { id: previous.id as string, claim: previous.claim as string, status: previous.status as string };
+      await admin
+        .from("certification_items")
+        .update({ status: "corrected", last_reviewed_at: now, last_reviewed_by: statedBy?.memberId ?? null })
+        .eq("id", replaced.id);
+    }
+  }
+
+  const { error: itemError } = await admin.from("certification_items").insert({
     household_id: householdId,
+    memory_id: inserted.id as string,
+    category: placement.category,
+    claim,
     scope: update.memory.scope,
     member_id: update.memory.memberId,
-    category: update.memory.category,
-    key: update.memory.key,
-    value: update.memory.value,
     source_type: update.memory.sourceType,
-    source_id: update.memory.sourceId,
-    confidence: update.memory.confidence,
-    status: update.memory.status,
+    source_detail: statedBy ? `told by ${statedBy.displayName}` : null,
+    status: update.memory.status === "confirmed" ? "confirmed" : "learned",
+    risk_level: placement.risk,
   });
-  if (error) throw new Error(`remember failed: ${error.code ?? "unknown"}`);
+  if (itemError) throw new Error(`remember review item failed: ${itemError.code ?? "unknown"}`);
+
+  if (replaced && statedBy) {
+    await admin.from("certification_reviews").insert({
+      household_id: householdId,
+      item_id: replaced.id,
+      reviewer_member_id: statedBy.memberId,
+      decision: "corrected",
+      previous_value: { claim: replaced.claim, status: replaced.status },
+      new_value: { claim, status: "learned" },
+      note: "Corrected in HomeTalk.",
+    });
+  }
 }
 
 function toAction(row: Row): ConversationAction {

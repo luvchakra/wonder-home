@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
+import { forgetHouseholdContext } from "@wonderhome/core/conversation/brain";
 import { applyReview, type CertificationItem } from "@wonderhome/core/household/certification";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
@@ -64,7 +65,10 @@ export async function addBeliefAction(_previous: ActionState, formData: FormData
     }
 
     const now = new Date().toISOString();
-    const { error } = await supabase.from("certification_items").insert({
+    // The review tables are read-only to a session by design (RLS has no
+    // insert policy), so the write is the server's, after the membership and
+    // adult check above — the same shape reviewCertificationAction uses.
+    const { error } = await createAdminClient().from("certification_items").insert({
       household_id: parsed.data.householdId,
       category: parsed.data.category,
       claim: parsed.data.claim,
@@ -78,6 +82,7 @@ export async function addBeliefAction(_previous: ActionState, formData: FormData
     });
     if (error) throw new Error(`addBelief failed: ${error.code ?? "unknown"}`);
 
+    forgetHouseholdContext(parsed.data.householdId);
     revalidatePath("/certification");
     return { notice: "Added, and confirmed — it's your own household saying so." };
   } catch (error) {
@@ -107,7 +112,7 @@ export async function reviewCertificationAction(_previous: ActionState, formData
 
     const { data: row } = await supabase
       .from("certification_items")
-      .select("id, category, claim, scope, member_id, source_type, source_detail, status, risk_level, last_reviewed_at")
+      .select("id, memory_id, category, claim, scope, member_id, source_type, source_detail, status, risk_level, last_reviewed_at")
       .eq("id", parsed.data.itemId)
       .eq("household_id", parsed.data.householdId)
       .maybeSingle();
@@ -141,8 +146,44 @@ export async function reviewCertificationAction(_previous: ActionState, formData
       })
       .eq("id", item.id);
 
+    // What HomeBrain actually reads (Wave 2 §8): a belief HomeTalk learned
+    // lives in `memories`, and a decision here has to reach it — confirmed
+    // becomes the household's word, removed stops being believed, corrected
+    // replaces it with what the person just said.
+    const memoryId = (row.memory_id as string | null) ?? null;
+    let replacementMemoryId: string | null = null;
+    if (memoryId) {
+      if (parsed.data.decision === "confirmed") {
+        await admin.from("memories").update({ status: "confirmed", confidence: 1 }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
+      } else if (parsed.data.decision === "removed") {
+        await admin.from("memories").update({ status: "rejected" }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
+      } else if (correction) {
+        const { data: previous } = await admin.from("memories").select("scope, member_id, category, key").eq("id", memoryId).maybeSingle();
+        if (previous) {
+          await admin.from("memories").update({ status: "superseded" }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
+          const { data: replacement } = await admin
+            .from("memories")
+            .insert({
+              household_id: parsed.data.householdId,
+              scope: previous.scope,
+              member_id: previous.member_id,
+              category: previous.category,
+              key: previous.key,
+              value: { statement: correction },
+              source_type: "conversation",
+              confidence: 1,
+              status: "confirmed",
+            })
+            .select("id")
+            .single();
+          replacementMemoryId = (replacement?.id as string | undefined) ?? null;
+        }
+      }
+    }
+
     if (correction) {
       const { error: insertError } = await admin.from("certification_items").insert({
+        memory_id: replacementMemoryId,
         household_id: parsed.data.householdId,
         category: item.category,
         claim: correction,
@@ -168,6 +209,8 @@ export async function reviewCertificationAction(_previous: ActionState, formData
       new_value: { claim: correction ?? item.claim, status: updated.status },
     });
 
+    // HomeBrain answers from what was just decided, not from a copy read a moment ago.
+    forgetHouseholdContext(parsed.data.householdId);
     revalidatePath("/certification");
     return {
       notice:

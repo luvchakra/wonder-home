@@ -2,12 +2,12 @@ import { Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { consumableNames } from "@wonderhome/core/commerce/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
-import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
-import { createHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
-import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
+import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
+import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -16,15 +16,15 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { HomeSendChannels } from "../_components/home-send-channels";
-import { HomeSendInbox } from "../_components/home-send-inbox";
+import { prepareReview } from "../(auth)/home-send-review";
+import { HomeSendInbox, type PreparedReview } from "../_components/home-send-inbox";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "HomeSend" };
 export const dynamic = "force-dynamic";
 
 const SHARE_ERROR_MESSAGES: Record<string, string> = {
-  type: "That share wasn't a JPEG, PNG or WebP image, so WonderHome couldn't take it in.",
-  size: "That shared file is too large — please use one under 8MB.",
+  size: "That shared file is too large — please use one under 4MB.",
   upload: "That share couldn't be saved — please try sending it in again.",
   rate_limited: "Too many shares from this connection recently — please wait a few minutes and try again.",
 };
@@ -45,39 +45,16 @@ async function resumeShareHandoff(
   const content = await consumeShareHandoff(createAdminClient(), token);
   if (!content) return;
 
-  const itemId = crypto.randomUUID();
-
-  if (content.kind === "file") {
-    const securityStatus = await assessUploadSecurity(content.fileContentType, content.fileBytes);
-    const path = `${householdId}/${itemId}`;
-    const { error: uploadError } = await supabase.storage
-      .from("home-send")
-      .upload(path, content.fileBytes, { contentType: content.fileContentType });
-    if (uploadError) return;
-
-    await createHomeSendItem(supabase, {
-      id: itemId,
-      householdId,
-      createdByMemberId: memberId,
-      source: "manual_upload",
-      filePath: path,
-      securityStatus,
-    });
-
-    if (securityStatus !== "rejected") {
-      await classifyAndSave(supabase, householdId, itemId, {
-        image: { mediaType: content.fileContentType as "image/jpeg" | "image/png" | "image/webp", base64: content.fileBytes.toString("base64") },
-      });
+  const actor = { householdId, memberId };
+  try {
+    if (content.kind === "file") {
+      await ingestFile(supabase, actor, { bytes: new Uint8Array(content.fileBytes), claimedType: content.fileContentType });
+    } else {
+      await ingestText(supabase, actor, { text: content.rawText });
     }
-  } else {
-    await createHomeSendItem(supabase, {
-      id: itemId,
-      householdId,
-      createdByMemberId: memberId,
-      source: "pasted_text",
-      rawText: content.rawText,
-    });
-    await classifyAndSave(supabase, householdId, itemId, { text: content.rawText });
+  } catch {
+    // A share that cannot be taken in now is not worth failing the page
+    // over; the inbox simply does not show it.
   }
 }
 
@@ -135,20 +112,39 @@ export default async function HomeSendPage({
   ]);
 
   const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
+  // Pending intake survives closing the page (Wave 3 §14): whatever is
+  // waiting on a person, and whatever failed safely, is read back from the
+  // table every time — never held only in the page that sent it.
   const pending = items.filter((item) => item.status === "received" || item.status === "classified");
+  const failed = items.filter((item) => item.status === "failed");
+
+  // Who each waiting item is for, and whether it is already on record —
+  // worked out now, on this member's own client, so opening one shows the
+  // same "I found Asmi's existing Science Exhibition" a fresh send would.
+  const reviews: Record<string, PreparedReview> = {};
+  await Promise.all(
+    pending.slice(0, 10).map(async (item) => {
+      const review = await prepareReview(supabase, membership, item).catch(() => null);
+      if (review && (review.subject || review.reconciliation)) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation };
+    }),
+  );
   const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);
+  // "Also added to Groceries: White T-shirt" — each need by name, so two of
+  // them from one notice can be told apart (and undone) separately.
+  const groceryIds = changes.filter((change) => change.domain === "grocery_item").map((change) => change.entityId);
+  const groceryNames = await consumableNames(supabase, householdId, groceryIds).catch(() => ({}));
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise hidden lg:block">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">HomeSend</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">A photo, a file, or a forwarded message — drop it here and HomeBrain reads it.</p>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">A photo, a PDF, a voice note, a link or a forwarded message — drop it here and HomeBrain reads it.</p>
         </header>
 
         {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
 
-        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} history={history} changes={changes} />
+        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} />
 
         <HomeSendChannels
           householdId={householdId}

@@ -103,7 +103,7 @@ export type CreateRecordInput = {
   filePath?: string | null;
   notes?: string | null;
   privacyScope: PrivacyScope;
-  /** Defaults to `manual_entry`; `classifyAndSave`'s HomeSend caller passes `home_send_document`. */
+  /** Defaults to `manual_entry`; HomeSend's routing passes `home_send_document`. */
   sourceType?: RecordSourceType;
 };
 

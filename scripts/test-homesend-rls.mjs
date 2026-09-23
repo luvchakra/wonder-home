@@ -256,7 +256,7 @@ test("a member cannot record a change attributed to someone else", () => {
   );
 });
 
-test("only one change per intake", () => {
+test("the same record is only recorded once per intake", () => {
   assert.ok(
     deniedForProfile(
       HEAD,
@@ -493,7 +493,8 @@ test("another household cannot see this household's HomeSend address", () => {
 
 // ---------------------------------------------------------------------------
 // Phase 3: a second, different-domain change on the same intake (a bill that
-// also implies a grocery item) — homesend_changes_one_per_intake_domain.
+// also implies a grocery item) — one change per record per intake
+// (homesend_changes_one_per_intake_record, Wave 3 §11).
 // ---------------------------------------------------------------------------
 
 let thirdItemId = "";
@@ -535,19 +536,15 @@ test("a second write to a different domain on the same intake is allowed", () =>
   assert.ok(thirdGroceryChangeId.length > 0);
 });
 
-test("a second write to the *same* domain on that intake is still refused", () => {
-  const anotherObligationId = psql(
-    `insert into public.obligations (household_id, name, kind) values ('${household}', 'Duplicate fee', 'school_fee') returning id;`,
-    options,
-  );
+test("the same record written twice by that intake is still refused", () => {
   assert.ok(
     deniedForProfile(
       HEAD,
       `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
-       values ('${household}', '${thirdItemId}', 'bill', '${anotherObligationId}', '${headMember}');`,
+       select household_id, intake_id, domain, entity_id, created_by_member_id from public.homesend_changes where id = '${thirdGroceryChangeId}';`,
       options,
     ),
-    "a second change was recorded for a domain the intake already has a change for",
+    "the same record was recorded twice for one intake",
   );
 });
 
@@ -689,3 +686,208 @@ function otherAdultMember() {
     options,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Wave 3 (story 14-011): every input type in one table, one canonical
+// understanding, and an inbox that says what failed safely.
+// ---------------------------------------------------------------------------
+
+function refused(sql, asHead = true) {
+  try {
+    if (asHead) asProfile(HEAD, sql, options);
+    else psql(sql, options);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+const HASH = "a".repeat(64);
+
+test("a member can send a link, a voice note or a PDF — each with the content its source needs", () => {
+  const link = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, source_url, content_hash)
+     values ('${household}', '${headMember}', 'link', 'https://school.example.org/notice', '${HASH}') returning id;`,
+    options,
+  );
+  const voice = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, file_path, content_type, transcript_confidence)
+     values ('${household}', '${headMember}', 'audio_note', '${household}/voice-1', 'audio/webm', 0.82) returning id;`,
+    options,
+  );
+  const pdf = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, file_path, content_type)
+     values ('${household}', '${headMember}', 'manual_upload', '${household}/circular.pdf', 'application/pdf') returning id;`,
+    options,
+  );
+  assert.ok(link && voice && pdf);
+});
+
+test("a link needs its address, and a voice note needs its recording", () => {
+  assert.ok(refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text) values ('${household}', '${headMember}', 'link', 'no address');`), "a link without source_url was accepted");
+  assert.ok(refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text) values ('${household}', '${headMember}', 'audio_note', 'no recording');`), "a voice note without a file was accepted");
+});
+
+test("a failed item must say why, and the reason must be one the inbox can put into words", () => {
+  assert.ok(refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, status) values ('${household}', '${headMember}', 'pasted_text', 'x', 'failed');`), "a failed item with no reason was accepted");
+  assert.ok(
+    refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, status, failure_reason) values ('${household}', '${headMember}', 'pasted_text', 'x', 'failed', 'because');`),
+    "an unknown failure reason was accepted",
+  );
+  const id = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, source_url, status, failure_reason)
+     values ('${household}', '${headMember}', 'link', 'http://169.254.169.254/', 'failed', 'link_blocked') returning id;`,
+    options,
+  );
+  assert.ok(id.length > 0);
+});
+
+test("a failed item can still be dismissed, keeping why it failed", () => {
+  const id = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, status, failure_reason)
+     values ('${household}', '${headMember}', 'pasted_text', 'unreadable scan', 'failed', 'unreadable') returning id;`,
+    options,
+  );
+  asProfile(OTHER_ADULT, `update public.home_send_items set status = 'dismissed' where id = '${id}';`, options);
+  assert.equal(psql(`select status || ':' || failure_reason from public.home_send_items where id = '${id}';`, options), "dismissed:unreadable");
+});
+
+test("a content hash must be a real sha256, and the same content can be looked up in one household", () => {
+  assert.ok(refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, content_hash) values ('${household}', '${headMember}', 'pasted_text', 'x', 'not-a-hash');`), "a malformed content hash was accepted");
+  assert.equal(
+    asProfile(HEAD, `select count(*) from public.home_send_items where household_id = '${household}' and content_hash = '${HASH}';`, options),
+    "1",
+  );
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.home_send_items where content_hash = '${HASH}';`, options), "0");
+});
+
+test("the canonical understanding round-trips, and a transcript confidence stays between 0 and 1", () => {
+  const id = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, understanding)
+     values ('${household}', '${headMember}', 'pasted_text', 'Sports Day is Saturday',
+             '{"readable": true, "kind": "school_item", "safety": {"instructionsIgnored": false, "signals": []}}'::jsonb) returning id;`,
+    options,
+  );
+  assert.equal(psql(`select understanding->>'kind' from public.home_send_items where id = '${id}';`, options), "school_item");
+  assert.ok(
+    refused(`insert into public.home_send_items (household_id, created_by_member_id, source, file_path, transcript_confidence) values ('${household}', '${headMember}', 'audio_note', 'p/v', 1.5);`),
+    "a transcript confidence above 1 was accepted",
+  );
+});
+
+test("a page's worth of text fits; more than the understanding step reads does not", () => {
+  const long = "a".repeat(11000);
+  const id = asProfile(HEAD, `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text) values ('${household}', '${headMember}', 'pasted_text', '${long}') returning id;`, options);
+  assert.ok(id.length > 0);
+  assert.ok(refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text) values ('${household}', '${headMember}', 'pasted_text', '${"a".repeat(12001)}');`), "text over 12,000 characters was accepted");
+});
+
+test("an email attachment belongs to its email and, like the email, to no acting member", () => {
+  const email = psql(
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, external_id)
+     values ('${household}', null, 'email', 'See the attached circular', 'ext-attach-parent') returning id;`,
+    options,
+  );
+  const attachment = psql(
+    `insert into public.home_send_items (household_id, created_by_member_id, source, file_path, parent_item_id, external_id, content_type)
+     values ('${household}', null, 'email_attachment', '${household}/attach-1', '${email}', 'ext-attach-parent:att-1', 'application/pdf') returning id;`,
+    options,
+  );
+  assert.ok(attachment.length > 0);
+  assert.ok(
+    refused(`insert into public.home_send_items (household_id, created_by_member_id, source, file_path) values ('${household}', null, 'email_attachment', 'x/y');`, false),
+    "an attachment with no parent email was accepted",
+  );
+  assert.ok(
+    refused(`insert into public.home_send_items (household_id, created_by_member_id, source, file_path, parent_item_id) values ('${household}', '${headMember}', 'email_attachment', 'x/y', '${email}');`),
+    "a member was able to claim to have sent an email attachment",
+  );
+  assert.ok(
+    refused(`insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, parent_item_id) values ('${household}', '${headMember}', 'pasted_text', 'x', '${email}');`),
+    "a non-attachment was given a parent",
+  );
+});
+
+test("a share handoff can stage a PDF or a voice note, not only a photo", () => {
+  psql(
+    `insert into public.homesend_share_handoffs (token, kind, file_bytes, file_content_type)
+     values ('tok-pdf-1', 'file', '\\x255044462d', 'application/pdf');`,
+    options,
+  );
+  assert.equal(psql(`select file_content_type from public.homesend_share_handoffs where token = 'tok-pdf-1';`, options), "application/pdf");
+});
+
+// ---------------------------------------------------------------------------
+// Wave 3 §10, §11: a routed item can update or cancel a record already on
+// record (and undo puts back exactly what it replaced), and one notice can
+// write two different grocery needs.
+// ---------------------------------------------------------------------------
+
+function newIntake(text) {
+  return asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+     values ('${household}', '${headMember}', 'pasted_text', '${text}') returning id;`,
+    options,
+  );
+}
+
+test("an existing change row reads as 'created' with nothing it replaced", () => {
+  assert.equal(psql(`select change_type || ':' || coalesce(previous::text, 'null') from public.homesend_changes where id = '${changeId}';`, options), "created:null");
+});
+
+test("an update records what it replaced, and a cancellation too", () => {
+  const moved = newIntake("Science Exhibition moved to 29 September");
+  const exhibition = psql(`insert into public.obligations (household_id, name, kind, due_on) values ('${household}', 'Exhibition fee', 'school_fee', '2026-09-28') returning id;`, options);
+  const updated = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, change_type, previous)
+     values ('${household}', '${moved}', 'bill', '${exhibition}', '${headMember}', 'updated', '{"dueOn": "2026-09-28"}'::jsonb) returning id;`,
+    options,
+  );
+  assert.equal(psql(`select previous->>'dueOn' from public.homesend_changes where id = '${updated}';`, options), "2026-09-28");
+
+  const called = newIntake("Sports Day is cancelled");
+  const cancelled = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, change_type, previous)
+     values ('${household}', '${called}', 'bill', '${exhibition}', '${headMember}', 'cancelled', '{"status": "received"}'::jsonb) returning id;`,
+    options,
+  );
+  assert.ok(cancelled.length > 0);
+});
+
+test("an update or cancellation must say what it replaced, and a creation must not", () => {
+  const intake = newIntake("Fee revised");
+  const record = psql(`insert into public.obligations (household_id, name, kind) values ('${household}', 'Revised fee', 'school_fee') returning id;`, options);
+  const insert = (type, previous) =>
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, change_type, previous)
+     values ('${household}', '${intake}', 'bill', '${record}', '${headMember}', '${type}', ${previous});`;
+  assert.ok(deniedForProfile(HEAD, insert("updated", "null"), options), "an update with nothing it replaced was accepted");
+  assert.ok(deniedForProfile(HEAD, insert("cancelled", "null"), options), "a cancellation with nothing it replaced was accepted");
+  assert.ok(deniedForProfile(HEAD, insert("created", `'{"dueOn": "2026-09-28"}'::jsonb`), options), "a creation claiming to replace something was accepted");
+  assert.ok(deniedForProfile(HEAD, insert("deleted", `'{}'::jsonb`), options), "an unknown change type was accepted");
+});
+
+test("one notice can add two different grocery needs, each undone on its own", () => {
+  const notice = newIntake("Sports Day: bring a white T-shirt and sports shoes");
+  const [shirt, shoes] = ["White T-shirt", "Sports shoes"].map((name) =>
+    psql(`insert into public.consumables (household_id, name, category, unit) values ('${household}', '${name}', 'household', 'unit') returning id;`, options),
+  );
+  const [shirtChange] = [shirt, shoes].map((consumable) =>
+    asProfile(
+      HEAD,
+      `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id)
+       values ('${household}', '${notice}', 'grocery_item', '${consumable}', '${headMember}') returning id;`,
+      options,
+    ),
+  );
+  asProfile(HEAD, `update public.homesend_changes set undone_at = now(), undone_by_member_id = '${headMember}' where id = '${shirtChange}';`, options);
+  assert.equal(psql(`select count(*) from public.homesend_changes where intake_id = '${notice}' and undone_at is null;`, options), "1");
+});

@@ -1,13 +1,16 @@
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { resolveHouseholdIdByAddress } from "@wonderhome/core/homesend/addresses";
 import {
+  fetchReceivedAttachment,
   fetchReceivedEmail,
   parseEmailReceivedEvent,
   platformResendConfig,
+  toEmailSource,
   verifySvixSignature,
 } from "@wonderhome/core/homesend/email-gateway";
-import type { HomeSendExtraction } from "@wonderhome/core/homesend/items";
-import { createEmailHomeSendItem, setHomeSendClassification } from "@wonderhome/core/homesend/repository";
+import { ingestEmailAttachment, understand } from "@wonderhome/core/homesend/ingest";
+import { contentHash, htmlToText, MAX_BYTES, normalizeText } from "@wonderhome/core/homesend/normalize";
+import { createEmailHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -35,6 +38,12 @@ import { log } from "@wonderhome/core/observability/logger";
  * consistent with `e2e/domains.spec.ts`'s "every endpoint refuses an
  * anonymous caller the same way" sweep, without needing a special case.
  */
+/** "Rao Home <hs-abc@inbox.example>" → "hs-abc@inbox.example". */
+function bareAddress(value: string): string {
+  const angled = /<([^>]+)>/.exec(value);
+  return (angled?.[1] ?? value).trim().toLowerCase();
+}
+
 function unauthenticated(): Response {
   return new Response(
     JSON.stringify({ error: { code: "unauthenticated", message: "Authentication required.", requestId: "homesend-email-webhook" } }),
@@ -70,20 +79,25 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const supabase = createAdminClient();
-  const candidates = [...event.data.to, ...event.data.received_for];
-  let householdId: string | null = null;
+
+  // The recipient address is the routing key (§5) — every address the
+  // message was delivered to, each resolved server-side. One email sent to
+  // two households' addresses is two intakes, one per household; a revoked
+  // or unknown address resolves to nothing.
+  const candidates = [...new Set([...event.data.to, ...event.data.received_for].map(bareAddress))];
+  const households = new Set<string>();
   for (const candidate of candidates) {
-    householdId = await resolveHouseholdIdByAddress(supabase, candidate);
-    if (householdId) break;
+    const householdId = await resolveHouseholdIdByAddress(supabase, candidate);
+    if (householdId) households.add(householdId);
   }
-  if (!householdId) {
+  if (households.size === 0) {
     // No household recognizes this address — never confirm or deny which
     // addresses are real to an unauthenticated sender; just ack and stop.
     return new Response(null, { status: 200 });
   }
 
-  const email = await fetchReceivedEmail(event.data.email_id, config.apiKey);
-  if (!email) {
+  const received = await fetchReceivedEmail(event.data.email_id, config.apiKey);
+  if (!received) {
     // Could not retrieve the message content — a non-2xx tells Resend to
     // retry, per the architecture doc's "persistence/fetch failure -> retry".
     return new Response(JSON.stringify({ error: { code: "upstream_fetch_failed", message: "Could not retrieve the email." } }), {
@@ -91,77 +105,91 @@ export async function POST(request: Request): Promise<Response> {
       headers: { "content-type": "application/json; charset=utf-8" },
     });
   }
-  if (!email.text || email.text.trim().length === 0) {
-    // Nothing to classify (an HTML-only email with no text part, say) — ack
-    // rather than retry forever on a message that will never have text.
+  const email = toEmailSource(received);
+
+  // The plain-text part when there is one; otherwise the HTML part, reduced
+  // to text first — never handed to a model as markup (Wave 3 §6).
+  const body = email.text?.trim() ? normalizeText(email.text) : email.html ? htmlToText(email.html).text : "";
+  if (!body && email.attachments.length === 0) {
+    // Nothing readable at all — ack rather than retry forever on a message
+    // that will never have text.
     return new Response(null, { status: 200 });
   }
 
-  const { item, duplicate } = await createEmailHomeSendItem(supabase, {
-    householdId,
-    externalId: email.id,
-    senderAddress: email.from,
-    rawText: email.text.slice(0, 4000),
-  });
-  if (duplicate) {
-    return new Response(null, { status: 200 });
+  // Each attachment is fetched once, however many households it is for.
+  let retryAttachments = false;
+  const attachments: { id: string; bytes: Uint8Array; contentType: string; filename: string | null }[] = [];
+  for (const attachment of email.attachments.slice(0, 5)) {
+    try {
+      const fetched = await fetchReceivedAttachment(email.externalId, attachment.id, config.apiKey, MAX_BYTES.document);
+      if (fetched.ok) attachments.push({ id: attachment.id, bytes: fetched.bytes, contentType: fetched.contentType, filename: fetched.filename ?? attachment.filename });
+      else if (fetched.reason === "unavailable") retryAttachments = true;
+    } catch (thrown) {
+      log.warn("homesend email webhook: attachment fetch failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+      retryAttachments = true;
+    }
   }
 
-  await classifyEmailIntake(supabase, householdId, item.id, email.text.slice(0, 4000));
+  for (const householdId of households) {
+    const { item, duplicate } = await createEmailHomeSendItem(supabase, {
+      householdId,
+      externalId: email.externalId,
+      senderAddress: email.from,
+      rawText: body || `(${email.attachments.length} attachment${email.attachments.length === 1 ? "" : "s"}, no message text)`,
+      subject: email.subject?.slice(0, 300) ?? null,
+      contentHash: await contentHash(body || email.externalId),
+    });
 
+    if (!duplicate && body) {
+      try {
+        // The same understanding step every other HomeSend input ends in.
+        // The sender and subject are evidence, told to the model as
+        // untrusted context — never proof of which household member sent it.
+        await understand(supabase, householdId, item.id, {
+          source: { text: body },
+          channel: "email",
+          context: { channel: "a forwarded email", subject: email.subject, from: email.from },
+          text: body,
+        });
+      } catch (thrown) {
+        // Understanding is a convenience, not the point of this request —
+        // the item is already safely persisted and reachable for manual entry.
+        log.warn("homesend email webhook: understanding failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+      }
+    }
+
+    // Every attachment is a HomeSend file of its own (§7), idempotent by
+    // its own id, so a retried webhook fetches only what it has not kept
+    // yet. A malicious or unreadable one fails safely on its own; the
+    // email's text above is already kept either way.
+    for (const attachment of attachments) {
+      try {
+        await ingestEmailAttachment(supabase, {
+          householdId,
+          parentItemId: item.id,
+          externalId: `${email.externalId}:${attachment.id}`,
+          bytes: attachment.bytes,
+          claimedType: attachment.contentType,
+          filename: attachment.filename,
+          subject: email.subject,
+          sender: email.from,
+        });
+      } catch (thrown) {
+        log.warn("homesend email webhook: attachment failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+        retryAttachments = true;
+      }
+    }
+  }
+
+  if (retryAttachments) {
+    // The email itself is kept; an attachment that could not be fetched yet
+    // is retried by the provider, and everything already kept is skipped.
+    return new Response(JSON.stringify({ error: { code: "attachment_fetch_failed", message: "Some attachments could not be retrieved yet." } }), {
+      status: 502,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
   return new Response(null, { status: 200 });
-}
-
-/**
- * The same "read the household's own AI key, fall back to the platform key,
- * or leave it for a person to fill in by hand" bargain
- * `home-send-actions.ts`'s `classifyAndSave` keeps for uploads/paste —
- * reimplemented here rather than shared, because this call has no `File`,
- * no session, and always the admin client, so generalizing the existing
- * helper would cost more than the dozen lines it saves.
- */
-async function classifyEmailIntake(
-  supabase: ReturnType<typeof createAdminClient>,
-  householdId: string,
-  itemId: string,
-  text: string,
-): Promise<void> {
-  try {
-    const { readHouseholdKey } = await import("@wonderhome/core/ai/credentials");
-    const { resolveModelKey, platformKey } = await import("@wonderhome/core/ai/model-key");
-    const { classifyIntake } = await import("@wonderhome/core/ai/classify-intake");
-
-    const householdKey = await readHouseholdKey(householdId).catch(() => null);
-    const key = resolveModelKey(householdKey, platformKey());
-    if (key.source === "none" || !key.provider || !key.key) return;
-
-    const extraction = await classifyIntake(key.provider, key.key, { text });
-    if (!extraction || !extraction.readable) return;
-
-    const extracted: HomeSendExtraction = {
-      title: extraction.title,
-      notes: extraction.notes,
-      billKind: extraction.billKind,
-      payee: extraction.payee,
-      amount: extraction.amount,
-      currency: extraction.currency,
-      dueDate: extraction.dueDate,
-      schoolKind: extraction.schoolKind,
-      subject: extraction.subject,
-      quantity: extraction.quantity,
-      unit: extraction.unit,
-      category: extraction.category,
-      healthRecordType: extraction.healthRecordType,
-      documentDate: extraction.documentDate,
-      subjectMemberName: extraction.subjectMemberName,
-      secondary: extraction.secondary,
-    };
-    await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: extraction.kind, extracted });
-  } catch (thrown) {
-    // Classification is a convenience, not the point of this request — the
-    // item is already safely persisted and still reachable for manual entry.
-    log.warn("homesend email webhook: classification failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
-  }
 }
 
 export const dynamic = "force-dynamic";

@@ -1,6 +1,8 @@
 import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments";
-import type { HouseholdIntent, IntentAction } from "./intent";
+import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
+import type { HouseholdIntent, IntentAction } from "./intent";
+import { parsePreference } from "./memory";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -113,6 +115,26 @@ function item(value: string): string {
 }
 
 const RULES: readonly Rule[] = [
+  // --- "Why?" — answered from what was recorded (HomeBrain 2.0, Wave 2 §10) --
+  {
+    // "Why are you asking for approval?", "Where did this date come from?",
+    // "What did I just send you?" are questions about WonderHome's own
+    // record, not about the home: read first, so no status rule below takes
+    // "what changed since yesterday" for a general catch-up. The answer is
+    // assembled from evidence on the server; nothing here decides it.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const why = readWhyQuestion(utterance);
+      if (!why) return null;
+      return {
+        action: "ask_status",
+        target: { kind: "unspecified" },
+        parameters: { scope: "explain", explain: why.topic, ...(why.subject ? { subject: why.subject } : {}) },
+        confidence: 0.96,
+      };
+    },
+  },
+
   // --- Greetings, thanks, help ---------------------------------------------
   {
     pattern: /^(?:hi|hello|hey|hiya|good (?:morning|afternoon|evening|night)|namaste)(?:\s+(?:there|wonderhome))?$/i,
@@ -433,6 +455,24 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:actually,?\s+)(.+?) (?:is|are) (?:at|on) (.+)$/i,
     read: (match) => preference(`${match[1]} at ${match[2]}`, true),
+  },
+  {
+    // "Asmi doesn't like mushrooms", "Dad is allergic to peanuts", "actually
+    // Asmi is okay with mushrooms now" — one person's stance on one thing,
+    // keyed so a later change of mind replaces the earlier one (Wave 2 §8).
+    // Last, so every more specific rule above reads its sentence first.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const parsed = parsePreference(utterance);
+      if (!parsed) return null;
+      const statement = utterance.trim().replace(/^actually,?\s+/i, "").replace(/[.!]+$/, "");
+      return {
+        action: "set_preference",
+        target: { kind: "outcome", reference: parsed.key },
+        parameters: { statement, ...(parsed.corrects ? { corrects: true } : {}) },
+        confidence: 0.88,
+      };
+    },
   },
 ];
 

@@ -4,20 +4,38 @@ import { listConsumables } from "../commerce/repository";
 import { buildContextItems, type ContextRecords } from "../context/builders";
 import { applyFreshness } from "../context/freshness";
 import { describeMatch, findPotentialMatches, needsReconciliation } from "../context/matching";
-import type { ContextDomain, IncomingFact, MatchVerdict } from "../context/types";
+import type { ContextDomain, HouseholdContextItem, IncomingFact, MatchResult, MatchVerdict } from "../context/types";
 import { listObligations } from "../finance/repository";
 import { listRecords } from "../health/records";
 import { listSchoolItems } from "../school/repository";
 import type { HomeSendChangeDomain } from "./items";
 
 /**
- * Before HomeSend writes anything, is it already known? (Wave 1 §7)
+ * Before HomeSend writes anything, is it already known? (Wave 1 §7, Wave 3 §10)
  *
  * The same matcher HomeTalk uses, over the same domain the confirm form is
- * about to write into, read through the member's own client. A photo of
- * the electricity bill already on record is a reconciliation candidate for
- * the person to see — never a second bill created quietly beside the first.
+ * about to write into, read through the member's own client. What it finds
+ * becomes a proposal the person decides on, never a quiet write:
+ *
+ *   duplicate     — already on record; keep the existing one
+ *   update        — newer details for a record on record (a moved date, a
+ *                   revised amount): "Update the existing event?"
+ *   cancellation  — the content says it is called off: "Cancel it?"
+ *   conflict      — the record was changed after this was captured, so the
+ *                   record stands unless the person says otherwise
+ *
+ * Updates and cancellations only exist where the domain has a governed
+ * service to perform them and put them back (a bill, a school item);
+ * everywhere else a match is a duplicate to confirm or add anyway.
  */
+
+export type HomeSendProposal =
+  | { type: "duplicate" }
+  | { type: "update"; changes: HomeSendFieldChange[] }
+  | { type: "cancellation" }
+  | { type: "conflict" };
+
+export type HomeSendFieldChange = { field: "date" | "amount"; from: string | number | null; to: string | number };
 
 export type HomeSendReconciliation = {
   verdict: MatchVerdict;
@@ -25,6 +43,8 @@ export type HomeSendReconciliation = {
   message: string;
   /** The existing record's id within its own table. */
   existingId: string;
+  existing: { title: string; date: string | null; status: string | null; subjectName: string | null; amountMinor: number | null };
+  proposal: HomeSendProposal;
 };
 
 const DOMAIN_FOR_KIND: Record<HomeSendChangeDomain, ContextDomain> = {
@@ -33,6 +53,9 @@ const DOMAIN_FOR_KIND: Record<HomeSendChangeDomain, ContextDomain> = {
   grocery_item: "groceries",
   health_document: "health",
 };
+
+/** Domains whose governed services can update or cancel a record, and put it back on undo. */
+const REVISABLE: ReadonlySet<HomeSendChangeDomain> = new Set(["bill", "school_item"]);
 
 export type HomeSendCandidate = {
   kind: HomeSendChangeDomain;
@@ -45,6 +68,8 @@ export type HomeSendCandidate = {
   subjectMemberId?: string | null;
   /** When the source content was captured, so an older source never overrides a newer record. */
   capturedAt?: string | null;
+  /** Whether the content announces a change to something announced before (§10). */
+  change?: "new" | "update" | "cancellation";
 };
 
 async function readDomain(supabase: SupabaseClient, householdId: string, candidate: HomeSendCandidate): Promise<ContextRecords> {
@@ -60,12 +85,140 @@ async function readDomain(supabase: SupabaseClient, householdId: string, candida
   }
 }
 
-/** The strongest existing record this candidate would duplicate or update, or null when it is genuinely new. */
+const NOUN: Record<HomeSendChangeDomain, string> = { bill: "bill", school_item: "one", grocery_item: "item", health_document: "document" };
+
+/** What to call the record in the question: the school item's own kind ("event", "exam", "homework") when it has one. */
+function nounFor(kind: HomeSendChangeDomain, item: HouseholdContextItem): string {
+  const own = item.attributes.kind;
+  if (kind === "school_item" && typeof own === "string" && own.trim()) return own.replace(/_/g, " ");
+  return NOUN[kind];
+}
+
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "28 Sep" — the §10 example's own wording. */
+export function shortDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!match) return null;
+  return `${Number(match[3])} ${SHORT_MONTHS[Number(match[2]) - 1]}`;
+}
+
+function zoneParts(date: Date, timeZone: string): { year: number; month: number; day: number; hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+  return { year: get("year"), month: get("month"), day: get("day"), hour: get("hour") === 24 ? 0 : get("hour"), minute: get("minute") };
+}
+
+/**
+ * The new due instant when only the date moved (§10): "moved to 29 Sep"
+ * keeps the 10:00 start it had, read in the household's own time zone,
+ * rather than dropping the time of day. With no time on record, the new
+ * date is taken as given.
+ */
+export function movedDueAt(previousIso: string | null, newDate: string, timeZone: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(newDate);
+  const previous = previousIso ? new Date(previousIso) : null;
+  if (!match || !previous || Number.isNaN(previous.getTime())) return new Date(newDate).toISOString();
+  try {
+    const { hour, minute } = zoneParts(previous, timeZone);
+    const naive = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, minute);
+    const seen = zoneParts(new Date(naive), timeZone);
+    const offset = Date.UTC(seen.year, seen.month - 1, seen.day, seen.hour, seen.minute) - naive;
+    return new Date(naive - offset).toISOString();
+  } catch {
+    return new Date(newDate).toISOString();
+  }
+}
+
+function formatAmount(minor: number | null, currency: string | null): string | null {
+  if (minor === null) return null;
+  return `${(minor / 100).toFixed(2)}${currency ? ` ${currency}` : ""}`;
+}
+
+type Existing = HomeSendReconciliation["existing"];
+
+function existingOf(item: HouseholdContextItem, names: ReadonlyMap<string, string>): Existing {
+  const attributes = item.attributes;
+  const subjectId = item.subjectMemberIds.find((id): id is string => typeof id === "string" && names.has(id));
+  return {
+    title: typeof attributes.title === "string" ? attributes.title : item.summary,
+    date: typeof attributes.date === "string" ? attributes.date : null,
+    status: typeof attributes.status === "string" ? attributes.status : null,
+    subjectName: subjectId ? (names.get(subjectId) ?? null) : null,
+    amountMinor: typeof attributes.amountMinor === "number" ? attributes.amountMinor : null,
+  };
+}
+
+/**
+ * The decision the person is offered, and the words it is offered in.
+ * Pure: the same match always produces the same proposal.
+ */
+export function proposalFor(
+  match: MatchResult,
+  candidate: HomeSendCandidate,
+  names: ReadonlyMap<string, string> = new Map(),
+): HomeSendReconciliation | null {
+  if (!match.item) return null;
+  const existing = existingOf(match.item, names);
+  const owner = existing.subjectName ? `${existing.subjectName}'s ` : "the ";
+  const when = shortDate(existing.date);
+  const found = `I found ${owner}existing ${existing.title}${when ? ` for ${when}` : ""}`;
+  const revisable = REVISABLE.has(candidate.kind);
+  const cancelled = existing.status === "cancelled";
+
+  const sameThing =
+    match.verdict !== "no_match" &&
+    (match.verdict !== "related_but_different" || !match.reasons.some((reason) => reason === "for a different person" || reason === "a different variety"));
+  if (candidate.change === "cancellation" && revisable && !cancelled && sameThing) {
+    return {
+      verdict: match.verdict,
+      existingId: match.item.entityId,
+      existing,
+      proposal: { type: "cancellation" },
+      message: `${found}. This message says it is cancelled. Cancel the existing ` + `${nounFor(candidate.kind, match.item)}?`,
+    };
+  }
+
+  if (!needsReconciliation(match)) return null;
+
+  if (match.verdict === "contradiction") {
+    return { verdict: match.verdict, existingId: match.item.entityId, existing, proposal: { type: "conflict" }, message: describeMatch(match) };
+  }
+
+  // A moved date one day away matches as a likely duplicate; when the content
+  // itself says something changed, the difference is the point (§10).
+  const announcedChange = candidate.change === "update" && (match.verdict === "likely_duplicate" || match.verdict === "exact_match");
+  if ((match.verdict === "likely_update" || announcedChange) && revisable && !cancelled) {
+    const changes: HomeSendFieldChange[] = [];
+    const newDate = candidate.date ? candidate.date.slice(0, 10) : null;
+    if (newDate && newDate !== existing.date) changes.push({ field: "date", from: existing.date, to: newDate });
+    const newAmount = candidate.amount != null ? Math.round(candidate.amount * 100) : null;
+    if (candidate.kind === "bill" && newAmount !== null && newAmount !== existing.amountMinor) changes.push({ field: "amount", from: existing.amountMinor, to: newAmount });
+    if (changes.length > 0) {
+      const says = changes
+        .map((change) => (change.field === "date" ? `it moved to ${shortDate(String(change.to))}` : `the amount is now ${formatAmount(Number(change.to), null)}`))
+        .join(" and ");
+      const noun = nounFor(candidate.kind, match.item);
+      return {
+        verdict: match.verdict,
+        existingId: match.item.entityId,
+        existing,
+        proposal: { type: "update", changes },
+        message: `${found}. This message says ${says}. Update the existing ` + `${noun}?`,
+      };
+    }
+  }
+
+  return { verdict: match.verdict, existingId: match.item.entityId, existing, proposal: { type: "duplicate" }, message: describeMatch(match) };
+}
+
+/** The strongest existing record this candidate would duplicate, update or cancel, or null when it is genuinely new. */
 export async function reconcileHomeSend(
   supabase: SupabaseClient,
   householdId: string,
   candidate: HomeSendCandidate,
-  options: { timezone: string; now?: Date },
+  options: { timezone: string; now?: Date; memberNames?: ReadonlyMap<string, string> },
 ): Promise<HomeSendReconciliation | null> {
   if (!candidate.title.trim()) return null;
   const now = options.now ?? new Date();
@@ -89,7 +242,9 @@ export async function reconcileHomeSend(
     capturedAt: candidate.capturedAt ?? null,
   };
 
-  const best = findPotentialMatches(incoming, items, { timezone: options.timezone }).find(needsReconciliation);
-  if (!best?.item) return null;
-  return { verdict: best.verdict, message: describeMatch(best), existingId: best.item.entityId };
+  const matches = findPotentialMatches(incoming, items, { timezone: options.timezone });
+  // A cancellation may name its record less exactly than an update does — the
+  // closest same-subject match is still the one to ask about.
+  const best = matches.find(needsReconciliation) ?? (candidate.change === "cancellation" ? matches[0] : undefined);
+  return best ? proposalFor(best, candidate, options.memberNames) : null;
 }

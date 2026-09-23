@@ -1,3 +1,4 @@
+import { readWhyQuestion } from "../homebrain/why";
 import type { AutonomyMode } from "../household/autonomy";
 import type { PermissionContext } from "../identity/permissions";
 import { answerClarification, clarificationFrom, escalatedQuestion, type PendingClarification } from "./clarify";
@@ -118,7 +119,9 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
   const short = resolveShortReply(input.utterance, input.pending, now);
   switch (short.kind) {
     case "approve":
-      return { kind: "approve", actionId: short.actionId, text: "Done — I have your go-ahead and it is on its way." };
+      // Not "done": nothing has run yet. The route carries it out through the
+      // governed executor and says what actually happened (Wave 2 §11).
+      return { kind: "approve", actionId: short.actionId, text: "Got it — I have your go-ahead." };
     case "reject":
       return { kind: "reject", actionId: short.actionId, text: "Understood. I have left that alone." };
     case "no_pending_proposal":
@@ -149,7 +152,8 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
   // A question WonderHome asked is a promise to use the answer. Reading
   // this turn against it first is what stops the loop where the same
   // question comes back however clearly somebody answers it.
-  const answered = input.clarifying
+  // "Why are you asking me this?" is a question about the question, never its answer.
+  const answered = input.clarifying && !readWhyQuestion(input.utterance)
     ? answerClarification(input.clarifying, input.utterance, {
         actorMemberId: input.actor.memberId,
         channel: input.channel,

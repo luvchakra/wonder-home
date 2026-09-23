@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveFixtureIntent } from "./fixtures";
-import { extractMemory, isCorrection, reconcileMemory, type Memory } from "./memory";
+import { attributeMemory, claimFor, extractMemory, isCorrection, isReviewable, parsePreference, reconcileMemory, reviewPlacementFor, type Memory } from "./memory";
 
 const intentFor = (utterance: string) =>
   resolveFixtureIntent(utterance, { actorMemberId: "m-1", channel: "text" });
@@ -138,5 +138,57 @@ describe("corrections", () => {
   it("recognises a correction from the utterance itself", () => {
     expect(isCorrection(intentFor("Actually, dinner is at 7:30."))).toBe(true);
     expect(isCorrection(intentFor("We prefer dinner at 8."))).toBe(false);
+  });
+});
+
+describe("someone's likes and dislikes (Wave 2 §8)", () => {
+  it("keys every way of saying it to the same belief", () => {
+    const first = parsePreference("Asmi doesn't like mushrooms");
+    const later = parsePreference("Actually Asmi is okay with mushrooms now");
+    expect(first).toMatchObject({ subject: "Asmi", object: "mushrooms", stance: "dislikes", key: "pref.asmi.mushroom", corrects: false });
+    expect(later).toMatchObject({ subject: "Asmi", stance: "okay_with", key: "pref.asmi.mushroom", corrects: true });
+  });
+
+  it.each([
+    ["Dad is allergic to peanuts", "allergic", "pref.dad.peanut"],
+    ["Manan loves pasta", "likes", "pref.manan.pasta"],
+    ["Asmi really likes the spicy chicken", "likes", "pref.asmi.spicy.chicken"],
+    ["Mum can't eat gluten", "avoids", "pref.mum.gluten"],
+    ["Asmi no longer likes broccoli", "dislikes", "pref.asmi.broccoli"],
+    ["Kunal prefers tea", "prefers", "pref.kunal.tea"],
+  ])("reads %j", (statement, stance, key) => {
+    expect(parsePreference(statement)).toMatchObject({ stance, key });
+  });
+
+  it.each(["We like pasta", "It doesn't like the rain", "What does Asmi like?", "Add milk"])("leaves %j alone", (statement) => {
+    expect(parsePreference(statement)).toBeNull();
+  });
+
+  it("puts a named person's preference on that person, and an allergy under safety", () => {
+    const memory = extractMemory(
+      { action: "set_preference", actorMemberId: "kunal", target: { kind: "outcome", reference: "pref.asmi.peanut" }, parameters: { statement: "Asmi is allergic to peanuts" }, confidence: 0.88, channel: "text", utterance: "Asmi is allergic to peanuts" },
+      { sessionId: "s-1" },
+    )!;
+    expect(memory.key).toBe("pref.asmi.peanut");
+    const attributed = attributeMemory(memory, [{ id: "asmi", displayName: "Asmi" }, { id: "kunal", displayName: "Kunal Mehta" }]);
+    expect(attributed).toMatchObject({ scope: "member", memberId: "asmi" });
+    expect(claimFor(attributed)).toBe("Asmi is allergic to peanuts.");
+    expect(reviewPlacementFor(attributed)).toEqual({ category: "safety", risk: "high" });
+  });
+
+  it("keys a model's reading of the same sentence the same way as the rules'", () => {
+    const fromModel = extractMemory(
+      { action: "set_preference", actorMemberId: "kunal", target: { kind: "outcome", reference: "asmi_food_likes" }, parameters: { statement: "Asmi doesn't like mushrooms" }, confidence: 0.8, channel: "text", utterance: "Asmi doesn't like mushrooms" },
+      { sessionId: "s-1" },
+    )!;
+    expect(fromModel.key).toBe("pref.asmi.mushroom");
+  });
+});
+
+describe("what is worth putting up for review", () => {
+  it("skips a memory with nothing in it", () => {
+    expect(isReviewable({ value: {} })).toBe(false);
+    expect(isReviewable({ value: { statement: "" } })).toBe(false);
+    expect(isReviewable({ value: { statement: "dinner at 8" } })).toBe(true);
   });
 });
