@@ -12,7 +12,8 @@ import { createConsumable, retireConsumable } from "@wonderhome/core/commerce/re
 import { createClient } from "@wonderhome/core/db/server";
 import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
-import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
+import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
+import { HOME_SEND_REVIEW_PROPOSALS, HOME_SEND_REVIEW_SUBJECTS, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
 import { movedDueAt, reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
@@ -40,6 +41,11 @@ export type SendHomeItemState = {
   state?: IngestState;
   duplicate?: boolean;
   heard?: IngestOutcome["heard"];
+  /**
+   * Set when the household's own autonomy setting let WonderHome apply this
+   * without asking (§12) — shown as done, with its Undo, not as a review.
+   */
+  autoApplied?: { changeId: string; title: string; where: string };
   item?: {
     id: string;
     classifiedKind: HomeSendKind;
@@ -48,6 +54,8 @@ export type SendHomeItemState = {
     reconciliation?: HomeSendReconciliation | null;
     /** Who it is for, resolved through the household's own people (§9). */
     subject?: SubjectResolution | null;
+    /** How it is confirmed (§12): the reason, or the one question, the review opens with. */
+    confirmation?: ConfirmationDecision | null;
   };
 };
 
@@ -64,9 +72,71 @@ async function withReview(
 ): Promise<SendHomeItemState> {
   const item = state.item;
   if (!item) return state;
-  const review = await prepareReview(supabase, membership, { classifiedKind: item.classifiedKind, extracted: item.extracted, understanding: item.understanding ?? null }).catch(() => null);
+  const review = await prepareReview(supabase, membership, {
+    classifiedKind: item.classifiedKind,
+    extracted: item.extracted,
+    understanding: item.understanding ?? null,
+    // Sent in by this member, just now.
+    createdByMemberId: membership.memberId,
+  }).catch(() => null);
   if (!review) return state;
-  return { ...state, item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject } };
+  // Something already waiting is shown again, never applied a second time.
+  if (review.confirmation.mode === "auto_apply" && !state.duplicate) {
+    const applied = await autoApply(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject }).catch(() => null);
+    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own. ${review.confirmation.reason}`, autoApplied: applied };
+  }
+  return {
+    ...state,
+    item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject, confirmation: review.confirmation },
+  };
+}
+
+/**
+ * Applying an item the household's own autonomy setting allows (§12): the
+ * same governed create a person's confirm uses, recorded as a change with
+ * the same Undo, and marked `auto_added` so it is never mistaken for a
+ * person's decision (§19).
+ */
+async function autoApply(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  membership: Awaited<ReturnType<typeof requireMembership>>,
+  item: { id: string; kind: HomeSendKind; extracted: HomeSendExtraction | null; subject: SubjectResolution | null },
+): Promise<{ changeId: string; title: string; where: string } | null> {
+  const extracted = item.extracted;
+  const title = extracted?.title?.trim();
+  if (!title || (item.kind !== "grocery_item" && item.kind !== "school_item")) return null;
+  const householdId = membership.household.id;
+  const input: RouteInput = {
+    householdId,
+    itemId: item.id,
+    decision: "add",
+    kind: item.kind,
+    title: title.slice(0, 160),
+    notes: extracted?.notes ?? undefined,
+    dueDate: extracted?.dueDate ?? undefined,
+    childMemberId: item.subject?.selected?.memberId,
+    schoolKind: SCHOOL_ITEM_KINDS.find((schoolKind) => schoolKind === extracted?.schoolKind),
+    subject: extracted?.subject ?? undefined,
+    quantity: extracted?.quantity ?? undefined,
+    unit: extracted?.unit ?? undefined,
+    category: CONSUMABLE_CATEGORIES.find((category) => category === extracted?.category),
+    needs: [],
+  };
+  const created = await createNew(supabase, membership, input);
+  if ("error" in created) return null;
+  await routeHomeSendItem(supabase, householdId, item.id, {
+    routedTable: created.routedTable,
+    routedId: created.routedId,
+    review: { decision: "auto_added", subject: item.subject?.selected ? "resolved" : "not_needed", corrected: false },
+  });
+  const change = await recordHomeSendChange(supabase, {
+    householdId,
+    intakeId: item.id,
+    domain: item.kind,
+    entityId: created.routedId,
+    createdByMemberId: membership.memberId,
+  });
+  return { changeId: change.id, title, where: item.kind === "grocery_item" ? "Groceries" : "Kids & School" };
 }
 
 function toState(outcome: IngestOutcome): SendHomeItemState {
@@ -198,6 +268,11 @@ const routeSchema = z.object({
   // Set once the person has seen a reconciliation candidate and said this
   // really is a different one.
   confirmDuplicate: z.literal("on").optional(),
+  // What the review showed (§19's metrics): the reconciliation it offered
+  // and whether "who is this for" had to be asked. Closed words only; they
+  // describe the review, never decide anything.
+  proposal: z.enum(HOME_SEND_REVIEW_PROPOSALS).optional(),
+  subjectState: z.enum(HOME_SEND_REVIEW_SUBJECTS).optional(),
 });
 
 type RouteInput = z.infer<typeof routeSchema>;
@@ -339,6 +414,26 @@ function revalidateDomains() {
   revalidatePath("/health");
 }
 
+/**
+ * Whether the person changed what WonderHome read before confirming it
+ * (§19's correction rate): the kind, the name, a date, an amount or a
+ * quantity. Null when there was no reading to compare against.
+ */
+function wasCorrected(intake: HomeSendItem | null, input: RouteInput): boolean | null {
+  const read = intake?.extracted;
+  if (!intake || !read) return null;
+  const differs = (a: unknown, b: unknown) => String(a ?? "").trim().toLowerCase() !== String(b ?? "").trim().toLowerCase();
+  if (intake.classifiedKind && intake.classifiedKind !== "unknown" && intake.classifiedKind !== input.kind) return true;
+  if (differs(read.title, input.title)) return true;
+  const date = input.kind === "health_document" ? input.documentDate : input.dueDate;
+  const readDate = (input.kind === "health_document" ? read.documentDate : read.dueDate)?.slice(0, 10);
+  if (differs(readDate, date)) return true;
+  const number = (value: unknown) => (value === "" || value === undefined || value === null ? null : Number(value));
+  if (input.kind === "bill" && number(read.amount) !== number(input.amount)) return true;
+  if (input.kind === "grocery_item" && read.quantity != null && number(read.quantity) !== number(input.quantity)) return true;
+  return false;
+}
+
 export async function routeHomeSendItemAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
   const parsed = routeSchema.safeParse({
     householdId: formData.get("householdId"),
@@ -364,6 +459,8 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     documentDate: formData.get("documentDate") || undefined,
     needs: formData.getAll("need").filter((value): value is string => typeof value === "string" && value.trim().length > 0),
     confirmDuplicate: formData.get("confirmDuplicate") || undefined,
+    proposal: formData.get("proposal") || undefined,
+    subjectState: formData.get("subjectState") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   const input = parsed.data;
@@ -371,11 +468,18 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, input.householdId);
+    const intake = await getHomeSendItem(supabase, input.householdId, input.itemId).catch(() => null);
+    const review = (decision: HomeSendReviewOutcome["decision"]): HomeSendReviewOutcome => ({
+      decision,
+      proposal: input.proposal ?? null,
+      subject: input.subjectState ?? null,
+      corrected: decision === "kept_existing" ? null : wasCorrected(intake, input),
+    });
 
     // "Keep existing" (§13): the record on file stands and nothing is
     // written; the intake is set aside as handled.
     if (input.decision === "keep") {
-      await dismissHomeSendItem(supabase, input.householdId, input.itemId, membership.memberId);
+      await dismissHomeSendItem(supabase, input.householdId, input.itemId, membership.memberId, review("kept_existing"));
       revalidateDomains();
       return { notice: "Kept the existing one — nothing changed." };
     }
@@ -389,7 +493,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       const revised = await reviseExisting(supabase, membership, { ...input, existingId: input.existingId, decision: input.decision });
       routedTable = revised.routedTable;
       routedId = revised.routedId;
-      await routeHomeSendItem(supabase, input.householdId, input.itemId, { routedTable, routedId });
+      await routeHomeSendItem(supabase, input.householdId, input.itemId, { routedTable, routedId, review: review(input.decision === "update" ? "updated" : "cancelled") });
       await recordHomeSendChange(supabase, {
         householdId: input.householdId,
         intakeId: input.itemId,
@@ -405,7 +509,6 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       // is, the person sees which record and decides — nothing is written
       // until they say it is a different one.
       if (input.confirmDuplicate !== "on") {
-        const intake = await getHomeSendItem(supabase, input.householdId, input.itemId).catch(() => null);
         const found = await reconcileHomeSend(
           supabase,
           input.householdId,
@@ -428,7 +531,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       if ("error" in created) return { error: created.error };
       routedTable = created.routedTable;
       routedId = created.routedId;
-      await routeHomeSendItem(supabase, input.householdId, input.itemId, { routedTable, routedId });
+      await routeHomeSendItem(supabase, input.householdId, input.itemId, { routedTable, routedId, review: review("added") });
       await recordHomeSendChange(supabase, {
         householdId: input.householdId,
         intakeId: input.itemId,

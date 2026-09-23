@@ -7,7 +7,9 @@ import type { IncomingFact } from "../context/types";
 import type { Obligation } from "../finance/payments";
 import type { HouseholdMember } from "../identity/households";
 import type { SchoolItem } from "../school/items";
-import { movedDueAt, proposalFor, shortDate, type HomeSendCandidate } from "./reconcile";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { movedDueAt, proposalFor, reconcileHomeSend, shortDate, type HomeSendCandidate } from "./reconcile";
 import { resolveIntakePeople } from "./resolve";
 
 const TZ = "Asia/Kolkata";
@@ -110,6 +112,13 @@ describe("HomeSend reconciliation (Wave 3 §10)", () => {
     expect(movedDueAt("2026-09-28T04:30:00.000Z", "2026-09-29", TZ)).toBe("2026-09-29T04:30:00.000Z");
     expect(movedDueAt("2026-03-07T14:00:00.000Z", "2026-03-10", "America/New_York")).toBe("2026-03-10T13:00:00.000Z");
     expect(movedDueAt(null, "2026-09-29", TZ)).toBe("2026-09-29T00:00:00.000Z");
+  });
+
+  it("says it could not check, when asked to be strict, instead of calling an unread item new", async () => {
+    const down = { from: () => { throw new Error("database unavailable"); } } as unknown as SupabaseClient;
+    const candidate: HomeSendCandidate = { kind: "school_item", title: "Science Exhibition", date: "2026-09-29" };
+    await expect(reconcileHomeSend(down, "hh", candidate, { timezone: TZ })).resolves.toBeNull();
+    await expect(reconcileHomeSend(down, "hh", candidate, { timezone: TZ, strict: true })).rejects.toThrow("database unavailable");
   });
 
   it("writes dates the way the spec does", () => {

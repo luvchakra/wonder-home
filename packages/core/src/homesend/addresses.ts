@@ -159,3 +159,25 @@ export async function resolveHouseholdIdByAddress(adminClient: SupabaseClient, a
   if (error) throw new Error(`resolveHouseholdIdByAddress failed: ${error.code ?? "unknown"}`);
   return data ? (data.household_id as string) : null;
 }
+
+/** "Rao Home <hs-abc@inbox.example>" → "hs-abc@inbox.example". */
+export function bareAddress(value: string): string {
+  const angled = /<([^>]+)>/.exec(value);
+  return (angled?.[1] ?? value).trim().toLowerCase();
+}
+
+/**
+ * Every household a delivered email is for (Wave 3 §5): each recipient
+ * address resolved server-side, never taken from the payload's own claim.
+ * One email to two households' addresses is two households; a revoked or
+ * unknown address resolves to nothing, so it is simply not in the set.
+ */
+export async function resolveRecipientHouseholds(adminClient: SupabaseClient, recipients: readonly string[]): Promise<string[]> {
+  const households = new Set<string>();
+  for (const address of new Set(recipients.map(bareAddress))) {
+    if (!address) continue;
+    const householdId = await resolveHouseholdIdByAddress(adminClient, address);
+    if (householdId) households.add(householdId);
+  }
+  return [...households];
+}

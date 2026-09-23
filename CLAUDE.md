@@ -273,7 +273,17 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   untrusted content: `injection.ts` fences it for the model and flags
   instructions aimed at WonderHome, which are ignored and said so.
   Whatever cannot go on is kept and shown under "Failed safely", never
-  dropped. Every routed item can be undone
+  dropped. Names are resolved through the same Wave 1 resolver HomeBrain
+  uses (`homesend/resolve.ts` — one question when two people fit, never a
+  guess), and every candidate is reconciled against what is already on
+  record (`homesend/reconcile.ts`): a duplicate is shown, a moved date or a
+  cancellation is offered as an update to the existing record, never a
+  second copy. How an item is confirmed is `homesend/confirmation.ts`
+  (§12): a clear, new grocery or school item a member sent may apply on its
+  own only where the household set that outcome's autonomy to "execute";
+  bills and health documents always wait for a person, whatever the
+  confidence. What each review decided is kept in closed words on the item
+  and counted by `homesend/metrics.ts` (§19) — outcomes, not parse counts. Every routed item can be undone
   (`homesend/changes.ts`), the same domain service a manual remove would
   use, never a raw delete. A real Resend inbound-email webhook
   (`POST /api/v1/homesend/email/webhook`, `homesend/email-gateway.ts`)

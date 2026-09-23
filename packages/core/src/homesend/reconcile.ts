@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { listConsumables } from "../commerce/repository";
 import { buildContextItems, type ContextRecords } from "../context/builders";
 import { applyFreshness } from "../context/freshness";
-import { describeMatch, findPotentialMatches, needsReconciliation } from "../context/matching";
+import { findPotentialMatches, needsReconciliation } from "../context/matching";
 import type { ContextDomain, HouseholdContextItem, IncomingFact, MatchResult, MatchVerdict } from "../context/types";
 import { listObligations } from "../finance/repository";
 import { listRecords } from "../health/records";
@@ -161,7 +161,10 @@ export function proposalFor(
 ): HomeSendReconciliation | null {
   if (!match.item) return null;
   const existing = existingOf(match.item, names);
-  const owner = existing.subjectName ? `${existing.subjectName}'s ` : "the ";
+  // "Asmi's Science Exhibition" — but never "Kunal's electricity bill": a
+  // bill's person is who is responsible for it, not whose it is.
+  const personal = candidate.kind === "school_item" || candidate.kind === "health_document";
+  const owner = personal && existing.subjectName ? `${existing.subjectName}'s ` : "the ";
   const when = shortDate(existing.date);
   const found = `I found ${owner}existing ${existing.title}${when ? ` for ${when}` : ""}`;
   const revisable = REVISABLE.has(candidate.kind);
@@ -183,7 +186,13 @@ export function proposalFor(
   if (!needsReconciliation(match)) return null;
 
   if (match.verdict === "contradiction") {
-    return { verdict: match.verdict, existingId: match.item.entityId, existing, proposal: { type: "conflict" }, message: describeMatch(match) };
+    return {
+      verdict: match.verdict,
+      existingId: match.item.entityId,
+      existing,
+      proposal: { type: "conflict" },
+      message: `${found}. It was changed after this message was written, so the one on record stands unless you say otherwise.`,
+    };
   }
 
   // A moved date one day away matches as a likely duplicate; when the content
@@ -210,7 +219,13 @@ export function proposalFor(
     }
   }
 
-  return { verdict: match.verdict, existingId: match.item.entityId, existing, proposal: { type: "duplicate" }, message: describeMatch(match) };
+  return {
+    verdict: match.verdict,
+    existingId: match.item.entityId,
+    existing,
+    proposal: { type: "duplicate" },
+    message: `${found}. ${match.verdict === "related_but_different" ? "It may be a different one" : "This looks like the same one"} — keep the existing one, or add this as new?`,
+  };
 }
 
 /** The strongest existing record this candidate would duplicate, update or cancel, or null when it is genuinely new. */
@@ -218,14 +233,25 @@ export async function reconcileHomeSend(
   supabase: SupabaseClient,
   householdId: string,
   candidate: HomeSendCandidate,
-  options: { timezone: string; now?: Date; memberNames?: ReadonlyMap<string, string> },
+  options: {
+    timezone: string;
+    now?: Date;
+    memberNames?: ReadonlyMap<string, string>;
+    /**
+     * Throw when the records could not be read, instead of answering "nothing
+     * on record" — for a caller about to apply something on its own (§12),
+     * where an unchecked item must never be taken for a new one.
+     */
+    strict?: boolean;
+  },
 ): Promise<HomeSendReconciliation | null> {
   if (!candidate.title.trim()) return null;
   const now = options.now ?? new Date();
   let records: ContextRecords;
   try {
     records = await readDomain(supabase, householdId, candidate);
-  } catch {
+  } catch (thrown) {
+    if (options.strict) throw thrown;
     // Not being able to check is not the same as a duplicate; the write
     // still goes through the domain's own create, which has its own guards.
     return null;

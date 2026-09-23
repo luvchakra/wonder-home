@@ -73,6 +73,8 @@ export function HomeSendSheet({
   }
   const outcome = latest;
   const failedNotice = outcome.state === "failed" ? outcome.notice : null;
+  // Applied on its own under the household's autonomy setting (§12).
+  const appliedNotice = outcome.autoApplied ? outcome.notice : null;
   const item = outcome.state === "failed" ? null : (outcome.item ?? null);
   const checkTranscript = outcome.state === "check_transcript" && outcome.heard ? outcome.heard : null;
   const busy = uploading || pasting;
@@ -121,6 +123,7 @@ export function HomeSendSheet({
               <input type="hidden" name="householdId" value={householdId} />
               {uploadState.error ? <Alert>{uploadState.error}</Alert> : null}
               {failedNotice ? <Alert>{failedNotice} It&apos;s kept in HomeSend under &ldquo;Failed safely&rdquo;.</Alert> : null}
+              {appliedNotice ? <Alert tone="info">{appliedNotice} It&apos;s under &ldquo;Recently handled&rdquo; in HomeSend.</Alert> : null}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -141,6 +144,7 @@ export function HomeSendSheet({
               <input type="hidden" name="householdId" value={householdId} />
               {pasteState.error ? <Alert>{pasteState.error}</Alert> : null}
               {failedNotice ? <Alert>{failedNotice} It&apos;s kept in HomeSend under &ldquo;Failed safely&rdquo;.</Alert> : null}
+              {appliedNotice ? <Alert tone="info">{appliedNotice} It&apos;s under &ldquo;Recently handled&rdquo; in HomeSend.</Alert> : null}
               <label htmlFor="home-send-text" className="block text-sm font-medium">
                 Paste a forwarded message, or a link
               </label>
@@ -186,6 +190,7 @@ export function HomeSendSheet({
             understanding={item.understanding}
             receivedAt={new Date().toISOString()}
             subject={item.subject ?? null}
+            confirmation={item.confirmation ?? null}
           />
         )}
 

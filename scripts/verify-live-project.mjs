@@ -121,6 +121,11 @@ const SHIPPED_COLUMNS = [
   { table: "homesend_share_handoffs", column: "ip_hash" },
   { table: "homesend_changes", column: "change_type" },
   { table: "homesend_changes", column: "previous" },
+  { table: "home_send_items", column: "review_decision" },
+  { table: "home_send_items", column: "review_proposal" },
+  { table: "home_send_items", column: "review_subject" },
+  { table: "home_send_items", column: "review_corrected" },
+  { table: "home_send_items", column: "reviewed_at" },
   { table: "health_appointments", column: "checkup_id" },
 ];
 
