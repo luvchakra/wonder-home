@@ -358,6 +358,17 @@ All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_mi
 ## Opening and merging pull requests
 Always open a PR for finished work pushed to a story/feature branch — never ask first, and never leave pushed commits sitting on a branch with no PR against them. Once that PR (or any PR against this repo, whether opened this session or found already open) has CI green on its current head — every required check passing, no merge conflict — merge it, again without asking. Still hold off merging when there's an open review thread that hasn't been addressed, or when the PR is explicitly marked draft/WIP.
 
+## Cleaning up test data after the merge
+The work isn't finished until its test data is gone. Once the PR has merged into `main`, remove everything the session created to test it, in that same session and before reporting the work done:
+
+- **QA accounts.** Delete every account made with `node scripts/qa-test-user.mjs create`, using `node scripts/qa-test-user.mjs delete <user-id>`.
+- **QA households.** Delete each QA household and every row created in it, on the live project and on any preview branch.
+- **Seeded or hand-inserted rows.** Remove any rows added directly with `execute_sql` to set up a scenario.
+- **Stored files.** Remove files uploaded to Storage buckets during testing, such as HomeSend and avatar uploads.
+- **Local debris.** Delete scratch files, screenshots and QA helper scripts left in the working tree, and stop any dev server the session started.
+
+Then confirm it is gone: a SQL count, or a `qa-test-user.mjs` lookup, should find nothing left. Only delete what this session created itself, tracked by the user ids and household ids it printed along the way. When you can't prove a leftover test account or row belongs to this session, leave it in place and name it in your report, with the id and the command that would remove it. Never delete it on a guess. The progress note for the work says the cleanup ran, or lists what was left behind and why.
+
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 
