@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Looking ahead: three narrow, checkable predictions over the next two weeks, each with its basis and where to act; money shows two decimals whenever it has any (story 14-008 Done, module 14 complete)](2026-09-24-predictive-intelligence.md) |
 | 2026-09-24 | [Share the load: times-a-week loads, imbalances named only when they matter, a one-tap swap to the outcome's own backup (story 03-008 Done, module 03 complete)](2026-09-24-workload-optimization.md) |
 | 2026-09-24 | [Backup services: only the outcomes an absence leaves uncovered, the right outside service offered for exactly those days, one tap to arrange it as a service request (story 07-008 Done, module 07 complete)](2026-09-24-backup-services.md) |
 | 2026-09-24 | [Controlled entitlement experiments: a stable hashed share of a plan gets one feature changed, applied inside the one entitlement service, frozen once running, visible to the household (story 20-008 Done, module 20 complete)](2026-09-24-entitlement-experiments.md) |
