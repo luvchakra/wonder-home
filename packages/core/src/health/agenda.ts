@@ -1,6 +1,7 @@
 import { silent, type HomeAssessment } from "../home/assessment";
 import type { AppointmentType, HealthAppointment } from "./appointments";
 import { classifyCheckup, type CheckupType, type HealthCheckup } from "./checkups";
+import { FITNESS_ACTIVITY_LABEL, type FitnessGoal, type FitnessSession } from "./fitness";
 import { assessForMedicalAttention } from "./issue-safety";
 import type { HealthIssue } from "./issues";
 import { classifyRoutine, type MeasurementRoutine, type VitalType } from "./measurement-routines";
@@ -336,4 +337,41 @@ export function healthRoutinesAgenda(routines: readonly MeasurementRoutine[], na
     );
 
   return { needsAttention, comingUp, recent };
+}
+
+/**
+ * Fitness goals & sessions (story 21-008) as Overview rows — deliberately
+ * "Recent" only, the same place vitals and records live, and for the same
+ * reason: the story's own acceptance criterion is no leaderboard, no guilt
+ * messaging, no fitness surveillance, so a goal falling behind its own pace
+ * never escalates into "Needs attention". A goal's row states its own
+ * configuration as arithmetic a person can verify ("3 times a week"), never
+ * a judgment about whether it is being kept.
+ */
+function fitnessGoalLabel(goal: Pick<FitnessGoal, "activityType" | "customLabel">): string {
+  return goal.activityType === "other" ? (goal.customLabel ?? "Activity") : FITNESS_ACTIVITY_LABEL[goal.activityType];
+}
+
+export function healthFitnessGoalsAgenda(goals: readonly FitnessGoal[], nameOf: (memberId: string) => string): HomeAssessment[] {
+  return goals.slice(0, 5).map((goal) => {
+    const reason = `${goal.targetCount} time${goal.targetCount === 1 ? "" : "s"} a ${goal.frequencyPeriod}.${goal.status === "dismissed" ? " — removed." : ""}`;
+    return silent(`fitness_goal.${goal.id}`, `${nameOf(goal.memberId)} — ${fitnessGoalLabel(goal)}`, reason);
+  });
+}
+
+function formatSessionDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
+}
+
+export function healthFitnessSessionsAgenda(sessions: readonly FitnessSession[], nameOf: (memberId: string) => string): HomeAssessment[] {
+  return sessions.slice(0, 5).map((session) => {
+    const label = session.activityType === "other" ? (session.customLabel ?? "Activity") : FITNESS_ACTIVITY_LABEL[session.activityType];
+    const distance = session.distanceValue !== null ? `, ${session.distanceValue} ${session.distanceUnit}` : "";
+    const when = formatDueDate(session.startedAt.slice(0, 10));
+    const reason = `${formatSessionDuration(session.durationMinutes)}${distance}, ${when}.${session.status === "archived" ? " — removed." : ""}`;
+    return silent(`fitness_session.${session.id}`, `${nameOf(session.memberId)} — ${label}`, reason);
+  });
 }

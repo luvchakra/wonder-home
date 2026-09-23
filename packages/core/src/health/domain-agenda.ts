@@ -2,9 +2,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { HomeAssessment } from "../home/assessment";
 import { listMembers } from "../identity/households";
-import { healthAppointmentsAgenda, healthCheckupsAgenda, healthIssuesAgenda, healthRecordsAgenda, healthRoutinesAgenda, healthVitalsAgenda } from "./agenda";
+import {
+  healthAppointmentsAgenda,
+  healthCheckupsAgenda,
+  healthFitnessGoalsAgenda,
+  healthFitnessSessionsAgenda,
+  healthIssuesAgenda,
+  healthRecordsAgenda,
+  healthRoutinesAgenda,
+  healthVitalsAgenda,
+} from "./agenda";
 import { listAppointments } from "./appointments";
 import { listCheckups } from "./checkups";
+import { listFitnessGoals, listFitnessSessions } from "./fitness";
 import { listIssues } from "./issues";
 import { listRoutines } from "./measurement-routines";
 import { listRecords } from "./records";
@@ -40,7 +50,7 @@ export async function healthAgenda(
 ): Promise<HealthDomainAgenda> {
   const now = options.now ?? new Date();
 
-  const [members, appointments, issues, checkups, records, vitals, routines] = await Promise.all([
+  const [members, appointments, issues, checkups, records, vitals, routines, fitnessGoals, fitnessSessions] = await Promise.all([
     listMembers(supabase, householdId, null).catch(() => []),
     listAppointments(supabase, householdId).catch(() => []),
     listIssues(supabase, householdId).catch(() => []),
@@ -48,6 +58,8 @@ export async function healthAgenda(
     listRecords(supabase, householdId).catch(() => []),
     listVitals(supabase, householdId).catch(() => []),
     listRoutines(supabase, householdId).catch(() => []),
+    listFitnessGoals(supabase, householdId, { statuses: ["active", "dismissed"] }).catch(() => []),
+    listFitnessSessions(supabase, householdId, { statuses: ["active", "archived"] }).catch(() => []),
   ]);
 
   const nameOf = (memberId: string) => members.find((member) => member.id === memberId)?.displayName ?? "Someone";
@@ -58,11 +70,22 @@ export async function healthAgenda(
   const recordsAgenda = healthRecordsAgenda(records, nameOf);
   const vitalsAgenda = healthVitalsAgenda(vitals, nameOf);
   const routinesAgenda = healthRoutinesAgenda(routines, nameOf, now);
+  const fitnessGoalsAgenda = healthFitnessGoalsAgenda(fitnessGoals, nameOf);
+  const fitnessSessionsAgenda = healthFitnessSessionsAgenda(fitnessSessions, nameOf);
 
   return {
     needsAttention: [...appointmentsAgenda.needsAttention, ...issuesAgenda.needsAttention, ...checkupsAgenda.needsAttention, ...routinesAgenda.needsAttention],
     comingUp: [...appointmentsAgenda.comingUp, ...checkupsAgenda.comingUp, ...routinesAgenda.comingUp],
     monitoring: issuesAgenda.monitoring,
-    recent: [...appointmentsAgenda.recent, ...issuesAgenda.recent, ...checkupsAgenda.recent, ...recordsAgenda, ...vitalsAgenda, ...routinesAgenda.recent],
+    recent: [
+      ...appointmentsAgenda.recent,
+      ...issuesAgenda.recent,
+      ...checkupsAgenda.recent,
+      ...recordsAgenda,
+      ...vitalsAgenda,
+      ...routinesAgenda.recent,
+      ...fitnessGoalsAgenda,
+      ...fitnessSessionsAgenda,
+    ],
   };
 }

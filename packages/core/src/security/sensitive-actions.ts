@@ -363,6 +363,46 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     because: "Brings back a routine that had been removed.",
     recordedIn: "packages/core/src/health/measurement-routines.ts",
   },
+  {
+    event: "health.fitness_goal_created",
+    because: "A new consistency-oriented fitness intention for a member — who, what activity, and how often.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_goal_updated",
+    because: "Changes a goal's own target, frequency or preferred time.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_goal_dismissed",
+    because: "Removes a goal the household no longer wants tracked — reversible, but still a change worth recording.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_goal_reactivated",
+    because: "Brings back a goal that had been removed.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_session_logged",
+    because: "A new logged activity for a member — who, what, and by hand or through HomeTalk.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_session_updated",
+    because: "Corrects a session's own content — duration, distance, notes.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_session_archived",
+    because: "Removes a mis-logged session — reversible, but still a change worth recording.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
+  {
+    event: "health.fitness_session_reactivated",
+    because: "Brings back a session that had been archived.",
+    recordedIn: "packages/core/src/health/fitness.ts",
+  },
 ];
 
 /**
@@ -551,6 +591,22 @@ export function describeAuditEvent(
       return { title: "A measurement routine was removed", detail: null };
     case "health.routine_reactivated":
       return { title: "A measurement routine was brought back", detail: null };
+    case "health.fitness_goal_created":
+      return { title: "A fitness goal was set", detail: stringOr(metadata.activityType, null) };
+    case "health.fitness_goal_updated":
+      return { title: "A fitness goal's details changed", detail: null };
+    case "health.fitness_goal_dismissed":
+      return { title: "A fitness goal was removed", detail: null };
+    case "health.fitness_goal_reactivated":
+      return { title: "A fitness goal was brought back", detail: null };
+    case "health.fitness_session_logged":
+      return { title: "A fitness session was logged", detail: stringOr(metadata.activityType, null) };
+    case "health.fitness_session_updated":
+      return { title: "A fitness session's details changed", detail: null };
+    case "health.fitness_session_archived":
+      return { title: "A fitness session was removed", detail: null };
+    case "health.fitness_session_reactivated":
+      return { title: "A fitness session was brought back", detail: null };
     default:
       // An event nobody has described is still shown. A trail that hides what
       // it cannot phrase is a trail with a hole in it.
