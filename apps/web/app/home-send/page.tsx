@@ -2,7 +2,7 @@ import { Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { consumableNames } from "@wonderhome/core/commerce/repository";
+import { consumableNames, purchaseLabels } from "@wonderhome/core/commerce/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
@@ -133,6 +133,9 @@ export default async function HomeSendPage({
   // them from one notice can be told apart (and undone) separately.
   const groceryIds = changes.filter((change) => change.domain === "grocery_item").map((change) => change.entityId);
   const groceryNames = await consumableNames(supabase, householdId, groceryIds).catch(() => ({}));
+  // A receipt's lines, each by what was bought (09-009).
+  const purchaseIds = changes.filter((change) => change.domain === "purchase").map((change) => change.entityId);
+  const purchaseNames = await purchaseLabels(supabase, householdId, purchaseIds).catch(() => ({}));
 
   return (
     <AppShell {...shell}>
@@ -144,7 +147,7 @@ export default async function HomeSendPage({
 
         {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
 
-        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} />
+        <HomeSendInbox householdId={householdId} kids={kids} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} purchaseNames={purchaseNames} />
 
         <HomeSendChannels
           householdId={householdId}

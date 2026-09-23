@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [A receipt becomes purchase history: read line by line, matched only when plain, confirmed by a person, undone per line (story 09-009 Done)](2026-09-24-receipt-purchase-history.md) |
 | 2026-09-24 | [HomeSend reads the time of day: start and end from the notice's own words, all-day items never show a time (story 14-014 Done)](2026-09-24-homesend-time-of-day.md) |
 | 2026-09-24 | [Voice phases 5–6: one capability matrix, per-surface conversations, a voice release gate and per-channel telemetry (stories 04-016, 04-017)](2026-09-24-voice-capabilities-and-observability.md) |
 | 2026-09-24 | [Gemini Voice: Gemini Live as a HomeTalk channel — single-use tokens, allowlisted tools, consent-narrowed facts; two defects fixed (voice phase 3, story 04-014)](2026-09-24-gemini-voice-live.md) |

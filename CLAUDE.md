@@ -313,8 +313,11 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   second copy. How an item is confirmed is `homesend/confirmation.ts`
   (§12): a clear, new grocery or school item a member sent may apply on its
   own only where the household set that outcome's autonomy to "execute";
-  bills and health documents always wait for a person, whatever the
-  confidence. What each review decided is kept in closed words on the item
+  bills, health documents and receipts always wait for a person, whatever
+  the confidence. A paid receipt is its own kind, never a bill: each line
+  a person keeps becomes a `consumable_purchases` row (`commerce/receipts.ts`
+  matches a line to a tracked item only when plain, never guesses) and
+  undoes on its own. What each review decided is kept in closed words on the item
   and counted by `homesend/metrics.ts` (§19) — outcomes, not parse counts. Every routed item can be undone
   (`homesend/changes.ts`), the same domain service a manual remove would
   use, never a raw delete. A real Resend inbound-email webhook

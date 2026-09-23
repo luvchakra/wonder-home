@@ -10,6 +10,7 @@ import {
   type ConsumableCategory,
   type EvidenceBasis,
 } from "./consumables";
+import { historyFrom } from "./receipts";
 import { evaluatePurchase, type PolicyDecision, type PurchasePolicy, type PurchaseRequest } from "./policy";
 import { idempotencyKeyFor, isLate, type Order, type OrderStatus } from "./orders";
 import { invalidatesContext } from "../context/invalidation";
@@ -163,6 +164,133 @@ async function retireConsumableImpl(
     if (error.code === "42501") throw ApiError.forbidden("You cannot change items for this household.");
     throw new Error(`retireConsumable failed: ${error.code ?? "unknown"}`);
   }
+}
+
+/**
+ * A purchase that actually happened (09-009): one row of
+ * `consumable_purchases`, then the consumable's own history refreshed from
+ * every purchase it now has — when it was last bought, how much, and the
+ * rate those purchases support. Only ever called once a person has confirmed
+ * the line it came from.
+ */
+async function recordPurchaseImpl(
+  supabase: SupabaseClient,
+  input: {
+    householdId: string;
+    consumableId: string;
+    purchasedOn: string;
+    quantity: number;
+    unitCostMinor?: number | null;
+    currency?: string | null;
+    merchant?: string | null;
+  },
+): Promise<{ id: string }> {
+  const cost = input.unitCostMinor != null && input.currency ? { unit_cost_minor: input.unitCostMinor, currency: input.currency } : { unit_cost_minor: null, currency: null };
+  const { data, error } = await supabase
+    .from("consumable_purchases")
+    .insert({
+      household_id: input.householdId,
+      consumable_id: input.consumableId,
+      purchased_on: input.purchasedOn,
+      quantity: input.quantity,
+      merchant: input.merchant?.trim().slice(0, 120) || null,
+      ...cost,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot record purchases for this household.");
+    throw new Error(`recordPurchase failed: ${error.code ?? "unknown"}`);
+  }
+  await refreshPurchaseHistory(supabase, input.householdId, input.consumableId);
+  return { id: (data as Row).id as string };
+}
+
+/** Undoing a recorded purchase: the row goes, and the history is what the remaining purchases say. */
+async function removePurchaseImpl(supabase: SupabaseClient, input: { householdId: string; purchaseId: string }): Promise<void> {
+  const { data, error } = await supabase
+    .from("consumable_purchases")
+    .delete()
+    .eq("id", input.purchaseId)
+    .eq("household_id", input.householdId)
+    .select("consumable_id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change purchases for this household.");
+    throw new Error(`removePurchase failed: ${error.code ?? "unknown"}`);
+  }
+  const consumableId = (data as Row[] | null)?.[0]?.consumable_id as string | undefined;
+  if (consumableId) await refreshPurchaseHistory(supabase, input.householdId, consumableId);
+}
+
+async function refreshPurchaseHistory(supabase: SupabaseClient, householdId: string, consumableId: string): Promise<void> {
+  const [purchases, current] = await Promise.all([
+    supabase.from("consumable_purchases").select("purchased_on, quantity").eq("household_id", householdId).eq("consumable_id", consumableId),
+    supabase.from("consumables").select("days_per_unit, evidence_basis").eq("household_id", householdId).eq("id", consumableId).single(),
+  ]);
+  if (purchases.error) throw new Error(`refreshPurchaseHistory failed: ${purchases.error.code ?? "unknown"}`);
+  if (current.error) throw new Error(`refreshPurchaseHistory failed: ${current.error.code ?? "unknown"}`);
+  const row = current.data as Row;
+  const history = historyFrom(
+    ((purchases.data ?? []) as Row[]).map((purchase) => ({ purchasedOn: String(purchase.purchased_on), quantity: Number(purchase.quantity) })),
+    { daysPerUnit: row.days_per_unit === null ? null : Number(row.days_per_unit), evidenceBasis: (row.evidence_basis as EvidenceBasis | null) ?? null },
+  );
+  const { error } = await supabase
+    .from("consumables")
+    .update({
+      last_purchased_on: history.lastPurchasedOn,
+      last_purchased_quantity: history.lastPurchasedQuantity,
+      days_per_unit: history.daysPerUnit,
+      evidence_basis: history.evidenceBasis,
+    })
+    .eq("household_id", householdId)
+    .eq("id", consumableId);
+  if (error) throw new Error(`refreshPurchaseHistory failed: ${error.code ?? "unknown"}`);
+}
+
+/** "Milk × 2" for specific purchases, by id — how a HomeSend history names each line it recorded. An undone one is gone and has no label. */
+export async function purchaseLabels(supabase: SupabaseClient, householdId: string, ids: readonly string[]): Promise<Record<string, string>> {
+  if (ids.length === 0) return {};
+  const { data, error } = await supabase
+    .from("consumable_purchases")
+    .select("id, quantity, consumables(name, unit)")
+    .eq("household_id", householdId)
+    .in("id", [...ids]);
+  if (error) throw error;
+  return Object.fromEntries(
+    ((data ?? []) as Row[]).map((row) => {
+      const item = (Array.isArray(row.consumables) ? row.consumables[0] : row.consumables) as Row | null;
+      const quantity = Number(row.quantity);
+      const unit = item?.unit && item.unit !== "unit" ? ` ${String(item.unit)}` : "";
+      return [String(row.id), `${String(item?.name ?? "An item")} × ${Number.isInteger(quantity) ? quantity : quantity.toFixed(2)}${unit}`];
+    }),
+  );
+}
+
+export type PurchaseRecord = { id: string; consumableId: string; purchasedOn: string; quantity: number; unitCostMinor: number | null; currency: string | null; merchant: string | null };
+
+/** The most recent purchases, newest first — per consumable when asked. */
+export async function listPurchases(supabase: SupabaseClient, householdId: string, options: { consumableId?: string; limit?: number } = {}): Promise<PurchaseRecord[]> {
+  let query = supabase
+    .from("consumable_purchases")
+    .select("id, consumable_id, purchased_on, quantity, unit_cost_minor, currency, merchant")
+    .eq("household_id", householdId)
+    .order("purchased_on", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(options.limit ?? 200);
+  if (options.consumableId) query = query.eq("consumable_id", options.consumableId);
+  const { data, error } = await query;
+  if (error) throw new Error(`listPurchases failed: ${error.code ?? "unknown"}`);
+  return ((data ?? []) as Row[]).map((row) => ({
+    id: String(row.id),
+    consumableId: String(row.consumable_id),
+    purchasedOn: String(row.purchased_on),
+    quantity: Number(row.quantity),
+    unitCostMinor: row.unit_cost_minor === null ? null : Number(row.unit_cost_minor),
+    currency: (row.currency as string | null) ?? null,
+    merchant: (row.merchant as string | null) ?? null,
+  }));
 }
 
 export async function listPolicies(
@@ -350,5 +478,7 @@ async function prepareOrderImpl(
 export const createConsumable = invalidatesContext(createConsumableImpl, (_supabase, input) => input.householdId);
 export const updateConsumable = invalidatesContext(updateConsumableImpl, (_supabase, input) => input.householdId);
 export const retireConsumable = invalidatesContext(retireConsumableImpl, (_supabase, input) => input.householdId);
+export const recordPurchase = invalidatesContext(recordPurchaseImpl, (_supabase, input) => input.householdId);
+export const removePurchase = invalidatesContext(removePurchaseImpl, (_supabase, input) => input.householdId);
 export const refreshSuggestions = invalidatesContext(refreshSuggestionsImpl, (_supabase, householdId) => householdId);
 export const prepareOrder = invalidatesContext(prepareOrderImpl, (_supabase, input) => input.householdId);

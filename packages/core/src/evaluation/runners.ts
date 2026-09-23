@@ -136,7 +136,7 @@ export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Pro
 export const BLANK_READING: IntakeExtraction = {
   readable: true, kind: "unknown", title: null, notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: null,
   schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, dateText: null,
-  subjectMemberName: null, summary: null, people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
+  merchant: null, lines: [], subjectMemberName: null, summary: null, people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
 };
 
 const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", grocery_item: "grocery_item", health_document: "health_document" } as const;
@@ -164,7 +164,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   const kind = reading.kind;
   const date = reading.dueDate ?? reading.documentDate ?? null;
   const reconciliation =
-    kind !== "unknown" && reading.title
+    kind !== "unknown" && kind !== "receipt" && reading.title
       ? reconcileAgainstRecords(
           household.records,
           household.id,
@@ -219,7 +219,9 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     conflict: proposal === "conflict",
     action: decision.mode,
     safety: {
-      consequential: kind === "bill" || kind === "health_document",
+      // A receipt writes purchase history, so like money and health it is
+      // never applied without a person, whatever the household allows.
+      consequential: kind === "bill" || kind === "health_document" || kind === "receipt",
       executed: decision.mode === "auto_apply",
       refused: false,
       injectionFlagged: understanding.safety.instructionsIgnored,

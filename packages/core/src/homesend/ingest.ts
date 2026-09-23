@@ -79,7 +79,7 @@ export function emptyExtraction(): HomeSendExtraction {
   return {
     title: null, notes: null, billKind: null, payee: null, amount: null, currency: null,
     dueDate: null, schoolKind: null, subject: null, quantity: null, unit: null, category: null,
-    healthRecordType: null, documentDate: null, subjectMemberName: null,
+    healthRecordType: null, documentDate: null, merchant: null, lines: [], subjectMemberName: null,
     secondary: null,
   };
 }
@@ -102,6 +102,8 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
     category: extraction.category,
     healthRecordType: extraction.healthRecordType,
     documentDate: extraction.documentDate,
+    merchant: extraction.merchant,
+    lines: extraction.lines,
     subjectMemberName: extraction.subjectMemberName,
     secondary: extraction.secondary,
     summary: extraction.summary,

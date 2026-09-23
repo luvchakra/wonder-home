@@ -310,3 +310,52 @@ test("an automatic limit cannot exceed the household's own ceiling", () => {
     ),
   );
 });
+
+// Story 09-009: a receipt becomes purchase history.
+test("any member can record what was bought, and undo it", () => {
+  const purchase = asProfile(
+    ADULT,
+    `insert into public.consumable_purchases (household_id, consumable_id, purchased_on, quantity, unit_cost_minor, currency, merchant)
+     values ('${household}', '${consumable}', current_date, 2, 2800, 'INR', 'FreshMart') returning id;`,
+    options,
+  );
+  assert.ok(purchase.length > 0);
+  assert.equal(asProfile(ADULT, `delete from public.consumable_purchases where id = '${purchase}' returning id;`, options), purchase);
+});
+
+test("a purchase cost has to say which currency it is in", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.consumable_purchases (household_id, consumable_id, purchased_on, quantity, unit_cost_minor)
+       values ('${household}', '${consumable}', current_date, 1, 2800);`,
+      options,
+    ),
+    "a cost was kept with no currency",
+  );
+});
+
+test("another household can neither see nor record this household's purchases", () => {
+  asProfile(
+    HEAD,
+    `insert into public.consumable_purchases (household_id, consumable_id, purchased_on, quantity) values ('${household}', '${consumable}', current_date, 1);`,
+    options,
+  );
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.consumable_purchases;`, options), "0");
+  assert.ok(
+    deniedForProfile(
+      OUTSIDER,
+      `insert into public.consumable_purchases (household_id, consumable_id, purchased_on, quantity) values ('${household}', '${consumable}', current_date, 1);`,
+      options,
+    ),
+    "an outsider recorded a purchase in another household",
+  );
+  assert.ok(
+    deniedForProfile(
+      OUTSIDER,
+      `insert into public.consumable_purchases (household_id, consumable_id, purchased_on, quantity) values ('${otherHousehold}', '${consumable}', current_date, 1);`,
+      options,
+    ),
+    "a purchase in one household pointed at another household's item",
+  );
+});

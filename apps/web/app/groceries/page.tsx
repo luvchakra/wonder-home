@@ -2,7 +2,7 @@ import { Lightbulb, PackageCheck, ShoppingBasket, Sparkles, Truck } from "lucide
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeBasis, expectedDepletion } from "@wonderhome/core/commerce/consumables";
-import { listConsumables, listOrders, shoppingAgenda } from "@wonderhome/core/commerce/repository";
+import { listConsumables, listOrders, listPurchases, shoppingAgenda } from "@wonderhome/core/commerce/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
@@ -62,7 +62,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const [agenda, consumables, orders, suggestionRows] = await Promise.all([
+  const [agenda, consumables, orders, suggestionRows, purchases] = await Promise.all([
     shoppingAgenda(supabase, householdId).catch(() => null),
     listConsumables(supabase, householdId).catch(() => []),
     listOrders(supabase, householdId).catch(() => []),
@@ -72,7 +72,13 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
       .eq("household_id", householdId)
       .in("status", ["suggested", "accepted"])
       .order("needed_by", { ascending: true, nullsFirst: false }),
+    listPurchases(supabase, householdId, { limit: 300 }).catch(() => []),
   ]);
+  // What was actually bought, per item — the history a receipt adds to (09-009).
+  const purchasesByItem = new Map<string, typeof purchases>();
+  for (const purchase of purchases) purchasesByItem.set(purchase.consumableId, [...(purchasesByItem.get(purchase.consumableId) ?? []), purchase]);
+  // A purchase date is a calendar day, not an instant: read it as one, wherever the household is.
+  const day = (isoDay: string) => formatDate("UTC", new Date(`${isoDay}T00:00:00Z`), "long");
 
   const suggestions = ((suggestionRows.data as SuggestionRow[] | null) ?? []).map((row) => {
     const embedded = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
@@ -254,12 +260,31 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                                 <div>
                                   <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Last purchased</dt>
                                   <dd>
-                                    {formatDate(timezone, new Date(item.lastPurchasedOn), "long")}
+                                    {day(item.lastPurchasedOn)}
                                     {item.lastPurchasedQuantity ? ` · ${item.lastPurchasedQuantity} ${item.unit}` : ""}
                                   </dd>
                                 </div>
                               ) : null}
                             </dl>
+                            {purchasesByItem.get(item.id)?.length ? (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Recent purchases</p>
+                                <ul className="space-y-1 text-sm">
+                                  {purchasesByItem.get(item.id)!.slice(0, 5).map((purchase) => (
+                                    <li key={purchase.id} className="break-words">
+                                      {[
+                                        day(purchase.purchasedOn),
+                                        `${purchase.quantity} ${item.unit}`,
+                                        purchase.merchant,
+                                        purchase.unitCostMinor !== null && purchase.currency ? `${(purchase.unitCostMinor / 100).toFixed(2)} ${purchase.currency} each` : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
                             <ConsumableRowControls
                               householdId={householdId}
                               item={{

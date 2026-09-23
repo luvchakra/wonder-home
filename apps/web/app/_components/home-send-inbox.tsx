@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
+import { Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
 import { useActionState, useRef, useState } from "react";
 
 import { gateTranscript, uncertainTranscriptPrompt } from "@wonderhome/core/homesend/audio";
@@ -36,6 +36,7 @@ const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone; l
   school_item: { icon: GraduationCap, tone: "school", label: "School" },
   grocery_item: { icon: ShoppingBasket, tone: "care", label: "Grocery" },
   health_document: { icon: HeartPulse, tone: "health", label: "Health" },
+  receipt: { icon: Receipt, tone: "care", label: "Receipt" },
   unknown: { icon: HelpCircle, tone: "neutral", label: "Not sure yet" },
 };
 
@@ -121,6 +122,7 @@ export function HomeSendInbox({
   changes,
   reviews = {},
   groceryNames = {},
+  purchaseNames = {},
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
@@ -132,6 +134,8 @@ export function HomeSendInbox({
   changes: HomeSendChange[];
   /** Consumable names by id, for the "Also added to Groceries" lines. */
   groceryNames?: Record<string, string>;
+  /** A receipt's recorded lines by purchase id ("Milk × 2") — undone ones have no label. */
+  purchaseNames?: Record<string, string>;
 }) {
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});
   const [pasteState, pasteAction, pasting] = useActionState<SendHomeItemState, FormData>(pasteHomeSendItemAction, {});
@@ -418,22 +422,30 @@ export function HomeSendInbox({
               {history.map((item) => {
                 const title = titleFor(item);
                 const itemChanges = changesByIntakeId.get(item.id) ?? [];
-                const primaryChange = itemChanges.find((change) => change.domain === item.classifiedKind) ?? itemChanges[0];
+                // A receipt has no one "primary" record: each line it recorded
+                // (and each item it started tracking) is its own row with its
+                // own Undo (09-009).
+                const isReceipt = item.classifiedKind === "receipt" || itemChanges.some((change) => change.domain === "purchase");
+                const primaryChange = isReceipt ? undefined : (itemChanges.find((change) => change.domain === item.classifiedKind) ?? itemChanges[0]);
                 const secondaryChanges = itemChanges.filter((change) => change !== primaryChange);
                 // What was actually routed is more trustworthy than
                 // classified_kind — a manual override in the confirm form
                 // (or no AI provider ever having classified it at all) can
                 // leave classified_kind unknown while the real change row
                 // still says exactly what was written.
-                const presentation = presentationFor(primaryChange?.domain ?? item.classifiedKind);
+                const presentation = presentationFor(isReceipt ? "receipt" : (primaryChange?.domain ?? item.classifiedKind));
                 const canUndoPrimary = Boolean(primaryChange && !primaryChange.undoneAt);
                 const statusLabel =
                   item.status === "dismissed"
                     ? item.reviewDecision === "kept_existing"
                       ? "Kept existing"
                       : "Dismissed"
-                    : primaryChange?.undoneAt
-                      ? "Undone"
+                    : isReceipt
+                      ? itemChanges.length > 0 && itemChanges.every((change) => change.undoneAt)
+                        ? "Undone"
+                        : "Recorded"
+                      : primaryChange?.undoneAt
+                        ? "Undone"
                       : primaryChange?.changeType === "updated"
                         ? "Updated"
                         : primaryChange?.changeType === "cancelled"
@@ -460,20 +472,26 @@ export function HomeSendInbox({
                           </Pill>
                         </form>
                       ) : (
-                        <Badge tone={statusLabel === "Added" ? "handled" : "neutral"}>{statusLabel}</Badge>
+                        <Badge tone={statusLabel === "Added" || statusLabel === "Recorded" ? "handled" : "neutral"}>{statusLabel}</Badge>
                       )}
                     </div>
-                    {secondaryChanges.map((change) => (
+                    {secondaryChanges.map((change) => {
+                      const bought = change.domain === "purchase";
+                      const name = bought ? purchaseNames[change.entityId] : groceryNames[change.entityId];
+                      const said = bought
+                        ? `Bought: ${name ?? "a line from this receipt"}`
+                        : isReceipt
+                          ? `Now tracking${name ? `: ${name}` : " a new item"}`
+                          : `Also added to Groceries${name ? `: ${name}` : ""}`;
+                      return (
                       <div key={change.id} className="ml-11 flex items-center gap-2 text-xs text-[var(--wh-foreground-subtle)]">
-                        <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />
-                        <span className="flex-1 break-words">
-                          Also added to Groceries{groceryNames[change.entityId] ? `: ${groceryNames[change.entityId]}` : ""}
-                        </span>
+                        {bought ? <Receipt aria-hidden className="size-3.5 shrink-0" /> : <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />}
+                        <span className="flex-1 break-words">{said}</span>
                         {!change.undoneAt ? (
                           <form action={undoAction}>
                             <input type="hidden" name="householdId" value={householdId} />
                             <input type="hidden" name="changeId" value={change.id} />
-                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${groceryNames[change.entityId] ?? "the grocery item"}`}>
+                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={bought ? `Undo recording ${name ?? "this line"}` : `Undo adding ${name ?? "the grocery item"}`}>
                               {undoing ? "Undoing…" : "Undo"}
                             </Pill>
                           </form>
@@ -481,7 +499,8 @@ export function HomeSendInbox({
                           <Badge tone="neutral">Undone</Badge>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </li>
                 );
               })}

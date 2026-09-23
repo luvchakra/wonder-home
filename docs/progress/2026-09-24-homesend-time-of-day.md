@@ -68,7 +68,7 @@
 
 - The school assessment's `dueOn` (`school/items.ts`) is still the UTC date of `due_at`. A timed item before 05:30 local, in a zone east of UTC, would be grouped under the previous day on the Overview.
   - Fixing it needs the household timezone in `assessDeadline`'s context. That is a small follow-up, not part of this story.
-- The sidebar tagline under the wordmark is clipped at 1280px ("…FAMILY TIME!" runs under the sidebar edge). It will be fixed separately.
+- The sidebar tagline under the wordmark was clipped at desktop widths ("…FAMILY TIME!" ran under the sidebar edge). It was fixed in the same PR (#135): the sidebar lockup now wraps it to a second line (`components/shell/primary-nav.tsx`). It was measured inside the sidebar at 1024, 1280 and 1920. The other placements already fit at 360px.
 
 ## Where the code lives
 
@@ -79,3 +79,15 @@
 - `apps/web/app/_components/home-send-intake.tsx`, `school-forms.tsx`, `school-item-controls.tsx`
 - `apps/web/app/school/page.tsx`, `today/page.tsx`, `_screens/child-home.tsx`
 - `supabase/migrations/20260927090000_school_item_times.sql`
+
+## Test data cleanup
+
+Ran after PR #135 merged:
+- QA account `54baba4f-6ab8-47c8-b009-8f6e084be6ab`, deleted with `qa-test-user.mjs delete`.
+- Household `98806a47-b044-4676-a86a-c5064b89bb77` ("Time QA Home"). With it went:
+  - its seeded child member, school items and HomeSend items;
+  - the subscription row set for QA;
+  - its audit events;
+  - this session's rate-limit rows.
+
+SQL counts confirm none of it remains. The dev server was stopped and the scratchpad scripts and screenshots were deleted.
