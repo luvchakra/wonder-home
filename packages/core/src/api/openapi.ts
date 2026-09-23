@@ -351,6 +351,76 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/smart-home/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Sync the household's connected smart-home provider now",
+          description:
+            "Runs the device connector for an administrator (story 17-008). A device reported for the first time becomes a link to nothing until an Admin says which appliance it is; only readings from a linked, not-ignored device are recorded, only while fresh enough to change a decision, and never twice. A provider's confidence is capped below certainty. A failure changes the connection's health and nothing else. Responds with counts and the connection's state, never a reading. Requires the `integrations.deep` entitlement. 409 while no provider is live.",
+          parameters: [
+            {
+              name: "provider",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Which provider, when more than one smart-home provider is connected.",
+            },
+          ],
+          responses: {
+            "200": { description: "Counts of what was recorded and the connection's state" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "No smart-home provider is connected" },
+            "409": { description: "The provider is not configured, or more than one is connected and none was named" },
+          },
+        },
+      },
+      "/households/{householdId}/devices": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "The household's devices",
+          description:
+            "Each device a connected provider reported (story 17-008): which appliance it is, if an Admin has said, whether it is ignored, and when it last reported. Never a reading's value and never a credential.",
+          responses: {
+            "200": { description: "The devices" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/devices/{linkId}": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "linkId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        patch: {
+          summary: "Say which appliance a device is, or ignore it",
+          description:
+            "Admin only (story 17-008). `assetId` links the device to one of the household's appliances (null unlinks it); `ignored` stops or restarts using its readings. Nothing else about a device can be changed from a session.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    assetId: { type: "string", format: "uuid", nullable: true },
+                    ignored: { type: "boolean" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Updated" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "No such device in this household" },
+          },
+        },
+      },
       "/households/{householdId}/home": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

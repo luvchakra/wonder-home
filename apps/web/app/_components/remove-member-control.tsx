@@ -1,7 +1,7 @@
 "use client";
 
 import { UserRoundX } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
@@ -54,7 +54,7 @@ export function RemoveMemberControl({
           const formData = new FormData();
           formData.set("householdId", householdId);
           formData.set("memberId", memberId);
-          formAction(formData);
+          startTransition(() => formAction(formData));
         }}
       >
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}

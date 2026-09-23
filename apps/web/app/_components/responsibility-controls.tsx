@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { ResponsibilityCard, type ResponsibilityCardProps } from "@wonderhome/core/ui/outcome-card";
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -146,7 +146,7 @@ function RemoveResponsibilityControl({
           const formData = new FormData();
           formData.set("householdId", householdId);
           formData.set("outcomeKey", outcomeKey);
-          formAction(formData);
+          startTransition(() => formAction(formData));
         }}
       >
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}

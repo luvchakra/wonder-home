@@ -80,3 +80,16 @@ checkable predictions rather than a model's guess.
 
 Recorded after the merge, below. This covers stories 07-008, 03-008 and this
 one, which shared one QA account.
+
+**Done, after PR #145 merged.** The shared QA account
+`15192beb-18b9-4aea-8b6e-ec507081757e` was removed with
+`node scripts/qa-test-user.mjs delete`. Its household "Backup QA Home"
+(`5671b375-36c5-42e5-9199-d6c0cb0d8a45`) was deleted along with its
+`audit_events`, which cascaded the helper, adult and child members, the
+backup service, the cover request, responsibilities, playbook items,
+consumables, obligations and school items. Its `rate_limit_counters` rows and
+the `verify.live%` counters were deleted too. SQL counts afterwards were 0 for
+the household, its members, audit events, backup services, service requests,
+the auth user and the profile. The scratch QA scripts, screenshots, state file
+and credentials file were deleted. Nothing was left behind.
+

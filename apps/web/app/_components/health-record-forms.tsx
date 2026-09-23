@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, Pencil, Plus, RotateCcw } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { RecordType } from "@wonderhome/core/health/records";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -199,7 +199,7 @@ export function RecordActions({
     const formData = new FormData();
     formData.set("householdId", householdId);
     formData.set("recordId", record.id);
-    action(formData);
+    startTransition(() => action(formData));
   };
 
   if (record.status === "archived") {

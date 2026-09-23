@@ -1,7 +1,7 @@
 "use client";
 
 import { Archive, ArchiveRestore, Pencil, Plus } from "lucide-react";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -89,7 +89,9 @@ export function BackupServiceRowControls({ householdId, service, outcomes }: { h
     formData.set("householdId", householdId);
     formData.set("id", service.id);
     formData.set("active", String(active));
-    activeAction(formData);
+    // A hand-built call, not a form's `action`, so it needs its own transition
+    // for `pending` to mean anything.
+    startTransition(() => activeAction(formData));
   };
 
   return (

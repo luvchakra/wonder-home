@@ -1,7 +1,7 @@
 "use client";
 
 import { PawPrint } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
@@ -53,7 +53,7 @@ function RetireButton({ householdId, petId, name }: { householdId: string; petId
           const formData = new FormData();
           formData.set("householdId", householdId);
           formData.set("petId", petId);
-          formAction(formData);
+          startTransition(() => formAction(formData));
         }}
       >
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}

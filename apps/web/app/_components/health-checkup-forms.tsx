@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, CalendarPlus, CircleCheck, Pencil, Plus, RotateCcw } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { AppointmentType } from "@wonderhome/core/health/appointments";
 import type { CheckupType } from "@wonderhome/core/health/checkups";
@@ -234,7 +234,7 @@ export function CheckupActions({
     const formData = new FormData();
     formData.set("householdId", householdId);
     formData.set("checkupId", checkup.id);
-    action(formData);
+    startTransition(() => action(formData));
   };
 
   if (checkup.status === "dismissed") {

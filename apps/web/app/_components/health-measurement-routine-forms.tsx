@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, CircleCheck, Pencil, Plus, RotateCcw } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { VITAL_TYPE_LABEL } from "@wonderhome/core/health/agenda";
 import type { VitalType } from "@wonderhome/core/health/vitals";
@@ -251,7 +251,7 @@ export function RoutineActions({
     const formData = new FormData();
     formData.set("householdId", householdId);
     formData.set("routineId", routine.id);
-    action(formData);
+    startTransition(() => action(formData));
   };
 
   if (routine.status === "dismissed") {

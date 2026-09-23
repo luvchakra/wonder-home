@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 195 |
-| Done | 192 |
+| Done | 193 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 2 |
-| Completion | 98.5% |
-| Current module | 14 AI Orchestration & Learning |
-| Current story | — (14-008 Done; 04-017 waits on a person; next: 17-008, 18-008) |
+| Not Started | 1 |
+| Completion | 99.0% |
+| Current module | 17 External Integrations |
+| Current story | — (17-008 Done; 04-017 waits on a person; next: 18-008) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -41,7 +41,7 @@ disagree again.)
 | 14 | AI Orchestration & Learning | 14 | 11 | 2 | 1 | 14 | Done |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
-| 17 | External Integrations | 8 | 5 | 2 | 1 | 7 | In Progress |
+| 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 8 | Done |
@@ -235,3 +235,4 @@ disagree again.)
 | 2026-09-24 | 07 | 07-008 | Done | 2565 unit (backup coverage 5), home database suite 26 (4 new: Admin-only backup services, one name per household, one open cover per outcome and day with a cancelled one freeing it, no borrowing another household's service), tenant isolation 9, verify:live 176/176, browser QA at 360px and desktop on the real project: a helper's absence listed only the two uncovered outcomes, a service added through the form was offered for the one it covers, one tap arranged it as a service request with provider, contact and the household's next move, retire kept the arrangement and restore brought the service back | Backup services: `backup_services` (migration `20260927160000`, applied live) — the outside people a household can call, with the outcomes each covers, Admin-only and retired rather than deleted; `service_requests` gains `backup_service_id`/`cover_outcome_key`/`cover_on` with a unique open cover per outcome and day. `household/backup-services.ts`: `planBackupCoverage` (only what an absence leaves uncovered; a member's backup is silent), `arrangeCover` (idempotent, a 13-006 service request with the household's move next — nothing booked on anyone's behalf, no booking provider connected), `loadBackupCoverage`. Househelper Overview leads with "While they're away"; Tasks keeps the services; `GET/POST /households/{id}/backup-services`, `POST /households/{id}/backup-services/cover` |
 | 2026-09-24 | 03 | 03-008 | Done | 2575 unit (workload 6, accepting a swap 4), browser QA at 360px and desktop on the real project: a household where one adult carried about 14 times a week and the other 1 was offered exactly one swap (the backup taking the school run, 7.25/8 after), one tap applied it through the audited save (one `responsibility.updated` audit row) and the section went quiet once balanced; accepting the same swap again through the API returned `changed: false` | Workload optimization: `household/workload.ts` (times-a-week loads from each outcome's own rhythm, imbalances named only past 2× and 5 a week, swaps only to an outcome's named backup, within adults or within helpers, never a child, only if they narrow the gap), `household/workload-repository.ts` (`acceptRebalance` through the validated `saveResponsibility`, idempotent, refuses a moved-on suggestion; `householdWorkload`). Responsibilities shows "Share the load" only when there is something to share; `GET /households/{id}/workload`, `POST /households/{id}/workload/rebalance` |
 | 2026-09-24 | 14 | 14-008 | Done | 2582 unit (predictions 7, money format 1), eval 47/47 with 0/14 unsafe, browser QA at 360px and desktop on the real project: from seeded rows, Today's Household view showed exactly three predictions soonest first — two bills within 5 days with their real total (₹3,449.50), one shop covering Milk, Rice and Soap from the buying pattern, and a full exam week for the child — nothing on the personal view; the API returned the same three | Predictive intelligence: `ai/predictions.ts` (pure, deterministic, read-only: stock-out clusters, bill bunching, heavy school weeks over the next 14 days, each with its basis and where to act; high thresholds so an ordinary week is silent), `ai/predictions-repository.ts`. Today's Household view "Looking ahead" predicts only from what the viewer may already read, never for a child; `GET /households/{id}/predictions`. `finance/payments.ts`'s `format` now shows two decimals whenever an amount has any |
+| 2026-09-24 | 17 | 17-008 | Done | 2603 unit (device connector and sync 21), home database suite 31 (5 new: devices seen by the household and created only by a sync, an Admin changes only which appliance and whether ignored, no linking to another household's appliance, one reading recorded once, disconnecting takes the devices), tenant isolation 9, verify:live 177/177, browser QA at 360px and desktop on the real project: two seeded devices listed in full with no clipped names, one linked to a new appliance added inline from the picker, one ignored and used again, `GET /devices` agreed, an unknown device's PATCH 404 | Optional device connectors: `home/device-connector.ts` (one canonical `DevicePayload`; readings translated with reasons for every skip, dropped when older than their kind's freshness window, provider confidence capped at 0.95; a device is stated never inferred — first report is a link to nothing), `home/device-sync.ts` (provider first, an outage changes health only; only written readings are logged, so linking later still counts), `home/device-repository.ts` (Admin decisions through RLS and column grants; devices and readings written by the service role). `home_device_links` + a unique reading index on `home_device_signals` (migration `20260927170000`, applied live); device readings join the 60-day integration-events retention. Integrations shows a Devices section with an appliance picker (add one inline) and ignore/use again; `POST /households/{id}/integrations/smart-home/sync` (`integrations.deep`, 409 until a provider is live), `GET /households/{id}/devices`, `PATCH /households/{id}/devices/{linkId}` |

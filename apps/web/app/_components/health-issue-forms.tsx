@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity, CircleCheck, Pencil, Plus, RotateCcw, Stethoscope } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { IssueStatus } from "@wonderhome/core/health/issues";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -168,7 +168,7 @@ export function IssueStatusActions({ householdId, issueId, status }: { household
     formData.set("householdId", householdId);
     formData.set("issueId", issueId);
     formData.set("status", next);
-    formAction(formData);
+    startTransition(() => formAction(formData));
   };
 
   const options = NEXT_STATUS[status];

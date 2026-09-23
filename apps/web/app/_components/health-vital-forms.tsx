@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { VITAL_TYPE_LABEL } from "@wonderhome/core/health/agenda";
 import type { VitalType } from "@wonderhome/core/health/vitals";
@@ -194,7 +194,7 @@ export function VitalActions({
     const formData = new FormData();
     formData.set("householdId", householdId);
     formData.set("vitalId", vital.id);
-    action(formData);
+    startTransition(() => action(formData));
   };
 
   if (vital.status === "archived") {

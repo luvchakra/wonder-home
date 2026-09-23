@@ -49,7 +49,12 @@ export const PURGE_TARGETS: Partial<Record<RetentionClass, PurgeTarget[]>> = {
     { table: "notifications", column: "created_at" },
     { table: "notification_events", column: "created_at" },
   ],
-  integration_events: [{ table: "integration_events", column: "received_at" }],
+  integration_events: [
+    { table: "integration_events", column: "received_at" },
+    // Device readings (story 17-008) are provider data too, and useful for
+    // hours, not months.
+    { table: "home_device_signals", column: "observed_at" },
+  ],
   usage: [{ table: "usage_counters", column: "updated_at" }],
   audit: [{ table: "audit_events", column: "created_at" }],
   step_up: [{ table: "step_up_verifications", column: "verified_at" }],

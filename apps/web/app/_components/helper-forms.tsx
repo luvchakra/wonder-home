@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarDays, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -255,7 +255,7 @@ export function HelperEngagementRowControls({
           const formData = new FormData();
           formData.set("id", current.id);
           formData.set("householdId", householdId);
-          removeAction(formData);
+          startTransition(() => removeAction(formData));
         }}
       >
         {removeState.error ? <p className="text-sm text-[var(--wh-risk)]">{removeState.error}</p> : null}

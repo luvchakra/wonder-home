@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, Pencil, Plus, Trash2 } from "lucide-react";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -584,7 +584,7 @@ export function RemoveTransactionControl({
           formData.set("householdId", householdId);
           formData.set("obligationId", transaction.obligationId);
           formData.set("periodLabel", transaction.periodLabel);
-          formAction(formData);
+          startTransition(() => formAction(formData));
         }}
       >
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}

@@ -2,7 +2,7 @@
 
 import { Ban, ChevronLeft, ChevronRight, CircleCheck, Plus } from "lucide-react";
 import type { ReactNode } from "react";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import type { AppointmentType } from "@wonderhome/core/health/appointments";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -217,7 +217,7 @@ export function AppointmentStatusActions({
     formData.set("householdId", householdId);
     formData.set("appointmentId", appointmentId);
     formData.set("status", next);
-    formAction(formData);
+    startTransition(() => formAction(formData));
   };
 
   if (status === "proposed") {
