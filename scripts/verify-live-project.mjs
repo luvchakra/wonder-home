@@ -21,6 +21,8 @@ const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
 /** Tables the application ships. A missing one means a migration never landed. */
 const SHIPPED_TABLES = [
+  "billing_intents",
+  "billing_events",
   "weather_locations",
   "profiles",
   "households",
@@ -135,6 +137,8 @@ const SHIPPED_COLUMNS = [
   { table: "school_items", column: "due_time_known" },
   { table: "school_items", column: "ends_at" },
   { table: "weather_locations", column: "forecast_fetched_at" },
+  { table: "plans", column: "requires_payment" },
+  { table: "household_subscriptions", column: "last_billing_event_at" },
 ];
 
 /**

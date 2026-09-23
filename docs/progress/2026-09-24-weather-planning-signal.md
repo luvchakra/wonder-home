@@ -113,3 +113,17 @@ end.
 - **Outdoor work.** `planOutdoorWork` (from 13-005) is ready, but no outdoor
   job carries a planned time yet, so only laundry and drying use the
   forecast today.
+
+## Test data cleanup
+
+Ran after PR #137 merged:
+- Deleted the QA account `a2df560f-7f7e-4036-af13-bfc68d027b28` with
+  `qa-test-user.mjs`.
+- Deleted its household `ddccd474-c437-4a8e-a926-476a39a5056f` ("Weather QA
+  Home"): audit rows first, then the household. That cascades its weather
+  area, integration row and the Pro subscription row added by hand for QA.
+- Deleted this session's rate-limit counters.
+- Deleted the local screenshots and QA scripts.
+
+SQL counts for the household, weather area, integrations, subscription,
+audit, counters and stored files are all 0.

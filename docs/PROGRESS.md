@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**184 of 195 stories done — 94.4%**
+**185 of 195 stories done — 94.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 184 |
+| Done | 185 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 10 |
+| Not Started | 9 |
 
 ## By module
 
@@ -44,7 +44,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 17 External Integrations | `███████░░░` | 6 | 8 | 2 not started |
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
-| 20 Subscriptions, Entitlements & Usage | `██████░░░░` | 5 | 8 | 3 not started |
+| 20 Subscriptions, Entitlements & Usage | `███████░░░` | 6 | 8 | 2 not started |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 
 ## What is left
@@ -59,7 +59,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-006` WhatsApp | 17 External Integrations | P1 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
-| `20-006` Billing abstraction | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
 | `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 
@@ -386,7 +385,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 20 — Subscriptions, Entitlements & Usage
 
-5 of 8 done `██████░░░░`
+6 of 8 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -395,7 +394,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-003` Usage metering | P0 | Done | atomic counters proven against 20 concurrent sessions |
 | `20-004` Upgrade/downgrade | P0 | Done | A change writes one row and never a household record; consequences shown and re-derived before applying; audited |
 | `20-005` Usage UI | P1 | Done | Settings shows used/limit per metered feature, from the same counter `consume` enforces against |
-| `20-006` Billing abstraction | P1 | Not Started | — |
+| `20-006` Billing abstraction | P1 | Done | Provider-neutral `BillingProvider` port + pure `applyBillingEvent` (out-of-order and other-subscription events ignored, cancellation falls back to free, never deletes); Stripe adapter code-complete and inert (intent id as Idempotency-Key, HMAC-verified webhooks); `billing_intents` (one open per household+plan) and `billing_events` (unique per provider event) with RLS; `plans.requires_payment` keeps paid plans out of reach of any household session |
 | `20-007` Quota automation | P2 | Not Started | — |
 | `20-008` Plan experiments | P2 | Not Started | — |
 

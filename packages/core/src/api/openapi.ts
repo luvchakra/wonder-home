@@ -485,11 +485,11 @@ export function buildOpenApiDocument(): Json {
           description:
             "The household's own change path (`changePlan`), unmodified — the same re-derived assessment, the same single row that changes, no shortcut for staff around what a household would also have to face. Requires a reason code rather than free text, because a note is redacted out of the audit trail before it is written. Requires `subscription.manage`, which `support` does not hold.",
           responses: {
-            "200": { description: "The new plan and what the change did" },
+            "200": { description: "The new plan and what the change did — or, for a plan marked requires_payment when a billing provider sells it (story 20-006), `checkout.url` to send the person to; the plan then changes only when the provider's verified webhook confirms the payment" },
             "400": { $ref: "#/components/responses/BadRequest" },
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
-            "409": { description: "Already on that plan, or the consequences moved since they were shown" },
+            "409": { description: "Already on that plan, the consequences moved since they were shown, or a paid plan that cannot be bought here yet" },
           },
         },
       },
@@ -1425,6 +1425,18 @@ export function buildOpenApiDocument(): Json {
           responses: {
             "200": { description: "Counts by outcome: delivered, retrying, exhausted, skipped" },
             "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+      },
+      "/billing/webhook": {
+        post: {
+          summary: "Billing provider webhook (story 20-006)",
+          description:
+            "The configured billing provider's webhook, not a household session: believed only after its signature verifies over the raw body (Stripe: HMAC-SHA256, five-minute tolerance). Each provider event is recorded once by its own id, and only `applyBillingEvent` moves a subscription — never a household's records. 404 when no billing provider is configured. Live only once WONDERHOME_BILLING_PROVIDER, the provider's secret and webhook secret, and a price per sold plan are set.",
+          responses: {
+            "200": { description: "Acknowledged — applied, a duplicate delivery, or an event this endpoint does not act on" },
+            "400": { description: "Signature rejected or body unreadable; nothing changed" },
+            "404": { description: "No billing provider is configured" },
           },
         },
       },

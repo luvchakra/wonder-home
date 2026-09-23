@@ -250,13 +250,15 @@ export type PlanOption = {
   name: string;
   description: string | null;
   sortOrder: number;
+  /** Entered only through a verified payment (story 20-006); never by a direct change. */
+  requiresPayment: boolean;
 };
 
 /** The plans a household may move to. Data, never a hard-coded list. */
 export async function listPlans(supabase: SupabaseClient): Promise<PlanOption[]> {
   const { data, error } = await supabase
     .from("plans")
-    .select("key, name, description, sort_order")
+    .select("key, name, description, sort_order, requires_payment")
     .eq("active", true)
     .order("sort_order");
 
@@ -267,7 +269,15 @@ export async function listPlans(supabase: SupabaseClient): Promise<PlanOption[]>
     name: row.name as string,
     description: (row.description as string | null) ?? null,
     sortOrder: Number(row.sort_order),
+    requiresPayment: row.requires_payment === true,
   }));
+}
+
+/** Whether a plan can only be entered through a verified payment (story 20-006). */
+export async function planRequiresPayment(supabase: SupabaseClient, planKey: string): Promise<boolean> {
+  const { data, error } = await supabase.from("plans").select("requires_payment").eq("key", planKey).maybeSingle();
+  if (error) throw new Error(`planRequiresPayment failed: ${error.code ?? "unknown"}`);
+  return (data as Row | null)?.requires_payment === true;
 }
 
 async function featuresOf(supabase: SupabaseClient, planKey: string): Promise<PlanFeature[]> {
@@ -365,6 +375,14 @@ export async function changePlan(
   now: Date = new Date(),
 ): Promise<{ assessment: PlanChangeAssessment; planKey: string }> {
   const assessment = await previewPlanChange(supabase, input.householdId, input.toPlanKey, now);
+
+  // A plan that has to be paid for is entered through a checkout and a
+  // verified payment (story 20-006), never by a direct change from a
+  // household. Platform staff comping a plan (16-005) is the one exception,
+  // and it is audited as theirs. RLS refuses the household path as well.
+  if (!input.actorProfileId && (await planRequiresPayment(supabase, input.toPlanKey))) {
+    throw ApiError.conflict("This plan is bought through a checkout, not changed directly.", { checkoutRequired: true });
+  }
 
   if (assessment.fromPlanKey === input.toPlanKey) {
     throw ApiError.conflict("This household is already on that plan.");

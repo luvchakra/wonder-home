@@ -30,6 +30,8 @@ import { AiKeyForm } from "../_components/ai-key-form";
 import { DataUseForm } from "../_components/data-use-form";
 import { MemberAvatarControl } from "../_components/member-avatar-control";
 import { MemberProfileForm } from "../_components/member-profile-form";
+import { Alert } from "@wonderhome/core/ui/alert";
+
 import { PlanForm } from "../_components/plan-form";
 import { formatDate, requireSession } from "../_lib/session";
 
@@ -44,7 +46,8 @@ type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | n
  * accounts, and sign-out. What is not built yet — MFA, data export, deletion —
  * is listed as coming rather than as a button that does nothing.
  */
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
+  const { checkout } = await searchParams;
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
   const [user, { data: preferenceRows }, credential, dataUse, voiceSettings, members] = await Promise.all([
@@ -199,6 +202,14 @@ export default async function SettingsPage() {
           <section>
             <SectionHeader title="Your plan" />
             <Card className="space-y-3 p-4">
+              {/* Back from the payment provider (story 20-006). The plan
+                  changes when the provider confirms the payment, not on the
+                  redirect — so this says what is true, not what is hoped. */}
+              {checkout === "complete" ? (
+                <Alert tone="info">Thanks — your plan changes as soon as the payment is confirmed, usually within a minute.</Alert>
+              ) : checkout === "cancelled" ? (
+                <Alert tone="info">No payment was taken, and your plan is as it was.</Alert>
+              ) : null}
               {manages ? (
                 <PlanForm
                   householdId={membership.household.id}
