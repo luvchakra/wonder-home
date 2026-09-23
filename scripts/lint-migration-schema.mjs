@@ -25,6 +25,7 @@ const FILENAME = /^\d{14}_[a-z0-9_]+\.sql$/;
  *   profiles        — a person, who may belong to several households
  *   plans                     — platform-level plan catalogue
  *   plan_features             — what a plan allows; a property of the plan, not a tenant
+ *   plan_policy_events        — staff changes to a plan's usage policy; a plan belongs to no household
  *   platform_admins           — the separate platform-admin boundary
  *   homesend_share_handoffs   — a share sheet staged before sign-in; no household is known yet
  *   rate_limit_counters       — request counters keyed by a bucket and a subject (member, household or IP hash); some subjects have no household
@@ -34,6 +35,7 @@ const NON_TENANT_TABLES = new Set([
   "profiles",
   "plans",
   "plan_features",
+  "plan_policy_events",
   "platform_admins",
   "homesend_share_handoffs",
   "rate_limit_counters",

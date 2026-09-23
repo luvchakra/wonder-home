@@ -65,9 +65,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     listPlans(supabase).catch(() => []),
     usageSummary(supabase, membership.household.id).catch(() => ({ planKey: null, features: [] })),
   ]);
-  // Only what is actually metered — an unlimited feature has no "used of"
-  // to show, and "used of unlimited" is not arithmetic anybody asked for.
-  const metered = usage.features.filter((feature) => feature.limit !== null && feature.used !== null);
+  // Only what is actually counted — an unlimited feature with no fair-use
+  // level has no "used of" to show, and "used of unlimited" is not
+  // arithmetic anybody asked for.
+  const metered = usage.features.filter((feature) => feature.used !== null && (feature.limit !== null || feature.fairUseLimit !== null));
+  // What the plan says about spikes and heavy use (story 20-007), in words.
+  const policyLines = usage.features.flatMap((feature) => feature.policies);
 
   // Which key actually answers for this household, decided in one place so
   // the screen can never disagree with the server about it.
@@ -190,11 +193,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <section>
             <SectionHeader title="Usage this period" />
             <MetricGrid
-              metrics={metered.map((feature) => ({
-                label: `${feature.label} this period`,
-                value: `${feature.used} / ${feature.limit}`,
-              }))}
+              metrics={metered.map((feature) =>
+                feature.limit !== null
+                  ? { label: `${feature.label} this period`, value: `${feature.used} / ${feature.limit}` }
+                  : { label: `${feature.label} this period, fair use ${feature.fairUseLimit}`, value: `${feature.used}` },
+              )}
             />
+            {policyLines.length > 0 ? (
+              <ul className="mt-3 space-y-1 text-sm text-[var(--wh-foreground-muted)]">
+                {policyLines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
           </section>
         ) : null}
 

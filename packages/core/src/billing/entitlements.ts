@@ -37,6 +37,18 @@ export type PlanFeature = {
   /** Null means unlimited. Zero means listed but unusable. */
   limitPerPeriod: number | null;
   period: "day" | "month" | "year" | "forever";
+  /**
+   * At most this many uses per fixed `burstWindowSeconds` window (story
+   * 20-007) — the spike a script or a stuck client makes. Null or absent: no
+   * burst policy.
+   */
+  burstLimit?: number | null;
+  burstWindowSeconds?: number | null;
+  /**
+   * Uses in the period past which the household is served more cheaply,
+   * never refused (story 20-007). Null or absent: no fair-use level.
+   */
+  fairUseLimit?: number | null;
 };
 
 export type Subscription = {
@@ -47,14 +59,22 @@ export type Subscription = {
 };
 
 export type EntitlementDecision =
-  | { allowed: true; remaining: number | null; reason: string }
+  | {
+      allowed: true;
+      remaining: number | null;
+      reason: string;
+      /** Where the household stands against the plan's fair-use level, when it has one (story 20-007). */
+      fairUse?: "within" | "over";
+    }
   | { allowed: false; code: EntitlementRefusal; reason: string; remaining: 0 };
 
 export type EntitlementRefusal =
   | "not_in_plan"
   | "quota_exhausted"
   | "subscription_inactive"
-  | "no_subscription";
+  | "no_subscription"
+  /** Too many uses in a short window; temporary, and nothing was lost (story 20-007). */
+  | "burst_limited";
 
 /**
  * Whether a household may use a feature right now.

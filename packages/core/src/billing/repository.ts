@@ -4,6 +4,7 @@ import { cache } from "react";
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
+import { log } from "../observability/logger";
 import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import {
   checkEntitlement,
@@ -14,6 +15,7 @@ import {
   type PlanFeature,
   type Subscription,
 } from "./entitlements";
+import { BURST_MESSAGE, burstBucket, describePolicy, fairUseState, needsCounting } from "./policies";
 import {
   assessPlanChange,
   needsConfirmation,
@@ -30,6 +32,21 @@ import {
  */
 
 type Row = Record<string, unknown>;
+
+const FEATURE_COLUMNS = "feature_key, enabled, limit_per_period, period, burst_limit, burst_window_seconds, fair_use_limit";
+
+function featureFromRow(row: Row): PlanFeature {
+  const optional = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+  return {
+    featureKey: row.feature_key as string,
+    enabled: row.enabled as boolean,
+    limitPerPeriod: (row.limit_per_period as number | null) ?? null,
+    period: row.period as PlanFeature["period"],
+    burstLimit: optional(row.burst_limit),
+    burstWindowSeconds: optional(row.burst_window_seconds),
+    fairUseLimit: optional(row.fair_use_limit),
+  };
+}
 
 /** A household with no subscription row is on Free rather than on nothing. */
 export const DEFAULT_PLAN_KEY = "free";
@@ -56,17 +73,12 @@ export const loadSubscription = cache(async (
 
   const { data: featureRows, error: featureError } = await supabase
     .from("plan_features")
-    .select("feature_key, enabled, limit_per_period, period")
+    .select(FEATURE_COLUMNS)
     .eq("plan_key", planKey);
 
   if (featureError) throw new Error(`loadSubscription failed: ${featureError.code ?? "unknown"}`);
 
-  const features: PlanFeature[] = (featureRows ?? []).map((row: Row) => ({
-    featureKey: row.feature_key as string,
-    enabled: row.enabled as boolean,
-    limitPerPeriod: (row.limit_per_period as number | null) ?? null,
-    period: row.period as PlanFeature["period"],
-  }));
+  const features: PlanFeature[] = (featureRows ?? []).map(featureFromRow);
 
   // No plan_features rows at all means the catalogue has not been seeded, which
   // is a deployment fault rather than a household on an empty plan. Reporting
@@ -108,8 +120,12 @@ export type FeatureUsage = {
   /** Null for a feature this plan does not meter — nothing to show against. */
   limit: number | null;
   period: PlanFeature["period"];
-  /** Null alongside a null limit; otherwise what has actually been spent this period. */
+  /** What has actually been spent this period; null when nothing about the feature is counted. */
   used: number | null;
+  /** Past this many uses the household is served more simply, never refused (story 20-007). */
+  fairUseLimit: number | null;
+  /** The plan's burst and fair-use policies for this feature, as sentences. */
+  policies: string[];
 };
 
 /**
@@ -131,10 +147,9 @@ export async function usageSummary(
   for (const feature of subscription.features) {
     if (!feature.enabled) continue;
 
-    const used =
-      feature.limitPerPeriod !== null
-        ? await usedThisPeriod(supabase, householdId, feature.featureKey, feature.period, now)
-        : null;
+    const used = needsCounting(feature)
+      ? await usedThisPeriod(supabase, householdId, feature.featureKey, feature.period, now)
+      : null;
 
     features.push({
       featureKey: feature.featureKey,
@@ -142,6 +157,8 @@ export async function usageSummary(
       limit: feature.limitPerPeriod,
       period: feature.period,
       used,
+      fairUseLimit: feature.fairUseLimit ?? null,
+      policies: describePolicy(feature),
     });
   }
 
@@ -207,16 +224,32 @@ export async function consume(
   if (!gate.allowed) return gate;
 
   const entry = subscription!.features.find((candidate) => candidate.featureKey === feature)!;
-  if (entry.limitPerPeriod === null) {
+  const meter = options.meter ?? createAdminClient();
+
+  // A burst policy first (story 20-007): too many uses in a short window is
+  // refused for that window only, before anything is spent. Counted per
+  // household, in the same fixed-window counters every rate limit uses —
+  // and, like them, it lets the request through when the counter cannot be
+  // reached: a throttle, never an authorization gate.
+  if (entry.burstLimit && entry.burstWindowSeconds) {
+    const withinBurst = await hitBurst(meter, feature, householdId, entry.burstLimit, entry.burstWindowSeconds);
+    if (!withinBurst) {
+      return { allowed: false, code: "burst_limited", reason: BURST_MESSAGE, remaining: 0 };
+    }
+  }
+
+  // Nothing to count: no allowance and no fair-use level to measure against.
+  if (!needsCounting(entry)) {
     return { allowed: true, remaining: null, reason: "Included in this plan." };
   }
 
-  const meter = options.meter ?? createAdminClient();
   const { data, error } = await meter.rpc("record_usage", {
     p_household_id: householdId,
     p_feature_key: feature,
     p_period_start: periodStart(entry.period, now).toISOString(),
     p_amount: amount,
+    // Null is unlimited: a feature with only a fair-use level is counted,
+    // never refused, for it.
     p_limit: entry.limitPerPeriod,
   });
 
@@ -234,11 +267,38 @@ export async function consume(
     };
   }
 
-  return {
-    allowed: true,
-    remaining: Math.max(0, entry.limitPerPeriod - used),
-    reason: `${Math.max(0, entry.limitPerPeriod - used)} of ${entry.limitPerPeriod} left this period.`,
-  };
+  const fairUse = fairUseState(entry, used);
+  const decision: EntitlementDecision =
+    entry.limitPerPeriod === null
+      ? { allowed: true, remaining: null, reason: "Included in this plan." }
+      : {
+          allowed: true,
+          remaining: Math.max(0, entry.limitPerPeriod - used),
+          reason: `${Math.max(0, entry.limitPerPeriod - used)} of ${entry.limitPerPeriod} left this period.`,
+        };
+  return fairUse ? { ...decision, fairUse } : decision;
+}
+
+async function hitBurst(
+  meter: Pick<SupabaseClient, "rpc">,
+  feature: string,
+  householdId: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  try {
+    const { data, error } = await meter.rpc("rate_limit_hit", {
+      p_bucket: burstBucket(feature),
+      p_subject: householdId,
+      p_window_seconds: windowSeconds,
+      p_max: limit,
+    });
+    if (error) throw error;
+    return data !== false;
+  } catch (thrown) {
+    log.warn("burst counter unavailable; allowing", { feature, reason: (thrown as { code?: string } | null)?.code ?? "unknown" });
+    return true;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -283,17 +343,12 @@ export async function planRequiresPayment(supabase: SupabaseClient, planKey: str
 async function featuresOf(supabase: SupabaseClient, planKey: string): Promise<PlanFeature[]> {
   const { data, error } = await supabase
     .from("plan_features")
-    .select("feature_key, enabled, limit_per_period, period")
+    .select(FEATURE_COLUMNS)
     .eq("plan_key", planKey);
 
   if (error) throw new Error(`featuresOf failed: ${error.code ?? "unknown"}`);
 
-  return ((data as Row[] | null) ?? []).map((row) => ({
-    featureKey: row.feature_key as string,
-    enabled: row.enabled as boolean,
-    limitPerPeriod: (row.limit_per_period as number | null) ?? null,
-    period: row.period as PlanFeature["period"],
-  }));
+  return ((data as Row[] | null) ?? []).map(featureFromRow);
 }
 
 /**

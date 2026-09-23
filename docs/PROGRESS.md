@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**187 of 195 stories done — 95.9%**
+**188 of 195 stories done — 96.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 187 |
+| Done | 188 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 7 |
+| Not Started | 6 |
 
 ## By module
 
@@ -44,7 +44,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 17 External Integrations | `████████░░` | 7 | 8 | 1 not started |
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
-| 20 Subscriptions, Entitlements & Usage | `███████░░░` | 6 | 8 | 2 not started |
+| 20 Subscriptions, Entitlements & Usage | `████████░░` | 7 | 8 | 1 not started |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 
 ## What is left
@@ -57,7 +57,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
-| `20-007` Quota automation | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 
 ## Every story
@@ -383,7 +382,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 20 — Subscriptions, Entitlements & Usage
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -393,7 +392,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-004` Upgrade/downgrade | P0 | Done | A change writes one row and never a household record; consequences shown and re-derived before applying; audited |
 | `20-005` Usage UI | P1 | Done | Settings shows used/limit per metered feature, from the same counter `consume` enforces against |
 | `20-006` Billing abstraction | P1 | Done | Provider-neutral `BillingProvider` port + pure `applyBillingEvent` (out-of-order and other-subscription events ignored, cancellation falls back to free, never deletes); Stripe adapter code-complete and inert (intent id as Idempotency-Key, HMAC-verified webhooks); `billing_intents` (one open per household+plan) and `billing_events` (unique per provider event) with RLS; `plans.requires_payment` keeps paid plans out of reach of any household session |
-| `20-007` Quota automation | P2 | Not Started | — |
+| `20-007` Quota automation | P2 | Done | Burst (N per fixed W-second window) and fair-use (past N in the period, served more simply, never refused) as plan data on `plan_features`, enforced in the one entitlement service (`consume`); HomeTalk answers from the rules past fair use, with a disclosure, and refuses a burst as temporary; staff set policies through `PATCH /platform-admin/plans/{planKey}/policies` (`subscription.manage`, reason code), every change kept in `plan_policy_events` |
 | `20-008` Plan experiments | P2 | Not Started | — |
 
 ### 21 — Health and Fitness
