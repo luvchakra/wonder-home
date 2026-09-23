@@ -10,7 +10,8 @@ import { ApiError } from "@wonderhome/core/api/errors";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { consume, may } from "@wonderhome/core/billing/repository";
-import { describeLocalNow, forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
+import { describeLocalNow, factsFor, forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
+import type { PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, resolveDeterministicIntent, type ConversationTurn, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import type { HouseholdIntent, IntentTarget } from "@wonderhome/core/conversation/intent";
@@ -474,14 +475,16 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
 }
 
 /**
- * A question answered from the HomeBrain (product-direction v4 §5).
+ * A question answered from the HomeBrain (product-direction v4 §5, Wave 1).
  *
- * Every domain this member may see is read into plain facts, each carrying
- * its consent class; the gate keeps only what the household has agreed may
- * leave and replaces names with roles; the model composes an answer from
- * those facts alone; the names go back in here. Null when the household's
- * policy lets nothing go, no provider is configured, or the model did not
- * answer — the caller keeps its deterministic line in every such case.
+ * Every domain this member may see is read by the context engine into
+ * facts, each carrying its consent class; the engine picks the ones this
+ * question needs and marks the rest not relevant; the gate keeps only what
+ * the household has agreed may leave and replaces names with roles; the
+ * model composes an answer from those facts alone; the names go back in
+ * here. Null when the household's policy lets nothing go, no provider is
+ * configured, or the model did not answer — the caller keeps its
+ * deterministic line in every such case.
  */
 async function answerFromBrain(input: {
   routing: Awaited<ReturnType<typeof decideProviderRouting>>;
@@ -493,7 +496,7 @@ async function answerFromBrain(input: {
   if (!input.routing.answer || !input.read) return null;
   try {
     const { context } = await input.read;
-    return await input.routing.answer(input.question, context.facts, input.view.roleLabel);
+    return await input.routing.answer(input.question, factsFor(context, input.question), input.view.roleLabel);
   } catch (thrown) {
     console.error("[conversation] HomeBrain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
     return null;
@@ -529,17 +532,35 @@ function windowFor(when: string, now: Date): { from: Date; to: Date } {
   }
 }
 
-async function listPeople(supabase: Supabase, householdId: string): Promise<Person[]> {
+/**
+ * Everyone active in the household: who they are for the consent gate's
+ * placeholders, and the words the family uses for them (nickname,
+ * "Dad", date of birth for "the older one") for the context engine's resolver.
+ */
+async function listPeople(supabase: Supabase, householdId: string): Promise<(Person & PersonLike)[]> {
   const { data } = await supabase
     .from("household_members")
-    .select("id, display_name, member_type")
+    .select("id, display_name, member_type, nickname, relationship, date_of_birth, occupation")
     .eq("household_id", householdId)
     .eq("status", "active");
 
-  return ((data as { id: string; display_name: string; member_type: Person["memberType"] }[] | null) ?? []).map((row) => ({
+  type Row = {
+    id: string;
+    display_name: string;
+    member_type: Person["memberType"];
+    nickname: string | null;
+    relationship: string | null;
+    date_of_birth: string | null;
+    occupation: string | null;
+  };
+  return ((data as Row[] | null) ?? []).map((row) => ({
     id: row.id,
     displayName: row.display_name,
     memberType: row.member_type,
+    nickname: row.nickname,
+    relationship: row.relationship,
+    dateOfBirth: row.date_of_birth,
+    occupation: row.occupation,
   }));
 }
 

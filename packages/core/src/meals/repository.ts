@@ -17,6 +17,7 @@ import {
   type Preference,
   type Recipe,
 } from "./meals";
+import { invalidatesContext } from "../context/invalidation";
 
 /**
  * Reading and writing meals (module 10).
@@ -122,7 +123,7 @@ export type CreateMealInput = {
   cookMemberId?: string | null;
 };
 
-export async function createMeal(
+async function createMealImpl(
   supabase: SupabaseClient,
   input: CreateMealInput,
 ): Promise<{ id: string }> {
@@ -164,7 +165,7 @@ export async function createMeal(
  * — and so a household can adjust one dinner without editing the recipe they
  * cook every month.
  */
-export async function attachIngredients(
+async function attachIngredientsImpl(
   supabase: SupabaseClient,
   householdId: string,
   mealId: string,
@@ -209,7 +210,7 @@ export async function attachIngredients(
  * recipe's ingredients onto the meal the same way planning with a recipe
  * from the start does, via `attachIngredients`.
  */
-export async function attachRecipeToMeal(
+async function attachRecipeToMealImpl(
   supabase: SupabaseClient,
   householdId: string,
   mealId: string,
@@ -256,7 +257,7 @@ export type CreateRecipeInput = {
  * selection in plan a meal section"). Every ingredient becomes a real
  * `recipe_ingredients` row so `attachIngredients` has something to copy.
  */
-export async function createRecipe(
+async function createRecipeImpl(
   supabase: SupabaseClient,
   input: CreateRecipeInput,
 ): Promise<{ id: string }> {
@@ -328,7 +329,7 @@ export type CreatePreferenceInput = {
  * them: null (whole household), the caller's own member, or, for an admin,
  * anybody's.
  */
-export async function createFoodPreference(
+async function createFoodPreferenceImpl(
   supabase: SupabaseClient,
   input: CreatePreferenceInput,
 ): Promise<{ id: string }> {
@@ -557,7 +558,7 @@ export async function suggestMeal(
  * shortage becomes a row the household can act on, and the meal records which
  * suggestion covers it so the two stay connected as either one changes.
  */
-export async function bridgeToShopping(
+async function bridgeToShoppingImpl(
   supabase: SupabaseClient,
   householdId: string,
   meal: Meal,
@@ -637,3 +638,12 @@ export async function mealAgenda(
     checked: meals.length,
   };
 }
+
+// Every write forgets the household's cached context once it succeeds, so
+// the next HomeTalk answer sees the change (Wave 1 §14).
+export const createMeal = invalidatesContext(createMealImpl, (_supabase, input) => input.householdId);
+export const createRecipe = invalidatesContext(createRecipeImpl, (_supabase, input) => input.householdId);
+export const createFoodPreference = invalidatesContext(createFoodPreferenceImpl, (_supabase, input) => input.householdId);
+export const attachIngredients = invalidatesContext(attachIngredientsImpl, (_supabase, householdId) => householdId);
+export const attachRecipeToMeal = invalidatesContext(attachRecipeToMealImpl, (_supabase, householdId) => householdId);
+export const bridgeToShopping = invalidatesContext(bridgeToShoppingImpl, (_supabase, householdId) => householdId);

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { invalidateHouseholdContext } from "../context/invalidation";
 import { createAdminClient } from "../db/admin";
 import { redact } from "../security/redact";
 import { log } from "../observability/logger";
@@ -204,6 +205,9 @@ export async function listAuditEvents(
  * from being silent ones.
  */
 export async function auditChange(entry: AuditEntry): Promise<void> {
+  // Every audited change is a successful write to this household, so what
+  // HomeTalk last read about it is out of date from this moment (Wave 1 §14).
+  invalidateHouseholdContext(entry.householdId);
   try {
     await recordAuditEvent(createAdminClient(), entry);
   } catch {

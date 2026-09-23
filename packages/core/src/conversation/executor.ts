@@ -2,7 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
-import { createConsumable } from "../commerce/repository";
+import { createConsumable, listConsumables } from "../commerce/repository";
+import { buildContextItems, personItems, type PersonLike } from "../context/builders";
+import { matchIncoming } from "../context/matching";
+import { resolveEntity, resolvePerson } from "../context/resolution";
 import { createAppointment, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
@@ -33,7 +36,8 @@ export type ExecutionContext = {
   supabase: SupabaseClient;
   householdId: string;
   actorMemberId: string;
-  members: readonly { id: string; displayName: string }[];
+  /** Everyone in the household — with the profile words (nickname, "Dad") the resolver matches on, where known. */
+  members: readonly PersonLike[];
   timezone: string;
   now?: Date;
   /** Only `check_agents` needs these — who is asking, for the tool gate a run checks per step. */
@@ -141,6 +145,21 @@ async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext
   const name = raw.charAt(0).toUpperCase() + raw.slice(1);
   if (!name) return { ok: false, reason: "What should I add?" };
 
+  // "Milk" when "Amul milk" is already tracked is the same milk, not a new
+  // item — checked by the context engine's matcher, the same one HomeSend
+  // uses, so the two can never disagree about what is already on the list.
+  const tracked = await listConsumables(context.supabase, context.householdId).catch(() => []);
+  const known = buildContextItems({ consumables: tracked }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now: context.now ?? new Date(), viewerMemberId: context.actorMemberId });
+  const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
+  if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate")) {
+    const title = String(match.item.attributes.title ?? name);
+    return {
+      ok: true,
+      text: `**${title}** is already on the ${linkTo("/groceries", "groceries")}, so there was nothing to add.`,
+      result: { name: title, alreadyTracked: true, consumableId: match.item.entityId },
+    };
+  }
+
   try {
     const { id } = await createConsumable(context.supabase, {
       householdId: context.householdId,
@@ -165,11 +184,19 @@ async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext
 async function recordAbsence(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
   const reference = intent.target.reference ?? "";
   const memberId = typeof intent.parameters.memberId === "string" ? intent.parameters.memberId : null;
-  const member =
-    context.members.find((entry) => entry.id === memberId) ??
-    context.members.find((entry) => firstName(entry.displayName) === reference.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  // A model that already mapped the reference to a member is trusted only as
+  // far as that id is someone in this household; otherwise the context
+  // engine resolves "Sunita", "Dad" or "the helper" — and asks rather than
+  // guesses when it cannot tell.
+  let member = context.members.find((entry) => entry.id === memberId);
   if (!member) {
-    return { ok: false, reason: `I do not know anyone called “${reference}” in this household. Who did you mean?` };
+    const resolution = resolvePerson(reference, personItems(context.members, { householdId: context.householdId, now: context.now ?? new Date() }), { viewerMemberId: context.actorMemberId });
+    member = resolution.selected ? context.members.find((entry) => entry.id === resolution.selected!.memberId) : undefined;
+    if (!member) {
+      if (resolution.ambiguous) return { ok: false, reason: resolution.question ?? "Who did you mean?" };
+      const suggestion = resolution.candidates[0] ? ` ${resolution.question}` : " Who did you mean?";
+      return { ok: false, reason: `I do not know anyone called “${reference}” in this household.${suggestion}` };
+    }
   }
 
   const when = typeof intent.parameters.when === "string" ? intent.parameters.when : "today";
@@ -277,7 +304,11 @@ async function resolveHealthIssue(intent: HouseholdIntent, context: ExecutionCon
     memberId: context.actorMemberId,
     statuses: ["mentioned", "active", "monitoring"],
   });
-  const match = open.find((issue) => issue.label.toLowerCase().includes(label) || label.includes(issue.label.toLowerCase()));
+  const now = context.now ?? new Date();
+  const items = buildContextItems({ healthIssues: open }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now, viewerMemberId: context.actorMemberId });
+  const resolution = resolveEntity(label, items, { timezone: context.timezone, now, entityTypes: ["health_issue"] });
+  if (resolution.ambiguous) return { ok: false, reason: resolution.question ?? "Which one did you mean?" };
+  const match = resolution.selected ? open.find((issue) => issue.id === resolution.selected!.entityId) : undefined;
   if (!match) {
     return { ok: false, reason: `I do not have an open record of "${label}" for you — check ${linkTo("/health", "Health & Fitness")} to see what is tracked.` };
   }
@@ -487,10 +518,6 @@ function timezoneOffsetMinutes(date: Date, timeZone: string): number {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function firstName(displayName: string): string {
-  return (displayName.split(/\s+/)[0] ?? displayName).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];

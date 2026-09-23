@@ -14,6 +14,7 @@ import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/heal
 import { classifyAndSave } from "@wonderhome/core/homesend/classify-and-save";
 import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendItem, HomeSendKind } from "@wonderhome/core/homesend/items";
+import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import { createHomeSendItem, dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { assessUploadSecurity } from "@wonderhome/core/homesend/security";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -33,8 +34,38 @@ import { cancelSchoolItem, createSchoolItem } from "@wonderhome/core/school/repo
 export type SendHomeItemState = {
   error?: string;
   notice?: string;
-  item?: { id: string; classifiedKind: HomeSendKind; extracted: HomeSendExtraction | null };
+  item?: { id: string; classifiedKind: HomeSendKind; extracted: HomeSendExtraction | null; reconciliation?: Pick<HomeSendReconciliation, "verdict" | "message"> | null };
 };
+
+/**
+ * What was just classified, checked against what the household already has
+ * (Wave 1 §7) — so the confirm step can say "this looks like the
+ * electricity bill already on record" before anyone presses Add.
+ */
+async function withReconciliation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  householdId: string,
+  timezone: string,
+  state: SendHomeItemState,
+): Promise<SendHomeItemState> {
+  const item = state.item;
+  const kind = item?.classifiedKind;
+  if (!item || !kind || kind === "unknown" || !item.extracted?.title) return state;
+  const found = await reconcileHomeSend(
+    supabase,
+    householdId,
+    {
+      kind,
+      title: item.extracted.title,
+      date: item.extracted.dueDate ?? item.extracted.documentDate ?? null,
+      amount: item.extracted.amount,
+      payee: item.extracted.payee,
+      capturedAt: new Date().toISOString(),
+    },
+    { timezone },
+  ).catch(() => null);
+  return found ? { ...state, item: { ...item, reconciliation: { verdict: found.verdict, message: found.message } } } : state;
+}
 
 const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 const UPLOAD_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -82,9 +113,10 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
       };
     }
 
-    const state = await classifyAndSave(supabase, householdId, itemId, {
+    const classified = await classifyAndSave(supabase, householdId, itemId, {
       image: { mediaType: photo.type as "image/jpeg" | "image/png" | "image/webp", base64: buffer.toString("base64") },
     });
+    const state = await withReconciliation(supabase, householdId, membership.household.timezone, classified);
     revalidatePath("/ai");
     revalidatePath("/home-send");
     return state;
@@ -114,7 +146,8 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
       rawText: parsed.data.text,
     });
 
-    const state = await classifyAndSave(supabase, parsed.data.householdId, itemId, { text: parsed.data.text });
+    const classified = await classifyAndSave(supabase, parsed.data.householdId, itemId, { text: parsed.data.text });
+    const state = await withReconciliation(supabase, parsed.data.householdId, membership.household.timezone, classified);
     revalidatePath("/ai");
     revalidatePath("/home-send");
     return state;
@@ -155,6 +188,9 @@ const routeSchema = z.object({
   // No notes field: createConsumable has nowhere to put one.
   includeSecondary: z.literal("on").optional(),
   secondaryTitle: z.string().trim().max(160).optional(),
+  // Set once the person has seen a reconciliation candidate and said this
+  // really is a different one.
+  confirmDuplicate: z.literal("on").optional(),
 });
 
 /**
@@ -164,7 +200,7 @@ const routeSchema = z.object({
  * grocery row — this is the one place that does, and only once a person has
  * reviewed the fields.
  */
-export type RouteHomeItemState = { error?: string; notice?: string };
+export type RouteHomeItemState = { error?: string; notice?: string; reconciliation?: Pick<HomeSendReconciliation, "verdict" | "message"> };
 
 export async function routeHomeSendItemAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
   const parsed = routeSchema.safeParse({
@@ -184,15 +220,42 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     quantity: formData.get("quantity") || undefined,
     unit: formData.get("unit") || undefined,
     category: formData.get("category") || undefined,
+    subjectMemberId: formData.get("subjectMemberId") || undefined,
+    healthRecordType: formData.get("healthRecordType") || undefined,
+    documentDate: formData.get("documentDate") || undefined,
     includeSecondary: formData.get("includeSecondary") || undefined,
     secondaryTitle: formData.get("secondaryTitle") || undefined,
     secondaryNotes: formData.get("secondaryNotes") || undefined,
+    confirmDuplicate: formData.get("confirmDuplicate") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
+
+    // Never a quiet second copy (Wave 1 §7): if this is already on record,
+    // or looks like newer details for something that is, the person sees
+    // which record and decides — nothing is written until they say it is a
+    // different one.
+    if (parsed.data.confirmDuplicate !== "on") {
+      const intake = await getHomeSendItem(supabase, parsed.data.householdId, parsed.data.itemId).catch(() => null);
+      const found = await reconcileHomeSend(
+        supabase,
+        parsed.data.householdId,
+        {
+          kind: parsed.data.kind,
+          title: parsed.data.title,
+          date: parsed.data.kind === "health_document" ? parsed.data.documentDate || null : parsed.data.dueDate || null,
+          amount: parsed.data.amount ? Number(parsed.data.amount) : null,
+          payee: parsed.data.payee || null,
+          subjectMemberId: parsed.data.kind === "school_item" ? parsed.data.childMemberId || null : parsed.data.kind === "health_document" ? parsed.data.subjectMemberId || null : null,
+          capturedAt: intake?.createdAt ?? null,
+        },
+        { timezone: membership.household.timezone },
+      ).catch(() => null);
+      if (found) return { reconciliation: { verdict: found.verdict, message: found.message } };
+    }
 
     let routedTable: string;
     let routedId: string;
