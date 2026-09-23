@@ -2,12 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { may } from "../billing/repository";
 import { createAdminClient } from "../db/admin";
-import type { AutonomyMode } from "../household/autonomy";
+import { lookupAutonomy } from "../household/autonomy-lookup";
 import type { PermissionContext } from "../identity/permissions";
 import { createNotification } from "../notifications/create";
 import { decideNotification, type Candidate, type HouseholdEvent } from "../notifications/decide";
 import { householdAssessments } from "./gather-assessments";
-import { runExecutor } from "./executors";
+import { runExecutor, type ExecutorResult } from "./executors";
 import {
   advance,
   approvalFingerprint,
@@ -102,7 +102,11 @@ export async function runHouseholdAgents(
 
   for (const step of steps) {
     const outcomeKey = typeof step.arguments.outcomeKey === "string" ? step.arguments.outcomeKey : step.toolName;
-    const mode = await lookupAutonomy(supabase, householdId, outcomeKey);
+    // The household's own setting, read by the trusted server for the
+    // household this request was already authorised against. Anything but a
+    // clean read of a known mode is "observe" (fail closed); what the mode
+    // then permits is still decided by authorizeToolCall below.
+    const { mode } = await lookupAutonomy(admin, householdId, outcomeKey);
 
     const { outcome, authorization } = executeStep(step, run, {
       actor: permission,
@@ -112,7 +116,12 @@ export async function runHouseholdAgents(
     });
 
     if (outcome.kind === "executed") {
-      const result = await runExecutor(supabase, householdId, step, admin);
+      // The executor's own result decides whether this is done — an
+      // authorised step whose write failed, or threw, is refused, never
+      // reported as handled.
+      const result = await runExecutor(supabase, householdId, step, admin).catch(
+        (): ExecutorResult => ({ performed: false, reason: "That could not be completed just now." }),
+      );
       const finalOutcome: StepOutcome = result.performed
         ? outcome
         : { kind: "refused", toolName: step.toolName, reason: result.reason };
@@ -153,15 +162,6 @@ export async function runHouseholdAgents(
     .eq("id", runId);
 
   return { runId, executed, awaitingApproval, refused, headline };
-}
-
-/** Reads the household's own configured autonomy for an outcome, defaulting to `observe` (`wh.autonomy_for`). */
-async function lookupAutonomy(supabase: SupabaseClient, householdId: string, outcomeKey: string): Promise<AutonomyMode> {
-  const { data, error } = await supabase.rpc("autonomy_for", { p_household_id: householdId, p_outcome_key: outcomeKey });
-  if (error || typeof data !== "string") return "observe";
-  return (["observe", "prepare", "approve", "execute"] as const).includes(data as AutonomyMode)
-    ? (data as AutonomyMode)
-    : "observe";
 }
 
 async function logToolCall(

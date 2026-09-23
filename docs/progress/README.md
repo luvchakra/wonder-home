@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-23 | [Agent RPC schema fix: household autonomy actually takes effect (public wrappers, fail-closed lookup)](2026-09-23-agent-rpc-autonomy-fix.md) |
 | 2026-09-23 | [Transaction payee/kind/owner, helper gender and notes](2026-09-23-transaction-details-and-helper-gender-notes.md) |
 | 2026-09-23 | [HomeSend 2.0, part 3: how it confirms, what it measures, and the acceptance matrix — Wave 3 (story 14-011, Done)](2026-09-23-homesend-2-confirmation-metrics.md) |
 | 2026-09-23 | [HomeSend 2.0, part 2: who it's for, what's already on record, and email 2.0 — Wave 3 (story 14-011)](2026-09-23-homesend-2-reconciliation.md) |

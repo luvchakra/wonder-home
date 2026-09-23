@@ -515,6 +515,28 @@ async function main() {
     forgedPlan.error?.code ?? "no error",
   );
 
+  // Public RPC wrappers for wh.* (20260924120000). The server must reach
+  // autonomy_for and record_usage — before the wrappers, both answered
+  // PGRST202 and every household silently ran as "observe" — and nobody
+  // without the service role may reach either.
+  const nobody = "00000000-0000-4000-8000-000000000000";
+  const serverAutonomy = await admin.rpc("autonomy_for", { p_household_id: nobody, p_outcome_key: "groceries.stocked" });
+  check(
+    "the server reads autonomy through public.autonomy_for (observe when unconfigured)",
+    !serverAutonomy.error && serverAutonomy.data === "observe",
+    serverAutonomy.error?.code ?? `value=${JSON.stringify(serverAutonomy.data)}`,
+  );
+  const anonAutonomy = await anon.rpc("autonomy_for", { p_household_id: nobody, p_outcome_key: "groceries.stocked" });
+  check("anonymous cannot read a household's autonomy", anonAutonomy.error?.code === "42501", anonAutonomy.error?.code ?? "no error");
+  const anonUsage = await anon.rpc("record_usage", {
+    p_household_id: nobody,
+    p_feature_key: "ai.agent_runs",
+    p_period_start: new Date().toISOString(),
+  });
+  check("anonymous cannot record usage", anonUsage.error?.code === "42501", anonUsage.error?.code ?? "no error");
+  const anonBusy = await anon.rpc("busy_windows", { p_household_id: nobody, p_from: new Date().toISOString(), p_to: new Date().toISOString() });
+  check("anonymous cannot read free/busy", anonBusy.error?.code === "42501", anonBusy.error?.code ?? "no error");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }
