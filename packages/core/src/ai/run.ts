@@ -52,6 +52,9 @@ export type RunSummary = {
   headline: string;
 };
 
+/** How long a running agent run holds the household's one-run lock before it counts as crashed. */
+const RUN_LOCK_MINUTES = 10;
+
 export async function runHouseholdAgents(
   supabase: SupabaseClient,
   householdId: string,
@@ -63,6 +66,24 @@ export async function runHouseholdAgents(
   }
 
   const admin = createAdminClient();
+
+  // One run at a time per household (Wave 5 §17). A second "check on
+  // things" while one is still going would plan the same steps twice, and a
+  // retried request must not start a duplicate. A run that has been
+  // "running" for longer than the window is treated as crashed, not as
+  // holding the lock forever.
+  const since = new Date(Date.now() - RUN_LOCK_MINUTES * 60_000).toISOString();
+  const { data: running } = await admin
+    .from("agent_runs")
+    .select("id")
+    .eq("household_id", householdId)
+    .eq("status", "running")
+    .gte("started_at", since)
+    .limit(1)
+    .maybeSingle();
+  if (running) {
+    return { runId: (running as { id: string }).id, executed: 0, awaitingApproval: 0, refused: 0, headline: "I am already checking on things — give it a moment." };
+  }
 
   const { data: inserted, error: insertError } = await admin
     .from("agent_runs")

@@ -75,6 +75,12 @@ server-ingested, because evidence a member can write is not evidence.
 `next_action_by` is the column that makes an open service request actionable
 rather than informational, and a settled request is constrained to hold none.
 
+## Reliability (Wave 5 §14–§16)
+- `rate_limit_counters`: fixed-window counters (bucket, subject, window start, hits). Not a tenant table. Deny-all RLS; only the server reaches it, through the service-role-only `public.rate_limit_hit`. Swept daily after a day.
+- `homesend_email_events`: forwarded-email telemetry in closed words only (a kind, an optional latency and count, the household). Nothing from an email is ever stored here. Deny-all RLS, platform-read through the admin client, swept after 90 days.
+- `jobs` is reached by the server through `public.claim_jobs` / `public.complete_job` (service role only). HomeSend's classification retries run there, one waiting job per item.
+- `idempotency_keys`: a request reserves its key while it is in flight (status 102, two-minute expiry). Members may complete or release their own household's reservation.
+
 ## Integrations
 - `integrations`: provider, status, scopes, credential reference, last sync
 - `integration_events`: provider event identity, type, payload hash, processing timestamps

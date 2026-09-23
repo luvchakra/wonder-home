@@ -105,3 +105,26 @@ export function heldBecause(part: string, earlier: readonly { part: string; outc
       return `I have not done "${part}" — it depends on ${what}, which did not go through.`;
   }
 }
+
+/**
+ * Partial success, said plainly (Wave 5 §16). After a request with several
+ * parts, when some happened and some did not, one closing line says exactly
+ * which is which, so nobody has to add it up from the replies above.
+ * Returns null when everything went the same way, or when the last thing
+ * said was a question (the question must stay last).
+ */
+export function partialSummary(outcomes: readonly { part: string; outcome: PartOutcome }[]): string | null {
+  if (outcomes.length < 2 || outcomes[outcomes.length - 1]!.outcome === "asked") return null;
+  const happened = outcomes.filter((entry) => entry.outcome === "done" || entry.outcome === "answered");
+  const waiting = outcomes.filter((entry) => entry.outcome === "waiting");
+  const notDone = outcomes.filter((entry) => entry.outcome === "failed" || entry.outcome === "held");
+  if (notDone.length === 0 || happened.length + waiting.length === 0) return null;
+  const quote = (entries: readonly { part: string }[]) => entries.map((entry) => `"${entry.part}"`).join(", ");
+  return [
+    happened.length > 0 ? `Done: ${quote(happened)}.` : null,
+    waiting.length > 0 ? `Waiting for your OK: ${quote(waiting)}.` : null,
+    `Not done: ${quote(notDone)}.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}

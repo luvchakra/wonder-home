@@ -36,6 +36,46 @@ export const MAX_BYTES: Record<FileFamily, number> = {
   audio: 10 * 1024 * 1024,
 };
 
+/**
+ * Payload limits beyond bytes (Wave 5 §15). A PDF's pages are what a model
+ * reads, and a voice note's length is what transcription pays for, so each
+ * has its own ceiling beside the byte one.
+ */
+export const MAX_PDF_PAGES = 40;
+export const MAX_AUDIO_SECONDS = 600;
+
+/**
+ * Pages in a PDF, counted from its page objects (`/Type /Page`, never the
+ * `/Pages` tree nodes). A PDF whose page objects sit in compressed object
+ * streams can undercount; the byte limit still bounds that one.
+ */
+export function pdfPageCount(bytes: Uint8Array): number {
+  const text = new TextDecoder("latin1").decode(bytes);
+  return (text.match(/\/Type\s*\/Page(?![A-Za-z])/g) ?? []).length;
+}
+
+/**
+ * A voice note's length in seconds, where the container states it
+ * exactly: a WAV's data size over its byte rate. For compressed formats
+ * (MP3, OGG, WebM) there is no header that says so cheaply and reliably, so
+ * this returns null and the byte limit bounds them instead.
+ */
+export function audioDurationSeconds(bytes: Uint8Array, type: string): number | null {
+  if (type !== "audio/wav" && type !== "audio/x-wav" && type !== "audio/wave") return null;
+  if (bytes.length < 44 || !startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) || !startsWith(bytes, [0x57, 0x41, 0x56, 0x45], 8)) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let byteRate: number | null = null;
+  let offset = 12;
+  while (offset + 8 <= bytes.length) {
+    const id = String.fromCharCode(bytes[offset]!, bytes[offset + 1]!, bytes[offset + 2]!, bytes[offset + 3]!);
+    const size = view.getUint32(offset + 4, true);
+    if (id === "fmt " && offset + 20 <= bytes.length) byteRate = view.getUint32(offset + 16, true);
+    if (id === "data") return byteRate && byteRate > 0 ? size / byteRate : null;
+    offset += 8 + size + (size % 2);
+  }
+  return null;
+}
+
 /** What the `accept` attribute of every HomeSend picker offers — one list, so the picker never offers what the server refuses. */
 export const ACCEPTED_UPLOAD_TYPES = [...IMAGE_TYPES, ...DOCUMENT_TYPES, ...TEXT_FILE_TYPES, ".txt", ".csv", ...AUDIO_TYPES, ".m4a", ".mp3", ".ogg", ".opus", ".webm", ".wav"].join(",");
 

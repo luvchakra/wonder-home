@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hitRateLimit } from "@wonderhome/core/security/rate-limit";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
@@ -57,13 +58,16 @@ export async function POST(request: Request): Promise<Response> {
   if (user && membership) {
     const supabase = await createClient();
     const actor = { householdId: membership.household.id, memberId: membership.memberId };
+    // The same per-member intake limit the upload and paste forms use (Wave 5 §15).
+    const limiter = createAdminClient();
+    if (!(await hitRateLimit(limiter, "homesend.intake", membership.memberId))) return redirectTo("/home-send?shareError=rate_limited", origin);
     try {
       // The same one pipeline every other HomeSend input goes through; a
       // file it refuses is still kept, failed safely, in the inbox.
       if (photo) {
         await ingestFile(supabase, actor, { bytes: new Uint8Array(await photo.arrayBuffer()), claimedType: photo.type, filename: photo.name || null });
       } else {
-        await ingestText(supabase, actor, { text: combinedText });
+        await ingestText(supabase, actor, { text: combinedText }, { limit: (bucket) => hitRateLimit(limiter, bucket, membership.memberId) });
       }
     } catch (thrown) {
       return redirectTo(`/home-send?shareError=${thrown instanceof IngestRejected ? "size" : "upload"}`, origin);

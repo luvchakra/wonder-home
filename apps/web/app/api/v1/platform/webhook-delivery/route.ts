@@ -45,4 +45,12 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Vercel Cron calls a path with GET, never POST. With only a POST handler
+ * the scheduled run answered 405 every day and nothing ran. The same
+ * handler, behind the same secret, answers both. POST stays for manual and
+ * scripted runs.
+ */
+export const GET = POST;
+
 export const dynamic = "force-dynamic";

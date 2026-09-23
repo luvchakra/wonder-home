@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 186 |
-| Done | 175 |
-| In Progress | 1 |
+| Done | 176 |
+| In Progress | 0 |
 | Blocked | 0 |
 | Not Started | 10 |
-| Completion | 94.1% |
+| Completion | 94.6% |
 | Current module | 14 AI Orchestration & Learning |
-| Current story | 14-013 Unified AI evaluation, reliability & production hardening (In Progress) |
+| Current story | — (14-013 Done; next dependency-ready story per `IMPLEMENTATION-ORDER.md`) |
 | Last updated | 2026-09-23 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 13 | 11 | 1 | 1 | 11 | In Progress |
+| 14 | AI Orchestration & Learning | 13 | 11 | 1 | 1 | 12 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -215,4 +215,5 @@ disagree again.)
 | 2026-09-23 | 14 | 14-012 | In Progress | 2072 unit (temporal 11, references 15, grounding 18), 414 database, 364 E2E, live QA on a synthetic household | HomeTalk 2.0 part 1 — grounding: one timezone-aware temporal resolver (`conversation/temporal.ts`, this/next Friday, weekend, next week, after school, before dinner, explicit dates), every action intent grounded before a proposal (`conversation/grounding.ts`: people through the Wave 1 resolver with one focused question when two fit), "that/it/them/him/the other one" through `conversation/references.ts` in the spec's priority order with the "white T-shirt from the school notice or printer paper?" question, per-turn focus persisted on the reply; previews name the grounded person and day |
 | 2026-09-23 | 14 | 14-012 | In Progress | 2115 unit (corrections, decompose, operations, grounding and rules additions), full verify gate, live QA on a synthetic household with each write checked in the database | HomeTalk 2.0 part 2 — operations: corrections (`conversation/corrections.ts`) amend a waiting proposal or undo-then-redo an executed write through its own domain service; multi-part sentences split (`conversation/decompose.ts`) into independently gated parts with the premise rule ("them" only from what earlier parts actually wrote); several items per add; real reminders (`set_reminder` → a notification held until `scheduled_for`; inbox and badge show only what is due); `plan_meal` via `createMeal`/`attachIngredients` and "make sure we have everything" from the recipe; "yes to both"; "Nothing to change" instead of "Done" |
 | 2026-09-23 | 14 | 14-012 | Done | 2159 unit (§22 evaluation matrix 30), full verify gate, live QA on a synthetic household with each write checked in the database | HomeTalk 2.0 part 3 — model contract: named nullable parameters (the open record reached Anthropic as an always-empty object, so a model could never say the item or the day), no id field and server-only keys stripped from model output (§19), runtime context in the system prompt (§17, minimised like the utterance), phrases-only references (§5); "I think you mean …"/"I found two possibilities …" (§20); all §21 examples through their own domain services (school done/move, remove from list, service request, protected family time); HomeTalk↔HomeSend shared-truth tests (§15) |
+| 2026-09-23 | 14 | 14-013 | Done | 2219 unit in 145 files (hardening 12, idempotency +2, agent-run lock), 431 database (hardening RLS 8), security 12/12 (untrusted intake 79, AI release safety 33, abuse and retries 27), eval 45/45 with 0/13 unsafe, verify:live 145/145, live QA on a synthetic household | Wave 5 part 3 — production hardening: service-role-only rate limits (`public.rate_limit_hit`, fail-open), PDF/audio/webhook payload limits, model and voice timeouts, forwarded-email telemetry (`homesend_email_events`) with §14 alert thresholds, failed classifications retried through `jobs`, cron routes answer Vercel Cron's GET, partial success said plainly, idempotency reservations and an agent-run lock. Operations gate stays "not yet" (no rendered dashboard or alert delivery) |
 | 2026-09-23 | 11 / 01 | enhancement | Done | 2003 unit, 403 database, 364 E2E (after merging main), lint/typecheck/build/security clean | Transactions carry their own payee, kind and owner (`obligation_history` columns + same-household owner trigger), prefilled from the bill and editable via a new Edit control; helpers (and any member) get gender and notes on Add helper and the profile editor. Migration `20260923100000` applied live and confirmed. Browser QA not run — no service-role credential in this sandbox |

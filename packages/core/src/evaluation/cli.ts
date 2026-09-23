@@ -21,7 +21,7 @@ import { runEvaluation, type RunTarget } from "./run";
 const OPERATIONS = {
   pass: false,
   evidence:
-    "Per-turn telemetry is kept on every HomeTalk reply (understanding source, failure, timings, HomeBrain validation). HomeSend, AI-operations and AI-quality (§23: outcomes handled, corrections, refused approvals, unsafe actions) metrics have platform-admin endpoints. Email-forwarding counters and alerts are Wave 5 part 3.",
+    "Telemetry exists: per-turn reply metadata, correction evidence (`ai_corrections`) and email forwarding events (`homesend_email_events`). Platform-admin JSON endpoints serve it: HomeSend and email monitoring, AI operations, and AI quality. The §14 alert conditions are evaluated there and logged at error level. What is missing: a rendered dashboard, and alert delivery to a person (no paging integration is configured).",
 };
 
 const LIMITATIONS = [

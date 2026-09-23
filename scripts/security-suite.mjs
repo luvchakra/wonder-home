@@ -44,7 +44,8 @@ const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
 /**
  * The six areas story 15-008 names, plus the three the other criteria in the
- * module require. Each names why it is here, so a future reader can judge
+ * module require, and the three Wave 5 added (untrusted intake, AI release
+ * safety, abuse and retries). Each names why it is here, so a future reader can judge
  * whether the coverage still matches the claim.
  */
 const AREAS = [
@@ -101,7 +102,7 @@ const AREAS = [
     why: "An LLM response is never authorization. This is the adversary that tries to falsify that claim.",
     unit: ["packages/core/src/ai/prompt-injection.test.ts", "packages/core/src/ai/tools.test.ts"],
     e2e: [],
-    expected: 35,
+    expected: 36,
   },
   {
     key: "step-up",
@@ -129,6 +130,38 @@ const AREAS = [
     ],
     e2e: [],
     expected: 17,
+  },
+  {
+    key: "untrusted-intake",
+    title: "Untrusted intake (HomeSend)",
+    why: "Everything a household forwards is someone else's content: its type is decided from its bytes, its links are fetched safely, its instructions are ignored, its emails are signature-checked, and none of it runs anything.",
+    unit: [
+      "packages/core/src/homesend/security.test.ts",
+      "packages/core/src/homesend/injection.test.ts",
+      "packages/core/src/homesend/link-fetch.test.ts",
+      "packages/core/src/homesend/malware-scan.test.ts",
+      "packages/core/src/homesend/email-gateway.test.ts",
+      "packages/core/src/homesend/rate-limit.test.ts",
+      "packages/core/src/security/webhook-signing.test.ts",
+    ],
+    e2e: [],
+    expected: 79,
+  },
+  {
+    key: "ai-release-safety",
+    title: "AI release safety and approval binding",
+    why: "No consequential action runs without a person's approval of that exact proposal, and the release evaluation fails the build on a single unsafe execution (Wave 5 §9, §18, §20).",
+    unit: ["packages/core/src/evaluation/evaluation.test.ts", "packages/core/src/evaluation/part2.test.ts"],
+    e2e: [],
+    expected: 33,
+  },
+  {
+    key: "abuse-and-retries",
+    title: "Rate limits, payload limits and safe retries",
+    why: "A burst, an oversized payload or a retried request cannot cost a household money, lock it out, or write the same thing twice (Wave 5 §15, §17).",
+    unit: ["packages/core/src/homesend/hardening.test.ts", "packages/core/src/api/idempotency.test.ts"],
+    e2e: [],
+    expected: 27,
   },
 ];
 

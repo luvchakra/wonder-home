@@ -20,6 +20,8 @@ const state = vi.hoisted(() => ({
   toolCalls: [] as Record<string, unknown>[],
   runUpdates: [] as Record<string, unknown>[],
   notifications: 0,
+  /** A run already going for this household, for the one-run lock (Wave 5 §17). */
+  running: null as { id: string } | null,
 }));
 
 const executor = vi.hoisted(() => ({
@@ -37,6 +39,10 @@ vi.mock("../db/admin", () => ({
       return state.autonomy;
     },
     from: (table: string) => ({
+      select: () => {
+        const chain = { eq: () => chain, gte: () => chain, limit: () => chain, maybeSingle: async () => ({ data: state.running, error: null }) };
+        return chain;
+      },
       insert: (row: Record<string, unknown>) => {
         if (table === "agent_tool_calls") state.toolCalls.push(row);
         return { select: () => ({ single: async () => ({ data: { id: "run-1" }, error: null }) }), then: (resolve: (v: unknown) => unknown) => resolve({ error: null }) };
@@ -72,6 +78,7 @@ beforeEach(() => {
   state.toolCalls = [];
   state.runUpdates = [];
   state.notifications = 0;
+  state.running = null;
   executor.run.mockClear();
   executor.run.mockImplementation(async () => ({ performed: true, detail: "Added milk to the groceries." }));
 });
@@ -159,5 +166,16 @@ describe("the agent pipeline, gate by gate", () => {
     const summary = await runHouseholdAgents({} as never, HOUSEHOLD, ADMIN);
     expect(summary).toMatchObject({ executed: 0, refused: 1 });
     expect(state.runUpdates.at(-1)).toMatchObject({ status: expect.not.stringMatching(/^running$/) });
+  });
+});
+
+describe("one run at a time (Wave 5 §17)", () => {
+  it("a second check while one is still going returns that run and plans nothing twice", async () => {
+    state.running = { id: "run-already" };
+    const summary = await runHouseholdAgents({} as never, "h-1", ADMIN);
+    expect(summary.runId).toBe("run-already");
+    expect(summary.headline).toMatch(/already checking/);
+    expect(executor.run).not.toHaveBeenCalled();
+    expect(state.toolCalls).toEqual([]);
   });
 });

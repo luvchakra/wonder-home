@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { rateLimitMessage } from "../security/rate-limit";
 import type { IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
 import type { AudioClip } from "../voice/provider";
 import { gateTranscript, uncertainTranscriptPrompt } from "./audio";
@@ -8,7 +9,7 @@ import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendS
 import { FAILURE_REASON_COPY } from "./items";
 import { fetchLinkSafely, LINK_FAILURE_COPY, type LinkContent } from "./link-fetch";
 import { platformMalwareScanConfig, scanForMalware, type MalwareScanOutcome } from "./malware-scan";
-import { asLoneUrl, contentHash, decodeTextFile, detectIntakeFile, MAX_BYTES, normalizeText, type IntakeFileType } from "./normalize";
+import { asLoneUrl, audioDurationSeconds, contentHash, decodeTextFile, detectIntakeFile, MAX_AUDIO_SECONDS, MAX_BYTES, MAX_PDF_PAGES, normalizeText, pdfPageCount, type IntakeFileType } from "./normalize";
 import { createHomeSendItem, findByExternalId, findPendingByContentHash, markHomeSendFailed, setHomeSendClassification } from "./repository";
 import { buildUnderstanding, unreadableUnderstanding, type IntakeUnderstanding, type UnderstandingMeta } from "./understanding";
 
@@ -42,12 +43,20 @@ export type IngestDeps = {
   transcribe?: (supabase: SupabaseClient, householdId: string, clip: AudioClip) => Promise<TranscribeResult>;
   fetchLink?: (url: string) => Promise<LinkContent>;
   scan?: (bytes: Uint8Array, contentType: string) => Promise<MalwareScanOutcome>;
+  /** Counts one outbound link fetch against the member's limit (Wave 5 §15); false means over it. */
+  limit?: (bucket: "homesend.link") => Promise<boolean>;
 };
 
 export type IngestState = "needs_review" | "check_transcript" | "failed";
 
 export type IngestOutcome = {
   itemId: string;
+  /**
+   * The provider was configured but could not be reached, or gave nothing
+   * back (Wave 5 §16). The item is kept and waits for a person, and the
+   * reading is worth retrying later. Distinct from "no provider at all".
+   */
+  classifyFailed?: boolean;
   /** The same content was already waiting; nothing new was created (§15). */
   duplicate: boolean;
   state: IngestState;
@@ -195,6 +204,7 @@ export async function understand(
     return {
       itemId,
       duplicate: false,
+      ...(result === null ? { classifyFailed: true } : {}),
       state: "needs_review",
       notice:
         result === "no_provider"
@@ -350,6 +360,14 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
     failureReason = detected.reason === "mismatched_type" ? "security_rejected" : "unsupported_type";
     if (detected.reason === "unsupported_audio") notice = "That voice note is in a format (like .m4a) WonderHome can't hear yet — please record or share it as MP3, OGG, WebM or WAV.";
     if (detected.reason === "mismatched_type") notice = "That file isn't what it says it is, so WonderHome kept it without looking inside.";
+  } else if (detected.family === "document" && pdfPageCount(input.bytes) > MAX_PDF_PAGES) {
+    // Kept, not read (Wave 5 §15): a document this long is not what a
+    // household sends WonderHome to act on, and reading it is not free.
+    failureReason = "too_large";
+    notice = `That PDF has more than ${MAX_PDF_PAGES} pages — please send just the pages that matter.`;
+  } else if (detected.family === "audio" && (audioDurationSeconds(input.bytes, detected.type) ?? 0) > MAX_AUDIO_SECONDS) {
+    failureReason = "too_large";
+    notice = `That voice note is longer than ${MAX_AUDIO_SECONDS / 60} minutes — please send a shorter one.`;
   } else {
     const scanned = await (deps.scan ?? defaultScan)(input.bytes, storedType).catch((): MalwareScanOutcome => ({ scanned: false }));
     if (scanned.scanned && !scanned.clean) {
@@ -521,6 +539,9 @@ export async function ingestLink(
   const hash = await contentHash(url);
   const duplicate = await existingDuplicate(supabase, actor.householdId, hash);
   if (duplicate) return duplicate;
+  // Every new link is an outbound fetch, so each counts against the limit
+  // before anything is fetched or stored.
+  if (deps.limit && !(await deps.limit("homesend.link"))) throw new IngestRejected(rateLimitMessage("homesend.link"));
 
   const itemId = crypto.randomUUID();
   await createHomeSendItem(supabase, {

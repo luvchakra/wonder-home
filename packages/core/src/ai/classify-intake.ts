@@ -1,7 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { GoogleGenAI } from "@google/genai";
-import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
@@ -10,6 +8,7 @@ import { RECORD_TYPES } from "../health/records";
 import { SCHOOL_ITEM_KINDS } from "../school/items";
 import { CLAUDE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
+import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 import { fenceUntrusted, UNTRUSTED_CONTENT_RULE } from "../homesend/injection";
 
 /**
@@ -305,7 +304,7 @@ export async function classifyIntake(
   try {
     switch (provider) {
       case "anthropic": {
-        const client = new Anthropic({ apiKey });
+        const client = anthropicClient(apiKey, "classify");
         const content: Anthropic.ContentBlockParam[] =
           "image" in source
             ? [
@@ -329,7 +328,7 @@ export async function classifyIntake(
         return sanitizeIntakeExtraction(response.parsed_output);
       }
       case "google": {
-        const client = new GoogleGenAI({ apiKey });
+        const client = geminiClient(apiKey, "classify");
         const parts =
           "image" in source
             ? [{ inlineData: { mimeType: source.image.mediaType, data: source.image.base64 } }, { text: attachmentPrompt(context) }]
@@ -350,7 +349,7 @@ export async function classifyIntake(
         return parsed?.success ? sanitizeIntakeExtraction(parsed.data) : null;
       }
       case "openai": {
-        const client = new OpenAI({ apiKey });
+        const client = openaiClient(apiKey, "classify");
         const completion = await client.chat.completions.parse({
           model: OPENAI_MODEL,
           messages: [

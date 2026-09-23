@@ -2,6 +2,7 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
+import { drainJobs, type DrainOutcome } from "@wonderhome/core/homesend/retry-queue";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
@@ -103,9 +104,28 @@ export async function POST(request: Request) {
       log.error("measurement routine reminder sweep failed", { reason: routineReminderError, allow: ["reason"] });
     }
 
+    // Wave 5 §15/§16: queued retries (a HomeSend item a provider could not
+    // read when it arrived) are worked here too, so none waits more than a
+    // day even when nothing else wakes the queue. Then rate-limit windows
+    // and email telemetry past their usefulness are cleared.
+    let jobsSummary: DrainOutcome | null = null;
+    let jobsError: string | undefined;
+    try {
+      jobsSummary = await drainJobs(admin, { limit: 25, workerId: "retention" });
+    } catch (thrown) {
+      jobsError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("job queue drain failed", { reason: jobsError, allow: ["reason"] });
+    }
+    const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
+    const counters = await admin.from("rate_limit_counters").delete({ count: "exact" }).lt("window_start", dayAgo);
+    const emailEvents = await admin.from("homesend_email_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
+
     const swept = [
       ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
       { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
+      { table: "rate_limit_counters", deleted: counters.count ?? 0, error: counters.error?.code },
+      { table: "homesend_email_events", deleted: emailEvents.count ?? 0, error: emailEvents.error?.code },
     ];
     const failed = swept.filter((row) => row.error);
 
@@ -116,8 +136,9 @@ export async function POST(request: Request) {
       deletionsFailed,
       reminderSummary,
       routineReminderSummary,
+      jobsSummary,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "jobsSummary", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
@@ -128,9 +149,10 @@ export async function POST(request: Request) {
         deletionsFailed,
         healthReminders: reminderSummary ?? { error: reminderError },
         routineReminders: routineReminderSummary ?? { error: routineReminderError },
+        jobs: jobsSummary ?? { error: jobsError },
       },
       {
-        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError ? 207 : 200,
+        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || jobsError ? 207 : 200,
         headers: { "cache-control": "no-store" },
       },
     );
@@ -139,5 +161,13 @@ export async function POST(request: Request) {
     return Response.json(body, { status, headers: { "cache-control": "no-store" } });
   }
 }
+
+/**
+ * Vercel Cron calls a path with GET, never POST. With only a POST handler
+ * the scheduled run answered 405 every day and nothing ran. The same
+ * handler, behind the same secret, answers both. POST stays for manual and
+ * scripted runs.
+ */
+export const GET = POST;
 
 export const dynamic = "force-dynamic";
