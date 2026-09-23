@@ -19,6 +19,10 @@ export const INTENT_ACTIONS = [
   /** "Check on things" — runs the household's specialists for real (14-007). */
   "check_agents",
   "plan_event",
+  /** "Plan pasta for tonight" — a real meal on the household's plan, with its recipe's ingredients (Wave 4 §11). */
+  "plan_meal",
+  /** "Remind me to buy them tomorrow" — a real in-app reminder to the speaker, due at that time (Wave 4 §10). */
+  "set_reminder",
   "adjust_schedule",
   "set_preference",
   "make_payment",

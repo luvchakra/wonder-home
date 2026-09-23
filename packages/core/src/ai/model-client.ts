@@ -75,9 +75,11 @@ const SYSTEM_PROMPT = `You translate one thing a household member said to their 
 
 Available actions:
 - record_absence: someone (a member, a helper) will not be present for a period. parameters.when is the day word as said ("today", "tomorrow", "friday").
-- add_to_list: add an item to a household list, usually groceries. parameters.item is the item, singular, without "a"/"some". "add a grocery item of milk", "we're out of milk", "put milk on the list" all mean this.
+- add_to_list: add an item to a household list, usually groceries. parameters.item is the item, singular, without "a"/"some"; when several things were named, parameters.items is the list of them instead ("add milk and bananas" → ["milk", "bananas"]). "add a grocery item of milk", "we're out of milk", "put milk on the list" all mean this. "Make sure we have everything for X" / "get what we need for X" means this with parameters.ingredientsOf set to X as said ("that" when it points back at a meal just planned).
 - ask_status: a question that changes nothing — "what's going on", "what needs my attention", "how is X going", "what's on tomorrow". parameters.when holds a day word when one was said; parameters.scope is "schedule" for a question about a day's plans, "home" otherwise.
 - plan_event: propose a family or social event or outing. parameters.window is the time window as said.
+- plan_meal: plan a meal of the day ("plan pasta for dinner tonight"). parameters.what is the dish as said, parameters.slot "breakfast", "lunch", "snack" or "dinner" when said, parameters.when the day as said.
+- set_reminder: remind the speaker themself about something at a time ("remind me to buy them tomorrow"). parameters.what is what to be reminded of, in the speaker's words; parameters.when the day or part of the day as said; parameters.time a time of day if said.
 - adjust_schedule: move or change the time of something already planned. parameters.to is the new time as said.
 - set_preference: state a preference or fact about the household or a person, including correcting an earlier statement. parameters.statement is the fact in plain words; parameters.time a 24h "HH:MM" if a time was stated; parameters.corrects true when it corrects something said earlier. target.reference is a short key like "meals.dinner" or "kids.bedtime".
 - make_payment: pay a bill.

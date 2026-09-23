@@ -189,3 +189,65 @@ describe("the whole turn: grounding sits between understanding and any proposal"
     expect(turn.kind === "reply" && turn.focus).toEqual([expect.objectContaining({ label: "white T-shirt" })]);
   });
 });
+
+describe("cross-domain grounding (Wave 4 §10, §11): meals, what they need, and reminders", () => {
+  const recipes = async () => [
+    { id: "r-pasta", name: "Tomato pasta" },
+    { id: "r-dal", name: "Dal tadka" },
+  ];
+  const ingredients = async (of: { mealId?: string | null; recipeId?: string | null }) =>
+    of.mealId === "meal-1" || of.recipeId === "r-pasta" ? ["pasta", "tomatoes", "basil"] : [];
+  const mealEnv = (references: Partial<ReferenceState> = {}): GroundingEnv => ({ ...env(references), recipes, ingredients });
+
+  it("\"plan pasta for tonight\" is a meal when the household has a pasta recipe", async () => {
+    const grounded = await groundIntent(intent({ action: "plan_event", target: { kind: "event", reference: "pasta" }, parameters: { what: "pasta", window: "tonight" } }), mealEnv());
+    expect(grounded.kind === "grounded" && grounded.intent).toMatchObject({
+      action: "plan_meal",
+      target: { kind: "outcome", reference: "meals" },
+      parameters: { mealName: "Tomato pasta", recipeId: "r-pasta", slot: "dinner", windowResolved: expect.objectContaining({ date: "2026-09-23" }) },
+    });
+  });
+
+  it("naming a meal of the day makes it a meal even with no recipe; anything else stays a calendar plan", async () => {
+    const khichdi = await groundIntent(intent({ action: "plan_event", target: { kind: "event" }, parameters: { what: "khichdi for lunch", when: "tomorrow" } }), mealEnv());
+    expect(khichdi.kind === "grounded" && khichdi.intent.parameters).toMatchObject({ mealName: "Khichdi", slot: "lunch" });
+    const picnic = await groundIntent(intent({ action: "plan_event", target: { kind: "event", reference: "picnic" }, parameters: { what: "a picnic", window: "this weekend" } }), mealEnv());
+    expect(picnic.kind === "grounded" && picnic.intent.action).toBe("plan_event");
+  });
+
+  it("a meal with no day is one question", async () => {
+    const grounded = await groundIntent(intent({ action: "plan_event", target: { kind: "event" }, parameters: { what: "pasta" } }), mealEnv());
+    expect(grounded.kind === "clarify" && grounded.question).toBe("Which day should I plan tomato pasta for?");
+  });
+
+  it("\"make sure we have everything\" is what the meal just planned needs", async () => {
+    const planned: FocusEntity = { entityType: "meal", entityId: "meal-1", label: "Tomato pasta", source: "action_result", at: minutesAgo(0) };
+    const grounded = await groundIntent(intent({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: "that" } }), mealEnv({ conversation: [planned] }));
+    expect(grounded.kind === "grounded" && grounded.intent.parameters).toMatchObject({ items: ["pasta", "tomatoes", "basil"], forMeal: "Tomato pasta" });
+    expect(grounded.kind === "grounded" && grounded.intent.parameters.ingredientsOf).toBeUndefined();
+  });
+
+  it("with no recipe on record it asks what to add, rather than inventing ingredients", async () => {
+    const grounded = await groundIntent(intent({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: "khichdi" } }), mealEnv());
+    expect(grounded.kind === "clarify" && grounded.question).toMatch(/^I do not know what goes into khichdi/);
+    expect(grounded.kind === "clarify" && grounded.awaiting).toBe("item");
+  });
+
+  it("\"remind me to buy them\" names what them was", async () => {
+    const at = minutesAgo(0);
+    const added: FocusEntity[] = [
+      { entityType: "consumable", entityId: "c-1", label: "Milk", source: "action_result", at },
+      { entityType: "consumable", entityId: "c-2", label: "Bananas", source: "action_result", at },
+    ];
+    const grounded = await groundIntent(
+      intent({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: { what: "buy them", when: "tomorrow" } }),
+      mealEnv({ conversation: added }),
+    );
+    expect(grounded.kind === "grounded" && grounded.intent.parameters).toMatchObject({ what: "buy milk and bananas", whenResolved: expect.objectContaining({ date: "2026-09-24" }) });
+  });
+
+  it("a reminder with no time is one question", async () => {
+    const grounded = await groundIntent(intent({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: { what: "call the plumber" } }), mealEnv());
+    expect(grounded.kind === "clarify" && grounded.awaiting).toBe("day");
+  });
+});

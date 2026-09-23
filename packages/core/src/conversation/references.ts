@@ -196,9 +196,19 @@ export function focusFromResult(action: string, result: Record<string, unknown>,
   const text = (key: string) => (typeof result[key] === "string" ? (result[key] as string) : null);
   switch (action) {
     case "add_to_list": {
+      // Several things added together are one group — what "them" means next.
+      if (Array.isArray(result.items)) {
+        return (result.items as { name?: unknown; consumableId?: unknown }[])
+          .filter((entry) => typeof entry.name === "string")
+          .map((entry) => ({ entityType: "consumable", entityId: typeof entry.consumableId === "string" ? entry.consumableId : null, label: entry.name as string, source: "action_result" as const, at }));
+      }
       const name = text("name");
       return name ? [{ entityType: "consumable", entityId: id("consumableId"), label: name, source: "action_result", at }] : [];
     }
+    case "plan_meal":
+      return id("mealId") ? [{ entityType: "meal", entityId: id("mealId"), label: text("name") ?? "the meal", source: "action_result", at }] : [];
+    case "set_reminder":
+      return id("notificationId") ? [{ entityType: "reminder", entityId: id("notificationId"), label: text("what") ?? "the reminder", source: "action_result", at }] : [];
     case "record_absence":
       return id("memberId") ? [{ entityType: "member", entityId: id("memberId"), label: text("memberName") ?? "them", source: "action_result", at }] : [];
     case "record_health_appointment":

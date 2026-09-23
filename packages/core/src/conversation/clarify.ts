@@ -142,7 +142,9 @@ export function answerClarification(
             ? { kind: "list", reference: "groceries" }
             : pending.target,
         // One named thing is one item — the shape the grocery write takes.
-        parameters: { ...withoutGroundingState(pending.parameters), items, ...(items.length === 1 ? { item: items[0] } : {}) },
+        // The named things replace whatever stood in for them — "that", or
+        // "everything for the pasta" when no recipe said what that was.
+        parameters: { ...withoutItems(withoutGroundingState(pending.parameters)), items, ...(items.length === 1 ? { item: items[0] } : {}) },
         // High, and deliberately so: the household has now said this twice.
         // Treating a repeated answer as still uncertain is the behaviour
         // that made this loop in the first place.
@@ -166,6 +168,15 @@ function withoutGroundingState(parameters: Record<string, unknown>): Record<stri
   const rest = { ...parameters };
   delete rest.awaiting;
   delete rest.candidates;
+  return rest;
+}
+
+/** What stood in for the items, which a named answer replaces. */
+function withoutItems(parameters: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...parameters };
+  delete rest.item;
+  delete rest.items;
+  delete rest.ingredientsOf;
   return rest;
 }
 

@@ -63,6 +63,12 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   // actually do is gated per step, by the real tool registry.
   check_agents: "read",
   plan_event: "schedule",
+  // A meal on the plan is like an absence: it shapes someone's day, so it
+  // follows the meals outcome's own autonomy setting.
+  plan_meal: "schedule",
+  // A reminder to the speaker themself: nobody else is told anything, and it
+  // can be cancelled — as harmless as a note.
+  set_reminder: "draft",
   adjust_schedule: "schedule",
   set_preference: "draft",
   make_payment: "payment",
@@ -180,8 +186,17 @@ function summarize(intent: HouseholdIntent): string {
   switch (intent.action) {
     case "record_absence":
       return `Record that ${groundedName(intent, "someone")} is away ${groundedWhen(intent, "when")}`.trim();
-    case "add_to_list":
-      return `Add ${String(intent.parameters.item ?? "an item")} to the ${intent.target.reference ?? "list"}`;
+    case "add_to_list": {
+      const items = listItems(intent);
+      const what = items.length > 0 ? joinWords(items) : "an item";
+      return typeof intent.parameters.forMeal === "string"
+        ? `Add what ${intent.parameters.forMeal} needs to the ${intent.target.reference ?? "list"}: ${what}`
+        : `Add ${what} to the ${intent.target.reference ?? "list"}`;
+    }
+    case "plan_meal":
+      return `Plan ${String(intent.parameters.mealName ?? intent.parameters.what ?? "a meal")} for ${String(intent.parameters.slot ?? "dinner")} ${groundedWhen(intent, intent.parameters.windowResolved ? "window" : "when")}`.trim();
+    case "set_reminder":
+      return `Remind you ${groundedWhen(intent, "when")}${typeof intent.parameters.time === "string" ? ` at ${intent.parameters.time}` : ""} to ${String(intent.parameters.what ?? "do that")}`.replace(/\s+/g, " ");
     case "plan_event":
       return `Plan something for ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "the family")}`;
     case "adjust_schedule":
@@ -211,6 +226,10 @@ function summarize(intent: HouseholdIntent): string {
 
 function describeChanges(intent: HouseholdIntent): string[] {
   switch (intent.action) {
+    case "plan_meal":
+      return ["Put the meal on the household's plan", "Copy its recipe's ingredients onto it, where there is a recipe"];
+    case "set_reminder":
+      return ["Show you a reminder under Notifications at that time — only you see it"];
     case "record_absence":
       return [
         "Mark them unavailable for that day",
@@ -259,6 +278,18 @@ function refusalFor(intent: HouseholdIntent): string {
     default:
       return "You do not have access to that.";
   }
+}
+
+/** The things an add names: one item or several. */
+function listItems(intent: HouseholdIntent): string[] {
+  if (Array.isArray(intent.parameters.items)) return intent.parameters.items.filter((value): value is string => typeof value === "string");
+  return typeof intent.parameters.item === "string" ? [intent.parameters.item] : [];
+}
+
+/** "milk", "milk and bananas", "milk, eggs and bread". */
+export function joinWords(words: readonly string[]): string {
+  if (words.length <= 1) return words[0] ?? "";
+  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 function describeTarget(intent: HouseholdIntent): string {

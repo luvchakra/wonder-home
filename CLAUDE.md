@@ -249,7 +249,18 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   pending proposal, recent conversation and recent HomeSend by recency.
   Anything still uncertain becomes one focused question, never a guess;
   each turn persists what it was about (its focus) for the next turn's
-  "that".
+  "that". A correction ("not milk, almond milk", "no, I meant Manan",
+  "actually, make that Friday" — `conversation/corrections.ts`) replaces a
+  proposal still waiting for a yes, or undoes an executed write through
+  its own domain service before making the corrected one — both kept on
+  the record, never a silent overwrite. A sentence with several requests
+  is split (`conversation/decompose.ts`) and each part runs through the
+  same engine on its own; a part that leans on an earlier one ("remind me
+  to buy *them*") only goes ahead when that earlier part actually
+  happened. A reminder is a real notification to the speaker alone, held
+  until its `scheduled_for`; the inbox and badge only ever show what is
+  due. An add where nothing was new shows "Nothing to change", never
+  "Done".
 - **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`'s
   `understand`/answer-composition seam) is the reasoning behind a reply: a
   real model call, gated by the same consent/minimisation/entitlement

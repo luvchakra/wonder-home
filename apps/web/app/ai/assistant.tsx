@@ -39,7 +39,7 @@ export type AssistantMessage = {
   role: "member" | "assistant";
   text: string;
   pending?: boolean;
-  action?: { id: string; status: ActionState; preview: ActionPreviewShape | null } | null;
+  action?: { id: string; status: ActionState; preview: ActionPreviewShape | null; unchanged?: boolean } | null;
   /** A preview WonderHome showed without recording an action (e.g. prepared). */
   preview?: ActionPreviewShape | null;
   proposal?: string;
@@ -188,21 +188,27 @@ export function Assistant({
           liveStartMessageId.current = payload.memberMessageId;
         }
 
+        // A request with several parts comes back as one reply per part,
+        // each with its own preview (Wave 4 §10); anything else is one.
+        const replies: { id: string; text: string; action?: AssistantMessage["action"]; preview?: ActionPreviewShape | null; proposal?: string }[] =
+          Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : [payload.reply];
         setMessages((current) =>
           current
             .filter((message) => message.id !== `${optimisticId}-pending`)
             .map((message) => (message.id === optimisticId ? { ...message, id: payload.memberMessageId ?? message.id } : message))
-            .concat({
-              id: payload.reply.id,
-              role: "assistant",
-              text: payload.reply.text,
-              action: payload.reply.action ?? null,
-              preview: payload.reply.preview ?? null,
-              proposal: payload.reply.proposal,
-              speaker: speaker?.assistant,
-            }),
+            .concat(
+              replies.map((reply) => ({
+                id: reply.id,
+                role: "assistant" as const,
+                text: reply.text,
+                action: reply.action ?? null,
+                preview: reply.preview ?? null,
+                proposal: reply.proposal,
+                speaker: speaker?.assistant,
+              })),
+            ),
         );
-        return payload.reply.text as string;
+        return replies.map((reply) => reply.text).join("\n\n");
       } catch (caught) {
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
         setError(caught instanceof Error ? caught.message : "WonderHome could not answer just now.");
@@ -375,7 +381,7 @@ export function Assistant({
                   <ActionPreview
                     state={stateOf(message)}
                     understood={(message.action?.preview ?? message.preview)!.summary}
-                    plan={(message.action?.preview ?? message.preview)!.changes}
+                    plan={message.action?.unchanged ? ["It was already on record, so nothing was added or changed."] : (message.action?.preview ?? message.preview)!.changes}
                     impact={(message.action?.preview ?? message.preview)!.because}
                     reversible={(message.action?.preview ?? message.preview)!.reversible}
                     controls={
@@ -488,8 +494,9 @@ export function Assistant({
 }
 
 
-function stateOf(message: AssistantMessage): "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "refused" {
+function stateOf(message: AssistantMessage): "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "unchanged" | "refused" {
   if (message.action) {
+    if (message.action.status === "executed" && message.action.unchanged) return "unchanged";
     switch (message.action.status) {
       case "proposed":
         return "needs_approval";
