@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { ApiError } from "../api/errors";
 import { withIdempotency, type IdempotencyStore } from "../api/idempotency";
 import { log } from "../observability/logger";
-import { toHomeTalkResponse, type HomeTalkRequest, type HomeTalkResponse, type TurnReply } from "./contract";
+import { toHomeTalkResponse, type HomeTalkRequest, type HomeTalkResponse, type HomeTalkStatus, type TurnReply } from "./contract";
 
 /**
  * The HomeTalk gateway for channels other than the web composer (voice
@@ -31,6 +31,12 @@ export type GatewayDeps = {
   turn: (body: GatewayTurnBody) => Promise<{ reply?: TurnReply } | unknown>;
   /** Where a delivery's response is kept so a retry replays it. */
   idempotency: IdempotencyStore | null;
+  /**
+   * Where one closed-word event per turn goes (voice phase 6): the channel,
+   * the outcome, the latency, whether it was a replay. Best-effort — it
+   * never changes the answer, and it never sees what was said.
+   */
+  record?: (event: { outcome: HomeTalkStatus; latencyMs: number; replayed: boolean }) => void;
 };
 
 /** A delivery's retry key, whatever shape the provider's request id has. */
@@ -42,6 +48,10 @@ export async function runHomeTalkGateway(request: HomeTalkRequest, deps: Gateway
   const startedAt = Date.now();
   const refuse = (status: "not_authorized" | "failed", speech: string): HomeTalkResponse => ({ requestId: request.requestId, status, speech, displayText: speech });
   let response: HomeTalkResponse;
+  // Set when this delivery actually ran a turn; a redelivery answered from
+  // its first response never does.
+  let ran = false;
+  let replayed = false;
 
   try {
     const text = request.input.text.trim();
@@ -60,10 +70,12 @@ export async function runHomeTalkGateway(request: HomeTalkRequest, deps: Gateway
           ...(request.input.transcriptConfidence !== undefined ? { transcriptConfidence: request.input.transcriptConfidence } : {}),
         };
         const recorded = await withIdempotency(deps.idempotency, { key: gatewayIdempotencyKey(request), endpoint: `hometalk:${request.channel}`, body }, async () => {
+          ran = true;
           const turn = await deps.turn(body);
           const reply = (turn as { reply?: TurnReply } | null)?.reply;
           return { status: 200, body: reply ? toHomeTalkResponse(request.requestId, reply) : refuse("failed", FAILED_SPEECH) };
         });
+        replayed = !ran;
         response = recorded.body as HomeTalkResponse;
       }
     }
@@ -80,6 +92,12 @@ export async function runHomeTalkGateway(request: HomeTalkRequest, deps: Gateway
   }
 
   // Safe metadata only: never the words, never a token (phase 1 §Observability).
+  try {
+    deps.record?.({ outcome: response.status, latencyMs: Date.now() - startedAt, replayed });
+  } catch {
+    // Telemetry never changes an answer.
+  }
+
   log.info("hometalk turn", {
     requestId: request.requestId,
     channel: request.channel,

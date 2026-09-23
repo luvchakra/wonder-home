@@ -120,12 +120,14 @@ export async function POST(request: Request) {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
     const counters = await admin.from("rate_limit_counters").delete({ count: "exact" }).lt("window_start", dayAgo);
     const emailEvents = await admin.from("homesend_email_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
+    const channelEvents = await admin.from("hometalk_channel_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
 
     const swept = [
       ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
       { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
       { table: "rate_limit_counters", deleted: counters.count ?? 0, error: counters.error?.code },
       { table: "homesend_email_events", deleted: emailEvents.count ?? 0, error: emailEvents.error?.code },
+      { table: "hometalk_channel_events", deleted: channelEvents.count ?? 0, error: channelEvents.error?.code },
     ];
     const failed = swept.filter((row) => row.error);
 

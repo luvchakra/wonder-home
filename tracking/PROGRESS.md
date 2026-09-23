@@ -28,7 +28,7 @@ disagree again.)
 | 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 8 | Done |
 | 02 | Household Configuration & Playbook | 8 | 6 | 1 | 1 | 8 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 6 | In Progress |
-| 04 | Conversation, Voice & Text | 17 | 14 | 3 | 0 | 15 | In Progress |
+| 04 | Conversation, Voice & Text | 17 | 14 | 3 | 0 | 16 | In Progress |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 5 | In Progress |
@@ -222,3 +222,5 @@ disagree again.)
 | 2026-09-23 | 04 | 04-015 | Done | Alexa unit tests (certificate, signature, timestamp, carriers) | Alexa skill endpoint; inert until a person creates the skill (voice phase 4, PR #131) |
 | 2026-09-24 | 04 | 04-014 | Done | 2367 unit (Gemini Live 17, PCM 5, live messages 5, reminder grounding 1), 443 database (live-engine RLS), security 12/12, eval 45/45 with 0/13 unsafe, verify:live 150/150, live Gemini Live run through the real routes, browser QA at 360px and desktop | Gemini Voice: single-use Live tokens locked to 12 allowlisted HomeTalk tools, tool calls answered by the HomeTalk gateway on channel gemini_voice under the member's session, facts narrowed to the content classes the household lets reach Google, `useGeminiLive` behind the one live control, `live_engine` setting (migration `20260926090000`, applied live). Fixed on the way: a model-read reminder asked "Which one did you mean?"; a failed Live connect left the composer "Thinking…" |
 | 2026-09-24 | 08 / 09 / 14 | 08-009, 09-009, 14-014 | Not Started | — | Follow-ups from the test-spec live run: add a child from a school notice; receipts become purchase history (E2E-002); HomeSend keeps the time of day |
+| 2026-09-24 | 04 | 04-016 | Done | capability matrix 11, session surfaces 3, golden voice 25, 2 database, browser QA at 360px and desktop | Voice phase 5: the capability matrix as data and held to the real gates, shown on the Voice assistants screen; conversations belong to their surface (app / Alexa, migration `20260926100000`, applied live); the spec's everyday questions read by the rules |
+| 2026-09-24 | 04 | 04-017 | In Progress | voice gate in eval (15/15 Gemini sentences, 4/4 Alexa phrases, 22/22 actions placed, 11/11 app-only refused), channel metrics 5 unit + 3 gateway, 1 database, verify:live 153/153, live rows checked | Voice phase 6: golden voice scenarios and a blocking eval gate, `hometalk_channel_events` telemetry (migration `20260926110000`, applied live) with the spec's per-channel metrics, per-session tool-call cap, structured Gemini tool sentences read by the rules first. Needs a person: a real Alexa run, a device-level Gemini Live run, a rendered dashboard with alert delivery |

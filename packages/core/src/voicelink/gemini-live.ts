@@ -169,12 +169,20 @@ export function geminiLiveFunctionDeclarations(): FunctionDeclaration[] {
   return TOOLS.map((tool) => tool.declaration);
 }
 
-/** What HomeTalk hears for one function call, or why the call is refused. Unknown tools are refused, never guessed at. */
-export function utteranceForToolCall(name: string, args: unknown): { text: string } | { refused: string } {
+/** Tools that pass the person's own words through, rather than a sentence built from structured arguments. */
+const FREE_TEXT_TOOLS: ReadonlySet<string> = new Set(["ask_household", "answer_pending_question"]);
+
+/**
+ * What HomeTalk hears for one function call, or why the call is refused.
+ * Unknown tools are refused, never guessed at. `structured` marks a sentence
+ * WonderHome built itself from the tool's arguments — worded for HomeTalk's
+ * own rules, so the rules read it without a second model re-reading it.
+ */
+export function utteranceForToolCall(name: string, args: unknown): { text: string; structured: boolean } | { refused: string } {
   const tool = BY_NAME.get(name);
   if (!tool) return { refused: "That is not something WonderHome can do from here." };
   const utterance = tool.utterance(args && typeof args === "object" && !Array.isArray(args) ? (args as ToolArgs) : {});
-  return utterance ? { text: utterance } : { refused: "I didn't catch that. Could you say it again?" };
+  return utterance ? { text: utterance, structured: !FREE_TEXT_TOOLS.has(name) } : { refused: "I didn't catch that. Could you say it again?" };
 }
 
 export type LiveToolStatus = "answered" | "completed" | "needs_approval" | "needs_clarification" | "denied" | "failed";

@@ -37,6 +37,8 @@ export const RATE_LIMITS = {
   "voice.request": { max: 60, windowSeconds: 600 },
   /** Gemini voice sessions opened, per member (voice phase 3): each mints a provider token. */
   "voice.session": { max: 20, windowSeconds: 600 },
+  /** Tool calls within one Gemini Live session: a long, lively conversation, not a loop (voice phase 6 cost control). */
+  "voice.tool": { max: 120, windowSeconds: 900 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

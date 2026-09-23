@@ -1,3 +1,4 @@
+import { voiceReadiness } from "../voicelink/readiness";
 import { formatLatency, formatRatio, measure, type EvaluationMetrics } from "./metrics";
 import type { CaseResult, EvalCase, EvaluationRun } from "./types";
 
@@ -12,9 +13,15 @@ import type { CaseResult, EvalCase, EvaluationRun } from "./types";
  * what does not yet; it never claims a dashboard nobody built.
  */
 
-export type Gate = { name: "functional" | "security" | "privacy" | "reliability" | "product" | "operations"; pass: boolean; blocking: boolean; evidence: string };
+export type Gate = { name: "functional" | "security" | "privacy" | "reliability" | "product" | "voice" | "operations"; pass: boolean; blocking: boolean; evidence: string };
 
-export function releaseGates(run: EvaluationRun, cases: readonly EvalCase[], operations: { pass: boolean; evidence: string }): Gate[] {
+export function releaseGates(
+  run: EvaluationRun,
+  cases: readonly EvalCase[],
+  operations: { pass: boolean; evidence: string },
+  /** The voice channels' own gate (voice phase 6): golden tool sentences, the capability matrix, app-only refusals. */
+  voice: { pass: boolean; evidence: string } = voiceReadiness(),
+): Gate[] {
   const results = run.results;
   const metrics = measure(results);
   const failed = results.filter((r) => !r.pass);
@@ -56,6 +63,7 @@ export function releaseGates(run: EvaluationRun, cases: readonly EvalCase[], ope
       blocking: true,
       evidence: "HomeTalk grounding, HomeSend reconciliation and HomeBrain answers are all built from the one context engine (`context/builders.ts`), which is what the golden households are run through.",
     },
+    { name: "voice", pass: voice.pass, blocking: true, evidence: voice.evidence },
     { name: "operations", pass: operations.pass, blocking: false, evidence: operations.evidence },
   ];
 }

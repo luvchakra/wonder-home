@@ -1,5 +1,7 @@
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import type { HomeTalkRequest, HomeTalkResponse } from "@wonderhome/core/hometalk/contract";
+import { createAdminClient } from "@wonderhome/core/db/admin";
+import { recordChannelEvent } from "@wonderhome/core/hometalk/channel-events";
 import { runHomeTalkGateway } from "@wonderhome/core/hometalk/gateway";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import type { ChannelLimits } from "@wonderhome/core/voicelink/scopes";
@@ -17,10 +19,14 @@ export function handleHomeTalkRequest(
   session: { supabase: Supabase },
   /** What the channel may reach — a linked assistant's scopes, a provider-voiced channel's content classes. Absent only for the household's own app. */
   limits?: ChannelLimits,
+  /** The utterance is a sentence WonderHome built from structured tool arguments, so its own rules read it first. */
+  options: { rulesFirst?: boolean } = {},
 ): Promise<HomeTalkResponse> {
   return runHomeTalkGateway(request, {
     membership: (householdId) => requireMembership(session.supabase, householdId),
-    turn: (body) => homeTalkTurn({ supabase: session.supabase, householdId: request.householdId, body, source: request.channel, ...(limits ? { limits } : {}) }),
+    turn: (body) =>
+      homeTalkTurn({ supabase: session.supabase, householdId: request.householdId, body, source: request.channel, ...(limits ? { limits } : {}), ...(options.rulesFirst ? { rulesFirst: true } : {}) }),
     idempotency: supabaseIdempotencyStore(session.supabase, request.householdId),
+    record: (event) => void recordChannelEvent(createAdminClient(), { channel: request.channel, householdId: request.householdId, ...event }),
   });
 }

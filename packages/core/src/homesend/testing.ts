@@ -43,7 +43,7 @@ export function fakeSupabase(seed: Record<string, Row[]> = {}): FakeSupabase {
         mode = "insert";
       }
       if (mode === "insert" && payload) {
-        const inserted = (Array.isArray(payload) ? payload : [payload]).map((value: Row) => ({ created_at: new Date(Date.now() + rows.length).toISOString(), status: "received", ...value }));
+        const inserted = (Array.isArray(payload) ? payload : [payload]).map((value: Row) => ({ id: crypto.randomUUID(), created_at: new Date(Date.now() + rows.length).toISOString(), status: "received", ...value }));
         rows.push(...inserted);
         return inserted;
       }

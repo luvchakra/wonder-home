@@ -131,3 +131,20 @@ test("Gemini Voice's live-engine choice is an admin's preference, and only a kno
   assert.throws(() => asProfile(HEAD, `update public.household_voice_settings set live_engine = 'some_other_engine' where household_id = '${household}';`, options), /check constraint/);
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.household_voice_settings where household_id = '${household}';`, options), "0");
 });
+
+test("channel telemetry is unreadable and unwritable to every session (voice phase 6)", () => {
+  psql(`insert into public.hometalk_channel_events (household_id, channel, outcome, latency_ms) values ('${household}', 'alexa', 'completed', 120);`, options);
+  assert.equal(asProfile(HEAD, `select count(*) from public.hometalk_channel_events;`, options), "0");
+  assert.equal(asProfile(PARTNER, `select count(*) from public.hometalk_channel_events;`, options), "0");
+  assert.ok(deniedForProfile(HEAD, `insert into public.hometalk_channel_events (household_id, channel, outcome) values ('${household}', 'web', 'answered');`, options), "a member wrote telemetry");
+  assert.throws(() => psql(`insert into public.hometalk_channel_events (channel, outcome) values ('telegram', 'answered');`, options));
+  assert.throws(() => psql(`insert into public.hometalk_channel_events (channel, outcome) values ('web', 'transcript: buy milk');`, options));
+});
+
+test("a conversation belongs to one surface, and only a known one (voice phase 5)", () => {
+  // Sessions are opened by the server; every one that says nothing is the app's.
+  assert.equal(psql(`insert into public.conversation_sessions (household_id, member_id, channel) values ('${household}', '${headMember}', 'text') returning surface;`, options), "app");
+  assert.ok(deniedForProfile(HEAD, `insert into public.conversation_sessions (household_id, member_id, channel, surface) values ('${household}', '${headMember}', 'voice', 'alexa');`, options), "a member opened a session directly");
+  assert.throws(() => psql(`insert into public.conversation_sessions (household_id, member_id, channel, surface) values ('${household}', '${headMember}', 'voice', 'telegram');`, options));
+  assert.equal(psql(`insert into public.conversation_sessions (household_id, member_id, channel, surface) values ('${household}', '${headMember}', 'voice', 'alexa') returning surface;`, options), "alexa");
+});

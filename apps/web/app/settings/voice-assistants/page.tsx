@@ -2,12 +2,14 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
+import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import { channelSummary, type Capability, type CapabilityChannel } from "@wonderhome/core/voicelink/capabilities";
 import { voiceOAuthClients } from "@wonderhome/core/voicelink/oauth";
 import { listVoiceLinks, type VoiceLink } from "@wonderhome/core/voicelink/repository";
 import { SCOPE_LABELS } from "@wonderhome/core/voicelink/scopes";
-import { Speaker, Unlink } from "lucide-react";
+import { AudioLines, Speaker, Unlink } from "lucide-react";
 
 import { revokeVoiceLinkAction } from "../../(auth)/voice-link-actions";
 import { formatDate, requireSession } from "../../_lib/session";
@@ -16,6 +18,34 @@ export const metadata = { title: "Voice assistants" };
 export const dynamic = "force-dynamic";
 
 const PROVIDER_NAMES: Record<VoiceLink["provider"], string> = { amazon_alexa: "Alexa", gemini: "Gemini Voice" };
+
+/** Why a capability depends on something, in the household's words (voice phase 5). */
+const CONDITION: Record<string, string> = {
+  consent: "if your data-use settings let it reach Google",
+  opt_in: "if you turn it on when you link it",
+};
+
+const VOICE_CHANNELS: { channel: CapabilityChannel; name: string; where: string }[] = [
+  { channel: "gemini_voice", name: "Gemini Voice", where: "Inside the WonderHome app, when Voice settings uses Gemini Live" },
+  { channel: "alexa", name: "Alexa", where: "A linked Alexa speaker" },
+];
+
+function CapabilityList({ title, items, channel }: { title: string; items: Capability[]; channel: CapabilityChannel }) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{title}</p>
+      <ul className="mt-1 space-y-1">
+        {items.map((capability) => (
+          <li key={capability.id} className="text-sm">
+            {capability.label}
+            {CONDITION[capability.policy[channel]] ? <span className="text-[var(--wh-foreground-muted)]"> — {CONDITION[capability.policy[channel]]}</span> : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /**
  * Voice assistants linked to this home (voice phase 2): who each one speaks
@@ -110,6 +140,34 @@ export default async function VoiceAssistantsPage() {
             </ul>
           </section>
         ) : null}
+
+        <section className="space-y-3">
+          <SectionHeader title="What a voice assistant can do" />
+          <p className="text-sm text-[var(--wh-foreground-muted)]">
+            Every door reaches the same WonderHome — the same answers, the same checks. Paying, ordering and changing plans stay in the app, where they ask for your OK.
+          </p>
+          <ul className="space-y-3">
+            {VOICE_CHANNELS.map(({ channel, name, where }) => {
+              const summary = channelSummary(channel);
+              return (
+                <li key={channel}>
+                  <Card className="flex items-start gap-3">
+                    <IconTile icon={AudioLines} tone="ai" />
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div>
+                        <p className="text-sm font-semibold">{name}</p>
+                        <p className="text-xs text-[var(--wh-foreground-muted)]">{where}</p>
+                      </div>
+                      <CapabilityList title="Can do" items={summary.available} channel={channel} />
+                      <CapabilityList title="Can do, when you allow it" items={summary.conditional} channel={channel} />
+                      <CapabilityList title="Only in the app" items={summary.appOnly} channel={channel} />
+                    </div>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
         <QuoteCard>Your home, on your terms.</QuoteCard>
       </div>

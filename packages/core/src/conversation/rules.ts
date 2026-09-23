@@ -227,6 +227,20 @@ const RULES: readonly Rule[] = [
     read: (match) => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: withWhen({ scope: "health" }, match[1]), confidence: 0.93 }),
   },
 
+  {
+    // The everyday questions a household asks in one breath — the voice
+    // spec's own examples, and what Gemini Voice's tools and Alexa's carrier
+    // phrases send (voice phase 6 golden set): "what's for dinner?", "do we
+    // need milk?", "are we out of rice?", "do the kids have homework?",
+    // "what homework does Asmi have?". Questions, answered by HomeBrain from
+    // the facts; none of them asks for anything to change.
+    pattern: new RegExp(
+      `^(?:what(?:'s| is|s) for (?:breakfast|lunch|dinner|supper|tea)|what are we (?:having|eating)(?: for (?:breakfast|lunch|dinner|supper))?|do we (?:still )?(?:need|have)(?: enough| any)? .+|are we (?:out of|low on|running low on|running out of) .+|what(?:'s| is| are|s)? (?:running low|low|out of stock|on the (?:${LIST_WORDS}))|what (?:groceries|food|things|items) (?:are|do we|have we)\\b.*|(?:do|does) (?:the kids|the children|\\w+) (?:have|got) (?:any )?(?:homework|exams?|tests?|school ?work|assignments?)\\b.*|what (?:homework|school ?work|exams?|tests?|assignments?) (?:does|do|is|are) .+)(?: (${WHEN_WORDS}))?[?.!]*$`,
+      "i",
+    ),
+    read: (match) => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: withWhen({ scope: "home" }, match[1]), confidence: 0.9 }),
+  },
+
   // --- Agents: run the specialists for real ----------------------------------
   {
     // The literal trigger for 14-007's specialists, made real: unlike

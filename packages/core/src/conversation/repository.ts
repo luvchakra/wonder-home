@@ -55,15 +55,29 @@ export type ConversationMessage = {
 };
 
 /** The member's open session, created if there is none. */
+/**
+ * Where a conversation happens (voice phase 5). Household truth is shared
+ * across surfaces; what a conversation is waiting on is not — a question the
+ * app asked is never answered by something said to Alexa.
+ */
+export type ConversationSurface = "app" | "alexa";
+
+/** The surface a HomeTalk channel talks on: every in-app channel shares the app's conversation. */
+export function surfaceForChannel(channel: string | undefined): ConversationSurface {
+  return channel === "alexa" ? "alexa" : "app";
+}
+
 export async function openSession(
   admin: SupabaseClient,
-  input: { householdId: string; memberId: string; channel: "text" | "voice" },
+  input: { householdId: string; memberId: string; channel: "text" | "voice"; surface?: ConversationSurface },
 ): Promise<string> {
+  const surface = input.surface ?? "app";
   const { data: existing, error: readError } = await admin
     .from("conversation_sessions")
     .select("id")
     .eq("household_id", input.householdId)
     .eq("member_id", input.memberId)
+    .eq("surface", surface)
     .eq("status", "open")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -74,7 +88,7 @@ export async function openSession(
 
   const { data, error } = await admin
     .from("conversation_sessions")
-    .insert({ household_id: input.householdId, member_id: input.memberId, channel: input.channel })
+    .insert({ household_id: input.householdId, member_id: input.memberId, channel: input.channel, surface, status: "open" })
     .select("id")
     .single();
 
@@ -290,17 +304,19 @@ export async function markActionResult(
   }
 }
 
-/** The member's most recent open session, if they have one. */
+/** The member's most recent open session on a surface — the app's, unless said otherwise. */
 export async function currentSessionId(
   supabase: SupabaseClient,
   householdId: string,
   memberId: string,
+  surface: ConversationSurface = "app",
 ): Promise<string | null> {
   const { data } = await supabase
     .from("conversation_sessions")
     .select("id")
     .eq("household_id", householdId)
     .eq("member_id", memberId)
+    .eq("surface", surface)
     .eq("status", "open")
     .order("created_at", { ascending: false })
     .limit(1)
