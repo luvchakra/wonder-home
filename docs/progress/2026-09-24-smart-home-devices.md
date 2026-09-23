@@ -125,3 +125,23 @@ helpers, finance, and eight health forms. Each call now runs inside
 ## Test data cleanup
 
 Recorded after the merge, below.
+
+**Done, after PR #146 merged.**
+- The QA account `465275ac-f6a3-4d5d-b4e6-3981fca57f08` was removed with
+  `node scripts/qa-test-user.mjs delete`.
+- Its household "Devices QA Home" (`79cc3899-606c-447f-ab84-bac1e9b6b4d3`)
+  was deleted, together with its `audit_events`.
+  - The delete cascaded to the hand-seeded smart-home integration, both
+    device links, the seeded reading, and the two appliances (Washing
+    machine, plus the Front door fixture added inline during QA).
+  - Its `rate_limit_counters` rows and the `verify.live%` counters were
+    deleted too.
+- SQL counts afterwards were 0 for:
+  - the household, its members, appliances, integrations, device links,
+    readings and audit events;
+  - the auth user and the profile.
+- Nothing was uploaded to Storage.
+- The scratch QA scripts, screenshots, state file and credentials file were
+  deleted, and the dev server was stopped.
+
+Nothing was left behind.
