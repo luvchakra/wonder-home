@@ -430,6 +430,14 @@ Production hardening (Wave 5 §14–§17):
   change them through `PATCH /platform-admin/plans/{planKey}/policies`, and
   every change is kept in `plan_policy_events`. A domain module never
   hard-codes a number of its own.
+- **Entitlement experiments.** An experiment changes one plan feature for
+  a stable, hashed share of the households on the plans it names (story
+  20-008, `billing/experiments.ts`). It is applied inside `loadSubscription`,
+  so `may`, `consume` and every screen give the same answer, and a direct
+  API call gets the same answer too. Its terms are frozen once it is
+  running, and the database enforces that. Settings tells a household when
+  a feature is part of a trial. Never gate a feature on anything but the
+  entitlement service.
 - **Timeouts.** Every model client comes from `ai/provider-clients.ts`, with
   a timeout and a single retry. Never construct an SDK client elsewhere.
 - **Forwarded email.** Each delivery leaves closed-word events in

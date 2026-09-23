@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**188 of 195 stories done — 96.4%**
+**189 of 195 stories done — 96.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 188 |
+| Done | 189 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 6 |
+| Not Started | 5 |
 
 ## By module
 
@@ -44,7 +44,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 17 External Integrations | `████████░░` | 7 | 8 | 1 not started |
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
-| 20 Subscriptions, Entitlements & Usage | `████████░░` | 7 | 8 | 1 not started |
+| 20 Subscriptions, Entitlements & Usage | `██████████` | 8 | 8 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 
 ## What is left
@@ -57,7 +57,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-008` Predictive intelligence | 14 AI Orchestration & Learning | P2 | Not Started |
 | `17-008` Smart home | 17 External Integrations | P2 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
-| `20-008` Plan experiments | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 
 ## Every story
 
@@ -382,7 +381,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 20 — Subscriptions, Entitlements & Usage
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -393,7 +392,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-005` Usage UI | P1 | Done | Settings shows used/limit per metered feature, from the same counter `consume` enforces against |
 | `20-006` Billing abstraction | P1 | Done | Provider-neutral `BillingProvider` port + pure `applyBillingEvent` (out-of-order and other-subscription events ignored, cancellation falls back to free, never deletes); Stripe adapter code-complete and inert (intent id as Idempotency-Key, HMAC-verified webhooks); `billing_intents` (one open per household+plan) and `billing_events` (unique per provider event) with RLS; `plans.requires_payment` keeps paid plans out of reach of any household session |
 | `20-007` Quota automation | P2 | Done | Burst (N per fixed W-second window) and fair-use (past N in the period, served more simply, never refused) as plan data on `plan_features`, enforced in the one entitlement service (`consume`); HomeTalk answers from the rules past fair use, with a disclosure, and refuses a burst as temporary; staff set policies through `PATCH /platform-admin/plans/{planKey}/policies` (`subscription.manage`, reason code), every change kept in `plan_policy_events` |
-| `20-008` Plan experiments | P2 | Not Started | — |
+| `20-008` Plan experiments | P2 | Done | `entitlement_experiments`: one feature changed (on, off, or a different allowance) for a stable hashed share of the households on named plans, applied inside `loadSubscription` so `may`/`consume` and every screen agree and a direct API call cannot bypass it; terms frozen once running and draft → running → stopped only (database trigger); a household reads only a running experiment's terms (column grants), never staff's description; staff create/start/stop through `/platform-admin/experiments` (`subscription.manage`, reason code, `entitlement_experiment_events`) and read per-group household counts and usage — counts only; Settings tells a household plainly when a feature is part of a trial |
 
 ### 21 — Health and Fitness
 

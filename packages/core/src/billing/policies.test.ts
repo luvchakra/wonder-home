@@ -18,6 +18,7 @@ function memberClient(features: Record<string, unknown>[]): SupabaseClient {
       const chain = {
         select: () => chain,
         eq: () => chain,
+        contains: () => chain,
         maybeSingle: async () => ({ data: result.data[0] ?? null, error: null }),
         then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve),
       };

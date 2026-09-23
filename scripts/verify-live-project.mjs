@@ -25,6 +25,8 @@ const SHIPPED_TABLES = [
   "billing_events",
   "weather_locations",
   "plan_policy_events",
+  "entitlement_experiments",
+  "entitlement_experiment_events",
   "profiles",
   "households",
   "household_members",
@@ -604,6 +606,17 @@ async function main() {
   // missing notification.
   const sentProbe = await admin.from("notification_events").insert({ household_id: nobodyHome, notification_id: nobodyHome, event_type: "sent", channel: "whatsapp", metadata: { providerMessageId: "verify-live" } });
   check("a notification can be recorded as sent to WhatsApp", sentProbe.error?.code === "23503", sentProbe.error?.code ?? "inserted?!");
+
+  // Entitlement experiments (20260927150000, story 20-008): anonymous
+  // reads nothing, and a draft's description never reaches a session.
+  const anonExperiments = await anon.from("entitlement_experiments").select("key").limit(1);
+  check(
+    "anonymous cannot read entitlement experiments",
+    Boolean(anonExperiments.error) || (Array.isArray(anonExperiments.data) && anonExperiments.data.length === 0),
+    anonExperiments.error ? anonExperiments.error.code : `${anonExperiments.data?.length ?? "?"} rows`,
+  );
+  const serverExperimentEvents = await admin.from("entitlement_experiment_events").select("id").limit(1);
+  check("the server can read experiment history", !serverExperimentEvents.error, serverExperimentEvents.error?.code ?? "ok");
 
   // HomeTalk channel telemetry (20260926110000, voice phase 6).
   const serverChannelEvents = await admin.from("hometalk_channel_events").select("id").limit(1);

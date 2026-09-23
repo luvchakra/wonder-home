@@ -49,6 +49,8 @@ export type PlanFeature = {
    * never refused (story 20-007). Null or absent: no fair-use level.
    */
   fairUseLimit?: number | null;
+  /** Set when a running experiment gave this household this entry rather than its plan (story 20-008). */
+  experimentKey?: string;
 };
 
 export type Subscription = {
