@@ -164,12 +164,18 @@ describe("in-flight reservation (Wave 5 §17)", () => {
     const { store } = reservingStore();
     let runs = 0;
     let finishFirst!: () => void;
+    let firstStarted!: () => void;
+    const started = new Promise<void>((resolve) => (firstStarted = resolve));
     const first = withIdempotency(store, { key: "turn-abc-123456", endpoint: "POST /x", body: { a: 1 } }, async () => {
       runs += 1;
+      firstStarted();
       await new Promise<void>((resolve) => (finishFirst = resolve));
       return { status: 200, body: { ok: 1 } };
     });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Wait until the first attempt is actually running — past hashing and
+    // its reservation — rather than for one tick, which a loaded CI runner
+    // can outrun.
+    await started;
     await expect(
       withIdempotency(store, { key: "turn-abc-123456", endpoint: "POST /x", body: { a: 1 } }, async () => {
         runs += 1;
