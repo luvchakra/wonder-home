@@ -20,6 +20,7 @@
     "./homesend/*": "./src/homesend/*.ts",
     "./evaluation/*": "./src/evaluation/*.ts",
     "./hometalk/*": "./src/hometalk/*.ts",
+    "./voicelink/*": "./src/voicelink/*.ts",
     "./security/*": "./src/security/*.ts",
     "./api/*": "./src/api/*.ts",
     "./billing/*": "./src/billing/*.ts",

@@ -121,6 +121,14 @@ export type TurnInput = {
    * authorizes anything. Absent, the intent goes on exactly as understood.
    */
   ground?: (intent: HouseholdIntent) => Grounding | Promise<Grounding>;
+  /**
+   * What the channel the turn arrived on may ask for (a linked voice
+   * assistant's scopes, voice phase 2). Checked as soon as the intent is
+   * understood — before grounding asks anything and before any proposal —
+   * and it only ever narrows: every other gate still runs on what it lets
+   * through. Absent, the channel is the household's own app.
+   */
+  channelLimits?: { allows: (intent: HouseholdIntent) => boolean; refusal: string };
   now?: Date;
 };
 
@@ -223,6 +231,19 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
       }
       intent = { ...intent, parameters: filled };
     }
+  }
+
+  // Outside what this channel may ask for: refused before anything is asked
+  // or proposed, the way a permission refusal is.
+  if (input.channelLimits && !input.channelLimits.allows(intent)) {
+    return {
+      kind: "reply",
+      intent,
+      proposal: { kind: "refused", reason: input.channelLimits.refusal },
+      text: input.channelLimits.refusal,
+      record: false,
+      memory: null,
+    };
   }
 
   // A shaky transcript of something consequential is read back, never acted on.

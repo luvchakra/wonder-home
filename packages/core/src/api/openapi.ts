@@ -1398,6 +1398,20 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/oauth/voice/token": {
+        post: {
+          summary: "OAuth 2.0 token endpoint for linked voice assistants (voice phase 2)",
+          description:
+            "Where a voice provider (Alexa account linking) exchanges an authorization code for tokens, and refreshes them. Authenticated by the provider's client secret (HTTP Basic, or client_id/client_secret in the form body), never a household session. Form-encoded, per RFC 6749: grant_type authorization_code (code, redirect_uri, code_verifier when the code carried a PKCE challenge) or refresh_token. A code works once; a code or refresh token presented twice revokes every token of that link. Only SHA-256 hashes of codes and tokens are stored. Errors use RFC 6749's closed words. Inert until ALEXA_OAUTH_CLIENT_ID, ALEXA_OAUTH_CLIENT_SECRET and ALEXA_OAUTH_REDIRECT_URIS are set.",
+          security: [],
+          responses: {
+            "200": { description: "access_token (1 hour), refresh_token, token_type Bearer, and the scopes the member granted" },
+            "400": { description: "invalid_request, invalid_grant or unsupported_grant_type" },
+            "401": { description: "invalid_client" },
+            "429": { description: "temporarily_unavailable — too many token requests for this client" },
+          },
+        },
+      },
       "/invitations/{invitationId}": {
         parameters: [
           { name: "invitationId", in: "path", required: true, schema: { type: "string", format: "uuid" } },

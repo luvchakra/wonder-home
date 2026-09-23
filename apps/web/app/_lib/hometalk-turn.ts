@@ -61,7 +61,9 @@ import { requireMembership } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 
-import { householdAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
+import { agendaAllows, domainsFor, VOICE_NOT_ALLOWED, voiceAllowsAction, type VoiceScope } from "@wonderhome/core/voicelink/scopes";
+
+import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
 
 /**
  * HomeTalk's turn: one engine for talk and text (module 04), made real
@@ -129,11 +131,30 @@ export type HomeTalkBody = z.infer<typeof bodySchema>;
  * permissions, entitlements and autonomy are decided exactly as they are
  * for the web — no channel has a path of its own around them.
  */
-export async function homeTalkTurn(input: { supabase: Supabase; householdId: string; body: HomeTalkBody }) {
-  const { supabase, householdId, body } = input;
+export async function homeTalkTurn(input: {
+  supabase: Supabase;
+  householdId: string;
+  body: HomeTalkBody;
+  /**
+   * A linked voice assistant's scopes (voice phase 2). They only narrow:
+   * an action outside them is refused before it is asked about, approved or
+   * carried out, and facts from domains outside them never reach an answer.
+   * Absent for the household's own app.
+   */
+  limits?: { scopes: readonly VoiceScope[] };
+}) {
+  const { supabase, householdId, body, limits } = input;
   const membership = await requireMembership(supabase, householdId);
   const actor = { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType };
   const admin = createAdminClient();
+  const channelLimits = limits ? { allows: (intent: HouseholdIntent) => voiceAllowsAction(intent.action, limits.scopes), refusal: VOICE_NOT_ALLOWED } : null;
+  // A "yes" over a voice link settles only what the link may do: a payment
+  // proposed in the app is approved in the app.
+  const blockedOnChannel = async (actionId: string): Promise<boolean> => {
+    if (!limits) return false;
+    const stored = await loadAction(admin, { householdId, actionId }).catch(() => null);
+    return !stored || !voiceAllowsAction(stored.actionType as HouseholdIntent["action"], limits.scopes);
+  };
 
   if ("actionId" in body) {
     const action = await decideAction(admin, { householdId, actionId: body.actionId, memberId: membership.memberId, decision: body.decision, seen: body.fingerprint ?? null });
@@ -242,16 +263,19 @@ export async function homeTalkTurn(input: { supabase: Supabase; householdId: str
   // (a deterministic answer needs them too), so the read starts whenever
   // the turn might be one.
   const readBrain = () =>
-    householdMemory(householdId, `agenda:${membership.memberId}`, () => householdAgenda(supabase, householdId, view)).then(async (agenda) => ({
+    householdMemory(householdId, `agenda:${membership.memberId}`, () => householdAgenda(supabase, householdId, view)).then(async (full) => {
+      const agenda = limits ? narrowAgenda(full, (key) => agendaAllows(key, limits.scopes)) : full;
+      return {
       agenda,
-      context: await householdContext(supabase, {
+      context: scopedContext(await householdContext(supabase, {
         householdId,
         householdName: membership.household.name,
         timezone: membership.household.timezone,
         viewer: view,
         agenda: { needsYou: agenda.needsYou, handled: agenda.handled, checked: agenda.checked, unavailable: agenda.domains.filter((domain) => domain.failed).map((domain) => domain.label) },
-      }),
-    }));
+      }), limits),
+      };
+    });
   // A request with several parts (Wave 4 §10) is carried out part by part
   // below; a correction is always one request about one earlier one.
   const parts = readCorrection(body.utterance) ? [body.utterance] : splitRequest(body.utterance);
@@ -352,6 +376,11 @@ export async function homeTalkTurn(input: { supabase: Supabase; householdId: str
       const approve = !/^(?:no|nope|cancel)\b/i.test(body.utterance.trim());
       const replies = [];
       for (const entry of [...open].reverse()) {
+        if (await blockedOnChannel(entry.id)) {
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: VOICE_NOT_ALLOWED, metadata: { proposal: "refused", mode: "answer" } });
+          replies.push({ id, text: VOICE_NOT_ALLOWED, action: null, preview: null, proposal: "refused", mode: "answer" as BrainMode });
+          continue;
+        }
         const decided = await decideAction(admin, { householdId, actionId: entry.id, memberId: membership.memberId, decision: approve ? "approved" : "rejected" });
         if (!decided) continue;
         const settled = decided.refused
@@ -394,6 +423,7 @@ export async function homeTalkTurn(input: { supabase: Supabase; householdId: str
       const turn = await converse({
         utterance: part,
         channel: body.channel,
+        ...(channelLimits ? { channelLimits } : {}),
         transcriptConfidence: body.transcriptConfidence,
         actor,
         pending: null,
@@ -499,6 +529,7 @@ export async function homeTalkTurn(input: { supabase: Supabase; householdId: str
   const result = await converse({
     utterance: body.utterance,
     channel: body.channel,
+    ...(channelLimits ? { channelLimits } : {}),
     transcriptConfidence: body.transcriptConfidence,
     actor,
     pending: pending && !corrected ? pendingFrom(pending) : null,
@@ -597,7 +628,10 @@ export async function homeTalkTurn(input: { supabase: Supabase; householdId: str
     // Context unavailable (Wave 5 §16): if the home itself cannot be read,
     // say so plainly rather than failing the whole turn.
     const agenda =
-      (brainRead ? (await brainRead.catch(() => null))?.agenda : null) ?? (await householdAgenda(supabase, householdId, view).catch(() => null));
+      (brainRead ? (await brainRead.catch(() => null))?.agenda : null) ??
+      (await householdAgenda(supabase, householdId, view)
+        .then((full) => (limits ? narrowAgenda(full, (key) => agendaAllows(key, limits.scopes)) : full))
+        .catch(() => null));
     const [fallback, answered] = await Promise.all([
       agenda
         ? answerStatus(supabase, householdId, membership, result.intent, agenda).catch(() => HOME_UNREADABLE)
@@ -707,6 +741,16 @@ export async function homeTalkTurn(input: { supabase: Supabase; householdId: str
     },
   });
 
+  if ((result.kind === "approve" || result.kind === "reject") && (await blockedOnChannel(result.actionId))) {
+    text = VOICE_NOT_ALLOWED;
+    await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
+    return {
+      sessionId,
+      memberMessageId,
+      reply: { id: replyId, text, action: null, preview: null, proposal: "refused", mode: "answer" as BrainMode },
+      privacy: { provider: routing.code, disclosure: routing.disclosure },
+    };
+  }
   if (result.kind === "approve" || result.kind === "reject") {
     action = await decideAction(admin, {
       householdId,
@@ -1183,3 +1227,9 @@ async function consequentialEntitlements(
   };
 }
 
+/** A household's facts narrowed to what a voice link's scopes open (voice phase 2). Unchanged without limits. */
+function scopedContext(context: HouseholdContext, limits: { scopes: readonly VoiceScope[] } | undefined): HouseholdContext {
+  if (!limits) return context;
+  const open = domainsFor(limits.scopes);
+  return { ...context, snapshot: { ...context.snapshot, items: context.snapshot.items.filter((item) => open.has(item.domain)) } };
+}
