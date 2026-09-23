@@ -22,7 +22,14 @@ import { Badge } from "@wonderhome/core/ui/pill";
  */
 
 type PlanOption = { key: string; name: string; description: string | null };
-type Preview = PlanChangeAssessment & { lines: string[]; needsConfirmation: boolean };
+type Preview = PlanChangeAssessment & {
+  lines: string[];
+  needsConfirmation: boolean;
+  /** Confirming goes to the payment provider's page (story 20-006). */
+  checkout?: boolean;
+  /** A paid plan with no way to pay for it here yet. */
+  unavailable?: boolean;
+};
 
 export function PlanForm({
   householdId,
@@ -77,6 +84,13 @@ export function PlanForm({
 
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message ?? "We could not change the plan just now.");
+
+      // A paid plan: the provider's page takes it from here, and the plan
+      // changes when the payment is confirmed — not on this click.
+      if (payload.checkout?.url) {
+        window.location.assign(payload.checkout.url as string);
+        return;
+      }
 
       setDone(payload.changed.lines as string[]);
       setPreview(null);
@@ -139,10 +153,23 @@ export function PlanForm({
               <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
             ))}
           </ul>
+          {preview.unavailable ? (
+            <p className="text-sm">This plan can&rsquo;t be bought here yet, so there is nothing to confirm. Nothing has changed.</p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => void apply()} disabled={busy}>
-              {busy ? "Changing…" : preview.needsConfirmation ? "I understand — change the plan" : "Change the plan"}
-            </Button>
+            {preview.unavailable ? null : (
+              <Button type="button" onClick={() => void apply()} disabled={busy}>
+                {busy
+                  ? preview.checkout
+                    ? "Opening payment…"
+                    : "Changing…"
+                  : preview.checkout
+                    ? "Continue to payment"
+                    : preview.needsConfirmation
+                      ? "I understand — change the plan"
+                      : "Change the plan"}
+              </Button>
+            )}
             <Button type="button" variant="secondary" onClick={() => { setPreview(null); setChosen(null); }}>
               Leave it as it is
             </Button>

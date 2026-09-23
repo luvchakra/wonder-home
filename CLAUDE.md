@@ -488,6 +488,27 @@ requests to Open-Meteo's commercial endpoint, and whether production needs
 that key is a person's call. Weather speaks only when it changes a
 decision, such as washing that won't dry. It never gives a forecast readout.
 
+Billing (story 20-006) goes through the `BillingProvider` port
+(`billing/provider.ts`). Only the pure `applyBillingEvent` moves a
+subscription in response to a payment. It ignores an event older than the
+last one applied, or one about another subscription. A failed payment keeps
+the plan as past-due, and a cancellation falls back to free. Neither ever
+touches a household's records.
+
+The Stripe adapter (`billing/stripe.ts`) is code-complete and inert. It
+needs `WONDERHOME_BILLING_PROVIDER=stripe`, `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET` and a `STRIPE_PRICE_<PLAN>` for each plan it sells.
+The intent id is Stripe's Idempotency-Key (`billing_intents` holds one open
+intent per household and plan), so a retry is never a second transaction.
+Webhooks are believed only after HMAC verification of the raw body, and
+each provider event is applied once (`billing_events`).
+
+A plan marked `plans.requires_payment` can never be written onto a
+subscription from a household session: RLS and `changePlan` both refuse
+it. Every plan is unmarked today, and marking plans paid is a person's
+pricing decision. Never let a household change its own plan to a paid one
+without a verified payment.
+
 ## Non-functional gates
 Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests are release blockers. Core API targets are p95 <=500ms reads and <=800ms ordinary writes excluding external provider latency.
 

@@ -341,3 +341,109 @@ test("provider events store identity and a hash, never the payload", () => {
     "a member forged a provider event",
   );
 });
+
+// Story 20-006: billing. A paid plan is entered only through a verified
+// payment, a checkout retry is the same intent, and a provider event is
+// written by the server alone, once.
+
+test("a plan that needs payment cannot be set from a household session, even by an Admin", () => {
+  psql(`update public.plans set requires_payment = true where key = 'max';`, options);
+  try {
+    assert.ok(
+      deniedForProfile(
+        HEAD,
+        `insert into public.household_subscriptions (household_id, plan_key) values ('${household}', 'max')
+         on conflict (household_id) do update set plan_key = excluded.plan_key;`,
+        options,
+      ),
+      "an Admin put the household on a paid plan without paying",
+    );
+    assert.notEqual(psql(`select plan_key from public.household_subscriptions where household_id = '${household}';`, options), "max");
+
+    // The server, applying a verified provider event, can.
+    psql(`update public.household_subscriptions set plan_key = 'max', last_billing_event_at = now() where household_id = '${household}';`, options);
+    assert.equal(psql(`select plan_key from public.household_subscriptions where household_id = '${household}';`, options), "max");
+
+    // And an Admin can still step down to a plan that needs no payment.
+    asProfile(HEAD, `update public.household_subscriptions set plan_key = 'free' where household_id = '${household}';`, options);
+    assert.equal(psql(`select plan_key from public.household_subscriptions where household_id = '${household}';`, options), "free");
+  } finally {
+    psql(`update public.plans set requires_payment = false where key = 'max';`, options);
+  }
+});
+
+test("only an Admin opens a checkout intent, as themselves, with nothing from the provider on it", () => {
+  const headMember = psql(`select id from public.household_members where household_id = '${household}' and profile_id = '${HEAD}';`, options);
+  const adultMember = psql(`select id from public.household_members where household_id = '${household}' and profile_id = '${ADULT}';`, options);
+
+  const intent = asProfile(
+    HEAD,
+    `insert into public.billing_intents (household_id, plan_key, provider, created_by_member_id)
+     values ('${household}', 'pro', 'stripe', '${headMember}') returning id;`,
+    options,
+  );
+  assert.match(intent, /^[0-9a-f-]{36}$/);
+
+  assert.ok(
+    deniedForProfile(ADULT, `insert into public.billing_intents (household_id, plan_key, provider, created_by_member_id) values ('${household}', 'max', 'stripe', '${adultMember}');`, options),
+    "a member without a role opened a checkout",
+  );
+  assert.ok(
+    deniedForProfile(OUTSIDER, `insert into public.billing_intents (household_id, plan_key, provider, created_by_member_id) values ('${household}', 'max', 'stripe', '${headMember}');`, options),
+    "an outsider opened a checkout for another household",
+  );
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.billing_intents (household_id, plan_key, provider, created_by_member_id, provider_session_id, checkout_url)
+       values ('${household}', 'max', 'stripe', '${headMember}', 'cs_forged', 'https://evil.example');`,
+      options,
+    ),
+    "a household session wrote the provider's session onto an intent",
+  );
+
+  // Attaching the provider's session and completing the intent are the server's.
+  asProfile(HEAD, `update public.billing_intents set status = 'completed', completed_at = now() where id = '${intent}';`, options);
+  assert.equal(psql(`select status from public.billing_intents where id = '${intent}';`, options), "open", "a household session completed its own intent");
+
+  assert.equal(asProfile(HEAD, `select count(*) from public.billing_intents;`, options), "1");
+  assert.equal(asProfile(ADULT, `select count(*) from public.billing_intents;`, options), "0", "a member without a role can read what the household is buying");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.billing_intents;`, options), "0");
+});
+
+test("a retry finds the open intent: there is only ever one per household and plan", () => {
+  const headMember = psql(`select id from public.household_members where household_id = '${household}' and profile_id = '${HEAD}';`, options);
+  assert.ok(
+    deniedForProfile(HEAD, `insert into public.billing_intents (household_id, plan_key, provider, created_by_member_id) values ('${household}', 'pro', 'stripe', '${headMember}');`, options),
+    "a second open intent for the same plan was created",
+  );
+  // Once the first is finished, a new one may open.
+  psql(`update public.billing_intents set status = 'expired' where household_id = '${household}' and plan_key = 'pro';`, options);
+  asProfile(HEAD, `insert into public.billing_intents (household_id, plan_key, provider, created_by_member_id) values ('${household}', 'pro', 'stripe', '${headMember}');`, options);
+  assert.equal(psql(`select count(*) from public.billing_intents where household_id = '${household}' and status = 'open';`, options), "1");
+});
+
+test("billing events are the server's to write, once each, and an Admin's to read", () => {
+  assert.ok(
+    deniedForProfile(
+      HEAD,
+      `insert into public.billing_events (provider, provider_event_id, household_id, event_type, occurred_at)
+       values ('stripe', 'evt_forged', '${household}', 'subscription.activated', now());`,
+      options,
+    ),
+    "a household forged a billing event",
+  );
+
+  psql(
+    `insert into public.billing_events (provider, provider_event_id, household_id, event_type, occurred_at, applied, outcome)
+     values ('stripe', 'evt_1', '${household}', 'subscription.activated', now(), true, 'applied');`,
+    options,
+  );
+  assert.throws(
+    () => psql(`insert into public.billing_events (provider, provider_event_id, household_id, event_type, occurred_at) values ('stripe', 'evt_1', '${household}', 'payment.failed', now());`, options),
+    "a redelivered event was stored twice",
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.billing_events;`, options), "1");
+  assert.equal(asProfile(ADULT, `select count(*) from public.billing_events;`, options), "0");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.billing_events;`, options), "0");
+});

@@ -4,12 +4,16 @@ import { requireUser } from "@wonderhome/core/api/auth";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { featureSummary } from "@wonderhome/core/billing/entitlements";
 import { describePlanChange, needsConfirmation } from "@wonderhome/core/billing/plan-change";
+import { billingProviderFromEnv, startCheckout } from "@wonderhome/core/billing/checkout";
 import {
   changePlan,
   listPlans,
   loadSubscription,
+  planRequiresPayment,
   previewPlanChange,
 } from "@wonderhome/core/billing/repository";
+import { ApiError } from "@wonderhome/core/api/errors";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 
@@ -44,6 +48,8 @@ export async function GET(request: Request, { params }: Params) {
     if (!to) return { current: featureSummary(current), plans };
 
     const assessment = await previewPlanChange(supabase, householdId, to);
+    const provider = billingProviderFromEnv();
+    const requiresPayment = plans.find((plan) => plan.key === to)?.requiresPayment ?? false;
     return {
       current: featureSummary(current),
       plans,
@@ -51,6 +57,11 @@ export async function GET(request: Request, { params }: Params) {
         ...assessment,
         lines: describePlanChange(assessment),
         needsConfirmation: needsConfirmation(assessment),
+        // Whether confirming goes to a payment page (story 20-006). Only ever
+        // true when a real provider sells this plan: a checkout that goes
+        // nowhere is never offered.
+        checkout: requiresPayment && Boolean(provider?.live && provider.sells(to)),
+        unavailable: requiresPayment && !(provider?.live && provider.sells(to)),
       },
     };
   })(request);
@@ -71,6 +82,23 @@ export async function POST(request: Request, { params }: Params) {
   return defineRoute({ input: changeSchema, authenticate: requireUser }, async ({ body }) => {
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, householdId);
+
+    // A paid plan goes through a checkout, and the plan changes only once
+    // the provider's verified webhook says it was paid (story 20-006).
+    if (await planRequiresPayment(supabase, body.toPlanKey)) {
+      const provider = billingProviderFromEnv();
+      if (!provider?.live || !provider.sells(body.toPlanKey)) {
+        throw ApiError.conflict("This plan can't be bought here yet. Nothing has changed.");
+      }
+      const checkout = await startCheckout(supabase, createAdminClient(), {
+        householdId,
+        memberId: membership.memberId,
+        toPlanKey: body.toPlanKey,
+        provider,
+        returnUrl: new URL("/settings", request.url).toString(),
+      });
+      return { checkout: { url: checkout.url, reused: checkout.reused } };
+    }
 
     const { assessment, planKey } = await changePlan(supabase, {
       householdId,

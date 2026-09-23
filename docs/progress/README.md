@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Provider-neutral billing: a pure event reducer, an inert Stripe adapter with idempotent checkouts and verified webhooks, paid plans out of reach of any household session (story 20-006 Done)](2026-09-24-billing-abstraction.md) |
 | 2026-09-24 | [Weather as a planning signal: Open-Meteo behind the weather port, an Admin-chosen area rounded to ~1 km, hourly cached forecast, laundry planned around it (story 17-007 Done)](2026-09-24-weather-planning-signal.md) |
 | 2026-09-24 | [A receipt becomes purchase history: read line by line, matched only when plain, confirmed by a person, undone per line (story 09-009 Done)](2026-09-24-receipt-purchase-history.md) |
 | 2026-09-24 | [HomeSend reads the time of day: start and end from the notice's own words, all-day items never show a time (story 14-014 Done)](2026-09-24-homesend-time-of-day.md) |
