@@ -289,6 +289,35 @@ test("a new pet is active by default, and only an admin can retire or restore on
   );
 });
 
+test("a pet's gender is optional, set and changed by an admin, and held to a sensible length", () => {
+  const pet = asProfile(
+    HEAD,
+    `insert into public.pets (household_id, name, species, gender) values ('${household}', 'Luna', 'cat', 'Female (spayed)') returning id;`,
+    options,
+  );
+  assert.equal(psql(`select gender from public.pets where id = '${pet}';`, options), "Female (spayed)");
+
+  const unrecorded = asProfile(HEAD, `insert into public.pets (household_id, name, species) values ('${household}', 'Pip', 'budgie') returning id;`, options);
+  assert.equal(psql(`select coalesce(gender, '<null>') from public.pets where id = '${unrecorded}';`, options), "<null>");
+
+  assert.ok(
+    deniedForUpdate(
+      PARTNER,
+      `update public.pets set gender = 'Male' where id = '${pet}';`,
+      `select gender from public.pets where id = '${pet}';`,
+      "Female (spayed)",
+      options,
+    ),
+    "a non-admin member changed a pet's gender",
+  );
+
+  asProfile(HEAD, `update public.pets set gender = null where id = '${pet}';`, options);
+  assert.equal(psql(`select coalesce(gender, '<null>') from public.pets where id = '${pet}';`, options), "<null>", "an admin could not clear a pet's gender");
+
+  assert.throws(() => asProfile(HEAD, `update public.pets set gender = '   ' where id = '${pet}';`, options), "a blank gender was stored");
+  assert.throws(() => asProfile(HEAD, `update public.pets set gender = repeat('x', 41) where id = '${pet}';`, options), "an over-long gender was stored");
+});
+
 test("a member cannot manufacture a device signal", () => {
   assert.ok(
     deniedForProfile(

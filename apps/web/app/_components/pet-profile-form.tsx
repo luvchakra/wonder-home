@@ -6,16 +6,19 @@ import { useActionState, useState } from "react";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { PET_GENDER_OPTIONS } from "@wonderhome/core/home/pets";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import { updatePetAction } from "../(auth)/home-actions";
+import { GenderField } from "./gender-field";
 
 export type PetProfileInitial = {
   name: string;
   species: string;
   dateOfBirth: string | null;
+  gender: string | null;
   vetName: string | null;
   vetContact: string | null;
   notes: string | null;
@@ -51,6 +54,7 @@ export function PetProfileForm({
             <Field label="Species" name="species" required defaultValue={initial.species} autoComplete="off" />
           </div>
           <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={initial.dateOfBirth ?? ""} />
+          <GenderField options={PET_GENDER_OPTIONS} value={initial.gender} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Vet name" name="vetName" defaultValue={initial.vetName ?? ""} autoComplete="off" />
             <Field label="Vet contact" name="vetContact" defaultValue={initial.vetContact ?? ""} autoComplete="off" />

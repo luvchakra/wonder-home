@@ -234,7 +234,7 @@ export async function listPets(
 ): Promise<Pet[]> {
   let query = supabase
     .from("pets")
-    .select("id, name, species, date_of_birth, vet_name, vet_contact, notes, active")
+    .select("id, name, species, date_of_birth, gender, vet_name, vet_contact, notes, active")
     .eq("household_id", householdId)
     .order("name", { ascending: true });
   if (!options?.includeRetired) query = query.eq("active", true);
@@ -247,6 +247,7 @@ export async function listPets(
     name: row.name as string,
     species: row.species as string,
     dateOfBirth: (row.date_of_birth as string | null) ?? null,
+    gender: (row.gender as string | null) ?? null,
     vetName: (row.vet_name as string | null) ?? null,
     vetContact: (row.vet_contact as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
@@ -259,6 +260,7 @@ export type CreatePetInput = {
   name: string;
   species: string;
   dateOfBirth?: string | null;
+  gender?: string | null;
   vetName?: string | null;
   vetContact?: string | null;
   notes?: string | null;
@@ -272,6 +274,7 @@ async function createPetImpl(supabase: SupabaseClient, input: CreatePetInput): P
       name: input.name,
       species: input.species,
       date_of_birth: input.dateOfBirth ?? null,
+      gender: input.gender ?? null,
       vet_name: input.vetName ?? null,
       vet_contact: input.vetContact ?? null,
       notes: input.notes ?? null,
@@ -291,6 +294,7 @@ export type UpdatePetInput = {
   name?: string;
   species?: string;
   dateOfBirth?: string | null;
+  gender?: string | null;
   vetName?: string | null;
   vetContact?: string | null;
   notes?: string | null;
@@ -306,6 +310,7 @@ async function updatePetImpl(
   if (input.name !== undefined) patch.name = input.name;
   if (input.species !== undefined) patch.species = input.species;
   if (input.dateOfBirth !== undefined) patch.date_of_birth = input.dateOfBirth;
+  if (input.gender !== undefined) patch.gender = input.gender;
   if (input.vetName !== undefined) patch.vet_name = input.vetName;
   if (input.vetContact !== undefined) patch.vet_contact = input.vetContact;
   if (input.notes !== undefined) patch.notes = input.notes;

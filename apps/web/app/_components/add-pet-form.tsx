@@ -6,9 +6,11 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 import { Field } from "@wonderhome/core/ui/field";
+import { PET_GENDER_OPTIONS } from "@wonderhome/core/home/pets";
 
 import type { ActionState } from "../(auth)/actions";
 import { createPetAction } from "../(auth)/home-actions";
+import { GenderField } from "./gender-field";
 
 /**
  * Adding a pet alongside inviting a person (product feedback: "under family
@@ -41,6 +43,7 @@ export function AddPetForm({ householdId }: { householdId: string }) {
           <Field label="Species" name="species" required placeholder="Dog, cat, parakeet…" autoComplete="off" />
         </div>
         <Field label="Date of birth (optional)" name="dateOfBirth" type="date" />
+        <GenderField options={PET_GENDER_OPTIONS} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Vet name (optional)" name="vetName" autoComplete="off" />
           <Field label="Vet contact (optional)" name="vetContact" autoComplete="off" />

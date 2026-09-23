@@ -149,6 +149,7 @@ const addChildSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Use a date like 2016-09-18." })
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  gender: z.string().trim().max(GENDER_MAX_LENGTH, { error: "Keep gender under 40 characters." }),
 });
 
 /**
@@ -163,6 +164,7 @@ export async function addChildAction(
     householdId: formData.get("householdId"),
     displayName: formData.get("displayName"),
     dateOfBirth: formData.get("dateOfBirth") || undefined,
+    gender: formData.get("gender") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
@@ -170,11 +172,13 @@ export async function addChildAction(
 
   const supabase = await createClient();
   const { createChildMember } = await import("@wonderhome/core/identity/children");
-  const { requireHouseholdAdmin } = await import("@wonderhome/core/identity/households");
+  const { requireHouseholdAdmin, updateMemberProfile } = await import("@wonderhome/core/identity/households");
 
+  let added: { memberId: string };
+  let actor: Awaited<ReturnType<typeof requireHouseholdAdmin>>;
   try {
-    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await createChildMember(supabase, {
+    actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    added = await createChildMember(supabase, {
       householdId: parsed.data.householdId,
       displayName: parsed.data.displayName,
       dateOfBirth: parsed.data.dateOfBirth ?? null,
@@ -187,6 +191,21 @@ export async function addChildAction(
       reason: error instanceof Error ? error.name : "unknown",
     });
     return { error: "We could not add that child. Please try again." };
+  }
+
+  // Gender goes on through the same profile update the editor uses, so the
+  // child-creation function itself stays unchanged. The child already exists
+  // by now: if this one optional detail fails to save, say so plainly rather
+  // than claiming the whole addition failed.
+  const gender = textOrNull(parsed.data.gender);
+  if (gender) {
+    try {
+      await updateMemberProfile(supabase, actor, { memberId: added.memberId, gender });
+    } catch (error) {
+      log.warn("recording a new child's gender failed", { reason: error instanceof Error ? error.name : "unknown" });
+      revalidatePath("/household/members");
+      return { notice: "Added. Their gender didn't save — add it from their details." };
+    }
   }
 
   revalidatePath("/household/members");
