@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { createAssetSchema, createServiceRequestSchema } from "../home/schemas";
 import { arrangeCoverSchema, createBackupServiceSchema } from "../household/backup-services";
+import { rebalanceSchema } from "../household/workload";
 import { createHouseholdSchema } from "../identity/schemas";
 import { API_ERROR_CODES } from "./errors";
 
@@ -452,6 +453,38 @@ export function buildOpenApiDocument(): Json {
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
             "409": { description: "The service is retired, or not set up to cover that outcome" },
+          },
+        },
+      },
+      "/households/{householdId}/workload": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        get: {
+          summary: "Who carries what, and fairer swaps",
+          description:
+            "Each active member's owned outcomes and load in times a week, counted from each outcome's own rhythm (daily 7, weekly 1, monthly about 0.25; an outcome with no rhythm set counts as weekly and is reported as assumed). Imbalances are named only when the heaviest person in a group carries at least twice the lightest and 5 or more times a week more. Suggested swaps only ever make an outcome's named backup its owner, within adults or within helpers, and never involve a child (story 03-008).",
+          responses: { "200": { description: "Loads, imbalances and suggestions" }, "403": { $ref: "#/components/responses/Forbidden" } },
+        },
+      },
+      "/households/{householdId}/workload/rebalance": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Accept a suggested swap",
+          description:
+            "The backup becomes the owner and the owner the backup, through the same validated, audited save as any responsibility change. Idempotent: an already-applied swap returns `changed: false`. A swap that no longer matches the current owner and backup is refused with 409. Admin only.",
+          requestBody: {
+            required: true,
+            content: { "application/json": { schema: toJsonSchema(rebalanceSchema) } },
+          },
+          responses: {
+            "200": { description: "Whether anything changed" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "Who owns it has changed since the suggestion" },
           },
         },
       },

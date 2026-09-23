@@ -8,7 +8,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
-import { removeResponsibilityAction, saveResponsibilityAction } from "../(auth)/configuration-actions";
+import { acceptRebalanceAction, removeResponsibilityAction, saveResponsibilityAction } from "../(auth)/configuration-actions";
 import { iconForOutcome } from "../_lib/outcome-icons";
 import { ResponsibilityForm, type MemberOption, type ResponsibilityInitial } from "./config-forms";
 
@@ -178,5 +178,41 @@ function ReadOnlyDetail({ card }: { card: Omit<ResponsibilityCardProps, "onExpan
         Only an Admin can change who owns this.
       </p>
     </dl>
+  );
+}
+
+/**
+ * Accepting one suggested swap (story 03-008). A single tap: the swap is one
+ * the household already half-made — the person taking it is its named
+ * backup — and it can be swapped straight back from the row itself.
+ */
+export function AcceptRebalanceButton({
+  householdId,
+  outcomeKey,
+  fromMemberId,
+  toMemberId,
+  toName,
+}: {
+  householdId: string;
+  outcomeKey: string;
+  fromMemberId: string;
+  toMemberId: string;
+  toName: string;
+}) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(acceptRebalanceAction, {});
+
+  if (state.notice) return <p className="text-xs text-[var(--wh-handled)]" role="status">{state.notice}</p>;
+
+  return (
+    <form action={formAction} className="flex flex-col items-end gap-1">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="outcomeKey" value={outcomeKey} />
+      <input type="hidden" name="fromMemberId" value={fromMemberId} />
+      <input type="hidden" name="toMemberId" value={toMemberId} />
+      <Pill type="submit" tone="primary" disabled={pending} aria-label={`Give this to ${toName}`}>
+        {pending ? "Swapping…" : "Swap"}
+      </Pill>
+      {state.error ? <p className="max-w-48 text-right text-xs text-[var(--wh-risk)]" role="alert">{state.error}</p> : null}
+    </form>
   );
 }
