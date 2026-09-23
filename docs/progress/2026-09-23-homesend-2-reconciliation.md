@@ -105,9 +105,14 @@ updates the Science Exhibition that moved instead of adding a second one.
 
 ## Test data
 
-QA account `77291a4f-c1ec-4130-babf-3bec3b019d2f`, household "Mehta QA Home"
-`55652b61-5a7b-4fb3-a271-574e81ee4ebb`, and every row seeded in it — removed
-after the merge per CLAUDE.md; the PR's cleanup is recorded below once done.
+QA account `77291a4f-c1ec-4130-babf-3bec3b019d2f` and household "Mehta QA Home"
+`55652b61-5a7b-4fb3-a271-574e81ee4ebb` — **cleanup ran after PR #113 merged**:
+the household was deleted (its school items, bill, consumables, HomeSend items
+and changes went with it), the account was deleted with
+`node scripts/qa-test-user.mjs delete`, no Storage files had been uploaded, the
+dev server was stopped and the QA scripts (kept in the session scratchpad, never
+the working tree) were removed. A SQL count of every table touched found 0 rows
+left.
 
 ## Still open
 

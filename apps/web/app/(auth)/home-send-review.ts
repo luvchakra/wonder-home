@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadHouseholdContext } from "@wonderhome/core/context/repository";
+import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
+import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { AUTO_APPLY_OUTCOMES, decideConfirmation, type ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { HouseholdContextItem } from "@wonderhome/core/context/types";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
@@ -22,7 +25,21 @@ export type ReviewPreparation = {
   subject: SubjectResolution | null;
   reconciliation: HomeSendReconciliation | null;
   understanding: IntakeUnderstanding | null;
+  /** How this item is confirmed (§12): applied on its own, prepared, one question, or held for a person. */
+  confirmation: ConfirmationDecision;
 };
+
+/**
+ * The household's own autonomy setting for the outcome a kind belongs to
+ * (§12), read from its responsibilities — the same row the Manage Household
+ * screen writes. Anything unconfigured, or unreadable, is "observe".
+ */
+async function autonomyFor(supabase: SupabaseClient, householdId: string, kind: HomeSendKind): Promise<AutonomyMode> {
+  const outcome = AUTO_APPLY_OUTCOMES[kind];
+  if (!outcome) return "observe";
+  const rows = await listResponsibilities(supabase, householdId).catch(() => []);
+  return rows.find((row) => row.outcomeKey === outcome.outcomeKey)?.aiMode ?? "observe";
+}
 
 async function householdPeople(supabase: SupabaseClient, membership: HouseholdMembership): Promise<HouseholdContextItem[]> {
   const view = buildPersonalView(membership);
@@ -44,10 +61,21 @@ async function householdPeople(supabase: SupabaseClient, membership: HouseholdMe
 export async function prepareReview(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
-  item: { classifiedKind: HomeSendKind | null; extracted: HomeSendExtraction | null; understanding: IntakeUnderstanding | null; createdAt?: string | null },
+  item: {
+    classifiedKind: HomeSendKind | null;
+    extracted: HomeSendExtraction | null;
+    understanding: IntakeUnderstanding | null;
+    createdAt?: string | null;
+    /** Null for an email: nobody in the household was acting when it arrived. */
+    createdByMemberId: string | null;
+  },
 ): Promise<ReviewPreparation> {
   const kind = item.classifiedKind;
-  if (!kind || kind === "unknown" || !item.extracted?.title) return { subject: null, reconciliation: null, understanding: item.understanding };
+  const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode) =>
+    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy });
+  if (!kind || kind === "unknown" || !item.extracted?.title) {
+    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "observe") };
+  }
 
   const people = await householdPeople(supabase, membership).catch(() => []);
   const resolution = item.understanding
@@ -56,6 +84,9 @@ export async function prepareReview(
   const understanding = item.understanding && resolution ? { ...item.understanding, references: resolution.references } : item.understanding;
   const memberNames = new Map(people.map((person) => [person.entityId, String(person.attributes.displayName)]));
 
+  // Strict: if what is on record could not be read, nothing may apply on its
+  // own (§12) — the item is prepared for a person instead.
+  let checked = true;
   const reconciliation = await reconcileHomeSend(
     supabase,
     membership.household.id,
@@ -69,8 +100,13 @@ export async function prepareReview(
       capturedAt: item.createdAt ?? new Date().toISOString(),
       change: item.extracted.change ?? item.understanding?.change ?? "new",
     },
-    { timezone: membership.household.timezone, memberNames },
-  ).catch(() => null);
+    { timezone: membership.household.timezone, memberNames, strict: true },
+  ).catch(() => {
+    checked = false;
+    return null;
+  });
 
-  return { subject: resolution?.subject ?? null, reconciliation, understanding };
+  const subject = resolution?.subject ?? null;
+  const autonomy = checked ? await autonomyFor(supabase, membership.household.id, kind) : "observe";
+  return { subject, reconciliation, understanding, confirmation: confirm(subject, reconciliation, understanding, autonomy) };
 }

@@ -81,6 +81,27 @@ export type HomeSendExtraction = {
   confidence?: "high" | "medium" | "low";
 };
 
+/**
+ * What a person decided at review (Wave 3 §13), kept on the item so HomeSend
+ * can be judged by household outcomes (§19). `auto_added` is the one decision
+ * no person made at the time: the household's own autonomy setting let it
+ * apply (§12).
+ */
+export const HOME_SEND_REVIEW_DECISIONS = ["added", "updated", "cancelled", "kept_existing", "dismissed", "auto_added"] as const;
+export type HomeSendReviewDecision = (typeof HOME_SEND_REVIEW_DECISIONS)[number];
+export const HOME_SEND_REVIEW_PROPOSALS = ["duplicate", "update", "cancellation", "conflict"] as const;
+export type HomeSendReviewProposal = (typeof HOME_SEND_REVIEW_PROPOSALS)[number];
+export const HOME_SEND_REVIEW_SUBJECTS = ["resolved", "asked", "not_needed"] as const;
+export type HomeSendReviewSubject = (typeof HOME_SEND_REVIEW_SUBJECTS)[number];
+
+/** The review outcome, recorded when an item is routed or set aside. Closed words only — never content. */
+export type HomeSendReviewOutcome = {
+  decision: HomeSendReviewDecision;
+  proposal?: HomeSendReviewProposal | null;
+  subject?: HomeSendReviewSubject | null;
+  corrected?: boolean | null;
+};
+
 export type HomeSendItem = {
   id: string;
   householdId: string;
@@ -112,6 +133,9 @@ export type HomeSendItem = {
   understanding: IntakeUnderstanding | null;
   transcriptConfidence: number | null;
   failureReason: HomeSendFailureReason | null;
+  /** What was decided at review (§19); null until reviewed. */
+  reviewDecision?: HomeSendReviewDecision | null;
+  reviewedAt?: string | null;
   createdAt: string;
 };
 

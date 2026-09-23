@@ -505,6 +505,19 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/homesend-metrics": {
+        get: {
+          summary: "HomeSend outcome metrics",
+          description:
+            "Platform-wide HomeSend metrics (Wave 3 §19): intake by source, parsing success, entity resolution and ambiguity, duplicate detection, proposal acceptance, correction, downstream write success, safe rejection, queue depth and time to outcome — each a count and the count it is out of. Read only from closed-word columns, never household content. Requires `ai_operations.read`. `days` sets the window (1–365, default 30).",
+          parameters: [{ name: "days", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 365 } }],
+          responses: {
+            "200": { description: "The metrics for the window" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/platform-admin/ai-operations/runs/{runId}": {
         parameters: [{ name: "runId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         get: {

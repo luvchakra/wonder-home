@@ -891,3 +891,36 @@ test("one notice can add two different grocery needs, each undone on its own", (
   asProfile(HEAD, `update public.homesend_changes set undone_at = now(), undone_by_member_id = '${headMember}' where id = '${shirtChange}';`, options);
   assert.equal(psql(`select count(*) from public.homesend_changes where intake_id = '${notice}' and undone_at is null;`, options), "1");
 });
+
+// ---------------------------------------------------------------------------
+// Wave 3 §12, §19: what a person decided at review, kept on the item in
+// closed words — the outcome metrics read these, never content.
+// ---------------------------------------------------------------------------
+
+test("a member records what they decided when they route or set an item aside", () => {
+  const id = newIntake("Milk, 2 litres");
+  asProfile(
+    OTHER_ADULT,
+    `update public.home_send_items
+       set status = 'dismissed', review_decision = 'kept_existing', review_proposal = 'duplicate', review_subject = 'not_needed', reviewed_at = now()
+     where id = '${id}';`,
+    options,
+  );
+  assert.equal(psql(`select review_decision || ':' || review_proposal || ':' || review_subject from public.home_send_items where id = '${id}';`, options), "kept_existing:duplicate:not_needed");
+});
+
+test("a review outcome is only ever one of the closed words, and always says when it was made", () => {
+  const id = newIntake("Bread");
+  const set = (columns) => `update public.home_send_items set ${columns} where id = '${id}';`;
+  assert.ok(refused(set(`review_decision = 'added'`)), "a decision with no reviewed_at was accepted");
+  assert.ok(refused(set(`reviewed_at = now()`)), "a reviewed_at with no decision was accepted");
+  assert.ok(refused(set(`review_decision = 'approved', reviewed_at = now()`)), "an unknown decision was accepted");
+  assert.ok(refused(set(`review_decision = 'added', reviewed_at = now(), review_proposal = 'merge'`)), "an unknown proposal was accepted");
+  assert.ok(refused(set(`review_decision = 'added', reviewed_at = now(), review_subject = 'guessed'`)), "an unknown subject outcome was accepted");
+  asProfile(HEAD, set(`status = 'routed', routed_table = 'consumables', routed_id = gen_random_uuid(), review_decision = 'auto_added', review_subject = 'not_needed', review_corrected = false, reviewed_at = now()`), options);
+  assert.equal(psql(`select review_decision from public.home_send_items where id = '${id}';`, options), "auto_added");
+});
+
+test("another household cannot see how this household's reviews went", () => {
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.home_send_items where review_decision is not null;`, options), "0");
+});

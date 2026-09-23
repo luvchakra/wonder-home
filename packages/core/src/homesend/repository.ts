@@ -7,6 +7,8 @@ import type {
   HomeSendFailureReason,
   HomeSendItem,
   HomeSendKind,
+  HomeSendReviewDecision,
+  HomeSendReviewOutcome,
   HomeSendSecurityStatus,
   HomeSendSource,
   HomeSendStatus,
@@ -49,12 +51,14 @@ function fromRow(row: Row): HomeSendItem {
     understanding: (row.understanding as IntakeUnderstanding | null) ?? null,
     transcriptConfidence: row.transcript_confidence === null || row.transcript_confidence === undefined ? null : Number(row.transcript_confidence),
     failureReason: (row.failure_reason as HomeSendFailureReason | null) ?? null,
+    reviewDecision: (row.review_decision as HomeSendReviewDecision | null) ?? null,
+    reviewedAt: (row.reviewed_at as string | null) ?? null,
     createdAt: row.created_at as string,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, content_type, content_hash, source_url, subject, parent_item_id, understanding, transcript_confidence, failure_reason, created_at";
+  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, content_type, content_hash, source_url, subject, parent_item_id, understanding, transcript_confidence, failure_reason, review_decision, reviewed_at, created_at";
 
 /** The item a provider already delivered with this id, if any — so a retried webhook never creates a second one (§15). */
 export async function findByExternalId(supabase: SupabaseClient, householdId: string, externalId: string): Promise<HomeSendItem | null> {
@@ -292,15 +296,28 @@ export async function routeHomeSendItem(
   supabase: SupabaseClient,
   householdId: string,
   itemId: string,
-  input: { routedTable: string; routedId: string },
+  input: { routedTable: string; routedId: string; review?: HomeSendReviewOutcome },
 ): Promise<void> {
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("home_send_items")
-    .update({ status: "routed", routed_table: input.routedTable, routed_id: input.routedId, routed_at: new Date().toISOString() })
+    .update({ status: "routed", routed_table: input.routedTable, routed_id: input.routedId, routed_at: now, ...reviewColumns(input.review, now) })
     .eq("household_id", householdId)
     .eq("id", itemId);
 
   if (error) throw new Error(`routeHomeSendItem failed: ${error.code ?? "unknown"}`);
+}
+
+/** The review outcome's columns (§19) — closed words and a boolean, never content. */
+function reviewColumns(review: HomeSendReviewOutcome | undefined, at: string): Record<string, unknown> {
+  if (!review) return {};
+  return {
+    review_decision: review.decision,
+    review_proposal: review.proposal ?? null,
+    review_subject: review.subject ?? null,
+    review_corrected: review.corrected ?? null,
+    reviewed_at: at,
+  };
 }
 
 /** The other half of sending something in (CLAUDE.md rule 12): saying it was not worth acting on. */
@@ -309,10 +326,11 @@ export async function dismissHomeSendItem(
   householdId: string,
   itemId: string,
   actorMemberId: string,
+  review: HomeSendReviewOutcome = { decision: "dismissed" },
 ): Promise<void> {
   const { error } = await supabase
     .from("home_send_items")
-    .update({ status: "dismissed" })
+    .update({ status: "dismissed", ...reviewColumns(review, new Date().toISOString()) })
     .eq("household_id", householdId)
     .eq("id", itemId);
 

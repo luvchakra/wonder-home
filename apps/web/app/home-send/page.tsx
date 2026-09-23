@@ -125,7 +125,7 @@ export default async function HomeSendPage({
   await Promise.all(
     pending.slice(0, 10).map(async (item) => {
       const review = await prepareReview(supabase, membership, item).catch(() => null);
-      if (review && (review.subject || review.reconciliation)) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation };
+      if (review) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation, confirmation: review.confirmation };
     }),
   );
   const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);

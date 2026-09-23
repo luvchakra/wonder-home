@@ -56,6 +56,13 @@ export type ReviewReconciliation = {
   proposal?: { type: "duplicate" | "update" | "cancellation" | "conflict" };
 };
 
+/** How the item is confirmed (`homesend/confirmation.ts`, Wave 3 §12). */
+export type ReviewConfirmation = {
+  mode: "auto_apply" | "prepare" | "ask" | "govern";
+  reason: string;
+  question: string | null;
+};
+
 /** Who it is for (`homesend/resolve.ts`). */
 export type ReviewSubject = {
   said: string | null;
@@ -250,6 +257,7 @@ export function HomeSendConfirmStep({
   contentType,
   receivedAt,
   subject,
+  confirmation,
 }: {
   item: { id: string };
   defaultKind: string;
@@ -268,6 +276,8 @@ export function HomeSendConfirmStep({
   receivedAt?: string | null;
   /** Who it is for, resolved through the household's own people (§9). */
   subject?: ReviewSubject | null;
+  /** Why this waits for a person, or the one question to answer (§12). */
+  confirmation?: ReviewConfirmation | null;
 }) {
   const [kind, setKind] = useState(defaultKind);
   const needs = (kind !== "grocery_item" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
@@ -281,6 +291,9 @@ export function HomeSendConfirmStep({
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="itemId" value={item.id} />
       {reconciliation?.existingId ? <input type="hidden" name="existingId" value={reconciliation.existingId} /> : null}
+      {/* What this review showed, for HomeSend's outcome metrics (§19) — never a decision. */}
+      {proposal ? <input type="hidden" name="proposal" value={proposal} /> : null}
+      <input type="hidden" name="subjectState" value={subject?.question ? "asked" : subject?.selected ? "resolved" : "not_needed"} />
       {routeError ? <Alert>{routeError}</Alert> : null}
       {notice ? (
         <Alert tone="info">
@@ -291,6 +304,14 @@ export function HomeSendConfirmStep({
       ) : null}
 
       <HomeSendFindings understanding={understanding} contentType={contentType} receivedAt={receivedAt} />
+
+      {/* §12: a low-confidence reading opens with its one question (who it
+          is for is asked beside the picker instead); a bill or a health
+          document says plainly why it always waits for a person. */}
+      {confirmation?.mode === "ask" && confirmation.question && confirmation.question !== subject?.question ? (
+        <p className="text-sm font-medium">{confirmation.question}</p>
+      ) : null}
+      {confirmation?.mode === "govern" ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{confirmation.reason}</p> : null}
 
       {needs.length > 0 ? (
         // "I found 2 things" (§13): the main item plus what else the same
