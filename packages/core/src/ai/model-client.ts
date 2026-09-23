@@ -133,6 +133,109 @@ const LenientIntentOutputSchema = IntentOutputSchema.extend({
 type LenientIntentOutput = z.infer<typeof LenientIntentOutputSchema>;
 
 /**
+ * The structured-output formats, built once from the same schema. The
+ * reply is read through `readIntentOutput` rather than the SDKs' own
+ * parse helpers, so every provider's answer gets the same field-by-field
+ * repair and the same logged reason when it still cannot be read.
+ */
+const CLAUDE_INTENT_FORMAT = { type: "json_schema" as const, schema: zodOutputFormat(IntentOutputSchema).schema };
+const OPENAI_INTENT_FORMAT = { type: "json_schema" as const, json_schema: zodResponseFormat(IntentOutputSchema, "household_intent").json_schema };
+
+const TEXT_LIMIT = 300;
+const PHRASE_LIMIT = 120;
+const ENUM_PARAMETERS: Record<string, readonly string[]> = {
+  slot: ["breakfast", "lunch", "snack", "dinner"],
+  timesPer: ["day", "week", "month"],
+};
+const NUMBER_PARAMETERS = new Set(["count", "amount"]);
+const BOOLEAN_PARAMETERS = new Set(["corrects", "protected"]);
+
+/**
+ * Repairs a model's answer field by field before it is checked, so one
+ * detail a model got wrong costs that detail, not the whole understanding.
+ * Gemini's schema here forces no key and no length, and Claude's constrained
+ * output carries lengths only as descriptions, so an empty string, a slot
+ * called "evening" or an over-long phrase can arrive from any of them — and
+ * before this, one such field in production turned "the little one is off
+ * sick tomorrow" into "I could not reach my model". A bad detail becomes "not stated"
+ * (null) — never truncated or guessed — and grounding then asks for it if
+ * it matters. What the turn cannot do without (the action, the target's
+ * kind, the confidence) is left alone, so the schema still rejects an
+ * answer that is wrong where it counts.
+ */
+export function tidyIntentOutput(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+
+  const parameters = isRecord(raw.parameters) ? raw.parameters : {};
+  const tidied: Record<string, unknown> = {};
+  for (const key of MODEL_PARAMETER_KEYS) {
+    if (!(key in parameters)) continue;
+    const value = parameters[key];
+    if (key === "items") tidied[key] = tidyItems(value);
+    else if (key in ENUM_PARAMETERS) tidied[key] = typeof value === "string" && ENUM_PARAMETERS[key]!.includes(value.trim().toLowerCase()) ? value.trim().toLowerCase() : null;
+    else if (NUMBER_PARAMETERS.has(key)) tidied[key] = typeof value === "number" && Number.isFinite(value) ? value : null;
+    else if (BOOLEAN_PARAMETERS.has(key)) tidied[key] = typeof value === "boolean" ? value : null;
+    else tidied[key] = tidyText(value, TEXT_LIMIT);
+  }
+
+  const target = isRecord(raw.target) ? { ...raw.target, reference: tidyText(raw.target.reference, PHRASE_LIMIT) } : raw.target;
+  const references = Array.isArray(raw.references)
+    ? raw.references.flatMap((reference) => {
+        if (!isRecord(reference)) return [];
+        const phrase = tidyText(reference.phrase, PHRASE_LIMIT);
+        return phrase ? [{ phrase, confidence: tidyConfidence(reference.confidence) }] : [];
+      })
+    : null;
+  const confidence = typeof raw.confidence === "number" ? tidyConfidence(raw.confidence) : raw.confidence;
+
+  return { ...raw, target, parameters: tidied, confidence, references };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function tidyText(value: unknown, limit: number): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= limit ? trimmed : null;
+}
+
+function tidyItems(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value.map((item) => tidyText(item, PHRASE_LIMIT)).filter((item): item is string => item !== null).slice(0, 20);
+  return items.length > 0 ? items : null;
+}
+
+function tidyConfidence(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.min(1, Math.max(0, value));
+}
+
+/**
+ * Reads a model's JSON through the tidy step and the schema. What still
+ * fails is logged as the paths and codes of what was wrong — never the
+ * values, which carry what the household said.
+ */
+export function readIntentOutput(provider: UnderstandingTrace["provider"], json: string | null | undefined): LenientIntentOutput | null {
+  if (!json) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    console.warn("[conversation] model output unparseable", { provider, issues: [{ path: "", code: "invalid_json" }] });
+    return null;
+  }
+  const parsed = LenientIntentOutputSchema.safeParse(tidyIntentOutput(raw));
+  if (parsed.success) return parsed.data;
+  console.warn("[conversation] model output unparseable", {
+    provider,
+    issues: parsed.error.issues.slice(0, 8).map((issue) => ({ path: issue.path.join("."), code: issue.code })),
+  });
+  return null;
+}
+
+/**
  * The system prompt is the entire briefing the model gets. No household
  * name, no member roster, no schedule — the same minimisation the route
  * applies before anything is sent. People appear as placeholders ("Adult A",
@@ -211,7 +314,9 @@ const INTENT_JSON_SCHEMA = {
               ? { type: "number" }
               : key === "corrects" || key === "protected"
                 ? { type: "boolean" }
-                : { type: "string" },
+                : key in ENUM_PARAMETERS
+                  ? { type: "string", enum: ENUM_PARAMETERS[key] }
+                  : { type: "string" },
         ]),
       ),
     },
@@ -342,20 +447,20 @@ export function createClaudeUnderstanding(apiKey: string): Understanding {
 
   return async (utterance, context) => {
     try {
-      const response = await client.messages.parse({
+      const response = await client.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: 1024,
         system: systemFor(context.runtime),
         messages: conversationMessages(context.history, utterance),
         // Translating one sentence into a small JSON object is routine work;
         // low effort keeps the turn quick without changing what is allowed.
-        output_config: { format: zodOutputFormat(IntentOutputSchema), effort: "low" },
+        output_config: { format: CLAUDE_INTENT_FORMAT, effort: "low" },
       });
 
-      if (response.stop_reason === "refusal" || !response.parsed_output) {
-        return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "unparseable" });
-      }
-      return intentFromModelOutput(response.parsed_output, { ...context, utterance }, trace);
+      const json = response.content.find((block) => block.type === "text")?.text;
+      const parsed = response.stop_reason === "refusal" ? null : readIntentOutput("anthropic", json);
+      if (!parsed) return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "unparseable" });
+      return intentFromModelOutput(parsed, { ...context, utterance }, trace);
     } catch (thrown) {
       logProviderFailure("anthropic", thrown);
       return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "provider_error" });
@@ -396,11 +501,9 @@ export function createGeminiUnderstanding(apiKey: string): Understanding {
         },
       });
 
-      const parsed = response.text ? LenientIntentOutputSchema.safeParse(JSON.parse(response.text)) : null;
-      if (!parsed || !parsed.success) {
-        return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "unparseable" });
-      }
-      return intentFromModelOutput(parsed.data, { ...context, utterance }, trace);
+      const parsed = readIntentOutput("google", response.text);
+      if (!parsed) return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "unparseable" });
+      return intentFromModelOutput(parsed, { ...context, utterance }, trace);
     } catch (thrown) {
       logProviderFailure("google", thrown);
       return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "provider_error" });
@@ -423,13 +526,13 @@ export function createOpenAIUnderstanding(apiKey: string): Understanding {
 
   return async (utterance, context) => {
     try {
-      const completion = await client.chat.completions.parse({
+      const completion = await client.chat.completions.create({
         model: OPENAI_MODEL,
         messages: [{ role: "system", content: systemFor(context.runtime) }, ...conversationMessages(context.history, utterance)],
-        response_format: zodResponseFormat(IntentOutputSchema, "household_intent"),
+        response_format: OPENAI_INTENT_FORMAT,
       });
 
-      const parsed = completion.choices[0]?.message.parsed ?? null;
+      const parsed = readIntentOutput("openai", completion.choices[0]?.message.content);
       if (!parsed) return intentFromModelOutput(null, { ...context, utterance }, { ...trace, failure: "unparseable" });
       return intentFromModelOutput(parsed, { ...context, utterance }, trace);
     } catch (thrown) {
