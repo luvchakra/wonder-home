@@ -171,3 +171,37 @@ describe("speech is short and heard once", () => {
     expect(spoken).toMatch(/And \d+ more/);
   });
 });
+
+describe("every turn leaves one closed-word event for the channel metrics (voice phase 6)", () => {
+  it("records the outcome and latency, and a redelivery as a replay — one logical action, counted once", async () => {
+    const events: { outcome: string; latencyMs: number; replayed: boolean }[] = [];
+    const { deps, calls } = gateway(executed);
+    const recorded = { ...deps, record: (event: (typeof events)[number]) => void events.push(event) };
+    await runHomeTalkGateway(request(), recorded);
+    await runHomeTalkGateway(request(), recorded);
+    expect(calls).toHaveLength(1);
+    expect(events.map(({ outcome, replayed }) => ({ outcome, replayed }))).toEqual([
+      { outcome: "completed", replayed: false },
+      { outcome: "completed", replayed: true },
+    ]);
+    expect(events[0]!.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("a refusal before any turn is recorded as itself, not as a replay", async () => {
+    const events: { outcome: string; replayed: boolean }[] = [];
+    const { deps } = gateway(executed, { memberId: "someone-else" });
+    await runHomeTalkGateway(request(), { ...deps, record: (event) => void events.push(event) });
+    expect(events).toEqual([expect.objectContaining({ outcome: "not_authorized", replayed: false })]);
+  });
+
+  it("a recorder that throws never changes the answer", async () => {
+    const { deps } = gateway(executed);
+    const response = await runHomeTalkGateway(request(), {
+      ...deps,
+      record: () => {
+        throw new Error("telemetry down");
+      },
+    });
+    expect(response.status).toBe("completed");
+  });
+});

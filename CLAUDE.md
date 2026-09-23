@@ -380,7 +380,15 @@ is a new allowlisted tool that maps to a HomeTalk utterance — never a tool
 that reaches a table. Alexa (`/api/v1/voice/alexa`) is verified as Amazon
 documents and stays inert until a person creates the skill and sets
 `ALEXA_*`; Gemini Live runs only where the household's key is Google's and
-its data-use agreement allows it, re-checked on every tool call.
+its data-use agreement allows it, re-checked on every tool call. What each
+channel may do is `voicelink/capabilities.ts` — every HomeTalk action is
+placed in it exactly once and its tests hold each cell to the real gates, so
+a new action forces a decision about voice. A conversation belongs to its
+surface (`conversation_sessions.surface`): what the app is waiting on is
+never answered by Alexa. Every turn leaves one content-free row in
+`hometalk_channel_events`, and `npm run eval`'s blocking `voice` gate checks
+that every Gemini tool sentence is read by the rules as the action it
+promised — extend `voicelink/readiness.ts` when a tool changes.
 
 **One evaluation across all three** (Wave 5, spec
 `design/AI-EVALUATION-WAVE-5.md`, `packages/core/src/evaluation/`):

@@ -518,6 +518,19 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/voice-metrics": {
+        get: {
+          summary: "HomeTalk by channel: web, mobile, Gemini Voice, Alexa",
+          description:
+            "Platform-wide HomeTalk metrics per channel (voice integration phase 6). Each channel reports requests; success, failure, clarification, approval and not-authorized rates; action success and failure; duplicate (replayed) deliveries; p50/p95 latency; provider errors; Gemini Live sessions opened; unlinked speakers; and rate limits. Every rate is a count and the count it is out of. Read only from `hometalk_channel_events` (closed words and numbers, never an utterance, transcript or audio). Requires `ai_operations.read`. `hours` sets the window (1–2160, default 24).",
+          parameters: [{ name: "hours", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 2160 } }],
+          responses: {
+            "200": { description: "The window and each channel's metrics" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/platform-admin/ai-quality": {
         get: {
           summary: "HomeTalk and HomeBrain quality in production",

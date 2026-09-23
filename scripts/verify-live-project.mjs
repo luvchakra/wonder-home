@@ -130,6 +130,7 @@ const SHIPPED_COLUMNS = [
   { table: "home_send_items", column: "reviewed_at" },
   { table: "health_appointments", column: "checkup_id" },
   { table: "household_voice_settings", column: "live_engine" },
+  { table: "conversation_sessions", column: "surface" },
 ];
 
 /**
@@ -574,6 +575,16 @@ async function main() {
   );
   const anonClaim = await anon.rpc("claim_jobs", { p_worker_id: "verify-live", p_limit: 1, p_lease_seconds: 5 });
   check("anonymous cannot claim queued work", anonClaim.error?.code === "42501", anonClaim.error?.code ?? "no error");
+
+  // HomeTalk channel telemetry (20260926110000, voice phase 6).
+  const serverChannelEvents = await admin.from("hometalk_channel_events").select("id").limit(1);
+  check("the server can read HomeTalk channel telemetry", !serverChannelEvents.error, serverChannelEvents.error?.code ?? "ok");
+  const anonChannelEvents = await anon.from("hometalk_channel_events").select("id").limit(1);
+  check(
+    "anonymous cannot read HomeTalk channel telemetry",
+    Boolean(anonChannelEvents.error) || (Array.isArray(anonChannelEvents.data) && anonChannelEvents.data.length === 0),
+    anonChannelEvents.error ? anonChannelEvents.error.code : `${anonChannelEvents.data?.length ?? "?"} rows`,
+  );
 
   // Voice links and their OAuth grants (20260925100000, voice phase 2).
   const serverLinks = await admin.from("external_voice_identities").select("id").limit(1);

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { recordChannelEvent } from "@wonderhome/core/hometalk/channel-events";
 import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit } from "@wonderhome/core/security/rate-limit";
 import {
@@ -94,8 +95,12 @@ export async function POST(request: Request): Promise<Response> {
 
   const admin = createAdminClient();
   const caller = await resolveVoiceAccessToken(admin, envelope.accessToken);
-  if (!caller || caller.provider !== "amazon_alexa") return alexaJson(linkAccountResponse());
+  if (!caller || caller.provider !== "amazon_alexa") {
+    await recordChannelEvent(admin, { channel: "alexa", outcome: "unlinked" });
+    return alexaJson(linkAccountResponse());
+  }
   if (!(await hitRateLimit(admin, "voice.request", caller.identityId))) {
+    await recordChannelEvent(admin, { channel: "alexa", householdId: caller.householdId, outcome: "rate_limited" });
     return alexaJson(localAlexaResponse("That's a lot in a short time, so I'm pausing for a few minutes. Nothing was lost.", true));
   }
 

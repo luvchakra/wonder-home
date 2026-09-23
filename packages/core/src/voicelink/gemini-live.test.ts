@@ -61,18 +61,25 @@ describe("Gemini gets narrow, domain-specific tools and nothing else", () => {
 
 describe("a tool call is only ever words a member could have said to HomeTalk", () => {
   it("each tool becomes one plain sentence", () => {
-    expect(utteranceForToolCall("get_meal_plan", { when: "tonight" })).toEqual({ text: "What's for dinner tonight?" });
-    expect(utteranceForToolCall("get_meal_plan", {})).toEqual({ text: "What's for dinner tonight?" });
-    expect(utteranceForToolCall("get_upcoming_events", { when: "tomorrow" })).toEqual({ text: "What is happening tomorrow?" });
-    expect(utteranceForToolCall("get_grocery_status", { item: "milk" })).toEqual({ text: "Do we need milk?" });
-    expect(utteranceForToolCall("get_grocery_status", {})).toEqual({ text: "What groceries are running low?" });
-    expect(utteranceForToolCall("add_grocery_item", { item: "bananas", quantity: "6" })).toEqual({ text: "Add 6 bananas to the grocery list" });
-    expect(utteranceForToolCall("get_school_items", { child: "Asmi" })).toEqual({ text: "What school work does Asmi have?" });
-    expect(utteranceForToolCall("create_reminder", { what: "to call the plumber", when: "tomorrow at 9am" })).toEqual({ text: "Remind me to call the plumber tomorrow at 9am" });
-    expect(utteranceForToolCall("get_bill_status", {})).toEqual({ text: "What bills are due this week?" });
-    expect(utteranceForToolCall("get_recent_household_activity", {})).toEqual({ text: "What did WonderHome handle today?" });
-    expect(utteranceForToolCall("answer_pending_question", { answer: "Manan" })).toEqual({ text: "Manan" });
-    expect(utteranceForToolCall("ask_household", { question: "Is the plumber coming today?" })).toEqual({ text: "Is the plumber coming today?" });
+    expect(utteranceForToolCall("get_meal_plan", { when: "tonight" })).toMatchObject({ text: "What's for dinner tonight?" });
+    expect(utteranceForToolCall("get_meal_plan", {})).toMatchObject({ text: "What's for dinner tonight?" });
+    expect(utteranceForToolCall("get_upcoming_events", { when: "tomorrow" })).toMatchObject({ text: "What is happening tomorrow?" });
+    expect(utteranceForToolCall("get_grocery_status", { item: "milk" })).toMatchObject({ text: "Do we need milk?" });
+    expect(utteranceForToolCall("get_grocery_status", {})).toMatchObject({ text: "What groceries are running low?" });
+    expect(utteranceForToolCall("add_grocery_item", { item: "bananas", quantity: "6" })).toMatchObject({ text: "Add 6 bananas to the grocery list" });
+    expect(utteranceForToolCall("get_school_items", { child: "Asmi" })).toMatchObject({ text: "What school work does Asmi have?" });
+    expect(utteranceForToolCall("create_reminder", { what: "to call the plumber", when: "tomorrow at 9am" })).toMatchObject({ text: "Remind me to call the plumber tomorrow at 9am" });
+    expect(utteranceForToolCall("get_bill_status", {})).toMatchObject({ text: "What bills are due this week?" });
+    expect(utteranceForToolCall("get_recent_household_activity", {})).toMatchObject({ text: "What did WonderHome handle today?" });
+    expect(utteranceForToolCall("answer_pending_question", { answer: "Manan" })).toMatchObject({ text: "Manan" });
+    expect(utteranceForToolCall("ask_household", { question: "Is the plumber coming today?" })).toMatchObject({ text: "Is the plumber coming today?" });
+  });
+
+  it("only a sentence built from structured arguments is marked for the rules; a person's own words are not", () => {
+    expect(utteranceForToolCall("add_grocery_item", { item: "milk" })).toMatchObject({ structured: true });
+    expect(utteranceForToolCall("get_meal_plan", {})).toMatchObject({ structured: true });
+    expect(utteranceForToolCall("ask_household", { question: "add milk and pay the bill" })).toMatchObject({ structured: false });
+    expect(utteranceForToolCall("answer_pending_question", { answer: "yes" })).toMatchObject({ structured: false });
   });
 
   it("a call missing what it needs is asked again, not acted on", () => {

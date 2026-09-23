@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { requireUser } from "@wonderhome/core/api/auth";
 import { defineRoute } from "@wonderhome/core/api/route";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
+import { recordChannelEvent } from "@wonderhome/core/hometalk/channel-events";
+import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { inAppVoiceScopes, refusedToolResult, toolResultFrom, utteranceForToolCall } from "@wonderhome/core/voicelink/gemini-live";
 
@@ -45,6 +48,14 @@ export async function POST(request: Request, { params }: Params) {
     const { availability, policy } = await geminiLiveGate(supabase, householdId);
     if (!availability.available) return refusedToolResult(`${availability.reason} Nothing was changed.`);
 
+    // One Live session is a conversation, not a loop: past a generous number
+    // of tool calls it is paused, and says so (voice phase 6 cost control).
+    const admin = createAdminClient();
+    if (!(await hitRateLimit(admin, "voice.tool", body.sessionId))) {
+      await recordChannelEvent(admin, { channel: "gemini_voice", householdId, outcome: "rate_limited" });
+      return refusedToolResult(rateLimitMessage("voice.tool"));
+    }
+
     const call = utteranceForToolCall(body.name, body.args ?? {});
     if ("refused" in call) return refusedToolResult(call.refused);
 
@@ -59,6 +70,7 @@ export async function POST(request: Request, { params }: Params) {
       },
       { supabase },
       { scopes: inAppVoiceScopes(policy.allowedClasses), classes: policy.allowedClasses },
+      { rulesFirst: call.structured },
     );
     return toolResultFrom(answer);
   })(request);

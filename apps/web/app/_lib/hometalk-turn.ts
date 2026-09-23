@@ -27,6 +27,7 @@ import {
   markActionResult,
   openProposals,
   openSession,
+  surfaceForChannel,
   pendingAction,
   pendingClarification,
   recentExecutedActions,
@@ -147,6 +148,14 @@ export async function homeTalkTurn(input: {
   limits?: ChannelLimits;
   /** The channel this turn came through, for the audit trail: "web" unless a gateway channel says otherwise. */
   source?: string;
+  /**
+   * The utterance was built by WonderHome from a voice tool's structured
+   * arguments (Gemini Voice), worded for these rules: a confident reading by
+   * the rules is used as it is, without a model re-reading WonderHome's own
+   * sentence. Anything the rules do not read confidently still goes to the
+   * model. Every gate downstream runs the same either way.
+   */
+  rulesFirst?: boolean;
 }) {
   const { supabase, householdId, body, limits } = input;
   const source = input.source ?? "web";
@@ -209,7 +218,7 @@ export async function homeTalkTurn(input: {
 
   const [entitled, sessionId, autonomyFor, people] = await Promise.all([
     consequentialEntitlements(supabase, householdId),
-    openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel }),
+    openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel, surface: surfaceForChannel(source) }),
     autonomyLookup(supabase, householdId),
     listPeople(supabase, householdId),
   ]);
@@ -260,6 +269,7 @@ export async function homeTalkTurn(input: {
   // either way. Everything else still goes to the model to be understood.
   const quick = resolveDeterministicIntent(body.utterance, { actorMemberId: membership.memberId, channel: body.channel });
   const plainQuestion = (quick.action === "ask_status" || quick.action === "greet") && quick.confidence >= 0.8;
+  const rulesRead = input.rulesFirst === true && quick.action !== "unknown" && quick.confidence >= 0.8;
 
   // The HomeBrain reads the home while the request is being
   // understood — the two need nothing from each other, and together they
@@ -546,7 +556,7 @@ export async function homeTalkTurn(input: {
     },
     executable: canExecute,
     sessionId,
-    understand: corrected ? () => corrected : plainQuestion ? undefined : routing.understand,
+    understand: corrected ? () => corrected : plainQuestion || rulesRead ? undefined : routing.understand,
     history: routing.history,
     clarifying: corrected ? null : clarifying,
     ground: (intent) => groundIntent(intent, groundingEnv(references)),

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**180 of 195 stories done — 92.3%**
+**181 of 195 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 180 |
-| In Progress | 0 |
+| Done | 181 |
+| In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 15 |
+| Not Started | 13 |
 
 ## By module
 
@@ -28,7 +28,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 8 | 8 | — |
 | 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
 | 03 Outcome & Routine Engine | `████████░░` | 7 | 8 | 1 not started |
-| 04 Conversation, Voice & Text | `████████░░` | 15 | 17 | 2 not started |
+| 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `████████░░` | 7 | 8 | 1 not started |
@@ -52,8 +52,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `03-008` Optimization | 03 Outcome & Routine Engine | P2 | Not Started |
-| `04-016` Unified voice experience and capability matrix | 04 Conversation, Voice & Text | P0 | Not Started |
-| `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | Not Started |
+| `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `07-008` Service marketplace | 07 Househelper & Home Operations | P2 | Not Started |
 | `08-009` Add a child from a school notice | 08 Kids & School Intelligence | P2 | Not Started |
 | `09-009` A receipt becomes purchase history | 09 Commerce, Groceries & Pet Supplies | P1 | Not Started |
@@ -133,7 +132,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-15 of 17 done `████████░░`
+16 of 17 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -152,8 +151,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-013` Linked voice assistants: identity, OAuth, scopes | P0 | Done | Voice phase 2: `external_voice_identities` + `voice_oauth_grants` (hashed), S256 PKCE, scopes only narrow, payments/orders never by voice, turns under the member's own RLS session, `/settings/voice-assistants` to revoke (PR #131) |
 | `04-014` Gemini Voice: Gemini Live as a HomeTalk channel | P0 | Done | Voice phase 3: `voicelink/gemini-live.ts` (12 allowlisted tools, each only words a member could say to HomeTalk), single-use Live tokens locked to that config, `/voice/gemini/session` + `/voice/gemini/tool`, facts narrowed to the content classes the household lets reach Google, `useGeminiLive` behind the one live control, `live_engine` voice setting. Live-verified token → Gemini Live → tool → HomeTalk → spoken answer; in-browser mic audio not exercisable in the sandbox (its proxy has no WebSocket upgrades) |
 | `04-015` Alexa as a HomeTalk channel | P1 | Done | Voice phase 4: `/api/v1/voice/alexa` verified as Amazon documents (cert chain, signature, timestamp, skill id), carrier-word interaction model; inert until a person creates the skill and sets `ALEXA_*` (`integrations/alexa/README.md`) |
-| `04-016` Unified voice experience and capability matrix | P0 | Not Started | Voice phase 5 (`design/voice-integration/05-unified-voice-ux-and-capabilities.md`) |
-| `04-017` Voice evaluation, metrics and release gates | P0 | Not Started | Voice phase 6 (`design/voice-integration/06-voice-integration-evaluation-and-hardening.md`) |
+| `04-016` Unified voice experience and capability matrix | P0 | Done | Voice phase 5: `voicelink/capabilities.ts` — the spec's matrix as data, every HomeTalk action placed once, every cell held to the real gates by `capabilities.test.ts`, shown to households on `/settings/voice-assistants`; payments/orders stay app-only by voice (stricter than the spec, on purpose). Conversations belong to their surface (`conversation_sessions.surface`: app / alexa, migration `20260926100000`, applied live) — a question the app asked is never answered by Alexa. Everyday domain questions ("what's for dinner?", "do we need milk?", "do the kids have homework?") now read by the rules |
+| `04-017` Voice evaluation, metrics and release gates | P0 | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery |
 
 ### 05 — Household Certification & Understanding
 
