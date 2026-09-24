@@ -112,4 +112,4 @@
 - QA user `163f8cda-ecb7-4092-9164-df6a69bfbae3`.
 - Household `b4206815-9e3e-4fdb-804b-70762342064f`, with its seeded records.
 
-Both are removed after the merge (see the follow-up note on this file).
+Both were reused for part 3 and removed after PR #175 merged. The details are in `2026-09-24-document-understanding-hometalk.md` § Cleanup.

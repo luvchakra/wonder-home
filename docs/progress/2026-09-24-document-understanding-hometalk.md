@@ -69,4 +69,14 @@ The shortcut is not used over a voice link (Gemini, Alexa). Those take the HomeB
 
 ## Cleanup
 
-The QA user `163f8cda-ecb7-4092-9164-df6a69bfbae3` and household `b4206815-9e3e-4fdb-804b-70762342064f`, with every record seeded or created in it, are removed after the merge. See the cleanup line added to this note.
+Cleanup ran after PR #175 merged. Everything below was created by this session:
+- **QA household `b4206815-9e3e-4fdb-804b-70762342064f`** ("DDU QA Household") is deleted:
+  - its 15 audit events first;
+  - then the household, which cascaded its members, the two seeded children, enrolment, school items, the consumable, the obligation, the seeded HomeSend item, its change rows and the conversation.
+- **QA users are deleted:**
+  - `163f8cda-ecb7-4092-9164-df6a69bfbae3`;
+  - `cf59bcf4-755e-46ec-b912-df3e23a88705` (replaced before any use because its password was lost);
+  - `87959e93-bcd8-4baf-977e-dd8329cc472f` (created by mistake, deleted within the minute).
+- **No files were uploaded** to Storage.
+- **Local debris:** the dev server is stopped and the scratch QA scripts and screenshots are removed.
+- **Confirmed by SQL:** 0 of those users and 0 of those households remain.
