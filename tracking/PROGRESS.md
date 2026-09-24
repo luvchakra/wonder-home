@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 222 |
-| Done | 214 |
+| Done | 215 |
 | In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 3 |
-| Completion | 96.4% |
+| Not Started | 2 |
+| Completion | 96.8% |
 | Current module | 20 Subscriptions (Payments) |
-| Current story | 20-009 multi-provider payments backend done; 20-010 payment screens next (waits on pricing) |
+| Current story | 20-010 plan, checkout and billing screens done; Deep Document Understanding 2.0 next |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -44,7 +44,7 @@ disagree again.)
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
-| 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 9 | In Progress |
+| 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 10 | In Progress |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 4 | In Progress |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
@@ -248,3 +248,4 @@ disagree again.)
 | 2026-09-24 | 14 | 14-016 | Done | channels 5 unit (every source in one tab, unknown reads as All, no tabs with uploads only, WhatsApp tab once available or used, waiting counts and links), security/api 210, whatsapp 18; browser QA at 360px and 1280px against a local server with placeholder WhatsApp settings: connect intro, code and Open WhatsApp link, "not linked yet" on an early check, a locally signed CONNECT linking the number, the confirmation, disconnect and reconnect, a WhatsApp text becoming a HomeSend item "from Priya", the All/WhatsApp/Uploads filter and its empty state, the member badge and the Settings row; no horizontal scroll | WhatsApp into HomeSend, screens: `/settings/whatsapp` (connect, confirmation, your link, an admin's view of everyone's, disconnect), a Settings row, "WhatsApp connected" on Manage Household members, a WhatsApp card among HomeSend's channels, the inbox filter by channel and who sent each WhatsApp item. Nothing is offered until the deployment has a WhatsApp number |
 | 2026-09-24 | 01 | 01-009 | Done | typecheck and lint clean; browser QA at 360px and 1280px against the live project with a QA household: the grouped Settings page with the profile, chevrons and no horizontal scroll, the new AI Assistant and Your plan pages, Privacy linking to AI Assistant, your own Family card linking to Settings and the link landing there, and an Admin still editing a child's card on Family | Settings & Profile consolidation: one editor per setting. `/settings` keeps the profile and becomes grouped rows; the AI key and data use moved to `/settings/ai`, the plan and usage to `/settings/plan`; your own profile elsewhere links to Settings |
 | 2026-09-24 | 20 | 20-009 | Done | billing 116 unit (Razorpay signature, vocabulary, subscriptions, cancel and refund calls in paise; router, money and forward-only payment states; a Razorpay subscription's whole life through the webhook into the ledger; Stripe invoice ledger, cancel-at-period-end and refunds), payments database suite 11 (prices readable, provider plans unreadable, ledger Admin-read and server-written, one payment per provider id, codes and last four only, refunds pending until confirmed), verify:live 212/212 | Multi-provider payments backend: Razorpay and Stripe behind the one billing port, a configurable router, our own price catalogue mapped server-side to provider plans, and a ledger of payments, invoices and refunds. Migration `20261003090000_payments_multi_provider.sql` applied live. Inert: the catalogue is empty and no provider is configured until a person decides prices and sets keys |
+| 2026-09-24 | 20 | 20-010 | Done | billing 122 unit (account: prices from the catalogue, yearly arithmetic, early access, money in words, closed payment words); payments database suite 11 (the catalogue ships with the decided prices, nothing paid for yet); tenant isolation, entitlements; security gate 12/12; verify:live 213/213; browser QA at 360px and 1280px with a QA household: early-access plans with monthly/yearly prices, a free switch to Pro, a seeded Razorpay-paid state (renewal date, billing history, invoice detail, cancel refused honestly with no live provider), landing pricing | Plan, checkout and billing screens. Prices seeded live (`20261004090000_plan_prices_inr.sql`); no plan requires payment yet, so switching is free during early access. Checkout, confirmation, billing history, invoice detail and cancel-at-period-end are built and go live the moment a provider is configured and the plans are marked paid |

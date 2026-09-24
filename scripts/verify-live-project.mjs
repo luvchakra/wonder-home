@@ -680,6 +680,16 @@ async function main() {
   const serverExperimentEvents = await admin.from("entitlement_experiment_events").select("id").limit(1);
   check("the server can read experiment history", !serverExperimentEvents.error, serverExperimentEvents.error?.code ?? "ok");
 
+  // The decided prices (20261004090000, story 20-010): Pro and Max, monthly and
+  // yearly, in INR — and no plan paid for yet, because no provider is live.
+  const prices = await admin.from("plan_prices").select("plan_key, billing_interval, amount").eq("active", true).eq("currency", "INR");
+  const priced = new Set((prices.data ?? []).map((row) => `${row.plan_key}:${row.billing_interval}`));
+  check(
+    "the catalogue carries the decided INR prices",
+    !prices.error && ["pro:month", "pro:year", "max:month", "max:year"].every((key) => priced.has(key)),
+    prices.error?.code ?? `${priced.size} priced`,
+  );
+
   // HomeTalk channel telemetry (20260926110000, voice phase 6).
   const serverChannelEvents = await admin.from("hometalk_channel_events").select("id").limit(1);
   check("the server can read HomeTalk channel telemetry", !serverChannelEvents.error, serverChannelEvents.error?.code ?? "ok");

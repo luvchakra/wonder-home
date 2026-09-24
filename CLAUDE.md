@@ -576,6 +576,17 @@ everywhere else. The provider is never the source of truth:
   holds no card number, no secret and no provider prose.
 - **Nothing is taken away early.** A cancellation or downgrade waits for the
   end of the paid period (`cancel_at_period_end`, `scheduled_plan_key`).
+- **The prices, and early access.** The catalogue holds the decided prices:
+  Pro ₹299 and Max ₹599 a month, or a year at 20% off (₹2,870 and ₹5,750).
+  No plan is marked `requires_payment` yet, so switching stays free and every
+  screen says "Free during early access". Marking the plans paid is the step
+  taken once a provider is live; until then no checkout is offered.
+- **The screens** (story 20-010) are `/settings/plan` (terms, Monthly/Yearly,
+  the plans), `/settings/plan/checkout` (our summary before the provider's
+  page), `/settings/plan/confirmed` (waits for the webhook, never assumes),
+  `/settings/plan/billing` and its invoices. `billing/account.ts` holds their
+  reads and arithmetic. Cancelling at period end asks the provider first
+  (`POST /households/{id}/plan/cancel`).
 
 A plan marked `plans.requires_payment` can never be written onto a
 subscription from a household session: RLS and `changePlan` both refuse

@@ -49,12 +49,8 @@ before(() => {
     options,
   );
 
-  // Test fixtures only: the real catalogue ships empty until a person prices it.
-  price = psql(
-    `insert into public.plan_prices (plan_key, billing_interval, currency, amount)
-     values ('pro', 'month', 'INR', 299.00) returning id;`,
-    options,
-  );
+  // The catalogue ships priced (story 20-010); the provider mapping is a test fixture.
+  price = psql(`select id from public.plan_prices where plan_key = 'pro' and billing_interval = 'month' and currency = 'INR' and active;`, options);
   psql(
     `insert into public.payment_provider_plans (plan_price_id, provider, provider_plan_ref)
      values ('${price}', 'razorpay', 'plan_test_pro_month');`,
@@ -80,11 +76,14 @@ after(() => {
   psql(`drop database if exists ${DB}`, { database: "postgres" });
 });
 
-test("the catalogue ships with no prices: what a plan costs is a person's decision", () => {
+test("the catalogue ships with the prices a person decided, and nothing is paid for yet", () => {
   const fresh = "wonderhome_payments_fresh_test";
   buildTestDatabase(fresh);
   try {
-    assert.equal(psql(`select count(*) from public.plan_prices;`, { database: fresh }), "0");
+    assert.equal(
+      psql(`select string_agg(plan_key || ' ' || billing_interval || ' ' || amount, ', ' order by plan_key desc, billing_interval) from public.plan_prices where currency = 'INR' and active;`, { database: fresh }),
+      "pro month 299.00, pro year 2870.00, max month 599.00, max year 5750.00",
+    );
     assert.equal(psql(`select count(*) from public.payment_provider_plans;`, { database: fresh }), "0");
     assert.equal(psql(`select count(*) from public.plans where requires_payment;`, { database: fresh }), "0");
   } finally {
@@ -94,7 +93,7 @@ test("the catalogue ships with no prices: what a plan costs is a person's decisi
 
 test("anyone signed in reads an active price, and nobody but the server writes one", () => {
   assert.equal(asProfile(ADULT, `select amount from public.plan_prices where id = '${price}';`, options), "299.00");
-  assert.equal(asProfile(OUTSIDER, `select count(*) from public.plan_prices;`, options), "1");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.plan_prices where id = '${price}';`, options), "1");
   assert.ok(
     deniedForProfile(HEAD, `insert into public.plan_prices (plan_key, billing_interval, currency, amount) values ('max', 'month', 'INR', 1);`, options),
     "an Admin priced a plan",
@@ -105,7 +104,7 @@ test("anyone signed in reads an active price, and nobody but the server writes o
   );
   // A retired price is not offered.
   psql(`update public.plan_prices set active = false where id = '${price}';`, options);
-  assert.equal(asProfile(HEAD, `select count(*) from public.plan_prices;`, options), "0");
+  assert.equal(asProfile(HEAD, `select count(*) from public.plan_prices where id = '${price}';`, options), "0");
   psql(`update public.plan_prices set active = true where id = '${price}';`, options);
 });
 

@@ -84,15 +84,18 @@ test("the header navigation reaches each section", async ({ page, isMobile }) =>
   await expect(page).toHaveURL(/#pricing$/);
 });
 
-test("pricing shows three plans and no invented prices", async ({ page }) => {
+test("pricing shows three plans, and every amount is a catalogue price with its period", async ({ page }) => {
   await page.goto("/");
   const pricing = page.locator("#pricing");
 
   for (const plan of ["Free", "Pro", "Max"]) {
     await expect(pricing.getByRole("heading", { level: 3, name: plan })).toBeVisible();
   }
-  // No amount is configured anywhere, so none may appear.
-  await expect(pricing).not.toContainText(/[₹$€]\s?\d/);
+  // Amounts come only from the plan catalogue, and each says what it is for:
+  // a month, a year, or Free's "always". A bare figure would be an invented one.
+  const text = await pricing.innerText();
+  const amounts = text.split("\n").filter((line) => /[₹$€]\s?\d/.test(line));
+  for (const line of amounts) expect(line).toMatch(/a month|a year|always/);
 });
 
 test("placeholder stories are marked as illustrative", async ({ page }) => {

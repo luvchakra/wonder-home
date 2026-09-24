@@ -1613,6 +1613,21 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/plan/cancel": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "End the paid plan at the end of its period",
+          description:
+            "An administrator's action (story 20-010). The payment provider is asked to stop renewing; only once it accepts is the subscription marked to end with the current period. The plan and everything in it stay until then, and the provider's own cancellation webhook moves the household to Free when the period ends. Nothing is refunded and nothing is deleted. Audited as subscription.changed.",
+          responses: {
+            "200": { description: "The plan will end with the current period" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "409": { description: "There is no paid plan to cancel, or the provider could not be reached" },
+          },
+        },
+      },
       "/households/{householdId}/privacy/export": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
