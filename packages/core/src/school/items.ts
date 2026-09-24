@@ -54,6 +54,8 @@ export type SchoolItem = {
   /** Which provider it came from, or null when the household entered it. */
   provider: string | null;
   externalId: string | null;
+  /** When the record was last written — what "newer record wins" compares a document against (DDU 2.0 §28). */
+  updatedAt?: Date | null;
 };
 
 /**

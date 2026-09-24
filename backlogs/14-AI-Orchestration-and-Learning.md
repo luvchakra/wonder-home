@@ -20,6 +20,9 @@
 | 14 | P1 | 14-014 | HomeSend reads the time of day | Done | Local start and end read deterministically from the notice's own date words (`timeFromDateText`); `school_items.due_time_known` + `ends_at` (migration `20260927090000`, applied live); all-day items never show a time |
 | 15 | P0 | 14-015 | WhatsApp into HomeSend — linking and intake | Done | Spec: the WhatsApp HomeSend integration brief. WhatsApp becomes an input channel, never an authorization channel (`packages/core/src/whatsapp/`, migration `20261002090000_whatsapp_intake.sql`, applied live). A number is linked to one adult member only through a single-use code: fifteen minutes, SHA-256 hash only, completed atomically by the service-role-only `public.complete_whatsapp_link` from a signature-verified "CONNECT <code>". One number, one member, anywhere. `public.disconnect_whatsapp` keeps history. A linked number's messages are recorded once by WhatsApp's message id and queued (`whatsapp.process` on the job queue, run after the response with `after()`, retried with backoff and dead after five tries). They become `whatsapp` / `whatsapp_media` HomeSend items from that member (`ingestWhatsAppText` / `ingestWhatsAppMedia`: media fetched from Meta's CDN only, type from bytes, private bucket), and a short acknowledgement never echoes an amount, a health detail or a number. An unlinked number is told how to connect, and nothing it sent is kept. Closed-word telemetry lives in `whatsapp_events`. Inert until a deployment sets the WhatsApp credentials |
 | 16 | P0 | 14-016 | WhatsApp into HomeSend — in the app | Done | The mockup flow: connect WhatsApp (intro, save the number and send CONNECT, confirmation), another adult connecting, WhatsApp status beside members in Manage Household, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and provenance on each item, and connection management in Settings |
+| 17 | P0 | 14-017 | Deep document understanding — whole-document reader & change plan | Done | Spec: `design/HOMESEND-DEEP-DOCUMENT-UNDERSTANDING-2.0.md` (mockup `design/HomeSend-Deep-Document-Understanding-Mockup.png`), phases A–C. The classifier reads the whole document into every household-relevant record across its pages (`records[]`: each event, each date of a series, each fee, each thing to buy), each with page, section and quote as evidence, plus pages read/unreadable and the day the document is dated (`issuedOn`). Deterministic backstop per record (no ids, no field a domain does not own); each record's day and time grounded by WonderHome, never the model. `homesend/document.ts` keeps the reading on the understanding (older readings derive records from the headline and needs); `homesend/plan.ts` reconciles every record on its own — create / update (field by field, before → after) / cancel / no change / conflict (a newer record wins, §28) / needs your answer (one question, §29) — with a series of dates read as occurrences, one record on file answering for one thing, a same-amount-same-day bill recognised, and school/class enrichment from the household's records marked as such (§30). Matcher fixes: a part of an occasion (rehearsal, fee, registration) is never the occasion; equal matches ordered by name. Golden scenarios 1–3 (§46–48) are permanent tests |
+| 18 | P0 | 14-018 | Deep document understanding — review, apply and receipt | Not Started | Phases D–E: the grouped review from the mockup (Found N items, item detail with source page, Edit / Looks good, Review and apply (N)), per-record include/skip/answer, the exact plan persisted, execution through domain services with verification, field-level change history on `homesend_changes`, the exact receipt (created/updated/unchanged/skipped/failed), partial failure said plainly, undo |
+| 19 | P0 | 14-019 | Deep document understanding — HomeTalk attachments & certification | Not Started | Phases F–G: a HomeTalk attachment goes through the same plan and shows it in the conversation ("I read the 6-page school notice…"), the receipt posted back, "what did the school notice change?" answered from stored changes, golden scenario 4 (same file through HomeTalk), eval cases and observability counts |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -31,6 +34,7 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - **Epic 14-E01 — Governed AI Orchestration:** stories 14-001 through 14-005.
 - **Epic 14-E06 — Learning, Multi-Agent Coordination & Prediction:** stories 14-006 through 14-008.
 - **Epic 14-E09 — Household Context & Grounding:** story 14-009.
+- **Epic 14-E17 — Deep Document Understanding 2.0:** stories 14-017 through 14-019.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -398,6 +402,39 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - Manage Household shows who has WhatsApp connected, never another member's number; Settings lets a member see, reconnect and disconnect their own, and an admin disconnect anyone's.
 - HomeSend lists WhatsApp as a channel and filters its inbox by channel; every item shows where it came from and who sent it.
 - Nothing is offered while the deployment has no WhatsApp number configured.
+
+### Story 14-017 — Deep document understanding: whole-document reader & change plan
+**Epic:** Deep Document Understanding 2.0
+**Priority:** P0
+**Goal:** Read the whole document, and decide for every household-relevant thing in it whether it is new, an update, already on record, a conflict, or needs a person's answer — before anything is written.
+
+**Acceptance criteria**
+- One document yields every record it proposes, across pages and domains (school, bills, things to buy), each with the page, section and words it came from; how many pages were read is reported and an unreadable page is never claimed read.
+- The model never names an id, never decides a day (WonderHome grounds each record's own words), and never proposes a field a record's domain does not own.
+- Each record is reconciled on its own: an existing record is updated field by field rather than duplicated; the same thing already on record is a no-op; a record changed after the document was written stands (conflict); a child it cannot place is one question, and nothing is created until it is answered.
+- Several dates of the same thing are separate occurrences; one record on file answers for one thing in the document.
+- Enrichment from the household's own records is marked as such.
+- Golden scenarios 1–3 of the spec are permanent regression tests.
+
+### Story 14-018 — Deep document understanding: review, apply and receipt
+**Epic:** Deep Document Understanding 2.0
+**Priority:** P0
+**Goal:** The person sees exactly what will change, chooses record by record, and afterwards sees exactly what did.
+
+**Acceptance criteria**
+- The review groups outcomes (Updates, New, Already on record, Conflicts, Needs your answer); every record opens to its fields, before → after, and its source page; each can be included, skipped, edited or answered.
+- Applying runs each included record through its own domain service; the exact plan and a field-level change history are kept; the receipt says what was created, updated, left unchanged, skipped or failed, and a partial failure is never reported as success.
+- Every applied change can be undone exactly; re-sending the same document changes nothing.
+
+### Story 14-019 — Deep document understanding: HomeTalk attachments & certification
+**Epic:** Deep Document Understanding 2.0
+**Priority:** P0
+**Goal:** A file given to HomeTalk goes through the same pipeline and plan, and HomeTalk can say afterwards what it actually changed.
+
+**Acceptance criteria**
+- The same file through HomeTalk and HomeSend produces the same understanding, matches, proposals, writes and provenance; only the presentation differs.
+- HomeTalk shows the plan and the receipt in the conversation, and answers "what did it change?" from stored changes, never from the model's reading.
+- The spec's golden scenarios and §45 coverage run in the evaluation; §50 counts are observable.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

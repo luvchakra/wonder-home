@@ -57,6 +57,8 @@ export type Obligation = {
   responsibleMemberId: string | null;
   status: ObligationStatus;
   requiresReview: boolean;
+  /** When the record was last written (DDU 2.0 §28: a newer record wins over an older document). */
+  updatedAt?: string | null;
 };
 
 /**
