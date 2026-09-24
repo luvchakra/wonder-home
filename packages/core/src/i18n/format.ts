@@ -124,6 +124,13 @@ export function formatterFor(preferences: LocalePreferences) {
         () => currency,
       ),
 
+    /** "Milk, bread and eggs" — a list joined the way this language joins one; each item is shown as written. */
+    list: (items: readonly string[]) =>
+      safe(
+        () => new Intl.ListFormat(locale, { type: "conjunction", style: "long" }).format(items),
+        () => items.join(", "),
+      ),
+
     /** A temperature stored in °C, shown in the person's system. */
     temperature: (celsius: number) =>
       preferences.measurement === "imperial"

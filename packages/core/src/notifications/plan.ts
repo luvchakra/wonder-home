@@ -1,4 +1,9 @@
 import { REMINDER_POLICIES, planStages, placeOutsideQuiet, presetFor, storedPriority, withLearnedTime, type ReminderPriority } from "./policies";
+import { formatterFor } from "../i18n/format";
+import { en } from "../i18n/messages/en";
+import { DEFAULT_PREFERENCES } from "../i18n/preferences";
+import { translator } from "../i18n/translate";
+import { msg, plain, renderMessage, type NotificationCopy } from "./message";
 import type { ReminderSubject } from "./sources";
 import type { QuietHours } from "./timing";
 
@@ -88,6 +93,8 @@ export type DesiredReminder = {
   expiresAt: Date;
   title: string;
   body: string;
+  /** The same words as a key and typed values, for each recipient's language (story 22-006). */
+  copy: NotificationCopy;
   priority: ReminderPriority;
   storedPriority: "high" | "normal" | "low";
   action: { action: string; target?: string };
@@ -166,6 +173,7 @@ export function planReminder(
     expiresAt: subject.expiresAt,
     title: text.title,
     body: text.body,
+    copy: text.copy,
     priority: text.priority,
     storedPriority: storedPriority(text.priority),
     action: subject.action,
@@ -203,7 +211,7 @@ export function backupFor(subject: ReminderSubject, directory: Directory, primar
 export function planEscalation(
   primary: DesiredReminder,
   backupId: string,
-  primaryName: string,
+  primaryName: string | null,
   settings: RecipientSettings,
   closedSeq: number,
   timeZone: string,
@@ -220,7 +228,7 @@ export function planEscalation(
     scheduledFor,
     earliestAt: scheduledFor,
     latestAt: primary.expiresAt,
-    body: `${primary.body} ${primaryName} has not marked it done yet.`,
+    ...escalatedWords(primary, primaryName),
     placement: placement.moved,
     timing: "policy",
     escalatedFrom: primary.recipientMemberId,
@@ -244,3 +252,18 @@ export function isUnanswered(
   return now.getTime() - new Date(open.delivered_at).getTime() >= escalation.afterMinutes * 60_000;
 }
 
+const ENGLISH = translator("en", en);
+const PLAIN_FORMAT = formatterFor(DEFAULT_PREFERENCES);
+
+/**
+ * The backup's version of the reminder: the same words, then who has not
+ * dealt with it yet. The stored English is the primary's English plus that
+ * line, so it reads exactly as it always has.
+ */
+function escalatedWords(primary: DesiredReminder, primaryName: string | null): { body: string; copy: NotificationCopy } {
+  const name = primaryName ? plain(primaryName) : msg("reminder.personResponsible");
+  const copy: NotificationCopy = { ...primary.copy, body: msg("reminder.escalated", { body: { msg: primary.copy.body }, name: { msg: name } }) };
+  // The primary's English is already rendered, so nothing here needs formatting.
+  const body = renderMessage(msg("reminder.escalated", { body: primary.body, name: { msg: name } }), ENGLISH, PLAIN_FORMAT);
+  return { body: body.slice(0, 500), copy };
+}

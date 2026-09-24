@@ -21,6 +21,8 @@ export type ReminderRowData = {
   priority: string;
   title: string;
   body: string;
+  /** The same words as a key and typed values, read in the viewer's language (story 22-006). */
+  message?: unknown;
   source_type: string | null;
   source_id: string | null;
   scheduled_for: string;
@@ -31,7 +33,7 @@ export type ReminderRowData = {
 };
 
 export const REMINDER_COLUMNS =
-  "id, type, status, category, priority, title, body, source_type, source_id, scheduled_for, latest_at, expires_at, decision_factors, updated_at";
+  "id, type, status, category, priority, title, body, message, source_type, source_id, scheduled_for, latest_at, expires_at, decision_factors, updated_at";
 
 const OPEN = new Set(["generated", "delivered", "seen"]);
 const CLOSED_AS: Record<string, string> = { acted: "Done", resolved: "Resolved", dismissed: "Dismissed", expired: "Expired" };

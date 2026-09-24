@@ -102,6 +102,7 @@ test("a recipient never rewrites what a reminder says or what it is about", () =
   for (const [column, value] of [
     ["title", "'Nothing to see here'"],
     ["body", "'Ignore this'"],
+    ["message", `'{"v":1,"title":{"key":"reminder.text","params":{"text":"Forged"}},"body":{"key":"reminder.text","params":{"text":"Forged"}}}'::jsonb`],
     ["priority", "'low'"],
     ["category", "'system'"],
     ["source_id", "gen_random_uuid()"],
@@ -117,6 +118,13 @@ test("a recipient never rewrites what a reminder says or what it is about", () =
     );
   }
   assert.equal(psql(`select title from public.notifications where id = '${id}';`, options), "Electricity bill");
+});
+
+test("a stored message is an object carrying its version, title and body (22-006)", () => {
+  const id = remind(partnerMember);
+  assert.throws(() => psql(`update public.notifications set message = '"just text"'::jsonb where id = '${id}';`, options));
+  assert.throws(() => psql(`update public.notifications set message = '{"v":1}'::jsonb where id = '${id}';`, options));
+  psql(`update public.notifications set message = '{"v":1,"title":{"key":"reminder.text","params":{"text":"Electricity bill"}},"body":{"key":"reminder.bill.dueToday"}}'::jsonb where id = '${id}';`, options);
 });
 
 test("a recipient cannot claim delivery or restore an expired reminder", () => {

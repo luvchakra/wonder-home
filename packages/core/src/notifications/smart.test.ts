@@ -436,13 +436,31 @@ describe("idempotency (§29)", () => {
       latest_at: want.latestAt.toISOString(),
       expires_at: want.expiresAt.toISOString(),
       reminder_policy: want.reminderPolicy,
+      // As Postgres hands it back: jsonb does not keep key order.
+      message: reorder(want.copy),
     });
     expect(patchFor(row, want, at("2026-09-23T11:00"))).toBeNull();
   });
 
+  it("a reminder written before messages existed gains one, and nothing else changes (22-006)", () => {
+    const want = planReminder(subject(), owner, open, 0, TZ, at("2026-09-23T11:00"))!;
+    const row = openRow({
+      reminder_seq: want.reminderSeq,
+      scheduled_for: want.scheduledFor.toISOString(),
+      title: want.title,
+      body: want.body,
+      priority: want.storedPriority,
+      earliest_at: want.earliestAt.toISOString(),
+      latest_at: want.latestAt.toISOString(),
+      expires_at: want.expiresAt.toISOString(),
+      reminder_policy: want.reminderPolicy,
+    });
+    expect(patchFor(row, want, at("2026-09-23T11:00"))).toEqual({ message: want.copy });
+  });
+
   it("a snooze the person chose is kept until a new stage arrives", () => {
     const want = planReminder(subject(), owner, open, 0, TZ, at("2026-09-23T11:00"))!;
-    const snoozed = openRow({ reminder_seq: 1, snooze_count: 1, scheduled_for: at("2026-09-23T15:00").toISOString(), title: want.title, body: want.body, priority: want.storedPriority, earliest_at: want.earliestAt.toISOString(), latest_at: want.latestAt.toISOString(), expires_at: want.expiresAt.toISOString(), reminder_policy: want.reminderPolicy });
+    const snoozed = openRow({ reminder_seq: 1, snooze_count: 1, scheduled_for: at("2026-09-23T15:00").toISOString(), title: want.title, body: want.body, priority: want.storedPriority, earliest_at: want.earliestAt.toISOString(), latest_at: want.latestAt.toISOString(), expires_at: want.expiresAt.toISOString(), reminder_policy: want.reminderPolicy, message: want.copy });
     expect(patchFor(snoozed, want, at("2026-09-23T11:00"))).toBeNull();
 
     const dueDay = planReminder(subject(), owner, open, 0, TZ, at("2026-09-26T09:30"))!;
@@ -627,4 +645,11 @@ function openRow(over: Partial<OpenRow>): OpenRow {
     delivered_at: null,
     ...over,
   };
+}
+
+/** The same value with every object's keys in reverse order, as a round trip through jsonb may return it. */
+function reorder<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(reorder) as T;
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).reverse().map(([k, v]) => [k, reorder(v)])) as T;
+  return value;
 }
