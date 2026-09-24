@@ -259,6 +259,13 @@ lets the header's trigger and the tab bar's "More" button open one shared
 drawer instance without prop-drilling open state through every intermediate
 server component in the shell.
 
+**The bell is the one way into Notifications.** The drawer leaves the
+Notifications row out, exactly as the desktop sidebar does. The bell in the
+header already opens it, with its unread count, on every screen, so a second
+row in the menu would be two buttons for one job (rule 14). The drawer
+also no longer carries a card under its hero that restated the tagline and
+led to HomeBrain Review, which the AI & Smart Tools section already lists.
+
 **The drawer opens with the same warm hero every signed-out screen does.** A
 `var(--wh-gradient-hero)` band carrying `LeafDecor` (rule 5), `HomeIllustration`
 bleeding off its top-right corner, the brand `Wordmark` with its tagline, the

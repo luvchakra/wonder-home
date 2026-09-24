@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, House, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { createContext, useContext, useState, type ReactNode } from "react";
@@ -9,7 +9,6 @@ import { cn } from "../../lib/cn";
 import { groupSecondaryNavigation, type SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
 import { HomeIllustration } from "../ui/home-illustration";
-import { IconTile } from "../ui/icon-tile";
 import { LeafDecor } from "../ui/leaf-decor";
 import { ScriptAccent } from "../ui/script-accent";
 import type { ShellLabels, ShellViewer } from "./mobile-header";
@@ -127,7 +126,11 @@ function NavDrawer({
   groupLabels?: ShellLabels["groups"];
 }) {
   const close = () => onOpenChange(false);
-  const sections = groupSecondaryNavigation(secondary, groupLabels);
+  // The bell in the header is the way into Notifications, as in the desktop sidebar.
+  const sections = groupSecondaryNavigation(
+    secondary.filter((item) => item.key !== "notifications"),
+    groupLabels,
+  );
 
   const isCurrent = (href: string) => Boolean(pathname && (pathname === href || pathname.startsWith(`${href}/`)));
 
@@ -182,23 +185,7 @@ function NavDrawer({
             </ScriptAccent>
           </div>
 
-          {/* Certification is "what WonderHome believes", the closest thing
-              this menu has to "how the household is doing" — rather than a
-              second, differently-worded way into Manage Household below. */}
-          <Link
-            href="/certification"
-            onClick={close}
-            className="mx-2 mt-3 flex items-center gap-3 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-surface-muted)]"
-          >
-            <IconTile icon={House} tone="handled" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">A happier home together</span>
-              <span className="block text-xs text-[var(--wh-foreground-muted)]">Plan. Organize. Share. Enjoy.</span>
-            </span>
-            <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
-          </Link>
-
-          <nav aria-label="Household menu" className="mt-2 flex-1 space-y-5 px-2 pb-6">
+          <nav aria-label="Household menu" className="mt-4 flex-1 space-y-5 px-2 pb-6">
             {sections.map((section) => (
               <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
             ))}
