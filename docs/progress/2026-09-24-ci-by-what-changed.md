@@ -69,3 +69,42 @@ Nothing below removes a test. It removes work that was repeated.
 - **Unit tests are unchanged.** 2,600 tests take about 35 s in their own
   parallel job and are not on the critical path, so removing any would buy
   no CI time.
+
+## Follow-up: the critical path
+
+These timings are from real runs, not estimates.
+
+A full run took 2:52. With the template database (PR #149) it took 2:15,
+and build-and-e2e became the longest job at 2:00. That job was made up of:
+- setup, 15 s;
+- the build, 40 s;
+- the Playwright browser cache and its apt install, 22 s;
+- the e2e run on two workers, 38 s.
+
+db-tests, at 1:22, included 20 s just to pull and start a `postgres:16`
+container. Changes:
+
+- **Next.js build cache.** Turbopack's `.next/cache` makes a warm build
+  7 s instead of 43 s (measured locally).
+  - Pull requests restore the cache main last saved.
+  - Only a push to main saves one, so no PR spends time uploading a cache.
+  - The key is the lockfile plus the commit, with a lockfile-prefix
+    fallback.
+- **The runner's own Chrome.** GitHub's Ubuntu image ships Google Chrome
+  with its system libraries.
+  - CI sets `PLAYWRIGHT_CHANNEL=chrome`, so there is no Chromium download
+    and no apt install.
+  - If an image ever lacks Chrome, the step falls back to
+    `playwright install --with-deps chromium`.
+- **Four Playwright workers in CI.** Playwright's default is half the cores.
+  Locally, four workers took 34 s against 39 s for two; six workers were no
+  faster.
+- **The runner's own PostgreSQL 16.** It is started with `systemctl` (about
+  2 s) instead of a service container (about 20 s). No migration uses an
+  extension.
+- **No npm download cache.** `setup-node`'s `cache: npm` restored a cache
+  that is unused when `node_modules` itself is cached. Dropping it saves a
+  few seconds in every job. On a lockfile change `npm ci` downloads as
+  before.
+- **Raising database-test concurrency from 4 to 8 was tried and dropped.**
+  The runner has 4 cores, and 8 was no faster.

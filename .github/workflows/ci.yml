@@ -77,7 +77,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -147,7 +146,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -168,20 +166,6 @@ jobs:
     needs: changes
     if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       PGHOST: localhost
       PGPORT: 5432
@@ -194,7 +178,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -206,6 +189,15 @@ jobs:
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
+
+      # The runner image ships PostgreSQL 16, stopped. Starting it takes about
+      # two seconds; a postgres:16 service container took about twenty to
+      # pull and become healthy. The migrations need no extension beyond
+      # what the stock server has.
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -q -c "alter user postgres password 'postgres'"
 
       - name: Schema and authorization tests
         run: npm run test:db
@@ -222,7 +214,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -235,27 +226,40 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
+      # Turbopack keeps its build cache in .next/cache: warm, a build takes
+      # seconds instead of most of a minute. Pull requests restore the one
+      # main last saved (a PR can read its base branch's caches); only main
+      # saves, so a PR never spends time uploading a cache nobody else reads.
+      - name: Restore Next.js build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Build
         run: npm run build
 
-      - name: Playwright version
-        id: playwright-version
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      # Chromium's binary is a ~150MB download; the browser itself doesn't
-      # change between runs unless @playwright/test's version does, so this
-      # is the one part of the install worth caching. The OS-level packages
-      # `--with-deps` also installs still run every time — the runner VM is
-      # thrown away after each job, so there is nothing to cache them into.
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
+      - name: Save Next.js build cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          path: apps/web/.next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+      # The runner image ships Google Chrome with every system library it
+      # needs, so the specs drive that instead of downloading Playwright's
+      # Chromium and installing its apt dependencies (~20 s). Should an image
+      # ever lack it, fall back to the download.
+      - name: Browser
+        run: |
+          if [ -x /opt/google/chrome/chrome ]; then
+            echo "PLAYWRIGHT_CHANNEL=chrome" >> "$GITHUB_ENV"
+            /opt/google/chrome/chrome --version
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: E2E smoke tests
         # The Build step above already produced apps/web/.next — without this,
