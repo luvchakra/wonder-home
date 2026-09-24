@@ -42,8 +42,11 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // Gemini Live only where the household chose it and the server agrees it
   // may run now — key, consent, plan and flag. Anything else is WonderHome's
   // own live loop, so the control never leads somewhere that cannot answer.
-  const liveEngine =
-    voiceSettings.liveEngine === "gemini_live" && (await geminiLiveGate(supabase, membership.household.id)).availability.available ? "gemini_live" : "wonderhome";
+  // A member may switch engines in the composer; the household's setting is
+  // where it starts. The token route re-checks all of this per session.
+  const geminiAvailability = (await geminiLiveGate(supabase, membership.household.id)).availability;
+  const geminiLive = geminiAvailability.available ? { available: true } : { available: false, reason: geminiAvailability.reason };
+  const liveEngine = voiceSettings.liveEngine === "gemini_live" && geminiLive.available ? "gemini_live" : "wonderhome";
 
   let initialMessages: AssistantMessage[] = [];
   if (entitlement.allowed) {
@@ -74,6 +77,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           serverVoice={serverVoice}
           voiceLanguage={voiceSettings.language}
           liveEngine={liveEngine}
+          geminiLive={geminiLive}
           kids={kids}
           canAddChild={isHouseholdAdmin(membership)}
         />
