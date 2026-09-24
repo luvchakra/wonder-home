@@ -59,6 +59,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/identity/households.ts",
   },
   {
+    event: "member.locale_updated",
+    because: "How WonderHome speaks to someone changed, possibly set for them by an Admin.",
+    recordedIn: "packages/core/src/i18n/repository.ts",
+  },
+  {
+    event: "household.locale_updated",
+    because: "The household's region, currency, time zone or default language changed for everyone.",
+    recordedIn: "packages/core/src/i18n/repository.ts",
+  },
+  {
     event: "invitation.created",
     because: "An outstanding invitation is a way into the household.",
     recordedIn: "packages/core/src/identity/invitations.ts",
@@ -469,6 +479,10 @@ export function describeAuditEvent(
       return { title: "A role was taken away", detail: stringOr(metadata.role, null) };
     case "member.profile_updated":
       return { title: "A member's details were updated", detail: null };
+    case "member.locale_updated":
+      return { title: "Someone's language or formats were changed", detail: null };
+    case "household.locale_updated":
+      return { title: "The household's region, currency or time zone changed", detail: null };
     case "invitation.created":
       return { title: "An invitation was sent", detail: stringOr(metadata.role, null) };
     case "invitation.revoked":
