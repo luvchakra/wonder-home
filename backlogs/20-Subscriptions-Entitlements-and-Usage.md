@@ -12,6 +12,9 @@
 | 6 | P1 | 20-006 | Billing abstraction | Done | Provider-neutral `BillingProvider` port + pure `applyBillingEvent` (out-of-order and other-subscription events ignored, cancellation falls back to free, never deletes); Stripe adapter code-complete and inert (intent id as Idempotency-Key, HMAC-verified webhooks); `billing_intents` (one open per household+plan) and `billing_events` (unique per provider event) with RLS; `plans.requires_payment` keeps paid plans out of reach of any household session |
 | 7 | P2 | 20-007 | Quota automation | Done | Burst (N per fixed W-second window) and fair-use (past N in the period, served more simply, never refused) as plan data on `plan_features`, enforced in the one entitlement service (`consume`); HomeTalk answers from the rules past fair use, with a disclosure, and refuses a burst as temporary; staff set policies through `PATCH /platform-admin/plans/{planKey}/policies` (`subscription.manage`, reason code), every change kept in `plan_policy_events` |
 | 8 | P2 | 20-008 | Plan experiments | Done | `entitlement_experiments`: one feature changed (on, off, or a different allowance) for a stable hashed share of the households on named plans, applied inside `loadSubscription` so `may`/`consume` and every screen agree and a direct API call cannot bypass it; terms frozen once running and draft → running → stopped only (database trigger); a household reads only a running experiment's terms (column grants), never staff's description; staff create/start/stop through `/platform-admin/experiments` (`subscription.manage`, reason code, `entitlement_experiment_events`) and read per-group household counts and usage — counts only; Settings tells a household plainly when a feature is part of a trial |
+| 9 | P1 | 20-009 | Multi-provider payments backend | Done | Razorpay (India) and Stripe (international) behind the one `BillingProvider` port, chosen per checkout by `selectPaymentProvider` (INR or an Indian household → the India provider, anything else → the international one, a preference honoured only where eligible, both defaults deployment config); our own price catalogue in major units (`plan_prices`, readable when active) mapped server-side to provider plans (`payment_provider_plans`, service role only); a ledger of what providers report (`payments` forward-only, `billing_invoices`, `payment_refunds` pending until the provider confirms, `payment_customers`), Admin-read and server-written; the subscription learns provider, interval, currency, amount, cancel-at-period-end and a scheduled downgrade; per-provider webhooks at `/api/v1/billing/webhook/{provider}`, HMAC-verified and applied once; a refund's household comes from our ledger, never the payload. Inert until a person prices the plans and sets a provider's keys |
+| 10 | P1 | 20-010 | Plan, checkout and billing screens | Not Started | Choose plan (monthly/yearly), checkout with region and provider, success, subscription overview, upgrade/downgrade, payment methods, billing history and invoice detail — waits on a person's pricing decision |
+| 11 | P2 | 20-011 | Payment operations | Not Started | Payment notifications, platform-admin payment monitoring, staff refunds and provider reconciliation |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -22,6 +25,7 @@ Implement Subscriptions, Entitlements & Usage as a first-class WonderHome domain
 
 - **Epic 20-E01 — Plans, Entitlements & Metering:** stories 20-001 through 20-004.
 - **Epic 20-E05 — Billing, Quotas & Experiments:** stories 20-005 through 20-008.
+- **Epic 20-E06 — Payments (Razorpay + Stripe):** stories 20-009 through 20-011.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -200,6 +204,65 @@ Implement Subscriptions, Entitlements & Usage as a first-class WonderHome domain
 - Usage counters are atomic and scoped by household, feature and billing period so concurrent requests cannot bypass quotas.
 - AI and premium feature usage can be measured without retaining raw private conversation content.
 - Plan/entitlement changes are auditable and do not require hard-coded pricing logic in individual domain modules.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 20-009 — Multi-provider payments backend
+**Epic:** Payments (Razorpay + Stripe)
+**Priority:** P1
+**Goal:** Take payments through Razorpay in India and Stripe elsewhere without either becoming the source of truth.
+
+**Acceptance criteria**
+- Plans, prices, subscriptions and entitlements are WonderHome's; a provider only moves money, and its plan or price id is configuration mapped server-side, never chosen by the browser.
+- The provider for a checkout is chosen by a configurable router (currency and region, with a preference honoured only where eligible), and a missing or half-configured provider is never offered.
+- Every amount is stored and shown in major units; minor units exist only inside a provider adapter.
+- A webhook is believed only after its signature verifies over the raw body, and each provider event is applied once.
+- A payment only ever moves forward; a refund stays pending until the provider confirms it; a refund's household comes from our own ledger.
+- Cancellation and downgrade take effect at the end of the paid period, and nothing is removed before then.
+- The ledger holds no card number, no secret and no provider prose; Admins read it and only the server writes it.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 20-010 — Plan, checkout and billing screens
+**Epic:** Payments (Razorpay + Stripe)
+**Priority:** P1
+**Goal:** Let an Admin choose, pay for, change and review the household's plan.
+
+**Acceptance criteria**
+- Choose plan with monthly and yearly prices from the catalogue, the yearly saving computed from the two real prices, never claimed.
+- Checkout shows region, currency and the provider the router chose, and hands off to the provider's hosted page.
+- Success, subscription overview, upgrade/downgrade (at period end), payment methods, billing history and invoice detail each keep the three states and work at 360px.
+- No price is shown that the catalogue does not hold, and no paid plan is reachable without a verified payment.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 20-011 — Payment operations
+**Epic:** Payments (Razorpay + Stripe)
+**Priority:** P2
+**Goal:** Tell people what happened to their money and let staff see and fix it.
+
+**Acceptance criteria**
+- A successful, failed or refunded payment reaches the right Admin as a notification sourced from the ledger.
+- Platform staff see payments, failures and refunds across households, counts first, and start a refund with a reason code.
+- A reconciliation job compares the ledger with each provider and records any difference in closed words.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

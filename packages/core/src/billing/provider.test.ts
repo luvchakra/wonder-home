@@ -80,3 +80,37 @@ describe("providers deliver out of order and late; neither may rewind the truth"
     }
   });
 });
+
+describe("story 20-009: ending later, ledger-only events and a plan moved at renewal", () => {
+  it("a subscription set to end at the period's end keeps its plan until then, and can be taken back", () => {
+    const ending = applyBillingEvent(onPro, event({ type: "subscription.cancel_scheduled", cancelAtPeriodEnd: true, occurredAt: at("2026-09-10T00:00:00Z") }));
+    expect(ending).toMatchObject({ apply: true, next: { planKey: "pro", status: "active", cancelAtPeriodEnd: true } });
+    const state = ending.apply ? ending.next : onPro;
+    const resumed = applyBillingEvent(state, event({ type: "subscription.cancel_scheduled", cancelAtPeriodEnd: false, occurredAt: at("2026-09-11T00:00:00Z") }));
+    expect(resumed).toMatchObject({ apply: true, next: { cancelAtPeriodEnd: false } });
+  });
+
+  it("a payment, a declined attempt or a refund goes to the ledger and moves nothing", () => {
+    for (const type of ["payment.succeeded", "payment.attempt_failed", "refund.succeeded", "refund.failed"] as const) {
+      const decision = applyBillingEvent(onPro, event({ type, occurredAt: at("2026-09-12T00:00:00Z") }));
+      expect(decision.apply).toBe(false);
+      expect(decision.reason).toMatch(/^Recorded/);
+    }
+  });
+
+  it("a renewal that arrives on the downgraded plan makes it the plan, and clears what was scheduled", () => {
+    const scheduled = { ...onPro, planKey: "max", scheduledPlanKey: "pro" };
+    const decision = applyBillingEvent(scheduled, event({ type: "subscription.renewed", planKey: "pro", occurredAt: at("2026-10-01T00:00:00Z") }));
+    expect(decision).toMatchObject({ apply: true, next: { planKey: "pro", scheduledPlanKey: null } });
+  });
+
+  it("activation starts with no end, no scheduled change and the terms it was bought on", () => {
+    const decision = applyBillingEvent({ ...onPro, cancelAtPeriodEnd: true, scheduledPlanKey: "free" }, event({ occurredAt: at("2026-10-02T00:00:00Z"), terms: { interval: "year", currency: "INR", amount: 2870 } }));
+    expect(decision).toMatchObject({ apply: true, next: { cancelAtPeriodEnd: false, scheduledPlanKey: null, terms: { interval: "year", amount: 2870 } } });
+  });
+
+  it("cancellation clears who billed it and what it cost", () => {
+    const decision = applyBillingEvent({ ...onPro, provider: "razorpay", terms: { interval: "month", currency: "INR", amount: 299 } }, event({ type: "subscription.cancelled", occurredAt: at("2026-10-05T00:00:00Z") }));
+    expect(decision).toMatchObject({ apply: true, next: { planKey: FALLBACK_PLAN_KEY, provider: null, terms: null } });
+  });
+});

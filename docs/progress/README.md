@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Payments across providers: Razorpay for India and Stripe elsewhere behind one port, a configurable router, our own price catalogue mapped server-side, and a ledger of payments, invoices and refunds (story 20-009 Done; screens wait on pricing)](2026-09-24-payments-multi-provider.md) |
 | 2026-09-24 | [Settings & Profile consolidation: one editor per setting — grouped Settings with the profile, the AI key and data use on `/settings/ai`, the plan on `/settings/plan`, your own profile elsewhere linking to Settings (story 01-009 Done)](2026-09-24-settings-consolidation.md) |
 | 2026-09-24 | [WhatsApp into HomeSend, part 2: connect with a one-time code and a confirmation from the server's own link, "WhatsApp connected" beside members, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and who sent each item (story 14-016 Done, module 14 complete)](2026-09-24-whatsapp-homesend-screens.md) |
 | 2026-09-24 | [WhatsApp into HomeSend, part 1: a number linked by single-use code, linked members' messages recorded once and turned into HomeSend items, never an authorization channel (story 14-015 Done)](2026-09-24-whatsapp-homesend-intake.md) |

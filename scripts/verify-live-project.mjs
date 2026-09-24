@@ -23,6 +23,12 @@ const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 const SHIPPED_TABLES = [
   "billing_intents",
   "billing_events",
+  "plan_prices",
+  "payment_provider_plans",
+  "payment_customers",
+  "payments",
+  "billing_invoices",
+  "payment_refunds",
   "weather_locations",
   "plan_policy_events",
   "entitlement_experiments",
@@ -152,6 +158,10 @@ const SHIPPED_COLUMNS = [
   { table: "weather_locations", column: "forecast_fetched_at" },
   { table: "plans", column: "requires_payment" },
   { table: "household_subscriptions", column: "last_billing_event_at" },
+  { table: "household_subscriptions", column: "cancel_at_period_end" },
+  { table: "household_subscriptions", column: "scheduled_plan_key" },
+  { table: "household_subscriptions", column: "billing_interval" },
+  { table: "billing_intents", column: "plan_price_id" },
   { table: "plan_features", column: "burst_limit" },
   { table: "plan_features", column: "burst_window_seconds" },
   { table: "plan_features", column: "fair_use_limit" },
@@ -173,6 +183,11 @@ const SHIPPED_COLUMNS = [
  * check it — no session, and no rows required.
  */
 const EMBEDDED_READS = [
+  {
+    name: "purchasable prices embed resolves",
+    table: "payment_provider_plans",
+    select: "plan_price_id, provider, plan_prices!inner(plan_key, active)",
+  },
   {
     name: "memberships embed resolves",
     table: "household_members",
@@ -326,6 +341,22 @@ async function main() {
     event_types: ["member.added"],
   });
   check("anonymous cannot create a webhook subscription", Boolean(forgedWebhook.error), forgedWebhook.error?.code ?? "no error");
+
+  // Payments (story 20-009): which provider plan backs a price is the
+  // server's alone, and the ledger is written only by a verified webhook.
+  const providerPlans = await anon.from("payment_provider_plans").select("provider_plan_ref").limit(1);
+  check(
+    "nobody can read which provider plan backs a price",
+    Boolean(providerPlans.error) || (Array.isArray(providerPlans.data) && providerPlans.data.length === 0),
+    providerPlans.error ? providerPlans.error.code : `${providerPlans.data?.length ?? "?"} rows`,
+  );
+  const forgedPayment = await anon.from("payments").insert({
+    household_id: "00000000-0000-4000-8000-000000000000",
+    provider: "razorpay",
+    provider_payment_id: "pay_forged",
+    status: "succeeded",
+  });
+  check("anonymous cannot record a payment", Boolean(forgedPayment.error), forgedPayment.error?.code ?? "no error");
 
   // Health profiles (story 21-001). RLS gates SELECT through wh.may_see_health,
   // which never grants an anonymous caller (not a household member at all)
