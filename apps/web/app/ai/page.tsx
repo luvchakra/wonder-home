@@ -59,6 +59,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           id: message.id,
           role: message.role as "member" | "assistant",
           text: message.content,
+          at: message.createdAt.toISOString(),
           action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null } : null,
         }));
     }
@@ -80,6 +81,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           geminiLive={geminiLive}
           kids={kids}
           canAddChild={isHouseholdAdmin(membership)}
+          timeZone={membership.household.timezone}
         />
       ) : (
         <EmptyState
