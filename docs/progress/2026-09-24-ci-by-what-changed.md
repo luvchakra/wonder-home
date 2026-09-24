@@ -90,12 +90,17 @@ container. Changes:
   - Only a push to main saves one, so no PR spends time uploading a cache.
   - The key is the lockfile plus the commit, with a lockfile-prefix
     fallback.
-- **The runner's own Chrome.** GitHub's Ubuntu image ships Google Chrome
-  with its system libraries.
-  - CI sets `PLAYWRIGHT_CHANNEL=chrome`, so there is no Chromium download
-    and no apt install.
-  - If an image ever lacks Chrome, the step falls back to
-    `playwright install --with-deps chromium`.
+- **Browser install without apt.** First try: drive the runner's own
+  Chrome (`PLAYWRIGHT_CHANNEL=chrome`).
+  - That cut the install from 18 s to 1 s, but the e2e run went from 38 s
+    to 59 s, because full Chrome is heavier than Playwright's headless
+    shell.
+  - Kept instead: Playwright's cached headless shell (`--only-shell`),
+    installed without `--with-deps`. The runner's Chrome already brought
+    the system libraries.
+  - The apt install runs only if the plain install fails.
+  - `PLAYWRIGHT_CHANNEL` remains supported by `playwright.config.ts` for
+    anyone who wants it.
 - **Four Playwright workers in CI.** Playwright's default is half the cores.
   Locally, four workers took 34 s against 39 s for two; six workers were no
   faster.

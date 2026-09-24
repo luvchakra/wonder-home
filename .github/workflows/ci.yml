@@ -248,18 +248,23 @@ jobs:
           path: apps/web/.next/cache
           key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
-      # The runner image ships Google Chrome with every system library it
-      # needs, so the specs drive that instead of downloading Playwright's
-      # Chromium and installing its apt dependencies (~20 s). Should an image
-      # ever lack it, fall back to the download.
-      - name: Browser
-        run: |
-          if [ -x /opt/google/chrome/chrome ]; then
-            echo "PLAYWRIGHT_CHANNEL=chrome" >> "$GITHUB_ENV"
-            /opt/google/chrome/chrome --version
-          else
-            npx playwright install --with-deps chromium
-          fi
+      # Playwright's own headless shell, not the runner's Chrome: full Chrome
+      # (channel: chrome) made the suite ~20 s slower than it saved. The
+      # shell is cached, and the system libraries it needs already come with
+      # the Chrome the runner image ships, so `--with-deps` (an apt install,
+      # most of the old ~18 s) runs only if the plain install fails.
+      - name: Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-shell-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browser
+        run: npx playwright install --only-shell chromium || npx playwright install --with-deps --only-shell chromium
 
       - name: E2E smoke tests
         # The Build step above already produced apps/web/.next — without this,
