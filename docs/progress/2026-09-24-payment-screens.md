@@ -128,4 +128,15 @@ operations (notifications, staff refunds, reconciliation) are 20-011.
 
 ## Cleanup
 
-(Recorded after the merge.)
+Done after the merge (#171, `187a5cb`):
+- **QA household.** "Mehta Pay QA Home" (`88f1bdca-dc5f-4b3d-80b6-0768cd094a1f`)
+  was deleted with every row in it. That includes the seeded Razorpay-paid
+  subscription terms, the payment `pay_QA_PAY_TEST_1` and the invoice
+  `inv_QA_PAY_TEST_1`.
+- **QA account.** `184f03cc-ce0a-4ad3-b6c9-21b92492a0e8` was deleted.
+- **Local debris.** The dev server was stopped, and the scratch scripts and
+  screenshots were removed.
+
+A count found nothing left: household, payments, invoices, subscription and
+user were all 0. The INR prices stay: they are the product's catalogue, not
+test data.
