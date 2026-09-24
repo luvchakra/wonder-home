@@ -94,6 +94,18 @@ const HOMETALK: HomeTalkCase[] = [
     expected: { interpretation: "set_reminder", date: "2026-09-24" },
   },
   {
+    id: "HT-13b", surface: "hometalk", household: "A", category: "time_date", actor: "a-upasana",
+    description: "\"On my way back from office\" is this evening — never a \"when?\" — and the reminder is the thing itself.",
+    utterance: "Remind me to pick up some coriander on my way back from office",
+    expected: { interpretation: "set_reminder", date: "2026-09-23" },
+  },
+  {
+    id: "HT-13c", surface: "hometalk", household: "A", category: "time_date", actor: "a-upasana",
+    description: "\"Later today\" — the answer the reminder question itself offers — is a time later today.",
+    utterance: "Remind me to call the plumber later today",
+    expected: { interpretation: "set_reminder", date: "2026-09-23" },
+  },
+  {
     id: "HT-14", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-upasana",
     description: "\"Plan pasta for tonight\" is a meal from the household's own recipe, waiting for a yes.",
     utterance: "Plan pasta for tonight",

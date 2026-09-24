@@ -263,7 +263,8 @@ describe("a reminder's wording", () => {
     const admin = fakeAdmin();
     const done = await executeIntent(intent({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: { what: "buy jam", when: "friday" } }), context({ admin: admin.client }));
     expect(done.ok && done.text).toMatch(/^I will remind you on Fri 25 Sep at 9am/);
-    expect(admin.writes[0]!.row.body).toBe("You asked HomeTalk to remind you on Fri 25 Sep.");
+    // The time it will actually go off is named too, so the note never disagrees with the reply.
+    expect(admin.writes[0]!.row.body).toBe("You asked HomeTalk to remind you on Fri 25 Sep at 9am.");
   });
 });
 

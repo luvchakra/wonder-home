@@ -3,6 +3,7 @@ import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
+import { splitTrailingWhen } from "./temporal";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -130,6 +131,13 @@ const TIME_WORDS = "\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?|noon|midday";
 
 /** A reminder's parameters: what, and when as the household said it. */
 function reminder(what: string, when: string | undefined, time: string | undefined): Record<string, unknown> {
+  // "…coriander while I'm on my way back from office", "…the plumber later":
+  // a when the pattern could not capture, split off the thing itself.
+  const split = when ? null : splitTrailingWhen(what.trim().replace(/[.!]+$/, ""));
+  if (split) {
+    what = split.what;
+    when = split.when;
+  }
   return {
     what: what.trim().replace(/[.!]+$/, ""),
     ...(when ? { when: when.trim().toLowerCase() } : {}),

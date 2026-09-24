@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { personItems } from "../context/builders";
+import type { PendingClarification } from "./clarify";
 import { applyCorrection, readCorrection } from "./corrections";
 import { heldBecause, splitRequest } from "./decompose";
 import { converse, type TurnInput } from "./engine";
@@ -232,5 +233,46 @@ describe("§22 evaluation matrix", () => {
       { actorMemberId: "m-priya", channel: "text", utterance: "Not milk, almond milk", timezone: "Asia/Kolkata", now: NOW },
     );
     expect(corrected?.parameters).toMatchObject({ items: ["almond milk", "bananas"], corrects: { actionId: "a-9" } });
+  });
+});
+
+describe("the reminder conversation of 24 Sep, 8:34 pm — replayed through the whole turn", () => {
+  const EVENING = new Date("2026-09-24T15:04:00Z");
+  const evening = (utterance: string, clarifying: PendingClarification | null = null) =>
+    turn(utterance, { now: EVENING, clarifying, ground: (intent) => groundIntent(intent, { ...env(), now: EVENING }) });
+
+  it("\"…while my way back from office\" is understood as this evening, with the thing itself as the reminder", async () => {
+    const result = await evening("remind me to pick some coriander while my back way back from office");
+    expect(result.kind).toBe("reply");
+    if (result.kind !== "reply") return;
+    expect(result.proposal.kind).not.toBe("clarify");
+    expect(result.intent.parameters.what).toBe("pick some coriander");
+    expect(result.intent.parameters.remindAtResolved).toMatchObject({ day: "today (Thu 24 Sep)", time: "9pm" });
+  });
+
+  it("the answers our own question offers — \"later today\", \"today\" — are understood, and never land in the past", async () => {
+    const asked = await evening("remind me to call the plumber");
+    expect(asked.kind === "reply" && asked.proposal.kind).toBe("clarify");
+    if (asked.kind !== "reply") return;
+    expect(asked.text).toContain("later today");
+
+    for (const answer of ["later today", "today"]) {
+      const answered = await evening(answer, asked.clarification!);
+      expect(answered.kind).toBe("reply");
+      if (answered.kind !== "reply") return;
+      expect(answered.proposal.kind).not.toBe("clarify");
+      expect(answered.intent.parameters.remindAtResolved).toMatchObject({ day: "today (Thu 24 Sep)", time: "9:45pm" });
+      expect(answered.text).not.toContain("9am");
+    }
+  });
+
+  it("a time already gone is one question, and \"tomorrow\" answers it", async () => {
+    const asked = await evening("remind me to call mum today at 9am");
+    expect(asked.kind === "reply" && asked.proposal.kind).toBe("clarify");
+    if (asked.kind !== "reply") return;
+    expect(asked.text).toContain("9am today has already passed");
+
+    const answered = await evening("tomorrow", asked.clarification!);
+    expect(answered.kind === "reply" && answered.intent.parameters.remindAtResolved).toMatchObject({ day: "tomorrow (Fri 25 Sep)", time: "9am" });
   });
 });

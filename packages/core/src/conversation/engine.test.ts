@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { CONFIRM_TRANSCRIPT_BELOW, converse, pendingFrom, replyFor, type TurnInput } from "./engine";
+import { groundIntent } from "./grounding";
+import { NO_REFERENCES } from "./references";
 
 const NOW = new Date("2026-09-17T09:00:00.000Z");
 
@@ -184,6 +186,34 @@ describe("a live provider behind the same seam", () => {
     );
     if (other.kind !== "reply") throw new Error("expected a reply");
     expect(other.intent.parameters).toEqual({ item: "coriander" });
+  });
+});
+
+describe("a model that leaves the when inside what to be reminded of (live, 24 Sep)", () => {
+  const EVENING = new Date("2026-09-24T15:04:00Z");
+  const said = (parameters: Record<string, unknown>): TurnInput["understand"] =>
+    async (utterance, context) => ({
+      action: "set_reminder",
+      actorMemberId: context.actorMemberId,
+      target: { kind: "unspecified" },
+      parameters,
+      confidence: 0.9,
+      channel: context.channel,
+      utterance,
+      understanding: { source: "model", provider: "google" },
+    });
+
+  it("is not asked \"when?\": the trip home is this evening, and the reminder is the thing itself", async () => {
+    const result = await converse({
+      ...turn({ utterance: "remind me to pick some coriander while my back way back from office", understand: said({ what: "pick some coriander while my back way back from office" }) }),
+      now: EVENING,
+      ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: "m-1", timezone: "Asia/Kolkata", now: EVENING, references: async () => NO_REFERENCES }),
+    });
+    expect(result.kind).toBe("reply");
+    if (result.kind !== "reply") return;
+    expect(result.proposal.kind).not.toBe("clarify");
+    expect(result.intent.parameters.what).toBe("pick some coriander");
+    expect(result.intent.parameters.remindAtResolved).toMatchObject({ day: "today (Thu 24 Sep)", time: "9pm" });
   });
 });
 

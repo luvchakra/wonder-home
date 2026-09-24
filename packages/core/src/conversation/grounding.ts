@@ -1,8 +1,9 @@
+import { reminderMoment } from "./reminder-time";
 import { resolvePerson } from "../context/resolution";
 import type { HouseholdContextItem } from "../context/types";
 import { isConsequential, type HouseholdIntent } from "./intent";
 import { anaphorOf, resolveAnaphor, whichOf, type FocusEntity, type ReferenceState } from "./references";
-import { resolveTemporal, TEMPORAL_PHRASE } from "./temporal";
+import { resolveTemporal, splitTrailingWhen, TEMPORAL_PHRASE } from "./temporal";
 
 /**
  * Grounding (Wave 4 §6–§8): what the household *meant*, given this
@@ -340,9 +341,22 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
 
   // --- A reminder (§10): when, and what "them" was --------------------------
   if (grounded.action === "set_reminder") {
+    // A model (or a rule) may leave "while I'm on my way back from office" in
+    // what to be reminded of, and no when at all: the when is in there.
+    if (typeof grounded.parameters.what === "string") {
+      const split = splitTrailingWhen(grounded.parameters.what);
+      const hasWhen = typeof grounded.parameters.when === "string" && grounded.parameters.when.trim() !== "";
+      if (split) grounded.parameters = { ...grounded.parameters, what: split.what, ...(hasWhen ? {} : { when: split.when }) };
+    }
     if (typeof grounded.parameters.when !== "string" || !grounded.parameters.when.trim()) {
       return clarify(grounded, "day", "When should I remind you — later today, tomorrow, or another day?", []);
     }
+    // The moment it will actually go off, decided here once: a time already
+    // gone is one question, never a reminder quietly written for "now" and
+    // described as 9am (live, 24 Sep: "today" said at 8:35 pm).
+    const moment = reminderMoment(grounded.parameters.when, typeof grounded.parameters.time === "string" ? grounded.parameters.time : null, { timezone: env.timezone, now: env.now });
+    if (!moment.ok) return clarify(grounded, "day", moment.question, []);
+    grounded.parameters = { ...grounded.parameters, remindAtResolved: { date: moment.date, day: moment.day, time: moment.time, at: moment.at.toISOString() } };
     const what = typeof grounded.parameters.what === "string" ? grounded.parameters.what : "";
     const pointer = /\b(them|those|these|it|that|this)\b/i.exec(what);
     if (pointer) {
