@@ -141,6 +141,9 @@ export const ALEXA_LEADS = [
   "what", "what's", "what is", "when", "when's", "when is", "who", "who's", "which", "where", "how", "how many", "how much",
   "is", "are", "do", "does", "did", "has", "have", "can", "should", "will",
   "add", "put", "remove", "take", "remind", "remind me", "plan", "mark", "move", "cancel",
+  "create", "set", "schedule", "book", "order", "buy", "change", "update", "delete", "clear",
+  "complete", "finish", "undo", "log", "note", "show", "give me", "list", "check", "find", "read",
+  "any", "anything",
   "the", "i", "i've", "i'm", "my", "we", "we're", "our",
 ] as const;
 
@@ -158,6 +161,50 @@ export function alexaIntentFor(lead: string): string {
 export const ALEXA_OPEN_INTENTS: Record<string, readonly string[]> = {
   WonderHomeQueryIntent: ["tell me {utterance}", "about {utterance}", "to tell me {utterance}", "for {utterance}"],
 };
+
+/**
+ * "Alexa, ask WonderHome for today's summary": the household's status, asked
+ * in HomeTalk's own words so the same rules answer it that answer the app.
+ * No slot — the whole intent is the question.
+ */
+export const ALEXA_STATUS_INTENT = "WonderHomeStatusIntent";
+export const ALEXA_STATUS_QUESTION = "what needs attention today";
+export const ALEXA_STATUS_SAMPLES = [
+  "for today's summary",
+  "for a summary",
+  "for my summary",
+  "for an update",
+  "for today's update",
+  "what needs attention",
+  "what needs my attention",
+  "what's pending",
+  "what's important today",
+  "what needs doing today",
+  "catch me up",
+] as const;
+
+/**
+ * The answer to a question WonderHome just asked, said on its own: "What
+ * would you like to add?" — "Milk." Alexa's free-text slot needs a word in
+ * front of it, so a bare answer has nowhere to land; a custom slot type does
+ * accept words it was never given, which is what this one is for. Its values
+ * only teach Alexa the shape of a short answer. HomeTalk decides what the
+ * answer means, against what it is waiting on for this surface.
+ */
+export const ALEXA_ANSWER_INTENT = "WonderHomeAnswerIntent";
+export const ALEXA_ANSWER_TYPE = "WONDERHOME_ANSWER";
+export const ALEXA_ANSWER_SAMPLES = ["{answer}", "it's {answer}", "it is {answer}", "just {answer}"] as const;
+export const ALEXA_ANSWER_EXAMPLES = [
+  "milk", "eggs", "bread", "rice", "atta", "dal", "sugar", "tea", "coffee", "butter", "curd", "paneer",
+  "onions", "tomatoes", "potatoes", "apples", "bananas", "coriander", "almond milk", "dog food",
+  "the grocery list", "groceries", "the shopping list",
+  "today", "tomorrow", "tonight", "this evening", "this weekend", "next week",
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  "at five", "at seven thirty", "in the morning", "after school",
+  "the first one", "the second one", "both", "neither", "all of them", "none of them",
+  "two", "three", "a dozen", "one kilo", "half a litre",
+  "go ahead", "not now", "never mind", "that's all",
+] as const;
 
 export const ALEXA_CARRIERS: Record<string, string> = Object.fromEntries(ALEXA_LEADS.map((lead) => [alexaIntentFor(lead), lead]));
 
@@ -180,6 +227,8 @@ export function alexaInteractionModel(invocationName = "wonder home"): unknown {
         intents: [
           ...Object.entries(ALEXA_OPEN_INTENTS).map(([name, samples]) => ({ name, slots: slot, samples })),
           ...ALEXA_LEADS.map((lead) => ({ name: alexaIntentFor(lead), slots: slot, samples: [`${lead} {utterance}`] })),
+          { name: ALEXA_STATUS_INTENT, slots: [], samples: [...ALEXA_STATUS_SAMPLES] },
+          { name: ALEXA_ANSWER_INTENT, slots: [{ name: "answer", type: ALEXA_ANSWER_TYPE }], samples: [...ALEXA_ANSWER_SAMPLES] },
           { name: "AMAZON.YesIntent", samples: [] },
           { name: "AMAZON.NoIntent", samples: [] },
           { name: "AMAZON.HelpIntent", samples: [] },
@@ -188,7 +237,7 @@ export function alexaInteractionModel(invocationName = "wonder home"): unknown {
           { name: "AMAZON.FallbackIntent", samples: [] },
           { name: "AMAZON.NavigateHomeIntent", samples: [] },
         ],
-        types: [],
+        types: [{ name: ALEXA_ANSWER_TYPE, values: ALEXA_ANSWER_EXAMPLES.map((value) => ({ name: { value } })) }],
       },
     },
   };
@@ -212,7 +261,7 @@ export function readAlexaEnvelope(rawBody: string): AlexaEnvelope | null {
   const intent = obj(request.intent);
   const intentName = str(intent.name);
   const slots = obj(intent.slots);
-  const utterance = str(obj(slots.utterance).value) ?? str(obj(slots.query).value);
+  const utterance = str(obj(slots.utterance).value) ?? str(obj(slots.query).value) ?? str(obj(slots.answer).value);
   const applicationId = str(obj(system.application).applicationId) ?? str(obj(session.application).applicationId);
   const accessToken = str(obj(system.user).accessToken) ?? str(obj(session.user).accessToken);
 
@@ -236,7 +285,7 @@ export type AlexaTurn =
   | { kind: "local"; speech: string | null; endSession: boolean };
 
 export const ALEXA_WELCOME = "WonderHome here. What would you like to know or do?";
-export const ALEXA_HELP = "You can ask what's happening tomorrow, what's for dinner, or add something to the grocery list. What would you like?";
+export const ALEXA_HELP = "You can ask for today's summary, what's for dinner, or add something to the grocery list. What would you like?";
 
 /** What an Alexa request asks for, in HomeTalk's terms. */
 export function alexaTurn(envelope: AlexaEnvelope): AlexaTurn {
@@ -263,6 +312,8 @@ export function alexaTurn(envelope: AlexaEnvelope): AlexaTurn {
       return { kind: "hometalk", text: "no" };
     case "AMAZON.FallbackIntent":
       return { kind: "local", speech: "Sorry, I didn't catch that. What would you like?", endSession: false };
+    case ALEXA_STATUS_INTENT:
+      return { kind: "hometalk", text: ALEXA_STATUS_QUESTION };
     default:
       return envelope.utterance ? { kind: "hometalk", text: withCarrier(envelope.intent, envelope.utterance) } : { kind: "local", speech: "Sorry, I didn't catch that. What would you like?", endSession: false };
   }

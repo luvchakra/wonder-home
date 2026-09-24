@@ -415,6 +415,282 @@
           ]
         },
         {
+          "name": "WonderHomeCreateIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "create {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeSetIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "set {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeScheduleIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "schedule {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeBookIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "book {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeOrderIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "order {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeBuyIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "buy {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeChangeIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "change {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeUpdateIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "update {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeDeleteIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "delete {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeClearIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "clear {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeCompleteIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "complete {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeFinishIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "finish {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeUndoIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "undo {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeLogIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "log {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeNoteIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "note {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeShowIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "show {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeGiveMeIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "give me {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeListIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "list {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeCheckIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "check {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeFindIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "find {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeReadIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "read {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeAnyIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "any {utterance}"
+          ]
+        },
+        {
+          "name": "WonderHomeAnythingIntent",
+          "slots": [
+            {
+              "name": "utterance",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "anything {utterance}"
+          ]
+        },
+        {
           "name": "WonderHomeTheIntent",
           "slots": [
             {
@@ -511,6 +787,38 @@
           ]
         },
         {
+          "name": "WonderHomeStatusIntent",
+          "slots": [],
+          "samples": [
+            "for today's summary",
+            "for a summary",
+            "for my summary",
+            "for an update",
+            "for today's update",
+            "what needs attention",
+            "what needs my attention",
+            "what's pending",
+            "what's important today",
+            "what needs doing today",
+            "catch me up"
+          ]
+        },
+        {
+          "name": "WonderHomeAnswerIntent",
+          "slots": [
+            {
+              "name": "answer",
+              "type": "WONDERHOME_ANSWER"
+            }
+          ],
+          "samples": [
+            "{answer}",
+            "it's {answer}",
+            "it is {answer}",
+            "just {answer}"
+          ]
+        },
+        {
           "name": "AMAZON.YesIntent",
           "samples": []
         },
@@ -539,7 +847,288 @@
           "samples": []
         }
       ],
-      "types": []
+      "types": [
+        {
+          "name": "WONDERHOME_ANSWER",
+          "values": [
+            {
+              "name": {
+                "value": "milk"
+              }
+            },
+            {
+              "name": {
+                "value": "eggs"
+              }
+            },
+            {
+              "name": {
+                "value": "bread"
+              }
+            },
+            {
+              "name": {
+                "value": "rice"
+              }
+            },
+            {
+              "name": {
+                "value": "atta"
+              }
+            },
+            {
+              "name": {
+                "value": "dal"
+              }
+            },
+            {
+              "name": {
+                "value": "sugar"
+              }
+            },
+            {
+              "name": {
+                "value": "tea"
+              }
+            },
+            {
+              "name": {
+                "value": "coffee"
+              }
+            },
+            {
+              "name": {
+                "value": "butter"
+              }
+            },
+            {
+              "name": {
+                "value": "curd"
+              }
+            },
+            {
+              "name": {
+                "value": "paneer"
+              }
+            },
+            {
+              "name": {
+                "value": "onions"
+              }
+            },
+            {
+              "name": {
+                "value": "tomatoes"
+              }
+            },
+            {
+              "name": {
+                "value": "potatoes"
+              }
+            },
+            {
+              "name": {
+                "value": "apples"
+              }
+            },
+            {
+              "name": {
+                "value": "bananas"
+              }
+            },
+            {
+              "name": {
+                "value": "coriander"
+              }
+            },
+            {
+              "name": {
+                "value": "almond milk"
+              }
+            },
+            {
+              "name": {
+                "value": "dog food"
+              }
+            },
+            {
+              "name": {
+                "value": "the grocery list"
+              }
+            },
+            {
+              "name": {
+                "value": "groceries"
+              }
+            },
+            {
+              "name": {
+                "value": "the shopping list"
+              }
+            },
+            {
+              "name": {
+                "value": "today"
+              }
+            },
+            {
+              "name": {
+                "value": "tomorrow"
+              }
+            },
+            {
+              "name": {
+                "value": "tonight"
+              }
+            },
+            {
+              "name": {
+                "value": "this evening"
+              }
+            },
+            {
+              "name": {
+                "value": "this weekend"
+              }
+            },
+            {
+              "name": {
+                "value": "next week"
+              }
+            },
+            {
+              "name": {
+                "value": "monday"
+              }
+            },
+            {
+              "name": {
+                "value": "tuesday"
+              }
+            },
+            {
+              "name": {
+                "value": "wednesday"
+              }
+            },
+            {
+              "name": {
+                "value": "thursday"
+              }
+            },
+            {
+              "name": {
+                "value": "friday"
+              }
+            },
+            {
+              "name": {
+                "value": "saturday"
+              }
+            },
+            {
+              "name": {
+                "value": "sunday"
+              }
+            },
+            {
+              "name": {
+                "value": "at five"
+              }
+            },
+            {
+              "name": {
+                "value": "at seven thirty"
+              }
+            },
+            {
+              "name": {
+                "value": "in the morning"
+              }
+            },
+            {
+              "name": {
+                "value": "after school"
+              }
+            },
+            {
+              "name": {
+                "value": "the first one"
+              }
+            },
+            {
+              "name": {
+                "value": "the second one"
+              }
+            },
+            {
+              "name": {
+                "value": "both"
+              }
+            },
+            {
+              "name": {
+                "value": "neither"
+              }
+            },
+            {
+              "name": {
+                "value": "all of them"
+              }
+            },
+            {
+              "name": {
+                "value": "none of them"
+              }
+            },
+            {
+              "name": {
+                "value": "two"
+              }
+            },
+            {
+              "name": {
+                "value": "three"
+              }
+            },
+            {
+              "name": {
+                "value": "a dozen"
+              }
+            },
+            {
+              "name": {
+                "value": "one kilo"
+              }
+            },
+            {
+              "name": {
+                "value": "half a litre"
+              }
+            },
+            {
+              "name": {
+                "value": "go ahead"
+              }
+            },
+            {
+              "name": {
+                "value": "not now"
+              }
+            },
+            {
+              "name": {
+                "value": "never mind"
+              }
+            },
+            {
+              "name": {
+                "value": "that's all"
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }

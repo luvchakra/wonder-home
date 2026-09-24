@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveDeterministicIntent } from "../conversation/engine";
-import { withCarrier } from "./alexa";
 import { capabilityForAction } from "./capabilities";
 import { utteranceForToolCall } from "./gemini-live";
-import { ALEXA_GOLDEN, GEMINI_GOLDEN, voiceReadiness } from "./readiness";
+import { ALEXA_GOLDEN, alexaText, GEMINI_GOLDEN, voiceReadiness } from "./readiness";
 import { voiceAllowsAction, VOICE_SCOPES } from "./scopes";
 
 /**
@@ -53,7 +52,7 @@ describe("every Gemini tool sentence is read by HomeTalk's rules as the action t
 describe("Alexa's carrier phrases reach the same actions", () => {
   for (const golden of ALEXA_GOLDEN) {
     it(`${golden.intent} "${golden.slot}" → ${golden.action}`, () => {
-      expect(read(withCarrier(golden.intent, golden.slot)).action).toBe(golden.action);
+      expect(read(alexaText(golden.intent, golden.slot)).action).toBe(golden.action);
     });
   }
 });
