@@ -46,12 +46,12 @@ export default async function NotificationSettingsPage() {
     supabase
       .from("responsibilities")
       .select("outcome_key, primary_member_id, backup_member_id, playbook_items(name)")
-      .eq("household_id", membership.household.id)
-      .or(`primary_member_id.eq.${membership.memberId},backup_member_id.eq.${membership.memberId}`),
+      .eq("household_id", membership.household.id),
   ]);
   // What routes reminders to this person (story 23-009): the responsibilities
   // they hold, first or as backup — the same ones the engine reads.
   const routing = ((responsibilityData ?? []) as { outcome_key: string; primary_member_id: string | null; backup_member_id: string | null; playbook_items: { name: string } | { name: string }[] | null }[])
+    .filter((row) => row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId)
     .map((row) => {
       const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
       const name = item?.name ?? STARTER_OUTCOMES.find((starter) => starter.key === row.outcome_key)?.label ?? row.outcome_key.replace(/[._]/g, " ");
