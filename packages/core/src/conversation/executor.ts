@@ -20,7 +20,8 @@ import { recordAvailabilityException } from "../household/helpers-repository";
 import type { HouseholdIntent } from "./intent";
 import { joinWords } from "./proposal";
 import { linkTo } from "./reply-format";
-import { resolveDay, resolveTemporal } from "./temporal";
+import { formatHourMinute, parseTimeOfDay, reminderMoment } from "./reminder-time";
+import { resolveDay } from "./temporal";
 
 /**
  * Carrying an understood request out (product-direction update §7: the
@@ -563,16 +564,9 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
   if (!context.admin) return { ok: false, reason: "I could not set a reminder just now." };
   const now = context.now ?? new Date();
   const when = String(intent.parameters.when ?? "");
-  const resolved = resolveTemporal(when, { timezone: context.timezone, now });
-  if (!resolved || resolved.precision === "range") return { ok: false, reason: `When should I remind you? Say "tomorrow", "Friday evening" or a date.` };
-
-  const said = typeof intent.parameters.time === "string" ? intent.parameters.time.trim().toLowerCase() : null;
-  const time = said === "noon" || said === "midday" ? { hour: 12, minute: 0 } : said ? parseTimeOfDay(said) : null;
-  if (said && !time) return { ok: false, reason: `What time should I remind you — for example "9am" or "6:30pm"?` };
-  // A day alone means the morning; a part of the day, its start.
-  const at = time ?? (resolved.window ? { hour: Number(resolved.window.from.slice(0, 2)), minute: Number(resolved.window.from.slice(3, 5)) } : { hour: 9, minute: 0 });
-  const dueIso = zonedTimeToUtcIso(resolved.date, at.hour, at.minute, context.timezone);
-  const due = new Date(Math.max(Date.parse(dueIso), now.getTime()));
+  const moment = reminderMoment(when, typeof intent.parameters.time === "string" ? intent.parameters.time : null, { timezone: context.timezone, now });
+  if (!moment.ok) return { ok: false, reason: moment.question };
+  const due = moment.at;
 
   const what = String(intent.parameters.what ?? "").trim().replace(/[.!]+$/, "");
   const title = `Reminder: ${what.charAt(0).toUpperCase()}${what.slice(1)}`.slice(0, 160);
@@ -585,7 +579,7 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
       priority: "normal",
       thread_key: `reminder:${crypto.randomUUID()}`,
       title,
-      body: `You asked HomeTalk to remind you ${onDay(resolved.label.replace(/\s*\(.*\)$/, ""))}.`.slice(0, 500),
+      body: `You asked HomeTalk to remind you ${onDay(moment.day.replace(/\s*\(.*\)$/, ""))} at ${moment.time}.`.slice(0, 500),
       action: null,
       decision_factors: { source: "home_talk", requestedBy: context.actorMemberId, phrase: when },
       scheduled_for: due.toISOString(),
@@ -598,7 +592,7 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
     .single();
   if (error || !data) return { ok: false, reason: "I could not set that reminder just now, and nothing was saved." };
 
-  const whenText = `${onDay(resolved.label)} at ${formatHourMinute(at.hour, at.minute)}`;
+  const whenText = `${onDay(moment.day)} at ${moment.time}`;
   return {
     ok: true,
     text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.`,
@@ -891,26 +885,6 @@ export function parseVitalReading(vitalWord: string, reading: string): ParsedVit
 
   const canonical = CANONICAL_UNIT[vitalType];
   return canonical ? { vitalType, value, unit: canonical } : null;
-}
-
-/** "4", "4pm", "16:30" → hour/minute. A bare hour 1-11 with no am/pm reads as afternoon/evening — the same household convention `rules.ts`'s meal-time parsing already uses. */
-function parseTimeOfDay(raw: string): { hour: number; minute: number } | null {
-  const match = raw.trim().toLowerCase().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
-  if (!match) return null;
-  let hour = Number(match[1]);
-  const minute = Number(match[2] ?? "0");
-  const meridiem = match[3];
-  if (hour > 23 || minute > 59) return null;
-  if (meridiem === "pm" && hour < 12) hour += 12;
-  if (meridiem === "am" && hour === 12) hour = 0;
-  if (!meridiem && hour >= 1 && hour <= 11) hour += 12;
-  return { hour, minute };
-}
-
-function formatHourMinute(hour: number, minute: number): string {
-  const period = hour >= 12 ? "pm" : "am";
-  const twelve = hour % 12 === 0 ? 12 : hour % 12;
-  return minute === 0 ? `${twelve}${period}` : `${twelve}:${String(minute).padStart(2, "0")}${period}`;
 }
 
 /** A wall-clock date + hour/minute, read in `timeZone`, as a UTC ISO instant — the "guess, then correct by the zone's own offset" technique, correct across DST. */

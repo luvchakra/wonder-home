@@ -271,7 +271,7 @@ export function escalatedQuestion(pending: PendingClarification): string {
     case "member":
       return 'I still cannot tell who you mean. Say their name as your household has it — for example "Asmi" — and I will take it from there.';
     case "day":
-      return 'I still cannot pin that to one day. Say a single day — "tomorrow", "next Friday" or a date like "2 Oct".';
+      return 'I still cannot pin that down. Say it one of these ways — "later today", "in 2 hours", "tomorrow at 9am", "next Friday" or a date like "2 Oct".';
     case "referent": {
       const named = readFocus(pending.parameters.candidates).map((candidate) => `"${candidate.label}"`);
       return named.length > 0

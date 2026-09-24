@@ -221,7 +221,11 @@ function summarize(intent: HouseholdIntent): string {
     case "plan_meal":
       return `Plan ${String(intent.parameters.mealName ?? intent.parameters.what ?? "a meal")} for ${String(intent.parameters.slot ?? "dinner")} ${groundedWhen(intent, intent.parameters.windowResolved ? "window" : "when")}`.trim();
     case "set_reminder":
-      return `Remind you ${groundedWhen(intent, "when")}${typeof intent.parameters.time === "string" ? ` at ${intent.parameters.time}` : ""} to ${String(intent.parameters.what ?? "do that")}`.replace(/\s+/g, " ");
+      {
+        const at = intent.parameters.remindAtResolved as { day?: string; time?: string } | undefined;
+        const when = at?.day && at.time ? `${at.day} at ${at.time}` : `${groundedWhen(intent, "when")}${typeof intent.parameters.time === "string" ? ` at ${intent.parameters.time}` : ""}`;
+        return `Remind you ${when} to ${String(intent.parameters.what ?? "do that")}`.replace(/\s+/g, " ");
+      }
     case "plan_event":
       if (typeof intent.parameters.what === "string" && intent.parameters.protected === true) {
         return `Keep ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "that time")} free for ${intent.parameters.what}`;

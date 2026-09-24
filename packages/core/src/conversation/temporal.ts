@@ -73,6 +73,12 @@ export function resolveTemporal(phrase: string, options: { timezone: string; now
   if (!text) return null;
   const today = isoDateIn(options.now, options.timezone);
 
+  // "Later today", "in 2 hours", "on my way back from office": a moment
+  // counted from now, not a day — the answers our own reminder question
+  // offers must always be understood.
+  const soon = soonFrom(text, options);
+  if (soon) return soon;
+
   // A day, optionally followed by a part of it: "tomorrow after school",
   // "friday evening". Split the part off first so both halves resolve.
   const { dayText, part } = splitPartOfDay(text);
@@ -104,6 +110,101 @@ export function resolveTemporal(phrase: string, options: { timezone: string; now
 export function resolveDay(phrase: string, options: { timezone: string; now: Date }): string | null {
   const resolved = resolveTemporal(phrase, options);
   return resolved && resolved.precision !== "range" ? resolved.date : null;
+}
+
+/** Where the household's clock stands: its local day and minutes after midnight. */
+export function localClock(now: Date, timezone: string): { date: string; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  return { date: isoDateIn(now, timezone), minute: (hour % 24) * 60 + minute };
+}
+
+/** "Later today" when nothing more is said: about an hour from now, on the quarter hour, before the day is over. */
+export function laterToday(now: Date): Date {
+  return roundUpToQuarter(new Date(now.getTime() + 60 * 60_000));
+}
+
+export function roundUpToQuarter(at: Date): Date {
+  const quarter = 15 * 60_000;
+  return new Date(Math.ceil(at.getTime() / quarter) * quarter);
+}
+
+const COUNT_WORDS: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, "a couple of": 2, "a few": 3 };
+
+/** Words for the trip home, which every household means as "this evening". */
+export const COMMUTE_PATTERN =
+  /\b(?:way\s+(?:back|home)|back\s+(?:home|from\s+(?:the\s+)?(?:office|work|school))|(?:coming|going|heading|driving|walking|getting)\s+(?:back\s+)?home|(?:leave|leaving)\s+(?:the\s+)?(?:office|work)|after\s+(?:work|office))\b/;
+
+/**
+ * A moment rather than a day: "later today", "in 2 hours", "in half an
+ * hour", "on the way home". Returned as a day with a one-minute window, so
+ * every caller that only wants the day still gets the right one.
+ */
+function soonFrom(text: string, options: { timezone: string; now: Date }): TemporalResolution | null {
+  const relative = /^(an?|one|two|three|four|five|\d{1,3}|a couple of|a few|half an?) (minutes?|mins?|hours?|hrs?)(?: from now)?$/.exec(text);
+  if (relative) {
+    const unit = /^h/.test(relative[2]!) ? 60 : 1;
+    const count = relative[1]!.startsWith("half") ? 0.5 : (COUNT_WORDS[relative[1]!] ?? Number(relative[1]));
+    if (!Number.isFinite(count) || count <= 0 || count * unit > 24 * 60) return null;
+    return momentOf(new Date(options.now.getTime() + count * unit * 60_000), text, options);
+  }
+  const laterPart = /^later (?:tonight|this (evening|afternoon))$/.exec(text);
+  if (laterPart) {
+    // "Later this evening" at noon is this evening, not one o'clock.
+    const part = laterPart[1] ?? "night";
+    const clock = localClock(options.now, options.timezone);
+    const window = PARTS_OF_DAY[part]!;
+    if (clock.minute < minutesOf(window.from)) {
+      return { phrase: text, precision: "part_of_day", date: clock.date, endDate: clock.date, window: { from: window.from, to: window.to }, label: `this ${window.words} (${short(clock.date)})`.replace("this night", "tonight") };
+    }
+    return momentOf(laterToday(options.now), text, options);
+  }
+  if (/^(?:later|later on|later today|sometime later|sometime today|a bit later|soon)$/.test(text)) {
+    return momentOf(laterToday(options.now), text, options);
+  }
+  if (COMMUTE_PATTERN.test(text)) {
+    const clock = localClock(options.now, options.timezone);
+    const evening = PARTS_OF_DAY.evening!;
+    // Still ahead, or under way: this evening's window. Past it: soon.
+    if (clock.minute < minutesOf(evening.to)) {
+      return { phrase: text, precision: "part_of_day", date: clock.date, endDate: clock.date, window: { from: evening.from, to: evening.to }, label: `this evening (${short(clock.date)})` };
+    }
+    return momentOf(roundUpToQuarter(new Date(options.now.getTime() + 15 * 60_000)), text, options);
+  }
+  return null;
+}
+
+/** "today (Thu 24 Sep)", "tomorrow (Fri 25 Sep)", or just "Sat 26 Sep". */
+export function dayLabel(date: string, today: string): string {
+  return date === today ? `today (${short(date)})` : date === addDays(today, 1) ? `tomorrow (${short(date)})` : short(date);
+}
+
+function momentOf(at: Date, text: string, options: { timezone: string; now: Date }): TemporalResolution {
+  const clock = localClock(at, options.timezone);
+  const today = isoDateIn(options.now, options.timezone);
+  const time = `${String(Math.floor(clock.minute / 60)).padStart(2, "0")}:${String(clock.minute % 60).padStart(2, "0")}`;
+  return { phrase: text, precision: "part_of_day", date: clock.date, endDate: clock.date, window: { from: time, to: time }, label: dayLabel(clock.date, today) };
+}
+
+function minutesOf(hhmm: string): number {
+  return Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+}
+
+/**
+ * A trailing "when" a rule's pattern does not capture — "while I'm on my way
+ * back from office", "after work", "later today", "in 2 hours" — split off
+ * the thing to be reminded of, so the reminder says "pick up coriander", not
+ * "pick up coriander while my way back from office".
+ */
+export function splitTrailingWhen(what: string): { what: string; when: string } | null {
+  const trimmed = what.trim();
+  const commute = /\s+(?:while|when|on|as|during)\s+(?:[a-z']+\s+){0,4}?(?:way\s+(?:back|home)|back\s+(?:home|from)|(?:coming|going|heading|driving|walking|getting)\s+(?:back\s+)?home|(?:leave|leaving)\s+(?:the\s+)?(?:office|work))\b.*$/i.exec(trimmed)
+    ?? /\s+after\s+(?:work|office)\b.*$/i.exec(trimmed);
+  if (commute && commute.index > 0) return { what: trimmed.slice(0, commute.index).trim(), when: "on the way home" };
+  const soon = /\s+(later(?: today| on| tonight)?|in (?:an?|one|two|three|\d{1,3}|half an?|a couple of|a few) (?:minutes?|mins?|hours?|hrs?))$/i.exec(trimmed);
+  if (soon && soon.index > 0) return { what: trimmed.slice(0, soon.index).trim(), when: soon[1]!.toLowerCase() };
+  return null;
 }
 
 type Day = { precision: TemporalPrecision; date: string; endDate: string; window: { from: string; to: string } | null; label: string };
