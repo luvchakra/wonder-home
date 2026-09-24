@@ -69,6 +69,7 @@ export function Assistant({
   serverVoice = false,
   voiceLanguage = "en-IN",
   liveEngine = "wonderhome",
+  geminiLive = { available: false },
   kids = [],
   canAddChild = false,
 }: {
@@ -84,6 +85,8 @@ export function Assistant({
   voiceLanguage?: string;
   /** Who runs a live conversation: WonderHome's own loop, or Gemini Live calling HomeTalk's tools (voice phase 3). */
   liveEngine?: "wonderhome" | "gemini_live";
+  /** Whether Gemini Live may run now, and why not — the composer's picker offers only what can. */
+  geminiLive?: { available: boolean; reason?: string };
   /** For HomeSend's school-item confirm step ("who is this for"). */
   kids?: { id: string; displayName: string }[];
   /** Whether the viewer may add a child from a school notice (story 08-009). */
@@ -372,7 +375,11 @@ export function Assistant({
     // never scrolls: the conversation does, inside.
     <div className="flex h-[calc(100dvh-var(--wh-header-height)-env(safe-area-inset-top)-var(--wh-tabbar-height)-var(--wh-tabbar-raised-clearance)-1rem)] min-h-0 flex-col lg:h-[calc(100dvh-var(--wh-header-height)-4.5rem)]">
       {quiet ? (
-        <div className="wh-rise flex flex-1 flex-col items-center justify-center px-2 py-8 text-center">
+        // Scrolls inside itself when a short phone cannot fit it all, so the
+        // composer below keeps its place above the tab bar; `m-auto` centres
+        // it when there is room without clipping the top when there is not.
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+        <div className="wh-rise m-auto flex flex-col items-center px-2 py-8 text-center">
           <AiOrb size={88} />
           <h1 className="mt-6 text-2xl font-semibold tracking-tight text-balance">
             Hi {firstName}! <span aria-hidden>👋</span>
@@ -387,6 +394,7 @@ export function Assistant({
             Here are some things you can ask
           </p>
           <SuggestionChips suggestions={SUGGESTIONS} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
+        </div>
         </div>
       ) : (
         <div
@@ -510,6 +518,7 @@ export function Assistant({
           serverVoice={serverVoice}
           voiceLanguage={voiceLanguage}
           liveEngine={liveEngine}
+          geminiLive={geminiLive}
           onLiveTranscript={handleLiveTranscript}
         />
         <p className="mt-1.5 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
