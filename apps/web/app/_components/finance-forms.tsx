@@ -20,6 +20,7 @@ import {
   removeTransactionAction,
   updateObligationAction,
 } from "../(auth)/finance-actions";
+import { CurrencyField } from "./currency-field";
 
 const KINDS = [
   { value: "utility", label: "Utility" },
@@ -53,10 +54,13 @@ function ObligationFields({
   householdId,
   initial,
   state,
+  defaultCurrency = "INR",
 }: {
   householdId: string;
   initial?: ObligationInitial;
   state: ActionState;
+  /** The household's currency, for a new bill (story 22-007). A bill already on record keeps its own. */
+  defaultCurrency?: string;
 }) {
   return (
     <>
@@ -128,14 +132,7 @@ function ObligationFields({
             initial?.amountMinor != null ? initial.amountMinor / 100 : undefined
           }
         />
-        <Field
-          label="Currency"
-          name="currency"
-          placeholder="INR"
-          defaultValue={initial?.currency ?? "INR"}
-          maxLength={3}
-          autoComplete="off"
-        />
+        <CurrencyField value={initial?.currency ?? defaultCurrency} />
       </div>
       <Field
         label="Due (optional)"
@@ -163,7 +160,7 @@ function Submit({
 }
 
 /** "Add a bill" as a sheet — there was no way onto this page's data without a live connector or the AI chat link. */
-export function AddBillButton({ householdId }: { householdId: string }) {
+export function AddBillButton({ householdId, defaultCurrency }: { householdId: string; defaultCurrency?: string }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
     createObligationAction,
@@ -188,7 +185,7 @@ export function AddBillButton({ householdId }: { householdId: string }) {
         description="WonderHome tracks it from here — no connector needed."
       >
         <form action={formAction} className="space-y-3">
-          <ObligationFields householdId={householdId} state={state} />
+          <ObligationFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} />
           <Submit label="Add bill" pendingLabel="Adding…" />
         </form>
       </Sheet>
@@ -369,10 +366,13 @@ function TransactionDetailFields({
 export function AddTransactionButton({
   householdId,
   bills,
+  defaultCurrency = "INR",
   ...choices
 }: TransactionChoices & {
   householdId: string;
   bills: TransactionBill[];
+  /** For a bill with no currency of its own yet (story 22-007). */
+  defaultCurrency?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -436,16 +436,7 @@ export function AddTransactionButton({
               required
               placeholder="2500"
             />
-            <Field
-              key={`currency-${bill?.id}`}
-              label="Currency"
-              name="currency"
-              required
-              placeholder="INR"
-              defaultValue={bill?.currency ?? "INR"}
-              maxLength={3}
-              autoComplete="off"
-            />
+            <CurrencyField key={`currency-${bill?.id}`} value={bill?.currency ?? defaultCurrency} required />
           </div>
           {/* Keyed by bill, so choosing another bill brings in that bill's own payee, kind and owner. */}
           <TransactionDetailFields key={bill?.id} bill={bill} {...choices} />
@@ -517,14 +508,7 @@ export function EditTransactionControl({
               required
               defaultValue={transaction.amountMinor / 100}
             />
-            <Field
-              label="Currency"
-              name="currency"
-              required
-              defaultValue={transaction.currency}
-              maxLength={3}
-              autoComplete="off"
-            />
+            <CurrencyField value={transaction.currency} required />
           </div>
           <TransactionDetailFields bill={bill} initial={transaction} {...choices} />
           <Field

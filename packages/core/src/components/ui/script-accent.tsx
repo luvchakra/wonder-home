@@ -56,6 +56,9 @@ export function ScriptAccent({
   return (
     <p
       aria-hidden
+      // The script line takes its direction from its own words, so an
+      // English line keeps its punctuation in place on a right-to-left page.
+      dir="auto"
       className={cn(
         "font-[family-name:var(--wh-font-script)] font-medium text-balance select-none",
         TONES[tone],
@@ -65,7 +68,7 @@ export function ScriptAccent({
       )}
     >
       {children}
-      {heart ? <span className="ml-1.5 text-[0.8em] text-[var(--wh-tone-people)]">♥</span> : null}
+      {heart ? <span className="ms-1.5 text-[0.8em] text-[var(--wh-tone-people)]">♥</span> : null}
     </p>
   );
 }

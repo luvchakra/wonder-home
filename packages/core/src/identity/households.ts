@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { parseHouseholdSettings, parseLocaleSetup, parseMemberChoices } from "../i18n/preferences";
 import { completedYears, parseDateOfBirth } from "./age";
 import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import type {
@@ -32,6 +33,10 @@ type HouseholdRow = {
   status: Household["status"];
   owner_member_id: string | null;
   key_member_id: string | null;
+  region?: string | null;
+  currency?: string | null;
+  measurement_system?: string | null;
+  default_language?: string | null;
 };
 
 type MembershipRow = {
@@ -40,6 +45,13 @@ type MembershipRow = {
   member_type: MemberType;
   date_of_birth?: string | null;
   first_seen_at?: string | null;
+  language?: string | null;
+  date_format?: string | null;
+  time_format?: string | null;
+  measurement_system?: string | null;
+  locale_setup_status?: string | null;
+  locale_setup_step?: string | null;
+  locale_prompt_dismissed_at?: string | null;
   // A to-one embed comes back as an object, but the client's inferred types
   // describe every embed as an array, so both shapes are accepted here rather
   // than asserted away.
@@ -112,7 +124,7 @@ export const listMemberships = cache(async (supabase: SupabaseClient): Promise<H
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, member_type, date_of_birth, first_seen_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id), household_roles(role, created_at)",
+      "id, display_name, member_type, date_of_birth, first_seen_at, language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id, region, currency, measurement_system, default_language), household_roles(role, created_at)",
     )
     .eq("status", "active")
     .eq("profile_id", userId);
@@ -142,6 +154,17 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
         status: household.status,
         ownerMemberId: household.owner_member_id,
         keyMemberId: household.key_member_id,
+      },
+      locale: {
+        household: parseHouseholdSettings({
+          region: household.region,
+          currency: household.currency,
+          timezone: household.timezone,
+          measurement_system: household.measurement_system,
+          language: household.default_language,
+        }),
+        member: parseMemberChoices(row),
+        setup: parseLocaleSetup(row),
       },
     },
   ];

@@ -109,7 +109,9 @@ export function Wordmark({
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <BrandMark size={size} />
-      <span className="leading-tight">
+      {/* The name and tagline are the brand's own English, so they keep
+          their own direction inside a right-to-left page. */}
+      <span className="min-w-0 leading-tight" dir="ltr" lang="en">
         <span className="block text-[1.0625rem] font-bold tracking-tight">
           <span className="sr-only">WonderHome</span>
           <span aria-hidden>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
+import type { PrimaryNavKey } from "../../navigation/primary-navigation";
+import type { SecondaryNavGroup } from "../../navigation/secondary-navigation";
 import { BrandMark, Wordmark } from "../ui/brand";
 import { SearchBar } from "../ui/search-bar";
 import { NavDrawerTrigger } from "./nav-drawer";
@@ -28,6 +30,19 @@ export type ShellViewer = {
   householdName: string;
   /** Unread notifications, shown as a dot rather than a count — sparse, never a tally. */
   unread?: number;
+  /** The language the shell speaks in, and its direction (story 22-004). */
+  language?: string;
+  dir?: "ltr" | "rtl";
+  /** The shell's own words in that language. Anything absent stays in English. */
+  labels?: ShellLabels;
+};
+
+export type ShellLabels = {
+  nav?: Partial<Record<PrimaryNavKey, string>>;
+  groups?: Partial<Record<SecondaryNavGroup, string>>;
+  settings?: string;
+  household?: string;
+  logout?: string;
 };
 
 export function MobileHeader({
@@ -59,18 +74,18 @@ export function MobileHeader({
           <Link
             href={back.href}
             aria-label={back.label}
-            className="-ml-2 grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
+            className="-ms-2 grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeft className="size-5 rtl:rotate-180" />
           </Link>
         ) : (
-          <NavDrawerTrigger className="-ml-2 shrink-0 lg:hidden" />
+          <NavDrawerTrigger className="-ms-2 shrink-0 lg:hidden" />
         )}
 
         {search ? (
           <>
             {title ? <h1 className="sr-only">{title}</h1> : null}
-            <Link href="/" aria-label="WonderHome home" className="-ml-1 shrink-0 lg:hidden">
+            <Link href="/" aria-label="WonderHome home" className="-ms-1 shrink-0 lg:hidden">
               <BrandMark size={28} />
             </Link>
             <div className="min-w-0 flex-1 lg:max-w-lg">{search}</div>
@@ -82,8 +97,9 @@ export function MobileHeader({
             <Link href="/" aria-label="WonderHome home" className="min-w-0">
               <Wordmark
                 size={26}
+                className="max-w-full"
                 tagline
-                taglineClassName="max-w-[13.5rem] truncate text-[0.65rem] font-medium tracking-normal normal-case"
+                taglineClassName="max-w-[13.5rem] text-[0.65rem] font-medium tracking-normal whitespace-normal normal-case"
               />
             </Link>
           </div>
@@ -108,7 +124,7 @@ export function MobileHeader({
               >
                 <Bell className="size-5" />
                 {viewer.unread ? (
-                  <span aria-hidden className="absolute top-2.5 right-2.5 size-2 rounded-full bg-[var(--wh-attention)] ring-2 ring-[var(--wh-surface)]" />
+                  <span aria-hidden className="absolute end-2.5 top-2.5 size-2 rounded-full bg-[var(--wh-attention)] ring-2 ring-[var(--wh-surface)]" />
                 ) : null}
               </Link>
               <ViewerMenu viewer={viewer} />

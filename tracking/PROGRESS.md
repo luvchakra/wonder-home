@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 196 |
-| Done | 194 |
-| In Progress | 1 |
+| Total stories | 204 |
+| Done | 197 |
+| In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 1 |
-| Completion | 99.0% |
-| Current module | 02 Household Configuration & Playbook |
-| Current story | — (02-009 Done; 04-017 waits on a person; next: 18-008) |
+| Not Started | 3 |
+| Completion | 96.6% |
+| Current module | 22 Internationalization & Localization |
+| Current story | 22-004 / 22-005 (22-001..003 Done; PR 2 next: multilingual HomeTalk, localized notifications, RTL) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -46,6 +46,7 @@ disagree again.)
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 8 | Done |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
+| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 3 | In Progress |
 
 ## Execution Log
 
@@ -237,3 +238,4 @@ disagree again.)
 | 2026-09-24 | 14 | 14-008 | Done | 2582 unit (predictions 7, money format 1), eval 47/47 with 0/14 unsafe, browser QA at 360px and desktop on the real project: from seeded rows, Today's Household view showed exactly three predictions soonest first — two bills within 5 days with their real total (₹3,449.50), one shop covering Milk, Rice and Soap from the buying pattern, and a full exam week for the child — nothing on the personal view; the API returned the same three | Predictive intelligence: `ai/predictions.ts` (pure, deterministic, read-only: stock-out clusters, bill bunching, heavy school weeks over the next 14 days, each with its basis and where to act; high thresholds so an ordinary week is silent), `ai/predictions-repository.ts`. Today's Household view "Looking ahead" predicts only from what the viewer may already read, never for a child; `GET /households/{id}/predictions`. `finance/payments.ts`'s `format` now shows two decimals whenever an amount has any |
 | 2026-09-24 | 17 | 17-008 | Done | 2603 unit (device connector and sync 21), home database suite 31 (5 new: devices seen by the household and created only by a sync, an Admin changes only which appliance and whether ignored, no linking to another household's appliance, one reading recorded once, disconnecting takes the devices), tenant isolation 9, verify:live 177/177, browser QA at 360px and desktop on the real project: two seeded devices listed in full with no clipped names, one linked to a new appliance added inline from the picker, one ignored and used again, `GET /devices` agreed, an unknown device's PATCH 404 | Optional device connectors: `home/device-connector.ts` (one canonical `DevicePayload`; readings translated with reasons for every skip, dropped when older than their kind's freshness window, provider confidence capped at 0.95; a device is stated never inferred — first report is a link to nothing), `home/device-sync.ts` (provider first, an outage changes health only; only written readings are logged, so linking later still counts), `home/device-repository.ts` (Admin decisions through RLS and column grants; devices and readings written by the service role). `home_device_links` + a unique reading index on `home_device_signals` (migration `20260927170000`, applied live); device readings join the 60-day integration-events retention. Integrations shows a Devices section with an appliance picker (add one inline) and ignore/use again; `POST /households/{id}/integrations/smart-home/sync` (`integrations.deep`, 409 until a provider is live), `GET /households/{id}/devices`, `PATCH /households/{id}/devices/{linkId}` |
 | 2026-09-24 | 02 | 02-009 | Done | onboarding engine 24 unit + HomeBrain context 2, onboarding database suite 11 (setup read by members and moved only by an Admin, events Admin-only and closed-word, a stated age always dated, an invitation links the adult named in setup and can never take over a linked member or another household's), verify:live 183/183, browser golden scenario at 360px and desktop on the real project: 2 adults, 2 children, a cat and a maid named with ages and working days → 27 suggestions kept, the grocery owner changed to Priya, school fees dropped → exit to Home showed "Nearly there · Next: …" and Continue resumed → guided setup asked for both schools in one question and saved them (School then read Ready on the summary; the question exists only while an answer is missing, unit-tested) | Intelligent household onboarding: `household/onboarding.ts` (template engine, readiness, guided questions), `household/onboarding-repository.ts`, `/onboarding` (twelve screens), `(auth)/onboarding-actions.ts`, `school/enrolments.ts`; `household_onboarding`, `onboarding_events`, `household_members.work_arrangement/age_years/age_recorded_on`, `household_invitations.member_id` with `wh.accept_invitation` claiming an unlinked adult (migration `20260928090000`, applied live); new households go straight to setup; Home shows a resume card while setup is unfinished; kit gains `Stepper` and `ChoiceChips` |
+| 2026-09-24 | 22 | 22-001..003 | Done | i18n formatter 16 + catalog 7 unit, localization database suite 9 (a person sets only their own language and formats, an Admin any; region, currency, time zone and default language Admin-only; closed codes only; members record only their own localization events), `verify:live` 185/185, browser golden scenario at 360px and desktop on the real project (Hindi → India → INR → review → Home in Hindi; settings, member languages, bills in the household currency; English; Arabic right-to-left) | Language, locale, currency, time zone and measurement as separate preferences; optional resumable setup after family onboarding; Language & Region settings; 22-004, 22-007 and 22-008 In Progress (core UI only, cross-currency totals audit, RTL beyond the shell and Home) |

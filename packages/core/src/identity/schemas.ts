@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { MembershipLocale } from "../i18n/preferences";
+
 /**
  * Shared identity contracts (story 01-001).
  *
@@ -77,4 +79,6 @@ export type HouseholdMembership = {
   firstSeenAt?: string | null;
   /** When they most recently became head or administrator; null if they are neither. */
   adminSince?: string | null;
+  /** Language, region, currency, time and units — the household's and this person's own (story 22-002). */
+  locale?: MembershipLocale;
 };

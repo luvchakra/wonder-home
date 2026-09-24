@@ -32,6 +32,7 @@ import {
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
 import { IconTile, type IconTone } from "../ui/icon-tile";
+import type { ShellLabels } from "./mobile-header";
 import { MoreTabButton } from "./nav-drawer";
 
 /**
@@ -96,9 +97,12 @@ export type PrimaryNavProps = {
   secondary?: readonly SecondaryNavItem[];
   /** The current pathname, so a domain link can mark itself current. */
   pathname?: string;
+  /** The navigation's words in the viewer's language (story 22-004). */
+  labels?: ShellLabels;
 };
 
-export function PrimaryNav({ active, variant, secondary = [], pathname }: PrimaryNavProps) {
+export function PrimaryNav({ active, variant, secondary = [], pathname, labels }: PrimaryNavProps) {
+  const labelOf = (item: (typeof PRIMARY_NAVIGATION)[number]) => labels?.nav?.[item.key] ?? item.label;
   if (variant === "sidebar") {
     const domains = secondary.filter((item) => item.key !== "settings" && item.key !== "notifications");
     const settings = secondary.find((item) => item.key === "settings");
@@ -119,7 +123,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
             const isActive = item.key === active && !(item.key === "more" && pathname && pathname !== "/more");
             return (
               <li key={item.key}>
-                <SidebarLink href={item.href} icon={Icon} label={item.label} active={isActive} />
+                <SidebarLink href={item.href} icon={Icon} label={labelOf(item)} active={isActive} />
               </li>
             );
           })}
@@ -128,7 +132,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
         {domains.length > 0 ? (
           <>
             <p className="mt-6 mb-1.5 px-3 text-[0.625rem] font-semibold tracking-[0.12em] text-[var(--wh-foreground-subtle)] uppercase">
-              Household
+              {labels?.household ?? "Household"}
             </p>
             <ul className="space-y-0.5">
               {domains.map((item) => (
@@ -151,7 +155,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
             <SidebarLink
               href={settings.href}
               icon={SECONDARY_ICONS[settings.icon]}
-              label="Settings"
+              label={labels?.settings ?? "Settings"}
               active={Boolean(pathname && pathname.startsWith(settings.href))}
             />
           </div>
@@ -181,7 +185,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
               >
                 <Icon className="size-5" />
               </span>
-              <span>{item.label}</span>
+              <span>{labelOf(item)}</span>
             </>
           ) : (
             // The other four sit in a soft pill when they're the current
@@ -195,7 +199,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname }: Primar
               )}
             >
               <Icon className={cn("size-5", isActive && "fill-[var(--wh-primary-soft)]")} />
-              <span>{item.label}</span>
+              <span>{labelOf(item)}</span>
             </span>
           );
           const tabClass = cn(

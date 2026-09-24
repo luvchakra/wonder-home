@@ -1,4 +1,4 @@
-import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Link2, LogOut, MicVocal, Moon, ShieldCheck, Speaker, Trash2, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Languages, Link2, LogOut, MicVocal, Moon, ShieldCheck, Speaker, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -6,6 +6,8 @@ import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { languageInfo } from "@wonderhome/core/i18n/locales";
+import { regionName } from "@wonderhome/core/i18n/options";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
@@ -87,7 +89,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const preferences = (preferenceRows as PreferenceRow[] | null) ?? [];
   const inApp = preferences.find((p) => p.channel === "in_app");
 
+  const { t, preferences: localePreferences } = session.locale;
   const rows: { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href?: string; badge?: string }[] = [
+    // Language, region, currency, time and units (story 22-002) — first,
+    // because it changes how every other screen reads.
+    {
+      icon: Languages,
+      tone: "primary",
+      title: t("settings.languageRegion"),
+      meta: `${languageInfo(localePreferences.language).nativeName} · ${regionName(localePreferences.region, localePreferences.language)} · ${localePreferences.currency}`,
+      href: "/settings/language-region",
+    },
     { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/settings/notifications" },
     { icon: MicVocal, tone: "ai", title: "Voice", meta: voiceNote, href: "/settings/voice" },
     { icon: Speaker, tone: "ai", title: "Voice assistants", meta: "Alexa and Gemini Voice linked to this home, and what each may do", href: "/settings/voice-assistants" },
@@ -142,7 +154,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={UserRound} tone="people" size="sm" /><span className="flex-1 text-sm">Role</span><Badge>{view.roleLabel}</Badge></li>
-              <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={Moon} tone="home" size="sm" /><span className="flex-1 text-sm">Time zone</span><span className="text-xs text-[var(--wh-foreground-muted)]">{membership.household.timezone}</span></li>
+              <li><Link href="/settings/language-region/datetime" className="flex min-h-12 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-3 hover:bg-[var(--wh-surface-muted)]"><IconTile icon={Moon} tone="home" size="sm" /><span className="flex-1 text-sm">{t("field.timezone")}</span><span className="text-xs text-[var(--wh-foreground-muted)]">{membership.household.timezone}</span><ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)] rtl:rotate-180" /></Link></li>
               <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={ShieldCheck} tone="primary" size="sm" /><span className="flex-1 text-sm">What you can do</span><span className="text-xs text-[var(--wh-foreground-muted)]">{view.permissions.length} permissions</span></li>
             </ul>
           </Card>

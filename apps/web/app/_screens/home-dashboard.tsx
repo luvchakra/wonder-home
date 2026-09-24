@@ -16,6 +16,7 @@ import { describeAction, type FamilyEvent } from "@wonderhome/core/family/schedu
 import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
 import { loadOnboarding, loadOnboardingSnapshot } from "@wonderhome/core/household/onboarding-repository";
 import { assessSetup } from "@wonderhome/core/household/setup";
+import { shouldOfferLocaleSetup } from "@wonderhome/core/i18n/preferences";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
 import { cn } from "@wonderhome/core/lib/cn";
@@ -41,6 +42,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 
 import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
+import { PersonalizeCard } from "../_components/personalize-card";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
@@ -222,6 +224,7 @@ function TodayEventRow({ event, timezone }: { event: FamilyEvent; timezone: stri
  */
 export function HomeDashboard({ session }: { session: Session }) {
   const { membership, view, viewer, secondary } = session;
+  const { t } = session.locale;
   const timezone = membership.household.timezone;
   const now = new Date();
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
@@ -235,22 +238,25 @@ export function HomeDashboard({ session }: { session: Session }) {
             8) rather than beside it — a left-to-right scrim keeps the text
             legible over the artwork in both themes, and the illustration's
             own busy content is drawn into its right ~60% for exactly this
-            reason. The date/household chip is the true thing this screen
-            actually knows, never an invented temperature (rule 9:
-            WonderHome has no weather provider). */}
+            reason. In a right-to-left language the artwork, scrim and chip
+            mirror so the text still starts over the quiet side. The
+            date/household chip is the true thing this screen actually
+            knows, never an invented temperature (rule 9: WonderHome has no
+            weather provider); on a phone it sits above the greeting rather
+            than beside it, because a long date in some languages would
+            otherwise run into the greeting (rule 15). */}
         <header className="wh-rise relative min-h-[15.5rem] overflow-hidden rounded-[var(--wh-radius-lg)] sm:min-h-[16rem]">
-          <CozyCornerIllustration className="absolute inset-0 h-full w-full" />
+          <CozyCornerIllustration className="absolute inset-0 h-full w-full rtl:-scale-x-100" />
           <div
             aria-hidden
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(to right, var(--wh-surface) 0%, var(--wh-surface) 38%, transparent 68%)" }}
+            className="absolute inset-0 bg-[linear-gradient(to_right,var(--wh-surface)_0%,var(--wh-surface)_38%,transparent_68%)] rtl:bg-[linear-gradient(to_left,var(--wh-surface)_0%,var(--wh-surface)_38%,transparent_68%)]"
           />
 
           {/* Hidden below `sm`: at phone widths the greeting text block
               (max-w-[80%] below) has nowhere for this to sit without
               overlapping it — the illustration itself is mostly cropped
               out of frame there too, so there is no clear region left. */}
-          <ScriptAccent size="sm" heart className="absolute top-5 left-[40%] hidden max-w-[10rem] leading-[1.15] sm:block">
+          <ScriptAccent size="sm" heart className="absolute start-[40%] top-5 hidden max-w-[10rem] leading-[1.15] sm:block">
             Happier Homes
             <br />
             Happier Humans!
@@ -258,22 +264,22 @@ export function HomeDashboard({ session }: { session: Session }) {
 
           <Link
             href="/today"
-            className="absolute top-4 right-4 flex items-center gap-2 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/90 px-3 py-2 shadow-[var(--wh-shadow-card)] backdrop-blur-sm transition-colors hover:bg-[var(--wh-surface)]"
+            className="relative z-10 mx-4 mt-4 inline-flex items-center gap-2 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/90 px-3 py-2 shadow-[var(--wh-shadow-card)] backdrop-blur-sm transition-colors hover:bg-[var(--wh-surface)] sm:absolute sm:end-4 sm:top-4 sm:m-0"
           >
             <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
-            <span className="min-w-0 text-left">
+            <span className="min-w-0 text-start">
               <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
               <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
             </span>
           </Link>
 
-          <div className="relative z-10 max-w-[80%] space-y-1 p-5 sm:max-w-[42%] sm:p-6">
+          <div className="relative z-10 max-w-[80%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
             <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
             <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
               {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
             </h1>
-            <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">You&apos;re doing great!</p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">A calmer home today, for a brighter tomorrow.</p>
+            <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">{t("home.doingGreat")}</p>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("home.lede")}</p>
           </div>
         </header>
 
@@ -287,6 +293,7 @@ export function HomeDashboard({ session }: { session: Session }) {
 
 async function DashboardBody({ session, now }: { session: Session; now: Date }) {
   const { supabase, membership, view, secondary } = session;
+  const { t } = session.locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
 
@@ -399,7 +406,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   // stands for (rule 9).
   const metrics: ExpandableMetric[] = [
     {
-      label: "Need you",
+      label: t("home.metric.needYou"),
       value: agenda.needsYou.length,
       icon: <IconTile icon={AlertTriangle} tone="attention" size="sm" />,
       details:
@@ -427,7 +434,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         ),
     },
     {
-      label: "Handled",
+      label: t("home.metric.handled"),
       value: handledCount,
       icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
       details:
@@ -450,7 +457,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         ),
     },
     {
-      label: "Upcoming",
+      label: t("home.metric.upcoming"),
       value: upcoming.length,
       icon: <IconTile icon={CalendarHeart} tone="people" size="sm" />,
       details:
@@ -475,7 +482,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         ),
     },
     {
-      label: "Checked",
+      label: t("home.metric.checked"),
       value: agenda.checked,
       icon: <IconTile icon={Sparkles} tone="ai" size="sm" />,
       details:
@@ -505,6 +512,11 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           Home is where the household looks for what needs them today, and
           setup is a thing to go and finish rather than a block to read. */}
       {onboarding ? <OnboardingResumeCard summary={onboarding} /> : setup && !setup.complete ? <SetupProgressCard assessment={setup} variant="compact" /> : null}
+      {/* Language, region and currency (story 22-003): offered once, quietly,
+          until it is done or put away — never while family setup still is. */}
+      {!onboarding && shouldOfferLocaleSetup(membership.locale?.setup) ? (
+        <PersonalizeCard title={t("personalize.title")} body={t("personalize.body")} action={t("personalize.action")} dismissLabel={t("common.dismiss")} />
+      ) : null}
 
       {/* Four counts, two to a row on a phone (rule 19), each opening in
           place onto its real entries (rule 21) instead of only linking away. */}
@@ -513,7 +525,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       {family.length > 0 ? (
         <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
           <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
-            <h2 className="text-base font-semibold tracking-tight">Family status</h2>
+            <h2 className="text-base font-semibold tracking-tight">{t("home.familyStatus")}</h2>
             <PillLink href="/family" tone="quiet">
               See all
             </PillLink>
@@ -558,7 +570,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       {helpers.length > 0 ? (
         <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "45ms" } as React.CSSProperties}>
           <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
-            <h2 className="text-base font-semibold tracking-tight">Househelp</h2>
+            <h2 className="text-base font-semibold tracking-tight">{t("home.househelp")}</h2>
             <PillLink href="/househelper" tone="quiet">
               Manage
             </PillLink>
@@ -661,8 +673,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
             <div className="flex min-w-0 items-start gap-2.5">
               <Sparkles aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-handled)]" />
               <div className="min-w-0">
-                <h2 className="text-base font-semibold tracking-tight">WonderHome handled</h2>
-                <p className="text-xs text-[var(--wh-foreground-muted)]">Here is what we have taken care of.</p>
+                <h2 className="text-base font-semibold tracking-tight">{t("home.handled")}</h2>
+                <p className="text-xs text-[var(--wh-foreground-muted)]">{t("home.handledLede")}</p>
               </div>
             </div>
             <PillLink href="/today" tone="quiet">
@@ -682,7 +694,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
-              <h2 className="text-base font-semibold tracking-tight">Today&apos;s focus</h2>
+              <h2 className="text-base font-semibold tracking-tight">{t("home.todaysFocus")}</h2>
             </div>
             <PillLink href="/today" tone="quiet">
               See all
@@ -719,7 +731,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         <Card className="wh-rise p-4" style={{ "--wh-rise-delay": "150ms" } as React.CSSProperties}>
           <div className="mb-3 flex items-center gap-2.5">
             <Heart aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-people)]" />
-            <h2 className="text-base font-semibold tracking-tight">Family moment</h2>
+            <h2 className="text-base font-semibold tracking-tight">{t("home.familyMoment")}</h2>
           </div>
           {nextMoment ? (
             <>

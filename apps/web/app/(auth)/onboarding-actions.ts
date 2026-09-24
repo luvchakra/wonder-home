@@ -159,7 +159,9 @@ export async function completeAction(): Promise<OnboardingActionState> {
   await recordOnboardingEvent(supabase, { householdId, event: "setup_completed", step: "done" });
   await recordOnboardingEvent(supabase, { householdId, event: "first_use_after_onboarding", step: "done" });
   revalidatePath("/");
-  redirect("/");
+  // Then, once and optionally, how WonderHome should speak to them (story
+  // 22-003) — a separate, skippable step, never part of family setup itself.
+  redirect(membership.locale?.setup.status ? "/" : "/onboarding/personalize");
 }
 
 // ---------------------------------------------------------------------------

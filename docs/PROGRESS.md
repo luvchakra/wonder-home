@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**194 of 196 stories done — 99%**
+**197 of 204 stories done — 96.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 194 |
-| In Progress | 1 |
+| Done | 197 |
+| In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 1 |
+| Not Started | 3 |
 
 ## By module
 
@@ -46,6 +46,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 8 | 8 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
+| 22 Internationalization and Localization | `███░░░░░░░` | 3 | 8 | 3 in progress, 2 not started |
 
 ## What is left
 
@@ -53,6 +54,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
+| `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
+| `22-005` Multilingual HomeTalk | 22 Internationalization and Localization | P0 | Not Started |
+| `22-006` Localized notifications | 22 Internationalization and Localization | P0 | Not Started |
+| `22-007` Multi-currency household records | 22 Internationalization and Localization | P1 | In Progress |
+| `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | In Progress |
 
 ## Every story
 
@@ -406,4 +412,19 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `21-007` Vitals & measurement routines | P1 | Done | `health_measurement_routines` (created first, `cadence_days`/`preferred_time`/`reminder_enabled`/`next_due_on`/`last_completed_on`) and `health_vitals` (`value`/`secondary_value` for a paired reading like blood pressure, free-text `unit`, `status` active/archived, `routine_id` traces a reading back to the routine that produced it), same self-or-guardian RLS shape as every other health entity; `completeRoutine` records the real reading and advances `next_due_on` by the routine's own cadence in one step; `summarizeVitalTrend`/`describeVitalTrend` are pure verifiable arithmetic ("your last N readings were recorded over the past M weeks"), never a stated conclusion; HomeTalk's `log_vital` now actually executes via `createVital` — blood pressure/pulse/steps resolve without an explicit unit (their one conventional unit), every other type requires one or is honestly declined; day-scale reminder sweep (`routine-reminders.ts`) folded into `/platform/retention` alongside appointment/checkup reminders; add/edit/archive/reactivate UI for vitals, add/edit/complete/dismiss/reactivate UI for routines; live QA surfaced and fixed two real gaps — a dismissed routine with no completion history had no path back to "Bring back" (now included in Recent), and HomeTalk only recognized "My X was Y" phrasing (added "Log/Record my X as Y"); live-verified 2026-09-22 |
 | `21-008` Fitness & connected-health scaffolding | P1 | Done | `health_fitness_goals`/`health_fitness_sessions` (new migration, applied live, verified via direct schema/RLS introspection — no local Supabase credentials available in this session to run `verify:live`'s scripted checks), same self-or-guardian RLS shape as every other health entity; `health/health-provider.ts`'s `HealthProvider` is a real registry — manual/home_talk/home_send/calendar declared `live: true`, apple_health_kit/android_health_connect/wearable `live: false` and refused by `assertHealthProviderLive` before any write; `health/fitness.ts`'s goal (active/dismissed, mirroring measurement routines) and session (active/archived, mirroring vitals) services depend only on that abstraction, never a provider SDK. No leaderboard, no guilt messaging, no child fitness surveillance anywhere in the module — a goal or session lives only in Overview's Recent, never escalated to Needs attention. HomeTalk's `set_fitness_goal` ("I want to walk three times a week") now genuinely executes via `createFitnessGoal`, replacing the "not tracked yet" stub from 21-006; `mapFitnessActivity` maps free speech onto the known activity set or keeps the household's own words. Add/edit/dismiss/reactivate UI for goals and add/edit/archive/reactivate for sessions on `/health`, a session optionally linking to the goal it counts toward. `countSessionsInCurrentPeriod` is pure, verifiable arithmetic, never a scored conclusion. OpenAPI extended with the four new routes |
 
-_Generated 2026-09-24 from 22 backlog files._
+### 22 — Internationalization and Localization
+
+3 of 8 done `███░░░░░░░`
+
+| Story | Priority | Status | Notes |
+|---|---|---|---|
+| `22-001` Locale foundation & formatting | P0 | Done | `i18n/locales.ts` (languages, regions, currencies, IANA time zones), `i18n/preferences.ts` (precedence: person → household → region → app default), `i18n/format.ts` (Intl only, Latin digits, a calendar day never shifted by the zone, imperial for presentation only), `i18n/request.ts` sets the locale once per request so the existing date/time/money helpers follow it; 16 formatter tests |
+| `22-002` Preferences & Language & Region settings | P0 | Done | Migration `localization_preferences` (applied live): household `region`/`currency`/`measurement_system`/`default_language` (Admin only, existing `households_update_admin`), person `language`/`date_format`/`time_format`/`measurement_system` (self or Admin); `/settings/language-region` with language, region, currency, date & time and member-languages pages; audit `member.locale_updated`/`household.locale_updated`; 9 RLS tests |
+| `22-003` Optional localization setup | P0 | Done | `/onboarding/personalize` runs after family setup, never in place of it: six steps for an Admin, four for anyone else (they never set the household's region or currency); every step saved, "I'll do this later" resumable, a dismissible Home card for anyone who skipped; localization events recorded by the member themselves |
+| `22-004` Translation catalog & core UI | P0 | In Progress | Own catalog (`i18n/messages/*`, en/hi/mr/es/fr/de/ar, about 115 keys) with plurals, interpolation and English fallback, never a raw key, completeness enforced by the compiler and tests. Localized so far: navigation, Home header and counts, setup, Language & Region settings, the personalize card. Every other screen is still English, and the language page says so |
+| `22-005` Multilingual HomeTalk | P0 | Not Started | PR 2: language line in `systemFor` and the answer briefing, understanding into the same language-neutral intents, HomeBrain facts stay language-neutral, the same gates and validator |
+| `22-006` Localized notifications | P0 | Not Started | PR 2: structured event + params rendered per recipient in their own language |
+| `22-007` Multi-currency household records | P1 | In Progress | The household currency is the default for new bills and transactions only (`CurrencyField` picker with "Another currency…"); every record keeps its own currency, nothing is converted; the two money formatters use Intl. Still to audit: any screen that adds amounts across currencies |
+| `22-008` Right-to-left readiness | P1 | In Progress | `DocumentLocale` sets `lang`/`dir` from the viewer's language; the shell, Home hero, header, wordmark and script accents are direction-aware (logical properties, `rtl:` mirroring, `dir="auto"`), verified in Arabic at 360px and desktop. The remaining screens still need a pass |
+
+_Generated 2026-09-24 from 23 backlog files._

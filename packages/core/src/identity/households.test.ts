@@ -58,8 +58,45 @@ describe("membership mapping", () => {
           ownerMemberId: "m-1",
           keyMemberId: null,
         },
+        // Nothing chosen yet: every preference falls through to the defaults.
+        locale: {
+          household: { region: null, currency: null, timezone: "Asia/Kolkata", measurement: null, language: null },
+          member: { language: null, dateFormat: null, timeFormat: null, measurement: null },
+          setup: { status: null, step: null, promptDismissedAt: null },
+        },
       },
     ]);
+  });
+
+  it("reads a member's own language and the household's region and currency", () => {
+    const [mapped] = toMembership({
+      id: "m-1",
+      display_name: "Kunal",
+      member_type: "adult",
+      language: "hi",
+      time_format: "24h",
+      locale_setup_status: "skipped",
+      locale_setup_step: "region",
+      households: { ...household, region: "IN", currency: "INR", default_language: "mr" },
+      household_roles: [{ role: "head" }],
+    });
+    expect(mapped?.locale?.member.language).toBe("hi");
+    expect(mapped?.locale?.member.timeFormat).toBe("24h");
+    expect(mapped?.locale?.household).toMatchObject({ region: "IN", currency: "INR", language: "mr" });
+    expect(mapped?.locale?.setup).toMatchObject({ status: "skipped", step: "region" });
+  });
+
+  it("never passes free text through as a preference", () => {
+    const [mapped] = toMembership({
+      id: "m-1",
+      display_name: "Kunal",
+      member_type: "adult",
+      language: "Hindi",
+      households: { ...household, currency: "rupee" },
+      household_roles: [{ role: "head" }],
+    });
+    expect(mapped?.locale?.member.language).toBeNull();
+    expect(mapped?.locale?.household.currency).toBeNull();
   });
 
   it("maps the same embed when the client returns it as an array", () => {

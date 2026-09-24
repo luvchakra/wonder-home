@@ -40,6 +40,7 @@
     "./pwa/*": "./src/pwa/*.ts",
     "./webhooks/*": "./src/webhooks/*.ts",
     "./health/*": "./src/health/*.ts",
+    "./i18n/*": "./src/i18n/*.ts",
     "./shell/*": "./src/components/shell/*.tsx",
     "./ui/*": "./src/components/ui/*.tsx"
   },

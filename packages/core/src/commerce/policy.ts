@@ -11,6 +11,8 @@
  * decision, and the API and the tool gate both call it.
  */
 
+import { requestFormat } from "../i18n/request";
+
 export const POLICY_SCOPES = ["any", "category", "merchant", "consumable"] as const;
 export type PolicyScope = (typeof POLICY_SCOPES)[number];
 
@@ -138,10 +140,9 @@ export function evaluatePurchase(
   };
 }
 
-/** Minor units as a household reads them. */
+/** Minor units as the person reads them, in the amount's own currency (the one formatter, `i18n/format.ts`). */
 export function format(minor: number, currency: string): string {
-  const major = (minor / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  return currency === "INR" ? `₹${major}` : `${currency} ${major}`;
+  return requestFormat().money(minor / 100, currency);
 }
 
 /**
