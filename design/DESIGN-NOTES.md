@@ -398,6 +398,25 @@ scroll reveal, one rAF-throttled listener for parallax, and nothing at all when
 `prefers-reduced-motion` is set. No information depends on animation — the
 Playwright suite checks that headings are readable before they scroll in.
 
+The page also carries three small CSS motions in `ui-theme.css`, all removed
+under `prefers-reduced-motion`:
+- **`wh-marquee`** scrolls the language strip. It is a row duplicated once and
+  moved by exactly half its width, pauses on hover, and hides the copy from
+  assistive tech.
+- **`wh-arrive`** plays once when its revealed parent becomes visible, as
+  HomeSend's inbox rows arriving.
+- **`wh-twinkle`** is a slow breath on decorative sparks.
+
+Parallax depth comes from layered, `aria-hidden` colour fields, sparks and
+tiles, each with its own `data-parallax` factor. They sit behind the content
+and never over it. The "What's new" chapter is honest the way pricing is. What
+works today is listed as ready. What is built but waits on an account a person
+has to open says "Coming soon" in words: WhatsApp, forwarded email, Alexa and
+Gemini voice, and paying for a plan. The greetings strip reads the product's
+own `LANGUAGES` list rather than a marketing one. The header shows its inline
+links only from `xl`, where every label fits on one line; below that it uses
+the menu, never wrapped labels (rule 15).
+
 ## Performance rules
 
 "Snappy" is a design property, and these are the rules that keep it:

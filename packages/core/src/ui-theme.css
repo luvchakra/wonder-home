@@ -252,6 +252,41 @@
   }
 }
 
+/* The landing page's language strip: one row, scrolled by exactly its own half. */
+@keyframes wh-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Something arriving in the HomeSend inbox: in from the side, settling into place. */
+@keyframes wh-arrive {
+  from {
+    opacity: 0;
+    transform: translate3d(-28px, 10px, 0) rotate(-3deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A decorative spark: a slow breath of opacity and scale, never a flash. */
+@keyframes wh-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
 @keyframes wh-slide-in-left {
   from {
     transform: translate3d(-100%, 0, 0);
@@ -413,6 +448,29 @@
   animation-delay: var(--wh-rise-delay, 0ms);
 }
 
+/* A strip of content duplicated once, so -50% lands exactly on the start again. */
+.wh-marquee {
+  display: flex;
+  width: max-content;
+  animation: wh-marquee 38s linear infinite;
+}
+@media (hover: hover) {
+  .wh-marquee:hover {
+    animation-play-state: paused;
+  }
+}
+
+/* Plays once, when its revealed parent becomes visible; readable before then. */
+.wh-reveal.is-visible .wh-arrive {
+  animation: wh-arrive var(--wh-duration-slow) var(--wh-ease) both;
+  animation-delay: var(--wh-arrive-delay, 0ms);
+}
+
+.wh-twinkle {
+  animation: wh-twinkle 4.8s ease-in-out infinite;
+  animation-delay: var(--wh-twinkle-delay, 0s);
+}
+
 .wh-hand-wave {
   display: inline-block;
   transform-origin: 70% 70%;
@@ -475,6 +533,9 @@
   }
   .wh-float,
   .wh-rise,
+  .wh-marquee,
+  .wh-twinkle,
+  .wh-reveal.is-visible .wh-arrive,
   .wh-skeleton,
   .wh-slide-in-left,
   .wh-hand-wave,

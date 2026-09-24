@@ -12,6 +12,7 @@ import {
   GraduationCap,
   HandHeart,
   Heart,
+  HeartPulse,
   House,
   Compass,
   Laptop,
@@ -19,6 +20,7 @@ import {
   ListChecks,
   Lock,
   Mail,
+  Paperclip,
   ShieldCheck,
   ShoppingBasket,
   Smartphone,
@@ -48,6 +50,7 @@ import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { LandingHeader } from "./landing/header";
 import { AssistantMock, DashboardMock, DesktopMock, FloatingCard, LaptopFrame, PhoneFrame } from "./landing/mockups";
 import { Reveal } from "./landing/reveal";
+import { LanguageStrip, SendItToWonderHome, WhatsNew } from "./landing/whats-new";
 
 /**
  * The landing page (requirements §25–§45): one page, Apple-style storytelling
@@ -114,8 +117,12 @@ export async function Landing() {
       <main id="wh-main">
         {/* Hero */}
         <section className="relative overflow-hidden" style={{ background: "var(--wh-gradient-hero)" }}>
-          <LeafDecor corner="top-right" size={300} opacity={0.32} />
-          <LeafDecor corner="bottom-left" size={220} opacity={0.22} />
+          <div aria-hidden className="pointer-events-none absolute inset-0" data-parallax="0.12">
+            <LeafDecor corner="top-right" size={300} opacity={0.32} />
+          </div>
+          <div aria-hidden className="pointer-events-none absolute inset-0" data-parallax="-0.08">
+            <LeafDecor corner="bottom-left" size={220} opacity={0.22} />
+          </div>
           <div className="relative mx-auto grid max-w-[var(--wh-content-wide)] items-center gap-10 px-4 pt-12 pb-16 lg:grid-cols-[1fr_1.1fr] lg:px-8 lg:pt-20 lg:pb-28">
             <div className="wh-rise max-w-xl">
               <span className="inline-flex items-center gap-1.5 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)]/80 px-3 py-1 text-xs font-semibold text-[var(--wh-primary)]">
@@ -227,7 +234,7 @@ export async function Landing() {
 
         {/* Features */}
         <Section id="features" eyebrow="Everything your home needs" title="In one place." lede="Powerful features for real life. Each one is a household outcome — not another list to maintain.">
-          <DomainGrid className="lg:grid-cols-5">
+          <DomainGrid className="lg:grid-cols-4">
             {[
               { icon: Users, tone: "people", title: "Family & Profiles", description: "Everyone together. Without the coordination headache." },
               { icon: Clock3, tone: "primary", title: "Today", description: "Your day. Your focus." },
@@ -237,6 +244,8 @@ export async function Landing() {
               { icon: Wallet, tone: "money", title: "Bills & Finance", description: "Stay on top. Stress less." },
               { icon: GraduationCap, tone: "school", title: "Kids & School", description: "All school info in one place." },
               { icon: HandHeart, tone: "people", title: "Househelper", description: "Support that keeps home running." },
+              { icon: HeartPulse, tone: "health", title: "Health & Fitness", description: "Check-ups and routines, kept private." },
+              { icon: Paperclip, tone: "primary", title: "HomeSend", description: "Snap it, send it, sorted." },
               { icon: BadgeCheck, tone: "ai", title: "HomeBrain Review", description: "Your home, understood." },
               { icon: Sparkles, tone: "ai", title: "AI Assistant", description: "Always here for your family." },
             ].map((item, index) => (
@@ -246,6 +255,10 @@ export async function Landing() {
             ))}
           </DomainGrid>
         </Section>
+
+        <WhatsNew />
+        <SendItToWonderHome />
+        <LanguageStrip />
 
         {/* AI story */}
         <section id="families" className="py-20 lg:py-28" style={{ background: "var(--wh-gradient-hero)" }}>
@@ -261,7 +274,7 @@ export async function Landing() {
                 You don&apos;t have to tell WonderHome everything. It learns the rhythm of your home.
               </h2>
               <p className="mt-5 max-w-lg text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
-                Say it or type it — &ldquo;Plan a family outing this weekend&rdquo; — and WonderHome checks availability, preferences and what&apos;s already planned, then shows you exactly what it would do before it does it.
+                Say it or type it, in the language your family speaks at home — &ldquo;Plan a family outing this weekend&rdquo; — and WonderHome checks availability, preferences and what&apos;s already planned, then shows you exactly what it would do before it does it.
               </p>
               <ol className="mt-8 flex flex-wrap items-center gap-2 text-xs font-semibold">
                 {["Observe", "Understand", "Plan", "Act", "Monitor", "Result", "Learn"].map((step, index, all) => (
