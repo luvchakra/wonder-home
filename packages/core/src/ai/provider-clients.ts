@@ -24,6 +24,8 @@ export const MODEL_TIMEOUT_MS = {
   compose: 15_000,
   classify: 30_000,
   vision: 30_000,
+  /** Putting one checked reply into the person's language (story 22-005): short, and the English is always there to fall back on. */
+  translate: 8_000,
   /** Minting a short-lived Live API token (Gemini Voice): one small request. */
   live_token: 10_000,
 } as const;

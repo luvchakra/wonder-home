@@ -174,13 +174,49 @@ export type PendingProposal = {
 
 export type ShortReply = "affirm" | "decline" | "unclear";
 
-export function classifyShortReply(utterance: string): ShortReply {
-  const normalized = utterance.trim().toLowerCase().replace(/[.!]+$/, "");
+/**
+ * A bare yes or no in the other languages WonderHome speaks (story 22-005),
+ * in their own script and as commonly typed in Latin letters. Whole replies
+ * only, exactly as the English ones: a yes that approves something is never
+ * found inside a longer sentence.
+ */
+const AFFIRM_ELSEWHERE: ReadonlySet<string> = new Set([
+  // Hindi
+  "हाँ", "हां", "हाँ जी", "हां जी", "जी हाँ", "जी हां", "जी", "ठीक है", "कर दो", "haan", "haan ji", "han", "ha ji", "haa", "theek hai", "thik hai", "kar do",
+  // Marathi
+  "हो", "होय", "हो करा", "चालेल", "ho", "hoy", "chalel",
+  // Spanish
+  "sí", "si", "vale", "claro", "hazlo",
+  // French
+  "oui", "d'accord", "vas-y", "allez-y",
+  // German
+  "ja", "jawohl", "mach das", "in ordnung",
+  // Arabic
+  "نعم", "أجل", "حسنا", "حسناً", "موافق",
+]);
 
-  if (/^(yes|yep|yeah|sure|ok|okay|do it|go ahead|please do|confirm)$/.test(normalized)) {
+const DECLINE_ELSEWHERE: ReadonlySet<string> = new Set([
+  // Hindi
+  "नहीं", "नही", "मत करो", "रहने दो", "nahi", "nahin", "mat karo", "rehne do",
+  // Marathi
+  "नाही", "नको", "nako",
+  // Spanish
+  "no gracias", "déjalo", "cancela",
+  // French
+  "non", "annule", "laisse tomber",
+  // German
+  "nein", "abbrechen", "lass es",
+  // Arabic
+  "لا", "كلا", "ألغ", "إلغاء",
+]);
+
+export function classifyShortReply(utterance: string): ShortReply {
+  const normalized = utterance.trim().toLowerCase().replace(/[.!।؟?]+$/u, "").trim();
+
+  if (/^(yes|yep|yeah|sure|ok|okay|do it|go ahead|please do|confirm)$/.test(normalized) || AFFIRM_ELSEWHERE.has(normalized)) {
     return "affirm";
   }
-  if (/^(no|nope|don'?t|cancel|stop|not now|leave it)$/.test(normalized)) return "decline";
+  if (/^(no|nope|don'?t|cancel|stop|not now|leave it)$/.test(normalized) || DECLINE_ELSEWHERE.has(normalized)) return "decline";
   return "unclear";
 }
 

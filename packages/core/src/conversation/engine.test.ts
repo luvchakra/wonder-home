@@ -234,6 +234,14 @@ describe("HomeBrain 2.0 modes in the engine (Wave 2 §11)", () => {
     expect(result.text).not.toMatch(/\bdone\b/i);
   });
 
+  it("a yes or a no in the person's own language settles the proposal like the English one (story 22-005)", async () => {
+    const pending = pendingFrom({ id: "a-1", summary: "Pay the electricity bill", createdAt: NOW });
+    expect((await converse(turn({ utterance: "हाँ", pending }))).kind).toBe("approve");
+    expect((await converse(turn({ utterance: "नहीं", pending }))).kind).toBe("reject");
+    // "Yes, but…" in any language is not a yes.
+    expect((await converse(turn({ utterance: "हाँ, पर कल", pending }))).kind).not.toBe("approve");
+  });
+
   it("reads 'why are you asking me this?' as a question about the question, not its answer", async () => {
     const result = await converse(
       turn({

@@ -270,7 +270,19 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   you mean Manan…"); two equally likely ones are one question. Every
   §21 example and the §22 matrix are covered deterministically in
   `conversation/evaluation.test.ts` — extend it, never loosen it, when an
-  understanding changes.
+  understanding changes. A person who uses another language (story
+  22-005) is read into the same language-neutral intent (`languageLine` in
+  `systemFor`). Their reply is composed and validated in English and put
+  into their language only through `conversation/reply-language.ts`:
+  - names, items, dates, times, amounts, numbers and links are tokens the
+    translator never sees;
+  - a translation that drops, repeats or invents one is refused;
+  - a reply carrying a content class the household has not agreed may
+    reach its provider (`REPLY_CLASSES`, the answer's facts) stays in
+    English, with a line saying why.
+
+  The English is always the record. A new action gets a `REPLY_CLASSES`
+  entry.
 - **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`'s
   `understand`/answer-composition seam) is the reasoning behind a reply: a
   real model call, gated by the same consent/minimisation/entitlement

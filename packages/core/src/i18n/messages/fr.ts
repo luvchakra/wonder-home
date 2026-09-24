@@ -129,4 +129,8 @@ export const fr: Catalog = {
   "member.adult": "Adulte",
   "member.child": "Enfant",
   "member.helper": "Aide à domicile",
+
+  "hometalk.english.notPermitted": "Cette réponse est en anglais : votre foyer n’a pas accepté d’envoyer son contenu à un fournisseur de modèles pour la traduire.",
+  "hometalk.english.unchecked": "Cette réponse est en anglais : sa traduction n’a pas pu être vérifiée, vous voyez donc les mots que WonderHome a vérifiés.",
+  "hometalk.english.noModel": "Cette réponse est en anglais : aucun fournisseur de modèles n’est disponible pour la traduire pour le moment.",
 };

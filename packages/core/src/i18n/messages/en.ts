@@ -137,6 +137,10 @@ export const en = {
   "member.adult": "Adult",
   "member.child": "Child",
   "member.helper": "Household help",
+
+  "hometalk.english.notPermitted": "This reply is in English: your household has not agreed to send what it is about to a model provider for translation.",
+  "hometalk.english.unchecked": "This reply is in English: its translation could not be checked, so you see the words WonderHome checked.",
+  "hometalk.english.noModel": "This reply is in English: no model provider is available to translate it right now.",
 } as const;
 
 export type MessageKey = keyof typeof en;

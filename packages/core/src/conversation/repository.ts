@@ -49,10 +49,29 @@ export type ConversationAction = {
 export type ConversationMessage = {
   id: string;
   role: "member" | "assistant" | "system";
+  /** What WonderHome said, as it was validated: always the English an assistant reply was checked in. */
   content: string;
   createdAt: Date;
   action: ConversationAction | null;
+  /**
+   * How an assistant reply was shown to a person who does not use English
+   * (story 22-005): the checked translation, or — when it stayed in English
+   * — why. Never a second record of what happened; `content` is that.
+   */
+  localized?: ReplyShown | null;
 };
+
+export type ReplyShown = { language: string; text: string | null; fallback: string | null };
+
+export function replyShownFrom(metadata: unknown): ReplyShown | null {
+  const localized = (metadata as { localized?: unknown } | null)?.localized as Record<string, unknown> | undefined;
+  if (!localized || typeof localized.language !== "string") return null;
+  return {
+    language: localized.language,
+    text: typeof localized.text === "string" ? localized.text : null,
+    fallback: typeof localized.fallback === "string" ? localized.fallback : null,
+  };
+}
 
 /** The member's open session, created if there is none. */
 /**
@@ -106,7 +125,7 @@ export async function listMessages(
   const [{ data: messages, error }, { data: actions }] = await Promise.all([
     supabase
       .from("conversation_messages")
-      .select("id, role, content, created_at")
+      .select("id, role, content, created_at, metadata")
       .eq("household_id", householdId)
       .eq("session_id", sessionId)
       .order("created_at", { ascending: false })
@@ -132,6 +151,7 @@ export async function listMessages(
       content: row.content as string,
       createdAt: new Date(row.created_at as string),
       action: byMessage.get(row.id as string) ?? null,
+      localized: row.role === "assistant" ? replyShownFrom(row.metadata) : null,
     }))
     .reverse();
 }
