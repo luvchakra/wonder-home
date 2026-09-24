@@ -57,7 +57,13 @@ export default defineConfig({
   },
   projects: [
     { name: "mobile", use: { ...devices["Pixel 7"], launchOptions: { executablePath } } },
-    { name: "desktop", use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } } },
+    // The API-only specs never open a page, so a second viewport would run
+    // the identical requests twice (164 of 432 tests). They run once, on mobile.
+    {
+      name: "desktop",
+      testIgnore: /(api-contract|domains)\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+    },
   ],
   webServer: {
     // E2E_SKIP_BUILD is set by callers that already ran `npm run build`

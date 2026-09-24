@@ -21,7 +21,7 @@
     "lint:migrations": "node scripts/lint-migration-schema.mjs",
     "lint:embeds": "node scripts/lint-postgrest-embeds.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
-    "test:db": "node --test --test-concurrency=4 scripts/test-*-rls.mjs",
+    "test:db": "node scripts/setup-test-db.mjs --template && node --test --test-concurrency=4 scripts/test-*-rls.mjs",
     "lint:secrets": "node scripts/lint-secrets.mjs",
     "verify:live": "node scripts/verify-live-project.mjs",
     "qa:test-user": "node scripts/qa-test-user.mjs",

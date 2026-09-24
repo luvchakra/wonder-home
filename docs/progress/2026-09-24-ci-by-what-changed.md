@@ -43,3 +43,29 @@ change, so those gates still apply to every PR that changes code.
 ## Where
 
 `.github/workflows/ci.yml`, in the `changes` job and each job's `if:`.
+
+## Follow-up: less repeated work inside each job
+
+Nothing below removes a test. It removes work that was repeated.
+
+- **Database suite: migrate once, copy per file.** Each of the 35 RLS test
+  files used to replay all 85 migrations into its own database, which took
+  about 10 s each.
+  - `scripts/setup-test-db.mjs` now builds one template database, named by a
+    hash of the migrations and the shim, and each file's database is a copy
+    of it (`create database … template …`).
+  - `npm run test:db` builds the template first, so files starting together
+    never race to build it.
+  - A changed migration changes the hash, so a stale schema is never reused.
+  - Locally the 477 tests went from 72 s to 42 s, including the one-time
+    template build.
+- **Browser suite: API specs run once.** `api-contract.spec.ts` and
+  `domains.spec.ts` never open a page. They ran in both the mobile and the
+  desktop project, so 164 identical requests were made twice. The desktop
+  project now ignores them.
+  - The suite went from 432 tests to 268, and every spec still runs at
+    least once.
+  - Locally: 268 passed in 40 s.
+- **Unit tests are unchanged.** 2,600 tests take about 35 s in their own
+  parallel job and are not on the critical path, so removing any would buy
+  no CI time.
