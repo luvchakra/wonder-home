@@ -136,6 +136,62 @@ export async function listMessages(
     .reverse();
 }
 
+/** A message found by searching the member's own conversation. */
+export type MessageMatch = { id: string; role: "member" | "assistant"; content: string; createdAt: Date };
+
+/**
+ * A search term as an `ilike` pattern: matched anywhere, case-insensitive,
+ * with the pattern's own wildcards (`%`, `_`) and its escape character taken
+ * literally, so "50%" finds "50%" rather than everything starting "50".
+ * Null when there is nothing worth searching for.
+ */
+export function messageSearchPattern(query: string): string | null {
+  const term = query.trim().replace(/\s+/g, " ").slice(0, 100);
+  if (term.length < 2) return null;
+  return `%${term.replace(/[\\%_]/g, (match) => `\\${match}`)}%`;
+}
+
+/**
+ * Searches what this member said to WonderHome and what it said back, in
+ * every conversation of theirs in this household, newest first. Their own
+ * sessions only: a conversation another member shared with the household is
+ * theirs to search, not this one's. RLS decides what is readable at all.
+ */
+export async function searchMessages(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string; query: string; limit?: number },
+): Promise<MessageMatch[]> {
+  const pattern = messageSearchPattern(input.query);
+  if (!pattern) return [];
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from("conversation_sessions")
+    .select("id")
+    .eq("household_id", input.householdId)
+    .eq("member_id", input.memberId);
+  if (sessionsError) throw new Error(`searchMessages failed: ${sessionsError.code ?? "unknown"}`);
+  const sessionIds = ((sessions as Row[] | null) ?? []).map((row) => row.id as string);
+  if (sessionIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("conversation_messages")
+    .select("id, role, content, created_at")
+    .eq("household_id", input.householdId)
+    .in("session_id", sessionIds)
+    .in("role", ["member", "assistant"])
+    .ilike("content", pattern)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(input.limit ?? 30, 50));
+  if (error) throw new Error(`searchMessages failed: ${error.code ?? "unknown"}`);
+
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    role: row.role as MessageMatch["role"],
+    content: row.content as string,
+    createdAt: new Date(row.created_at as string),
+  }));
+}
+
 /**
  * The last few turns of a session, oldest first — what an understanding
  * needs to resolve "actually make it 7" against what was said before.

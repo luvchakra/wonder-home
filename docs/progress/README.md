@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [HomeTalk: the mark and a message search in the header, and no empty band between the composer and the tab bar](2026-09-24-hometalk-search-and-bottom-gap.md) |
 | 2026-09-24 | [HomeTalk shows a time on every message and a date between days (Today, Yesterday, the full date), always in the household's own time zone](2026-09-24-hometalk-message-times.md) |
 | 2026-09-24 | [HomeTalk composer: two rows, `+` for HomeSend, and a WonderHome / Gemini Live picker for live conversation (no other model brands)](2026-09-24-hometalk-composer-redesign.md) |
 | 2026-09-24 | [CI runs only what a change can affect: docs-only PRs run just the tracker check, and database, unit and e2e jobs run when their area changed; main always runs everything](2026-09-24-ci-by-what-changed.md) |

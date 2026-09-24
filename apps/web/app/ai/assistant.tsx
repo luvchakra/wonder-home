@@ -381,7 +381,7 @@ export function Assistant({
     // Exactly the space between the header and main's own bottom padding (which
     // already clears the tab bar and its raised button), so the page itself
     // never scrolls: the conversation does, inside.
-    <div className="flex h-[calc(100dvh-var(--wh-header-height)-env(safe-area-inset-top)-var(--wh-tabbar-height)-var(--wh-tabbar-raised-clearance)-1rem)] min-h-0 flex-col lg:h-[calc(100dvh-var(--wh-header-height)-4.5rem)]">
+    <div className="flex h-[calc(100dvh-var(--wh-header-height)-env(safe-area-inset-top)-var(--wh-tabbar-height)-var(--wh-tabbar-raised-overhang)-1rem)] min-h-0 flex-col lg:h-[calc(100dvh-var(--wh-header-height)-4.5rem)]">
       {quiet ? (
         // Scrolls inside itself when a short phone cannot fit it all, so the
         // composer below keeps its place above the tab bar; `m-auto` centres
@@ -417,6 +417,7 @@ export function Assistant({
             {/* A date between the days, as a messaging app shows it. */}
             {message.at && dayChanges(messages, index, timeZone) ? <ChatDayDivider label={messageDayLabel(new Date(message.at), timeZone)} /> : null}
             <ChatMessage
+              id={`message-${message.id}`}
               role={message.role}
               name={memberName}
               speaker={message.speaker}

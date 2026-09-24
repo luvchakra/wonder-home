@@ -20,10 +20,22 @@ export type AppShellProps = {
   /** Header for a subpage: a back chevron and a title. */
   back?: { href: string; label: string };
   title?: string;
+  /**
+   * A screen's own search, in the header in place of the title: the mark
+   * beside it on a phone, and in place of the global search on desktop. The
+   * title still names the page, for a screen reader.
+   */
+  headerSearch?: ReactNode;
   /** Optional context rail; desktop only, per the UI spec's desktop behaviour. */
   contextPanel?: ReactNode;
   /** Lets a screen use the wide desktop column (calendar, meals grid). */
   wide?: boolean;
+  /**
+   * A screen that fills the viewport down to the tab bar and scrolls inside
+   * itself (HomeTalk): it stops just clear of the raised button rather than
+   * the full clearance a scrolling page keeps, so no empty band is left.
+   */
+  fill?: boolean;
   className?: string;
 };
 
@@ -41,8 +53,10 @@ export function AppShell({
   pathname,
   back,
   title,
+  headerSearch,
   contextPanel,
   wide = false,
+  fill = false,
   className,
 }: AppShellProps) {
   const activeItem = PRIMARY_NAVIGATION.find((item) => item.key === active);
@@ -61,14 +75,17 @@ export function AppShell({
           <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} />
 
           <div className="min-w-0 flex-1">
-            <MobileHeader viewer={viewer} back={back} title={title} />
+            <MobileHeader viewer={viewer} back={back} title={title} search={headerSearch} />
 
             <div className="lg:flex lg:justify-center">
               <SwipeMain
                 active={active}
                 ariaLabel={activeItem?.purpose}
                 className={cn(
-                  "mx-auto w-full px-4 pt-4 pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance))] lg:px-8 lg:pt-6 lg:pb-12",
+                  "mx-auto w-full px-4 pt-4 lg:px-8 lg:pt-6 lg:pb-12",
+                  fill
+                    ? "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-overhang))]"
+                    : "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance))]",
                   wide ? "max-w-[var(--wh-content-wide)]" : "max-w-[var(--wh-content-max)]",
                 )}
               >
