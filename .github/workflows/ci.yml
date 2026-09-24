@@ -95,6 +95,23 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
+      # tsc's incremental build info and ESLint's content-keyed cache: warm,
+      # typecheck and lint take seconds instead of most of a minute. Both
+      # re-check whatever changed (tsc follows dependencies; the lint rules
+      # use no type information, so a file's result depends on it alone).
+      # Pull requests restore main's; only main saves.
+      - name: Restore typecheck and lint caches
+        if: env.CODE == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/web/tsconfig.tsbuildinfo
+            packages/core/tsconfig.tsbuildinfo
+            apps/web/.eslintcache
+          key: lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Typecheck
         if: env.CODE == 'true'
         run: npm run typecheck
@@ -102,6 +119,16 @@ jobs:
       - name: Lint
         if: env.CODE == 'true'
         run: npm run lint
+
+      - name: Save typecheck and lint caches
+        if: env.CODE == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            apps/web/tsconfig.tsbuildinfo
+            packages/core/tsconfig.tsbuildinfo
+            apps/web/.eslintcache
+          key: lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
       - name: Migration schema lint
         if: env.CODE == 'true'
@@ -166,6 +193,12 @@ jobs:
     needs: changes
     if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
+    # Two shards, each with its own server and template, so the ~35 test
+    # files run on eight cores instead of four.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
       PGHOST: localhost
       PGPORT: 5432
@@ -199,8 +232,12 @@ jobs:
           sudo systemctl start postgresql.service
           sudo -u postgres psql -q -c "alter user postgres password 'postgres'"
 
-      - name: Schema and authorization tests
-        run: npm run test:db
+      - name: Schema and authorization tests (shard ${{ matrix.shard }} of 2)
+        run: |
+          node scripts/setup-test-db.mjs --template
+          files=$(ls scripts/test-*-rls.mjs | awk -v n=${{ matrix.shard }} '(NR - 1) % 2 == n - 1')
+          echo "$files"
+          node --test --test-concurrency=4 $files
 
   # Build and browser smoke tests run against the placeholder project, no
   # database needed.

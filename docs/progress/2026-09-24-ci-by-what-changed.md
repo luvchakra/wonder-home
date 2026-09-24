@@ -113,3 +113,20 @@ container. Changes:
   before.
 - **Raising database-test concurrency from 4 to 8 was tried and dropped.**
   The runner has 4 cores, and 8 was no faster.
+- **Typecheck and lint caches.** Measured on the headless-shell run: the
+  lint job had become the longest, at 1:07, with typecheck taking 32 s and
+  ESLint 16 s.
+  - `packages/core` now typechecks incrementally, as `apps/web` already
+    did.
+  - ESLint uses a content-keyed cache (`--cache-strategy content`). The
+    rules use no type information, so each file's result depends only on
+    that file.
+  - Measured locally, warm against cold:
+    - web tsc: 3.8 s against 19.5 s;
+    - core tsc: 3.3 s against 14.2 s;
+    - eslint: 1.6 s against 16.3 s.
+  - The build info and the ESLint cache are restored from main on every PR.
+    Only main saves them.
+- **Database tests in two shards.** A matrix job runs about 18 files per
+  shard. Each shard has its own Postgres and template. Locally the shards
+  ran 240 and 237 tests, all 477 between them.
