@@ -546,6 +546,30 @@ deployment sets `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
 `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN`.
 Scheduled (future-dated) notifications are not yet sent beyond the app.
 
+Smart notifications (module 23, `packages/core/src/notifications/`) are
+reminders about real records, never lines of text fired and forgotten.
+- **Sources.** `sources.ts` derives each reminder from a record a domain
+  already keeps: an unpaid bill, pending school work, a planned meal, the
+  grocery list, pet care, a family plan.
+- **Reconcile.** `reconcile.ts` brings the notifications table in line
+  with those records (create, update, resolve, expire; idempotent). It runs
+  after any signed-in page (throttled), before `/notifications` reads, and
+  from the daily cron.
+- **Timing.** `policies.ts` defines when each kind lands, as per-category
+  presets a person picks from (`reminder_preferences`). Every time is on
+  the household's clock (`timing.ts`); never read `getUTCHours()` for a
+  person's day.
+- **Recipient.** One person (`plan.ts`): the record's owner, then the
+  responsibility's owner, a child's guardian, the backup, then the Admin.
+- **What a person may change.** A recipient changes a reminder's state
+  (seen, done, dismissed, snoozed forward up to 31 days), never its
+  content; a trigger enforces this, and every transition is recorded.
+- **Actions.** Acting on the thing itself goes through the domain's own
+  service. The reminder resolves because its source changed, not because a
+  notification wrote to a domain table.
+- **New kinds.** A new kind of reminder is a new source plus a policy
+  entry, never a new writer of `notifications`.
+
 ## Non-functional gates
 Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests are release blockers. Core API targets are p95 <=500ms reads and <=800ms ordinary writes excluding external provider latency.
 

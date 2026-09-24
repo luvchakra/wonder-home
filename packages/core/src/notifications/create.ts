@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import type { NotificationDecision } from "./decide";
 import { deliverNotification } from "./deliver";
+import type { NotificationCategory } from "./policies";
 
 /**
  * Turning a decision into a row (stories 06-001 through 06-007).
@@ -26,6 +27,9 @@ export type NotifyInput = {
   decision: Extract<NotificationDecision, { kind: "notify" }>;
   title: string;
   body: string;
+  /** What it is about (module 23), so the feed can file and filter it. */
+  category?: NotificationCategory;
+  source?: { type: "health_appointment" | "health_routine" | "health_checkup" | "approval"; id: string | null };
 };
 
 export async function createNotification(
@@ -54,6 +58,11 @@ export async function createNotification(
     action: decision.action,
     decision_factors: decision.factors,
     scheduled_for: decision.deliverAt.toISOString(),
+    // A high risk is marked as one; everything else stays ordinary (§35: High is rare).
+    priority: decision.factors.riskLevel === "high" ? "high" : "normal",
+    category: input.category ?? "system",
+    source_type: input.source?.type ?? null,
+    source_id: input.source?.id ?? null,
   };
 
   if (existing) {

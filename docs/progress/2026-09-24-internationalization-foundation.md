@@ -62,6 +62,10 @@
   - No horizontal overflow.
 - **Full gate:** `npm run verify` (see the PR).
 
+## Cleanup
+
+After the merge (PR #156) the QA user `7b051032-6441-49e7-9c12-d25e210e6c1a` and its household "QA L10n Home" (`15a6216a-29f1-4144-8ada-a52300165856`) were deleted. A SQL count found 0 users, 0 households and 0 members left. The dev server was stopped and the scratch files removed.
+
 ## Still open
 
 - **22-004:** translate the remaining screens (the family-setup resume card, "See all", domain tiles, and every domain screen).

@@ -160,7 +160,14 @@ async function notifyOverdueHealth(
   const decision = decideNotification(event, { candidates, openThreadKeys: [], now: new Date() });
   if (decision.kind !== "notify") return { performed: false, reason: "Nothing new to tell anyone about this yet." };
 
-  const created = await createNotification(admin, { householdId, decision, title: "Health checkup overdue", body: decision.impact });
+  const created = await createNotification(admin, {
+    householdId,
+    decision,
+    title: "Health checkup overdue",
+    body: decision.impact,
+    category: "appointments",
+    source: { type: "health_checkup", id: checkup.id },
+  });
   return created
     ? { performed: true, detail: `Told ${recipient.memberId === checkup.memberId ? "them" : "a guardian"} about the overdue checkup.` }
     : { performed: false, reason: "Could not send the reminder just now." };
