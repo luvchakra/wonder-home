@@ -100,7 +100,7 @@ export function ChannelPreferenceCard({
             type="tel"
             placeholder="+15551234567"
             defaultValue={preference.target ?? ""}
-            hint="With the country code, e.g. +15551234567."
+            hint="Where reminders are sent, with the country code, e.g. +15551234567. Sending things to WonderHome from WhatsApp is set up under Settings → WhatsApp."
           />
         ) : null}
 

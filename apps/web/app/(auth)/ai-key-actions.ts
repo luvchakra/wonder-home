@@ -49,6 +49,7 @@ export async function saveAiKey(_previous: ActionState, formData: FormData): Pro
   }
 
   revalidatePath("/settings");
+  revalidatePath("/settings/ai");
   return { notice: "Saved. Your household's own key is in use from now on." };
 }
 
@@ -63,5 +64,6 @@ export async function removeAiKey(_previous: ActionState, formData: FormData): P
   }
 
   revalidatePath("/settings");
+  revalidatePath("/settings/ai");
   return { notice: "Removed. WonderHome's own key takes over again." };
 }

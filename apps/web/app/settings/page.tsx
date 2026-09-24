@@ -1,130 +1,152 @@
-import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Languages, Link2, LogOut, MessageCircle, MicVocal, Moon, ShieldCheck, Speaker, Trash2, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MessageCircle, MicVocal, ShieldCheck, Speaker, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { describeDataUse } from "@wonderhome/core/ai/privacy";
-import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
+import { getVerifiedUser } from "@wonderhome/core/db/server";
 import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { regionName } from "@wonderhome/core/i18n/options";
 import { listMembers } from "@wonderhome/core/identity/households";
-import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
-import { describeVoice } from "@wonderhome/core/voice/settings";
-import { describeTrial } from "@wonderhome/core/billing/experiments";
-import { listPlans, loadSubscription, usageSummary } from "@wonderhome/core/billing/repository";
-import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
+import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
-import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
-
-import { getVerifiedUser } from "@wonderhome/core/db/server";
+import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
+import { describeVoice } from "@wonderhome/core/voice/settings";
+import { whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
+import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
 import { signOut } from "../(auth)/actions";
-import { removeAiKey, saveAiKey } from "../(auth)/ai-key-actions";
-import { saveDataUseAction } from "../(auth)/privacy-actions";
-import { AiKeyForm } from "../_components/ai-key-form";
-import { DataUseForm } from "../_components/data-use-form";
 import { MemberAvatarControl } from "../_components/member-avatar-control";
 import { MemberProfileForm } from "../_components/member-profile-form";
-import { Alert } from "@wonderhome/core/ui/alert";
-
-import { PlanForm } from "../_components/plan-form";
-import { formatDate, requireSession } from "../_lib/session";
+import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Settings & Profile" };
 export const dynamic = "force-dynamic";
 
 type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | null; quiet_until: number | null };
+type Row = { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href: string };
+
+/** One group of settings: every row opens the one place that setting is edited. */
+function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <section>
+      <SectionHeader title={title} />
+      <Card className="p-2">
+        <ul className="divide-y divide-[var(--wh-border)]">
+          {rows.map((row) => (
+            <li key={row.href}>
+              <Link href={row.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 hover:bg-[var(--wh-surface-muted)]">
+                <IconTile icon={row.icon} tone={row.tone} size="sm" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{row.title}</span>
+                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
+                </span>
+                <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] rtl:rotate-180" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </section>
+  );
+}
 
 /**
- * Settings & Profile (requirements §23). What is here is real: the profile,
- * the household role, notification channels with quiet hours, the connected
- * accounts, and sign-out. What is not built yet — MFA, data export, deletion —
- * is listed as coming rather than as a button that does nothing.
+ * Settings & Profile: one landing page, and one editor per setting (the
+ * Settings consolidation). The profile is edited here; everything else is a
+ * row that opens its own canonical page — Language & Region, Notifications,
+ * Voice, Voice assistants, the AI assistant, Privacy, WhatsApp, Connected
+ * accounts and the plan. Nothing is listed that is not built, and a row only
+ * appears where this person can use what it opens.
  */
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
-  const { checkout } = await searchParams;
+export default async function SettingsPage() {
   const session = await requireSession("/settings");
   const { supabase, membership, view, viewer, secondary } = session;
-  const [user, { data: preferenceRows }, credential, dataUse, voiceSettings, members] = await Promise.all([
+  const householdId = membership.household.id;
+  const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
+  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
-    credentialStatus(supabase, membership.household.id).catch(() => ({ configured: false, provider: null, updatedAt: null })),
-    loadDataUse(supabase, membership.household.id),
-    loadVoiceSettings(supabase, membership.household.id),
-    listMembers(supabase, membership.household.id, membership.household.ownerMemberId).catch(() => []),
+    credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
+    loadVoiceSettings(supabase, householdId),
+    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    loadSubscription(supabase, householdId).catch(() => null),
+    listPlans(supabase).catch(() => []),
+    whatsappReady ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
   ]);
   const me = members.find((member) => member.id === membership.memberId) ?? null;
 
-  const [subscription, plans, usage] = await Promise.all([
-    loadSubscription(supabase, membership.household.id).catch(() => null),
-    listPlans(supabase).catch(() => []),
-    usageSummary(supabase, membership.household.id).catch(() => ({ planKey: null, features: [] })),
-  ]);
-  // Only what is actually counted — an unlimited feature with no fair-use
-  // level has no "used of" to show, and "used of unlimited" is not
-  // arithmetic anybody asked for.
-  const metered = usage.features.filter((feature) => feature.used !== null && (feature.limit !== null || feature.fairUseLimit !== null));
-  // What the plan says about spikes and heavy use (story 20-007), in words.
-  const policyLines = usage.features.flatMap((feature) => feature.policies);
-  // A trial is never hidden from the household it applies to (story 20-008).
-  const trialLines = usage.features.filter((feature) => feature.trial).map((feature) => describeTrial(feature.featureKey));
-
   // Which key actually answers for this household, decided in one place so
-  // the screen can never disagree with the server about it.
-  const key = resolveModelKey(
-    credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null,
-    platformKey(),
-  );
+  // the row can never disagree with the AI Assistant page about it.
+  const key = resolveModelKey(credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null, platformKey());
   const keyNote = describeKeySource(key.source);
-  const manages = view.permissions.includes("household.manage");
-  const voiceNote = describeVoice(voiceSettings);
   const preferences = (preferenceRows as PreferenceRow[] | null) ?? [];
   const inApp = preferences.find((p) => p.channel === "in_app");
-
+  const planName = plans.find((plan) => plan.key === subscription?.planKey)?.name ?? "Free";
+  const myWhatsApp = whatsappLinks.some((link) => link.memberId === membership.memberId);
   const { t, preferences: localePreferences } = session.locale;
-  const rows: { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href?: string; badge?: string }[] = [
+
+  const personal: Row[] = [
     // Language, region, currency, time and units (story 22-002) — first,
     // because it changes how every other screen reads.
     {
       icon: Languages,
       tone: "primary",
       title: t("settings.languageRegion"),
-      meta: `${languageInfo(localePreferences.language).nativeName} · ${regionName(localePreferences.region, localePreferences.language)} · ${localePreferences.currency}`,
+      meta: `${languageInfo(localePreferences.language).nativeName} · ${regionName(localePreferences.region, localePreferences.language)} · ${localePreferences.currency} · ${membership.household.timezone}`,
       href: "/settings/language-region",
     },
-    { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/settings/notifications" },
-    { icon: MicVocal, tone: "ai", title: "Voice", meta: voiceNote, href: "/settings/voice" },
-    { icon: Speaker, tone: "ai", title: "Voice assistants", meta: "Alexa and Gemini Voice linked to this home, and what each may do", href: "/settings/voice-assistants" },
-    { icon: MessageCircle, tone: "handled", title: "WhatsApp", meta: "Forward messages, photos and documents into HomeSend", href: "/settings/whatsapp" },
-    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "What is shared, how long it is kept, and taking your data with you", href: "/settings/privacy" },
-    { icon: KeyRound, tone: "neutral", title: "Two-factor authentication", meta: "Coming — not switched on for this account yet", badge: "Soon" },
-    { icon: Link2, tone: "care", title: "Connected accounts", meta: "School, calendar, shopping, weather", href: view.permissions.includes("integrations.manage") ? "/household/integrations" : undefined },
-    { icon: Database, tone: "home", title: "Export my data", meta: "A copy of what WonderHome holds about you", href: "/settings/privacy" },
-    { icon: Trash2, tone: "risk", title: "Delete my data", meta: `Removes what is yours, after ${DELETION_GRACE_DAYS} days to change your mind`, href: "/settings/privacy" },
-    { icon: HelpCircle, tone: "ai", title: "Get Help", meta: "User guide, common questions, and a way to search them", href: "/help" },
+    {
+      icon: Bell,
+      tone: "attention",
+      title: "Notifications",
+      meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Your reminders and channels · quiet ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "Your reminders and channels",
+      href: "/settings/notifications",
+    },
+    { icon: MicVocal, tone: "ai", title: "Voice", meta: describeVoice(voiceSettings), href: "/settings/voice" },
+    { icon: Speaker, tone: "ai", title: "Voice assistants", meta: "Alexa and Gemini Voice, and what each may do", href: "/settings/voice-assistants" },
   ];
+  const aiAndPrivacy: Row[] = [
+    { icon: Bot, tone: "ai", title: "AI Assistant", meta: `${keyNote.title} · household key and data use`, href: "/settings/ai" },
+    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "Data use, export and deletion", href: "/settings/privacy" },
+  ];
+  const connected: Row[] = [
+    // WhatsApp only once the deployment has a number to connect to.
+    ...(whatsappReady
+      ? [{ icon: MessageCircle, tone: "handled" as IconTone, title: "WhatsApp", meta: myWhatsApp ? "Connected · forward things into HomeSend" : "Forward messages, photos and documents into HomeSend", href: "/settings/whatsapp" }]
+      : []),
+    ...(view.permissions.includes("integrations.manage")
+      ? [{ icon: Link2, tone: "care" as IconTone, title: "Connected accounts", meta: "School, calendar, shopping, weather and devices", href: "/household/integrations" }]
+      : []),
+  ];
+  const plan: Row[] = [{ icon: CreditCard, tone: "money", title: "Your plan", meta: `${planName} · plan and usage`, href: "/settings/plan" }];
 
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: "Back" }} title="Settings & Profile">
       <div className="space-y-6">
+        <header className="wh-rise hidden lg:block">
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Settings & Profile</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">How WonderHome works for you and {membership.household.name}.</p>
+        </header>
+
         <Card className="space-y-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
               <p className="text-sm text-[var(--wh-foreground-muted)]">{view.roleLabel} · {view.householdName}</p>
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">{user?.email}</p>
+              <p className="text-xs break-all text-[var(--wh-foreground-subtle)]">{user?.email}</p>
             </div>
             {me ? (
               <MemberProfileForm
-                householdId={membership.household.id}
+                householdId={householdId}
                 memberId={me.id}
                 initial={{
                   displayName: me.displayName,
@@ -144,173 +166,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             )}
           </div>
           {me ? (
-            <MemberAvatarControl householdId={membership.household.id} memberId={me.id} displayName={me.displayName} avatarUrl={me.avatarUrl} />
+            <MemberAvatarControl householdId={householdId} memberId={me.id} displayName={me.displayName} avatarUrl={me.avatarUrl} />
           ) : (
             <Avatar name={view.displayName} size="xl" />
           )}
         </Card>
 
-        <section>
-          <SectionHeader title="Household" />
-          <Card className="p-2">
-            <ul className="divide-y divide-[var(--wh-border)]">
-              <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={UserRound} tone="people" size="sm" /><span className="flex-1 text-sm">Role</span><Badge>{view.roleLabel}</Badge></li>
-              <li><Link href="/settings/language-region/datetime" className="flex min-h-12 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-3 hover:bg-[var(--wh-surface-muted)]"><IconTile icon={Moon} tone="home" size="sm" /><span className="flex-1 text-sm">{t("field.timezone")}</span><span className="text-xs text-[var(--wh-foreground-muted)]">{membership.household.timezone}</span><ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)] rtl:rotate-180" /></Link></li>
-              <li className="flex items-center gap-3 px-2 py-3"><IconTile icon={ShieldCheck} tone="primary" size="sm" /><span className="flex-1 text-sm">What you can do</span><span className="text-xs text-[var(--wh-foreground-muted)]">{view.permissions.length} permissions</span></li>
-            </ul>
-          </Card>
-        </section>
+        <SettingsGroup title="Personal" rows={personal} />
+        <SettingsGroup title="AI & privacy" rows={aiAndPrivacy} />
+        <SettingsGroup title="Connected services" rows={connected} />
+        <SettingsGroup title="Plan & usage" rows={plan} />
 
         <section>
-          <SectionHeader title="AI assistant" />
-          <Card className="space-y-4 p-4">
-            <div className="flex items-start gap-3">
-              <IconTile icon={Bot} tone="ai" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{keyNote.title}</p>
-                <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{keyNote.detail}</p>
-                {credential.configured && credential.updatedAt ? (
-                  <p className="mt-1 text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                    Set {formatDate(membership.household.timezone, credential.updatedAt, "long")}
-                  </p>
-                ) : null}
-              </div>
-              <Badge tone={keyNote.tone === "attention" ? "attention" : "handled"}>
-                {key.source === "household" ? "Your key" : key.source === "platform" ? "Included" : "Rules only"}
-              </Badge>
-            </div>
-
-            {manages ? (
-              <>
-                <p className="text-xs text-[var(--wh-foreground-muted)]">
-                  WonderHome runs the assistant on its own key, so you do not need an account with a model
-                  provider. Use your own instead if you would rather the requests were billed to you and
-                  covered by your own agreement with them.
-                </p>
-                <AiKeyForm
-                  householdId={membership.household.id}
-                  save={saveAiKey}
-                  remove={removeAiKey}
-                  configured={credential.configured}
-                />
-                {key.source === "none" ? (
-                  <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs text-[var(--wh-foreground-muted)]">
-                    This deployment has no key of its own either. An operator sets one with the
-                    <code className="mx-1 rounded bg-[var(--wh-surface)] px-1 py-0.5 text-[0.6875rem]">WONDERHOME_AI_KEY</code>
-                    environment variable — there is no platform administration screen for it.
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-          </Card>
+          <SectionHeader title="Account" />
+          <form action={signOut}>
+            <Button type="submit" variant="secondary" className="w-full gap-2">
+              <LogOut aria-hidden className="size-4" /> Log out
+            </Button>
+          </form>
         </section>
-
-        {metered.length > 0 || trialLines.length > 0 ? (
-          <section>
-            <SectionHeader title="Usage this period" />
-            <MetricGrid
-              metrics={metered.map((feature) =>
-                feature.limit !== null
-                  ? { label: `${feature.label} this period`, value: `${feature.used} / ${feature.limit}` }
-                  : { label: `${feature.label} this period, fair use ${feature.fairUseLimit}`, value: `${feature.used}` },
-              )}
-            />
-            {policyLines.length + trialLines.length > 0 ? (
-              <ul className="mt-3 space-y-1 text-sm text-[var(--wh-foreground-muted)]">
-                {[...policyLines, ...trialLines].map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        ) : null}
-
-        {plans.length > 0 ? (
-          <section>
-            <SectionHeader title="Your plan" />
-            <Card className="space-y-3 p-4">
-              {/* Back from the payment provider (story 20-006). The plan
-                  changes when the provider confirms the payment, not on the
-                  redirect — so this says what is true, not what is hoped. */}
-              {checkout === "complete" ? (
-                <Alert tone="info">Thanks — your plan changes as soon as the payment is confirmed, usually within a minute.</Alert>
-              ) : checkout === "cancelled" ? (
-                <Alert tone="info">No payment was taken, and your plan is as it was.</Alert>
-              ) : null}
-              {manages ? (
-                <PlanForm
-                  householdId={membership.household.id}
-                  currentPlanKey={subscription?.planKey ?? null}
-                  plans={plans.map(({ key, name, description }) => ({ key, name, description }))}
-                />
-              ) : (
-                <p className="text-sm text-[var(--wh-foreground-muted)]">
-                  This household is on the {plans.find((plan) => plan.key === subscription?.planKey)?.name ?? "free"} plan.
-                  An Admin can change it.
-                </p>
-              )}
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                Changing plans never removes anything your household has. A smaller plan stops some things from
-                growing; nothing already recorded is deleted.
-              </p>
-            </Card>
-          </section>
-        ) : null}
-
-        <section>
-          <SectionHeader title="What the assistant may share" />
-          <Card className="space-y-4 p-4">
-            {/* Read on the server every time. A screen cannot cache its way
-                into a more permissive answer (story 15-005). */}
-            <ul className="space-y-1.5">
-              {describeDataUse(dataUse).map((line) => (
-                <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
-              ))}
-            </ul>
-            {manages ? (
-              <DataUseForm
-                action={saveDataUseAction}
-                householdId={membership.household.id}
-                policy={dataUse}
-              />
-            ) : (
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                An Admin decides this for the household.
-              </p>
-            )}
-          </Card>
-        </section>
-
-        <section>
-          <SectionHeader title="Preferences, privacy & support" />
-          <Card className="p-2">
-            <ul className="divide-y divide-[var(--wh-border)]">
-              {rows.map((row) => {
-                const inner = (
-                  <>
-                    <IconTile icon={row.icon} tone={row.tone} size="sm" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{row.title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
-                    </span>
-                    {row.badge ? <Badge>{row.badge}</Badge> : row.href ? <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" /> : null}
-                  </>
-                );
-                return (
-                  <li key={row.title}>
-                    {row.href ? <Link href={row.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 hover:bg-[var(--wh-surface-muted)]">{inner}</Link> : <div className="flex min-h-14 items-center gap-3 px-2 py-2">{inner}</div>}
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
-        </section>
-
-        <form action={signOut}>
-          <Button type="submit" variant="secondary" className="w-full gap-2">
-            <LogOut aria-hidden className="size-4" /> Log out
-          </Button>
-        </form>
 
         <QuoteCard>Your home. Your rules.</QuoteCard>
       </div>

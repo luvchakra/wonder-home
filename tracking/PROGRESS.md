@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 218 |
-| Done | 212 |
+| Total stories | 219 |
+| Done | 213 |
 | In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 1 |
-| Completion | 97.2% |
-| Current module | 14 AI Orchestration (WhatsApp into HomeSend) |
-| Current story | 14-015/14-016 WhatsApp into HomeSend done; 22-006 localized reminders next |
+| Completion | 97.3% |
+| Current module | 01 Identity (Settings & Profile) |
+| Current story | 01-009 Settings & Profile consolidation done; payments (Razorpay + Stripe) next |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -25,7 +25,7 @@ disagree again.)
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 10 | 8 | 2 | 0 | 10 | Done |
-| 01 | Identity & Family Accounts | 8 | 5 | 2 | 1 | 8 | Done |
+| 01 | Identity & Family Accounts | 9 | 5 | 3 | 1 | 9 | Done |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
 | 04 | Conversation, Voice & Text | 17 | 14 | 3 | 0 | 16 | In Progress |
@@ -246,3 +246,4 @@ disagree again.)
 | 2026-09-24 | 22 | 22-005 | Done | reply-language 19 unit (protect, check, fallback, consent by class, notice reasons), multilingual yes/no, hello and thanks, the language line and the translator prompt; full verify gate (2776 unit, 268 E2E); browser QA as a Hindi-speaking member at 360px and desktop on the no-model path (a live model translation still needs a person on production) | Multilingual HomeTalk. Understanding is told the person's language and returns the same language-neutral intent. Every reply is validated in English, then translated with every name, item, date, time, amount, number and link taken out as a token, and shown only if the translation carries every token once with nothing invented. A reply whose content classes the household has not agreed to send stays in English, with a line saying why. The English remains the record; the shown words live in `metadata.localized` |
 | 2026-09-24 | 14 | 14-015 | Done | whatsapp intake 18 unit (reading payloads, codes, linking, unknown senders, idempotent retries, forged ids ignored, signature and size refusals, text/photo into HomeSend once, media outage retried silently, unsupported refused, injected instruction kept as content, replies never echo amounts or health), WhatsApp database suite 10 (single-use and expiring codes, one number one member, adults only, number visible to its member and admins only, no client writes, message bound to its link, HomeSend sources, disconnect keeps history), verify:live 199/199 | WhatsApp into HomeSend, backend: migration `20261002090000_whatsapp_intake.sql` applied live; the webhook links numbers by CONNECT code and records linked members' messages once, processing them after the response on the job queue into `whatsapp`/`whatsapp_media` HomeSend items with a short acknowledgement. Inert until the WhatsApp credentials are set; the screens are 14-016 |
 | 2026-09-24 | 14 | 14-016 | Done | channels 5 unit (every source in one tab, unknown reads as All, no tabs with uploads only, WhatsApp tab once available or used, waiting counts and links), security/api 210, whatsapp 18; browser QA at 360px and 1280px against a local server with placeholder WhatsApp settings: connect intro, code and Open WhatsApp link, "not linked yet" on an early check, a locally signed CONNECT linking the number, the confirmation, disconnect and reconnect, a WhatsApp text becoming a HomeSend item "from Priya", the All/WhatsApp/Uploads filter and its empty state, the member badge and the Settings row; no horizontal scroll | WhatsApp into HomeSend, screens: `/settings/whatsapp` (connect, confirmation, your link, an admin's view of everyone's, disconnect), a Settings row, "WhatsApp connected" on Manage Household members, a WhatsApp card among HomeSend's channels, the inbox filter by channel and who sent each WhatsApp item. Nothing is offered until the deployment has a WhatsApp number |
+| 2026-09-24 | 01 | 01-009 | Done | typecheck and lint clean; browser QA at 360px and 1280px against the live project with a QA household: the grouped Settings page with the profile, chevrons and no horizontal scroll, the new AI Assistant and Your plan pages, Privacy linking to AI Assistant, your own Family card linking to Settings and the link landing there, and an Admin still editing a child's card on Family | Settings & Profile consolidation: one editor per setting. `/settings` keeps the profile and becomes grouped rows; the AI key and data use moved to `/settings/ai`, the plan and usage to `/settings/plan`; your own profile elsewhere links to Settings |

@@ -95,7 +95,7 @@ export async function POST(request: Request, { params }: Params) {
         memberId: membership.memberId,
         toPlanKey: body.toPlanKey,
         provider,
-        returnUrl: new URL("/settings", request.url).toString(),
+        returnUrl: new URL("/settings/plan", request.url).toString(),
       });
       return { checkout: { url: checkout.url, reused: checkout.reused } };
     }

@@ -69,6 +69,7 @@ export async function saveDataUseAction(
     });
 
     revalidatePath("/settings");
+    revalidatePath("/settings/ai");
     return { notice: "Saved. This takes effect on the next thing you ask." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
