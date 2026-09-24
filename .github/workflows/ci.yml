@@ -18,11 +18,59 @@ env:
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder_key
 
 jobs:
+  # What this change touches, so each job below runs only when it can be
+  # affected. A push to main, or any change to CI itself, runs everything:
+  # skipping is a pull-request convenience, never how main is verified.
+  #
+  #   code  — anything outside the docs trees (docs/, backlogs/, tracking/,
+  #           design/, architecture/, database/ and *.md). Docs-only PRs run
+  #           just the tracker check.
+  #   unit  — apps/, packages/, scripts/ or the package/TS config.
+  #   db    — migrations, or the database test scripts themselves.
+  #   web   — code the browser run can see: apps/, packages/ (not *.test.*),
+  #           e2e/, and the package, TS, Playwright and Vercel config.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+      unit: ${{ steps.classify.outputs.unit }}
+      db: ${{ steps.classify.outputs.db }}
+      web: ${{ steps.classify.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          all() { for k in code unit db web; do echo "$k=true" >> "$GITHUB_OUTPUT"; done; }
+          if [ "$EVENT" != "pull_request" ]; then all; exit 0; fi
+
+          files=$(git diff --name-only "$BASE" HEAD)
+          echo "Changed files:"; echo "$files"
+          if echo "$files" | grep -qE '^\.github/'; then all; exit 0; fi
+
+          has() { echo "$files" | grep -E "$1" | grep -vqE "${2:-^$}" && echo true || echo false; }
+          docs='^(docs|backlogs|tracking|design|architecture|database)/|\.md$'
+          {
+            echo "code=$(has '.' "$docs")"
+            echo "unit=$(has '^(apps|packages|scripts)/|^package(-lock)?\.json$|^tsconfig')"
+            echo "db=$(has '^supabase/|^scripts/(test-.*-rls\.mjs|setup-test-db\.mjs|lib/)')"
+            echo "web=$(has '^(apps|packages|e2e)/|^package(-lock)?\.json$|^tsconfig|^playwright\.config|^vercel\.json' '\.test\.tsx?$|\.md$')"
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
   # Fast, no database needed: types and static analysis. Unit tests are a
   # separate job (below) so a typo eslint would catch in seconds doesn't sit
   # behind the ~1300-test unit suite before this job can report red.
   lint:
+    needs: changes
     runs-on: ubuntu-latest
+    env:
+      CODE: ${{ needs.changes.outputs.code }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,38 +97,49 @@ jobs:
         run: npm ci
 
       - name: Typecheck
+        if: env.CODE == 'true'
         run: npm run typecheck
 
       - name: Lint
+        if: env.CODE == 'true'
         run: npm run lint
 
       - name: Migration schema lint
+        if: env.CODE == 'true'
         run: npm run lint:migrations
 
       - name: PostgREST embed lint
+        if: env.CODE == 'true'
         run: npm run lint:embeds
 
       - name: Import boundary lint
+        if: env.CODE == 'true'
         run: npm run lint:boundaries
 
       - name: Secret lint
+        if: env.CODE == 'true'
         run: npm run lint:secrets
 
       - name: Progress tracker is current
         run: npm run tracker -- --check
 
       - name: Brand assets match the mark
+        if: env.CODE == 'true'
         run: npm run brand -- --check
 
       - name: P0 security suite
+        if: env.CODE == 'true'
         run: npm run security
 
       - name: AI evaluation — golden households, release gates
+        if: env.CODE == 'true'
         run: npm run eval
 
   # The ~1300-test unit suite, split out so it runs in parallel with lint
   # and db-tests rather than behind lint's fast static checks.
   unit-tests:
+    needs: changes
+    if: needs.changes.outputs.unit == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,6 +165,8 @@ jobs:
 
   # The only job that needs a real database: schema and RLS authorization tests.
   db-tests:
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -152,6 +213,8 @@ jobs:
   # Build and browser smoke tests run against the placeholder project, no
   # database needed.
   build-and-e2e:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -214,15 +277,19 @@ jobs:
   # above are split into.
   ci:
     if: always()
-    needs: [lint, unit-tests, db-tests, build-and-e2e]
+    needs: [changes, lint, unit-tests, db-tests, build-and-e2e]
     runs-on: ubuntu-latest
     steps:
-      - name: Require all jobs to have succeeded
+      # A job skipped because its area did not change is a pass; one skipped
+      # because `changes` itself failed is not, so `changes` must succeed.
+      - name: Require every job to have succeeded or been skipped on purpose
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.unit-tests.result }}" != "success" ] || \
-             [ "${{ needs.db-tests.result }}" != "success" ] || \
-             [ "${{ needs.build-and-e2e.result }}" != "success" ]; then
+          ok() { [ "$1" = "success" ] || [ "$1" = "skipped" ]; }
+          if [ "${{ needs.changes.result }}" != "success" ] || \
+             [ "${{ needs.lint.result }}" != "success" ] || \
+             ! ok "${{ needs.unit-tests.result }}" || \
+             ! ok "${{ needs.db-tests.result }}" || \
+             ! ok "${{ needs.build-and-e2e.result }}"; then
             echo "One or more required jobs did not succeed."
             exit 1
           fi
