@@ -31,6 +31,12 @@ export const RATE_LIMITS = {
   "homesend.link": { max: 15, windowSeconds: 600 },
   /** Forwarded emails processed, per household per hour. */
   "homesend.email": { max: 60, windowSeconds: 3600 },
+  /** Messages a linked member sends to WonderHome on WhatsApp, per member per hour. */
+  "homesend.whatsapp": { max: 60, windowSeconds: 3600 },
+  /** WhatsApp connect codes issued, per member: a few tries, not a guessing machine. */
+  "whatsapp.link": { max: 6, windowSeconds: 3600 },
+  /** Replies to a number that isn't connected (or sent a wrong code), per number: told, not flooded. */
+  "whatsapp.unlinked": { max: 3, windowSeconds: 3600 },
   /** OAuth token requests, per voice client (voice phase 2). */
   "voice.token": { max: 120, windowSeconds: 600 },
   /** Requests from a linked voice assistant, per link: a speaker in a kitchen, not a script. */

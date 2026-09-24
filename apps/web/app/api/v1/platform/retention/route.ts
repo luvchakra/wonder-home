@@ -4,6 +4,8 @@ import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { drainJobs, type DrainOutcome } from "@wonderhome/core/homesend/retry-queue";
 import { reconcileAllHouseholds, type SweepSummary } from "@wonderhome/core/notifications/reconcile";
+import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
+import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
@@ -123,7 +125,14 @@ export async function POST(request: Request) {
     let jobsSummary: DrainOutcome | null = null;
     let jobsError: string | undefined;
     try {
-      jobsSummary = await drainJobs(admin, { limit: 25, workerId: "retention" });
+      // WhatsApp messages still waiting (a media download or a model that
+      // was down when they arrived) are worked by the same pass.
+      const whatsapp = whatsappConfigFromEnv();
+      jobsSummary = await drainJobs(admin, {
+        limit: 25,
+        workerId: "retention",
+        handlers: whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter }) } : {},
+      });
     } catch (thrown) {
       jobsError = thrown instanceof Error ? thrown.message : "unknown";
       log.error("job queue drain failed", { reason: jobsError, allow: ["reason"] });
@@ -133,6 +142,9 @@ export async function POST(request: Request) {
     const counters = await admin.from("rate_limit_counters").delete({ count: "exact" }).lt("window_start", dayAgo);
     const emailEvents = await admin.from("homesend_email_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
     const channelEvents = await admin.from("hometalk_channel_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
+    const whatsappEvents = await admin.from("whatsapp_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
+    // A connect code is useful for fifteen minutes; a day later it is only a hash to keep.
+    const linkRequests = await admin.from("whatsapp_link_requests").delete({ count: "exact" }).lt("expires_at", dayAgo);
 
     const swept = [
       ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
@@ -140,6 +152,8 @@ export async function POST(request: Request) {
       { table: "rate_limit_counters", deleted: counters.count ?? 0, error: counters.error?.code },
       { table: "homesend_email_events", deleted: emailEvents.count ?? 0, error: emailEvents.error?.code },
       { table: "hometalk_channel_events", deleted: channelEvents.count ?? 0, error: channelEvents.error?.code },
+      { table: "whatsapp_events", deleted: whatsappEvents.count ?? 0, error: whatsappEvents.error?.code },
+      { table: "whatsapp_link_requests", deleted: linkRequests.count ?? 0, error: linkRequests.error?.code },
     ];
     const failed = swept.filter((row) => row.error);
 

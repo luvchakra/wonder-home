@@ -7,7 +7,7 @@ import type { IntakeUnderstanding } from "./understanding";
  * file the same way `school/items.ts` is split from `school/repository.ts`.
  */
 
-export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text", "email", "audio_note", "link", "email_attachment"] as const;
+export const HOME_SEND_SOURCES = ["manual_upload", "pasted_text", "email", "audio_note", "link", "email_attachment", "whatsapp", "whatsapp_media"] as const;
 export type HomeSendSource = (typeof HOME_SEND_SOURCES)[number];
 
 export const HOME_SEND_STATUSES = ["received", "classified", "routed", "dismissed", "undone", "failed"] as const;
