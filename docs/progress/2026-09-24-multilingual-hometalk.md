@@ -122,3 +122,16 @@ recorded in English, and translation is the last step.
 `conversation/intent.ts`, `conversation/repository.ts`,
 `apps/web/app/_lib/hometalk-turn.ts` (`inTheirLanguage`),
 `apps/web/app/ai/page.tsx`.
+
+## Cleanup
+
+Done after the merge (#163, `4fa9b79`):
+- The QA household "QA Bhasha Home" (`b4c00db1-efd4-443f-be14-9c4c1124d015`)
+  was deleted with every row in it, including the two grocery items and the
+  conversation.
+- The QA account `60ea533c-4691-455b-b0a2-e2874f64198a` was deleted.
+- The scratch scripts, screenshots and logs were removed, and the dev server
+  was stopped.
+
+A count over every `household_id` table in `public` and `wh`, the auth users
+and Storage found nothing left.
