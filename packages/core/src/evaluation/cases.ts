@@ -270,6 +270,13 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "school_item", title: "Science project", schoolKind: "project", subject: "Science", dueDate: "2026-09-25", people: ["Aarav"] },
     expected: { interpretation: "school_item", entity: "ask", date: "2026-09-25" },
   },
+  {
+    id: "HS-16", surface: "homesend", household: "A", category: "duplicates", actor: "a-kunal",
+    description: "The registration form for Manan's Science project is a part of the project, not the project again: new, never a duplicate or a move of it (DDU 2.0 §46).",
+    source: { channel: "pasted_text", text: "Manan — please return the Science project registration form by 29 September." },
+    reading: { kind: "school_item", title: "Science project registration form", schoolKind: "notice", subject: "Science", dueDate: "2026-09-29", people: ["Manan"] },
+    expected: { interpretation: "school_item", entity: "a-manan", match: { outcome: "new" } },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

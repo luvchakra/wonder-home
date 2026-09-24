@@ -81,5 +81,30 @@ describe("HomeSend metrics (Wave 3 §19)", () => {
     const empty = summarizeHomeSend([], [], { windowDays: 7, queueDepth: 0 });
     expect(empty.parsingSuccess).toEqual({ count: 0, of: 0 });
     expect(empty.timeToOutcomeMinutes).toEqual({ median: null, p90: null, of: 0 });
+    expect(empty.documents).toEqual({
+      applied: 0,
+      outcomes: { created: 0, updated: 0, cancelled: 0, unchanged: 0, skipped: 0, needs_clarification: 0, failed: 0 },
+      changesStanding: { count: 0, of: 0 },
+      correctChangesPerDocument: null,
+    });
+  });
+
+  it("measures documents by correct household changes, not by what was extracted (DDU 2.0 §50)", () => {
+    const base = { source: "manual_upload" as const, status: "routed" as const, classified_kind: "school_item", review_decision: "added" as const, review_proposal: null, review_subject: "resolved" as const, review_corrected: false, created_at: "2026-09-23T08:00:00Z", routed_at: "2026-09-23T08:02:00Z" };
+    const result = summarizeHomeSend(
+      [
+        { ...base, receipt_counts: { created: 2, updated: 1, unchanged: 3 } },
+        { ...base, receipt_counts: { created: 1, failed: 1, needs_clarification: 1 } },
+        base,
+      ],
+      [{ undone_at: null, plan_key: "r1" }, { undone_at: null, plan_key: "r2" }, { undone_at: "2026-09-23T09:00:00Z", plan_key: "r3" }, { undone_at: null, plan_key: "r1" }, { undone_at: null }],
+      { windowDays: 7, queueDepth: 0 },
+    );
+    expect(result.documents).toEqual({
+      applied: 2,
+      outcomes: { created: 3, updated: 1, cancelled: 0, unchanged: 3, skipped: 0, needs_clarification: 1, failed: 1 },
+      changesStanding: { count: 3, of: 4 },
+      correctChangesPerDocument: 1.5,
+    });
   });
 });

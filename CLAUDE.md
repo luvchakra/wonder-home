@@ -358,7 +358,11 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   receipt are kept on the item (`homesend/apply.ts`: created, updated,
   cancelled, unchanged, skipped, needs clarification, failed). A partial
   result is never reported as done, and "Undo all" reverses a whole
-  document. How an item is confirmed is `homesend/confirmation.ts`
+  document. HomeTalk's paperclip is the same sheet and pipeline. Once a
+  plan is applied there, HomeTalk posts what it did from the stored receipt
+  (`homesend/talk.ts`). "What did the school notice change?" is answered by
+  rules from the receipt and the change rows, never from what a model read,
+  and an undone change is said to be undone. How an item is confirmed is `homesend/confirmation.ts`
   (§12): a clear, new grocery or school item a member sent may apply on its
   own only where the household set that outcome's autonomy to "execute";
   bills, health documents and receipts always wait for a person, whatever

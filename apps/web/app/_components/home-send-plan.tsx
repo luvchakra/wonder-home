@@ -210,7 +210,7 @@ export function DocumentReceipt({ receipt, householdId, onDone }: { receipt: Int
     <div className="space-y-4" role="status">
       <div className="flex flex-col items-center gap-2 pt-2 text-center">
         <CheckCircle2 aria-hidden className={done ? "size-12 text-[var(--wh-handled)]" : "size-12 text-[var(--wh-attention)]"} />
-        <h3 className="text-lg font-semibold">{receipt.status === "completed" ? "All done!" : receiptHeadline(receipt)}</h3>
+        <h3 className="text-lg font-semibold">{receipt.status === "completed" && receipt.counts.needs_clarification === 0 ? "All done!" : receiptHeadline(receipt)}</h3>
         <p className="text-sm text-[var(--wh-foreground-muted)]">
           {receipt.status === "no_change"
             ? "Nothing new found. No records changed."

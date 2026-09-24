@@ -40,6 +40,18 @@ export type HomeSendMetrics = {
   queueDepth: number;
   /** Minutes from arriving to being routed into a domain, for items routed in the window. */
   timeToOutcomeMinutes: { median: number | null; p90: number | null; of: number };
+  /**
+   * Documents applied as a change plan (DDU 2.0 §50): how many, what each
+   * record came to, and the primary measure — correct household changes per
+   * document, meaning plan writes still standing (not undone), averaged over
+   * the documents applied. Counts only, from the receipt's closed words.
+   */
+  documents: {
+    applied: number;
+    outcomes: Record<"created" | "updated" | "cancelled" | "unchanged" | "skipped" | "needs_clarification" | "failed", number>;
+    changesStanding: Ratio;
+    correctChangesPerDocument: number | null;
+  };
 };
 
 export type MetricsItemRow = {
@@ -52,9 +64,11 @@ export type MetricsItemRow = {
   review_corrected: boolean | null;
   created_at: string;
   routed_at: string | null;
+  /** From a document plan's receipt: its counts, numbers only (DDU 2.0). */
+  receipt_counts?: Partial<Record<keyof HomeSendMetrics["documents"]["outcomes"], number>> | null;
 };
 
-export type MetricsChangeRow = { undone_at: string | null };
+export type MetricsChangeRow = { undone_at: string | null; plan_key?: string | null };
 
 const ACTED: ReadonlySet<HomeSendReviewDecision> = new Set(["added", "updated", "cancelled", "auto_added"]);
 const CONFIRMED_BY_A_PERSON: ReadonlySet<HomeSendReviewDecision> = new Set(["added", "updated", "cancelled"]);
@@ -63,6 +77,21 @@ function percentile(sorted: readonly number[], p: number): number | null {
   if (sorted.length === 0) return null;
   const index = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
   return sorted[Math.max(0, index)]!;
+}
+
+const OUTCOME_KEYS = ["created", "updated", "cancelled", "unchanged", "skipped", "needs_clarification", "failed"] as const;
+
+function documentMetrics(rows: readonly MetricsItemRow[], changes: readonly MetricsChangeRow[]): HomeSendMetrics["documents"] {
+  const applied = rows.filter((row) => row.receipt_counts);
+  const outcomes = Object.fromEntries(OUTCOME_KEYS.map((key) => [key, applied.reduce((sum, row) => sum + Number(row.receipt_counts?.[key] ?? 0), 0)])) as HomeSendMetrics["documents"]["outcomes"];
+  const planWrites = changes.filter((change) => change.plan_key);
+  const standing = planWrites.filter((change) => change.undone_at === null).length;
+  return {
+    applied: applied.length,
+    outcomes,
+    changesStanding: { count: standing, of: planWrites.length },
+    correctChangesPerDocument: applied.length ? Math.round((standing / applied.length) * 10) / 10 : null,
+  };
 }
 
 /** Pure: the same rows always give the same metrics. */
@@ -100,6 +129,7 @@ export function summarizeHomeSend(
     downstreamWriteSuccess: { count: changes.filter((change) => change.undone_at === null).length, of: changes.length },
     safeRejection: { count: rows.filter((row) => row.status === "failed").length, of: rows.length },
     queueDepth: options.queueDepth,
+    documents: documentMetrics(rows, changes),
     timeToOutcomeMinutes: {
       median: minutes.length ? Math.round(percentile(minutes, 50)! * 10) / 10 : null,
       p90: minutes.length ? Math.round(percentile(minutes, 90)! * 10) / 10 : null,
@@ -119,10 +149,10 @@ export async function loadHomeSendMetrics(supabase: SupabaseClient, options: { w
   const [items, changes, queue] = await Promise.all([
     supabase
       .from("home_send_items")
-      .select("source, status, classified_kind, review_decision, review_proposal, review_subject, review_corrected, created_at, routed_at")
+      .select("source, status, classified_kind, review_decision, review_proposal, review_subject, review_corrected, created_at, routed_at, receipt_counts:receipt->counts")
       .gte("created_at", since)
       .limit(50_000),
-    supabase.from("homesend_changes").select("undone_at").gte("created_at", since).limit(50_000),
+    supabase.from("homesend_changes").select("undone_at, plan_key").gte("created_at", since).limit(50_000),
     supabase.from("home_send_items").select("id", { count: "exact", head: true }).in("status", ["received", "classified"]),
   ]);
   if (items.error) throw new Error(`loadHomeSendMetrics items failed: ${items.error.code ?? "unknown"}`);
