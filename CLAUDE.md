@@ -567,6 +567,17 @@ reminders about real records, never lines of text fired and forgotten.
 - **Actions.** Acting on the thing itself goes through the domain's own
   service. The reminder resolves because its source changed, not because a
   notification wrote to a domain table.
+- **Fewer interruptions.** A child's school things due the same day are one
+  reminder (`school_day`, `batchSchoolDays`), as urgent as the most urgent
+  item in it. A policy that escalates tells the responsibility's backup
+  once, only after the last reminder has gone unanswered for the policy's
+  wait (`isUnanswered`, `planEscalation`). Nothing repeats beyond
+  `maxRemindersFor`.
+- **Smart, but never in charge.** The day's summary on `/notifications` is
+  built from the same rows. Learned timing (`learning.ts`) is off unless a
+  person turns it on. It learns only from them acting on a reminder, needs
+  five consistent times, never overrides a timing they chose, and is claimed
+  on a row only when it actually moved it.
 - **New kinds.** A new kind of reminder is a new source plus a policy
   entry, never a new writer of `notifications`.
 

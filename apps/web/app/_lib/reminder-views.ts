@@ -61,12 +61,15 @@ export async function loadReminderDetails(
   options: { isAdmin: boolean },
 ): Promise<Details> {
   const ids = (type: string) => [...new Set(rows.filter((row) => row.source_type === type && row.source_id).map((row) => row.source_id!))];
+  // A grouped school day names each thing it stands for; they are read like any school item.
+  const groupedItems = [...new Set(rows.filter((row) => row.source_type === "school_day").flatMap((row) => itemsOf(row)))];
+  const schoolIds = [...new Set([...ids("school_item"), ...groupedItems])];
   const [bills, school, meals, pets, events] = await Promise.all([
     ids("obligation").length
       ? supabase.from("obligations").select("id, name, payee, amount_minor, currency, due_on, recurrence").in("id", ids("obligation"))
       : Promise.resolve({ data: [] }),
-    ids("school_item").length
-      ? supabase.from("school_items").select("id, kind, title, due_at, due_time_known, child_member_id").in("id", ids("school_item"))
+    schoolIds.length
+      ? supabase.from("school_items").select("id, kind, title, due_at, due_time_known, child_member_id, status").in("id", schoolIds)
       : Promise.resolve({ data: [] }),
     ids("meal").length
       ? supabase.from("meals").select("id, name, slot, ready_by, recipes(name, total_minutes)").in("id", ids("meal"))
@@ -97,7 +100,24 @@ export async function loadReminderDetails(
   }
 
   const SCHOOL_NOUN: Record<string, string> = { homework: "Homework", worksheet: "Worksheet", exam: "Exam", project: "Project", event: "School event" };
-  for (const item of (school.data ?? []) as { id: string; kind: string; title: string; due_at: string | null; due_time_known: boolean }[]) {
+  const schoolRows = (school.data ?? []) as { id: string; kind: string; title: string; due_at: string | null; due_time_known: boolean; status: string }[];
+  const dueWords = (item: { due_at: string | null; due_time_known: boolean }) =>
+    item.due_at ? (item.due_time_known ? `${format.date(item.due_at, "long")}, ${format.time(item.due_at)}` : format.date(item.due_at.slice(0, 10), "long")) : null;
+  for (const row of rows.filter((entry) => entry.source_type === "school_day")) {
+    const items = itemsOf(row)
+      .map((id) => schoolRows.find((item) => item.id === id))
+      .filter((item): item is (typeof schoolRows)[number] => Boolean(item));
+    const open = items.filter((item) => item.status === "pending" || item.status === "in_progress");
+    map.set(`school_day:${row.source_id}:${row.id}`, {
+      details: items.map((item) => ({
+        label: SCHOOL_NOUN[item.kind] ?? "Item",
+        value: `${item.title}${dueWords(item) ? ` — ${dueWords(item)}` : ""}${open.includes(item) ? "" : " (done)"}`,
+      })),
+      link: { href: "/school", label: "Open Kids & School" },
+      complete: open.length > 0 ? { label: open.length === 1 ? "Mark as done" : `Mark all ${open.length} done` } : null,
+    });
+  }
+  for (const item of schoolRows) {
     const details = [{ label: SCHOOL_NOUN[item.kind] ?? "Item", value: item.title }];
     if (item.due_at) {
       details.push({ label: "Due", value: item.due_time_known ? `${format.date(item.due_at, "long")}, ${format.time(item.due_at)}` : format.date(item.due_at.slice(0, 10), "long") });
@@ -153,7 +173,14 @@ export async function loadReminderDetails(
   return map;
 }
 
+/** The records a grouped reminder stands for, as its decision factors name them. */
+function itemsOf(row: ReminderRowData): string[] {
+  const items = row.decision_factors?.items;
+  return Array.isArray(items) ? items.filter((id): id is string => typeof id === "string") : [];
+}
+
 const FALLBACK_LINKS: Record<string, ReminderView["link"]> = {
+  school_day: { href: "/school", label: "Open Kids & School" },
   grocery_list: { href: "/groceries", label: "View grocery list" },
   health_appointment: { href: "/health", label: "Open Health" },
   health_routine: { href: "/health", label: "Open Health" },
@@ -161,8 +188,14 @@ const FALLBACK_LINKS: Record<string, ReminderView["link"]> = {
   approval: { href: "/household", label: "Review in Manage Household" },
 };
 
-/** Why a reminder came when it did — only when the engine actually moved it. */
+/** Why a reminder came to this person, or when it did — only when something actually shaped it. */
 function placementReason(row: ReminderRowData, format: Formatter): string | null {
+  if (typeof row.decision_factors?.escalatedFrom === "string") {
+    return "It came to you as the backup, because the first reminder went unanswered. It will not come again after this.";
+  }
+  if (row.decision_factors?.timing === "learned") {
+    return `Timed for ${format.time(row.scheduled_for)}, around when you usually deal with these. You can turn this off in notification settings.`;
+  }
   switch (row.decision_factors?.placement) {
     case "after_quiet_hours":
       return `Held until ${format.time(row.scheduled_for)} so it would not arrive during your quiet hours.`;
@@ -182,7 +215,12 @@ export function toReminderView(
   now: Date,
   timeZone: string,
 ): ReminderView {
-  const found = row.source_type && row.source_id ? details.get(`${row.source_type}:${row.source_id}`) : undefined;
+  const found =
+    row.source_type === "school_day"
+      ? details.get(`school_day:${row.source_id}:${row.id}`)
+      : row.source_type && row.source_id
+        ? details.get(`${row.source_type}:${row.source_id}`)
+        : undefined;
   const at = new Date(row.scheduled_for);
   const today = localMoment(now, timeZone).dateKey;
   const day = localMoment(at, timeZone).dateKey;

@@ -4,7 +4,19 @@ import { formatterFor } from "../i18n/format";
 import { NO_MEMBER_CHOICES, parseHouseholdSettings, resolvePreferences } from "../i18n/preferences";
 import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import { deliverNotification } from "./deliver";
-import { chooseReminderRecipient, planReminder, type DesiredReminder, type Directory, type DirectoryMember } from "./plan";
+import { learnedMinuteFrom } from "./learning";
+import {
+  backupFor,
+  chooseReminderRecipient,
+  isUnanswered,
+  planEscalation,
+  planReminder,
+  type ChosenRecipient,
+  type DesiredReminder,
+  type Directory,
+  type DirectoryMember,
+} from "./plan";
+import { REMINDER_POLICIES } from "./policies";
 import {
   RECONCILED_SOURCE_TYPES,
   billSubject,
@@ -12,6 +24,7 @@ import {
   grocerySubject,
   mealSubject,
   petSubject,
+  schoolDaySubject,
   schoolSubject,
   type BillRow,
   type FamilyEventRow,
@@ -21,7 +34,7 @@ import {
   type SchoolItemRow,
   type SourceContext,
 } from "./sources";
-import { quietHoursFrom, type QuietHours } from "./timing";
+import { localMoment, quietHoursFrom, type QuietHours } from "./timing";
 
 /**
  * Keeping reminders true to the household (stories 23-001, 23-003, 23-004).
@@ -73,6 +86,7 @@ export type OpenRow = {
   latest_at: string | null;
   expires_at: string | null;
   reminder_policy: string | null;
+  delivered_at: string | null;
 };
 
 export async function reconcileHouseholdReminders(
@@ -180,7 +194,7 @@ async function reconcile(
       admin.from("reminder_preferences").select("member_id, category, preset, enabled").eq("household_id", householdId),
       admin
         .from("notification_preferences")
-        .select("member_id, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute")
+        .select("member_id, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, learn_timing")
         .eq("household_id", householdId)
         .eq("channel", "in_app"),
       admin
@@ -194,7 +208,7 @@ async function reconcile(
       admin
         .from("notifications")
         .select(
-          "id, recipient_member_id, thread_key, source_type, reminder_seq, scheduled_for, snooze_count, status, title, body, priority, earliest_at, latest_at, expires_at, reminder_policy",
+          "id, recipient_member_id, thread_key, source_type, reminder_seq, scheduled_for, snooze_count, status, title, body, priority, earliest_at, latest_at, expires_at, reminder_policy, delivered_at",
         )
         .eq("household_id", householdId)
         .in("status", ["generated", "delivered", "seen"]),
@@ -219,8 +233,16 @@ async function reconcile(
   const displayNames = new Map(memberRows.map((row) => [row.id, row.nickname || row.display_name]));
 
   const subjects: ReminderSubject[] = [];
+  const schoolRows = new Map<ReminderSubject, SchoolItemRow>();
   for (const row of (bills.data ?? []) as BillRow[]) push(subjects, billSubject(row, context));
-  for (const row of (school.data ?? []) as SchoolItemRow[]) push(subjects, schoolSubject(row, displayNames.get(row.child_member_id) ?? "Your child", context));
+  for (const row of (school.data ?? []) as SchoolItemRow[]) {
+    const subject = schoolSubject(row, displayNames.get(row.child_member_id) ?? "Your child", context);
+    // Something already past its moment is no longer worth grouping with the rest.
+    if (subject && subject.expiresAt > now) {
+      subjects.push(subject);
+      schoolRows.set(subject, row);
+    }
+  }
   for (const row of (meals.data ?? []) as (Omit<MealRow, "recipe_total_minutes"> & { recipes: { total_minutes: number } | { total_minutes: number }[] | null })[]) {
     const recipe = Array.isArray(row.recipes) ? row.recipes[0] : row.recipes;
     push(subjects, mealSubject({ ...row, recipe_total_minutes: recipe?.total_minutes ?? null }, context));
@@ -258,31 +280,77 @@ async function reconcile(
     closedSeq.set(key, Math.max(closedSeq.get(key) ?? 0, row.reminder_seq));
   }
 
-  const desired = new Map<string, DesiredReminder>();
+  const learning = new Set(
+    ((channelPrefs.data ?? []) as { member_id: string; learn_timing?: boolean | null }[]).filter((row) => row.learn_timing).map((row) => row.member_id),
+  );
+  const learned = learning.size > 0 ? await learnedTimes(admin, householdId, learning, timeZone, now) : new Map<string, number>();
+
+  // Each subject's one responsible person; then a child's school things due
+  // the same day, going to the same person, become one reminder (23-008).
+  const routed: { subject: ReminderSubject; recipient: ChosenRecipient }[] = [];
   for (const subject of subjects) {
     const recipient = chooseReminderRecipient(subject, directory);
-    if (!recipient) continue;
+    if (recipient) routed.push({ subject, recipient });
+  }
+  const assignments = REMINDER_POLICIES.school.batching ? batchSchoolDays(routed, schoolRows, displayNames, context) : routed;
+
+  const settingsFor = (memberId: string, category: ReminderSubject["category"]) => {
+    const chosen = prefs.get(`${memberId}|${category}`);
+    return {
+      preset: chosen?.preset ?? null,
+      enabled: chosen?.enabled ?? true,
+      quiet: quietByMember.has(memberId) ? quietByMember.get(memberId)! : householdQuiet,
+      // A timing the person chose themselves always wins over a learned one.
+      // Saving the settings writes every kind, so only a preset other than
+      // the policy's own default counts as a choice.
+      learnedMinute:
+        chosen && chosen.preset !== REMINDER_POLICIES[category].defaultPreset ? null : (learned.get(`${memberId}|${category}`) ?? null),
+    };
+  };
+
+  const desired = new Map<string, DesiredReminder>();
+  const subjectOf = new Map<string, ReminderSubject>();
+  for (const { subject, recipient } of assignments) {
     const key = `${recipient.memberId}|${subject.threadKey}`;
-    const chosen = prefs.get(`${recipient.memberId}|${subject.category}`);
-    const planned = planReminder(
-      subject,
-      recipient,
-      {
-        preset: chosen?.preset ?? null,
-        enabled: chosen?.enabled ?? true,
-        quiet: quietByMember.has(recipient.memberId) ? quietByMember.get(recipient.memberId)! : householdQuiet,
-      },
-      closedSeq.get(key) ?? 0,
+    const planned = planReminder(subject, recipient, settingsFor(recipient.memberId, subject.category), closedSeq.get(key) ?? 0, timeZone, now);
+    if (planned) {
+      desired.set(key, planned);
+      subjectOf.set(key, subject);
+    }
+  }
+
+  // The backup hears about it only when the responsible person has not
+  // answered the last reminder, and only once (23-010).
+  const openRows = (open.data ?? []) as OpenRow[];
+  const openByKey = new Map(openRows.map((row) => [`${row.recipient_member_id}|${row.thread_key}`, row]));
+  const escalations: { primaryRowId: string; backupId: string }[] = [];
+  for (const [key, want] of [...desired]) {
+    if (want.recipientRole !== "primary") continue;
+    const primaryOpen = openByKey.get(key);
+    if (!primaryOpen) continue;
+    const backupId = backupFor(subjectOf.get(key)!, directory, want.recipientMemberId);
+    if (!backupId) continue;
+    const backupKey = `${backupId}|${want.threadKey}`;
+    if (desired.has(backupKey)) continue;
+    const alreadyEscalated = openByKey.has(backupKey);
+    if (!alreadyEscalated && !isUnanswered(want, primaryOpen, now)) continue;
+    const escalation = planEscalation(
+      want,
+      backupId,
+      displayNames.get(want.recipientMemberId) ?? "The person responsible",
+      settingsFor(backupId, want.category),
+      closedSeq.get(backupKey) ?? 0,
       timeZone,
       now,
     );
-    if (planned) desired.set(key, planned);
+    if (!escalation) continue;
+    desired.set(backupKey, escalation);
+    if (!alreadyEscalated) escalations.push({ primaryRowId: primaryOpen.id, backupId });
   }
 
   // 3. Bring the table in line.
   const result: ReconcileResult = { ran: true, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
   const managed = new Set<string>(RECONCILED_SOURCE_TYPES);
-  const openRows = (open.data ?? []) as OpenRow[];
   const seen = new Set<string>();
 
   for (const row of openRows) {
@@ -313,6 +381,17 @@ async function reconcile(
     const { error } = await admin.from("notifications").insert(insertFor(householdId, want));
     // A unique violation is a concurrent pass that got there first.
     if (!error) result.created += 1;
+  }
+
+  // The trail says who it went to next, on the reminder that went unanswered.
+  for (const { primaryRowId } of escalations) {
+    await admin.from("notification_events").insert({
+      household_id: householdId,
+      notification_id: primaryRowId,
+      event_type: "escalated",
+      channel: "in_app",
+      metadata: { to: "backup" },
+    });
   }
 
   // 4. What has come due is delivered — in the app always, and on the
@@ -348,6 +427,76 @@ async function reconcile(
 
 function push(list: ReminderSubject[], subject: ReminderSubject | null): void {
   if (subject) list.push(subject);
+}
+
+/**
+ * School items for one child, due the same local day and going to the same
+ * person, replaced by one grouped subject. Everything else passes through.
+ */
+export function batchSchoolDays(
+  routed: readonly { subject: ReminderSubject; recipient: ChosenRecipient }[],
+  schoolRows: ReadonlyMap<ReminderSubject, SchoolItemRow>,
+  names: ReadonlyMap<string, string>,
+  context: SourceContext,
+): { subject: ReminderSubject; recipient: ChosenRecipient }[] {
+  const groups = new Map<string, { recipient: ChosenRecipient; items: { row: SchoolItemRow; subject: ReminderSubject }[] }>();
+  const rest: { subject: ReminderSubject; recipient: ChosenRecipient }[] = [];
+  for (const entry of routed) {
+    const row = schoolRows.get(entry.subject);
+    if (!row) {
+      rest.push(entry);
+      continue;
+    }
+    const day =
+      entry.subject.anchor.kind === "day" ? entry.subject.anchor.date : localMoment(entry.subject.anchor.at, context.timeZone).dateKey;
+    const key = `${entry.recipient.memberId}|${row.child_member_id}|${day}`;
+    const group = groups.get(key) ?? { recipient: entry.recipient, items: [] };
+    group.items.push({ row, subject: entry.subject });
+    groups.set(key, group);
+  }
+  for (const group of groups.values()) {
+    const childId = group.items[0]!.row.child_member_id;
+    const batched = schoolDaySubject(group.items, names.get(childId) ?? "Your child", context);
+    if (batched) rest.push({ subject: batched, recipient: group.recipient });
+    else for (const item of group.items) rest.push({ subject: item.subject, recipient: group.recipient });
+  }
+  return rest;
+}
+
+/** How long a person's past actions are looked at to learn their timing. */
+const LEARNING_WINDOW_DAYS = 60;
+
+/**
+ * When each learning member usually acts on each kind of reminder, from the
+ * times they acted on one (23-012). Only members who asked for it are read.
+ */
+async function learnedTimes(
+  admin: SupabaseClient,
+  householdId: string,
+  members: ReadonlySet<string>,
+  timeZone: string,
+  now: Date,
+): Promise<Map<string, number>> {
+  const { data } = await admin
+    .from("notification_events")
+    .select("created_at, notifications!inner(recipient_member_id, category)")
+    .eq("household_id", householdId)
+    .eq("event_type", "acted")
+    .gte("created_at", new Date(now.getTime() - LEARNING_WINDOW_DAYS * 86_400_000).toISOString())
+    .limit(2000);
+  const times = new Map<string, Date[]>();
+  for (const row of (data ?? []) as { created_at: string; notifications: { recipient_member_id: string; category: string } | { recipient_member_id: string; category: string }[] | null }[]) {
+    const notification = Array.isArray(row.notifications) ? row.notifications[0] : row.notifications;
+    if (!notification || !members.has(notification.recipient_member_id)) continue;
+    const key = `${notification.recipient_member_id}|${notification.category}`;
+    times.set(key, [...(times.get(key) ?? []), new Date(row.created_at)]);
+  }
+  const learned = new Map<string, number>();
+  for (const [key, acted] of times) {
+    const time = learnedMinuteFrom(acted, timeZone);
+    if (time) learned.set(key, time.minute);
+  }
+  return learned;
 }
 
 export function buildDirectory(
@@ -400,6 +549,18 @@ async function setStatus(admin: SupabaseClient, id: string, status: "resolved" |
   return !error;
 }
 
+/** Why a reminder is what it is, in closed words — read back to explain it, never shown raw. */
+export function decisionFactors(want: DesiredReminder): Record<string, unknown> {
+  return {
+    recipientRole: want.recipientRole,
+    stage: want.stageKey,
+    placement: want.placement,
+    ...(want.timing === "learned" ? { timing: "learned" } : {}),
+    ...(want.escalatedFrom ? { escalatedFrom: want.escalatedFrom } : {}),
+    ...(want.items ? { items: want.items } : {}),
+  };
+}
+
 function contentOf(want: DesiredReminder) {
   return {
     title: want.title.slice(0, 160),
@@ -425,7 +586,7 @@ function insertFor(householdId: string, want: DesiredReminder) {
     source_id: want.sourceId,
     reminder_seq: want.reminderSeq,
     scheduled_for: want.scheduledFor.toISOString(),
-    decision_factors: { recipientRole: want.recipientRole, stage: want.stageKey, placement: want.placement },
+    decision_factors: decisionFactors(want),
     ...contentOf(want),
   };
 }
@@ -445,7 +606,7 @@ export function patchFor(row: OpenRow, want: DesiredReminder, now: Date): Record
       status: "generated",
       seen_at: null,
       delivered_at: null,
-      decision_factors: { recipientRole: want.recipientRole, stage: want.stageKey, placement: want.placement },
+      decision_factors: decisionFactors(want),
     };
   }
 
@@ -460,6 +621,8 @@ export function patchFor(row: OpenRow, want: DesiredReminder, now: Date): Record
   // A snoozed reminder waits for the time its person chose.
   if (row.snooze_count === 0 && !sameInstant(row.scheduled_for, want.scheduledFor.toISOString())) {
     patch.scheduled_for = want.scheduledFor.toISOString();
+    // Why it lands when it does travels with the time it lands.
+    patch.decision_factors = decisionFactors(want);
     // Moved into the future (the due date changed): it waits again, and is
     // delivered afresh when its new time comes.
     if (want.scheduledFor > now && row.status !== "generated") {

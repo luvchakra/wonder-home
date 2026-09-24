@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, GraduationCap, HeartHandshake, Moon, PawPrint, ShoppingBasket, Utensils, Wallet } from "lucide-react";
+import { Bell, GraduationCap, HeartHandshake, Moon, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet } from "lucide-react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -162,6 +162,64 @@ export function ReminderPreferencesCard({
           <Feedback state={state} />
           <Submit label="Save reminder preferences" />
         </div>
+      </form>
+    </Card>
+  );
+}
+
+/**
+ * Two choices about how clever reminders get (stories 23-011, 23-012), each
+ * the person's own: the day's summary above the notification list (on unless
+ * turned off), and moving a first reminder to when they usually deal with
+ * that kind of thing (off unless turned on). Both say plainly what they do,
+ * and what they never do.
+ */
+export function SmartRemindersCard({
+  householdId,
+  dailyDigest,
+  learnTiming,
+  save,
+}: {
+  householdId: string;
+  dailyDigest: boolean;
+  learnTiming: boolean;
+  save: Save;
+}) {
+  const [state, action] = useActionState(save, {});
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-start gap-3">
+        <IconTile icon={Sparkles} tone="primary" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Smarter reminders</p>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
+            Both only change how your own reminders reach you. Nothing is decided for you.
+          </p>
+        </div>
+      </div>
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="householdId" value={householdId} />
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" name="dailyDigest" defaultChecked={dailyDigest} className="mt-0.5 size-5 shrink-0 rounded accent-[var(--wh-primary)]" />
+          <span>
+            <span className="font-medium">Today&rsquo;s summary</span>
+            <span className="block text-[var(--wh-foreground-muted)]">
+              A short list of what is waiting on you today, above your notifications.
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" name="learnTiming" defaultChecked={learnTiming} className="mt-0.5 size-5 shrink-0 rounded accent-[var(--wh-primary)]" />
+          <span>
+            <span className="font-medium">Learn when I usually act</span>
+            <span className="block text-[var(--wh-foreground-muted)]">
+              Once you have dealt with a kind of reminder at much the same time at least five times, the first reminder of that
+              kind moves to around then. A timing you chose above always wins, and quiet hours still apply.
+            </span>
+          </span>
+        </label>
+        <Feedback state={state} />
+        <Submit label="Save" />
       </form>
     </Card>
   );

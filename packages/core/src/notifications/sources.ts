@@ -14,12 +14,20 @@ import { localMoment, shiftDate, atLocal } from "./timing";
  * reminder.
  */
 
-export type ReminderSourceType = "obligation" | "school_item" | "meal" | "grocery_list" | "pet_care_need" | "family_event";
+export type ReminderSourceType =
+  | "obligation"
+  | "school_item"
+  | "school_day"
+  | "meal"
+  | "grocery_list"
+  | "pet_care_need"
+  | "family_event";
 
 /** The source types the reconcile pass owns. Health, approvals and HomeTalk reminders keep their own writers. */
 export const RECONCILED_SOURCE_TYPES: readonly ReminderSourceType[] = [
   "obligation",
   "school_item",
+  "school_day",
   "meal",
   "grocery_list",
   "pet_care_need",
@@ -48,6 +56,8 @@ export type ReminderSubject = {
   /** Whose child this concerns, so their guardians can be asked. */
   childMemberId?: string;
   action: { action: string; target?: string };
+  /** The records a grouped reminder stands for (story 23-008), kept so acting on it reaches each one. */
+  items?: readonly string[];
   /** The words for one stage of the policy, in the household's formats. */
   text: (stageKey: string, now: Date) => ReminderText;
 };
@@ -337,6 +347,60 @@ export function familySubject(row: FamilyEventRow, context: SourceContext): Remi
       priority: "low",
     }),
   };
+}
+
+/**
+ * A child's school things due the same day, as one reminder (story 23-008):
+ * "Aarav — 3 things for tomorrow" rather than three interruptions. Only for
+ * items that would go to the same person anyway; the grouped reminder is as
+ * urgent as the most urgent thing in it, so nothing critical is hidden in it.
+ */
+export function schoolDaySubject(
+  items: readonly { row: SchoolItemRow; subject: ReminderSubject }[],
+  childName: string,
+  context: SourceContext,
+): ReminderSubject | null {
+  if (items.length < 2) return null;
+  const sorted = [...items].sort((a, b) => anchorTime(a.subject, context.timeZone) - anchorTime(b.subject, context.timeZone));
+  const first = sorted[0]!;
+  const day = anchorDay(first.subject, context.timeZone);
+  const expiresAt = new Date(Math.max(...sorted.map((item) => item.subject.expiresAt.getTime())));
+  const titles = sorted.map(({ row }) => row.title);
+  const rank = { high: 2, medium: 1, low: 0 } as const;
+
+  return {
+    category: "school",
+    sourceType: "school_day",
+    // The child the day is about: a real record, and the same for every item.
+    sourceId: first.row.child_member_id,
+    threadKey: `school_day:${first.row.child_member_id}:${day}`,
+    anchor: first.subject.anchor,
+    expiresAt,
+    owners: [],
+    outcomeKeys: first.subject.outcomeKeys,
+    childMemberId: first.row.child_member_id,
+    action: { action: "view_school_day", target: first.row.child_member_id },
+    items: sorted.map(({ row }) => row.id),
+    text: (stage, now) => {
+      const whenWord = stage === "tonight" ? "tomorrow" : "today";
+      const priority = sorted
+        .map(({ subject }) => subject.text(stage, now).priority)
+        .reduce((top, next) => (rank[next] > rank[top] ? next : top), "low" as ReminderText["priority"]);
+      return {
+        title: `${childName} — ${sorted.length} things for ${whenWord}`,
+        body: `${joinWords(titles)}.`,
+        priority,
+      };
+    },
+  };
+}
+
+function anchorTime(subject: ReminderSubject, timeZone: string): number {
+  return subject.anchor.kind === "moment" ? subject.anchor.at.getTime() : atLocal(subject.anchor.date, 0, timeZone).getTime();
+}
+
+function anchorDay(subject: ReminderSubject, timeZone: string): string {
+  return subject.anchor.kind === "day" ? subject.anchor.date : localMoment(subject.anchor.at, timeZone).dateKey;
 }
 
 function daysBetween(fromDateKey: string, toDateKey: string): number {

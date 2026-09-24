@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { DELIVERY_CHANNELS, type DeliveryChannel } from "@wonderhome/core/notifications/channels";
-import { loadChannelPreferences, saveChannelPreference } from "@wonderhome/core/notifications/preferences";
+import { loadChannelPreferences, saveChannelPreference, saveSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
 import { TUNABLE_CATEGORIES } from "@wonderhome/core/notifications/policies";
 import { saveReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
 
@@ -149,4 +149,27 @@ export async function saveReminderPreferencesAction(_previous: ActionState, form
   revalidatePath("/settings/notifications");
   revalidatePath("/notifications");
   return { notice: "Reminder preferences saved." };
+}
+
+/** The day's summary and learned timing — each person's own choice (stories 23-011, 23-012). */
+export async function saveSmartRemindersAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const householdId = String(formData.get("householdId") ?? "");
+  const learnTiming = formData.get("learnTiming") === "on";
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, householdId);
+    await saveSmartReminderChoices(supabase, {
+      householdId,
+      memberId: membership.memberId,
+      dailyDigest: formData.get("dailyDigest") === "on",
+      learnTiming,
+    });
+    // Turning learning on or off moves reminders already waiting.
+    await reconcileRemindersNow(householdId, { force: true });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "notifications").body.error.message };
+  }
+  revalidatePath("/settings/notifications");
+  revalidatePath("/notifications");
+  return { notice: "Saved." };
 }

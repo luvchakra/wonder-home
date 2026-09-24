@@ -107,10 +107,10 @@ export async function completeReminderSourceAction(_previous: ActionState, formD
     const membership = await requireMembership(supabase, parsed.data.householdId);
     const { data } = await supabase
       .from("notifications")
-      .select("source_type, source_id")
+      .select("source_type, source_id, decision_factors")
       .eq("id", parsed.data.notificationId)
       .maybeSingle();
-    const row = data as { source_type: string | null; source_id: string | null } | null;
+    const row = data as { source_type: string | null; source_id: string | null; decision_factors: { items?: unknown } | null } | null;
     if (!row?.source_id) return { error: "There is nothing to mark done for this one." };
     const today = localMoment(new Date(), membership.household.timezone).dateKey;
 
@@ -127,6 +127,15 @@ export async function completeReminderSourceAction(_previous: ActionState, formD
         await completeSchoolItem(supabase, row.source_id);
         done = "done";
         break;
+      case "school_day": {
+        // A child's day, grouped: each thing in it is marked done on its own,
+        // through the same service the Kids & School screen uses.
+        const items = Array.isArray(row.decision_factors?.items) ? row.decision_factors.items.filter((id): id is string => typeof id === "string" && z.uuid().safeParse(id).success) : [];
+        if (items.length === 0) return { error: "There is nothing to mark done for this one." };
+        for (const id of items) await completeSchoolItem(supabase, id);
+        done = "done_all";
+        break;
+      }
       case "pet_care_need":
         await markPetCareDone(supabase, { householdId: parsed.data.householdId, needId: row.source_id, doneOn: today });
         done = "done";
@@ -134,6 +143,10 @@ export async function completeReminderSourceAction(_previous: ActionState, formD
       default:
         return { error: "There is nothing to mark done for this one." };
     }
+
+    // Done from the reminder itself: that is when this person acts on this
+    // kind of thing, the only evidence learned timing (23-012) ever uses.
+    await supabase.from("notifications").update({ status: "acted" }).eq("id", parsed.data.notificationId).in("status", ["generated", "delivered", "seen"]);
 
     // The reminder resolves because its source changed — right away, not at the next pass.
     await reconcileRemindersNow(parsed.data.householdId, { force: true });

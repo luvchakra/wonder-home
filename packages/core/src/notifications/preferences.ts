@@ -99,3 +99,34 @@ export async function saveChannelPreference(
     throw new Error(`saveChannelPreference failed: ${error.code ?? "unknown"}`);
   }
 }
+
+/** A person's own choices about how smart their reminders are (stories 23-011, 23-012). */
+export type SmartReminderChoices = { dailyDigest: boolean; learnTiming: boolean };
+
+/** Read from their in-app row; the summary is on and learning off until they say otherwise. */
+export async function loadSmartReminderChoices(supabase: SupabaseClient, memberId: string): Promise<SmartReminderChoices> {
+  const { data } = await supabase
+    .from("notification_preferences")
+    .select("daily_digest, learn_timing")
+    .eq("member_id", memberId)
+    .eq("channel", "in_app")
+    .maybeSingle();
+  const row = data as { daily_digest?: boolean | null; learn_timing?: boolean | null } | null;
+  return { dailyDigest: row?.daily_digest ?? true, learnTiming: row?.learn_timing ?? false };
+}
+
+/**
+ * Written onto the person's own in-app row, through their own session (RLS
+ * keeps it theirs). Only these two columns move; quiet hours and the rest
+ * of the row are left exactly as they were.
+ */
+export async function saveSmartReminderChoices(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string } & SmartReminderChoices,
+): Promise<void> {
+  const { error } = await supabase.from("notification_preferences").upsert(
+    { household_id: input.householdId, member_id: input.memberId, channel: "in_app", daily_digest: input.dailyDigest, learn_timing: input.learnTiming },
+    { onConflict: "member_id,channel" },
+  );
+  if (error) throw new Error(`saveSmartReminderChoices failed: ${error.code ?? "unknown"}`);
+}

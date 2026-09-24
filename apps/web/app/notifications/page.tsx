@@ -13,7 +13,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { cn } from "@wonderhome/core/lib/cn";
 
-import { ReminderRow } from "../_components/reminder-row";
+import { ReminderDigest, ReminderRow } from "../_components/reminder-row";
 import { reconcileRemindersNow } from "../_lib/reminders";
 import {
   REMINDER_COLUMNS,
@@ -58,7 +58,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   const endOfTomorrow = atLocal(shiftDate(localMoment(now, timeZone).dateKey, 2), 0, timeZone);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const [{ data: openData }, { data: closedData }] = await Promise.all([
+  const [{ data: openData }, { data: closedData }, { data: digestPref }] = await Promise.all([
     supabase
       .from("notifications")
       .select(REMINDER_COLUMNS)
@@ -75,6 +75,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       .gte("updated_at", weekAgo)
       .order("updated_at", { ascending: false })
       .limit(40),
+    supabase.from("notification_preferences").select("daily_digest").eq("member_id", membership.memberId).eq("channel", "in_app").maybeSingle(),
   ]);
 
   const openRows = (openData ?? []) as ReminderRowData[];
@@ -111,6 +112,16 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   };
 
   const firstName = membership.displayName.split(/\s+/)[0];
+
+  // The day in one card (23-011): the same reminders, today's, in the order they come.
+  const today = localMoment(now, timeZone).dateKey;
+  const digest =
+    tab === "all" && !category && (digestPref as { daily_digest?: boolean } | null)?.daily_digest !== false
+      ? openRows
+          .filter((row) => localMoment(new Date(row.scheduled_for), timeZone).dateKey === today)
+          .sort((a, b) => Date.parse(a.scheduled_for) - Date.parse(b.scheduled_for))
+          .map((row) => ({ id: row.id, category: row.category, title: row.title, when: format.time(row.scheduled_for) }))
+      : [];
   // What an action on the thing itself just did — a closed code, never text from the address.
   const nextDue = query.next && /^\d{4}-\d{2}-\d{2}$/.test(query.next) ? format.date(query.next, "long") : null;
   const untilDate = query.until && !Number.isNaN(Date.parse(query.until)) ? new Date(query.until) : null;
@@ -122,6 +133,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       ? `Marked paid.${nextDue ? ` The next one is due ${nextDue}, and its reminders will come then.` : ""}`
       : query.done === "done"
         ? "Marked done. Its reminders are cleared."
+        : query.done === "done_all"
+          ? "All marked done under Kids & School. Their reminders are cleared."
         : query.done === "dismissed"
           ? "Dismissed. If there is a later reminder about it, that one still comes."
           : query.done === "snoozed" && snoozedUntil
@@ -151,6 +164,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         </header>
 
         {confirmation ? <Alert tone="info">{confirmation}</Alert> : null}
+
+        {digest.length > 1 ? <ReminderDigest firstName={firstName} items={digest} /> : null}
 
         <SegmentedControl
           label="Which notifications"

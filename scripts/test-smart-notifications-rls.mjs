@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { asProfile, deniedForProfile, psql } from "./lib/db.mjs";
+import { asProfile, deniedForProfile, deniedForUpdate, psql } from "./lib/db.mjs";
 import { buildTestDatabase } from "./setup-test-db.mjs";
 
 const DB = process.env.WH_TEST_DB ?? "wonderhome_smart_notifications_test";
@@ -217,5 +217,39 @@ test("quiet hours are stored to the minute, and only as real minutes", () => {
   assert.ok(
     deniedForProfile(PARTNER, `update public.notification_preferences set quiet_from_minute = 75 where member_id = '${partnerMember}';`, options),
     "a quiet-hours minute of 75 was stored",
+  );
+});
+
+test("a child's school day is one reminder, sourced to the child and naming its items", () => {
+  const child = psql(
+    `insert into public.household_members (household_id, member_type, display_name) values ('${household}', 'child', 'Aarav') returning id;`,
+    options,
+  );
+  psql(
+    `insert into public.notifications (household_id, recipient_member_id, type, thread_key, title, body, category, source_type, source_id, decision_factors)
+     values ('${household}', '${partnerMember}', 'action', 'school_day:${child}:2026-09-25', 'Aarav — 2 things for tomorrow', 'Science project and Maths worksheet.',
+             'school', 'school_day', '${child}', jsonb_build_object('items', jsonb_build_array(gen_random_uuid(), gen_random_uuid())));`,
+    options,
+  );
+  assert.throws(
+    () => psql(`insert into public.notifications (household_id, recipient_member_id, type, thread_key, title, body, source_type) values ('${household}', '${partnerMember}', 'action', 'school_day:x', 't', 'b', 'school_day');`, options),
+    "a school day with no child behind it was stored",
+  );
+});
+
+test("the day's summary and learned timing are each person's own choice, and learning starts off", () => {
+  // The partner's in-app row exists from the quiet-hours test; its new choices start as the migration says.
+  assert.equal(psql(`select daily_digest || ' ' || learn_timing from public.notification_preferences where member_id = '${partnerMember}' and channel = 'in_app';`, options), "true false");
+  asProfile(PARTNER, `update public.notification_preferences set learn_timing = true, daily_digest = false where member_id = '${partnerMember}' and channel = 'in_app';`, options);
+  assert.equal(psql(`select daily_digest || ' ' || learn_timing from public.notification_preferences where member_id = '${partnerMember}' and channel = 'in_app';`, options), "false true");
+  assert.ok(
+    deniedForUpdate(
+      HEAD,
+      `update public.notification_preferences set learn_timing = false where member_id = '${partnerMember}' and channel = 'in_app';`,
+      `select learn_timing::text from public.notification_preferences where member_id = '${partnerMember}' and channel = 'in_app';`,
+      "true",
+      options,
+    ),
+    "an Admin changed another person's learned-timing choice",
   );
 });
