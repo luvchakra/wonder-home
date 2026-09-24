@@ -348,7 +348,17 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   update, cancel, no change, conflict (a record changed after the document
   was written stands) or one question — never a guess and never a second
   copy. A new rule for a document is a plan rule with a golden test in
-  `plan.test.ts`, not a special case in a screen. How an item is confirmed is `homesend/confirmation.ts`
+  `plan.test.ts`, not a special case in a screen. A document with two or
+  more records is reviewed as that plan (`_components/home-send-plan.tsx`)
+  and never applies on its own. The browser sends only choices (include,
+  edit, who it is for); `applyDocumentPlanAction` rebuilds the plan on the
+  server and writes each record through its domain service, via the
+  server-only `home-send-writes.ts`. Each change is recorded with its plan
+  key, field-level before/after and evidence, and the exact plan and
+  receipt are kept on the item (`homesend/apply.ts`: created, updated,
+  cancelled, unchanged, skipped, needs clarification, failed). A partial
+  result is never reported as done, and "Undo all" reverses a whole
+  document. How an item is confirmed is `homesend/confirmation.ts`
   (§12): a clear, new grocery or school item a member sent may apply on its
   own only where the household set that outcome's autonomy to "execute";
   bills, health documents and receipts always wait for a person, whatever

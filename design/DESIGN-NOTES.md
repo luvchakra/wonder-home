@@ -417,6 +417,31 @@ own `LANGUAGES` list rather than a marketing one. The header shows its inline
 links only from `xl`, where every label fits on one line; below that it uses
 the menu, never wrapped labels (rule 15).
 
+### The document change plan (rules 4, 12, 14, 17, 21)
+
+A document with several records in it (Deep Document Understanding 2.0) is
+reviewed as one plan, not as one item: `_components/home-send-plan.tsx`,
+composed only from the kit.
+
+- **Grouped by what the reader is deciding** (rule 17): Updates, New,
+  Already on record, Conflicts, Needs your answer.
+- **Every record is one row** (rule 4): a tinted domain tile, the name, one
+  line of why, and its outcome as a badge in words, never colour alone.
+- **The chevron opens it** (rule 21, `ExpandableRow`) to exactly what would
+  be written:
+  - an update shows before → after once;
+  - values from the household's own records sit under "From your household
+    records";
+  - the source page and quote come last.
+- **One button** (rule 14): "Review and apply (N)". The count is what
+  would actually be written; with nothing to change it says so.
+- **Include, edit and answer live in the open row.** Edits are held in
+  state, so closing a row never loses them.
+- **The receipt says what happened record by record** (Created / Updated /
+  No change / Left out / Could not complete). "Undo all" reverses the lot
+  through each domain's own service (rule 12).
+
+
 ## Performance rules
 
 "Snappy" is a design property, and these are the rules that keep it:

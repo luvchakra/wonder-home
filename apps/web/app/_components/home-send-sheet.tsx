@@ -57,6 +57,9 @@ export function HomeSendSheet({
   // it came from. A failed-safely outcome opens nothing — it is kept in
   // HomeSend's own "Failed safely" list, and the sheet says so.
   const [latest, setLatest] = useState<SendHomeItemState>({});
+  // Once a document's plan is applied its receipt is shown, and "Not worth
+  // adding" no longer applies to it.
+  const [planApplied, setPlanApplied] = useState(false);
   const [seen, setSeen] = useState([uploadState, pasteState, transcriptState]);
   const fresh = [uploadState, pasteState, transcriptState].find((state, index) => state !== seen[index]);
   if (fresh) {
@@ -195,10 +198,18 @@ export function HomeSendSheet({
             receivedAt={new Date().toISOString()}
             subject={item.subject ?? null}
             confirmation={item.confirmation ?? null}
+            plan={item.plan ?? null}
+            onApplied={() => setPlanApplied(true)}
+            onDone={() => {
+              setLatest({});
+              setMode("choose");
+              setPlanApplied(false);
+              onOpenChange(false);
+            }}
           />
         )}
 
-        {item ? (
+        {item && !planApplied ? (
           <form action={dismissAction}>
             <input type="hidden" name="householdId" value={householdId} />
             <input type="hidden" name="itemId" value={item.id} />

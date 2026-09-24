@@ -6,6 +6,7 @@ import { useActionState, useRef, useState, type ReactNode } from "react";
 import { gateTranscript, uncertainTranscriptPrompt } from "@wonderhome/core/homesend/audio";
 import { FAILURE_REASON_COPY, type HomeSendChange } from "@wonderhome/core/homesend/items";
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
+import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { cn } from "@wonderhome/core/lib/cn";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -29,7 +30,7 @@ import {
 import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
-export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null; confirmation?: ReviewConfirmation | null };
+export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null; confirmation?: ReviewConfirmation | null; plan?: DocumentPlan | null };
 
 const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone; label: string }> = {
   bill: { icon: Wallet, tone: "money", label: "Bill" },
@@ -87,6 +88,7 @@ type OpenItem = {
   heard?: { text: string; prompt: string } | null;
   notice?: string | null;
   confirmation?: ReviewConfirmation | null;
+  plan?: DocumentPlan | null;
 };
 
 function openFromState(state: SendHomeItemState): OpenItem | null {
@@ -100,6 +102,7 @@ function openFromState(state: SendHomeItemState): OpenItem | null {
     reconciliation: state.item.reconciliation ?? null,
     subject: state.item.subject ?? null,
     confirmation: state.item.confirmation ?? null,
+    plan: state.item.plan ?? null,
     receivedAt: new Date().toISOString(),
     heard: state.heard ?? null,
     notice: state.notice ?? null,
@@ -159,6 +162,7 @@ export function HomeSendInbox({
   const [mode, setMode] = useState<"drop" | "paste">("drop");
   const [dragOver, setDragOver] = useState(false);
   const [openItem, setOpenItem] = useState<OpenItem | null>(null);
+  const [planApplied, setPlanApplied] = useState(false);
   const [failedNotice, setFailedNotice] = useState<string | null>(null);
   // Applied on its own under the household's own autonomy setting (§12):
   // said so, with its Undo right here as well as in "Recently handled".
@@ -225,6 +229,7 @@ export function HomeSendInbox({
       reconciliation: handFill ? null : (reviews[item.id]?.reconciliation ?? null),
       subject: handFill ? null : (reviews[item.id]?.subject ?? null),
       confirmation: handFill ? null : (reviews[item.id]?.confirmation ?? null),
+      plan: handFill ? null : (reviews[item.id]?.plan ?? null),
     });
   }
 
@@ -354,7 +359,14 @@ export function HomeSendInbox({
               receivedAt={openItem.receivedAt}
               subject={openItem.subject ?? null}
               confirmation={openItem.confirmation ?? null}
+              plan={openItem.plan ?? null}
+              onApplied={() => setPlanApplied(true)}
+              onDone={() => {
+                setPlanApplied(false);
+                setOpenItem(null);
+              }}
             />
+            {planApplied ? null : (
             <form action={dismissAction}>
               <input type="hidden" name="householdId" value={householdId} />
               <input type="hidden" name="itemId" value={openItem.id} />
@@ -362,6 +374,7 @@ export function HomeSendInbox({
                 {dismissing ? "Dismissing…" : "Not worth adding"}
               </Pill>
             </form>
+            )}
             {dismissState.error ? <Alert>{dismissState.error}</Alert> : null}
           </div>
         )}
@@ -492,21 +505,25 @@ export function HomeSendInbox({
                     </div>
                     {secondaryChanges.map((change) => {
                       const bought = change.domain === "purchase";
-                      const name = bought ? purchaseNames[change.entityId] : groceryNames[change.entityId];
-                      const said = bought
-                        ? `Bought: ${name ?? "a line from this receipt"}`
-                        : isReceipt
-                          ? `Now tracking${name ? `: ${name}` : " a new item"}`
-                          : `Also added to Groceries${name ? `: ${name}` : ""}`;
+                      // A document's plan (DDU 2.0) says what each of its changes was, by name.
+                      const planned = item.receipt?.changes.find((entry) => entry.changeId === change.id);
+                      const name = planned?.title ?? (bought ? purchaseNames[change.entityId] : groceryNames[change.entityId]);
+                      const said = planned
+                        ? `${planned.action === "updated" ? "Updated" : planned.action === "cancelled" ? "Cancelled" : "Added"}: ${planned.title} · ${planned.reason}`
+                        : bought
+                          ? `Bought: ${name ?? "a line from this receipt"}`
+                          : isReceipt
+                            ? `Now tracking${name ? `: ${name}` : " a new item"}`
+                            : `Also added to Groceries${name ? `: ${name}` : ""}`;
                       return (
                       <div key={change.id} className="ml-11 flex items-center gap-2 text-xs text-[var(--wh-foreground-subtle)]">
-                        {bought ? <Receipt aria-hidden className="size-3.5 shrink-0" /> : <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />}
+                        {bought ? <Receipt aria-hidden className="size-3.5 shrink-0" /> : change.domain === "school_item" ? <GraduationCap aria-hidden className="size-3.5 shrink-0" /> : change.domain === "bill" ? <Wallet aria-hidden className="size-3.5 shrink-0" /> : <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />}
                         <span className="flex-1 break-words">{said}</span>
                         {!change.undoneAt ? (
                           <form action={undoAction}>
                             <input type="hidden" name="householdId" value={householdId} />
                             <input type="hidden" name="changeId" value={change.id} />
-                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={bought ? `Undo recording ${name ?? "this line"}` : `Undo adding ${name ?? "the grocery item"}`}>
+                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={bought ? `Undo recording ${name ?? "this line"}` : `Undo ${planned?.action === "updated" ? "updating" : "adding"} ${name ?? "the grocery item"}`}>
                               {undoing ? "Undoing…" : "Undo"}
                             </Pill>
                           </form>

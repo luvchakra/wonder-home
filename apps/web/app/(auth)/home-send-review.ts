@@ -6,8 +6,10 @@ import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { AUTO_APPLY_OUTCOMES, decideConfirmation, type ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { HouseholdContextItem } from "@wonderhome/core/context/types";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
+import { buildDocumentPlan, readPlanContext, type DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
+import type { DocumentReading } from "@wonderhome/core/homesend/document";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView } from "@wonderhome/core/identity/views";
@@ -27,7 +29,46 @@ export type ReviewPreparation = {
   understanding: IntakeUnderstanding | null;
   /** How this item is confirmed (§12): applied on its own, prepared, one question, or held for a person. */
   confirmation: ConfirmationDecision;
+  /**
+   * The document's change plan (DDU 2.0 §22), when the document proposes more
+   * than one record — each reconciled on its own. Null for a single-record
+   * item, which keeps the one-item confirm form.
+   */
+  plan?: DocumentPlan | null;
 };
+
+/** A document worth a plan: one that proposes more than one record (DDU 2.0 §20). */
+export function wantsPlan(understanding: IntakeUnderstanding | null): boolean {
+  return (understanding?.document?.records.length ?? 0) >= 2;
+}
+
+/**
+ * The plan for a stored reading, built on the member's own client from what
+ * is on record right now — the same function the apply step runs again
+ * before writing anything, so what was shown is what is applied.
+ */
+export async function planFor(
+  supabase: SupabaseClient,
+  membership: HouseholdMembership,
+  item: { understanding: IntakeUnderstanding | null; createdAt?: string | null },
+  options: { answers?: Record<string, string>; people?: HouseholdContextItem[]; edit?: (records: DocumentReading["records"]) => DocumentReading["records"] } = {},
+): Promise<DocumentPlan | null> {
+  const reading = item.understanding?.document;
+  if (!reading || reading.records.length === 0) return null;
+  const [people, context] = await Promise.all([
+    options.people ? Promise.resolve(options.people) : householdPeople(supabase, membership).catch(() => []),
+    readPlanContext(supabase, membership.household.id),
+  ]);
+  const records = options.edit ? options.edit(reading.records) : reading.records;
+  return buildDocumentPlan({ ...reading, records }, context, {
+    householdId: membership.household.id,
+    timezone: membership.household.timezone,
+    viewerMemberId: membership.memberId,
+    people,
+    receivedAt: item.createdAt ?? null,
+    answers: options.answers,
+  });
+}
 
 /**
  * The household's own autonomy setting for the outcome a kind belongs to
@@ -111,5 +152,11 @@ export async function prepareReview(
   // Who it is for: what the content said, or else whose record it matched.
   const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
   const autonomy = checked ? await autonomyFor(supabase, membership.household.id, kind) : "observe";
-  return { subject, reconciliation, understanding, confirmation: confirm(subject, reconciliation, understanding, autonomy) };
+  // A document with several records is reviewed as a plan (DDU 2.0), and
+  // never applied on its own: every record in it waits for a person.
+  const plan = wantsPlan(understanding) ? await planFor(supabase, membership, { understanding, createdAt: item.createdAt }, { people }).catch(() => null) : null;
+  const confirmation = plan
+    ? { mode: "prepare" as const, reason: "A document with several things in it waits for you to check each one.", question: null }
+    : confirm(subject, reconciliation, understanding, autonomy);
+  return { subject, reconciliation, understanding, confirmation, plan };
 }

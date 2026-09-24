@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 225 |
-| Done | 216 |
+| Done | 217 |
 | In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 4 |
-| Completion | 96.0% |
+| Not Started | 3 |
+| Completion | 96.4% |
 | Current module | 14 AI Orchestration (Deep Document Understanding 2.0) |
-| Current story | 14-017 whole-document reader & change plan done; 14-018 review, apply and receipt next |
+| Current story | 14-018 review, apply and receipt done; 14-019 HomeTalk attachments & certification next |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 17 | In Progress |
+| 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 18 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -250,3 +250,4 @@ disagree again.)
 | 2026-09-24 | 20 | 20-009 | Done | billing 116 unit (Razorpay signature, vocabulary, subscriptions, cancel and refund calls in paise; router, money and forward-only payment states; a Razorpay subscription's whole life through the webhook into the ledger; Stripe invoice ledger, cancel-at-period-end and refunds), payments database suite 11 (prices readable, provider plans unreadable, ledger Admin-read and server-written, one payment per provider id, codes and last four only, refunds pending until confirmed), verify:live 212/212 | Multi-provider payments backend: Razorpay and Stripe behind the one billing port, a configurable router, our own price catalogue mapped server-side to provider plans, and a ledger of payments, invoices and refunds. Migration `20261003090000_payments_multi_provider.sql` applied live. Inert: the catalogue is empty and no provider is configured until a person decides prices and sets keys |
 | 2026-09-24 | 20 | 20-010 | Done | billing 122 unit (account: prices from the catalogue, yearly arithmetic, early access, money in words, closed payment words); payments database suite 11 (the catalogue ships with the decided prices, nothing paid for yet); tenant isolation, entitlements; security gate 12/12; verify:live 213/213; browser QA at 360px and 1280px with a QA household: early-access plans with monthly/yearly prices, a free switch to Pro, a seeded Razorpay-paid state (renewal date, billing history, invoice detail, cancel refused honestly with no live provider), landing pricing | Plan, checkout and billing screens. Prices seeded live (`20261004090000_plan_prices_inr.sql`); no plan requires payment yet, so switching is free during early access. Checkout, confirmation, billing history, invoice detail and cancel-at-period-end are built and go live the moment a provider is configured and the plans are marked paid |
 | 2026-09-24 | 14 | 14-017 | Done | plan 26 unit (golden scenarios 1–3 of the spec, cancel, field-level bill update, next month's bill as a new occurrence, no-op, the per-record backstop, record date grounding, page report); core suite 2871 green; eval 49/49 with 0/14 unsafe | Deep Document Understanding 2.0, phases A–C: whole-document reading into records with page evidence, pages read, the document's own date; the change plan reconciles each record on its own (create / field-level update / cancel / no change / conflict / one question). Matcher: an occasion's part (rehearsal, fee) is never the occasion. Review, apply and receipt are 14-018; HomeTalk and certification 14-019 |
+| 2026-09-24 | 14 | 14-018 | Done | apply 8 unit (writes once and records each, skipped, never-written outcomes, partial failure, plain refusals, unrecorded write, no-op, receipt text) + plan 27; typecheck/lint; verify:live 218/218 (including the five new column probes); browser QA at 360px and 1280px on a seeded QA household (golden scenario 1 + an unassigned Maths assessment): plan grouped 1 / 2 / 3 / 1, answer "Manan", apply 4, receipt "All done!", database checked (Annual Day 12 → 15 Oct, three new school items, field history and page on each change), newer-record conflict after a later edit, Undo all 3 restored | Deep Document Understanding 2.0 phases D–E: grouped review, per-record include/edit/answer, server-rebuilt plan applied through the domain services with verification, field-level change history, the exact receipt with partial failure and no-op, Undo all. Migration `20261005090000_homesend_document_plan_receipt.sql` applied live |

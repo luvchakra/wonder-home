@@ -132,6 +132,14 @@ describe("Golden scenario 2 — a newer record wins (§47)", () => {
     expect(applyLabel(result)).toBe("Nothing to change");
   });
 
+  it("a document dated the same day the record was last changed is not taken as older than it", () => {
+    const result = plan(
+      reading([record("r1", { domain: "school_item", title: "PTM", person: "Asmi", date: "2026-10-10" })], { issuedOn: "2026-09-23" }),
+      { schoolItems: [schoolItem("ptm", "asmi", "PTM", "2026-10-12", { updatedAt: new Date("2026-09-23T10:00:00Z") })] },
+    );
+    expect(outcome(result, "r1").action).toBe("update");
+  });
+
   it("the same document written after the record's last change is an update", () => {
     const result = plan(
       reading([record("r1", { domain: "school_item", title: "PTM", person: "Asmi", date: "2026-10-10" })], { issuedOn: "2026-09-24" }),

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Deep Document Understanding 2.0, part 2: the grouped review ("Found N items"), apply through the domain services with a server-rebuilt plan, field-level change history, the exact receipt with partial failure and no-op, and Undo all (story 14-018 Done)](2026-09-24-document-plan-review-and-receipt.md) |
 | 2026-09-24 | [Deep Document Understanding 2.0, part 1: the whole document read into every record it proposes, with page evidence, and a change plan that reconciles each one — new, field-level update, already on record, conflict or one question (story 14-017 Done)](2026-09-24-deep-document-reader-and-plan.md) |
 | 2026-09-24 | [Payments, part 2: the plan, checkout, confirmation, billing history and invoice screens; the decided prices (Pro ₹299, Max ₹599, 20% off yearly) live and free during early access until a provider is live (story 20-010 Done)](2026-09-24-payment-screens.md) |
 | 2026-09-24 | [Landing refresh: "New in WonderHome" (ready today, and coming soon in honest words), a HomeSend moment, a greetings strip from the product's own languages, parallax depth and gentle motion, all off under reduced motion](2026-09-24-landing-refresh.md) |
