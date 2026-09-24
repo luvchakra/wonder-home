@@ -27,6 +27,14 @@ const baseURL = `http://127.0.0.1:${PORT}`;
  */
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || findPinnedChromium();
 
+/**
+ * CI sets PLAYWRIGHT_CHANNEL=chrome to drive the Google Chrome the runner
+ * image already has, instead of downloading Chromium and its system
+ * libraries on every run. A channel and an executable path are exclusive.
+ */
+const channel = process.env.PLAYWRIGHT_CHANNEL || undefined;
+const launch = channel ? { channel } : { launchOptions: { executablePath } };
+
 function findPinnedChromium(): string | undefined {
   const root = process.env.PLAYWRIGHT_BROWSERS_PATH;
   if (!root) return undefined;
@@ -50,19 +58,22 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Playwright defaults to half the cores; the specs are short and mostly
+  // wait on the server, so CI's four cores all get a worker.
+  workers: process.env.CI ? 4 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL,
     trace: "on-first-retry",
   },
   projects: [
-    { name: "mobile", use: { ...devices["Pixel 7"], launchOptions: { executablePath } } },
+    { name: "mobile", use: { ...devices["Pixel 7"], ...launch } },
     // The API-only specs never open a page, so a second viewport would run
     // the identical requests twice (164 of 432 tests). They run once, on mobile.
     {
       name: "desktop",
       testIgnore: /(api-contract|domains)\.spec\.ts$/,
-      use: { ...devices["Desktop Chrome"], launchOptions: { executablePath } },
+      use: { ...devices["Desktop Chrome"], ...launch },
     },
   ],
   webServer: {

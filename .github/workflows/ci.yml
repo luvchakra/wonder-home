@@ -77,7 +77,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -96,6 +95,23 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
+      # tsc's incremental build info and ESLint's content-keyed cache: warm,
+      # typecheck and lint take seconds instead of most of a minute. Both
+      # re-check whatever changed (tsc follows dependencies; the lint rules
+      # use no type information, so a file's result depends on it alone).
+      # Pull requests restore main's; only main saves.
+      - name: Restore typecheck and lint caches
+        if: env.CODE == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/web/tsconfig.tsbuildinfo
+            packages/core/tsconfig.tsbuildinfo
+            apps/web/.eslintcache
+          key: lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Typecheck
         if: env.CODE == 'true'
         run: npm run typecheck
@@ -103,6 +119,16 @@ jobs:
       - name: Lint
         if: env.CODE == 'true'
         run: npm run lint
+
+      - name: Save typecheck and lint caches
+        if: env.CODE == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            apps/web/tsconfig.tsbuildinfo
+            packages/core/tsconfig.tsbuildinfo
+            apps/web/.eslintcache
+          key: lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
       - name: Migration schema lint
         if: env.CODE == 'true'
@@ -147,7 +173,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -168,20 +193,12 @@ jobs:
     needs: changes
     if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Two shards, each with its own server and template, so the ~35 test
+    # files run on eight cores instead of four.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
       PGHOST: localhost
       PGPORT: 5432
@@ -194,7 +211,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -207,8 +223,21 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Schema and authorization tests
-        run: npm run test:db
+      # The runner image ships PostgreSQL 16, stopped. Starting it takes about
+      # two seconds; a postgres:16 service container took about twenty to
+      # pull and become healthy. The migrations need no extension beyond
+      # what the stock server has.
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -q -c "alter user postgres password 'postgres'"
+
+      - name: Schema and authorization tests (shard ${{ matrix.shard }} of 2)
+        run: |
+          node scripts/setup-test-db.mjs --template
+          files=$(ls scripts/test-*-rls.mjs | awk -v n=${{ matrix.shard }} '(NR - 1) % 2 == n - 1')
+          echo "$files"
+          node --test --test-concurrency=4 $files
 
   # Build and browser smoke tests run against the placeholder project, no
   # database needed.
@@ -222,7 +251,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Cache node_modules
         id: node-modules-cache
@@ -235,27 +263,45 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
+      # Turbopack keeps its build cache in .next/cache: warm, a build takes
+      # seconds instead of most of a minute. Pull requests restore the one
+      # main last saved (a PR can read its base branch's caches); only main
+      # saves, so a PR never spends time uploading a cache nobody else reads.
+      - name: Restore Next.js build cache
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Build
         run: npm run build
 
+      - name: Save Next.js build cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+
+      # Playwright's own headless shell, not the runner's Chrome: full Chrome
+      # (channel: chrome) made the suite ~20 s slower than it saved. The
+      # shell is cached, and the system libraries it needs already come with
+      # the Chrome the runner image ships, so `--with-deps` (an apt install,
+      # most of the old ~18 s) runs only if the plain install fails.
       - name: Playwright version
         id: playwright-version
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      # Chromium's binary is a ~150MB download; the browser itself doesn't
-      # change between runs unless @playwright/test's version does, so this
-      # is the one part of the install worth caching. The OS-level packages
-      # `--with-deps` also installs still run every time — the runner VM is
-      # thrown away after each job, so there is nothing to cache them into.
       - name: Cache Playwright browsers
-        id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          key: playwright-shell-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --only-shell chromium || npx playwright install --with-deps --only-shell chromium
 
       - name: E2E smoke tests
         # The Build step above already produced apps/web/.next — without this,

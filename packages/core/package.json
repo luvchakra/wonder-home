@@ -44,7 +44,7 @@
     "./ui/*": "./src/components/ui/*.tsx"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile tsconfig.tsbuildinfo",
     "test": "vitest run --passWithNoTests"
   },
   "peerDependencies": {
