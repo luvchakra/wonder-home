@@ -224,8 +224,15 @@ create table public.notification_reconciliations (
 );
 
 comment on table public.notification_reconciliations is
-  'Server-only throttle for reminder reconciliation. No policy: only the service role reads or writes it.';
+  'Server-only throttle for reminder reconciliation. A deny-all policy: only the service role reads or writes it.';
 
 alter table public.notification_reconciliations enable row level security;
+
+-- No session reads or writes it: only the service role, which bypasses RLS.
+create policy notification_reconciliations_no_client_access
+  on public.notification_reconciliations for all
+  to anon, authenticated
+  using (false)
+  with check (false);
 
 notify pgrst, 'reload schema';
