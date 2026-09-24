@@ -345,8 +345,9 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   (`home-send-channels.tsx`) is real: every member can read and copy the
   household's address, only an admin can set it up, rotate or turn it
   off — real forwarding still waits on that same human errand, but
-  nothing about the UI or the backend behind it does. WhatsApp is a
-  delivery channel with its own webhook (story 17-006), not an intake. The classifier can
+  nothing about the UI or the backend behind it does. WhatsApp is also
+  an intake (stories 14-015/14-016, `packages/core/src/whatsapp/`; see
+  the WhatsApp section under External providers). The classifier can
   also propose one secondary, different-domain write alongside an
   intake's primary one (a bill or school notice that also implies a
   grocery need) — always a grocery suggestion, never written until the
@@ -546,17 +547,45 @@ from `createNotification`), and each attempt leaves a `sent` or
 `delivery_failed` event in closed words. A reply to an open thread never
 pings again.
 
-The webhook (`/api/v1/whatsapp/webhook`) does three things:
+The webhook (`/api/v1/whatsapp/webhook`) does four things:
 - answers Meta's handshake;
 - believes a POST only after `X-Hub-Signature-256` verifies, then records
   delivered, seen or failed by provider message id;
-- honours STOP on the spot.
+- honours STOP on the spot;
+- takes in what a linked adult sends (below).
 
-WhatsApp is not a second brain. Nothing else a person writes there is acted
-on, and no household record is touched from it. It stays inert until a
-deployment sets `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`,
-`WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN`.
-Scheduled (future-dated) notifications are not yet sent beyond the app.
+WhatsApp is also a HomeSend intake (stories 14-015/14-016,
+`packages/core/src/whatsapp/`). It is an input channel, never an
+authorization channel:
+- **Linking.** A number becomes one adult member's only through a
+  single-use code. The member asks for it signed in, and it is stored
+  only as a hash, valid for fifteen minutes (`whatsapp_link_requests`).
+  WhatsApp then delivers "CONNECT <code>" from that number, and
+  `public.complete_whatsapp_link` completes the link atomically on the
+  server. A number that merely matches something typed somewhere links
+  nothing. One number is linked to one member at a time, anywhere
+  (`whatsapp_identities`). Disconnecting (`public.disconnect_whatsapp`,
+  the member or an admin) keeps the row and everything made from it.
+- **Inbound.** The household and member always come from the verified
+  link, never from the message. A linked number's message is recorded
+  once by WhatsApp's message id (`whatsapp_messages`) and queued as a
+  `whatsapp.process` job. After the response it becomes a HomeSend item
+  (`whatsapp` / `whatsapp_media`), through `ingestWhatsAppText` /
+  `ingestWhatsAppMedia` — the same pipeline, gates and confirmation as any
+  item. A number with no link is told how to connect, and nothing it sent
+  is kept.
+- **Replies.** The acknowledgement (`acknowledgementFor`) is short, sent
+  once, inside the 24-hour window the person opened, and never echoes an
+  amount, a health detail or a number.
+- **What it never does.** WhatsApp is not a second brain: it never answers
+  questions, decides, or touches a domain record.
+- **Telemetry.** `whatsapp_events` holds closed words and counts only.
+
+It all stays inert until a deployment sets `WHATSAPP_ACCESS_TOKEN`,
+`WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME`,
+`WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN`. The app offers
+connecting only once `WHATSAPP_BUSINESS_NUMBER` is set too. Scheduled
+(future-dated) notifications are not yet sent beyond the app.
 
 Smart notifications (module 23, `packages/core/src/notifications/`) are
 reminders about real records, never lines of text fired and forgotten.

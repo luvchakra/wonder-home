@@ -1,14 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { drainJobs } from "../homesend/retry-queue";
+import type { IngestDeps } from "../homesend/ingest";
 import { log } from "../observability/logger";
+import { recordWhatsAppEvents } from "../whatsapp/events";
+import { readInboundMessages } from "../whatsapp/inbound";
+import { receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "../whatsapp/intake";
 import {
   isOptOut,
   OPT_OUT_REPLY,
   readWhatsAppWebhook,
-  textMessage,
+  sendWhatsAppText,
   verifyWhatsAppSignature,
   type WhatsAppEnv,
 } from "./whatsapp";
+
+/** A delivery of message events is small; anything larger is not one. */
+export const MAX_WHATSAPP_WEBHOOK_BYTES = 256 * 1024;
 
 /**
  * WhatsApp's webhook (story 17-006).
@@ -27,12 +35,26 @@ import {
  *   - "STOP" switches WhatsApp off for that number on the spot, as WhatsApp's
  *     own policy requires, and says so. Turning it back on is only ever the
  *     member's own act, in the app.
- * Anything else a person writes is not acted on here: WhatsApp is not a
- * second brain, and no domain record is ever touched from this door.
+ *   - Anything else a linked adult sends (the WhatsApp HomeSend spec) is an
+ *     intake: "CONNECT <code>" completes a link, a message from a linked
+ *     number is recorded once and queued for HomeSend, and a number with no
+ *     link is told how to connect and nothing it sent is kept. Processing
+ *     runs after the response (`defer`), and on the job queue if that is cut
+ *     short, so WhatsApp gets its 200 quickly.
+ * WhatsApp is still not a second brain: nothing here decides, answers
+ * questions or touches a domain record. What arrives becomes a HomeSend item,
+ * reviewed and confirmed under the same gates as any other.
  */
 export async function handleWhatsAppWebhook(
   request: Request,
-  deps: { config: WhatsAppEnv | null; admin: () => SupabaseClient; fetch?: typeof fetch },
+  deps: {
+    config: WhatsAppEnv | null;
+    admin: () => SupabaseClient;
+    fetch?: typeof fetch;
+    /** Runs work after the response has gone (Next's `after`). Without it, processing waits for the job queue. */
+    defer?: (work: () => Promise<unknown>) => void;
+    ingest?: IngestDeps;
+  },
 ): Promise<Response> {
   const config = deps.config;
 
@@ -47,9 +69,13 @@ export async function handleWhatsAppWebhook(
   }
 
   if (!config?.appSecret) return unauthenticated();
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_WHATSAPP_WEBHOOK_BYTES) return json(413, { error: "too_large" });
   const rawBody = await request.text();
+  if (rawBody.length > MAX_WHATSAPP_WEBHOOK_BYTES) return json(413, { error: "too_large" });
   if (!(await verifyWhatsAppSignature(rawBody, request.headers.get("x-hub-signature-256"), config.appSecret))) {
     log.warn("whatsapp webhook rejected");
+    await recordWhatsAppEvents(deps.admin(), [{ kind: "signature_failed" }]).catch(() => undefined);
     return unauthenticated();
   }
 
@@ -106,19 +132,32 @@ export async function handleWhatsAppWebhook(
       .select("member_id");
     if ((switchedOff ?? []).length === 0) continue;
     optedOut += 1;
-    await sendText(config, message.from, OPT_OUT_REPLY, deps.fetch).catch(() => undefined);
+    await sendWhatsAppText(config.adapter, message.from, OPT_OUT_REPLY, deps.fetch).catch(() => undefined);
   }
 
-  return json(200, { received: true, recorded, optedOut });
-}
+  // Intake: everything that isn't a STOP. A failure to record is a 500, so
+  // WhatsApp delivers again; recording is idempotent by message id.
+  const intakeDeps = { config: config.adapter, fetch: deps.fetch, ingest: deps.ingest };
+  const inbound = readInboundMessages(payload).filter((message) => !(message.type === "text" && isOptOut(message.text ?? "")));
+  let queued = 0;
+  if (inbound.length > 0) {
+    try {
+      const received = await receiveWhatsAppMessages(admin, inbound, intakeDeps);
+      queued = received.queued.length;
+    } catch (thrown) {
+      log.warn("whatsapp intake failed", { reason: thrown instanceof Error ? thrown.message : "unknown" });
+      return json(500, { error: "retry" });
+    }
+    if (queued > 0 && deps.defer) {
+      deps.defer(() =>
+        drainJobs(admin, { workerId: "whatsapp-webhook", limit: Math.min(10, queued + 2), deps: deps.ingest, handlers: { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler(intakeDeps) } }).catch((error) =>
+          log.warn("whatsapp processing drain failed", { reason: error instanceof Error ? error.message : "unknown" }),
+        ),
+      );
+    }
+  }
 
-async function sendText(config: WhatsAppEnv, to: string, text: string, fetchImpl: typeof fetch = fetch): Promise<void> {
-  await fetchImpl(`https://graph.facebook.com/v21.0/${encodeURIComponent(config.adapter.phoneNumberId)}/messages`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${config.adapter.accessToken}`, "content-type": "application/json" },
-    body: JSON.stringify(textMessage(to, text)),
-    signal: AbortSignal.timeout(8_000),
-  });
+  return json(200, { received: true, recorded, optedOut, queued });
 }
 
 function constantTimeEqual(a: string, b: string): boolean {

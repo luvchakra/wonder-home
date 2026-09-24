@@ -18,6 +18,7 @@
     "./help/*": "./src/help/*.ts",
     "./school/*": "./src/school/*.ts",
     "./homesend/*": "./src/homesend/*.ts",
+    "./whatsapp/*": "./src/whatsapp/*.ts",
     "./evaluation/*": "./src/evaluation/*.ts",
     "./hometalk/*": "./src/hometalk/*.ts",
     "./voicelink/*": "./src/voicelink/*.ts",

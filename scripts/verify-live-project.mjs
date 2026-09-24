@@ -102,6 +102,10 @@ const SHIPPED_TABLES = [
   "health_vitals",
   "health_fitness_goals",
   "health_fitness_sessions",
+  "whatsapp_identities",
+  "whatsapp_link_requests",
+  "whatsapp_messages",
+  "whatsapp_events",
 ];
 
 /**
@@ -596,6 +600,24 @@ async function main() {
     Boolean(anonEmailEvents.error) || (Array.isArray(anonEmailEvents.data) && anonEmailEvents.data.length === 0),
     anonEmailEvents.error ? anonEmailEvents.error.code : `${anonEmailEvents.data?.length ?? "?"} rows`,
   );
+  // WhatsApp intake (20261002090000). A link is completed only by the
+  // server; a WhatsApp item needs its member. Probed without writing: the
+  // RPC is asked about a code nobody issued, and the item points at a
+  // household that does not exist (a foreign-key error proves the new
+  // source passed its check).
+  const serverLink = await admin.rpc("complete_whatsapp_link", { p_token_hash: "0".repeat(64), p_wa_user_id: "10000000000", p_phone_number: "+10000000000", p_display_name: "" });
+  check("the server can complete a WhatsApp link (an unknown code is refused)", !serverLink.error && serverLink.data?.[0]?.outcome === "invalid", serverLink.error?.code ?? JSON.stringify(serverLink.data));
+  const anonLink = await anon.rpc("complete_whatsapp_link", { p_token_hash: "0".repeat(64), p_wa_user_id: "10000000000", p_phone_number: "+10000000000", p_display_name: "" });
+  check("anonymous cannot complete a WhatsApp link", anonLink.error?.code === "42501", anonLink.error?.code ?? "no error");
+  const anonWhatsAppEvents = await anon.from("whatsapp_events").select("id").limit(1);
+  check(
+    "anonymous cannot read WhatsApp telemetry",
+    Boolean(anonWhatsAppEvents.error) || (Array.isArray(anonWhatsAppEvents.data) && anonWhatsAppEvents.data.length === 0),
+    anonWhatsAppEvents.error ? anonWhatsAppEvents.error.code : `${anonWhatsAppEvents.data?.length ?? "?"} rows`,
+  );
+  const whatsappProbe = await admin.from("home_send_items").insert({ household_id: "00000000-0000-4000-8000-000000000000", created_by_member_id: "00000000-0000-4000-8000-000000000000", source: "whatsapp", raw_text: "verify-live whatsapp probe" });
+  check("HomeSend accepts a WhatsApp item", whatsappProbe.error?.code === "23503", whatsappProbe.error?.code ?? "inserted?!");
+
   const anonClaim = await anon.rpc("claim_jobs", { p_worker_id: "verify-live", p_limit: 1, p_lease_seconds: 5 });
   check("anonymous cannot claim queued work", anonClaim.error?.code === "42501", anonClaim.error?.code ?? "no error");
 

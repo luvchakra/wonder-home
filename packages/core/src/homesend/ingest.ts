@@ -355,7 +355,79 @@ type FileOwner = {
   externalId: string | null;
   subject?: string | null;
   sender?: string | null;
+  /** Sent to WonderHome's WhatsApp number by a linked member. */
+  viaWhatsApp?: boolean;
 };
+
+/**
+ * A message a linked member sent to WonderHome's WhatsApp number (the
+ * WhatsApp HomeSend spec). Called from the webhook's processing with the
+ * admin client: the member and household come from the verified link, never
+ * from the message. Kept as its own item, keyed by WhatsApp's message id, so
+ * a retried delivery is one item.
+ */
+export async function ingestWhatsAppText(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string; externalId: string; text: string },
+  deps: IngestDeps = {},
+): Promise<IngestOutcome> {
+  const already = await alreadyReceived(supabase, input.householdId, input.externalId);
+  if (already) return already;
+
+  // A bare link stays a WhatsApp item (its source and its message id are the
+  // record); the model reads the address as text rather than WonderHome
+  // fetching it.
+  const text = normalizeText(input.text);
+  if (!text) throw new IngestRejected("That message was empty.");
+  const hash = await contentHash(text);
+  const duplicate = await existingDuplicate(supabase, input.householdId, hash);
+  if (duplicate) return duplicate;
+
+  const itemId = crypto.randomUUID();
+  await createHomeSendItem(supabase, {
+    id: itemId,
+    householdId: input.householdId,
+    createdByMemberId: input.memberId,
+    source: "whatsapp",
+    rawText: text,
+    contentType: "text/plain",
+    contentHash: hash,
+    externalId: input.externalId,
+  });
+  return understand(supabase, input.householdId, itemId, { source: { text }, channel: "whatsapp", context: WHATSAPP_CONTEXT, text }, deps);
+}
+
+/** A photo, document or voice note a linked member sent on WhatsApp, with its caption. */
+export async function ingestWhatsAppMedia(
+  supabase: SupabaseClient,
+  input: IngestFileInput & { householdId: string; memberId: string; externalId: string; caption?: string | null },
+  deps: IngestDeps = {},
+): Promise<IngestOutcome> {
+  const already = await alreadyReceived(supabase, input.householdId, input.externalId);
+  if (already) return already;
+  const caption = input.caption ? normalizeText(input.caption).slice(0, 300) || null : null;
+  return ingestFileFor(
+    supabase,
+    { householdId: input.householdId, memberId: input.memberId, parentItemId: null, externalId: input.externalId, subject: caption, viaWhatsApp: true },
+    input,
+    deps,
+  );
+}
+
+/** What the model is told about where a WhatsApp item came from: a channel, never a number. */
+const WHATSAPP_CONTEXT: IntakeContext = { channel: "a message a household member sent or forwarded to WonderHome on WhatsApp" };
+
+async function alreadyReceived(supabase: SupabaseClient, householdId: string, externalId: string): Promise<IngestOutcome | null> {
+  const existing = await findByExternalId(supabase, householdId, externalId).catch(() => null);
+  if (!existing) return null;
+  return {
+    itemId: existing.id,
+    duplicate: true,
+    state: existing.status === "failed" ? "failed" : "needs_review",
+    notice: "Already received.",
+    item: { id: existing.id, classifiedKind: existing.classifiedKind ?? "unknown", extracted: existing.extracted, understanding: existing.understanding },
+  };
+}
 
 async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: IngestFileInput, deps: IngestDeps): Promise<IngestOutcome> {
   const actor = { householdId: owner.householdId, memberId: owner.memberId ?? "" };
@@ -407,7 +479,7 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
     id: itemId,
     householdId: actor.householdId,
     createdByMemberId: owner.memberId,
-    source: isAttachment ? "email_attachment" : family === "audio" ? "audio_note" : "manual_upload",
+    source: isAttachment ? "email_attachment" : owner.viaWhatsApp ? "whatsapp_media" : family === "audio" ? "audio_note" : "manual_upload",
     filePath: path,
     securityStatus: failureReason === "security_rejected" ? "rejected" : "clean",
     contentType: storedType,
@@ -420,9 +492,17 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
   });
   if (failureReason || !detected.ok) return failedOutcome(itemId, failureReason ?? "unsupported_type", notice);
 
-  const channel: HomeSendSource = isAttachment ? "email_attachment" : "manual_upload";
+  const channel: HomeSendSource = isAttachment ? "email_attachment" : owner.viaWhatsApp ? "whatsapp_media" : "manual_upload";
   const context: IntakeContext = {
-    channel: isAttachment ? "an attachment to a forwarded email" : family === "audio" ? "a voice note" : "an uploaded file",
+    channel: owner.viaWhatsApp
+      ? family === "audio"
+        ? "a voice note a household member sent to WonderHome on WhatsApp"
+        : "a file a household member sent or forwarded to WonderHome on WhatsApp, with its caption as the subject"
+      : isAttachment
+        ? "an attachment to a forwarded email"
+        : family === "audio"
+          ? "a voice note"
+          : "an uploaded file",
     filename: input.filename ?? null,
     subject: owner.subject ?? null,
     from: owner.sender ?? null,

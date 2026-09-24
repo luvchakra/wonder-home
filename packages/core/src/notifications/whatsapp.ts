@@ -107,6 +107,28 @@ function failure(code: ChannelError["code"], retryable: boolean, message: string
   return { ok: false, error: { code, retryable, message } };
 }
 
+/**
+ * A free-text reply, allowed only inside the 24-hour window a person opens
+ * by writing to WonderHome — which every reply here is. Never used to start
+ * a conversation: that is what the approved template is for.
+ */
+export async function sendWhatsAppText(config: WhatsAppConfig, to: string, text: string, fetchImpl: Fetch = config.fetch ?? fetch): Promise<ChannelSendResult> {
+  try {
+    const response = await fetchImpl(`${GRAPH}/${encodeURIComponent(config.phoneNumberId)}/messages`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${config.accessToken}`, "content-type": "application/json" },
+      body: JSON.stringify(textMessage(to, text)),
+      signal: AbortSignal.timeout(WHATSAPP_TIMEOUT_MS),
+    });
+    const body = (await response.json().catch(() => null)) as { messages?: { id?: unknown }[]; error?: { code?: unknown } } | null;
+    const id = body?.messages?.[0]?.id;
+    if (response.ok && typeof id === "string") return { ok: true, providerMessageId: id };
+    return failure("unavailable", response.status === 429 || response.status >= 500, "WhatsApp did not accept this reply.");
+  } catch {
+    return failure("unavailable", true, "WhatsApp could not be reached.");
+  }
+}
+
 export type WhatsAppEnv = {
   adapter: WhatsAppConfig;
   appSecret: string | null;

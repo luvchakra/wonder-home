@@ -1680,13 +1680,15 @@ export function buildOpenApiDocument(): Json {
           },
         },
         post: {
-          summary: "WhatsApp delivery reports and replies (story 17-006)",
+          summary: "WhatsApp delivery reports, replies and HomeSend intake (stories 17-006, 14-015)",
           description:
-            "Believed only after X-Hub-Signature-256 verifies over the raw body with WHATSAPP_APP_SECRET. A delivery report moves a notification's WhatsApp copy to delivered, seen or delivery_failed, found by the provider's message id; a reply of STOP switches WhatsApp off for that number and says so. Nothing else a person writes is acted on, and no household record is touched from here. 401 for both a bad signature and an unconfigured deployment.",
+            "Believed only after X-Hub-Signature-256 verifies over the raw body with WHATSAPP_APP_SECRET. A delivery report moves a notification's WhatsApp copy to delivered, seen or delivery_failed, found by the provider's message id; a reply of STOP switches WhatsApp off for that number and says so. A message of just \"CONNECT <code>\" links the sending number to the adult member the single-use code was issued to. Anything else from a linked number is recorded once by WhatsApp's message id and queued; after the response it becomes a HomeSend item for that member's household, waiting for a person to confirm, and the sender gets a short acknowledgement. A number with no link is told how to connect and nothing it sent is kept. The household and member always come from the verified link, never from the message, and no domain record is touched from here. 401 for both a bad signature and an unconfigured deployment.",
           responses: {
-            "200": { description: "Acknowledged, with how many reports were recorded and opt-outs honoured" },
+            "200": { description: "Acknowledged, with how many reports were recorded, opt-outs honoured and messages queued" },
             "400": { description: "A verified body that could not be read" },
             "401": { $ref: "#/components/responses/Unauthenticated" },
+            "413": { description: "Larger than any real delivery; not read" },
+            "500": { description: "The delivery could not be recorded; WhatsApp delivers it again, and recording is idempotent" },
           },
         },
       },

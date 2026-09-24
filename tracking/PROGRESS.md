@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 216 |
-| Done | 210 |
+| Total stories | 218 |
+| Done | 211 |
 | In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 1 |
-| Completion | 97.2% |
-| Current module | 22 Internationalization & Localization |
-| Current story | 22-005 multilingual HomeTalk done; 22-006 localized notifications next |
+| Not Started | 2 |
+| Completion | 96.8% |
+| Current module | 14 AI Orchestration (WhatsApp into HomeSend) |
+| Current story | 14-015 WhatsApp linking and intake done; 14-016 WhatsApp in the app next, then 22-006 |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 14 | 11 | 2 | 1 | 14 | Done |
+| 14 | AI Orchestration & Learning | 16 | 13 | 2 | 1 | 15 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -244,3 +244,4 @@ disagree again.)
 | 2026-09-24 | 23 | 23-005..007 | Done | 107 notification unit (new: paid recurring bill opens a new thread, one-off pet care, never dropped by quiet hours, plan starting inside quiet hours) plus `nextDueDate` month-end cases; browser QA at 360px and desktop on a synthetic household (mark paid rolled a monthly bill to its next due date with history, school done, snooze with a confirmed return time, dismiss, quiet hours and per-kind timing saved and redrawn, nav badge) | Notification center: feed tabs and category chips, expandable detail from the live record, Mark as paid / Mark done through domain services, Remind me later with presets or a picked time, settings for quiet hours and per-kind timing; 23-009 Upcoming timeline in place, the For me / Household split moves to N3 |
 | 2026-09-24 | 23 | 23-008..012 | Done | 117 notification unit (batching, escalation, learned timing, max count), smart notifications database suite 17 (school_day sourced to the child; the summary and learned-timing choices are each person's own, learning starts off), verify:live 191/191, browser QA at 360px and desktop with two adults (grouped school day marked all done, escalation to the backup with its reason, digest, routing and smarter-reminders settings) | Module 23 complete: school batching, escalation to the backup once, the HomeBrain digest, the What comes to you view, opt-in learned timing. Migration `20261001090000` applied live |
 | 2026-09-24 | 22 | 22-005 | Done | reply-language 19 unit (protect, check, fallback, consent by class, notice reasons), multilingual yes/no, hello and thanks, the language line and the translator prompt; full verify gate (2776 unit, 268 E2E); browser QA as a Hindi-speaking member at 360px and desktop on the no-model path (a live model translation still needs a person on production) | Multilingual HomeTalk. Understanding is told the person's language and returns the same language-neutral intent. Every reply is validated in English, then translated with every name, item, date, time, amount, number and link taken out as a token, and shown only if the translation carries every token once with nothing invented. A reply whose content classes the household has not agreed to send stays in English, with a line saying why. The English remains the record; the shown words live in `metadata.localized` |
+| 2026-09-24 | 14 | 14-015 | Done | whatsapp intake 18 unit (reading payloads, codes, linking, unknown senders, idempotent retries, forged ids ignored, signature and size refusals, text/photo into HomeSend once, media outage retried silently, unsupported refused, injected instruction kept as content, replies never echo amounts or health), WhatsApp database suite 10 (single-use and expiring codes, one number one member, adults only, number visible to its member and admins only, no client writes, message bound to its link, HomeSend sources, disconnect keeps history), verify:live 199/199 | WhatsApp into HomeSend, backend: migration `20261002090000_whatsapp_intake.sql` applied live; the webhook links numbers by CONNECT code and records linked members' messages once, processing them after the response on the job queue into `whatsapp`/`whatsapp_media` HomeSend items with a short acknowledgement. Inert until the WhatsApp credentials are set; the screens are 14-016 |

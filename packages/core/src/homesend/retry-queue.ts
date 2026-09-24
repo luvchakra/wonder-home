@@ -44,7 +44,10 @@ export async function enqueueClassifyRetry(admin: SupabaseClient, input: { house
   return !error;
 }
 
-type ClaimedJob = { id: string; household_id: string | null; kind: string; payload: { itemId?: unknown } | null; attempts: number };
+export type ClaimedJob = { id: string; household_id: string | null; kind: string; payload: Record<string, unknown> | null; attempts: number };
+
+/** Another kind of job this worker also knows how to run (e.g. WhatsApp message processing). */
+export type JobHandler = (admin: SupabaseClient, job: ClaimedJob) => Promise<"read" | "skipped" | "failed">;
 
 export type DrainOutcome = { claimed: number; succeeded: number; retried: number; skipped: number };
 
@@ -53,7 +56,10 @@ export type DrainOutcome = { claimed: number; succeeded: number; retried: number
  * know is completed with an error, so it backs off and eventually parks as
  * dead instead of being silently dropped.
  */
-export async function drainJobs(admin: SupabaseClient, options: { limit?: number; workerId?: string; deps?: IngestDeps } = {}): Promise<DrainOutcome> {
+export async function drainJobs(
+  admin: SupabaseClient,
+  options: { limit?: number; workerId?: string; deps?: IngestDeps; handlers?: Record<string, JobHandler> } = {},
+): Promise<DrainOutcome> {
   const { data, error } = await admin.rpc("claim_jobs", { p_worker_id: options.workerId ?? "wonderhome", p_limit: options.limit ?? 10, p_lease_seconds: LEASE_SECONDS });
   if (error) throw new Error(`claim_jobs failed: ${error.code ?? "unknown"}`);
   const jobs = (data ?? []) as ClaimedJob[];
@@ -62,10 +68,11 @@ export async function drainJobs(admin: SupabaseClient, options: { limit?: number
   for (const job of jobs) {
     let failure: string | null = null;
     try {
-      if (job.kind !== CLASSIFY_RETRY_KIND) {
+      const handler = job.kind === CLASSIFY_RETRY_KIND ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps) : options.handlers?.[job.kind];
+      if (!handler) {
         failure = "unknown job kind";
       } else {
-        const result = await retryClassification(admin, job, options.deps);
+        const result = await handler(admin, job);
         if (result === "skipped") outcome.skipped += 1;
         if (result === "failed") failure = "classification still unavailable";
       }
@@ -89,14 +96,20 @@ async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?
   if (item.classifiedKind && item.classifiedKind !== "unknown") return "skipped";
   if (!item.rawText) return "skipped";
 
+  const channel = item.source === "email" ? "email" : item.source === "whatsapp" ? "whatsapp" : "pasted_text";
   const outcome = await understand(
     admin,
     job.household_id,
     item.id,
     {
       source: { text: item.rawText },
-      channel: item.source === "email" ? "email" : "pasted_text",
-      context: item.source === "email" ? { channel: "a forwarded email", subject: item.subject, from: item.senderAddress } : { channel: "pasted or forwarded text" },
+      channel,
+      context:
+        channel === "email"
+          ? { channel: "a forwarded email", subject: item.subject, from: item.senderAddress }
+          : channel === "whatsapp"
+            ? { channel: "a message a household member sent or forwarded to WonderHome on WhatsApp" }
+            : { channel: "pasted or forwarded text" },
       text: item.rawText,
     },
     deps,

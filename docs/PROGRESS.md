@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**210 of 216 stories done — 97.2%**
+**211 of 218 stories done — 96.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 210 |
+| Done | 211 |
 | In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 2 |
+| Not Started | 3 |
 
 ## By module
 
@@ -38,7 +38,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `██████████` | 14 | 14 | — |
+| 14 AI Orchestration & Learning | `█████████░` | 15 | 16 | 1 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -54,6 +54,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
+| `14-016` WhatsApp into HomeSend — in the app | 14 AI Orchestration & Learning | P0 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
 | `22-006` Localized notifications | 22 Internationalization and Localization | P0 | Not Started |
@@ -288,7 +289,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-14 of 14 done `██████████`
+15 of 16 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -306,6 +307,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-012` HomeTalk 2.0 — contextual conversational operations (Wave 4) | P0 | Done | Spec: `design/HOMETALK-2.0-WAVE-4.md`. Part 1 (grounding): `conversation/temporal.ts` — one deterministic resolver for today/tomorrow/tonight/this and next Friday/this weekend/next week/after school/before dinner/explicit dates, in the household's timezone (the model names the phrase, code decides the day); `conversation/grounding.ts` — every action intent is grounded before a proposal exists: person mentions through the Wave 1 resolver (one focused question when two fit, "I do not know anyone called…" when none do), dates to local days, "that/it/them/him/the other one" through `conversation/references.ts` in the spec's priority order (pending question → pending proposal → recent conversation and recent HomeSend by recency → context), with "Do you mean the white T-shirt from the school notice or the printer paper?" when two things are in play; each turn persists its focus (what it acted on, proposed or mentioned) on its reply for the next turn's "that". Part 2 (operations): corrections (`conversation/corrections.ts`) amend a waiting proposal or undo-then-redo an executed write through its own domain service; multi-part sentences split (`conversation/decompose.ts`) into independently gated parts with the premise rule; several items per add; real reminders (`set_reminder`, a notification held until due); meals (`plan_meal` via `createMeal`/`attachIngredients`) and "make sure we have everything" from the recipe's ingredients; "Nothing to change" instead of "Done" when nothing was written Part 3 (contract): the model sees a runtime context (role, local date/time, what is waiting, what the conversation is about — minimised like the utterance) and returns named, nullable parameters with no id field, and anything server-only is stripped from its output; "I think you mean …" at medium confidence and "I found two possibilities …" at low; every §21 example handled through its own domain service (school done/move, remove from list, service request, protected family time); §22 matrix in `conversation/evaluation.test.ts` |
 | `14-013` Unified AI evaluation, reliability & production hardening (Wave 5) | P0 | Done | Spec: `design/AI-EVALUATION-WAVE-5.md`. One evaluation framework for HomeTalk, HomeSend and HomeBrain; synthetic golden households; §8 metrics and the §10 error taxonomy; corrections as structured evaluation evidence; provider/model/prompt/context versions recorded per run; release artifact and gates; rate and payload limits; failure semantics; idempotency; email-forwarding monitoring |
 | `14-014` HomeSend reads the time of day | P1 | Done | Local start and end read deterministically from the notice's own date words (`timeFromDateText`); `school_items.due_time_known` + `ends_at` (migration `20260927090000`, applied live); all-day items never show a time |
+| `14-015` WhatsApp into HomeSend — linking and intake | P0 | Done | Spec: the WhatsApp HomeSend integration brief. WhatsApp becomes an input channel, never an authorization channel (`packages/core/src/whatsapp/`, migration `20261002090000_whatsapp_intake.sql`, applied live). A number is linked to one adult member only through a single-use code: fifteen minutes, SHA-256 hash only, completed atomically by the service-role-only `public.complete_whatsapp_link` from a signature-verified "CONNECT <code>". One number, one member, anywhere. `public.disconnect_whatsapp` keeps history. A linked number's messages are recorded once by WhatsApp's message id and queued (`whatsapp.process` on the job queue, run after the response with `after()`, retried with backoff and dead after five tries). They become `whatsapp` / `whatsapp_media` HomeSend items from that member (`ingestWhatsAppText` / `ingestWhatsAppMedia`: media fetched from Meta's CDN only, type from bytes, private bucket), and a short acknowledgement never echoes an amount, a health detail or a number. An unlinked number is told how to connect, and nothing it sent is kept. Closed-word telemetry lives in `whatsapp_events`. Inert until a deployment sets the WhatsApp credentials |
+| `14-016` WhatsApp into HomeSend — in the app | P0 | Not Started | The mockup flow: connect WhatsApp (intro, save the number and send CONNECT, confirmation), another adult connecting, WhatsApp status beside members in Manage Household, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and provenance on each item, and connection management in Settings |
 
 ### 15 — Privacy, Security & Governance
 
