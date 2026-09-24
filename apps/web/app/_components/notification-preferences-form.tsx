@@ -104,24 +104,34 @@ export function ChannelPreferenceCard({
           />
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <Select label="Quiet from" name="quietFrom" defaultValue={preference.quietFrom ?? ""}>
-            <option value="">Off</option>
-            {HOURS.map((hour) => (
-              <option key={hour} value={hour}>
-                {String(hour).padStart(2, "0")}:00
-              </option>
-            ))}
-          </Select>
-          <Select label="Quiet until" name="quietUntil" defaultValue={preference.quietUntil ?? ""}>
-            <option value="">Off</option>
-            {HOURS.map((hour) => (
-              <option key={hour} value={hour}>
-                {String(hour).padStart(2, "0")}:00
-              </option>
-            ))}
-          </Select>
-        </div>
+        {preference.channel === "in_app" ? (
+          // In-app quiet hours are the "Quiet hours" card above; carried through unchanged here.
+          <>
+            <input type="hidden" name="quietFrom" value={preference.quietFrom ?? ""} />
+            <input type="hidden" name="quietUntil" value={preference.quietUntil ?? ""} />
+            <input type="hidden" name="quietFromMinute" value={preference.quietFromMinute ?? 0} />
+            <input type="hidden" name="quietUntilMinute" value={preference.quietUntilMinute ?? 0} />
+          </>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="Quiet from" name="quietFrom" defaultValue={preference.quietFrom ?? ""}>
+              <option value="">Off</option>
+              {HOURS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {String(hour).padStart(2, "0")}:00
+                </option>
+              ))}
+            </Select>
+            <Select label="Quiet until" name="quietUntil" defaultValue={preference.quietUntil ?? ""}>
+              <option value="">Off</option>
+              {HOURS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {String(hour).padStart(2, "0")}:00
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         {state.error ? <Alert>{state.error}</Alert> : null}
         {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}

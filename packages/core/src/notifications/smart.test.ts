@@ -125,10 +125,19 @@ describe("quiet hours", () => {
     expect(placed).toEqual({ at: at("2026-09-24T21:59"), moved: "before_quiet_hours" });
   });
 
-  it("only an urgent reminder that could do neither breaks the quiet", () => {
+  it("only an urgent reminder that could do neither breaks the quiet; anything else comes early, never not at all", () => {
     const window = { earliestAt: at("2026-09-24T22:30"), latestAt: at("2026-09-25T06:00") };
     expect(placeOutsideQuiet(at("2026-09-24T23:00"), window, quiet, TZ, true).moved).toBe("breaks_quiet_hours");
-    expect(placeOutsideQuiet(at("2026-09-24T23:00"), window, quiet, TZ, false).moved).toBe("after_quiet_hours");
+    expect(placeOutsideQuiet(at("2026-09-24T23:00"), window, quiet, TZ, false)).toEqual({ at: at("2026-09-24T21:59"), moved: "before_quiet_hours" });
+  });
+
+  it("a plan that starts inside quiet hours still gets its reminder", () => {
+    const subject = familySubject(
+      { id: "e9", title: "Late film", kind: "family_time", starts_at: at("2026-09-25T01:00").toISOString(), status: "planned", owner_member_id: "kunal" },
+      ctx("2026-09-24T12:00"),
+    )!;
+    const planned = planReminder(subject, owner, { ...open, quiet: { fromMinute: 22 * 60 + 30, untilMinute: 7 * 60 } }, 0, TZ, at("2026-09-24T12:00"));
+    expect(planned?.scheduledFor).toEqual(at("2026-09-24T22:29"));
   });
 });
 
@@ -185,6 +194,8 @@ describe("smart timing by type (§39)", () => {
     expect(planReminder(subject, owner, open, 0, TZ, at("2026-09-24T06:00"))!.scheduledFor).toEqual(at("2026-09-24T08:00"));
     expect(petCareDueOn({ due_on: null, last_done_on: "2026-09-20", interval_days: 7 })).toBe("2026-09-27");
     expect(petCareDueOn({ due_on: null, last_done_on: null, interval_days: 7 })).toBeNull();
+    // A one-off vet visit, done on its day, is finished.
+    expect(petCareDueOn({ due_on: "2026-09-24", last_done_on: "2026-09-24", interval_days: null })).toBeNull();
   });
 
   it("a family plan is an hour before it starts", () => {
@@ -236,9 +247,13 @@ describe("state changes (§39)", () => {
   });
 
   it("a postponed due date reschedules the same reminder", () => {
-    const row = openRow({ reminder_seq: 1, scheduled_for: at("2026-09-23T10:00").toISOString() });
+    const row = openRow({ thread_key: "school:s1", source_type: "school_item", reminder_seq: 1, scheduled_for: at("2026-09-24T18:30").toISOString() });
     const moved = planReminder(
-      billSubject({ id: "b1", name: "Rent", payee: null, amount_minor: null, currency: null, due_on: "2026-09-30", status: "expected", responsible_member_id: "kunal" }, ctx("2026-09-24T10:00"))!,
+      schoolSubject(
+        { id: "s1", child_member_id: "aarav", kind: "project", title: "Science project", due_at: at("2026-09-28T08:30").toISOString(), due_time_known: true, status: "pending" },
+        "Aarav",
+        ctx("2026-09-24T10:00"),
+      )!,
       owner,
       open,
       0,
@@ -246,8 +261,14 @@ describe("state changes (§39)", () => {
       at("2026-09-24T10:00"),
     )!;
     const patch = patchFor(row, moved, at("2026-09-24T10:00"))!;
-    expect(patch.scheduled_for).toBe(at("2026-09-27T10:00").toISOString());
+    expect(patch.scheduled_for).toBe(at("2026-09-27T18:30").toISOString());
     expect(patch.status).toBe("generated");
+  });
+
+  it("paying a recurring bill starts next month's reminders on a new thread", () => {
+    const thisMonth = billSubject({ id: "b1", name: "Rent", payee: null, amount_minor: null, currency: null, due_on: "2026-09-26", status: "expected", responsible_member_id: "kunal" }, ctx("2026-09-24T10:00"))!;
+    const nextMonth = billSubject({ id: "b1", name: "Rent", payee: null, amount_minor: null, currency: null, due_on: "2026-10-26", status: "expected", responsible_member_id: "kunal" }, ctx("2026-09-24T10:00"))!;
+    expect(thisMonth.threadKey).not.toBe(nextMonth.threadKey);
   });
 
   it("stops once the thing has passed", () => {
@@ -457,7 +478,7 @@ function openRow(over: Partial<OpenRow>): OpenRow {
   return {
     id: "n1",
     recipient_member_id: "kunal",
-    thread_key: "bill:b1",
+    thread_key: "bill:b1:2026-09-26",
     source_type: "obligation",
     reminder_seq: 1,
     scheduled_for: new Date(0).toISOString(),

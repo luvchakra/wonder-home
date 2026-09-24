@@ -24,6 +24,19 @@ export const NOTIFICATION_CATEGORIES = [
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
+/** How each category reads in the notification center and its filter (spec §14). */
+export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  meals: "Meals & Recipes",
+  school: "Kids & School",
+  groceries: "Groceries",
+  bills: "Bills & Finance",
+  home: "Home & Upkeep",
+  pets: "Pets",
+  appointments: "Appointments",
+  family: "Family",
+  system: "System & Updates",
+};
+
 /** Categories a person can tune the timing of. Appointments keep their own per-appointment switches. */
 export const TUNABLE_CATEGORIES = ["meals", "school", "groceries", "bills", "pets", "family"] as const;
 export type TunableCategory = (typeof TUNABLE_CATEGORIES)[number];
@@ -282,5 +295,8 @@ export function placeOutsideQuiet(
   if (beforeAllowed) return { at: before, moved: "before_quiet_hours" };
   if (afterFits) return { at: after, moved: "after_quiet_hours" };
 
-  return urgent ? { at: idealAt, moved: "breaks_quiet_hours" } : { at: after, moved: "after_quiet_hours" };
+  // Neither side fits the window. Something urgent breaks the quiet; anything
+  // else comes a little early rather than not at all — a reminder is never
+  // dropped because of quiet hours.
+  return urgent ? { at: idealAt, moved: "breaks_quiet_hours" } : { at: before, moved: "before_quiet_hours" };
 }

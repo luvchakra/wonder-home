@@ -416,3 +416,14 @@ export function auditMetadata(input: {
     ...(input.provider ? { provider: input.provider } : {}),
   };
 }
+
+/** The next due date of a recurring bill, clamped to the month's last day (31 Jan → 28 Feb). */
+export function nextDueDate(dueOn: string, recurrence: string | null): string | null {
+  const months = recurrence === "monthly" ? 1 : recurrence === "quarterly" ? 3 : recurrence === "yearly" ? 12 : 0;
+  if (months === 0) return null;
+  const [year, month, day] = dueOn.split("-").map(Number) as [number, number, number];
+  const target = new Date(Date.UTC(year, month - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  return target.toISOString().slice(0, 10);
+}

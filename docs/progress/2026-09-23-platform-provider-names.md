@@ -172,6 +172,30 @@ means for a household:
 A session check-in is scheduled for then. Upgrading the Vercel plan would
 lift the limit, but that is a billing decision for the owner.
 
+## Update, 2026-09-24: #126 is in production
+
+After the quota reset, production was already serving a later `main`:
+`0f47765` (#157), deployed automatically by that merge. Its history includes
+`608f38b` (#126), so no manual redeploy was needed.
+
+The live re-run of "remind me to pick up some coriander on the way home this
+evening" against production was **not done**. This session was not permitted
+to drive the production site with a test account.
+
+A QA account (`d174973b-acd6-4abf-9d2f-f10b3cba96b9`) and household
+(`8ca55abc-d6f5-4198-8aa0-92c46cbc3653`) were created for the check. Both
+were deleted straight away, and nothing else was written.
+
+**Still needs a person:**
+1. Sign in to home.wonderapps.biz with any household that uses the platform
+   (Gemini) key.
+2. Say that sentence.
+3. Check the answer: it should offer to remind you this evening, not ask
+   "when?".
+
+The unit tests that cover this case are in `ai/model-client.test.ts` and
+`conversation/engine.test.ts`.
+
 ## QA cleanup
 
 This session's QA data is all removed from the live project:

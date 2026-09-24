@@ -452,6 +452,33 @@ export async function homeAgenda(
   };
 }
 
+/**
+ * "Done" on a pet's care (story 23-005): fed the medication, walked, cleaned
+ * the litter. A repeating need counts from today again; a one-off need keeps
+ * its date and is simply marked done on it. The reminder resolves on its own.
+ */
+async function markPetCareDoneImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; needId: string; doneOn: string },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("pet_care_needs")
+    .select("id, interval_days")
+    .eq("id", input.needId)
+    .eq("household_id", input.householdId)
+    .maybeSingle();
+  if (error) throw new Error(`markPetCareDone failed: ${error.code ?? "unknown"}`);
+  if (!data) throw ApiError.notFound("That care is no longer here.");
+
+  const repeats = (data as { interval_days: number | null }).interval_days !== null;
+  const { error: updateError } = await supabase
+    .from("pet_care_needs")
+    .update(repeats ? { last_done_on: input.doneOn, due_on: null } : { last_done_on: input.doneOn })
+    .eq("id", input.needId)
+    .eq("household_id", input.householdId);
+  if (updateError) throw new Error(`markPetCareDone failed: ${updateError.code ?? "unknown"}`);
+}
+
 // Every write forgets the household's cached context once it succeeds, so
 // the next HomeTalk answer sees the change (Wave 1 §14).
 export const createAsset = invalidatesContext(createAssetImpl, (_supabase, input) => input.householdId);
@@ -459,3 +486,4 @@ export const createServiceRequest = invalidatesContext(createServiceRequestImpl,
 export const createPet = invalidatesContext(createPetImpl, (_supabase, input) => input.householdId);
 export const updatePet = invalidatesContext(updatePetImpl, (_supabase, householdId) => householdId);
 export const setPetActive = invalidatesContext(setPetActiveImpl, (_supabase, householdId) => householdId);
+export const markPetCareDone = invalidatesContext(markPetCareDoneImpl, (_supabase, input) => input.householdId);

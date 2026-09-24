@@ -235,6 +235,7 @@ function DrawerSection({
               icon={SECONDARY_ICONS[item.icon]}
               label={item.label}
               tone={item.tone}
+              badge={item.badge}
               active={isCurrent(item.href)}
               onClick={onNavigate}
               size="lg"

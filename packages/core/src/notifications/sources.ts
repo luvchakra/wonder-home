@@ -85,7 +85,9 @@ export function billSubject(row: BillRow, context: SourceContext): ReminderSubje
     category: "bills",
     sourceType: "obligation",
     sourceId: row.id,
-    threadKey: `bill:${row.id}`,
+    // One thread per due date: a recurring bill paid this month starts next
+    // month's reminders afresh rather than inheriting this month's dismissals.
+    threadKey: `bill:${row.id}:${row.due_on}`,
     anchor: { kind: "day", date: row.due_on },
     expiresAt: endOfLocalDay(shiftDate(row.due_on, 1), context.timeZone),
     owners: row.responsible_member_id ? [row.responsible_member_id] : [],
@@ -266,7 +268,8 @@ export type PetCareRow = {
 
 /** The day this care is next due, only when the record actually says so. */
 export function petCareDueOn(row: Pick<PetCareRow, "due_on" | "last_done_on" | "interval_days">): string | null {
-  if (row.due_on) return row.due_on;
+  // A one-off need already done on (or after) its date is finished.
+  if (row.due_on) return row.last_done_on && row.last_done_on >= row.due_on ? null : row.due_on;
   if (row.last_done_on && row.interval_days) return shiftDate(row.last_done_on, row.interval_days);
   return null;
 }

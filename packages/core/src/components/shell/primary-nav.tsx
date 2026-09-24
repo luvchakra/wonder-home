@@ -142,6 +142,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
                     icon={SECONDARY_ICONS[item.icon]}
                     label={item.label}
                     tone={item.tone}
+                    badge={item.badge}
                     active={Boolean(pathname && (pathname === item.href || pathname.startsWith(`${item.href}/`)))}
                   />
                 </li>
@@ -234,6 +235,7 @@ export function SidebarLink({
   onClick,
   size = "sm",
   tone,
+  badge,
 }: {
   href: string;
   icon: ComponentType<{ className?: string }>;
@@ -249,6 +251,8 @@ export function SidebarLink({
    * domain list, which have never carried a domain colour of their own.
    */
   tone?: IconTone;
+  /** How many new things wait behind this link (Notifications); nothing shown at zero. */
+  badge?: number;
 }) {
   return (
     <Link
@@ -264,7 +268,15 @@ export function SidebarLink({
       )}
     >
       {tone ? <IconTile icon={Icon} tone={tone} size="sm" /> : <Icon className="size-[1.125rem] shrink-0" />}
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 flex-1">{label}</span>
+      {badge ? (
+        <span
+          aria-label={`${badge} new`}
+          className="ms-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[var(--wh-primary)] px-1.5 text-[0.6875rem] font-semibold text-white"
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   );
 }

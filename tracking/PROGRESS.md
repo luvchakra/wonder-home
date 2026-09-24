@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 216 |
-| Done | 201 |
-| In Progress | 10 |
+| Done | 204 |
+| In Progress | 8 |
 | Blocked | 0 |
-| Not Started | 5 |
-| Completion | 93.1% |
+| Not Started | 4 |
+| Completion | 94.4% |
 | Current module | 23 Smart Notifications |
-| Current story | 23-005 notification center (23-001..004 engine Done; module 22 PR 2 still open) |
+| Current story | 23-008/23-010/23-011 batching, escalation and digest (23-001..007 Done, 23-009 in progress; module 22 PR 2 still open) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -47,7 +47,7 @@ disagree again.)
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 8 | Done |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 3 | In Progress |
-| 23 | Smart Notifications | 12 | 6 | 6 | 0 | 4 | In Progress |
+| 23 | Smart Notifications | 12 | 6 | 6 | 0 | 7 | In Progress |
 
 ## Execution Log
 
@@ -241,3 +241,4 @@ disagree again.)
 | 2026-09-24 | 02 | 02-009 | Done | onboarding engine 24 unit + HomeBrain context 2, onboarding database suite 11 (setup read by members and moved only by an Admin, events Admin-only and closed-word, a stated age always dated, an invitation links the adult named in setup and can never take over a linked member or another household's), verify:live 183/183, browser golden scenario at 360px and desktop on the real project: 2 adults, 2 children, a cat and a maid named with ages and working days → 27 suggestions kept, the grocery owner changed to Priya, school fees dropped → exit to Home showed "Nearly there · Next: …" and Continue resumed → guided setup asked for both schools in one question and saved them (School then read Ready on the summary; the question exists only while an answer is missing, unit-tested) | Intelligent household onboarding: `household/onboarding.ts` (template engine, readiness, guided questions), `household/onboarding-repository.ts`, `/onboarding` (twelve screens), `(auth)/onboarding-actions.ts`, `school/enrolments.ts`; `household_onboarding`, `onboarding_events`, `household_members.work_arrangement/age_years/age_recorded_on`, `household_invitations.member_id` with `wh.accept_invitation` claiming an unlinked adult (migration `20260928090000`, applied live); new households go straight to setup; Home shows a resume card while setup is unfinished; kit gains `Stepper` and `ChoiceChips` |
 | 2026-09-24 | 22 | 22-001..003 | Done | i18n formatter 16 + catalog 7 unit, localization database suite 9 (a person sets only their own language and formats, an Admin any; region, currency, time zone and default language Admin-only; closed codes only; members record only their own localization events), `verify:live` 185/185, browser golden scenario at 360px and desktop on the real project (Hindi → India → INR → review → Home in Hindi; settings, member languages, bills in the household currency; English; Arabic right-to-left) | Language, locale, currency, time zone and measurement as separate preferences; optional resumable setup after family onboarding; Language & Region settings; 22-004, 22-007 and 22-008 In Progress (core UI only, cross-currency totals audit, RTL beyond the shell and Home) |
 | 2026-09-24 | 23 | 23-001..004 | Done | smart notification engine 44 unit + decide/channel time-zone cases, smart notifications database suite 15 (recipient changes state never content, snooze forward only and counted, trail unforgeable, closed sources/categories/windows, one open per thread, own reminder timing, reconcile throttle server-only) plus the existing 17, `verify:live` 189/189, live end-to-end reconcile on the real project (3 reminders from real records, second pass wrote nothing, a paid bill resolved its reminder, snooze and dismiss by the member, a forged title refused 42501, every transition recorded) | Reminders derived from real records and reconciled; data-driven policies; quiet hours fixed from UTC to the household's clock; notification center UI (23-005..007, 23-009) is PR N2 |
+| 2026-09-24 | 23 | 23-005..007 | Done | 107 notification unit (new: paid recurring bill opens a new thread, one-off pet care, never dropped by quiet hours, plan starting inside quiet hours) plus `nextDueDate` month-end cases; browser QA at 360px and desktop on a synthetic household (mark paid rolled a monthly bill to its next due date with history, school done, snooze with a confirmed return time, dismiss, quiet hours and per-kind timing saved and redrawn, nav badge) | Notification center: feed tabs and category chips, expandable detail from the live record, Mark as paid / Mark done through domain services, Remind me later with presets or a picked time, settings for quiet hours and per-kind timing; 23-009 Upcoming timeline in place, the For me / Household split moves to N3 |
