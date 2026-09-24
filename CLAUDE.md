@@ -703,8 +703,15 @@ reminders about real records, never lines of text fired and forgotten.
   person turns it on. It learns only from them acting on a reminder, needs
   five consistent times, never overrides a timing they chose, and is claimed
   on a row only when it actually moved it.
+- **In each person's language** (story 22-006). A reminder's words are a
+  `reminder.*` catalog key plus typed values (`notifications/message.ts`),
+  kept in `notifications.message`. `title`/`body` are the English record,
+  rendered from that same message. `/notifications` and delivery beyond the
+  app render it in the recipient's language and formats. A name or item is
+  never translated, and an unreadable message shows the stored English.
 - **New kinds.** A new kind of reminder is a new source plus a policy
-  entry, never a new writer of `notifications`.
+  entry, with its wording as `reminder.*` keys in every catalog, never a
+  new writer of `notifications`.
 
 ## Non-functional gates
 Use the targets in `TECH-STACK-AND-NFR.md`. P0 security and authorization tests are release blockers. Core API targets are p95 <=500ms reads and <=800ms ordinary writes excluding external provider latency.

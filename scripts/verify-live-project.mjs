@@ -162,6 +162,7 @@ const SHIPPED_COLUMNS = [
   { table: "home_send_items", column: "plan" },
   { table: "home_send_items", column: "receipt" },
   { table: "homesend_changes", column: "plan_key" },
+  { table: "notifications", column: "message" },
   { table: "homesend_changes", column: "fields" },
   { table: "homesend_changes", column: "evidence" },
   { table: "household_subscriptions", column: "scheduled_plan_key" },

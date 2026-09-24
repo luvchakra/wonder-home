@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { formatterFor } from "../i18n/format";
+import { parseCopy, sameCopy } from "./message";
 import { NO_MEMBER_CHOICES, parseHouseholdSettings, resolvePreferences } from "../i18n/preferences";
 import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import { deliverNotification } from "./deliver";
@@ -81,6 +82,7 @@ export type OpenRow = {
   status: string;
   title: string;
   body: string;
+  message?: unknown;
   priority: string;
   earliest_at: string | null;
   latest_at: string | null;
@@ -142,7 +144,9 @@ async function reconcile(
   const timeZone = settings.timezone;
   const context: SourceContext = {
     timeZone,
-    format: formatterFor(resolvePreferences(NO_MEMBER_CHOICES, settings)),
+    // The stored words are the English record, in the household's region;
+    // each recipient reads them in their own language from `message`.
+    format: formatterFor(resolvePreferences(NO_MEMBER_CHOICES, { ...settings, language: "en" })),
     now,
   };
 
@@ -208,7 +212,7 @@ async function reconcile(
       admin
         .from("notifications")
         .select(
-          "id, recipient_member_id, thread_key, source_type, reminder_seq, scheduled_for, snooze_count, status, title, body, priority, earliest_at, latest_at, expires_at, reminder_policy, delivered_at",
+          "id, recipient_member_id, thread_key, source_type, reminder_seq, scheduled_for, snooze_count, status, title, body, message, priority, earliest_at, latest_at, expires_at, reminder_policy, delivered_at",
         )
         .eq("household_id", householdId)
         .in("status", ["generated", "delivered", "seen"]),
@@ -236,7 +240,7 @@ async function reconcile(
   const schoolRows = new Map<ReminderSubject, SchoolItemRow>();
   for (const row of (bills.data ?? []) as BillRow[]) push(subjects, billSubject(row, context));
   for (const row of (school.data ?? []) as SchoolItemRow[]) {
-    const subject = schoolSubject(row, displayNames.get(row.child_member_id) ?? "Your child", context);
+    const subject = schoolSubject(row, displayNames.get(row.child_member_id) ?? null, context);
     // Something already past its moment is no longer worth grouping with the rest.
     if (subject && subject.expiresAt > now) {
       subjects.push(subject);
@@ -337,7 +341,7 @@ async function reconcile(
     const escalation = planEscalation(
       want,
       backupId,
-      displayNames.get(want.recipientMemberId) ?? "The person responsible",
+      displayNames.get(want.recipientMemberId) ?? null,
       settingsFor(backupId, want.category),
       closedSeq.get(backupKey) ?? 0,
       timeZone,
@@ -402,8 +406,8 @@ async function reconcile(
     .eq("household_id", householdId)
     .eq("status", "generated")
     .lte("scheduled_for", now.toISOString())
-    .select("id, recipient_member_id, title, body, priority, scheduled_for, source_type");
-  for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; priority: string; scheduled_for: string; source_type: string | null }[]) {
+    .select("id, recipient_member_id, title, body, message, priority, scheduled_for, source_type");
+  for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; message: unknown; priority: string; scheduled_for: string; source_type: string | null }[]) {
     result.delivered += 1;
     const fresh = now.getTime() - new Date(row.scheduled_for).getTime() <= FRESH_DELIVERY_MINUTES * 60_000;
     const ownDelivery = row.source_type === "reminder" || (row.source_type !== null && managed.has(row.source_type));
@@ -415,6 +419,7 @@ async function reconcile(
           notificationId: row.id,
           recipientMemberId: row.recipient_member_id,
           notification: { title: row.title, body: row.body, priority: row.priority === "high" ? "high" : row.priority === "low" ? "low" : "normal" },
+          copy: parseCopy(row.message),
           now,
         },
         adapters,
@@ -456,7 +461,7 @@ export function batchSchoolDays(
   }
   for (const group of groups.values()) {
     const childId = group.items[0]!.row.child_member_id;
-    const batched = schoolDaySubject(group.items, names.get(childId) ?? "Your child", context);
+    const batched = schoolDaySubject(group.items, names.get(childId) ?? null, context);
     if (batched) rest.push({ subject: batched, recipient: group.recipient });
     else for (const item of group.items) rest.push({ subject: item.subject, recipient: group.recipient });
   }
@@ -565,6 +570,7 @@ function contentOf(want: DesiredReminder) {
   return {
     title: want.title.slice(0, 160),
     body: want.body.slice(0, 500),
+    message: want.copy,
     priority: want.storedPriority,
     category: want.category,
     earliest_at: want.earliestAt.toISOString(),
@@ -613,6 +619,10 @@ export function patchFor(row: OpenRow, want: DesiredReminder, now: Date): Record
   const patch: Record<string, unknown> = {};
   if (row.title !== content.title) patch.title = content.title;
   if (row.body !== content.body) patch.body = content.body;
+  // The message is compared as its parameters: a reminder written before
+  // messages existed gains one, and a change only in how it reads elsewhere
+  // (a time, in another language) still reaches every reader.
+  if (!sameCopy(row.message, content.message)) patch.message = content.message;
   if (row.priority !== content.priority) patch.priority = content.priority;
   if (row.reminder_policy !== content.reminder_policy) patch.reminder_policy = content.reminder_policy;
   for (const field of ["earliest_at", "latest_at", "expires_at"] as const) {

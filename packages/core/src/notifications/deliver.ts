@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { formatterFor } from "../i18n/format";
+import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "../i18n/preferences";
+import { translatorFor } from "../i18n/translate";
 import { log } from "../observability/logger";
+import { renderCopy, type NotificationCopy } from "./message";
 import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type ChannelNotification, type ChannelPreference, type DeliveryChannel } from "./channels";
 
 /**
@@ -19,18 +23,29 @@ import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type C
  */
 export async function deliverNotification(
   admin: SupabaseClient,
-  input: { householdId: string; notificationId: string; recipientMemberId: string; notification: ChannelNotification; now?: Date },
+  input: {
+    householdId: string;
+    notificationId: string;
+    recipientMemberId: string;
+    notification: ChannelNotification;
+    /** The reminder as a message, when it has one: sent in the recipient's own language (story 22-006). */
+    copy?: NotificationCopy | null;
+    now?: Date;
+  },
   adapters: Record<DeliveryChannel, ChannelAdapter> = channelAdaptersFromEnv(),
 ): Promise<{ sent: DeliveryChannel[]; failed: DeliveryChannel[] }> {
   const now = input.now ?? new Date();
   try {
-    const [{ data }, { data: household }] = await Promise.all([
+    const [{ data }, { data: household }, { data: member }] = await Promise.all([
       admin
         .from("notification_preferences")
         .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
         .eq("member_id", input.recipientMemberId)
         .neq("channel", "in_app"),
-      admin.from("households").select("timezone").eq("id", input.householdId).maybeSingle(),
+      admin.from("households").select("timezone, region, currency, measurement_system, default_language").eq("id", input.householdId).maybeSingle(),
+      input.copy
+        ? admin.from("household_members").select("language, date_format, time_format, measurement_system").eq("id", input.recipientMemberId).maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
     // Quiet hours are the household's own clock, never the server's.
     const timeZone = ((household as { timezone?: string } | null)?.timezone ?? "Asia/Kolkata") as string;
@@ -48,7 +63,8 @@ export async function deliverNotification(
     const live = preferences.filter((preference) => adapters[preference.channel]?.live);
     if (live.length === 0) return { sent: [], failed: [] };
 
-    const attempts = await dispatchToChannels(live, input.notification, now, timeZone, adapters);
+    const notification = input.copy ? await inRecipientLanguage(input.notification, input.copy, household, member) : input.notification;
+    const attempts = await dispatchToChannels(live, notification, now, timeZone, adapters);
     const rows = attempts.map((attempt) => ({
       household_id: input.householdId,
       notification_id: input.notificationId,
@@ -68,5 +84,25 @@ export async function deliverNotification(
   } catch (thrown) {
     log.warn("notification delivery failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     return { sent: [], failed: [] };
+  }
+}
+
+/** The words in the recipient's language and formats; the stored English whenever that cannot be done. */
+async function inRecipientLanguage(
+  notification: ChannelNotification,
+  copy: NotificationCopy,
+  household: Record<string, unknown> | null,
+  member: Record<string, unknown> | null,
+): Promise<ChannelNotification> {
+  if (!household) return notification;
+  try {
+    const preferences = resolvePreferences(
+      member ? parseMemberChoices(member) : parseMemberChoices({}),
+      parseHouseholdSettings({ ...household, language: household.default_language }),
+    );
+    const words = renderCopy(copy, await translatorFor(preferences.language), formatterFor(preferences));
+    return { ...notification, title: words.title || notification.title, body: words.body || notification.body };
+  } catch {
+    return notification;
   }
 }

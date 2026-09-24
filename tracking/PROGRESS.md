@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 225 |
-| Done | 218 |
-| In Progress | 5 |
+| Done | 219 |
+| In Progress | 4 |
 | Blocked | 0 |
 | Not Started | 2 |
-| Completion | 96.9% |
-| Current module | 14 AI Orchestration (Deep Document Understanding 2.0) |
-| Current story | Deep Document Understanding 2.0 (14-017..019) complete; next: payments P3 (20-011) or i18n 22-006/22-008 |
+| Completion | 97.3% |
+| Current module | 22 Internationalization and Localization |
+| Current story | 22-006 localized notifications complete; next: 22-004 catalog coverage / 22-008 RTL, then payments P3 (20-011) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -46,7 +46,7 @@ disagree again.)
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 10 | In Progress |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
-| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 4 | In Progress |
+| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 5 | In Progress |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 
 ## Execution Log
@@ -252,3 +252,4 @@ disagree again.)
 | 2026-09-24 | 14 | 14-017 | Done | plan 26 unit (golden scenarios 1–3 of the spec, cancel, field-level bill update, next month's bill as a new occurrence, no-op, the per-record backstop, record date grounding, page report); core suite 2871 green; eval 49/49 with 0/14 unsafe | Deep Document Understanding 2.0, phases A–C: whole-document reading into records with page evidence, pages read, the document's own date; the change plan reconciles each record on its own (create / field-level update / cancel / no change / conflict / one question). Matcher: an occasion's part (rehearsal, fee) is never the occasion. Review, apply and receipt are 14-018; HomeTalk and certification 14-019 |
 | 2026-09-24 | 14 | 14-018 | Done | apply 8 unit (writes once and records each, skipped, never-written outcomes, partial failure, plain refusals, unrecorded write, no-op, receipt text) + plan 27; typecheck/lint; verify:live 218/218 (including the five new column probes); browser QA at 360px and 1280px on a seeded QA household (golden scenario 1 + an unassigned Maths assessment): plan grouped 1 / 2 / 3 / 1, answer "Manan", apply 4, receipt "All done!", database checked (Annual Day 12 → 15 Oct, three new school items, field history and page on each change), newer-record conflict after a later edit, Undo all 3 restored | Deep Document Understanding 2.0 phases D–E: grouped review, per-record include/edit/answer, server-rebuilt plan applied through the domain services with verification, field-level change history, the exact receipt with partial failure and no-op, Undo all. Migration `20261005090000_homesend_document_plan_receipt.sql` applied live |
 | 2026-09-24 | 14 | 14-019 | Done | talk 8 unit (golden scenario 4, receipt reply and its content classes, question reading, answers from stored changes incl. undone and no match), apply 9, metrics 8 (document counts); HomeSend 341 unit; eval 50/50 with 0/14 unsafe (new HS-16); browser QA at 360px and 1280px on the seeded QA household: plan applied in HomeSend, the receipt posted into HomeTalk, "What did the school notice change?" answered from the changes ("moved Annual Day from 12 Oct to 15 Oct, added … 3 things were already on record") | Deep Document Understanding 2.0 phases F–G: HomeTalk shows what a document did from its receipt and answers what it changed from stored changes; §50 document metrics; module 14 complete |
+| 2026-09-24 | 22 | 22-006 | Done | message 12 unit (English record equals the message read in English; Hindi, Arabic plural, Spanish time, French "your child", German list; grouped school day and its escalation; malformed or foreign keys refused; placeholder-looking names shown as written; key order ignored), smart notifications 119 unit, notification RLS 35 (a recipient cannot rewrite the message; the column holds only a versioned object), `verify:live` 219/219, browser QA as a Hindi-speaking member at 360px and desktop on the real project | Smart reminders are an event plus its parameters: `notifications.message` (migration `20261006090000`, applied live) holds a `reminder.*` key and typed values, and `/notifications` and channel delivery render it per recipient; `title`/`body` remain the English record rendered from the same message. Health, approval and HomeTalk personal reminders still store English only |

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { markNotificationsSeen } from "@wonderhome/core/notifications/actions";
+import { localizeReminder } from "@wonderhome/core/notifications/message";
 import { CATEGORY_LABELS, NOTIFICATION_CATEGORIES, type NotificationCategory } from "@wonderhome/core/notifications/policies";
 import { atLocal, localMoment, shiftDate } from "@wonderhome/core/notifications/timing";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -78,8 +79,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     supabase.from("notification_preferences").select("daily_digest").eq("member_id", membership.memberId).eq("channel", "in_app").maybeSingle(),
   ]);
 
-  const openRows = (openData ?? []) as ReminderRowData[];
-  const closedRows = (closedData ?? []) as ReminderRowData[];
+  // Each reminder in the viewer's own language; the stored English when it has no message this build can read.
+  const inTheirLanguage = (row: ReminderRowData) => localizeReminder(row, locale.t, format);
+  const openRows = ((openData ?? []) as ReminderRowData[]).map(inTheirLanguage);
+  const closedRows = ((closedData ?? []) as ReminderRowData[]).map(inTheirLanguage);
   const due = openRows.filter((row) => Date.parse(row.scheduled_for) <= now.getTime());
   const upcoming = openRows.filter((row) => Date.parse(row.scheduled_for) > now.getTime());
 

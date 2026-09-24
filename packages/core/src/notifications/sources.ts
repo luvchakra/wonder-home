@@ -1,4 +1,7 @@
 import type { Formatter } from "../i18n/format";
+import { en } from "../i18n/messages/en";
+import { translator } from "../i18n/translate";
+import { msg, plain, renderCopy, REMINDER_MESSAGE_VERSION, type NotificationCopy, type NotificationMessage } from "./message";
 import type { ReminderAnchor, ReminderPriority, TunableCategory } from "./policies";
 import { localMoment, shiftDate, atLocal } from "./timing";
 
@@ -35,9 +38,12 @@ export const RECONCILED_SOURCE_TYPES: readonly ReminderSourceType[] = [
 ];
 
 export type ReminderText = {
+  /** The stored English — the record, and what a reader with no message sees. */
   title: string;
   body: string;
   priority: ReminderPriority;
+  /** What it says as a key and typed values, so each recipient reads it in their own language (story 22-006). */
+  copy: NotificationCopy;
 };
 
 export type ReminderSubject = {
@@ -64,9 +70,18 @@ export type ReminderSubject = {
 
 export type SourceContext = {
   timeZone: string;
+  /** English, in the household's region: the formatter the stored record is written with. */
   format: Formatter;
   now: Date;
 };
+
+const ENGLISH = translator("en", en);
+
+/** A reminder's words: the message, and the stored English rendered from it, so the two never disagree. */
+export function reminderText(title: NotificationMessage, body: NotificationMessage, priority: ReminderPriority, format: Formatter): ReminderText {
+  const copy: NotificationCopy = { v: REMINDER_MESSAGE_VERSION, title, body };
+  return { ...renderCopy(copy, ENGLISH, format), priority, copy };
+}
 
 const endOfLocalDay = (dateKey: string, timeZone: string) => atLocal(shiftDate(dateKey, 1), 0, timeZone);
 
@@ -89,8 +104,7 @@ export function billSubject(row: BillRow, context: SourceContext): ReminderSubje
   // A bill more than a day overdue belongs to the Bills screen, not a reminder.
   if (row.due_on < shiftDate(today, -1)) return null;
 
-  const amount = row.amount_minor !== null && row.currency ? context.format.money(row.amount_minor / 100, row.currency) : null;
-  const dueDate = context.format.date(row.due_on);
+  const amount = row.amount_minor !== null && row.currency ? { money: row.amount_minor / 100, currency: row.currency } : null;
   return {
     category: "bills",
     sourceType: "obligation",
@@ -106,24 +120,21 @@ export function billSubject(row: BillRow, context: SourceContext): ReminderSubje
     text: (_stage, now) => {
       const days = daysBetween(localMoment(now, context.timeZone).dateKey, row.due_on!);
       const when =
-        days > 1 ? `Due in ${days} days` : days === 1 ? "Due tomorrow" : days === 0 ? "Due today" : "Was due yesterday";
-      return {
-        title: row.name,
-        body: `${when}${amount ? ` · ${amount}` : ""}. ${days >= 0 ? `Pay by ${dueDate}.` : "It still shows as unpaid."}`,
-        priority: days <= 0 ? "high" : "medium",
-      };
+        days > 1
+          ? msg("reminder.bill.dueIn", { count: days })
+          : msg(days === 1 ? "reminder.bill.dueTomorrow" : days === 0 ? "reminder.bill.dueToday" : "reminder.bill.wasDueYesterday");
+      const params = { when: { msg: when }, date: { date: row.due_on! }, ...(amount ? { amount } : {}) };
+      const body =
+        days >= 0
+          ? msg(amount ? "reminder.bill.bodyAmount" : "reminder.bill.body", params)
+          : msg(amount ? "reminder.bill.unpaidAmount" : "reminder.bill.unpaid", params);
+      return reminderText(plain(row.name), body, days <= 0 ? "high" : "medium", context.format);
     },
   };
 }
 
 const OPEN_SCHOOL = new Set(["pending", "in_progress"]);
-const SCHOOL_NOUN: Record<string, string> = {
-  homework: "Homework",
-  worksheet: "Worksheet",
-  exam: "Exam",
-  project: "Project",
-  event: "School event",
-};
+const SCHOOL_KINDS = new Set(["homework", "worksheet", "exam", "project", "event"]);
 
 export type SchoolItemRow = {
   id: string;
@@ -135,16 +146,21 @@ export type SchoolItemRow = {
   status: string;
 };
 
-export function schoolSubject(row: SchoolItemRow, childName: string, context: SourceContext): ReminderSubject | null {
-  if (!row.due_at || !OPEN_SCHOOL.has(row.status) || !(row.kind in SCHOOL_NOUN)) return null;
+/** A child's name as the reminder says it: their own name, or "Your child" in the reader's language when the record has none. */
+function childWords(childName: string | null): NotificationMessage {
+  return childName ? plain(childName) : msg("reminder.yourChild");
+}
+
+export function schoolSubject(row: SchoolItemRow, childName: string | null, context: SourceContext): ReminderSubject | null {
+  if (!row.due_at || !OPEN_SCHOOL.has(row.status) || !SCHOOL_KINDS.has(row.kind)) return null;
   const dueAt = new Date(row.due_at);
   // An all-day item is stored at midnight UTC and names only its day.
   const anchor: ReminderAnchor = row.due_time_known
     ? { kind: "moment", at: dueAt }
     : { kind: "day", date: row.due_at.slice(0, 10) };
   const dueDay = anchor.kind === "day" ? anchor.date : localMoment(dueAt, context.timeZone).dateKey;
-  const noun = SCHOOL_NOUN[row.kind]!;
-  const time = row.due_time_known ? context.format.time(dueAt) : null;
+  const kind = msg(`reminder.school.kind.${row.kind}` as NotificationMessage["key"]);
+  const time = row.due_time_known ? { time: dueAt.toISOString() } : null;
 
   return {
     category: "school",
@@ -160,18 +176,16 @@ export function schoolSubject(row: SchoolItemRow, childName: string, context: So
     action: { action: "complete_school_item", target: row.id },
     text: (stage) => {
       const tomorrow = stage === "tonight";
-      const whenWord = tomorrow ? "tomorrow" : "today";
-      const body =
-        row.kind === "exam"
-          ? `${row.title} is ${whenWord}${time ? ` at ${time}` : ""}.`
-          : row.kind === "event"
-            ? `${row.title} is ${whenWord}${time ? ` at ${time}` : ""}.`
-            : `${row.title} is due ${whenWord}${time ? ` by ${time}` : ""}.`;
-      return {
-        title: `${childName} — ${noun}`,
-        body,
-        priority: row.kind === "event" ? "low" : "medium",
-      };
+      const happens = row.kind === "exam" || row.kind === "event";
+      const key = happens
+        ? tomorrow ? (time ? "reminder.isTomorrowAt" : "reminder.isTomorrow") : time ? "reminder.isTodayAt" : "reminder.isToday"
+        : tomorrow ? (time ? "reminder.dueTomorrowBy" : "reminder.dueTomorrow") : time ? "reminder.dueTodayBy" : "reminder.dueToday";
+      return reminderText(
+        msg("reminder.school.title", { child: { msg: childWords(childName) }, kind: { msg: kind } }),
+        msg(key, { title: row.title, ...(time ? { time } : {}) }),
+        row.kind === "event" ? "low" : "medium",
+        context.format,
+      );
     },
   };
 }
@@ -190,12 +204,16 @@ export type MealRow = {
   recipe_total_minutes: number | null;
 };
 
+const MEAL_SLOTS = new Set(["breakfast", "lunch", "snack", "dinner"]);
+
 export function mealSubject(row: MealRow, context: SourceContext): ReminderSubject | null {
   if (!OPEN_MEAL.has(row.status)) return null;
   const readyBy = new Date(row.ready_by);
   const minutes = row.recipe_total_minutes ?? DEFAULT_PREP_MINUTES;
   const startBy = new Date(readyBy.getTime() - minutes * 60_000);
-  const slot = row.slot.charAt(0).toUpperCase() + row.slot.slice(1);
+  const slot: NotificationMessage = MEAL_SLOTS.has(row.slot)
+    ? msg(`reminder.meal.slot.${row.slot}` as NotificationMessage["key"])
+    : plain(row.slot.charAt(0).toUpperCase() + row.slot.slice(1));
 
   return {
     category: "meals",
@@ -207,13 +225,15 @@ export function mealSubject(row: MealRow, context: SourceContext): ReminderSubje
     owners: row.cook_member_id ? [row.cook_member_id] : [],
     outcomeKeys: [`meals.${row.slot}_ready`, "meals.dinner_ready"],
     action: { action: "view_meal", target: row.id },
-    text: () => ({
-      title: `${slot} preparation`,
-      body: `Start preparing ${row.name}. ${slot} is planned for ${context.format.time(readyBy)}${
-        row.recipe_total_minutes ? `, and it takes about ${row.recipe_total_minutes} minutes` : ""
-      }.`,
-      priority: row.slot === "dinner" ? "high" : "medium",
-    }),
+    text: () =>
+      reminderText(
+        msg("reminder.meal.title", { slot: { msg: slot } }),
+        row.recipe_total_minutes
+          ? msg("reminder.meal.bodyMinutes", { meal: row.name, slot: { msg: slot }, time: { time: readyBy.toISOString() }, minutes: row.recipe_total_minutes })
+          : msg("reminder.meal.body", { meal: row.name, slot: { msg: slot }, time: { time: readyBy.toISOString() } }),
+        row.slot === "dinner" ? "high" : "medium",
+        context.format,
+      ),
   };
 }
 
@@ -228,7 +248,8 @@ export function grocerySubject(needs: readonly GroceryNeedRow[], context: Source
   if (needs.length === 0) return null;
   const today = localMoment(context.now, context.timeZone).dateKey;
   const names = needs.map((need) => need.name);
-  const listed = names.length <= 4 ? joinWords(names) : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+  const listed =
+    names.length <= 4 ? { list: names } : { msg: msg("reminder.grocery.andMore", { items: names.slice(0, 3).join(", "), count: names.length - 3 }) };
   const urgent = needs.some((need) => need.category === "medical" || (need.needed_by !== null && need.needed_by <= today));
 
   return {
@@ -241,22 +262,12 @@ export function grocerySubject(needs: readonly GroceryNeedRow[], context: Source
     owners: [],
     outcomeKeys: ["groceries.stocked", "groceries.list_updated"],
     action: { action: "view_grocery_list" },
-    text: () => ({
-      title: "Grocery list needs attention",
-      body: `${listed} ${names.length === 1 ? "is" : "are"} running low.`,
-      priority: urgent ? "medium" : "low",
-    }),
+    text: () =>
+      reminderText(msg("reminder.grocery.title"), msg("reminder.grocery.low", { items: listed, count: names.length }), urgent ? "medium" : "low", context.format),
   };
 }
 
-const PET_NOUN: Record<string, string> = {
-  food: "Food",
-  litter: "Litter",
-  medication: "Medication",
-  vet_visit: "Vet visit",
-  grooming: "Grooming",
-  exercise: "Exercise",
-};
+const PET_KINDS = new Set(["food", "litter", "medication", "vet_visit", "grooming", "exercise"]);
 const PET_OUTCOME: Record<string, string> = {
   food: "pets.fed",
   litter: "pets.litter",
@@ -286,7 +297,7 @@ export function petCareDueOn(row: Pick<PetCareRow, "due_on" | "last_done_on" | "
 
 export function petSubject(row: PetCareRow, context: SourceContext): ReminderSubject | null {
   const due = petCareDueOn(row);
-  if (!due || !(row.kind in PET_NOUN)) return null;
+  if (!due || !PET_KINDS.has(row.kind)) return null;
   const today = localMoment(context.now, context.timeZone).dateKey;
   // Overdue care is the Home & Upkeep screen's to show; a reminder is ahead of time.
   if (due < today) return null;
@@ -301,11 +312,15 @@ export function petSubject(row: PetCareRow, context: SourceContext): ReminderSub
     owners: row.responsible_member_id ? [row.responsible_member_id] : [],
     outcomeKeys: [PET_OUTCOME[row.kind]!],
     action: { action: "view_pet_care", target: row.id },
-    text: (stage) => ({
-      title: `${row.pet_name} — ${PET_NOUN[row.kind]}`,
-      body: `${PET_NOUN[row.kind]} is due ${stage === "due_tomorrow" ? "tomorrow" : "today"}.`,
-      priority: row.kind === "medication" ? "high" : "medium",
-    }),
+    text: (stage) => {
+      const kind = { msg: msg(`reminder.pet.kind.${row.kind}` as NotificationMessage["key"]) };
+      return reminderText(
+        msg("reminder.pet.title", { pet: row.pet_name, kind }),
+        msg(stage === "due_tomorrow" ? "reminder.dueTomorrow" : "reminder.dueToday", { title: kind }),
+        row.kind === "medication" ? "high" : "medium",
+        context.format,
+      );
+    },
   };
 }
 
@@ -339,13 +354,15 @@ export function familySubject(row: FamilyEventRow, context: SourceContext): Remi
     owners: row.owner_member_id ? [row.owner_member_id] : [],
     outcomeKeys: [],
     action: { action: "view_event", target: row.id },
-    text: (stage) => ({
-      title: row.title,
-      body: allDay
-        ? `${row.title} is ${stage === "tomorrow" ? "tomorrow" : "today"}.`
-        : `Starts ${stage === "tomorrow" ? "tomorrow at" : "at"} ${context.format.time(startsAt)}.`,
-      priority: "low",
-    }),
+    text: (stage) =>
+      reminderText(
+        plain(row.title),
+        allDay
+          ? msg(stage === "tomorrow" ? "reminder.isTomorrow" : "reminder.isToday", { title: row.title })
+          : msg(stage === "tomorrow" ? "reminder.family.startsTomorrowAt" : "reminder.family.startsAt", { time: { time: startsAt.toISOString() } }),
+        "low",
+        context.format,
+      ),
   };
 }
 
@@ -357,7 +374,7 @@ export function familySubject(row: FamilyEventRow, context: SourceContext): Remi
  */
 export function schoolDaySubject(
   items: readonly { row: SchoolItemRow; subject: ReminderSubject }[],
-  childName: string,
+  childName: string | null,
   context: SourceContext,
 ): ReminderSubject | null {
   if (items.length < 2) return null;
@@ -382,15 +399,15 @@ export function schoolDaySubject(
     action: { action: "view_school_day", target: first.row.child_member_id },
     items: sorted.map(({ row }) => row.id),
     text: (stage, now) => {
-      const whenWord = stage === "tonight" ? "tomorrow" : "today";
       const priority = sorted
         .map(({ subject }) => subject.text(stage, now).priority)
         .reduce((top, next) => (rank[next] > rank[top] ? next : top), "low" as ReminderText["priority"]);
-      return {
-        title: `${childName} — ${sorted.length} things for ${whenWord}`,
-        body: `${joinWords(titles)}.`,
+      return reminderText(
+        msg(stage === "tonight" ? "reminder.schoolDay.tomorrow" : "reminder.schoolDay.today", { child: { msg: childWords(childName) }, count: sorted.length }),
+        msg("reminder.schoolDay.body", { items: { list: titles } }),
         priority,
-      };
+        context.format,
+      );
     },
   };
 }
@@ -405,9 +422,4 @@ function anchorDay(subject: ReminderSubject, timeZone: string): string {
 
 function daysBetween(fromDateKey: string, toDateKey: string): number {
   return Math.round((Date.parse(`${toDateKey}T00:00:00Z`) - Date.parse(`${fromDateKey}T00:00:00Z`)) / 86_400_000);
-}
-
-function joinWords(words: readonly string[]): string {
-  if (words.length <= 1) return words[0] ?? "";
-  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
