@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useActionState, useId } from "react";
 import { useFormStatus } from "react-dom";
 
-import { CATEGORY_LABELS, type NotificationCategory } from "@wonderhome/core/notifications/policies";
+import type { NotificationCategory } from "@wonderhome/core/notifications/policies";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { ChoiceChips } from "@wonderhome/core/ui/choice-chips";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
@@ -16,6 +16,7 @@ import { Card } from "@wonderhome/core/ui/card";
 
 import { completeReminderSourceAction, dismissReminderAction, snoozeReminderAction } from "../(auth)/notification-actions";
 import type { ActionState } from "../(auth)/actions";
+import { PRESET_KEYS, type SnoozePreset } from "../_lib/snooze-presets";
 
 /**
  * One reminder in the notification center (story 23-005).
@@ -31,6 +32,8 @@ import type { ActionState } from "../(auth)/actions";
 export type ReminderView = {
   id: string;
   category: NotificationCategory;
+  /** The category's name in the viewer's language. */
+  categoryLabel: string;
   title: string;
   body: string;
   priority: "high" | "medium" | "low";
@@ -60,25 +63,42 @@ const CATEGORY: Record<NotificationCategory, { icon: typeof Bell; tone: IconTone
   system: { icon: Bell, tone: "primary" },
 };
 
-const PRIORITY: Record<ReminderView["priority"], { word: string; tone: BadgeTone }> = {
-  high: { word: "High", tone: "attention" },
-  medium: { word: "Medium", tone: "neutral" },
-  low: { word: "Low", tone: "neutral" },
+const PRIORITY_TONE: Record<ReminderView["priority"], BadgeTone> = { high: "attention", medium: "neutral", low: "neutral" };
+
+/**
+ * The row's own words in the viewer's language, read on the server and
+ * passed in — a client component has no catalog of its own (story 22-004).
+ */
+export type ReminderRowLabels = {
+  priority: Record<ReminderView["priority"], string>;
+  unread: string;
+  saving: string;
+  snooze: {
+    open: string;
+    when: string;
+    presets: Record<SnoozePreset, string>;
+    day: string;
+    time: string;
+    set: string;
+    setting: string;
+  };
+  dismiss: string;
 };
 
 export function ReminderRow({
   view,
   householdId,
   snoozeDays,
+  labels,
 }: {
   view: ReminderView;
   householdId: string;
+  labels: ReminderRowLabels;
   /** The next week's days, worded ("Today", "Tomorrow", "Sat 27 Sep"), for a picked time. */
   snoozeDays: readonly { value: string; label: string }[];
 }) {
   const category = CATEGORY[view.category];
-  const categoryLabel = CATEGORY_LABELS[view.category];
-  const priority = PRIORITY[view.priority];
+  const categoryLabel = view.categoryLabel;
 
   return (
     <ExpandableRow
@@ -89,8 +109,8 @@ export function ReminderRow({
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span className="font-medium">{view.title}</span>
-              {view.open ? <Badge tone={priority.tone}>{priority.word}</Badge> : view.closedAs ? <Badge tone="handled">{view.closedAs}</Badge> : null}
-              {view.unread ? <span className="size-2 shrink-0 rounded-full bg-[var(--wh-primary)]" aria-label="New" /> : null}
+              {view.open ? <Badge tone={PRIORITY_TONE[view.priority]}>{labels.priority[view.priority]}</Badge> : view.closedAs ? <Badge tone="handled">{view.closedAs}</Badge> : null}
+              {view.unread ? <span className="size-2 shrink-0 rounded-full bg-[var(--wh-primary)]" aria-label={labels.unread} /> : null}
             </span>
             <span className="mt-0.5 block text-sm text-[var(--wh-foreground-muted)]">{view.body}</span>
           </span>
@@ -115,7 +135,7 @@ export function ReminderRow({
         {view.open ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              {view.complete ? <CompleteForm id={view.id} householdId={householdId} label={view.complete.label} /> : null}
+              {view.complete ? <CompleteForm id={view.id} householdId={householdId} label={view.complete.label} savingLabel={labels.saving} /> : null}
               {view.link ? (
                 <Link
                   href={view.link.href}
@@ -125,8 +145,8 @@ export function ReminderRow({
                 </Link>
               ) : null}
             </div>
-            <SnoozeForm id={view.id} householdId={householdId} days={snoozeDays} />
-            <DismissForm id={view.id} householdId={householdId} />
+            <SnoozeForm id={view.id} householdId={householdId} days={snoozeDays} labels={labels.snooze} />
+            <DismissForm id={view.id} householdId={householdId} label={labels.dismiss} />
           </div>
         ) : null}
       </div>
@@ -149,41 +169,50 @@ function Feedback({ state }: { state: ActionState }) {
   return null;
 }
 
-function CompleteForm({ id, householdId, label }: { id: string; householdId: string; label: string }) {
+function CompleteForm({ id, householdId, label, savingLabel }: { id: string; householdId: string; label: string; savingLabel: string }) {
   const [state, action] = useActionState(completeReminderSourceAction, {});
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="notificationId" value={id} />
       <input type="hidden" name="householdId" value={householdId} />
-      <Pending pendingLabel="Saving…">{label}</Pending>
+      <Pending pendingLabel={savingLabel}>{label}</Pending>
       <Feedback state={state} />
     </form>
   );
 }
 
-const PRESETS = [
-  { value: "in_15_minutes", label: "In 15 minutes" },
-  { value: "in_1_hour", label: "In 1 hour" },
-  { value: "later_today", label: "Later today" },
-  { value: "tomorrow_morning", label: "Tomorrow morning" },
-  { value: "custom", label: "Pick a day and time" },
-] as const;
-
-function SnoozeForm({ id, householdId, days }: { id: string; householdId: string; days: readonly { value: string; label: string }[] }) {
+function SnoozeForm({
+  id,
+  householdId,
+  days,
+  labels,
+}: {
+  id: string;
+  householdId: string;
+  days: readonly { value: string; label: string }[];
+  labels: ReminderRowLabels["snooze"];
+}) {
   const [state, action] = useActionState(snoozeReminderAction, {});
   const fieldId = useId();
   return (
     <details className="group rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] px-3 py-2">
       <summary className="flex min-h-10 cursor-pointer list-none items-center text-sm font-semibold text-[var(--wh-foreground)] [&::-webkit-details-marker]:hidden">
-        Remind me later
+        {labels.open}
       </summary>
       <form action={action} className="space-y-3 pt-2">
         <input type="hidden" name="notificationId" value={id} />
         <input type="hidden" name="householdId" value={householdId} />
-        <ChoiceChips legend="When" legendHidden name="preset" options={PRESETS} defaultValue="in_1_hour" size="sm" />
+        <ChoiceChips
+          legend={labels.when}
+          legendHidden
+          name="preset"
+          options={PRESET_KEYS.map((value) => ({ value, label: labels.presets[value] }))}
+          defaultValue="in_1_hour"
+          size="sm"
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label htmlFor={`${fieldId}-date`} className="block space-y-1.5 text-sm">
-            <span className="font-medium">Day, for a picked time</span>
+            <span className="font-medium">{labels.day}</span>
             <select
               id={`${fieldId}-date`}
               name="date"
@@ -198,7 +227,7 @@ function SnoozeForm({ id, householdId, days }: { id: string; householdId: string
             </select>
           </label>
           <label htmlFor={`${fieldId}-time`} className="block space-y-1.5 text-sm">
-            <span className="font-medium">Time, for a picked time</span>
+            <span className="font-medium">{labels.time}</span>
             <input
               id={`${fieldId}-time`}
               type="time"
@@ -209,20 +238,24 @@ function SnoozeForm({ id, householdId, days }: { id: string; householdId: string
             />
           </label>
         </div>
-        <Pending pendingLabel="Setting…" variant="secondary">Set reminder</Pending>
+        <Pending pendingLabel={labels.setting} variant="secondary">
+          {labels.set}
+        </Pending>
         <Feedback state={state} />
       </form>
     </details>
   );
 }
 
-function DismissForm({ id, householdId }: { id: string; householdId: string }) {
+function DismissForm({ id, householdId, label }: { id: string; householdId: string; label: string }) {
   const [state, action] = useActionState(dismissReminderAction, {});
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="notificationId" value={id} />
       <input type="hidden" name="householdId" value={householdId} />
-      <Pending pendingLabel="…" variant="quiet">Dismiss</Pending>
+      <Pending pendingLabel="…" variant="quiet">
+        {label}
+      </Pending>
       <Feedback state={state} />
     </form>
   );
@@ -236,10 +269,14 @@ function DismissForm({ id, householdId }: { id: string; householdId: string }) {
  * who has not turned it off.
  */
 export function ReminderDigest({
-  firstName,
+  title,
+  lede,
   items,
 }: {
-  firstName: string;
+  /** "HomeBrain summary · Today", in the viewer's language. */
+  title: string;
+  /** How many there are, and for whom, already worded. */
+  lede: string;
   items: readonly { id: string; category: NotificationCategory; title: string; when: string }[];
 }) {
   return (
@@ -247,10 +284,8 @@ export function ReminderDigest({
       <div className="flex items-start gap-3">
         <IconTile icon={Sparkles} tone="primary" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold">HomeBrain summary · Today</h2>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            {items.length} things to take care of. Here&rsquo;s what&rsquo;s important for you, {firstName}.
-          </p>
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{lede}</p>
         </div>
       </div>
       <ol className="divide-y divide-[var(--wh-border)]">

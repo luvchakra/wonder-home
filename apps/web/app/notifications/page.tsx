@@ -4,7 +4,8 @@ import Link from "next/link";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { markNotificationsSeen } from "@wonderhome/core/notifications/actions";
 import { localizeReminder } from "@wonderhome/core/notifications/message";
-import { CATEGORY_LABELS, NOTIFICATION_CATEGORIES, type NotificationCategory } from "@wonderhome/core/notifications/policies";
+import { NOTIFICATION_CATEGORIES, type NotificationCategory } from "@wonderhome/core/notifications/policies";
+import type { Translate, TranslationKey } from "@wonderhome/core/i18n/translate";
 import { atLocal, localMoment, shiftDate } from "@wonderhome/core/notifications/timing";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -14,7 +15,8 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { cn } from "@wonderhome/core/lib/cn";
 
-import { ReminderDigest, ReminderRow } from "../_components/reminder-row";
+import { ReminderDigest, ReminderRow, type ReminderRowLabels } from "../_components/reminder-row";
+import { PRESET_KEYS, type SnoozePreset } from "../_lib/snooze-presets";
 import { reconcileRemindersNow } from "../_lib/reminders";
 import {
   REMINDER_COLUMNS,
@@ -51,6 +53,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const { supabase, membership, viewer, secondary, locale } = session;
   const timeZone = membership.household.timezone;
   const format = locale.format;
+  const t = locale.t;
   const now = new Date();
 
   // Reminders follow the household's records: a bill paid since the last
@@ -95,9 +98,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     tab === "upcoming" ? (a, b) => Date.parse(a.scheduled_for) - Date.parse(b.scheduled_for) : tab === "updates" ? () => 0 : byUrgency,
   );
 
-  const details = await loadReminderDetails(supabase, shown, format, { isAdmin: isHouseholdAdmin(membership) });
-  const views = shown.map((row) => ({ row, view: toReminderView(row, details, format, now, timeZone) }));
-  const days = snoozeDays(now, timeZone, format);
+  const details = await loadReminderDetails(supabase, shown, format, { isAdmin: isHouseholdAdmin(membership) }, t);
+  const views = shown.map((row) => ({ row, view: toReminderView(row, details, format, now, timeZone, t) }));
+  const days = snoozeDays(now, timeZone, format, t);
+  const labels = rowLabels(t);
 
   // What they have now looked at is seen — the badge counts only what is new.
   const unseen = due.filter((row) => row.status === "generated" || row.status === "delivered").map((row) => row.id);
@@ -129,37 +133,39 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const nextDue = query.next && /^\d{4}-\d{2}-\d{2}$/.test(query.next) ? format.date(query.next, "long") : null;
   const untilDate = query.until && !Number.isNaN(Date.parse(query.until)) ? new Date(query.until) : null;
   const snoozedUntil = untilDate
-    ? `${localMoment(untilDate, timeZone).dateKey === localMoment(now, timeZone).dateKey ? "today" : `on ${format.date(untilDate, "long")}`} at ${format.time(untilDate)}`
+    ? localMoment(untilDate, timeZone).dateKey === localMoment(now, timeZone).dateKey
+      ? t("notifications.done.snoozedToday", { time: format.time(untilDate) })
+      : t("notifications.done.snoozedOn", { date: format.date(untilDate, "long"), time: format.time(untilDate) })
     : null;
   const confirmation =
     query.done === "paid"
-      ? `Marked paid.${nextDue ? ` The next one is due ${nextDue}, and its reminders will come then.` : ""}`
+      ? nextDue
+        ? t("notifications.done.paidNext", { date: nextDue })
+        : t("notifications.done.paid")
       : query.done === "done"
-        ? "Marked done. Its reminders are cleared."
+        ? t("notifications.done.done")
         : query.done === "done_all"
-          ? "All marked done under Kids & School. Their reminders are cleared."
-        : query.done === "dismissed"
-          ? "Dismissed. If there is a later reminder about it, that one still comes."
-          : query.done === "snoozed" && snoozedUntil
-            ? `Snoozed. It will come back ${snoozedUntil}.`
-            : null;
+          ? t("notifications.done.doneAll")
+          : query.done === "dismissed"
+            ? t("notifications.done.dismissed")
+            : query.done === "snoozed" && snoozedUntil
+              ? snoozedUntil
+              : null;
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/notifications" back={{ href: "/", label: "Back home" }} title="Notifications">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/notifications" back={{ href: "/", label: t("notifications.backHome") }} title={t("notifications.title")}>
       <div className="space-y-5">
         <header className="wh-rise flex items-start justify-between gap-3">
           <div className="min-w-0">
             {/* The phone header already names the screen; the heading is for wider screens. */}
-            <h1 className="hidden text-[1.625rem] font-bold tracking-tight sm:text-3xl lg:block">Notifications</h1>
+            <h1 className="hidden text-[1.625rem] font-bold tracking-tight sm:text-3xl lg:block">{t("notifications.title")}</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">
-              {due.length > 0
-                ? `What needs you, ${firstName}, most pressing first. Each one clears itself when the thing is done.`
-                : `Nothing needs you right now, ${firstName}. Reminders appear when they are useful, and clear themselves.`}
+              {due.length > 0 ? t("notifications.lede.some", { name: firstName }) : t("notifications.lede.none", { name: firstName })}
             </p>
           </div>
           <Link
             href="/settings/notifications"
-            aria-label="Notification settings"
+            aria-label={t("notifications.settings")}
             className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
           >
             <Settings2 aria-hidden className="size-5" />
@@ -168,24 +174,26 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {confirmation ? <Alert tone="info">{confirmation}</Alert> : null}
 
-        {digest.length > 1 ? <ReminderDigest firstName={firstName} items={digest} /> : null}
+        {digest.length > 1 ? (
+          <ReminderDigest title={t("notifications.digest.title")} lede={t("notifications.digest.body", { count: digest.length, name: firstName })} items={digest} />
+        ) : null}
 
         <SegmentedControl
-          label="Which notifications"
+          label={t("notifications.tabs.label")}
           active={tab}
           segments={[
-            { key: "all", label: "All", href: hrefFor({ tab: "all" }), count: due.length },
-            { key: "action", label: "Action needed", href: hrefFor({ tab: "action" }), count: due.filter(needsAction).length },
-            { key: "upcoming", label: "Upcoming", href: hrefFor({ tab: "upcoming" }), count: upcoming.length },
-            { key: "updates", label: "Updates", href: hrefFor({ tab: "updates" }) },
+            { key: "all", label: t("notifications.tab.all"), href: hrefFor({ tab: "all" }), count: due.length },
+            { key: "action", label: t("notifications.tab.action"), href: hrefFor({ tab: "action" }), count: due.filter(needsAction).length },
+            { key: "upcoming", label: t("notifications.tab.upcoming"), href: hrefFor({ tab: "upcoming" }), count: upcoming.length },
+            { key: "updates", label: t("notifications.tab.updates"), href: hrefFor({ tab: "updates" }) },
           ]}
         />
 
         {present.size > 1 ? (
-          <nav aria-label="Filter by category" className="flex flex-wrap gap-2">
-            <CategoryChip href={hrefFor({ category: null })} active={category === null} label="All categories" />
+          <nav aria-label={t("notifications.filter.label")} className="flex flex-wrap gap-2">
+            <CategoryChip href={hrefFor({ category: null })} active={category === null} label={t("notifications.filter.all")} />
             {NOTIFICATION_CATEGORIES.filter((key) => present.has(key)).map((key) => (
-              <CategoryChip key={key} href={hrefFor({ category: key })} active={category === key} label={CATEGORY_LABELS[key]} />
+              <CategoryChip key={key} href={hrefFor({ category: key })} active={category === key} label={t(`notifications.category.${key}` as TranslationKey)} />
             ))}
           </nav>
         ) : null}
@@ -193,21 +201,23 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         {views.length === 0 ? (
           <EmptyState
             icon={tab === "upcoming" ? CalendarClock : BellOff}
-            title={tab === "upcoming" ? "Nothing planned for today or tomorrow" : tab === "updates" ? "Nothing handled this week yet" : "Nothing needs you"}
-            description={
+            title={
               tab === "upcoming"
-                ? "When a bill, a school item, dinner or a family plan is coming up, its reminder shows here with its time."
-                : "WonderHome only interrupts when a person is genuinely needed, and clears it the moment the situation resolves."
+                ? t("notifications.empty.upcoming.title")
+                : tab === "updates"
+                  ? t("notifications.empty.updates.title")
+                  : t("notifications.empty.none.title")
             }
+            description={tab === "upcoming" ? t("notifications.empty.upcoming.body") : t("notifications.empty.body")}
           />
         ) : tab === "upcoming" ? (
           groupByDay(views, now, timeZone).map((group) => (
             <section key={group.label} className="space-y-2">
-              <h2 className="px-1 text-sm font-semibold">{group.label}</h2>
+              <h2 className="px-1 text-sm font-semibold">{t(`notifications.day.${group.label}` as TranslationKey)}</h2>
               <Card className="p-1">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {group.items.map(({ row, view }) => (
-                    <ReminderRow key={row.id} view={{ ...view, when: format.time(row.scheduled_for) }} householdId={membership.household.id} snoozeDays={days} />
+                    <ReminderRow key={row.id} view={{ ...view, when: format.time(row.scheduled_for) }} householdId={membership.household.id} snoozeDays={days} labels={labels} />
                   ))}
                 </ul>
               </Card>
@@ -217,13 +227,13 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           <Card className="p-1">
             <ul className="divide-y divide-[var(--wh-border)]">
               {views.map(({ row, view }) => (
-                <ReminderRow key={row.id} view={view} householdId={membership.household.id} snoozeDays={days} />
+                <ReminderRow key={row.id} view={view} householdId={membership.household.id} snoozeDays={days} labels={labels} />
               ))}
             </ul>
           </Card>
         )}
 
-        <QuoteCard>Told once, told well — then left alone.</QuoteCard>
+        <QuoteCard>{t("notifications.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
@@ -252,8 +262,34 @@ function groupByDay<T extends { row: ReminderRowData }>(items: T[], now: Date, t
   const groups = new Map<string, T[]>();
   for (const item of items) {
     const day = localMoment(new Date(item.row.scheduled_for), timeZone).dateKey;
-    const label = day <= today ? "Today" : day === tomorrow ? "Tomorrow" : "Later";
+    const label = day <= today ? "today" : day === tomorrow ? "tomorrow" : "later";
     groups.set(label, [...(groups.get(label) ?? []), item]);
   }
-  return ["Today", "Tomorrow", "Later"].filter((label) => groups.has(label)).map((label) => ({ label, items: groups.get(label)! }));
+  return ["today", "tomorrow", "later"].filter((label) => groups.has(label)).map((label) => ({ label, items: groups.get(label)! }));
+}
+
+/** The row's own words in the viewer's language (story 22-004). */
+function rowLabels(t: Translate): ReminderRowLabels {
+  const presetKeys: Record<SnoozePreset, TranslationKey> = {
+    in_15_minutes: "notifications.snooze.in15",
+    in_1_hour: "notifications.snooze.in60",
+    later_today: "notifications.snooze.laterToday",
+    tomorrow_morning: "notifications.snooze.tomorrowMorning",
+    custom: "notifications.snooze.custom",
+  };
+  return {
+    priority: { high: t("notifications.priority.high"), medium: t("notifications.priority.medium"), low: t("notifications.priority.low") },
+    unread: t("notifications.new"),
+    saving: t("common.saving"),
+    snooze: {
+      open: t("notifications.snooze.open"),
+      when: t("notifications.snooze.when"),
+      presets: Object.fromEntries(PRESET_KEYS.map((key) => [key, t(presetKeys[key])])) as ReminderRowLabels["snooze"]["presets"],
+      day: t("notifications.snooze.day"),
+      time: t("notifications.snooze.time"),
+      set: t("notifications.snooze.set"),
+      setting: t("notifications.snooze.setting"),
+    },
+    dismiss: t("notifications.dismiss"),
+  };
 }
