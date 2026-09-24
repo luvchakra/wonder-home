@@ -580,6 +580,13 @@ authorization channel:
 - **What it never does.** WhatsApp is not a second brain: it never answers
   questions, decides, or touches a domain record.
 - **Telemetry.** `whatsapp_events` holds closed words and counts only.
+- **Screens.** `/settings/whatsapp` is the one place a number is
+  connected or disconnected. "I've sent the message" only looks again,
+  and the confirmation is shown from the server's own link, never from
+  the browser. Other members only ever see "WhatsApp connected" beside a
+  name, never the number. HomeSend lists WhatsApp as a channel, filters
+  its inbox by channel (`homesend/channels.ts`), and says who sent each
+  WhatsApp item.
 
 It all stays inert until a deployment sets `WHATSAPP_ACCESS_TOKEN`,
 `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME`,

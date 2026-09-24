@@ -10,6 +10,7 @@ import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 import { ErrorState } from "@wonderhome/core/ui/states";
+import { whatsappConnectedMembers } from "@wonderhome/core/whatsapp/repository";
 
 import { describeRoles } from "../../_lib/member-role";
 import { requireSession } from "../../_lib/session";
@@ -33,6 +34,9 @@ export default async function MembersPage() {
   let members: HouseholdMember[] = [];
   let invitations: Awaited<ReturnType<typeof listInvitations>> = [];
   let loadFailed = false;
+  // Who has linked WhatsApp — ids only, never a number (story 14-016). A
+  // failed read shows nobody as connected rather than failing the page.
+  const whatsapp = await whatsappConnectedMembers(supabase, membership.household.id).catch(() => new Set<string>());
   try {
     members = await listMembers(
       supabase,
@@ -88,6 +92,7 @@ export default async function MembersPage() {
                     member={member}
                     membership={membership}
                     admin={admin}
+                    whatsapp={whatsapp.has(member.id)}
                   />
                 ))}
               </ul>
@@ -108,6 +113,7 @@ export default async function MembersPage() {
                       member={member}
                       membership={membership}
                       admin={admin}
+                      whatsapp={whatsapp.has(member.id)}
                     />
                   ))}
                 </ul>
@@ -146,10 +152,12 @@ function MemberRow({
   member,
   membership,
   admin,
+  whatsapp,
 }: {
   member: HouseholdMember;
   membership: HouseholdMembership;
   admin: boolean;
+  whatsapp: boolean;
 }) {
   return (
     <li className="flex items-center justify-between gap-3 py-3">
@@ -170,6 +178,11 @@ function MemberRow({
           <p className="text-xs text-[var(--wh-foreground-subtle)]">
             {describeRoles(member.roles, member.isOwner)}
           </p>
+          {whatsapp ? (
+            <p className="mt-1">
+              <Badge tone="handled">WhatsApp connected</Badge>
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">

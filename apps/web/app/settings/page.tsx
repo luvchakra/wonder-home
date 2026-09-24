@@ -1,4 +1,4 @@
-import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Languages, Link2, LogOut, MicVocal, Moon, ShieldCheck, Speaker, Trash2, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, Database, HelpCircle, KeyRound, Languages, Link2, LogOut, MessageCircle, MicVocal, Moon, ShieldCheck, Speaker, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -103,6 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     { icon: Bell, tone: "attention", title: "Notifications", meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Quiet hours ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "In-app on · no quiet hours set", href: "/settings/notifications" },
     { icon: MicVocal, tone: "ai", title: "Voice", meta: voiceNote, href: "/settings/voice" },
     { icon: Speaker, tone: "ai", title: "Voice assistants", meta: "Alexa and Gemini Voice linked to this home, and what each may do", href: "/settings/voice-assistants" },
+    { icon: MessageCircle, tone: "handled", title: "WhatsApp", meta: "Forward messages, photos and documents into HomeSend", href: "/settings/whatsapp" },
     { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "What is shared, how long it is kept, and taking your data with you", href: "/settings/privacy" },
     { icon: KeyRound, tone: "neutral", title: "Two-factor authentication", meta: "Coming — not switched on for this account yet", badge: "Soon" },
     { icon: Link2, tone: "care", title: "Connected accounts", meta: "School, calendar, shopping, weather", href: view.permissions.includes("integrations.manage") ? "/household/integrations" : undefined },

@@ -121,7 +121,7 @@ below holds to that.
 
 ## Still open / needs a person
 
-- **Screens (14-016).** Connect WhatsApp, member status, the HomeSend
+- **Screens (14-016, done since — see `2026-09-24-whatsapp-homesend-screens.md`).** Connect WhatsApp, member status, the HomeSend
   channel and filter, and Settings management. Until then no one can ask
   for a code.
 - **Credentials.**

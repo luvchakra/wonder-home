@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState, type ReactNode } from "react";
 
 import { gateTranscript, uncertainTranscriptPrompt } from "@wonderhome/core/homesend/audio";
 import { FAILURE_REASON_COPY, type HomeSendChange } from "@wonderhome/core/homesend/items";
@@ -124,6 +124,9 @@ export function HomeSendInbox({
   groceryNames = {},
   purchaseNames = {},
   canAddChild = false,
+  senders = {},
+  filterLabel = null,
+  filter = null,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
@@ -139,6 +142,12 @@ export function HomeSendInbox({
   groceryNames?: Record<string, string>;
   /** A receipt's recorded lines by purchase id ("Milk × 2") — undone ones have no label. */
   purchaseNames?: Record<string, string>;
+  /** Members' names by id, so a WhatsApp item says who sent it (story 14-016). */
+  senders?: Record<string, string>;
+  /** Set when the lists below are one channel's only ("WhatsApp"), for the empty state. */
+  filterLabel?: string | null;
+  /** The channel tabs, placed between the drop zone and the lists they filter. */
+  filter?: ReactNode;
 }) {
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});
   const [pasteState, pasteAction, pasting] = useActionState<SendHomeItemState, FormData>(pasteHomeSendItemAction, {});
@@ -358,6 +367,8 @@ export function HomeSendInbox({
         )}
       </Card>
 
+      {filter}
+
       {pendingOthers.length > 0 ? (
         <section>
           <SectionHeader title="Needs your review" count={pendingOthers.length} />
@@ -366,7 +377,7 @@ export function HomeSendInbox({
               {pendingOthers.map((item) => {
                 const heard = uncheckedTranscript(item);
                 const presentation = item.source === "audio_note" && heard ? { icon: Mic, tone: "neutral" as IconTone, label: "Voice note" } : presentationFor(item.classifiedKind);
-                const reason = heard ? "Check what WonderHome heard" : describeSource(item.understanding, { contentType: item.contentType, receivedAt: item.createdAt });
+                const reason = heard ? "Check what WonderHome heard" : describeSource(item.understanding, { contentType: item.contentType, receivedAt: item.createdAt, from: item.createdByMemberId ? senders[item.createdByMemberId] : null });
                 const title = titleFor(item);
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
@@ -515,7 +526,11 @@ export function HomeSendInbox({
       ) : null}
 
       {pending.length === 0 && failed.length === 0 && history.length === 0 ? (
-        <EmptyState icon={UploadCloud} tone="ai" title="Nothing sent yet" description="Drag a photo, PDF or voice note above, or paste something you were forwarded, and WonderHome reads it for you." />
+        filterLabel ? (
+          <EmptyState icon={UploadCloud} tone="ai" title={`Nothing from ${filterLabel} yet`} description="Anything sent this way shows up here. Everything else is under All." />
+        ) : (
+          <EmptyState icon={UploadCloud} tone="ai" title="Nothing sent yet" description="Drag a photo, PDF or voice note above, or paste something you were forwarded, and WonderHome reads it for you." />
+        )
       ) : null}
     </div>
   );

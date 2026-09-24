@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { auditChange } from "../api/audit";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome } from "../homesend/ingest";
 import { FAILURE_REASON_COPY } from "../homesend/items";
@@ -64,7 +65,10 @@ export async function receiveWhatsAppMessages(admin: SupabaseClient, messages: r
       const result = await completeLink(admin, { code, waUserId: message.waUserId, phone: message.phone, displayName: message.profileName });
       const ok = result.outcome === "linked" || result.outcome === "already_linked";
       events.push({ kind: ok ? "connection_completed" : "connection_failed", householdId: result.householdId });
-      if (result.outcome === "linked") outcome.linked += 1;
+      if (result.outcome === "linked" && result.householdId) {
+        outcome.linked += 1;
+        await auditChange({ householdId: result.householdId, actorMemberId: result.memberId, eventType: "whatsapp.linked", targetTable: "whatsapp_identities", targetId: result.identityId });
+      }
       await reply(message.phone, LINK_REPLIES[result.outcome]);
       continue;
     }
