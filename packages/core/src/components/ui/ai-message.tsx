@@ -58,6 +58,7 @@ export function ChatMessage({
   speaker,
   children,
   aside,
+  sentAt,
   pending = false,
   className,
 }: {
@@ -76,6 +77,12 @@ export function ChatMessage({
   children: ReactNode;
   /** Something attached beneath the bubble: an action preview, suggestions. */
   aside?: ReactNode;
+  /**
+   * When it was said, shown small in the bubble's bottom corner, as a
+   * messaging app does. The caller formats it in the household's time zone;
+   * `dateTime` is the machine-readable instant.
+   */
+  sentAt?: { label: string; dateTime: string };
   pending?: boolean;
   className?: string;
 }) {
@@ -98,10 +105,43 @@ export function ChatMessage({
               {speaker}
             </p>
           ) : null}
-          {pending ? <ThinkingDots /> : children}
+          {pending ? (
+            <ThinkingDots />
+          ) : sentAt ? (
+            // The time sits beside a short message's last words and drops to
+            // its own line, still in the corner, when the text needs the width.
+            <div className="flex flex-wrap items-end justify-end gap-x-2.5">
+              <div className="min-w-0 flex-auto">{children}</div>
+              <time
+                dateTime={sentAt.dateTime}
+                className={cn(
+                  "shrink-0 translate-y-0.5 text-[0.6875rem] leading-none whitespace-nowrap tabular-nums",
+                  fromAssistant ? "text-[var(--wh-foreground-subtle)]" : "text-[var(--wh-primary-foreground)]/75",
+                )}
+              >
+                {sentAt.label}
+              </time>
+            </div>
+          ) : (
+            children
+          )}
         </div>
         {aside ? <div className="w-full">{aside}</div> : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Where one day's messages end and the next begin: the date, centred in a
+ * small pill between them ("Today", "Yesterday", "September 7, 2026").
+ */
+export function ChatDayDivider({ label }: { label: string }) {
+  return (
+    <div role="separator" aria-label={label} className="flex justify-center py-1">
+      <span className="rounded-full bg-[var(--wh-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--wh-foreground-muted)] shadow-[var(--wh-shadow-card)]">
+        {label}
+      </span>
     </div>
   );
 }

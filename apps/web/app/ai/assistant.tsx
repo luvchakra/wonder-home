@@ -11,12 +11,13 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
 import { plainText } from "@wonderhome/core/conversation/reply-format";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
-import { AiOrb, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
+import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
+import { AiOrb, ChatDayDivider, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
 import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-composer";
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -45,6 +46,8 @@ export type AssistantMessage = {
   proposal?: string;
   /** Who said this, spelled out — set only for a live conversation's turns. */
   speaker?: string;
+  /** When it was said (ISO 8601). Unset only on the "thinking" placeholder. */
+  at?: string;
 };
 
 /** Far enough back to be deliberate rather than a stray touch. */
@@ -72,6 +75,7 @@ export function Assistant({
   geminiLive = { available: false },
   kids = [],
   canAddChild = false,
+  timeZone = "Asia/Kolkata",
 }: {
   householdId: string;
   memberName: string;
@@ -91,6 +95,8 @@ export function Assistant({
   kids?: { id: string; displayName: string }[];
   /** Whether the viewer may add a child from a school notice (story 08-009). */
   canAddChild?: boolean;
+  /** The household's own zone, which every message time and date divider is shown in. */
+  timeZone?: string;
 }) {
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
@@ -176,7 +182,7 @@ export function Assistant({
         const base = editedIndex === -1 ? current : current.slice(0, editedIndex);
         return [
           ...base,
-          { id: optimisticId, role: "member", text: utterance, speaker: speaker?.member },
+          { id: optimisticId, role: "member", text: utterance, speaker: speaker?.member, at: new Date().toISOString() },
           { id: `${optimisticId}-pending`, role: "assistant", text: "", pending: true },
         ];
       });
@@ -214,6 +220,7 @@ export function Assistant({
                 preview: reply.preview ?? null,
                 proposal: reply.proposal,
                 speaker: speaker?.assistant,
+                at: new Date().toISOString(),
               })),
             ),
         );
@@ -252,6 +259,7 @@ export function Assistant({
           role: entry.role,
           text: entry.text,
           speaker: entry.role === "member" ? firstName : "WonderHome",
+          at: new Date().toISOString(),
         }),
       );
     },
@@ -271,7 +279,7 @@ export function Assistant({
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message ?? "Could not summarise that conversation.");
-      setMessages((current) => current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text }));
+      setMessages((current) => current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not summarise that conversation.");
     }
@@ -331,7 +339,7 @@ export function Assistant({
             .map((message) =>
               message.action?.id === actionId ? { ...message, action: { ...message.action, status: payload.reply.action?.status ?? decision } } : message,
             )
-            .concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text }),
+            .concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() }),
         );
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "That decision did not go through.");
@@ -404,13 +412,16 @@ export function Assistant({
           aria-live="polite"
         >
           <div className="space-y-4 py-2">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
+            <Fragment key={message.id}>
+            {/* A date between the days, as a messaging app shows it. */}
+            {message.at && dayChanges(messages, index, timeZone) ? <ChatDayDivider label={messageDayLabel(new Date(message.at), timeZone)} /> : null}
             <ChatMessage
-              key={message.id}
               role={message.role}
               name={memberName}
               speaker={message.speaker}
               pending={message.pending}
+              sentAt={message.at ? { label: messageTime(new Date(message.at), timeZone), dateTime: message.at } : undefined}
               aside={
                 message.action?.preview || message.preview ? (
                   <ActionPreview
@@ -452,6 +463,7 @@ export function Assistant({
             >
               {message.role === "assistant" ? <ReplyText text={message.text} /> : message.text}
             </ChatMessage>
+            </Fragment>
           ))}
           </div>
         </div>
@@ -531,6 +543,21 @@ export function Assistant({
   );
 }
 
+
+/**
+ * Whether a divider goes above this message: it is the first with a time, or
+ * the first on a new day in the household's zone. The "thinking" placeholder
+ * has no time and never starts a day.
+ */
+function dayChanges(messages: AssistantMessage[], index: number, timeZone: string): boolean {
+  const at = messages[index]?.at;
+  if (!at) return false;
+  for (let before = index - 1; before >= 0; before -= 1) {
+    const earlier = messages[before]?.at;
+    if (earlier) return messageDay(new Date(earlier), timeZone) !== messageDay(new Date(at), timeZone);
+  }
+  return true;
+}
 
 function stateOf(message: AssistantMessage): "prepared" | "needs_approval" | "approved" | "rejected" | "executed" | "unchanged" | "refused" {
   if (message.action) {
