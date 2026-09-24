@@ -122,8 +122,11 @@ backend is the foundation the 12 screens will sit on.
   - the purchasable-prices embed;
   - "nobody can read which provider plan backs a price";
   - "anonymous cannot record a payment".
-- Supabase security advisor: the only new finding is the intended "RLS
-  enabled, no policy" on `payment_provider_plans`.
+- Tenant-isolation suite: `payment_provider_plans` first failed "every table
+  has a policy". It now has an explicit deny-all policy, the convention
+  `plan_policy_events` uses, added in follow-up migration `20261003090100`,
+  also applied live. `plan_prices` and `payment_provider_plans` join the
+  suite's platform-table list, alongside `plans` and `plan_features`.
 
 ## Still open / needs a person
 
@@ -148,7 +151,7 @@ backend is the foundation the 12 screens will sit on.
   `checkout.ts` and `webhook.ts`, with their tests.
 - `apps/web/app/api/v1/billing/webhook/[provider]/route.ts`
 - `apps/web/app/api/v1/households/[householdId]/plan/route.ts`
-- `supabase/migrations/20261003090000_payments_multi_provider.sql`
+- `supabase/migrations/20261003090000_payments_multi_provider.sql` and `20261003090100_payment_provider_plans_no_client_access.sql`
 - `scripts/test-payments-rls.mjs`
 - `scripts/verify-live-project.mjs`
 
