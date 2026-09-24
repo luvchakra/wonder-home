@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Notification center: feed, detail, actions, snooze, settings (23-005..007)](2026-09-24-notification-center.md) |
 | 2026-09-24 | [Smart notifications, part 1: reminders derived from real records and reconciled (created, updated, resolved, expired, never duplicated), data-driven timing policies per category, quiet hours fixed from UTC to the household's clock, recipients change state never content (stories 23-001..004 Done)](2026-09-24-smart-notifications-engine.md) |
 | 2026-09-24 | [Internationalization, part 1: language, region, currency, time zone and units as separate preferences, an optional resumable setup after family onboarding, Language & Region settings, an Intl-only formatter and a seven-language catalog for the core UI, right-to-left ready shell and Home (stories 22-001..003 Done)](2026-09-24-internationalization-foundation.md) |
 | 2026-09-24 | [Intelligent household onboarding: twelve resumable screens from "Create household" to a working operating model — owners suggested from ages, work and helper roles (never gender), readiness counted from what is really set up, one guided question at a time (story 02-009 Done)](2026-09-24-household-onboarding.md) |

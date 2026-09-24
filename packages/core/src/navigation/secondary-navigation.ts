@@ -52,6 +52,8 @@ export type SecondaryNavItem = {
   adultOnly?: boolean;
   /** Which labelled section this item falls under in the nav drawer and the More page. */
   group: SecondaryNavGroup;
+  /** A count worth a glance beside the label — only Notifications' unread reminders carry one. */
+  badge?: number;
 };
 
 /** The nav drawer / More page's section groupings, in display order. */

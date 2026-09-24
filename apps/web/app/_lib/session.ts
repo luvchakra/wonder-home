@@ -111,7 +111,11 @@ export async function buildSession(
       dir: preferences.dir,
       labels,
     },
-    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }).map((item) => ({ ...item, label: t(`nav.item.${item.key}`) || item.label })),
+    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }).map((item) => ({
+      ...item,
+      label: t(`nav.item.${item.key}`) || item.label,
+      ...(item.key === "notifications" && unread > 0 ? { badge: unread } : {}),
+    })),
     locale: { preferences, t, format: requestFormat() },
   };
 }

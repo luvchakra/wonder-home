@@ -13,6 +13,7 @@ import {
   type Obligation,
   type ObligationKind,
   type ObligationStatus,
+  nextDueDate,
 } from "./payments";
 import { invalidatesContext } from "../context/invalidation";
 
@@ -352,6 +353,60 @@ async function recordAmountImpl(
 }
 
 /**
+ * "Mark as paid" (story 23-005): the household says this bill is settled.
+ *
+ * The payment is kept in the bill's history when its amount is known, and a
+ * recurring bill moves on to its next due date rather than being closed —
+ * next month's electricity bill is the same bill, not a new one to re-enter.
+ * A one-off bill is marked paid. Either way, the reminder about it resolves
+ * on its own, because its source no longer needs anyone.
+ */
+async function markObligationPaidImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; obligationId: string; paidOn: string },
+): Promise<{ nextDueOn: string | null }> {
+  const { data, error } = await supabase
+    .from("obligations")
+    .select("id, status, due_on, recurrence, amount_minor, currency, payee, kind, responsible_member_id")
+    .eq("id", input.obligationId)
+    .eq("household_id", input.householdId)
+    .maybeSingle();
+  if (error) throw new Error(`markObligationPaid failed: ${error.code ?? "unknown"}`);
+  if (!data) throw ApiError.notFound("That bill is no longer here.");
+  const bill = data as Row;
+  if (!["expected", "received", "scheduled", "overdue"].includes(bill.status as string)) {
+    throw ApiError.badRequest("That bill is already settled.");
+  }
+
+  const dueOn = (bill.due_on as string | null) ?? null;
+  if (bill.amount_minor !== null && bill.currency) {
+    await recordAmountImpl(supabase, {
+      householdId: input.householdId,
+      obligationId: input.obligationId,
+      periodLabel: (dueOn ?? input.paidOn).slice(0, 7),
+      amountMinor: Number(bill.amount_minor),
+      currency: bill.currency as string,
+      paidOn: input.paidOn,
+      payee: (bill.payee as string | null) ?? null,
+      kind: (bill.kind as string | null) ?? null,
+      ownerMemberId: (bill.responsible_member_id as string | null) ?? null,
+    });
+  }
+
+  const nextDueOn = dueOn ? nextDueDate(dueOn, (bill.recurrence as string | null) ?? null) : null;
+  const { error: updateError } = await supabase
+    .from("obligations")
+    .update(nextDueOn ? { due_on: nextDueOn, status: "expected" } : { status: "paid" })
+    .eq("id", input.obligationId)
+    .eq("household_id", input.householdId);
+  if (updateError) {
+    if (updateError.code === "42501") throw ApiError.forbidden("Only a household administrator can mark a bill paid.");
+    throw new Error(`markObligationPaid failed: ${updateError.code ?? "unknown"}`);
+  }
+  return { nextDueOn };
+}
+
+/**
  * Removes one recorded transaction — a household correcting a mistaken
  * entry, not a ledger requiring an audit trail of every deletion (unlike a
  * bill definition, which stands down rather than disappearing, a single
@@ -514,6 +569,7 @@ export const updateObligation = invalidatesContext(updateObligationImpl, (_supab
 export const cancelObligation = invalidatesContext(cancelObligationImpl, (_supabase, input) => input.householdId);
 export const restoreObligation = invalidatesContext(restoreObligationImpl, (_supabase, input) => input.householdId);
 export const recordAmount = invalidatesContext(recordAmountImpl, (_supabase, input) => input.householdId);
+export const markObligationPaid = invalidatesContext(markObligationPaidImpl, (_supabase, input) => input.householdId);
 export const removeTransaction = invalidatesContext(removeTransactionImpl, (_supabase, input) => input.householdId);
 export const applyObligationSyncPlan = invalidatesContext(applyObligationSyncPlanImpl, (_supabase, input) => input.householdId);
 export const prepareIntent = invalidatesContext(prepareIntentImpl, (_supabase, input) => input.householdId);

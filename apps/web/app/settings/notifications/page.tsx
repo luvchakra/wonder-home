@@ -2,9 +2,17 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { channelAdaptersFromEnv } from "@wonderhome/core/notifications/channels";
 import { loadChannelPreferences } from "@wonderhome/core/notifications/preferences";
+import { REMINDER_POLICIES } from "@wonderhome/core/notifications/policies";
+import { loadReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
+import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
 
-import { saveChannelPreferenceAction } from "../../(auth)/notification-preferences-actions";
+import {
+  saveChannelPreferenceAction,
+  saveQuietHoursAction,
+  saveReminderPreferencesAction,
+} from "../../(auth)/notification-preferences-actions";
 import { CHANNEL_DESCRIPTIONS, ChannelPreferenceCard } from "../../_components/notification-preferences-form";
+import { QuietHoursCard, ReminderPreferencesCard } from "../../_components/reminder-settings-form";
 import { requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Notifications" };
@@ -24,7 +32,25 @@ export default async function NotificationSettingsPage() {
   const session = await requireSession("/settings/notifications");
   const { supabase, membership, viewer, secondary } = session;
 
-  const preferences = await loadChannelPreferences(supabase, membership.memberId);
+  const [preferences, reminderPreferences] = await Promise.all([
+    loadChannelPreferences(supabase, membership.memberId),
+    loadReminderPreferences(supabase, membership.memberId),
+  ]);
+  const timeZone = membership.household.timezone;
+  const format = session.locale.format;
+
+  // Quiet hours are the in-app channel's own window, to the minute.
+  const inApp = preferences.find((preference) => preference.channel === "in_app");
+  const clock = (hour: number, minute: number) => `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const quiet =
+    inApp && inApp.quietFrom !== null && inApp.quietUntil !== null
+      ? { from: clock(inApp.quietFrom, inApp.quietFromMinute ?? 0), until: clock(inApp.quietUntil, inApp.quietUntilMinute ?? 0) }
+      : null;
+  const today = localMoment(new Date(), timeZone).dateKey;
+  const times = Array.from({ length: 96 }, (_, index) => ({
+    value: clock(Math.floor(index / 4), (index % 4) * 15),
+    label: format.time(atLocal(today, index * 15, timeZone)),
+  }));
   // Which channels actually reach someone on this deployment (story 17-006):
   // WhatsApp once its Cloud API is configured, in-app always.
   const adapters = channelAdaptersFromEnv();
@@ -46,6 +72,22 @@ export default async function NotificationSettingsPage() {
           </p>
         </header>
 
+        {/* Keyed on what is saved, so a saved change redraws the form with it. */}
+        <QuietHoursCard
+          key={quiet ? `${quiet.from}-${quiet.until}` : "off"}
+          householdId={membership.household.id} quiet={quiet} times={times} timeZone={timeZone} save={saveQuietHoursAction} />
+
+        <ReminderPreferencesCard
+          key={reminderPreferences.map((preference) => `${preference.preset}:${preference.enabled}`).join(",")}
+          householdId={membership.household.id}
+          rows={reminderPreferences.map((preference) => ({
+            ...preference,
+            options: REMINDER_POLICIES[preference.category].presets.map((preset) => ({ value: preset.key, label: preset.label })),
+          }))}
+          save={saveReminderPreferencesAction}
+        />
+
+        <h2 className="pt-2 text-base font-semibold">Where reminders reach you</h2>
         <div className="space-y-4">
           {preferences.map((preference) => (
             <ChannelPreferenceCard

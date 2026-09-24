@@ -8,6 +8,7 @@ import {
   detectAnomaly,
   format,
   mayExecute,
+  nextDueDate,
   shouldRetry,
   type Attempt,
   type Obligation,
@@ -275,5 +276,19 @@ describe("formatting money", () => {
     expect(format(284_000, "INR")).toBe("₹2,840");
     expect(format(1050, "USD")).toBe("$10.50");
     expect(format(344_950, "INR")).toBe("₹3,449.50");
+  });
+});
+
+describe("the next due date of a recurring bill", () => {
+  it("moves by its period and clamps to the month's last day", () => {
+    expect(nextDueDate("2026-09-26", "monthly")).toBe("2026-10-26");
+    expect(nextDueDate("2026-01-31", "monthly")).toBe("2026-02-28");
+    expect(nextDueDate("2026-11-15", "quarterly")).toBe("2027-02-15");
+    expect(nextDueDate("2024-02-29", "yearly")).toBe("2025-02-28");
+  });
+
+  it("a one-off bill has no next date", () => {
+    expect(nextDueDate("2026-09-26", "one_off")).toBeNull();
+    expect(nextDueDate("2026-09-26", null)).toBeNull();
   });
 });

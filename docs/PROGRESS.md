@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**201 of 216 stories done — 93.1%**
+**204 of 216 stories done — 94.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 201 |
-| In Progress | 9 |
+| Done | 204 |
+| In Progress | 7 |
 | Blocked | 0 |
-| Not Started | 6 |
+| Not Started | 5 |
 
 ## By module
 
@@ -47,7 +47,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 8 | 8 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `███░░░░░░░` | 3 | 8 | 3 in progress, 2 not started |
-| 23 Smart Notifications | `███░░░░░░░` | 4 | 12 | 5 in progress, 3 not started |
+| 23 Smart Notifications | `█████░░░░░` | 7 | 12 | 3 in progress, 2 not started |
 
 ## What is left
 
@@ -60,11 +60,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `22-006` Localized notifications | 22 Internationalization and Localization | P0 | Not Started |
 | `22-007` Multi-currency household records | 22 Internationalization and Localization | P1 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | In Progress |
-| `23-005` Notification center: feed, categories, detail, actions | 23 Smart Notifications | P0 | In Progress |
-| `23-006` Snooze and custom reminders | 23 Smart Notifications | P0 | In Progress |
-| `23-007` Notification settings | 23 Smart Notifications | P1 | In Progress |
 | `23-008` Smart batching | 23 Smart Notifications | P1 | In Progress |
-| `23-009` Today at a glance and member-specific view | 23 Smart Notifications | P1 | Not Started |
+| `23-009` Today at a glance and member-specific view | 23 Smart Notifications | P1 | In Progress |
 | `23-010` Escalation | 23 Smart Notifications | P1 | In Progress |
 | `23-011` HomeBrain smart digest | 23 Smart Notifications | P1 | Not Started |
 | `23-012` Timing learned from behaviour | 23 Smart Notifications | P1 | Not Started |
@@ -438,7 +435,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 23 — Smart Notifications
 
-4 of 12 done `███░░░░░░░`
+7 of 12 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -446,11 +443,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `23-002` Reminder policies and timing windows | P0 | Done | `notifications/policies.ts`: per-category presets as data (bills 3 days + due day, school evening before + morning of, meals when cooking starts from the recipe's time, groceries late afternoon, pets on the day, family an hour before). `planStages` works in the household's zone; stages are bounded (≤10, DB-checked). `reminder_preferences` holds a person's chosen preset |
 | `23-003` Idempotency, auto-cancellation and lifecycle trail | P0 | Done | The thread key plus the open-per-thread index is the dedupe key, and an unchanged reminder is never rewritten. A finished source resolves its reminder; a moved date reschedules it; a dismissed stage never returns, though a later one can. `wh.log_notification_transition` records every change of state in closed words |
 | `23-004` Quiet hours on the household's clock | P0 | Done | Fixes the UTC bug in `decide.ts`/`channels.ts`: quiet hours are read in the household's time zone, to the minute. A reminder is deferred, brought forward, or — only when urgent — breaks the quiet. The household's HomeTalk quiet-hours rule is the default for people with no setting of their own |
-| `23-005` Notification center: feed, categories, detail, actions | P0 | In Progress | Backend in place: `notifications/actions.ts` (seen, dismiss, snooze) and the recipient guard (state only, never content). The feed tabs, category filter, detail screens and domain actions (mark paid, mark done) are PR N2 |
-| `23-006` Snooze and custom reminders | P0 | In Progress | Presets (5 min … tomorrow morning) and a picked time, bounded forward to 31 days by the database. Snooze persists and is not overwritten until a new stage arrives. The UI is PR N2 |
-| `23-007` Notification settings | P1 | In Progress | Data is ready: quiet hours to the minute and per-category presets with on/off. The settings screen is PR N2 |
+| `23-005` Notification center: feed, categories, detail, actions | P0 | Done | `/notifications` reconciles first, then shows the person's own reminders most pressing first (priority → deadline → newest) under All / Action needed / Upcoming / Updates, with category chips. Each row (`ReminderRow`, an `ExpandableRow`) opens to the live record behind it — a bill's amount, due date, payee and repeat; a school item; a meal and its recipe time; a pet; a family plan — read now through the person's own session, never copied. Mark as paid goes through `finance/repository.ts`'s `markObligationPaid` (a recurring bill rolls to its next due date with history; Admins only), Mark done through `completeSchoolItem`/`markPetCareDone`; the reminder clears by reconciliation, never by editing it. The nav badge counts what is new; opening the feed marks it seen. Browser-verified at 360px and desktop |
+| `23-006` Snooze and custom reminders | P0 | Done | "Remind me later" on every open row: 15 minutes, an hour, later today, tomorrow morning, or a picked day (the next week) and time on the household's clock (`atLocal`), bounded by the database to 31 days. The confirmation names when it comes back |
+| `23-007` Notification settings | P1 | Done | `/settings/notifications`: quiet hours to the quarter hour on the household's clock, and per-kind timing (the policy's own presets, picked never typed) with an on/off each; saving reconciles so waiting reminders move at once. The per-channel cards stay below |
 | `23-008` Smart batching | P1 | In Progress | The grocery list is one reminder per day ("Milk, bread and eggs are running low"). Grouping related school items is still open |
-| `23-009` Today at a glance and member-specific view | P1 | Not Started | PR N2 |
+| `23-009` Today at a glance and member-specific view | P1 | In Progress | Upcoming is today and tomorrow at a glance, grouped Today / Tomorrow / Later with each reminder's time on the household's clock, and every view is only the person's own (routing picks one responsible recipient). Still open (PR N3): the "For me / Household / Assigned by me" split and the list of responsibilities that route to this person |
 | `23-010` Escalation | P1 | In Progress | A reminder moves through its policy's stages (bounded, recorded as `escalated`). Escalating to a backup person when nobody acts is still open (PR N3) |
 | `23-011` HomeBrain smart digest | P1 | Not Started | PR N3: a summary over the same deterministic reminders, never an authority over them |
 | `23-012` Timing learned from behaviour | P1 | Not Started | Only as a signal, never over an explicit preference |
