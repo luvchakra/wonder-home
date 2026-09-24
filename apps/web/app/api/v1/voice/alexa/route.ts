@@ -38,7 +38,14 @@ const MAX_BODY_BYTES = 64 * 1024;
 const CERT_CACHE_MS = 60 * 60 * 1000;
 const certCache = new Map<string, { pem: string; at: number }>();
 
-function reject(status: 400 | 401 | 413): Response {
+/**
+ * Why a request was refused, in closed words (spec §30: `alexa.request.rejected`).
+ * Never the body, a header value, a token or anything said.
+ */
+type Rejection = "not_configured" | "too_large" | "cert_url" | "cert_fetch" | "cert_invalid" | "signature" | "malformed" | "stale" | "wrong_skill";
+
+function reject(status: 400 | 401 | 413, reason: Rejection): Response {
+  log.info("alexa.request.rejected", { reason, status, allow: ["reason", "status"] });
   return new Response(JSON.stringify({ error: { code: "unauthenticated", message: "Authentication required.", requestId: "alexa" } }), {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
@@ -66,29 +73,32 @@ async function certificateChain(url: string): Promise<string | null> {
 export async function POST(request: Request): Promise<Response> {
   const skillId = alexaSkillId();
   // Unconfigured and unauthenticated look the same from outside.
-  if (!skillId) return reject(401);
+  if (!skillId) return reject(401, "not_configured");
 
   const declared = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return reject(413);
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return reject(413, "too_large");
   const rawBody = await request.text();
-  if (rawBody.length > MAX_BODY_BYTES) return reject(413);
+  if (rawBody.length > MAX_BODY_BYTES) return reject(413, "too_large");
 
   // Amazon's rules: reject with 400 anything that is not provably Alexa's.
   const certUrl = request.headers.get("signaturecertchainurl");
-  if (!certChainUrlAllowed(certUrl)) return reject(400);
+  if (!certChainUrlAllowed(certUrl)) return reject(400, "cert_url");
   const pem = await certificateChain(certUrl!);
-  if (!pem) return reject(400);
+  if (!pem) return reject(400, "cert_fetch");
   const now = new Date();
   let certificate;
   try {
     certificate = checkAlexaCertificate(splitPemChain(pem), now);
   } catch {
-    return reject(400);
+    return reject(400, "cert_invalid");
   }
-  if (!certificate.ok || !signatureMatches(certificate.leaf, request.headers.get("signature-256"), rawBody)) return reject(400);
+  if (!certificate.ok) return reject(400, "cert_invalid");
+  if (!signatureMatches(certificate.leaf, request.headers.get("signature-256"), rawBody)) return reject(400, "signature");
 
   const envelope = readAlexaEnvelope(rawBody);
-  if (!envelope || !timestampFresh(envelope.timestamp, now) || envelope.applicationId !== skillId) return reject(400);
+  if (!envelope) return reject(400, "malformed");
+  if (!timestampFresh(envelope.timestamp, now)) return reject(400, "stale");
+  if (envelope.applicationId !== skillId) return reject(400, "wrong_skill");
 
   const turn = alexaTurn(envelope);
   if (turn.kind === "local") return alexaJson(localAlexaResponse(turn.speech, turn.endSession));

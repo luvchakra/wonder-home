@@ -321,6 +321,13 @@ const RULES: readonly Rule[] = [
     pattern: new RegExp(`^remind me (${REMIND_WHEN})(?:\\s+at\\s+(${TIME_WORDS}))? (?:to|about|that) (.+)$`, "i"),
     read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[3]!, match[1], match[2]), confidence: 0.9 }),
   },
+  {
+    // "Set a reminder to call the plumber tomorrow", "create a reminder about
+    // the school meeting" — the same reminder, said the way a voice assistant
+    // is usually asked for one.
+    pattern: new RegExp(`^(?:set|create|make|add)(?: me)? an? reminder (?:to|about|for|that) (.+?)(?:\\s+(${REMIND_WHEN}))?(?:\\s+at\\s+(${TIME_WORDS}))?$`, "i"),
+    read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[1]!, match[2], match[3]), confidence: 0.9 }),
+  },
 
   // --- Lists: add something --------------------------------------------------
   {

@@ -2,8 +2,13 @@ import { createSign, X509Certificate } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
+import { looksLikeStatusQuestion } from "../conversation/rules";
 import {
+  ALEXA_ANSWER_INTENT,
+  ALEXA_ANSWER_TYPE,
   ALEXA_CARRIERS,
+  ALEXA_STATUS_INTENT,
+  ALEXA_STATUS_QUESTION,
   alexaInteractionModel,
   alexaResponseFor,
   alexaSkillId,
@@ -203,5 +208,41 @@ describe("the skill's interaction model is the code's", () => {
     const names = Object.keys(ALEXA_CARRIERS);
     expect(new Set(names).size).toBe(names.length);
     for (const name of names) expect(name).toMatch(/^[A-Za-z_]+$/);
+  });
+});
+
+describe("the spec's three kinds of request, and a bare answer in between", () => {
+  const intentOf = (name: string, slots: Record<string, unknown> = {}) => alexaTurn(readAlexaEnvelope(body({}, { intent: { name, slots } }))!);
+
+  it("a status request asks HomeTalk the status question its own rules already answer", () => {
+    expect(intentOf(ALEXA_STATUS_INTENT)).toEqual({ kind: "hometalk", text: ALEXA_STATUS_QUESTION });
+    expect(looksLikeStatusQuestion(ALEXA_STATUS_QUESTION)).toBe(true);
+  });
+
+  it("an action is words for HomeTalk, whatever verb starts it — never a write of its own", () => {
+    expect(intentOf("WonderHomeCreateIntent", { utterance: { value: "a reminder for the school meeting" } })).toEqual({ kind: "hometalk", text: "create a reminder for the school meeting" });
+    expect(intentOf("WonderHomeCompleteIntent", { utterance: { value: "the laundry" } })).toEqual({ kind: "hometalk", text: "complete the laundry" });
+    expect(intentOf("WonderHomeGiveMeIntent", { utterance: { value: "today's plan" } })).toEqual({ kind: "hometalk", text: "give me today's plan" });
+  });
+
+  it("a bare answer to WonderHome's own question reaches HomeTalk as said: \"What would you like to add?\" — \"Milk.\"", () => {
+    expect(intentOf(ALEXA_ANSWER_INTENT, { answer: { name: "answer", value: "milk" } })).toEqual({ kind: "hometalk", text: "milk" });
+    expect(intentOf(ALEXA_ANSWER_INTENT, { answer: { name: "answer", value: "the second one" } })).toEqual({ kind: "hometalk", text: "the second one" });
+    // An answer Alexa heard nothing for is asked again, not guessed.
+    expect(intentOf(ALEXA_ANSWER_INTENT, { answer: { name: "answer" } })).toMatchObject({ kind: "local", endSession: false });
+  });
+
+  it("the model carries both, and no sample belongs to two intents", () => {
+    const model = alexaInteractionModel() as {
+      interactionModel: { languageModel: { intents: { name: string; samples: string[]; slots?: { type: string }[] }[]; types: { name: string; values: unknown[] }[] } };
+    };
+    const { intents, types } = model.interactionModel.languageModel;
+    expect(intents.find((intent) => intent.name === ALEXA_STATUS_INTENT)?.samples).toContain("for today's summary");
+    const answer = intents.find((intent) => intent.name === ALEXA_ANSWER_INTENT);
+    expect(answer?.samples).toContain("{answer}");
+    expect(answer?.slots?.[0]?.type).toBe(ALEXA_ANSWER_TYPE);
+    expect(types.find((type) => type.name === ALEXA_ANSWER_TYPE)?.values.length).toBeGreaterThan(20);
+    const samples = intents.flatMap((intent) => intent.samples.map((sample) => sample.toLowerCase()));
+    expect(new Set(samples).size).toBe(samples.length);
   });
 });

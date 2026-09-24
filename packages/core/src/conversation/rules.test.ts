@@ -369,6 +369,14 @@ describe("Wave 4: several things, reminders and what a meal needs", () => {
     expect(read("Remind me to call the plumber tomorrow evening")).toMatchObject({ action: "set_reminder", parameters: { what: "call the plumber", when: "tomorrow evening" } });
   });
 
+  it("reads \"set a reminder\" and \"create a reminder\" as the same reminder", () => {
+    expect(read("set a reminder to call the plumber tomorrow")).toMatchObject({ action: "set_reminder", parameters: { what: "call the plumber", when: "tomorrow" } });
+    expect(read("create a reminder about the school meeting")).toMatchObject({ action: "set_reminder", parameters: { what: "the school meeting" } });
+    expect(read("Add a reminder to pay the maid tomorrow at 9am")).toMatchObject({ action: "set_reminder", parameters: { what: "pay the maid", when: "tomorrow", time: "9am" } });
+    // A reminder is never read as a grocery.
+    expect(read("add a reminder to buy milk").action).toBe("set_reminder");
+  });
+
   it("\"make sure we have everything\" asks for what a meal needs", () => {
     expect(read("make sure we have everything")).toMatchObject({ action: "add_to_list", parameters: { ingredientsOf: "that" } });
     expect(read("add everything we need for pasta")).toMatchObject({ action: "add_to_list", parameters: { ingredientsOf: "pasta" } });

@@ -337,6 +337,14 @@ describe("Which bills are due this week?", () => {
   });
 });
 
+describe("What's on my grocery list? (Alexa: \"ask WonderHome what's on my grocery list\")", () => {
+  it("reads the groceries, the same as the app does", () => {
+    const { reading, relevant } = ask("What's on my grocery list?");
+    expect(reading.domains.has("groceries")).toBe(true);
+    expect(has(relevant, "Milk")).toBe(true);
+  });
+});
+
 describe("What groceries are running low?", () => {
   it("reads the groceries, not the whole home", () => {
     const { reading, relevant } = ask("What groceries are running low?");

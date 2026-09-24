@@ -1,6 +1,6 @@
 import { resolveDeterministicIntent } from "../conversation/engine";
 import { INTENT_ACTIONS, type IntentAction } from "../conversation/intent";
-import { withCarrier } from "./alexa";
+import { ALEXA_STATUS_INTENT, alexaTurn } from "./alexa";
 import { VOICE_CAPABILITIES } from "./capabilities";
 import { GEMINI_LIVE_TOOL_NAMES, utteranceForToolCall } from "./gemini-live";
 import { VOICE_SCOPES, voiceAllowsAction } from "./scopes";
@@ -48,7 +48,17 @@ export const ALEXA_GOLDEN: readonly { intent: string; slot: string; action: Inte
   { intent: "WonderHomeAddIntent", slot: "bananas to the grocery list", action: "add_to_list" },
   { intent: "WonderHomeRemindMeIntent", slot: "to buy milk tomorrow", action: "set_reminder" },
   { intent: "WonderHomeQueryIntent", slot: "what's happening tomorrow", action: "ask_status" },
+  { intent: ALEXA_STATUS_INTENT, slot: "", action: "ask_status" },
+  { intent: "WonderHomeSetIntent", slot: "a reminder to call the plumber tomorrow", action: "set_reminder" },
+  { intent: "WonderHomeCreateIntent", slot: "a reminder about the school meeting", action: "set_reminder" },
+  { intent: "WonderHomeAnythingIntent", slot: "I need to do today", action: "ask_status" },
 ];
+
+/** What HomeTalk hears for an Alexa intent — through the adapter's own mapping, not a copy of it. */
+export function alexaText(intent: string, slot: string): string {
+  const turn = alexaTurn({ requestId: "golden", timestamp: "", type: "IntentRequest", intent, utterance: slot || null, applicationId: null, accessToken: null, sessionId: null, locale: null });
+  return turn.kind === "hometalk" ? turn.text : "";
+}
 
 const read = (text: string) => resolveDeterministicIntent(text, { actorMemberId: "golden", channel: "voice" });
 
@@ -73,7 +83,7 @@ export function voiceReadiness(): { pass: boolean; evidence: string; failures: s
 
   let alexaPassed = 0;
   for (const golden of ALEXA_GOLDEN) {
-    const action = read(withCarrier(golden.intent, golden.slot)).action;
+    const action = read(alexaText(golden.intent, golden.slot)).action;
     if (action === golden.action) alexaPassed += 1;
     else failures.push(`${golden.intent} "${golden.slot}" → ${action}`);
   }
