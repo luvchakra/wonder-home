@@ -1475,9 +1475,14 @@ export function buildOpenApiDocument(): Json {
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
         ],
         get: {
-          summary: "The caller's open conversation with WonderHome",
+          summary: "The caller's open conversation with WonderHome, or a search of their conversations",
+          description:
+            "Without `q`, the open conversation's recent messages. With `q` (two characters or more), `{ matches }`: messages in the caller's own conversations in this household whose text contains it, case-insensitively, newest first, at most 30. Another member's conversation is never searched, even one shared with the household.",
+          parameters: [
+            { name: "q", in: "query", required: false, schema: { type: "string", maxLength: 100 } },
+          ],
           responses: {
-            "200": { description: "Recent messages, with any action each one proposed" },
+            "200": { description: "Recent messages, with any action each one proposed; or the matches for `q`" },
             "403": { $ref: "#/components/responses/Forbidden" },
           },
         },

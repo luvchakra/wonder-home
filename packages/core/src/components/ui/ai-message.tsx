@@ -60,6 +60,7 @@ export function ChatMessage({
   aside,
   sentAt,
   pending = false,
+  id,
   className,
 }: {
   role: MessageRole;
@@ -84,12 +85,14 @@ export function ChatMessage({
    */
   sentAt?: { label: string; dateTime: string };
   pending?: boolean;
+  /** An anchor, so something else on the screen (a search result) can bring this message into view. */
+  id?: string;
   className?: string;
 }) {
   const fromAssistant = role === "assistant";
 
   return (
-    <div className={cn("wh-rise flex gap-2.5", fromAssistant ? "flex-row" : "flex-row-reverse", className)}>
+    <div id={id} className={cn("wh-rise flex scroll-my-4 gap-2.5", fromAssistant ? "flex-row" : "flex-row-reverse", className)}>
       {!fromAssistant && name ? <Avatar name={name} size="sm" className="mt-0.5" /> : null}
       <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-2", fromAssistant ? "items-start" : "items-end")}>
         <div

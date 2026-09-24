@@ -1,7 +1,7 @@
 import { requireUser } from "@wonderhome/core/api/auth";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
+import { currentSessionId, listMessages, searchMessages } from "@wonderhome/core/conversation/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { recordChannelEvent } from "@wonderhome/core/hometalk/channel-events";
@@ -25,6 +25,14 @@ export async function GET(request: Request, { params }: Params) {
   return defineRoute({ authenticate: requireUser }, async () => {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
+
+    // `?q=` searches the member's own conversations instead of listing the
+    // open one: what the search box in HomeTalk's header reads.
+    const query = new URL(request.url).searchParams.get("q");
+    if (query !== null) {
+      const matches = await searchMessages(supabase, { householdId, memberId: membership.memberId, query });
+      return { matches: matches.map((match) => ({ id: match.id, role: match.role, text: match.content, at: match.createdAt.toISOString() })) };
+    }
 
     const sessionId = await currentSessionId(supabase, householdId, membership.memberId);
     if (!sessionId) return { sessionId: null, messages: [] };

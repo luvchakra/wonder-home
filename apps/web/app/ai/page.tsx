@@ -10,6 +10,7 @@ import { Sparkles } from "lucide-react";
 import { geminiLiveGate } from "../_lib/gemini-live";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
+import { ConversationSearch } from "./conversation-search";
 
 export const metadata = { title: "HomeTalk" };
 export const dynamic = "force-dynamic";
@@ -66,7 +67,15 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   }
 
   return (
-    <AppShell active="ai" viewer={viewer} secondary={secondary} pathname="/ai" title="HomeTalk">
+    <AppShell
+      active="ai"
+      viewer={viewer}
+      secondary={secondary}
+      pathname="/ai"
+      title="HomeTalk"
+      fill
+      headerSearch={entitlement.allowed ? <ConversationSearch householdId={membership.household.id} timeZone={membership.household.timezone} /> : undefined}
+    >
       {entitlement.allowed ? (
         <Assistant
           householdId={membership.household.id}

@@ -152,6 +152,12 @@
      this if the button's offset or size change; nothing should hardcode its
      own guess at the gap. */
   --wh-tabbar-raised-clearance: 2.75rem;
+  /* How far that raised button (and its ring) actually rises above the bar:
+     ~15px. A screen that fills the viewport to the bar (HomeTalk, AppShell's
+     `fill`) stops this far above it instead of the full clearance above, so
+     its last line sits just clear of the button rather than floating over an
+     empty band. Scrolling pages keep the generous clearance. */
+  --wh-tabbar-raised-overhang: 1.25rem;
   --wh-header-height: 3.5rem;
   --wh-sidebar-width: 16.5rem;
   --wh-content-max: 42rem;

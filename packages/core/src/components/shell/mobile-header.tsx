@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
-import { Wordmark } from "../ui/brand";
+import { BrandMark, Wordmark } from "../ui/brand";
 import { SearchBar } from "../ui/search-bar";
 import { NavDrawerTrigger } from "./nav-drawer";
 import { ViewerMenu } from "./viewer-menu";
@@ -34,6 +34,7 @@ export function MobileHeader({
   viewer,
   back,
   title,
+  search,
   trailing,
   className,
 }: {
@@ -41,6 +42,8 @@ export function MobileHeader({
   /** A subpage: show a back chevron to this href instead of the mark. */
   back?: { href: string; label: string };
   title?: string;
+  /** A screen's own search (HomeTalk's messages): the mark and this, in place of the title. */
+  search?: ReactNode;
   trailing?: ReactNode;
   className?: string;
 }) {
@@ -51,7 +54,7 @@ export function MobileHeader({
         className,
       )}
     >
-      <div className="relative mx-auto flex h-[var(--wh-header-height)] max-w-[var(--wh-content-wide)] items-center gap-3 px-4 lg:px-8">
+      <div className={cn("relative mx-auto flex h-[var(--wh-header-height)] max-w-[var(--wh-content-wide)] items-center px-4 lg:px-8", search ? "gap-1.5 lg:gap-3" : "gap-3")}>
         {back ? (
           <Link
             href={back.href}
@@ -64,7 +67,15 @@ export function MobileHeader({
           <NavDrawerTrigger className="-ml-2 shrink-0 lg:hidden" />
         )}
 
-        {title ? (
+        {search ? (
+          <>
+            {title ? <h1 className="sr-only">{title}</h1> : null}
+            <Link href="/" aria-label="WonderHome home" className="-ml-1 shrink-0 lg:hidden">
+              <BrandMark size={28} />
+            </Link>
+            <div className="min-w-0 flex-1 lg:max-w-lg">{search}</div>
+          </>
+        ) : title ? (
           <h1 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight lg:hidden">{title}</h1>
         ) : (
           <div className="flex min-w-0 flex-1 justify-center lg:hidden">
@@ -78,9 +89,13 @@ export function MobileHeader({
           </div>
         )}
 
-        <div className="hidden min-w-0 flex-1 lg:block">
-          <SearchBar className="max-w-lg" />
-        </div>
+        {search ? (
+          <div aria-hidden className="hidden flex-1 lg:block" />
+        ) : (
+          <div className="hidden min-w-0 flex-1 lg:block">
+            <SearchBar className="max-w-lg" />
+          </div>
+        )}
 
         <div className="flex shrink-0 items-center gap-1">
           {trailing}
