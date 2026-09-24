@@ -545,6 +545,11 @@ export function describeAuditEvent(
     case "privacy.request_refused":
       return { title: "A privacy request was refused", detail: null };
     case "subscription.changed":
+      // An Admin asking the provider to stop renewing (story 20-010): the plan
+      // itself has not changed yet, so this says what did.
+      if (metadata.source === "cancel_requested") {
+        return { title: "The paid plan was set to end with its current period", detail: stringOr(metadata.to, null) };
+      }
       return {
         title: "The household's plan changed",
         detail: [stringOr(metadata.from, null), stringOr(metadata.to, null)].filter(Boolean).join(" → ") || null,

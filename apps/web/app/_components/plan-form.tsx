@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { PlanChangeAssessment } from "@wonderhome/core/billing/plan-change";
@@ -21,7 +22,19 @@ import { Badge } from "@wonderhome/core/ui/pill";
  * it kinder — and the kind version is the dangerous one.
  */
 
-type PlanOption = { key: string; name: string; description: string | null };
+type PlanOption = {
+  key: string;
+  name: string;
+  description: string | null;
+  /** The catalogue's price for the chosen interval, already in words: "₹299 a month". */
+  priceText?: string | null;
+  /** The arithmetic behind a yearly price: "₹239.16 a month · save 20%". */
+  priceNote?: string | null;
+  /** Priced, but switching is free until payments open (story 20-010). */
+  earlyAccess?: boolean;
+  /** Our catalogue price for this interval — what a checkout would charge. */
+  priceId?: string | null;
+};
 type Preview = PlanChangeAssessment & {
   lines: string[];
   needsConfirmation: boolean;
@@ -40,6 +53,7 @@ export function PlanForm({
   currentPlanKey: string | null;
   plans: PlanOption[];
 }) {
+  const router = useRouter();
   const [chosen, setChosen] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,6 +81,13 @@ export function PlanForm({
 
   const apply = async () => {
     if (!chosen || !preview) return;
+    // A priced plan that needs payment: our checkout summary shows what will
+    // be charged, and by whom, before anyone is sent to a provider (story 20-010).
+    const priceId = plans.find((plan) => plan.key === chosen)?.priceId;
+    if (preview.checkout && priceId) {
+      router.push(`/settings/plan/checkout?plan=${encodeURIComponent(chosen)}&price=${encodeURIComponent(priceId)}`);
+      return;
+    }
     setBusy(true);
     setError(null);
 
@@ -87,6 +108,7 @@ export function PlanForm({
 
       // A paid plan: the provider's page takes it from here, and the plan
       // changes when the payment is confirmed — not on this click.
+      // (A catalogue price goes through our checkout summary first; see below.)
       if (payload.checkout?.url) {
         window.location.assign(payload.checkout.url as string);
         return;
@@ -118,17 +140,28 @@ export function PlanForm({
         {plans.map((plan) => {
           const current = plan.key === (currentPlanKey ?? "free");
           return (
-            <li key={plan.key} className="flex items-center gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
+            // On a phone the action sits under the plan, so the name, price and
+            // description keep the full width (rules 11 and 15).
+            <li key={plan.key} className="flex flex-col gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{plan.name}</p>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                  {plan.name}
+                  {plan.earlyAccess && plan.priceText ? <Badge tone="handled" className="whitespace-nowrap">Free during early access</Badge> : null}
+                </p>
+                {plan.priceText ? (
+                  <p className="mt-0.5 text-sm">
+                    <span className="font-semibold">{plan.priceText}</span>
+                    {plan.priceNote ? <span className="ml-1.5 text-xs text-[var(--wh-foreground-muted)]">{plan.priceNote}</span> : null}
+                  </p>
+                ) : null}
                 {plan.description ? (
-                  <p className="text-xs text-[var(--wh-foreground-muted)]">{plan.description}</p>
+                  <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{plan.description}</p>
                 ) : null}
               </div>
               {current ? (
-                <Badge tone="handled">Current</Badge>
+                <Badge tone="handled" className="w-fit">Current</Badge>
               ) : (
-                <Button type="button" variant="secondary" disabled={busy} onClick={() => void ask(plan.key)}>
+                <Button type="button" variant="secondary" className="w-full sm:w-auto" disabled={busy} onClick={() => void ask(plan.key)}>
                   {busy && chosen === plan.key ? "Checking…" : "See what changes"}
                 </Button>
               )}

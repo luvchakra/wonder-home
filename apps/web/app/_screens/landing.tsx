@@ -33,7 +33,9 @@ import {
 import Link from "next/link";
 import type { ComponentType } from "react";
 
+import { DEFAULT_PRICE_CURRENCY, formatPrice } from "@wonderhome/core/billing/account";
 import { FEATURES } from "@wonderhome/core/billing/entitlements";
+import { yearlySavingPercent } from "@wonderhome/core/billing/prices";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { cn } from "@wonderhome/core/lib/cn";
 import { Wordmark } from "@wonderhome/core/ui/brand";
@@ -61,7 +63,24 @@ import { LanguageStrip, SendItToWonderHome, WhatsNew } from "./landing/whats-new
  * comes from the plan catalogue and carries no prices because none are
  * configured, and the security section claims only what the codebase does.
  */
-type Plan = { key: string; name: string; description: string | null; features: string[] };
+type Plan = {
+  key: string;
+  name: string;
+  description: string | null;
+  features: string[];
+  /** The catalogue's monthly and yearly prices (story 20-010), when the plan is priced. */
+  monthly: number | null;
+  yearly: number | null;
+  currency: string | null;
+  /** Priced, but switching is free until payments open. */
+  earlyAccess: boolean;
+};
+
+/** The yearly saving against twelve months — the catalogue's own arithmetic, not a claim. */
+function yearlySaving(monthly: number, yearly: number): number | null {
+  const price = (interval: "month" | "year", amount: number) => ({ id: interval, planKey: "", interval, currency: DEFAULT_PRICE_CURRENCY, amount });
+  return yearlySavingPercent(price("month", monthly), price("year", yearly));
+}
 
 const PLAN_TAGLINE: Record<string, string> = {
   free: "Run the Home",
@@ -77,14 +96,23 @@ const PLAN_TAGLINE: Record<string, string> = {
 const loadPlans = unstable_cache(async (): Promise<Plan[]> => {
   try {
     const admin = createAdminClient();
-    const [{ data: plans }, { data: features }] = await Promise.all([
-      admin.from("plans").select("key, name, description, sort_order").eq("active", true).order("sort_order"),
+    const [{ data: plans }, { data: features }, { data: prices }] = await Promise.all([
+      admin.from("plans").select("key, name, description, sort_order, requires_payment").eq("active", true).order("sort_order"),
       admin.from("plan_features").select("plan_key, feature_key, enabled").eq("enabled", true),
+      admin.from("plan_prices").select("plan_key, billing_interval, currency, amount").eq("active", true).eq("currency", DEFAULT_PRICE_CURRENCY),
     ]);
-    return ((plans as { key: string; name: string; description: string | null }[] | null) ?? []).map((plan) => ({
+    const priceOf = (planKey: string, interval: string) =>
+      ((prices as { plan_key: string; billing_interval: string; currency: string; amount: number | string }[] | null) ?? []).find(
+        (price) => price.plan_key === planKey && price.billing_interval === interval,
+      );
+    return ((plans as { key: string; name: string; description: string | null; requires_payment: boolean }[] | null) ?? []).map((plan) => ({
       key: plan.key,
       name: plan.name,
       description: plan.description,
+      monthly: priceOf(plan.key, "month") ? Number(priceOf(plan.key, "month")!.amount) : null,
+      yearly: priceOf(plan.key, "year") ? Number(priceOf(plan.key, "year")!.amount) : null,
+      currency: priceOf(plan.key, "month")?.currency ?? null,
+      earlyAccess: !plan.requires_payment,
       features: ((features as { plan_key: string; feature_key: string }[] | null) ?? [])
         .filter((feature) => feature.plan_key === plan.key)
         .map((feature) => FEATURES[feature.feature_key as keyof typeof FEATURES] ?? feature.feature_key),
@@ -93,9 +121,9 @@ const loadPlans = unstable_cache(async (): Promise<Plan[]> => {
     // No catalogue reachable: show the plans without their feature lists
     // rather than inventing them.
     return [
-      { key: "free", name: "Free", description: "The household basics, with WonderHome watching quietly.", features: [] },
-      { key: "pro", name: "Pro", description: "The full household: school, commerce, meals, bills and family time.", features: [] },
-      { key: "max", name: "Max", description: "Everything, with autonomous action and deeper integrations.", features: [] },
+      { key: "free", name: "Free", description: "The household basics, with WonderHome watching quietly.", features: [], monthly: null, yearly: null, currency: null, earlyAccess: false },
+      { key: "pro", name: "Pro", description: "The full household: school, commerce, meals, bills and family time.", features: [], monthly: null, yearly: null, currency: null, earlyAccess: false },
+      { key: "max", name: "Max", description: "Everything, with autonomous action and deeper integrations.", features: [], monthly: null, yearly: null, currency: null, earlyAccess: false },
     ];
   }
 }, ["landing-plans"], { revalidate: 3600 });
@@ -412,7 +440,7 @@ export async function Landing() {
         </Section>
 
         {/* Pricing */}
-        <Section id="pricing" eyebrow="Pricing" title="Start free. Grow into it." lede="Three plans, from a quiet watcher to a home that runs itself. Plan details come from WonderHome's live catalogue.">
+        <Section id="pricing" eyebrow="Pricing" title="Start free. Grow into it." lede="Three plans, from a quiet watcher to a home that runs itself. Prices and plan details come from WonderHome's live catalogue, and paid plans are free during early access.">
           <div className="grid gap-4 md:grid-cols-3">
             {plans.map((plan, index) => {
               const highlighted = plan.key === "pro";
@@ -428,6 +456,31 @@ export async function Landing() {
                   {highlighted ? <span className="mb-3 inline-flex w-fit rounded-[var(--wh-radius-pill)] bg-[var(--wh-primary)] px-2.5 py-1 text-[0.625rem] font-bold tracking-wide text-[var(--wh-primary-foreground)] uppercase">Most families</span> : null}
                   <h3 className="text-2xl font-bold tracking-tight">{plan.name}</h3>
                   <p className="text-sm font-semibold text-[var(--wh-primary)]">{PLAN_TAGLINE[plan.key] ?? ""}</p>
+                  {/* Prices are the catalogue's, never written here (spec §28). */}
+                  {plan.monthly !== null && plan.currency ? (
+                    <div className="mt-3">
+                      <p>
+                        <span className="text-3xl font-bold tracking-tight">{formatPrice(plan.monthly, plan.currency)}</span>
+                        <span className="text-sm text-[var(--wh-foreground-muted)]"> a month</span>
+                      </p>
+                      {plan.yearly !== null ? (
+                        <p className="text-xs text-[var(--wh-foreground-muted)]">
+                          or {formatPrice(plan.yearly, plan.currency)} a year
+                          {yearlySaving(plan.monthly, plan.yearly) ? ` — save ${yearlySaving(plan.monthly, plan.yearly)}%` : ""}
+                        </p>
+                      ) : null}
+                      {plan.earlyAccess ? (
+                        <span className="mt-2 inline-flex rounded-[var(--wh-radius-pill)] bg-[var(--wh-handled-soft)] px-2.5 py-1 text-[0.6875rem] font-semibold text-[var(--wh-handled)]">
+                          Free during early access
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : plan.key === "free" ? (
+                    <p className="mt-3">
+                      <span className="text-3xl font-bold tracking-tight">{formatPrice(0, DEFAULT_PRICE_CURRENCY)}</span>
+                      <span className="text-sm text-[var(--wh-foreground-muted)]"> always</span>
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-sm text-[var(--wh-foreground-muted)]">{plan.description}</p>
                   {plan.features.length > 0 ? (
                     <ul className="mt-5 space-y-2 text-sm">
