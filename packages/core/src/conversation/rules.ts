@@ -183,11 +183,13 @@ const RULES: readonly Rule[] = [
 
   // --- Greetings, thanks, help ---------------------------------------------
   {
-    pattern: /^(?:hi|hello|hey|hiya|good (?:morning|afternoon|evening|night)|namaste)(?:\s+(?:there|wonderhome))?$/i,
+    // A hello in each language WonderHome speaks (story 22-005), so a
+    // household answered by the rules alone is still greeted, not puzzled.
+    pattern: /^(?:hi|hello|hey|hiya|good (?:morning|afternoon|evening|night)|namaste|namaskar|नमस्ते|नमस्कार|हैलो|hola|buenos días|buenas tardes|bonjour|bonsoir|salut|hallo|guten (?:morgen|tag|abend)|مرحبا|أهلا|السلام عليكم)(?:\s+(?:there|wonderhome))?$/i,
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "greeting" }, confidence: 0.99 }),
   },
   {
-    pattern: /^(?:thanks|thank you|thx|cheers|great,? thanks|perfect|awesome|nice)(?:\s+\w+)?$/i,
+    pattern: /^(?:thanks|thank you|thx|cheers|great,? thanks|perfect|awesome|nice|धन्यवाद|शुक्रिया|dhanyavad|shukriya|gracias|merci|danke|شكرا)(?:\s+\w+)?$/i,
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "thanks" }, confidence: 0.99 }),
   },
   {

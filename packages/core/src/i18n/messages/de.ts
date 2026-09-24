@@ -129,4 +129,8 @@ export const de: Catalog = {
   "member.adult": "Erwachsene Person",
   "member.child": "Kind",
   "member.helper": "Haushaltshilfe",
+
+  "hometalk.english.notPermitted": "Diese Antwort ist auf Englisch: Ihr Haushalt hat nicht zugestimmt, ihren Inhalt zur Übersetzung an einen Modellanbieter zu senden.",
+  "hometalk.english.unchecked": "Diese Antwort ist auf Englisch: Ihre Übersetzung konnte nicht geprüft werden, daher sehen Sie die Worte, die WonderHome geprüft hat.",
+  "hometalk.english.noModel": "Diese Antwort ist auf Englisch: Im Moment steht kein Modellanbieter zur Verfügung, um sie zu übersetzen.",
 };

@@ -61,6 +61,12 @@ export type RuntimeContext = {
   pending?: string | null;
   /** What the last few turns were about: "milk", "Tomato pasta". */
   recent?: readonly string[];
+  /**
+   * The person's language in English words ("Hindi"), when it is not
+   * English (story 22-005). They may speak it, English, or a mix; what the
+   * model returns stays the same language-neutral intent either way.
+   */
+  language?: string | null;
 };
 
 export type Understanding = (

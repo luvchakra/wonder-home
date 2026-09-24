@@ -96,6 +96,14 @@ describe("short replies only mean something in context", () => {
     expect(classifyShortReply("what is it")).toBe("unclear");
   });
 
+  it("reads a bare yes or no in the other languages WonderHome speaks, never inside a sentence (story 22-005)", () => {
+    for (const yes of ["हाँ", "हां जी।", "haan", "होय", "sí", "Oui", "ja", "نعم"]) expect(classifyShortReply(yes), yes).toBe("affirm");
+    for (const no of ["नहीं", "nahi", "नाही", "non", "Nein", "لا"]) expect(classifyShortReply(no), no).toBe("decline");
+    // A yes that approves something is a whole reply, in any language.
+    expect(classifyShortReply("हाँ, पर पहले दूध जोड़ो")).toBe("unclear");
+    expect(classifyShortReply("oui mais attends")).toBe("unclear");
+  });
+
   it("approves the proposal that is actually pending", () => {
     expect(resolveShortReply("yes", pending, before)).toEqual({ kind: "approve", actionId: "a-1" });
   });

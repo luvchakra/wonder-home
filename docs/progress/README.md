@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Multilingual HomeTalk: understood in the person's language, answered in it through a checked translation, never beyond what the household agreed to send (story 22-005 Done)](2026-09-24-multilingual-hometalk.md) |
 | 2026-09-24 | [Smart notifications, part 3: batching, escalation, the day's summary, learned timing (23-008..012) — module 23 complete](2026-09-24-smart-notifications-part-3.md) |
 | 2026-09-24 | [HomeTalk reminders: "later today", the trip home, and never a time in the past](2026-09-24-reminder-times.md) |
 | 2026-09-24 | [Notification center: feed, detail, actions, snooze, settings (23-005..007)](2026-09-24-notification-center.md) |

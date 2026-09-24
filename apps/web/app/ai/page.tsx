@@ -1,6 +1,8 @@
 import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
-import { currentSessionId, listMessages } from "@wonderhome/core/conversation/repository";
+import { currentSessionId, listMessages, type ConversationMessage } from "@wonderhome/core/conversation/repository";
+import { englishNoticeKey } from "@wonderhome/core/conversation/reply-language";
+import { requestT } from "@wonderhome/core/i18n/request";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
@@ -59,7 +61,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
         .map((message) => ({
           id: message.id,
           role: message.role as "member" | "assistant",
-          text: message.content,
+          text: shownText(message),
           at: message.createdAt.toISOString(),
           action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null } : null,
         }));
@@ -102,4 +104,16 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
       )}
     </AppShell>
   );
+}
+
+/**
+ * A reply as it was shown (story 22-005): the checked translation when there
+ * was one, otherwise the validated English with the line saying why.
+ */
+function shownText(message: ConversationMessage): string {
+  const shown = message.localized;
+  if (!shown) return message.content;
+  if (shown.text) return shown.text;
+  const t = requestT();
+  return `${message.content}\n\n${t(englishNoticeKey(shown.fallback))}`;
 }

@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 216 |
-| Done | 209 |
+| Done | 210 |
 | In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 2 |
-| Completion | 96.8% |
-| Current module | 23 Smart Notifications |
-| Current story | Module 23 complete; module 22 PR 2 (multilingual HomeTalk, localized notifications) next |
+| Not Started | 1 |
+| Completion | 97.2% |
+| Current module | 22 Internationalization & Localization |
+| Current story | 22-005 multilingual HomeTalk done; 22-006 localized notifications next |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -46,7 +46,7 @@ disagree again.)
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 8 | Done |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
-| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 3 | In Progress |
+| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 4 | In Progress |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 
 ## Execution Log
@@ -243,3 +243,4 @@ disagree again.)
 | 2026-09-24 | 23 | 23-001..004 | Done | smart notification engine 44 unit + decide/channel time-zone cases, smart notifications database suite 15 (recipient changes state never content, snooze forward only and counted, trail unforgeable, closed sources/categories/windows, one open per thread, own reminder timing, reconcile throttle server-only) plus the existing 17, `verify:live` 189/189, live end-to-end reconcile on the real project (3 reminders from real records, second pass wrote nothing, a paid bill resolved its reminder, snooze and dismiss by the member, a forged title refused 42501, every transition recorded) | Reminders derived from real records and reconciled; data-driven policies; quiet hours fixed from UTC to the household's clock; notification center UI (23-005..007, 23-009) is PR N2 |
 | 2026-09-24 | 23 | 23-005..007 | Done | 107 notification unit (new: paid recurring bill opens a new thread, one-off pet care, never dropped by quiet hours, plan starting inside quiet hours) plus `nextDueDate` month-end cases; browser QA at 360px and desktop on a synthetic household (mark paid rolled a monthly bill to its next due date with history, school done, snooze with a confirmed return time, dismiss, quiet hours and per-kind timing saved and redrawn, nav badge) | Notification center: feed tabs and category chips, expandable detail from the live record, Mark as paid / Mark done through domain services, Remind me later with presets or a picked time, settings for quiet hours and per-kind timing; 23-009 Upcoming timeline in place, the For me / Household split moves to N3 |
 | 2026-09-24 | 23 | 23-008..012 | Done | 117 notification unit (batching, escalation, learned timing, max count), smart notifications database suite 17 (school_day sourced to the child; the summary and learned-timing choices are each person's own, learning starts off), verify:live 191/191, browser QA at 360px and desktop with two adults (grouped school day marked all done, escalation to the backup with its reason, digest, routing and smarter-reminders settings) | Module 23 complete: school batching, escalation to the backup once, the HomeBrain digest, the What comes to you view, opt-in learned timing. Migration `20261001090000` applied live |
+| 2026-09-24 | 22 | 22-005 | Done | reply-language 19 unit (protect, check, fallback, consent by class, notice reasons), multilingual yes/no, hello and thanks, the language line and the translator prompt; full verify gate (2776 unit, 268 E2E); browser QA as a Hindi-speaking member at 360px and desktop on the no-model path (a live model translation still needs a person on production) | Multilingual HomeTalk. Understanding is told the person's language and returns the same language-neutral intent. Every reply is validated in English, then translated with every name, item, date, time, amount, number and link taken out as a token, and shown only if the translation carries every token once with nothing invented. A reply whose content classes the household has not agreed to send stays in English, with a line saying why. The English remains the record; the shown words live in `metadata.localized` |

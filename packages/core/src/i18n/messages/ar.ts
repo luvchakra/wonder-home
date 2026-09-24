@@ -131,4 +131,8 @@ export const ar: Catalog = {
   "member.adult": "بالغ",
   "member.child": "طفل",
   "member.helper": "عامل منزلي",
+
+  "hometalk.english.notPermitted": "هذا الرد بالإنجليزية: لم يوافق منزلك على إرسال محتواه إلى مزوّد نموذج لترجمته.",
+  "hometalk.english.unchecked": "هذا الرد بالإنجليزية: تعذّر التحقق من ترجمته، لذلك ترى الكلمات التي تحقق منها WonderHome.",
+  "hometalk.english.noModel": "هذا الرد بالإنجليزية: لا يتوفر حاليًا مزوّد نموذج لترجمته.",
 };

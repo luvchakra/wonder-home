@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**209 of 216 stories done — 96.8%**
+**210 of 216 stories done — 97.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 209 |
+| Done | 210 |
 | In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 3 |
+| Not Started | 2 |
 
 ## By module
 
@@ -46,7 +46,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 8 | 8 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
-| 22 Internationalization and Localization | `███░░░░░░░` | 3 | 8 | 3 in progress, 2 not started |
+| 22 Internationalization and Localization | `█████░░░░░` | 4 | 8 | 3 in progress, 1 not started |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 
 ## What is left
@@ -56,7 +56,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
-| `22-005` Multilingual HomeTalk | 22 Internationalization and Localization | P0 | Not Started |
 | `22-006` Localized notifications | 22 Internationalization and Localization | P0 | Not Started |
 | `22-007` Multi-currency household records | 22 Internationalization and Localization | P1 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | In Progress |
@@ -415,7 +414,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 22 — Internationalization and Localization
 
-3 of 8 done `███░░░░░░░`
+4 of 8 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -423,7 +422,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `22-002` Preferences & Language & Region settings | P0 | Done | Migration `localization_preferences` (applied live): household `region`/`currency`/`measurement_system`/`default_language` (Admin only, existing `households_update_admin`), person `language`/`date_format`/`time_format`/`measurement_system` (self or Admin); `/settings/language-region` with language, region, currency, date & time and member-languages pages; audit `member.locale_updated`/`household.locale_updated`; 9 RLS tests |
 | `22-003` Optional localization setup | P0 | Done | `/onboarding/personalize` runs after family setup, never in place of it: six steps for an Admin, four for anyone else (they never set the household's region or currency); every step saved, "I'll do this later" resumable, a dismissible Home card for anyone who skipped; localization events recorded by the member themselves |
 | `22-004` Translation catalog & core UI | P0 | In Progress | Own catalog (`i18n/messages/*`, en/hi/mr/es/fr/de/ar, about 115 keys) with plurals, interpolation and English fallback, never a raw key, completeness enforced by the compiler and tests. Localized so far: navigation, Home header and counts, setup, Language & Region settings, the personalize card. Every other screen is still English, and the language page says so |
-| `22-005` Multilingual HomeTalk | P0 | Not Started | PR 2: language line in `systemFor` and the answer briefing, understanding into the same language-neutral intents, HomeBrain facts stay language-neutral, the same gates and validator |
+| `22-005` Multilingual HomeTalk | P0 | Done | A person can type or speak in their own language and get the reply in it, and no gate decides anything differently. The model is told the person's language (`languageLine` in `systemFor`) and returns the same language-neutral intent, with days, times, numbers and fixed choices in English words and the household's own words kept as said. A bare yes or no is read in all seven languages, as a whole reply only. Each reply is composed and validated in English, then translated by `conversation/reply-language.ts`: names, bold values, dates, times, amounts, numbers, link targets and brand names become tokens, and the result must carry every token once, with no new digit and no new markup. Otherwise the checked English is shown with a line saying why. A reply is translated only when the household has agreed that every content class it carries (`REPLY_CLASSES`, the answer's facts) may reach its model provider. The English stays the message's content, and the shown text is kept in `metadata.localized` |
 | `22-006` Localized notifications | P0 | Not Started | PR 2: structured event + params rendered per recipient in their own language |
 | `22-007` Multi-currency household records | P1 | In Progress | The household currency is the default for new bills and transactions only (`CurrencyField` picker with "Another currency…"); every record keeps its own currency, nothing is converted; the two money formatters use Intl. Still to audit: any screen that adds amounts across currencies |
 | `22-008` Right-to-left readiness | P1 | In Progress | `DocumentLocale` sets `lang`/`dir` from the viewer's language; the shell, Home hero, header, wordmark and script accents are direction-aware (logical properties, `rtl:` mirroring, `dir="auto"`), verified in Arabic at 360px and desktop. The remaining screens still need a pass |

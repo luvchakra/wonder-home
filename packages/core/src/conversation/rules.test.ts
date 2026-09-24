@@ -187,6 +187,14 @@ describe("greetings", () => {
     if (proposal.kind === "answer") expect(proposal.summary).toMatch(/hello/i);
   });
 
+  it("reads a hello or a thank-you in the other languages WonderHome speaks (story 22-005)", () => {
+    for (const hello of ["नमस्ते", "Namaste", "नमस्कार", "Hola", "Bonjour", "Guten Morgen", "مرحبا"]) {
+      expect(read(hello).action, hello).toBe("greet");
+      expect(read(hello).parameters.kind, hello).toBe("greeting");
+    }
+    for (const thanks of ["धन्यवाद", "shukriya", "gracias", "Merci", "Danke", "شكرا"]) expect(read(thanks).parameters.kind, thanks).toBe("thanks");
+  });
+
   it("says what it can do when asked", () => {
     const proposal = proposeFromIntent(read("what can you do?"), { actor: { roles: ["adult"] }, autonomy: "approve", entitled: true });
     if (proposal.kind === "answer") expect(proposal.summary).toMatch(/groceries/);

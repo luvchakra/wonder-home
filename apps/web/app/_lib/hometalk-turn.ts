@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
-import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, type AnswerComposer } from "@wonderhome/core/ai/model-client";
+import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, createReplyTranslator, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, routeToProvider, unpseudonymise, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, routeToProvider, unpseudonymise, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { FAIR_USE_DISCLOSURE } from "@wonderhome/core/billing/policies";
@@ -41,7 +41,12 @@ import {
   type ConversationAction,
 } from "@wonderhome/core/conversation/repository";
 import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
+import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
+import { contentClassFor } from "@wonderhome/core/context/privacy";
+import { languageInfo } from "@wonderhome/core/i18n/locales";
+import { preferencesOf } from "@wonderhome/core/i18n/preferences";
+import { translatorFor } from "@wonderhome/core/i18n/translate";
 import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal";
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -123,17 +128,8 @@ const FEATURE_FOR_ACTION: Partial<
 
 export type HomeTalkBody = z.infer<typeof bodySchema>;
 
-/**
- * One HomeTalk turn — the canonical gateway (voice integration phase 1).
- *
- * Every channel lands here: the web and PWA composer through the route
- * below, and an external voice adapter (Gemini Voice, Alexa) through
- * `hometalk/gateway.ts` once it has resolved a linked identity into a
- * member session. `supabase` is always that member's own session, so RLS,
- * permissions, entitlements and autonomy are decided exactly as they are
- * for the web — no channel has a path of its own around them.
- */
-export async function homeTalkTurn(input: {
+/** What one HomeTalk turn is given. */
+export type HomeTalkInput = {
   supabase: Supabase;
   householdId: string;
   body: HomeTalkBody;
@@ -157,10 +153,35 @@ export async function homeTalkTurn(input: {
    * model. Every gate downstream runs the same either way.
    */
   rulesFirst?: boolean;
-}) {
+};
+
+/**
+ * One HomeTalk turn — the canonical gateway (voice integration phase 1).
+ *
+ * Every channel lands here: the web and PWA composer through the route
+ * below, and an external voice adapter (Gemini Voice, Alexa) through
+ * `hometalk/gateway.ts` once it has resolved a linked identity into a
+ * member session. `supabase` is always that member's own session, so RLS,
+ * permissions, entitlements and autonomy are decided exactly as they are
+ * for the web — no channel has a path of its own around them.
+ *
+ * And in the words of the person it is for (story 22-005).
+ * Everything is decided, carried out, validated and recorded in English
+ * first, exactly as before; only then is each reply put into the person's
+ * language, through `localizeReply`'s protect → translate → check, and never
+ * for a reply the household has not agreed may reach a model provider.
+ */
+export async function homeTalkTurn(input: HomeTalkInput) {
+  const speaking: Speaking = { carried: new Set<ContentClass>(["general"]), membership: null, people: null };
+  const result = await turnInEnglish(input, speaking);
+  return inTheirLanguage(input, result, speaking);
+}
+
+async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   const { supabase, householdId, body, limits } = input;
   const source = input.source ?? "web";
   const membership = await requireMembership(supabase, householdId);
+  speaking.membership = membership;
   const actor = { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType };
   const admin = createAdminClient();
   const channelLimits = limits ? { allows: (intent: HouseholdIntent) => voiceAllowsAction(intent.action, limits.scopes), refusal: VOICE_NOT_ALLOWED } : null;
@@ -178,6 +199,8 @@ export async function homeTalkTurn(input: {
 
     const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: "text" });
     const people = await listPeople(supabase, householdId);
+    speaking.people = people;
+    carry(speaking, replyClassesFor(action.actionType));
     const settled = action.refused
       ? { text: approvalRefusal(action.refused), action }
       : body.decision === "approved"
@@ -232,6 +255,7 @@ export async function homeTalkTurn(input: {
     autonomyLookup(supabase, householdId),
     listPeople(supabase, householdId),
   ]);
+  speaking.people = people;
 
   // An edit removes the old message and whatever came of it before
   // anything downstream reads the session, so the regenerated reply is
@@ -257,6 +281,7 @@ export async function homeTalkTurn(input: {
     localDateTime: localDateTime(new Date(), membership.household.timezone),
     pending: pendingWords(clarifying ? { question: clarifying.question } : pending ? { summary: pending.summary } : null),
     recent: [...new Set(lastFocus.map((entity) => entity.label))].slice(0, 5),
+    language: languageOf(membership),
   };
   const routing = await decideProviderRouting(supabase, householdId, body.utterance, history, people, moment, overFairUse);
   const startedAt = Date.now();
@@ -407,6 +432,7 @@ export async function homeTalkTurn(input: {
         }
         const decided = await decideAction(admin, { householdId, actionId: entry.id, memberId: membership.memberId, decision: approve ? "approved" : "rejected" });
         if (!decided) continue;
+        carry(speaking, replyClassesFor(decided.actionType));
         const settled = decided.refused
           ? { text: approvalRefusal(decided.refused), action: decided, focus: [] as FocusEntity[] }
           : approve ? await carryOutApproved({ admin, supabase, householdId, membership, action: decided, people, source, modality: body.channel }) : { text: `Left alone: ${entry.summary.charAt(0).toLowerCase()}${entry.summary.slice(1)}.`, action: decided, focus: [] as FocusEntity[] };
@@ -470,6 +496,7 @@ export async function homeTalkTurn(input: {
         continue;
       }
 
+      carry(speaking, replyClassesFor(turn.intent.action));
       let text = turn.text;
       let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
       let partOutcome: PartOutcome =
@@ -569,6 +596,7 @@ export async function homeTalkTurn(input: {
     ground: (intent) => groundIntent(intent, groundingEnv(references)),
   });
   const understoodAt = Date.now();
+  if (result.kind === "reply") carry(speaking, replyClassesFor(result.intent.action));
 
   // What the assistant says: the engine's line, unless something real
   // happened this turn — a question answered from the household's own
@@ -641,6 +669,8 @@ export async function homeTalkTurn(input: {
       clarifying: clarifying ? { question: clarifying.question, utterance: clarifying.utterance, action: clarifying.action } : null,
     }).text;
     explained = true;
+    // Evidence about anything the home holds: assumed to carry all of it.
+    carry(speaking, EVERY_SENSITIVE_CLASS);
     brain = { source: "evidence", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer") {
     // A question about the home: HomeBrain answers from the facts this
@@ -664,6 +694,8 @@ export async function homeTalkTurn(input: {
     composedAt = Date.now();
     brainAnswer = answered;
     text = answered?.text ?? fallback;
+    // The answer carries what it rests on; the agenda summary rests on the whole home.
+    carry(speaking, answered?.text ? classesOf(answered) : EVERY_SENSITIVE_CLASS);
     brain = answered?.text ? { source: answered.source, factsSent: answered.factsSent } : { source: "deterministic", factsSent: answered?.factsSent ?? 0 };
   } else if (
     result.kind === "reply" &&
@@ -684,6 +716,7 @@ export async function homeTalkTurn(input: {
     if (answered && usable) {
       brainAnswer = answered;
       text = answered.text!;
+      carry(speaking, classesOf(answered));
       brain = { source: answered.source, factsSent: answered.factsSent };
     } else if (answered) {
       brain = { source: "none", factsSent: answered.factsSent };
@@ -779,6 +812,7 @@ export async function homeTalkTurn(input: {
       memberId: membership.memberId,
       decision: result.kind === "approve" ? "approved" : "rejected",
     });
+    if (action) carry(speaking, replyClassesFor(action.actionType));
     if (action?.refused) {
       text = approvalRefusal(action.refused);
       await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
@@ -1077,7 +1111,7 @@ async function decideProviderRouting(
   utterance: string,
   history: readonly ConversationTurn[],
   people: Person[],
-  moment?: { role: string; localDateTime: string; pending: string | null; recent: string[] },
+  moment?: { role: string; localDateTime: string; pending: string | null; recent: string[]; language?: string | null },
   /** Past the plan's fair-use level (story 20-007): answered by the rules, with a disclosure. */
   overFairUse = false,
 ): Promise<{
@@ -1175,7 +1209,7 @@ async function decideProviderRouting(
   // a name in a pending question arrives as its placeholder.
   const sentText = (id: string) => minimised.included.find((entry) => entry.id === id)?.text ?? null;
   const runtime: RuntimeContext | undefined = moment
-    ? { role: moment.role, localDateTime: moment.localDateTime, pending: sentText("pending"), recent: sentText("recent")?.split(", ") ?? [] }
+    ? { role: moment.role, localDateTime: moment.localDateTime, pending: sentText("pending"), recent: sentText("recent")?.split(", ") ?? [], language: moment.language ?? null }
     : undefined;
   const toHousehold = (intent: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
     if (intent.target.kind === "member" && intent.target.reference) {
@@ -1271,4 +1305,118 @@ async function consequentialEntitlements(
 function scopedContext(context: HouseholdContext, limits: ChannelLimits | undefined): HouseholdContext {
   if (!limits) return context;
   return { ...context, snapshot: { ...context.snapshot, items: narrowToChannel(context.snapshot.items, limits) } };
+}
+
+// ---------------------------------------------------------------------------
+// The person's own language (story 22-005)
+// ---------------------------------------------------------------------------
+
+/** What a turn learns on the way that its replies' language depends on. */
+type Speaking = {
+  /** Every content class the turn's replies are about. "general" always. */
+  carried: Set<ContentClass>;
+  membership: HouseholdMembership | null;
+  people: (Person & PersonLike)[] | null;
+};
+
+function carry(speaking: Speaking, classes: readonly ContentClass[]): void {
+  for (const contentClass of classes) speaking.carried.add(contentClass);
+}
+
+/** What a HomeBrain answer is about: the classes of the facts it could rest on. */
+function classesOf(answer: HomeBrainAnswer): ContentClass[] {
+  return [...new Set(answer.facts.filter((fact) => fact.relevant).map((fact) => contentClassFor(fact.privacyClass)))];
+}
+
+/** The person's language in English words, for the model reading them — null for English. */
+function languageOf(membership: HouseholdMembership): string | null {
+  const code = preferencesOf(membership.locale, membership.household.timezone).language;
+  return code === "en" ? null : languageInfo(code).englishName;
+}
+
+type TurnResult = Awaited<ReturnType<typeof turnInEnglish>>;
+type ShownReply = { id: string; text: string };
+
+/**
+ * Each reply of a turn as its person should see it. The English stays the
+ * message's content — what was validated, what the model reads as history,
+ * what a summary quotes; the translation, or why there is none, is kept
+ * beside it. External voice channels are left alone: their own assistant
+ * speaks to the person in its own voice and language settings.
+ */
+async function inTheirLanguage(input: HomeTalkInput, result: TurnResult, speaking: Speaking): Promise<TurnResult & { language?: { code: string; localized: boolean } }> {
+  const membership = speaking.membership;
+  if (!membership || input.limits || (input.source ?? "web") !== "web") return result;
+  const code = preferencesOf(membership.locale, membership.household.timezone).language;
+  if (code === "en") return result;
+
+  const replies = new Map<string, ShownReply>();
+  if ("replies" in result && Array.isArray(result.replies)) for (const reply of result.replies as ShownReply[]) replies.set(reply.id, reply);
+  const last = result.reply as ShownReply | undefined;
+  if (last && !replies.has(last.id)) replies.set(last.id, last);
+  if (replies.size === 0) return result;
+
+  const provider = "privacy" in result ? result.privacy?.provider : undefined;
+  const consent = await translationConsent(input, provider, speaking.carried);
+  const names = namesIn(speaking.people ?? [], membership);
+  const t = await translatorFor(code);
+  const admin = createAdminClient();
+
+  let localized = true;
+  await Promise.all(
+    [...replies.values()].map(async (reply) => {
+      const english = reply.text;
+      const shown = consent.permitted
+        ? await localizeReply(english, { language: languageInfo(code).englishName, names, translate: consent.translate })
+        : { text: english, localized: false, fallback: consent.refused };
+      const text = shown.localized ? shown.text : `${english}\n\n${t(englishNoticeKey(shown.fallback))}`;
+      if (!shown.localized) localized = false;
+      // Every object the result holds for this reply shows the same words.
+      for (const holder of [result.reply as ShownReply | undefined, ...(("replies" in result && Array.isArray(result.replies)) ? (result.replies as ShownReply[]) : [])]) {
+        if (holder?.id === reply.id) holder.text = text;
+      }
+      await recordShown(admin, reply.id, { language: code, text: shown.localized ? shown.text : null, fallback: shown.fallback ?? null }).catch((error) =>
+        log.warn("reply language not recorded", { reason: error instanceof Error ? error.message : "unknown" }),
+      );
+    }),
+  );
+  return { ...result, language: { code, localized } };
+}
+
+/**
+ * Whether this turn's replies may go to the model provider to be put into
+ * the person's language: the same consent, provider and budget that let
+ * anything leave, and every class the replies carry agreed to.
+ */
+async function translationConsent(
+  input: HomeTalkInput,
+  provider: string | undefined,
+  carried: ReadonlySet<ContentClass>,
+): Promise<{ permitted: true; translate: ReplyTranslator | null } | { permitted: false; refused: TranslationFallback }> {
+  // Served from the rules for fair use or the hourly budget: nothing more leaves this turn.
+  if (provider === "not_transmitted_fair_use" || provider === "not_transmitted_rate_limited") return { permitted: false, refused: "no_model" };
+  const [policy, householdKey] = await Promise.all([
+    loadDataUse(input.supabase, input.householdId),
+    readHouseholdKey(input.householdId).catch(() => null),
+  ]);
+  const key = resolveModelKey(householdKey, platformKey());
+  const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });
+  if (!route.ok) return { permitted: false, refused: route.code === "no_provider_configured" ? "no_model" : "not_permitted" };
+  if (!mayTranslate(policy, carried)) return { permitted: false, refused: "not_permitted" };
+  // A turn that asked no model yet (a decision, a summary) is counted now.
+  if (provider === undefined && !(await hitRateLimit(createAdminClient(), "ai.model", input.householdId))) return { permitted: false, refused: "no_model" };
+  return { permitted: true, translate: key.key ? createReplyTranslator(route.provider, key.key) : null };
+}
+
+/** Every name a reply might carry, whole and first-name, so none is ever handed to a translator. */
+function namesIn(people: readonly (Person & PersonLike)[], membership: HouseholdMembership): string[] {
+  const whole = [...people.map((person) => person.displayName), membership.displayName, membership.household.name].filter((name): name is string => Boolean(name));
+  return [...new Set([...whole, ...whole.map((name) => name.split(/\s+/)[0] ?? "")])].filter((name) => name.length > 1);
+}
+
+async function recordShown(admin: ReturnType<typeof createAdminClient>, messageId: string, shown: { language: string; text: string | null; fallback: string | null }): Promise<void> {
+  const { data } = await admin.from("conversation_messages").select("metadata").eq("id", messageId).maybeSingle();
+  const metadata = { ...((data?.metadata as Record<string, unknown> | null) ?? {}), localized: shown };
+  const { error } = await admin.from("conversation_messages").update({ metadata }).eq("id", messageId);
+  if (error) throw new Error(`recordShown failed: ${error.code ?? "unknown"}`);
 }
