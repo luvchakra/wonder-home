@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Clock, Download, ShieldCheck, Trash2 } from "lucide-react";
 
 import { describeDataUse } from "@wonderhome/core/ai/privacy";
@@ -95,7 +96,11 @@ export default async function PrivacyCentrePage() {
               </ul>
             </div>
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              Changed on the Settings screen by an Admin.
+              An Admin changes this in{" "}
+              <Link href="/settings/ai" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                Settings → AI Assistant
+              </Link>
+              .
             </p>
           </Card>
         </section>

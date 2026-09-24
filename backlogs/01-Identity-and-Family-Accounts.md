@@ -12,6 +12,7 @@
 | 6 | P1 | 01-006 | Availability | Done | Pattern plus exceptions; an absence never rewrites a schedule |
 | 7 | P1 | 01-007 | Preferences | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | 8 | P2 | 01-008 | Helper/service identity | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
+| 9 | P1 | 01-009 | Settings & Profile consolidation | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -21,7 +22,7 @@ Implement Identity & Family Accounts as a first-class WonderHome domain. The mod
 ## Epic Map
 
 - **Epic 01-E01 — Family Identity & Membership:** stories 01-001 through 01-004.
-- **Epic 01-E05 — Personalization, Availability & Delegated Access:** stories 01-005 through 01-008.
+- **Epic 01-E05 — Personalization, Availability & Delegated Access:** stories 01-005 through 01-009.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -221,6 +222,18 @@ This row was closed to reflect that, not to duplicate it.
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 01-009 — Settings & Profile consolidation
+**Epic:** 01-E05
+**Priority:** P1
+**Goal:** Every setting has exactly one canonical editor and one source of truth, reached from one Settings & Profile page.
+
+**Acceptance criteria**
+- `/settings` shows the profile (editable, with the photo) and groups every other setting into Personal, AI & privacy, Connected services, Plan & usage and Account, each row a chevron that opens the setting's own page, direction-aware for right-to-left.
+- Only rows this person can use appear; nothing unbuilt is presented as available.
+- The household AI key and the AI data-use policy are edited only on `/settings/ai`; the plan only on `/settings/plan`. Privacy links to the AI page rather than keeping a second editor.
+- A person's own profile is edited only in Settings; other screens show it and link there. An Admin editing someone else stays in Family/Househelper.
+- Existing server-side authorization is unchanged.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

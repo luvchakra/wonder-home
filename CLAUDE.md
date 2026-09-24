@@ -205,6 +205,21 @@ work, and hold new work against these:
     displays paise/cents as a bare integer. Convert to a minor unit only
     at a boundary that genuinely requires it — a payment provider's own
     API — and convert back before showing anything to a person.
+23. **Every setting has one editor.** Settings & Profile (`/settings`) is
+    where a person controls how WonderHome works for them. It holds the
+    profile, and one chevron row per setting that opens that setting's own
+    page:
+    - Language & Region, Notifications, Voice and Voice assistants;
+    - AI Assistant (`/settings/ai`) and Privacy;
+    - WhatsApp and Connected accounts;
+    - Your plan (`/settings/plan`).
+
+    Any other screen may show a setting's value and link to its page, but
+    never keeps a second form, a second write path or a competing default.
+    Onboarding collects values through the same repositories Settings uses.
+    A person's own profile is edited only in Settings; an Admin managing
+    someone else does that in Family. A row appears only when this person
+    can use what it opens, and nothing unbuilt is listed.
 
 **The brand is the sheet at `design/WonderHome-brand-guidelines.png`.** The
 name is WonderHome, one word, its wordmark set once in the brand's ink —

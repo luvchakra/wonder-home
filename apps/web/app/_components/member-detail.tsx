@@ -2,6 +2,9 @@ import { completedYears, parseDateOfBirth } from "@wonderhome/core/identity/age"
 import { siblingOrder } from "@wonderhome/core/identity/households";
 import type { HouseholdMember } from "@wonderhome/core/identity/households";
 
+import { PillLink } from "@wonderhome/core/ui/pill";
+import { UserRoundPen } from "lucide-react";
+
 import { formatDate } from "../_lib/session";
 import { describeRoles } from "../_lib/member-role";
 import { MemberAvatarControl } from "./member-avatar-control";
@@ -53,10 +56,15 @@ export function MemberDetail({
       ? `${member.specialOccasionLabel} — ${formatDate(timezone, new Date(member.specialOccasionDate), "long")}`
       : member.specialOccasionLabel;
   const siblings = siblingOrder(member, allMembers);
+  // Your own profile has one editor, in Settings (the Settings consolidation):
+  // here it is read, with a way there. An Admin editing someone else is
+  // managing the household's people, and that stays here.
+  const isMe = member.id === currentMemberId;
+  const editsHere = editable && !isMe;
 
   return (
     <div className="space-y-3">
-      {editable ? (
+      {editsHere ? (
         <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
       ) : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
@@ -78,7 +86,13 @@ export function MemberDetail({
           <p className="text-sm whitespace-pre-line">{member.notes}</p>
         </div>
       ) : null}
-      {editable ? (
+      {isMe ? (
+        <PillLink href="/settings" tone="quiet">
+          <UserRoundPen aria-hidden className="size-3.5" />
+          Edit your profile in Settings
+        </PillLink>
+      ) : null}
+      {editsHere ? (
         <div className="flex flex-wrap items-center gap-2">
           <MemberProfileForm
             householdId={householdId}
