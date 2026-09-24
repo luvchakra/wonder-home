@@ -28,7 +28,7 @@ test("Get Started leads to sign-up and Sign In to sign-in — the product's own 
 test("every story section the requirements call for is on the page", async ({ page }) => {
   await page.goto("/");
 
-  for (const id of ["why", "solution", "features", "families", "security", "stories", "pricing", "contact"]) {
+  for (const id of ["why", "solution", "features", "new", "homesend", "families", "security", "stories", "pricing", "contact"]) {
     await expect(page.locator(`#${id}`)).toHaveCount(1);
   }
   await expect(page.getByRole("heading", { name: /Modern life is beautiful/ })).toBeVisible();
@@ -137,4 +137,30 @@ test("there is no horizontal overflow at phone width", async ({ page }) => {
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("what's new says in words what is not switched on yet", async ({ page }) => {
+  await page.goto("/");
+  const whatsNew = page.locator("#new");
+
+  await expect(whatsNew.getByRole("heading", { level: 2 })).toContainText("Growing up alongside your family");
+  // Built but waiting on an account a person has to open: never listed as ready.
+  for (const channel of ["WhatsApp", "Forwarded email", "Alexa & Gemini voice", "Pay your way"]) {
+    await expect(whatsNew.locator("li", { hasText: channel }).getByText("Coming soon", { exact: true })).toBeVisible();
+  }
+  await expect(whatsNew.locator("li").getByText("Coming soon", { exact: true })).toHaveCount(4);
+});
+
+test("the language strip greets in every language the product speaks, and stops under reduced motion", async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  const strip = page.getByRole("region", { name: "Languages WonderHome speaks" });
+  await expect(strip.locator("li[lang='hi']").first()).toContainText("नमस्ते");
+  await expect(strip.locator("li[lang='ar']").first()).toHaveAttribute("dir", "rtl");
+  const marquee = await strip.locator(".wh-marquee").evaluate((element) => getComputedStyle(element).animationName);
+  expect(marquee).toBe("none");
+
+  await context.close();
 });

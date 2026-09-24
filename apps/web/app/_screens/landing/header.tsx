@@ -29,7 +29,11 @@ const NAV = [
  */
 const GUIDE = { href: "/help", label: "Help" };
 
-/** Translucent, blurred and sticky once the page scrolls (requirements §26). */
+/**
+ * Translucent, blurred and sticky once the page scrolls (requirements §26).
+ * The inline links appear only from `xl`, where every label fits on one line;
+ * narrower screens get the menu rather than wrapped labels (rule 15).
+ */
 export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -53,8 +57,8 @@ export function LandingHeader() {
           <Wordmark size={32} className="[&_span]:whitespace-nowrap" />
         </a>
 
-        <nav aria-label="Landing" className="hidden lg:block">
-          <ul className="flex items-center gap-6 text-[0.8125rem] font-medium text-[var(--wh-foreground-muted)]">
+        <nav aria-label="Landing" className="hidden xl:block">
+          <ul className="flex items-center gap-5 text-[0.8125rem] font-medium whitespace-nowrap text-[var(--wh-foreground-muted)]">
             {NAV.map((item) => (
               <li key={item.href}>
                 <a href={item.href} className="transition-colors hover:text-[var(--wh-foreground)]">
@@ -73,12 +77,12 @@ export function LandingHeader() {
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-2 whitespace-nowrap xl:flex">
           <ButtonLink href="/sign-in" variant="quiet">Sign In</ButtonLink>
           <ButtonLink href="/sign-up" className="rounded-[var(--wh-radius-pill)] px-5">Get Started</ButtonLink>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 lg:hidden">
+        <div className="flex shrink-0 items-center gap-1 xl:hidden">
           <ButtonLink href="/sign-up" className="min-h-10 rounded-[var(--wh-radius-pill)] px-3.5 text-xs">Get Started</ButtonLink>
           <button
             type="button"
@@ -94,7 +98,7 @@ export function LandingHeader() {
       </div>
 
       {open ? (
-        <nav id="wh-landing-menu" aria-label="Landing" className="border-t border-[var(--wh-border)] px-4 pt-2 pb-4 lg:hidden">
+        <nav id="wh-landing-menu" aria-label="Landing" className="border-t border-[var(--wh-border)] px-4 pt-2 pb-4 xl:hidden">
           <ul className="space-y-1">
             {NAV.map((item) => (
               <li key={item.href}>

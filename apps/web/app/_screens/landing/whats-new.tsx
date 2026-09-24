@@ -166,12 +166,15 @@ export function WhatsNew() {
           {READY.map((item, index) => (
             <li
               key={item.title}
-              className="wh-reveal wh-lift rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-5 shadow-[var(--wh-shadow-card)]"
+              className="wh-reveal wh-lift flex gap-3.5 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-4 shadow-[var(--wh-shadow-card)] sm:block sm:p-5"
               style={{ "--wh-reveal-delay": `${(index % 4) * 70}ms` } as CSSProperties}
             >
+              {/* Side by side on a phone, so eight cards read as a list, not a long scroll. */}
               <IconTile icon={item.icon} tone={item.tone} size="lg" />
-              <p className="mt-3 text-base font-semibold">{item.title}</p>
-              <p className="mt-1 text-sm leading-relaxed text-[var(--wh-foreground-muted)]">{item.copy}</p>
+              <span className="block min-w-0">
+                <span className="block text-base font-semibold sm:mt-3">{item.title}</span>
+                <span className="mt-1 block text-sm leading-relaxed text-[var(--wh-foreground-muted)]">{item.copy}</span>
+              </span>
             </li>
           ))}
         </ul>
