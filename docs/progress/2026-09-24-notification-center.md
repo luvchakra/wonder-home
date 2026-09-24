@@ -99,6 +99,9 @@ No migration: N2 reads and writes only through what N1 shipped.
 
 ## Cleanup
 
-Planned for after the merge: delete the QA household and account created for
-this session (user `57e8df96-693d-4e7c-beae-6ebef26ca00b`, household
-`51d9583f-2d1b-4c00-b514-eccf9fbc8347`).
+Done after the merge (#158, `93bdf16`):
+- The QA household "QA Notify Home" (`51d9583f-2d1b-4c00-b514-eccf9fbc8347`) was deleted with every row in it, including the bills and the school item that were inserted by hand.
+- The QA account `57e8df96-693d-4e7c-beae-6ebef26ca00b` was deleted.
+- The scratch scripts and screenshots were removed, and the dev server was stopped.
+
+A count over every `household_id` table in `public` and `wh`, the auth users and Storage found nothing left.
