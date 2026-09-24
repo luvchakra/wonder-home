@@ -1,4 +1,5 @@
 import type { IntakeExtraction } from "../ai/classify-intake";
+import { documentReading, type DocumentReading } from "./document";
 import type { InjectionScan } from "./injection";
 import type { HomeSendKind, HomeSendSource } from "./items";
 
@@ -54,6 +55,12 @@ export type IntakeUnderstanding = {
   references: UnderstandingReference[];
   /** Whether the content announces a change to something announced before (§10). */
   change: "new" | "update" | "cancellation";
+  /**
+   * The whole document (DDU 2.0): pages read, the day it is dated, and every
+   * record it proposes with where each was read. Absent on items read before
+   * DDU 2.0; the plan then derives its records from the headline reading.
+   */
+  document?: DocumentReading;
   safety: {
     /** The content addressed WonderHome with instructions; they were ignored (§16). */
     instructionsIgnored: boolean;
@@ -80,6 +87,8 @@ export type UnderstandingMeta = {
   sender?: string | null;
   filename?: string | null;
   contentType?: string | null;
+  /** Pages the file itself has, from its bytes — a fallback when the model gives no count. */
+  pageCount?: number | null;
   injection: InjectionScan;
 };
 
@@ -183,6 +192,7 @@ export function buildUnderstanding(extraction: IntakeExtraction, meta: Understan
     candidateActions,
     references: extraction.people.map((name) => ({ text: name, candidates: [], confidence: 0 })),
     change: extraction.change,
+    document: documentReading(extraction, meta.pageCount ?? null),
     safety: { instructionsIgnored: meta.injection.flagged, signals: meta.injection.signals },
     provenance: {
       channel: meta.channel,

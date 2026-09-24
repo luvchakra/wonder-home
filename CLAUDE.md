@@ -339,7 +339,16 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   review, story 08-009), and every candidate is reconciled against what is already on
   record (`homesend/reconcile.ts`): a duplicate is shown, a moved date or a
   cancellation is offered as an update to the existing record, never a
-  second copy. How an item is confirmed is `homesend/confirmation.ts`
+  second copy. Since Deep Document Understanding 2.0 (spec
+  `design/HOMESEND-DEEP-DOCUMENT-UNDERSTANDING-2.0.md`) the whole document
+  is read into every record it proposes (`homesend/document.ts`: each
+  event, each date of a series, each fee, each thing to buy, with page and
+  quote as evidence, and the pages actually read), and `homesend/plan.ts`
+  reconciles each record on its own into one outcome — create, field-level
+  update, cancel, no change, conflict (a record changed after the document
+  was written stands) or one question — never a guess and never a second
+  copy. A new rule for a document is a plan rule with a golden test in
+  `plan.test.ts`, not a special case in a screen. How an item is confirmed is `homesend/confirmation.ts`
   (§12): a clear, new grocery or school item a member sent may apply on its
   own only where the household set that outcome's autonomy to "execute";
   bills, health documents and receipts always wait for a person, whatever

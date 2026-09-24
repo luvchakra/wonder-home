@@ -44,7 +44,18 @@ const SAME_THING_NAMES: readonly (readonly string[])[] = [
   ["annual day", "annual function"],
 ];
 
+/**
+ * Words that name a part of an occasion rather than the occasion itself: the
+ * Annual Day rehearsal is not the Annual Day, nor is its fee or its
+ * registration. Two titles that differ by one of these are never "another
+ * name for the same thing".
+ */
+const PART_WORDS = new Set(["rehearsal", "practice", "practise", "preparation", "prep", "audition", "trial", "fee", "contribution", "registration", "form", "costume"]);
+
+const partsOf = (value: string) => tokens(value).filter((word) => PART_WORDS.has(word)).sort().join(" ");
+
 function sameThingByName(left: string, right: string): boolean {
+  if (partsOf(left) !== partsOf(right)) return false;
   const phrase = (value: string) => ` ${tokens(value).join(" ")} `;
   const a = phrase(left);
   const b = phrase(right);
@@ -146,6 +157,10 @@ function verdictFor(comparison: Comparison, incoming: IncomingFact): { verdict: 
     return { verdict: "related_but_different", confidence: 0.55, reasons: ["the same kind of thing", "a different variety"] };
   }
   if (effective < 0.5) return { verdict: "no_match", confidence: 0, reasons: [] };
+  // "Annual Day rehearsal" is not "Annual Day", however much of the name they share.
+  if (typeof item.attributes.title === "string" && partsOf(incoming.title) !== partsOf(item.attributes.title)) {
+    return { verdict: "related_but_different", confidence: 0.55, reasons: ["a different part of the same occasion"] };
+  }
   if (titleSimilarity >= 0.95) reasons.push("the same name");
   else if (titleSimilarity >= 0.8) reasons.push("nearly the same name");
   else if (sameThing) reasons.push("another name for the same thing");
@@ -205,7 +220,13 @@ export function findPotentialMatches(incoming: IncomingFact, items: readonly Hou
       return { verdict: decided.verdict, item, confidence: decided.confidence, reasons: decided.reasons };
     })
     .filter((result) => result.verdict !== "no_match")
-    .sort((a, b) => RANK[b.verdict] - RANK[a.verdict] || b.confidence - a.confidence);
+    // Equal verdicts are ordered by how alike the names are: "Annual Day"
+    // is the Annual Day on file before it is the Annual Day rehearsal.
+    .sort((a, b) => RANK[b.verdict] - RANK[a.verdict] || b.confidence - a.confidence || nameSimilarity(incoming, b.item) - nameSimilarity(incoming, a.item));
+}
+
+function nameSimilarity(incoming: IncomingFact, item: HouseholdContextItem): number {
+  return typeof item.attributes.title === "string" ? similarity(incoming.title, item.attributes.title) : 0;
 }
 
 /** The single verdict for an incoming fact: its strongest match, or `no_match`. */

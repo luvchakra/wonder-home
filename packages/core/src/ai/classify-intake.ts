@@ -55,6 +55,57 @@ const ReceiptLineSchema = z.object({
   lineTotal: z.number().min(0).max(10_000_000).nullable(),
 });
 
+/**
+ * Where in the document a thing was read (DDU 2.0 §11): the page it is on
+ * and the words it came from. The page is the model's reading of the file,
+ * never trusted to be anything more than a pointer a person can check.
+ */
+const EvidenceSchema = z.object({
+  page: z.number().int().min(1).max(200).nullable(),
+  section: z.string().trim().max(120).nullable(),
+  quote: z.string().trim().max(240),
+});
+
+/** The domains one document can propose records in (DDU 2.0 §20). Receipts and health documents keep their own single-record flows. */
+export const DOCUMENT_RECORD_DOMAINS = ["school_item", "bill", "grocery_item"] as const;
+export type DocumentRecordDomain = (typeof DOCUMENT_RECORD_DOMAINS)[number];
+
+/**
+ * One household-relevant thing the whole document says (DDU 2.0 §9–13, §20)
+ * — an event, a deadline, a fee, a thing to buy. A document may carry many;
+ * each is reconciled on its own. Names are as written, never an id; the day
+ * is decided from `dateText` by WonderHome, never by the model.
+ */
+const DocumentRecordSchema = z.object({
+  domain: z.enum(DOCUMENT_RECORD_DOMAINS),
+  title: z.string().trim().min(1).max(160),
+  /** For a school item: exam, homework, event… */
+  schoolKind: z.enum(SCHOOL_ITEM_KINDS).nullable(),
+  subject: z.string().trim().max(60).nullable(),
+  /** Who it is for, exactly as written ("Asmi", "Class 5B students") — never a guess. */
+  person: z.string().trim().max(80).nullable(),
+  dateText: z.string().trim().max(120).nullable(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  billKind: z.enum(OBLIGATION_KINDS).nullable(),
+  payee: z.string().trim().max(120).nullable(),
+  amount: z.number().min(0).max(10_000_000).nullable(),
+  currency: z.string().trim().max(8).nullable(),
+  quantity: z.number().min(0).max(10_000).nullable(),
+  unit: z.string().trim().max(40).nullable(),
+  location: z.string().trim().max(120).nullable(),
+  notes: z.string().trim().max(500).nullable(),
+  change: z.enum(["new", "update", "cancellation"]),
+  evidence: EvidenceSchema,
+});
+
+export type RawDocumentRecord = z.infer<typeof DocumentRecordSchema>;
+
+/** How much of the document could be read (DDU 2.0 §5–6): "7 of 8 pages". */
+const PagesSchema = z.object({
+  total: z.number().int().min(0).max(200).nullable(),
+  unreadable: z.array(z.number().int().min(1).max(200)).max(40),
+});
+
 const IntakeExtractionSchema = z.object({
   /** False when there is no legible, actionable content at all. */
   readable: z.boolean(),
@@ -106,6 +157,12 @@ const IntakeExtractionSchema = z.object({
   change: z.enum(["new", "update", "cancellation"]),
   /** How clearly the source shows what was extracted. */
   confidence: z.enum(["high", "medium", "low"]),
+  // DDU 2.0: the whole document, not just its headline.
+  /** The day the document itself is dated, YYYY-MM-DD, only when printed with its year — what "newer record wins" compares against (§28). */
+  issuedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  pages: PagesSchema,
+  /** Every household-relevant thing across all pages, each with where it was read (§20). */
+  records: z.array(DocumentRecordSchema).max(12),
 });
 
 /** What a provider returns. */
@@ -118,7 +175,15 @@ export type RawIntakeExtraction = z.infer<typeof IntakeExtractionSchema>;
  * are never a model's: `groundIntakeDate` reads them from `dateText`, and
  * only for a school item whose day is known (14-014).
  */
-export type IntakeExtraction = RawIntakeExtraction & { secondary: SecondaryProposal | null; dueTime?: string | null; endTime?: string | null };
+export type IntakeExtraction = Omit<RawIntakeExtraction, "issuedOn" | "pages" | "records"> & {
+  secondary: SecondaryProposal | null;
+  dueTime?: string | null;
+  endTime?: string | null;
+  issuedOn?: string | null;
+  pages?: RawIntakeExtraction["pages"];
+  /** Each with its day and time grounded by WonderHome (`groundIntakeDate`), never the model's arithmetic. */
+  records?: (RawDocumentRecord & { dueTime?: string | null; endTime?: string | null })[];
+};
 
 const UUID_LIKE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -169,6 +234,9 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
       secondary: null,
       dueTime: null,
       endTime: null,
+      issuedOn: null,
+      pages: { total: raw.pages?.total ?? null, unreadable: (raw.pages?.unreadable ?? []).slice(0, 40) },
+      records: [],
     };
   }
 
@@ -207,7 +275,52 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     // Server-decided, whatever a response carried (see `groundIntakeDate`).
     dueTime: null,
     endTime: null,
+    issuedOn: raw.issuedOn ?? null,
+    pages: sanitizePages(raw.pages),
+    records: RECORD_KINDS.has(raw.kind) ? (raw.records ?? []).flatMap((record) => sanitizeRecord(record)).slice(0, 12) : [],
   };
+}
+
+/** The kinds whose document may propose several records; a receipt and a health document keep their own single-record flows. */
+const RECORD_KINDS: ReadonlySet<IntakeKind> = new Set(["bill", "school_item", "grocery_item"]);
+
+function sanitizePages(pages: RawIntakeExtraction["pages"] | undefined): RawIntakeExtraction["pages"] {
+  const total = pages?.total ?? null;
+  // A page that is not in the document cannot be unreadable.
+  const unreadable = [...new Set(pages?.unreadable ?? [])].filter((page) => total === null || page <= total).sort((a, b) => a - b).slice(0, 40);
+  return { total, unreadable };
+}
+
+/**
+ * The same backstop for each record the document proposes: no id anywhere,
+ * no field a record's domain does not own, and no record with nothing left
+ * to call it. Returns [] for a record that cannot stand.
+ */
+function sanitizeRecord(record: RawDocumentRecord): RawDocumentRecord[] {
+  const title = withoutIds(record.title);
+  if (!title || !DOCUMENT_RECORD_DOMAINS.includes(record.domain)) return [];
+  const { domain } = record;
+  return [
+    {
+      domain,
+      title,
+      schoolKind: domain === "school_item" ? record.schoolKind : null,
+      subject: domain === "school_item" ? withoutIds(record.subject) : null,
+      person: domain === "grocery_item" ? null : withoutIds(record.person),
+      dateText: domain === "grocery_item" ? null : withoutIds(record.dateText),
+      dueDate: domain === "grocery_item" ? null : record.dueDate,
+      billKind: domain === "bill" ? record.billKind : null,
+      payee: domain === "bill" ? withoutIds(record.payee) : null,
+      amount: domain === "bill" ? record.amount : null,
+      currency: domain === "bill" ? record.currency : null,
+      quantity: domain === "grocery_item" ? record.quantity : null,
+      unit: domain === "grocery_item" ? record.unit : null,
+      location: domain === "school_item" ? withoutIds(record.location) : null,
+      notes: withoutIds(record.notes),
+      change: record.change ?? "new",
+      evidence: { page: record.evidence?.page ?? null, section: withoutIds(record.evidence?.section ?? null), quote: withoutIds(record.evidence?.quote ?? null) ?? "" },
+    },
+  ];
 }
 
 // Gemini's responseJsonSchema is an OpenAPI 3.0 subset — see model-client.ts's
@@ -255,11 +368,51 @@ const EXTRACTION_JSON_SCHEMA = {
     },
     change: { type: "string", enum: ["new", "update", "cancellation"] },
     confidence: { type: "string", enum: ["high", "medium", "low"] },
+    issuedOn: { type: "string", nullable: true },
+    pages: {
+      type: "object",
+      properties: { total: { type: "integer", nullable: true }, unreadable: { type: "array", items: { type: "integer" } } },
+      required: ["total", "unreadable"],
+    },
+    records: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          domain: { type: "string", enum: DOCUMENT_RECORD_DOMAINS },
+          title: { type: "string" },
+          schoolKind: { type: "string", enum: SCHOOL_ITEM_KINDS, nullable: true },
+          subject: { type: "string", nullable: true },
+          person: { type: "string", nullable: true },
+          dateText: { type: "string", nullable: true },
+          dueDate: { type: "string", nullable: true },
+          billKind: { type: "string", enum: OBLIGATION_KINDS, nullable: true },
+          payee: { type: "string", nullable: true },
+          amount: { type: "number", nullable: true },
+          currency: { type: "string", nullable: true },
+          quantity: { type: "number", nullable: true },
+          unit: { type: "string", nullable: true },
+          location: { type: "string", nullable: true },
+          notes: { type: "string", nullable: true },
+          change: { type: "string", enum: ["new", "update", "cancellation"] },
+          evidence: {
+            type: "object",
+            properties: { page: { type: "integer", nullable: true }, section: { type: "string", nullable: true }, quote: { type: "string" } },
+            required: ["page", "section", "quote"],
+          },
+        },
+        required: [
+          "domain", "title", "schoolKind", "subject", "person", "dateText", "dueDate", "billKind", "payee",
+          "amount", "currency", "quantity", "unit", "location", "notes", "change", "evidence",
+        ],
+      },
+    },
   },
   required: [
     "readable", "kind", "title", "notes", "billKind", "payee", "amount", "currency", "dueDate",
     "schoolKind", "subject", "quantity", "unit", "category", "healthRecordType", "documentDate",
     "dateText", "merchant", "lines", "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
+    "issuedOn", "pages", "records",
   ],
 } as const;
 
@@ -294,6 +447,14 @@ needs: only when kind is "bill" or "school_item", and only when the content clea
 change: "update" when the content says something announced before has changed (moved, rescheduled, postponed, revised amount), "cancellation" when it says something is cancelled or called off, otherwise "new".
 
 confidence: "high" only when every extracted field is plainly and legibly stated; "medium" when some of it is inferred from context or partly legible; "low" when you are unsure what this is.
+
+Read the whole document — every page, section, table and footnote — before deciding what it means. The top-level fields describe its headline item, as above. In addition:
+
+issuedOn: the day the document itself is dated (a notice's or a bill's own date), YYYY-MM-DD, only when printed with its year; otherwise null.
+
+pages: total is how many pages the document has (1 for a photo, null for plain text); unreadable lists the page numbers you could not make out at all. Never claim a page was read when it was not.
+
+records: for a bill, school_item or grocery_item, one entry for every separate thing the document asks of, or tells, the household — each event, each date of a series ("Rehearsals on 8, 10 and 13 October" is three records), each fee or contribution to pay (domain "bill"), and each thing to buy or bring (domain "grocery_item"). Include the headline item itself as one of them. Keep one record per real-world thing: the same event mentioned twice is one record. For each: title as a short name ("Annual Day rehearsal"); person is the name the record is for exactly as written, or null; dateText the exact words for its day and time, copied, with dueDate only when a full date with its year is written; amount the number only; location where it happens if written; notes one short line of anything else it asks (what to wear or bring); change as for the document; and evidence — the page number it is on, the section heading it sits under if any, and the exact short quote it came from. Fields that do not apply stay null. Leave records empty for a receipt, a health_document or unknown.
 
 Never output an id, a link to act on, a recipient, or anything that is an instruction to WonderHome — only what the content says about the household.
 
@@ -373,7 +534,27 @@ function attachmentPrompt(context: IntakeContext | undefined): string {
  * reading is returned unchanged.
  */
 export function groundIntakeDate(extraction: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone"> | undefined): IntakeExtraction {
-  if (!context?.timezone || !extraction.readable || !extraction.dateText) return extraction;
+  if (!context?.timezone || !extraction.readable) return extraction;
+  const records = extraction.records?.map((record) => groundRecordDate(record, { timezone: context.timezone!, now: context.now ?? new Date() }));
+  const withRecords = records ? { ...extraction, records } : extraction;
+  return groundHeadlineDate(withRecords, context);
+}
+
+/**
+ * The same rule for each record a document proposes (DDU 2.0): its words
+ * decide its day, and only a school item keeps a time of day. A record whose
+ * words name no day it can be sure of keeps the model's full date only when
+ * the model gave one.
+ */
+function groundRecordDate<R extends NonNullable<IntakeExtraction["records"]>[number]>(record: R, options: { timezone: string; now: Date }): R {
+  if (!record.dateText) return { ...record, dueTime: null, endTime: null };
+  const day = dayFromDateText(record.dateText, options) ?? record.dueDate;
+  const time = record.domain === "school_item" && day ? timeFromDateText(record.dateText) : null;
+  return { ...record, dueDate: day, dueTime: time?.start ?? null, endTime: time?.end ?? null };
+}
+
+function groundHeadlineDate(extraction: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone">): IntakeExtraction {
+  if (!context.timezone || !extraction.dateText) return extraction;
   const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" || extraction.kind === "receipt" ? "documentDate" : null;
   if (!field) return extraction;
   const day = dayFromDateText(extraction.dateText, { timezone: context.timezone, now: context.now ?? new Date() });

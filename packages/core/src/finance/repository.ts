@@ -35,7 +35,7 @@ export async function listObligations(
   const { data, error } = await supabase
     .from("obligations")
     .select(
-      "id, name, kind, payee, amount_minor, currency, due_on, responsible_member_id, status, requires_review",
+      "id, name, kind, payee, amount_minor, currency, due_on, responsible_member_id, status, requires_review, updated_at",
     )
     .eq("household_id", householdId)
     .order("due_on", { ascending: true, nullsFirst: false });
@@ -54,6 +54,7 @@ export async function listObligations(
     responsibleMemberId: (row.responsible_member_id as string | null) ?? null,
     status: row.status as ObligationStatus,
     requiresReview: row.requires_review as boolean,
+    updatedAt: (row.updated_at as string | null) ?? null,
   }));
 }
 

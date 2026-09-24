@@ -29,7 +29,7 @@ export async function listSchoolItems(
   let query = supabase
     .from("school_items")
     .select(
-      "id, child_member_id, kind, title, subject, detail, due_at, due_time_known, ends_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id",
+      "id, child_member_id, kind, title, subject, detail, due_at, due_time_known, ends_at, estimated_minutes, estimate_source, status, completed_at, provider, external_id, updated_at",
     )
     .eq("household_id", householdId)
     .order("due_at", { ascending: true, nullsFirst: false });
@@ -59,6 +59,7 @@ function toItem(row: Row): SchoolItem {
     completedAt: row.completed_at ? new Date(row.completed_at as string) : null,
     provider: (row.provider as string | null) ?? null,
     externalId: (row.external_id as string | null) ?? null,
+    updatedAt: row.updated_at ? new Date(row.updated_at as string) : null,
   };
 }
 

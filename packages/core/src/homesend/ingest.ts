@@ -164,13 +164,21 @@ export type UnderstandInput = {
   transcriptConfidence?: number | null;
   /** The file's real type, when the content is a file. */
   contentType?: string | null;
+  /** How many pages the file has, from its bytes (a PDF). */
+  pageCount?: number | null;
 };
 
 /** The longest text kept with an item — the table's own limit. */
 const MAX_STORED_TEXT = 12_000;
 
 function scanOutput(extraction: IntakeExtraction): InjectionScan {
-  return detectInstructionInjection(extraction.notes, extraction.summary, ...extraction.facts.flatMap((fact) => [fact.statement, fact.evidence]));
+  return detectInstructionInjection(
+    extraction.notes,
+    extraction.summary,
+    ...extraction.facts.flatMap((fact) => [fact.statement, fact.evidence]),
+    // Every record the whole document proposes is content too (DDU 2.0 §39).
+    ...(extraction.records ?? []).flatMap((record) => [record.title, record.notes, record.evidence.quote]),
+  );
 }
 
 /**
@@ -196,6 +204,7 @@ export async function understand(
     sender: input.context?.from ?? null,
     filename: input.context?.filename ?? null,
     contentType: input.contentType ?? null,
+    pageCount: input.pageCount ?? null,
     injection,
   });
 
@@ -511,9 +520,9 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
 
   switch (detected.family) {
     case "image":
-      return understand(supabase, actor.householdId, itemId, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64: base64() } }, channel, context, contentType: detected.type }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64: base64() } }, channel, context, contentType: detected.type, pageCount: 1 }, deps);
     case "document":
-      return understand(supabase, actor.householdId, itemId, { source: { document: { mediaType: "application/pdf", base64: base64() } }, channel, context, contentType: detected.type }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { document: { mediaType: "application/pdf", base64: base64() } }, channel, context, contentType: detected.type, pageCount: pdfPageCount(input.bytes) || null }, deps);
     case "text": {
       const text = normalizeText(decodeTextFile(input.bytes) ?? "");
       if (!text) {
