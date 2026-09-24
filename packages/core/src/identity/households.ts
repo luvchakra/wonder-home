@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { completedYears, parseDateOfBirth } from "./age";
 import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import type {
   CreateHouseholdInput,
@@ -201,7 +202,38 @@ export type HouseholdMember = {
   notes: string | null;
   /** A short-lived signed URL, minted fresh by `listMembers` on every read — never stored or cached (the bucket is private). */
   avatarUrl: string | null;
+  /** How an adult works, as the family said it during setup — shapes suggestions, never a permission. */
+  workArrangement?: WorkArrangement | null;
+  /** Current age in whole years: from the date of birth when there is one, else from an age the family stated. */
+  ageYears?: number | null;
+  /** Whether they sign in themselves — false for a child, a helper, or an adult added during setup who has not accepted an invitation yet. */
+  hasAccount?: boolean;
 };
+
+export const WORK_ARRANGEMENTS = ["office", "home", "hybrid", "not_working"] as const;
+export type WorkArrangement = (typeof WORK_ARRANGEMENTS)[number];
+export const WORK_ARRANGEMENT_LABELS: Record<WorkArrangement, string> = {
+  office: "Works from the office",
+  home: "Works from home",
+  hybrid: "Hybrid",
+  not_working: "Not working",
+};
+
+/**
+ * Whole years now, from a date of birth if the household gave one, else from
+ * an age it stated on a given day (story 02-009). A real birthday always wins,
+ * and a stated age grows with the calendar rather than staying frozen.
+ */
+export function currentAge(
+  input: { dateOfBirth: string | null; ageYears: number | null; ageRecordedOn: string | null },
+  now: Date = new Date(),
+): number | null {
+  const birth = parseDateOfBirth(input.dateOfBirth);
+  if (birth) return completedYears(birth, now);
+  if (input.ageYears === null) return null;
+  const recorded = parseDateOfBirth(input.ageRecordedOn);
+  return recorded ? input.ageYears + completedYears(recorded, now) : input.ageYears;
+}
 
 /** The fields a household can edit about one of its own members, beyond creation. */
 export type MemberProfileUpdate = {
@@ -217,13 +249,17 @@ export type MemberProfileUpdate = {
   notes?: string | null;
   /** The storage object path just uploaded to the `avatars` bucket, or null to clear the photo. */
   avatarPath?: string | null;
+  workArrangement?: WorkArrangement | null;
+  /** An age stated instead of a date of birth; recorded as true today. */
+  ageYears?: number | null;
 };
 
 const MEMBER_SELECT =
-  "id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, household_roles(role)";
+  "id, profile_id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, work_arrangement, age_years, age_recorded_on, household_roles(role)";
 
 type MemberRow = {
   id: string;
+  profile_id?: string | null;
   display_name: string;
   member_type: string;
   status: string;
@@ -237,6 +273,9 @@ type MemberRow = {
   gender: string | null;
   notes: string | null;
   avatar_path: string | null;
+  work_arrangement: string | null;
+  age_years: number | null;
+  age_recorded_on: string | null;
   household_roles: { role: HouseholdRole }[] | null;
 };
 
@@ -258,6 +297,9 @@ function toHouseholdMember(row: MemberRow, ownerMemberId: string | null, avatarU
     gender: row.gender,
     notes: row.notes,
     avatarUrl,
+    workArrangement: (WORK_ARRANGEMENTS as readonly string[]).includes(row.work_arrangement ?? "") ? (row.work_arrangement as WorkArrangement) : null,
+    ageYears: currentAge({ dateOfBirth: row.date_of_birth, ageYears: row.age_years, ageRecordedOn: row.age_recorded_on }),
+    hasAccount: Boolean(row.profile_id),
   };
 }
 
@@ -342,6 +384,11 @@ export async function updateMemberProfile(
   if (input.gender !== undefined) patch.gender = input.gender;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.avatarPath !== undefined) patch.avatar_path = input.avatarPath;
+  if (input.workArrangement !== undefined) patch.work_arrangement = input.workArrangement;
+  if (input.ageYears !== undefined) {
+    patch.age_years = input.ageYears;
+    patch.age_recorded_on = input.ageYears === null ? null : new Date().toISOString().slice(0, 10);
+  }
 
   if (Object.keys(patch).length === 0) return;
 
@@ -364,6 +411,60 @@ export async function updateMemberProfile(
     targetId: input.memberId,
     metadata: { fields: Object.keys(patch) },
   });
+}
+
+/**
+ * An adult the household records before they have a login (story 02-009) —
+ * a partner, a grandparent — named during setup so responsibilities can be
+ * shared with them from day one. The same shape as `createHelperMember`: a
+ * member with no profile, managed by an Admin. If they are invited later,
+ * the invitation names this member and accepting it links the new account
+ * here (`wh.accept_invitation`) rather than creating a second person.
+ */
+export async function createAdultMember(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  input: { displayName: string; relationship?: string | null; workArrangement?: WorkArrangement | null },
+): Promise<{ memberId: string }> {
+  if (!isHouseholdAdmin(actor)) {
+    throw ApiError.forbidden("Only an Admin can add someone to the household.");
+  }
+
+  const householdId = actor.household.id;
+  const { data, error } = await supabase
+    .from("household_members")
+    .insert({
+      household_id: householdId,
+      profile_id: null,
+      member_type: "adult",
+      display_name: input.displayName,
+      relationship: input.relationship ?? null,
+      work_arrangement: input.workArrangement ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can add someone to the household.");
+    throw new Error(`createAdultMember failed: ${error.code ?? "unknown"}`);
+  }
+
+  const memberId = (data as { id: string }).id;
+  const { error: roleError } = await supabase
+    .from("household_roles")
+    .insert({ household_id: householdId, member_id: memberId, role: "adult" });
+  if (roleError) throw new Error(`createAdultMember role failed: ${roleError.code ?? "unknown"}`);
+
+  await auditChange({
+    householdId,
+    actorMemberId: actor.memberId,
+    eventType: "member.added",
+    targetTable: "household_members",
+    targetId: memberId,
+    metadata: { memberType: "adult" },
+  });
+
+  return { memberId };
 }
 
 /**

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**193 of 195 stories done — 99%**
+**194 of 196 stories done — 99%**
 
 | Status | Stories |
 |---|---:|
-| Done | 193 |
+| Done | 194 |
 | In Progress | 1 |
 | Blocked | 0 |
 | Not Started | 1 |
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
 | 01 Identity & Family Accounts | `██████████` | 8 | 8 | — |
-| 02 Household Configuration & Playbook | `██████████` | 8 | 8 | — |
+| 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
@@ -90,7 +90,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 02 — Household Configuration & Playbook
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -102,6 +102,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `02-006` Configure by conversation | P0 | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
 | `02-007` Conflict detection | P1 | Done | `detectConflicts` over the household's current responsibilities and active members; orphaned owner/backup, a backup who is the owner, a child now on an adult-only outcome — each names the outcome, the member(s) and one resolution |
 | `02-008` Advanced rule builder | P2 | Done | A policy can carry one condition (member type, or an hour window) narrowing it to a specific case; `selectApplicablePolicy` picks the most specific match, falling back to the household's unconditional default |
+| `02-009` Intelligent household onboarding | P0 | Done | Twelve resumable screens at `/onboarding` (welcome → counts → overview → adults → children → pets & help → suggested responsibilities → per-category review → readiness summary → one-question-at-a-time guided setup → "Your home is ready"). A deterministic template engine (`household/onboarding.ts`) suggests owners from ages, work arrangements and helper roles, never from gender or relationship; suggestions are computed, never stored, and only accepting one writes a responsibility through `saveResponsibility`; readiness is weighted arithmetic over what is really set up. `household_onboarding`/`onboarding_events` (migration `20260928090000`, applied live), stated ages and work arrangements on members, an invitation that claims an adult named during setup, a Home resume card, and every new fact in HomeBrain's context |
 
 ### 03 — Outcome & Routine Engine
 
@@ -405,4 +406,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `21-007` Vitals & measurement routines | P1 | Done | `health_measurement_routines` (created first, `cadence_days`/`preferred_time`/`reminder_enabled`/`next_due_on`/`last_completed_on`) and `health_vitals` (`value`/`secondary_value` for a paired reading like blood pressure, free-text `unit`, `status` active/archived, `routine_id` traces a reading back to the routine that produced it), same self-or-guardian RLS shape as every other health entity; `completeRoutine` records the real reading and advances `next_due_on` by the routine's own cadence in one step; `summarizeVitalTrend`/`describeVitalTrend` are pure verifiable arithmetic ("your last N readings were recorded over the past M weeks"), never a stated conclusion; HomeTalk's `log_vital` now actually executes via `createVital` — blood pressure/pulse/steps resolve without an explicit unit (their one conventional unit), every other type requires one or is honestly declined; day-scale reminder sweep (`routine-reminders.ts`) folded into `/platform/retention` alongside appointment/checkup reminders; add/edit/archive/reactivate UI for vitals, add/edit/complete/dismiss/reactivate UI for routines; live QA surfaced and fixed two real gaps — a dismissed routine with no completion history had no path back to "Bring back" (now included in Recent), and HomeTalk only recognized "My X was Y" phrasing (added "Log/Record my X as Y"); live-verified 2026-09-22 |
 | `21-008` Fitness & connected-health scaffolding | P1 | Done | `health_fitness_goals`/`health_fitness_sessions` (new migration, applied live, verified via direct schema/RLS introspection — no local Supabase credentials available in this session to run `verify:live`'s scripted checks), same self-or-guardian RLS shape as every other health entity; `health/health-provider.ts`'s `HealthProvider` is a real registry — manual/home_talk/home_send/calendar declared `live: true`, apple_health_kit/android_health_connect/wearable `live: false` and refused by `assertHealthProviderLive` before any write; `health/fitness.ts`'s goal (active/dismissed, mirroring measurement routines) and session (active/archived, mirroring vitals) services depend only on that abstraction, never a provider SDK. No leaderboard, no guilt messaging, no child fitness surveillance anywhere in the module — a goal or session lives only in Overview's Recent, never escalated to Needs attention. HomeTalk's `set_fitness_goal` ("I want to walk three times a week") now genuinely executes via `createFitnessGoal`, replacing the "not tracked yet" stub from 21-006; `mapFitnessActivity` maps free speech onto the known activity set or keeps the household's own words. Add/edit/dismiss/reactivate UI for goals and add/edit/archive/reactivate for sessions on `/health`, a session optionally linking to the goal it counts toward. `countSessionsInCurrentPeriod` is pure, verifiable arithmetic, never a scored conclusion. OpenAPI extended with the four new routes |
 
-_Generated 2026-09-23 from 22 backlog files._
+_Generated 2026-09-24 from 22 backlog files._

@@ -442,3 +442,32 @@ describe("14. HomeTalk referring to the previous proposal", () => {
     expect(reference("do that", list).selected?.entityType).toBe("proposal");
   });
 });
+
+describe("what setup records reaches HomeBrain (story 02-009)", () => {
+  const setupMembers: HouseholdMember[] = [
+    member("kunal", "Kunal", "adult", { roles: ["head"], workArrangement: "office" }),
+    member("priya", "Priya", "adult", { workArrangement: "home" }),
+    member("aarav", "Aarav", "child", { ageYears: 10 }),
+    member("anya", "Anya", "child", { ageYears: 6 }),
+  ];
+  const built = applyFreshness(
+    buildContextItems(
+      { members: setupMembers, pets: [], enrolments: [{ childMemberId: "anya", schoolName: "Greenwood High", grade: null }] },
+      { householdId: HOUSEHOLD, householdName: "QA Home", timezone: TZ, now: NOW, viewerMemberId: "kunal" },
+    ),
+    NOW,
+  );
+  const about = (id: string) => built.find((item) => item.entityType === "member" && item.entityId === id)!;
+
+  it("says which school a child goes to, once the school is added", () => {
+    expect(about("anya").summary).toContain("goes to Greenwood High");
+    expect(about("anya").attributes).toMatchObject({ school: "Greenwood High" });
+  });
+
+  it("says a stated age and how an adult works, and nothing that was not said", () => {
+    expect(about("anya").summary).toContain("Anya is 6");
+    expect(about("priya").summary).toContain("works from home");
+    expect(about("aarav").summary).not.toContain("goes to");
+    expect(about("aarav").attributes).not.toHaveProperty("school");
+  });
+});

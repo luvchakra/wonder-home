@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createClient } from "@wonderhome/core/db/server";
-import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
+import { listMembers, requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import {
   acceptInvitation,
   createInvitation,
@@ -53,7 +53,22 @@ export async function inviteMemberAction(
       return { error: "Only the household's owner can invite another Admin." };
     }
 
+    // An adult already named during setup, without a login yet: the
+    // invitation is for them, and accepting it makes the account theirs
+    // rather than adding the same person twice (story 02-009).
+    const claimable =
+      parsed.data.role === "helper"
+        ? undefined
+        : (await listMembers(supabase, parsed.data.householdId, null)).find(
+            (member) =>
+              member.memberType === "adult" &&
+              member.status === "active" &&
+              member.hasAccount === false &&
+              member.displayName.trim().toLocaleLowerCase() === parsed.data.displayName.trim().toLocaleLowerCase(),
+          );
+
     const invitation = await createInvitation(supabase, membership.memberId, {
+      memberId: claimable?.id ?? null,
       householdId: parsed.data.householdId,
       email: parsed.data.email,
       displayName: parsed.data.displayName,

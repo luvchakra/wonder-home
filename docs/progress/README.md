@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Intelligent household onboarding: twelve resumable screens from "Create household" to a working operating model — owners suggested from ages, work and helper roles (never gender), readiness counted from what is really set up, one guided question at a time (story 02-009 Done)](2026-09-24-household-onboarding.md) |
 | 2026-09-24 | [Alexa skill spec checked against the build: bare follow-up answers, a status intent, more action verbs, "set/create a reminder", rejection logging and env placeholders added](2026-09-24-alexa-skill-spec-gaps.md) |
 | 2026-09-24 | [HomeTalk: the mark and a message search in the header, and no empty band between the composer and the tab bar](2026-09-24-hometalk-search-and-bottom-gap.md) |
 | 2026-09-24 | [HomeTalk shows a time on every message and a date between days (Today, Yesterday, the full date), always in the household's own time zone](2026-09-24-hometalk-message-times.md) |

@@ -19,6 +19,7 @@ import type { HouseholdMember } from "../identity/households";
 import type { Integration } from "../integrations/repository";
 import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
+import type { Enrolment } from "../school/enrolments";
 import type { SchoolItem } from "../school/items";
 import { capitalize, describeValue, formatDate, formatTime, humanKey, isoDateIn, money, words } from "./format";
 import type { ContextDomain, ContextTier, HealthScope, HouseholdContextItem, PrivacyClass, SourceRef } from "./types";
@@ -118,8 +119,22 @@ export type AgendaInput = {
   unavailable: readonly string[];
 };
 
+/** What setup learned about a person, said plainly after who they are (story 02-009). Empty when nothing was said. */
+function setupDetail(member: HouseholdMember, schools: readonly string[]): string {
+  const parts: string[] = [];
+  if (member.ageYears !== null && member.ageYears !== undefined && member.memberType === "child") parts.push(`${member.displayName} is ${member.ageYears}`);
+  if (schools.length > 0) parts.push(`goes to ${schools.join(" and ")}`);
+  if (member.workArrangement) {
+    const how = { office: "works from the office", home: "works from home", hybrid: "works partly from home", not_working: "is not working at the moment" }[member.workArrangement];
+    parts.push(`${member.displayName} ${how}`);
+  }
+  return parts.length > 0 ? ` ${capitalize(parts.join(", "))}.` : "";
+}
+
 export type ContextRecords = {
   members?: readonly HouseholdMember[];
+  /** Which school each child attends (story 02-009). */
+  enrolments?: readonly Enrolment[];
   pets?: readonly Pet[];
   responsibilities?: readonly ResponsibilityRow[];
   outcomes?: readonly OutcomeRecord[];
@@ -247,6 +262,9 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     source: { type: "households" },
   });
 
+  const schoolsOf = (memberId: string) =>
+    (records.enrolments ?? []).filter((enrolment) => enrolment.childMemberId === memberId).map((enrolment) => (enrolment.grade ? `${enrolment.schoolName} (${enrolment.grade})` : enrolment.schoolName));
+
   if (records.members) {
     const active = members.filter((member) => member.status === "active");
     for (const member of active) {
@@ -259,7 +277,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         entityId: member.id,
         summary: helper
           ? `${member.displayName} is a househelper.`
-          : `${member.displayName} is ${kind}${roles.length > 0 ? ` and ${roles.join(" and ")}` : ""}${member.id === options.viewerMemberId ? " (the person asking)" : ""}.`,
+          : `${member.displayName} is ${kind}${roles.length > 0 ? ` and ${roles.join(" and ")}` : ""}${member.id === options.viewerMemberId ? " (the person asking)" : ""}.${setupDetail(member, schoolsOf(member.id))}`,
         need: helper ? "who helps the household" : "who is in the household",
         privacyClass: member.memberType === "child" ? "child" : "general",
         subjectMemberIds: [member.id],
@@ -272,6 +290,9 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           dateOfBirth: member.dateOfBirth,
           occupation: member.occupation,
           roles: member.roles,
+          ...(member.workArrangement ? { workArrangement: member.workArrangement } : {}),
+          ...(member.ageYears !== null && member.ageYears !== undefined ? { ageYears: member.ageYears } : {}),
+          ...(schoolsOf(member.id).length > 0 ? { school: schoolsOf(member.id).join(", ") } : {}),
         },
         source: { type: "household_members" },
         aliases: [member.displayName, firstName(member.displayName), member.nickname, member.relationship],
