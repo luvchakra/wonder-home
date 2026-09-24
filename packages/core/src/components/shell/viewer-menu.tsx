@@ -119,7 +119,7 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
             <form action={signOut}>
               <button type="submit" className={cn(ITEM_CLASS, "text-[var(--wh-risk)]")}>
                 <LogOut aria-hidden className="size-4" />
-                Log out
+                {viewer.labels?.logout ?? "Log out"}
               </button>
             </form>
           </DropdownMenu.Item>

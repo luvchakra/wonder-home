@@ -165,10 +165,14 @@ export default async function BillsPage({
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const admin = isHouseholdAdmin(membership);
+  // Totals are shown in the currency the household's bills are actually in;
+  // the household's own currency only when nothing is on record yet. No
+  // amount is ever converted (story 22-007).
+  const householdCurrency = session.locale.preferences.currency;
   const currency =
     obligations.find((o) => o.currency)?.currency ??
     history[0]?.currency ??
-    "INR";
+    householdCurrency;
 
   const upcoming = obligations
     .filter((o) => o.status !== "paid" && o.status !== "cancelled")
@@ -324,10 +328,11 @@ export default async function BillsPage({
                 <AddTransactionButton
                   householdId={householdId}
                   bills={trackedBills}
+                  defaultCurrency={householdCurrency}
                   {...transactionChoices}
                 />
               ) : (
-                <AddBillButton householdId={householdId} />
+                <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} />
               )}
             </div>
           ) : null}
@@ -382,7 +387,7 @@ export default async function BillsPage({
                   tone="money"
                   title="Nothing due"
                   description="Add the bills the household pays — electricity, internet, school fees — and WonderHome raises each one with the right amount of notice."
-                  action={<AddBillButton householdId={householdId} />}
+                  action={<AddBillButton householdId={householdId} defaultCurrency={householdCurrency} />}
                 />
               ) : (
                 <Card className="p-2">

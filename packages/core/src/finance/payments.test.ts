@@ -273,7 +273,7 @@ describe("what a payment writes to the audit trail", () => {
 describe("formatting money", () => {
   it("reads the way the household does", () => {
     expect(format(284_000, "INR")).toBe("₹2,840");
-    expect(format(1050, "USD")).toBe("USD 10.50");
+    expect(format(1050, "USD")).toBe("$10.50");
     expect(format(344_950, "INR")).toBe("₹3,449.50");
   });
 });

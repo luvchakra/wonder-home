@@ -84,7 +84,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
     const embedded = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
     return { ...row, name: embedded?.name ?? "Item", unit: embedded?.unit ?? "" };
   });
-  const currency = suggestions.find((row) => row.currency)?.currency ?? "INR";
+  const currency = suggestions.find((row) => row.currency)?.currency ?? session.locale.preferences.currency;
   const total = suggestions.reduce((sum, row) => sum + (row.estimated_cost_minor ?? 0), 0);
   const priced = suggestions.filter((row) => row.estimated_cost_minor !== null).length;
   const needs = agenda ? [...agenda.needed, ...agenda.lateOrders] : [];

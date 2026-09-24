@@ -1,3 +1,4 @@
+import { requestFormat } from "../i18n/request";
 import { daysBetween, isoDate, parseDate, silent, type HomeAssessment } from "../home/assessment";
 
 /**
@@ -376,12 +377,15 @@ export function budgetView(input: {
   };
 }
 
-/** Minor units as a household reads them. */
+/**
+ * Minor units as the person reads them, in the amount's own currency — never
+ * converted (story 22-007). Whole amounts stay whole ("₹500"); anything with
+ * paise shows both digits ("₹3,449.50", never "₹3,449.5"). The grouping and
+ * symbol follow the reader's language and the household's region, through
+ * the one formatter (`i18n/format.ts`).
+ */
 export function format(minor: number, currency: string): string {
-  // Whole amounts stay whole ("₹500"); anything with paise shows both digits
-  // ("₹3,449.50", never "₹3,449.5") — money is read the way it is written.
-  const major = (minor / 100).toLocaleString("en-IN", { minimumFractionDigits: minor % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 });
-  return currency === "INR" ? `₹${major}` : `${currency} ${major}`;
+  return requestFormat().money(minor / 100, currency);
 }
 
 /**

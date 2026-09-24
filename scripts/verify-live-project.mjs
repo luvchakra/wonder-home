@@ -667,6 +667,10 @@ async function main() {
   );
   const workColumn = await admin.from("household_members").select("work_arrangement, age_years, age_recorded_on").limit(1);
   check("household members carry work and stated age", !workColumn.error, workColumn.error?.code ?? "ok");
+  const localeColumns = await admin.from("households").select("region, currency, measurement_system, default_language").limit(1);
+  check("households carry region, currency, units and default language", !localeColumns.error, localeColumns.error?.code ?? "ok");
+  const memberLocale = await admin.from("household_members").select("language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at").limit(1);
+  check("members carry their own language, formats and setup state", !memberLocale.error, memberLocale.error?.code ?? "ok");
   const claimColumn = await admin.from("household_invitations").select("member_id").limit(1);
   check("an invitation can name the member it claims", !claimColumn.error, claimColumn.error?.code ?? "ok");
 

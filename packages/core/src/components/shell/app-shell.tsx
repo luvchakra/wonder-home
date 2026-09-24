@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { PRIMARY_NAVIGATION, type PrimaryNavKey } from "../../navigation/primary-navigation";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
+import { DocumentLocale } from "./document-locale";
 import { MobileHeader, type ShellViewer } from "./mobile-header";
 import { NavDrawerProvider } from "./nav-drawer";
 import { PrimaryNav } from "./primary-nav";
@@ -72,7 +73,7 @@ export function AppShell({
 
       <NavDrawerProvider viewer={viewer} secondary={secondary} pathname={pathname}>
         <div className="lg:flex">
-          <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} />
+          <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} labels={viewer?.labels} />
 
           <div className="min-w-0 flex-1">
             <MobileHeader viewer={viewer} back={back} title={title} search={headerSearch} />
@@ -104,7 +105,8 @@ export function AppShell({
           </div>
         </div>
 
-        <PrimaryNav active={active} variant="tabbar" />
+        <PrimaryNav active={active} variant="tabbar" labels={viewer?.labels} />
+        {viewer?.language ? <DocumentLocale language={viewer.language} dir={viewer.dir ?? "ltr"} /> : null}
       </NavDrawerProvider>
     </div>
   );

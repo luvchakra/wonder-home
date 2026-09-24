@@ -12,7 +12,7 @@ import { HomeIllustration } from "../ui/home-illustration";
 import { IconTile } from "../ui/icon-tile";
 import { LeafDecor } from "../ui/leaf-decor";
 import { ScriptAccent } from "../ui/script-accent";
-import type { ShellViewer } from "./mobile-header";
+import type { ShellLabels, ShellViewer } from "./mobile-header";
 import { SECONDARY_ICONS, SidebarLink } from "./primary-nav";
 
 /**
@@ -65,7 +65,7 @@ export function NavDrawerProvider({
   return (
     <NavDrawerContext.Provider value={{ open, setOpen }}>
       {children}
-      {viewer ? <NavDrawer open={open} onOpenChange={setOpen} secondary={secondary} pathname={pathname} /> : null}
+      {viewer ? <NavDrawer open={open} onOpenChange={setOpen} secondary={secondary} pathname={pathname} groupLabels={viewer.labels?.groups} /> : null}
     </NavDrawerContext.Provider>
   );
 }
@@ -118,14 +118,16 @@ function NavDrawer({
   onOpenChange,
   secondary,
   pathname,
+  groupLabels,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   secondary: readonly SecondaryNavItem[];
   pathname?: string;
+  groupLabels?: ShellLabels["groups"];
 }) {
   const close = () => onOpenChange(false);
-  const sections = groupSecondaryNavigation(secondary);
+  const sections = groupSecondaryNavigation(secondary, groupLabels);
 
   const isCurrent = (href: string) => Boolean(pathname && (pathname === href || pathname.startsWith(`${href}/`)));
 

@@ -6,8 +6,13 @@ import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { listMemberships } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
-import { secondaryNavigationFor, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
-import type { ShellViewer } from "@wonderhome/core/shell/mobile-header";
+import type { Formatter } from "@wonderhome/core/i18n/format";
+import { preferencesOf, type LocalePreferences } from "@wonderhome/core/i18n/preferences";
+import { requestFormat, requestFormatIn, requestT, setRequestLocale } from "@wonderhome/core/i18n/request";
+import { translatorFor, type Translate } from "@wonderhome/core/i18n/translate";
+import { PRIMARY_NAVIGATION } from "@wonderhome/core/navigation/primary-navigation";
+import { secondaryNavigationFor, SECONDARY_GROUP_ORDER, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
+import type { ShellLabels, ShellViewer } from "@wonderhome/core/shell/mobile-header";
 
 /**
  * Everything a signed-in screen needs to render its shell: who is looking,
@@ -23,6 +28,8 @@ export type Session = {
   view: PersonalView;
   viewer: ShellViewer;
   secondary: SecondaryNavItem[];
+  /** How this person reads WonderHome: their language, the household's region, their formats (story 22-002). */
+  locale: { preferences: LocalePreferences; t: Translate; format: Formatter };
 };
 
 /**
@@ -72,6 +79,20 @@ export async function buildSession(
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
 
+  // Set once for the whole request, so every date, time and amount on the
+  // page — however deep — is written the way this person reads.
+  const preferences = preferencesOf(membership.locale, membership.household.timezone);
+  const t = await translatorFor(preferences.language);
+  setRequestLocale(preferences, t);
+
+  const labels: ShellLabels = {
+    nav: Object.fromEntries(PRIMARY_NAVIGATION.map((item) => [item.key, t(`nav.${item.key}`)])),
+    groups: Object.fromEntries(SECONDARY_GROUP_ORDER.map((group) => [group, t(`nav.group.${group}`)])),
+    settings: t("nav.settings"),
+    household: t("settings.section.household"),
+    logout: t("nav.logout"),
+  };
+
   return {
     supabase,
     membership,
@@ -81,8 +102,12 @@ export async function buildSession(
       roleLabel: view.roleLabel,
       householdName: view.householdName,
       unread,
+      language: preferences.language,
+      dir: preferences.dir,
+      labels,
     },
-    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }),
+    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }).map((item) => ({ ...item, label: t(`nav.item.${item.key}`) || item.label })),
+    locale: { preferences, t, format: requestFormat() },
   };
 }
 
@@ -115,52 +140,26 @@ async function countUnread(supabase: SupabaseClient, memberId: string): Promise<
   return count ?? 0;
 }
 
-/** The date as the household reads it, in the household's own time zone. */
+/** The date as the household reads it, in the household's own time zone and the person's own language. */
 export function formatToday(timezone: string, now = new Date()): string {
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      timeZone: timezone,
-    }).format(now);
-  } catch {
-    return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(now);
-  }
+  return requestFormatIn(timezone).today(now);
 }
 
+/** A time of day, 12- or 24-hour as the person chose (story 22-002). */
 export function formatTime(timezone: string, at: Date): string {
-  try {
-    return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(at);
-  } catch {
-    return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(at);
-  }
+  return requestFormatIn(timezone).time(at);
 }
 
 export function formatDate(timezone: string, at: Date, style: "short" | "long" = "short"): string {
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      weekday: style === "long" ? "short" : undefined,
-      day: "numeric",
-      month: "short",
-      timeZone: timezone,
-    }).format(at);
-  } catch {
-    return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(at);
-  }
+  return requestFormatIn(timezone).date(at, style);
 }
 
-/** A greeting for the household's hour, not the server's. */
+/** A greeting for the household's hour, not the server's, in the person's language. */
 export function greetingFor(timezone: string, now = new Date()): string {
-  let hour = now.getHours();
-  try {
-    hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: timezone }).format(now));
-  } catch {
-    // Fall through to the server's hour.
-  }
-  if (hour < 5) return "Good night";
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  const hour = requestFormatIn(timezone).hourOf(now);
+  const t = requestT();
+  if (hour < 5) return t("greeting.night");
+  if (hour < 12) return t("greeting.morning");
+  if (hour < 17) return t("greeting.afternoon");
+  return t("greeting.evening");
 }

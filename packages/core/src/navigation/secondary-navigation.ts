@@ -91,10 +91,12 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
  */
 export function groupSecondaryNavigation(
   items: readonly SecondaryNavItem[],
+  /** The section names in the viewer's language (story 22-004); English where absent. */
+  labels: Partial<Record<SecondaryNavGroup, string>> = {},
 ): { group: SecondaryNavGroup; label: string; items: SecondaryNavItem[] }[] {
   return SECONDARY_GROUP_ORDER.map((group) => ({
     group,
-    label: SECONDARY_GROUP_LABELS[group],
+    label: labels[group] ?? SECONDARY_GROUP_LABELS[group],
     items: items.filter((item) => item.group === group),
   })).filter((section) => section.items.length > 0);
 }

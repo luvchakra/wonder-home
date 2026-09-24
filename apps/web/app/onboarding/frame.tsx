@@ -18,6 +18,9 @@ import { OnboardingForm } from "./onboarding-form";
 export function OnboardingFrame({
   step,
   progress,
+  total = 4,
+  stepLabel,
+  backLabel = "Back",
   back,
   close = false,
   title,
@@ -28,6 +31,11 @@ export function OnboardingFrame({
   step: OnboardingStep;
   /** Which of the four steps this screen belongs to, if any. */
   progress?: number;
+  /** How many steps this flow has — four for family setup, six for language and region. */
+  total?: number;
+  /** "Step 2 of 6" in the reader's language; English when not given. */
+  stepLabel?: string;
+  backLabel?: string;
   back?: string | null;
   close?: boolean;
   title?: ReactNode;
@@ -45,26 +53,26 @@ export function OnboardingFrame({
           {back ? (
             <Link
               href={back}
-              aria-label="Back"
+              aria-label={backLabel}
               className="grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
             >
-              <ChevronLeft className="size-5" aria-hidden />
+              <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden />
             </Link>
           ) : (
             <span />
           )}
           {progress ? (
             <div className="mx-auto w-full max-w-40 space-y-1.5 text-center">
-              <p className="text-xs font-medium text-[var(--wh-foreground-muted)]">Step {progress} of 4</p>
+              <p className="text-xs font-medium text-[var(--wh-foreground-muted)]">{stepLabel ?? `Step ${progress} of ${total}`}</p>
               <div
                 role="progressbar"
                 aria-label="Setup progress"
                 aria-valuemin={0}
-                aria-valuemax={4}
+                aria-valuemax={total}
                 aria-valuenow={progress}
                 className="h-1.5 overflow-hidden rounded-full bg-[var(--wh-border)]"
               >
-                <span className="block h-full rounded-full bg-[var(--wh-primary)]" style={{ width: `${(progress / 4) * 100}%` }} />
+                <span className="block h-full rounded-full bg-[var(--wh-primary)]" style={{ width: `${(progress / total) * 100}%` }} />
               </div>
             </div>
           ) : (

@@ -129,6 +129,6 @@ describe("what the household is shown before anything is bought", () => {
 
   it("formats money the way the household reads it", () => {
     expect(format(284_000, "INR")).toBe("₹2,840");
-    expect(format(1050, "USD")).toBe("USD 10.5");
+    expect(format(1050, "USD")).toBe("$10.50");
   });
 });
