@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createNotification } from "../notifications/create";
 import { chooseRecipient, decideNotification, type Candidate, type HouseholdEvent } from "../notifications/decide";
+import { quietHoursFrom } from "../notifications/timing";
 import type { AppointmentStatus, HealthAppointment } from "./appointments";
 
 /**
@@ -69,16 +70,30 @@ type Row = Record<string, unknown>;
 
 /** Who to tell about something concerning one member: themselves if they have an account, otherwise their guardians — the same resolution the appointment reminder sweep uses, reused by the specialist pipeline's own overdue-checkup notice (story 21-006). */
 export async function candidatesFor(admin: SupabaseClient, householdId: string, memberId: string): Promise<Candidate[]> {
-  const [memberRow, guardianRows, quietRow] = await Promise.all([
+  const [memberRow, guardianRows, quietRow, householdRow] = await Promise.all([
     admin.from("household_members").select("id, member_type, profile_id").eq("id", memberId).maybeSingle(),
     admin.from("member_guardians").select("guardian_member_id").eq("household_id", householdId).eq("child_member_id", memberId),
-    admin.from("notification_preferences").select("quiet_from, quiet_until").eq("member_id", memberId).eq("channel", "in_app").maybeSingle(),
+    admin
+      .from("notification_preferences")
+      .select("quiet_from, quiet_until, quiet_from_minute, quiet_until_minute")
+      .eq("member_id", memberId)
+      .eq("channel", "in_app")
+      .maybeSingle(),
+    admin.from("households").select("timezone").eq("id", householdId).maybeSingle(),
   ]);
 
-  const availability =
-    quietRow.data && (quietRow.data as Row).quiet_from !== null
-      ? { quietFrom: (quietRow.data as Row).quiet_from as number, quietUntil: (quietRow.data as Row).quiet_until as number }
-      : null;
+  const quietData = quietRow.data as Row | null;
+  const quiet = quietData
+    ? quietHoursFrom({
+        quietFrom: quietData.quiet_from as number | null,
+        quietUntil: quietData.quiet_until as number | null,
+        quietFromMinute: quietData.quiet_from_minute as number | null,
+        quietUntilMinute: quietData.quiet_until_minute as number | null,
+      })
+    : null;
+  // Quiet hours are read on the household's clock, never UTC.
+  const timeZone = ((householdRow.data as Row | null)?.timezone as string | undefined) ?? "Asia/Kolkata";
+  const availability = quiet ? { quiet, timeZone } : null;
 
   const hasOwnAccount = memberRow.data ? Boolean((memberRow.data as Row).profile_id) : false;
   const candidates: Candidate[] = [];
@@ -162,6 +177,8 @@ export async function runHealthReminderSweep(admin: SupabaseClient, now: Date = 
         decision,
         title: "Health appointment",
         body: decision.impact,
+        category: "appointments",
+        source: { type: "health_appointment", id: row.id as string },
       });
       if (created) summary.sent += 1;
       else summary.skipped += 1;

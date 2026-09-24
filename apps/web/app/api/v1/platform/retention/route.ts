@@ -3,6 +3,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { drainJobs, type DrainOutcome } from "@wonderhome/core/homesend/retry-queue";
+import { reconcileAllHouseholds, type SweepSummary } from "@wonderhome/core/notifications/reconcile";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
@@ -104,6 +105,17 @@ export async function POST(request: Request) {
       log.error("measurement routine reminder sweep failed", { reason: routineReminderError, allow: ["reason"] });
     }
 
+    // Smart reminders (module 23) are reconciled whenever someone opens the
+    // app; this pass keeps them moving for households nobody opened today.
+    let smartReminderSummary: SweepSummary | null = null;
+    let smartReminderError: string | undefined;
+    try {
+      smartReminderSummary = await reconcileAllHouseholds(admin);
+    } catch (thrown) {
+      smartReminderError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("smart reminder reconcile failed", { reason: smartReminderError, allow: ["reason"] });
+    }
+
     // Wave 5 §15/§16: queued retries (a HomeSend item a provider could not
     // read when it arrived) are worked here too, so none waits more than a
     // day even when nothing else wakes the queue. Then rate-limit windows
@@ -138,9 +150,10 @@ export async function POST(request: Request) {
       deletionsFailed,
       reminderSummary,
       routineReminderSummary,
+      smartReminderSummary,
       jobsSummary,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "jobsSummary", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
@@ -151,10 +164,11 @@ export async function POST(request: Request) {
         deletionsFailed,
         healthReminders: reminderSummary ?? { error: reminderError },
         routineReminders: routineReminderSummary ?? { error: routineReminderError },
+        smartReminders: smartReminderSummary ?? { error: smartReminderError },
         jobs: jobsSummary ?? { error: jobsError },
       },
       {
-        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || jobsError ? 207 : 200,
+        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError ? 207 : 200,
         headers: { "cache-control": "no-store" },
       },
     );

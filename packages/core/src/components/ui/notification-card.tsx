@@ -15,7 +15,7 @@ import { Badge } from "./pill";
  */
 export type NotificationCardProps = {
   type: "action" | "decision" | "risk" | "completion";
-  status: "generated" | "delivered" | "seen" | "acted" | "resolved" | "expired";
+  status: "generated" | "delivered" | "seen" | "acted" | "resolved" | "expired" | "dismissed";
   title: string;
   body: string;
   /** Already formatted, e.g. "8:30 AM" or "Yesterday". */
@@ -36,7 +36,7 @@ const TYPE: Record<NotificationCardProps["type"], { icon: ComponentType<{ classN
 
 export function NotificationCard({ type, status, title, body, when, icon, tone, action, className }: NotificationCardProps) {
   const presentation = { icon: icon ?? TYPE[type].icon, tone: tone ?? TYPE[type].tone };
-  const settled = status === "acted" || status === "resolved" || status === "expired";
+  const settled = status === "acted" || status === "resolved" || status === "expired" || status === "dismissed";
   const unread = status === "generated" || status === "delivered";
 
   return (
@@ -58,7 +58,7 @@ export function NotificationCard({ type, status, title, body, when, icon, tone, 
         <div className="mt-2 flex items-center gap-2">
           {settled ? (
             <Badge tone={status === "expired" ? "neutral" : "handled"}>
-              {status === "resolved" ? "Resolved" : status === "acted" ? "Done" : "Expired"}
+              {status === "resolved" ? "Resolved" : status === "acted" ? "Done" : status === "dismissed" ? "Dismissed" : "Expired"}
             </Badge>
           ) : (
             action

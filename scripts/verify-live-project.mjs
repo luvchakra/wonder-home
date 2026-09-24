@@ -671,6 +671,21 @@ async function main() {
   check("households carry region, currency, units and default language", !localeColumns.error, localeColumns.error?.code ?? "ok");
   const memberLocale = await admin.from("household_members").select("language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at").limit(1);
   check("members carry their own language, formats and setup state", !memberLocale.error, memberLocale.error?.code ?? "ok");
+  const smartColumns = await admin
+    .from("notifications")
+    .select("category, source_type, source_id, earliest_at, latest_at, expires_at, reminder_policy, reminder_seq, snooze_count, dismissed_at")
+    .limit(1);
+  check("notifications carry a source, category, window and snooze", !smartColumns.error, smartColumns.error?.code ?? "ok");
+  const reminderPrefs = await admin.from("reminder_preferences").select("member_id, category, preset, enabled").limit(1);
+  check("migration landed: reminder_preferences", !reminderPrefs.error, reminderPrefs.error?.code ?? "ok");
+  const quietMinutes = await admin.from("notification_preferences").select("quiet_from_minute, quiet_until_minute").limit(1);
+  check("quiet hours are stored to the minute", !quietMinutes.error, quietMinutes.error?.code ?? "ok");
+  const anonThrottle = await anon.from("notification_reconciliations").select("household_id").limit(1);
+  check(
+    "anonymous cannot read the reminder reconcile throttle",
+    Boolean(anonThrottle.error) || (Array.isArray(anonThrottle.data) && anonThrottle.data.length === 0),
+    anonThrottle.error ? anonThrottle.error.code : `${anonThrottle.data?.length ?? "?"} rows`,
+  );
   const claimColumn = await admin.from("household_invitations").select("member_id").limit(1);
   check("an invitation can name the member it claims", !claimColumn.error, claimColumn.error?.code ?? "ok");
 

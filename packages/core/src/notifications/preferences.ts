@@ -14,7 +14,15 @@ import { DELIVERY_CHANNELS, type ChannelPreference, type DeliveryChannel } from 
  * is already only ever touching their own.
  */
 
-type Row = { channel: string; enabled: boolean; quiet_from: number | null; quiet_until: number | null; target: string | null };
+type Row = {
+  channel: string;
+  enabled: boolean;
+  quiet_from: number | null;
+  quiet_until: number | null;
+  quiet_from_minute: number | null;
+  quiet_until_minute: number | null;
+  target: string | null;
+};
 
 const DEFAULT_PREFERENCE = (channel: DeliveryChannel): ChannelPreference => ({
   channel,
@@ -31,7 +39,7 @@ export async function loadChannelPreferences(
 ): Promise<ChannelPreference[]> {
   const { data, error } = await supabase
     .from("notification_preferences")
-    .select("channel, enabled, quiet_from, quiet_until, target")
+    .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
     .eq("member_id", memberId);
 
   const byChannel = new Map<string, ChannelPreference>();
@@ -42,6 +50,8 @@ export async function loadChannelPreferences(
         enabled: row.enabled,
         quietFrom: row.quiet_from,
         quietUntil: row.quiet_until,
+        quietFromMinute: row.quiet_from_minute ?? 0,
+        quietUntilMinute: row.quiet_until_minute ?? 0,
         target: row.target,
       });
     }
@@ -57,6 +67,9 @@ export type SaveChannelPreferenceInput = {
   enabled: boolean;
   quietFrom: number | null;
   quietUntil: number | null;
+  /** Minutes past the hour; omitted means on the hour. */
+  quietFromMinute?: number;
+  quietUntilMinute?: number;
   target: string | null;
 };
 
@@ -72,6 +85,8 @@ export async function saveChannelPreference(
       enabled: input.enabled,
       quiet_from: input.quietFrom,
       quiet_until: input.quietUntil,
+      quiet_from_minute: input.quietFromMinute ?? 0,
+      quiet_until_minute: input.quietUntilMinute ?? 0,
       target: input.target,
     },
     { onConflict: "member_id,channel" },

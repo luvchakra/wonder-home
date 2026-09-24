@@ -15,7 +15,7 @@
  * behind the same adapter shape, without a schema or UI change.
  */
 
-import { inQuietHours } from "./decide";
+import { inQuietHours, quietHoursFrom } from "./timing";
 import { createWhatsAppAdapter, whatsappConfigFromEnv } from "./whatsapp";
 
 export const DELIVERY_CHANNELS = ["in_app", "push", "email", "whatsapp"] as const;
@@ -27,6 +27,9 @@ export type ChannelPreference = {
   enabled: boolean;
   quietFrom: number | null;
   quietUntil: number | null;
+  /** Minutes past the hour quiet begins and ends ("10:30 PM"); 0 when unset. */
+  quietFromMinute?: number;
+  quietUntilMinute?: number;
   /** A phone number, subscription reference, or similar. Null for in_app/email. */
   target: string | null;
 };
@@ -138,14 +141,15 @@ export function selectChannels(
   preferences: readonly ChannelPreference[],
   notification: ChannelNotification,
   now: Date,
+  timeZone: string,
 ): ChannelPreference[] {
   return preferences.filter((preference) => {
     if (!preference.enabled) return false;
     if (preference.channel !== "in_app" && preference.channel !== "email" && !preference.target) return false;
 
     if (notification.priority === "critical") return true;
-    if (preference.quietFrom === null || preference.quietUntil === null) return true;
-    return !inQuietHours(now, preference.quietFrom, preference.quietUntil);
+    const quiet = quietHoursFrom(preference);
+    return !quiet || !inQuietHours(now, quiet, timeZone);
   });
 }
 
@@ -164,9 +168,10 @@ export async function dispatchToChannels(
   preferences: readonly ChannelPreference[],
   notification: ChannelNotification,
   now: Date,
+  timeZone: string,
   adapters: Record<DeliveryChannel, ChannelAdapter> = CHANNEL_ADAPTERS,
 ): Promise<ChannelAttempt[]> {
-  const selected = selectChannels(preferences, notification, now);
+  const selected = selectChannels(preferences, notification, now, timeZone);
   return Promise.all(
     selected.map(async (preference) => ({
       channel: preference.channel,

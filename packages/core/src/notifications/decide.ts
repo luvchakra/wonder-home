@@ -10,6 +10,8 @@
  * whether, whom, when, and what the person can do about it.
  */
 
+import { endOfQuiet, inQuietHours as inQuietWindow, type QuietHours } from "./timing";
+
 export type NotificationType = "action" | "decision" | "risk" | "completion";
 
 export type HouseholdEvent = {
@@ -31,7 +33,8 @@ export type Candidate = {
   role: "primary" | "backup" | "administrator";
   /** Whether this person could act on it if told. */
   canAct: boolean;
-  availability: { quietFrom: number; quietUntil: number } | null;
+  /** Their quiet hours, read in the household's own time zone — never UTC. */
+  availability: { quiet: QuietHours; timeZone: string } | null;
 };
 
 export type DecisionContext = {
@@ -145,23 +148,15 @@ export function chooseTime(event: HouseholdEvent, recipient: Candidate, now: Dat
   if (isUrgent(event, now)) return now;
   if (!recipient.availability) return now;
 
-  const { quietFrom, quietUntil } = recipient.availability;
-  if (!inQuietHours(now, quietFrom, quietUntil)) return now;
+  const { quiet, timeZone } = recipient.availability;
+  if (!inQuietWindow(now, quiet, timeZone)) return now;
 
-  const wakeAt = new Date(now);
-  wakeAt.setUTCHours(quietUntil, 0, 0, 0);
-  if (wakeAt <= now) wakeAt.setUTCDate(wakeAt.getUTCDate() + 1);
+  const wakeAt = endOfQuiet(now, quiet, timeZone);
 
   // If it would be too late by morning, it was urgent after all.
   if (event.dueAt && wakeAt >= event.dueAt) return now;
 
   return wakeAt;
-}
-
-/** Quiet hours may wrap midnight, which is the normal case. */
-export function inQuietHours(now: Date, from: number, until: number): boolean {
-  const hour = now.getUTCHours();
-  return from <= until ? hour >= from && hour < until : hour >= from || hour < until;
 }
 
 function isUrgent(event: HouseholdEvent, now: Date): boolean {

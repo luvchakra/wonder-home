@@ -14,6 +14,8 @@ import { PRIMARY_NAVIGATION } from "@wonderhome/core/navigation/primary-navigati
 import { secondaryNavigationFor, SECONDARY_GROUP_ORDER, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
 import type { ShellLabels, ShellViewer } from "@wonderhome/core/shell/mobile-header";
 
+import { reconcileRemindersSoon } from "./reminders";
+
 /**
  * Everything a signed-in screen needs to render its shell: who is looking,
  * from which household, with which permissions, and what to offer them.
@@ -78,6 +80,9 @@ export async function buildSession(
   ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
+
+  // Reminders follow the household's records: re-read after this response.
+  reconcileRemindersSoon(membership.household.id);
 
   // Set once for the whole request, so every date, time and amount on the
   // page — however deep — is written the way this person reads.

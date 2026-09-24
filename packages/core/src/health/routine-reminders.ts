@@ -71,6 +71,8 @@ export async function runMeasurementRoutineSweep(admin: SupabaseClient, now: Dat
       decision,
       title: "Measurement due",
       body: decision.impact,
+      category: "appointments",
+      source: { type: "health_routine", id: routineId },
     });
     if (created) summary.sent += 1;
     else summary.skipped += 1;

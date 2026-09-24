@@ -589,6 +589,10 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
       action: null,
       decision_factors: { source: "home_talk", requestedBy: context.actorMemberId, phrase: when },
       scheduled_for: due.toISOString(),
+      // A person's own reminder: snoozed, dismissed and delivered like any
+      // other (module 23), with no record behind it to resolve it.
+      category: "system",
+      source_type: "reminder",
     })
     .select("id")
     .single();

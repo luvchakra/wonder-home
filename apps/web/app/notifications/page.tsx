@@ -10,6 +10,7 @@ import { updateNotificationAction } from "../(auth)/notification-actions";
 import { SubmitPill } from "../_components/submit-pill";
 import { actionLabelFor, presentationFor } from "../_components/agenda-row";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
+import { reconcileRemindersNow } from "../_lib/reminders";
 
 export const metadata = { title: "Notifications" };
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 type Row = {
   id: string;
   type: "action" | "decision" | "risk" | "completion";
-  status: "generated" | "delivered" | "seen" | "acted" | "resolved" | "expired";
+  status: "generated" | "delivered" | "seen" | "acted" | "resolved" | "expired" | "dismissed";
   thread_key: string;
   title: string;
   body: string;
@@ -36,6 +37,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const { supabase, membership, viewer, secondary } = session;
   const timezone = membership.household.timezone;
 
+  // Reminders follow the household's records (module 23): a bill paid since
+  // the last look is resolved, and one newly due appears, before this reads.
+  await reconcileRemindersNow(membership.household.id);
+
   // What is due: the in-app inbox is where a notification is delivered, so
   // one held for later — a reminder for tomorrow — appears once its time
   // comes, and not before.
@@ -47,7 +52,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     .order("scheduled_for", { ascending: false })
     .limit(60);
 
-  const all = ((data as Row[] | null) ?? []).filter((row) => row.status !== "expired" || row.type === "completion");
+  // Dismissed is the person's own "not this one"; it does not come back as history.
+  const all = ((data as Row[] | null) ?? []).filter(
+    (row) => row.status !== "dismissed" && (row.status !== "expired" || row.type === "completion"),
+  );
   const active = tab === "action" || tab === "decision" || tab === "updates" ? tab : "all";
   const open = (row: Row) => row.status === "generated" || row.status === "delivered" || row.status === "seen";
 

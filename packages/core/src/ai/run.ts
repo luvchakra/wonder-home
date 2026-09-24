@@ -238,6 +238,8 @@ async function notifyApproval(
     decision,
     title: "Waiting for your OK",
     body: `${tool?.description ?? step.toolName}: ${step.rationale} — ${reason}`,
+    category: "system",
+    source: { type: "approval", id: null },
   });
 }
 

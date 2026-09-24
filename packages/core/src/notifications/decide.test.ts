@@ -6,12 +6,12 @@ import {
   chooseTime,
   decideEscalation,
   decideNotification,
-  inQuietHours,
   shouldAutoResolve,
   type Candidate,
   type DecisionContext,
   type HouseholdEvent,
 } from "./decide";
+import { inQuietHours } from "./timing";
 
 const NOW = new Date("2026-09-17T14:00:00Z");
 
@@ -114,12 +114,22 @@ describe("who gets told", () => {
 });
 
 describe("when it arrives", () => {
-  const quiet = candidate({ availability: { quietFrom: 22, quietUntil: 7 } });
+  const night22to7 = { fromMinute: 22 * 60, untilMinute: 7 * 60 };
+  const quiet = candidate({ availability: { quiet: night22to7, timeZone: "UTC" } });
 
   it("recognises quiet hours that wrap past midnight", () => {
-    expect(inQuietHours(new Date("2026-09-17T23:00:00Z"), 22, 7)).toBe(true);
-    expect(inQuietHours(new Date("2026-09-17T03:00:00Z"), 22, 7)).toBe(true);
-    expect(inQuietHours(new Date("2026-09-17T14:00:00Z"), 22, 7)).toBe(false);
+    expect(inQuietHours(new Date("2026-09-17T23:00:00Z"), night22to7, "UTC")).toBe(true);
+    expect(inQuietHours(new Date("2026-09-17T03:00:00Z"), night22to7, "UTC")).toBe(true);
+    expect(inQuietHours(new Date("2026-09-17T14:00:00Z"), night22to7, "UTC")).toBe(false);
+  });
+
+  it("reads quiet hours in the household's time zone, not UTC", () => {
+    // 17:00 UTC is 22:30 in Kolkata — quiet there, though not in UTC.
+    const kolkata = candidate({ availability: { quiet: night22to7, timeZone: "Asia/Kolkata" } });
+    const evening = new Date("2026-09-17T17:00:00Z");
+    const deliverAt = chooseTime(event({ riskLevel: "medium", dueAt: new Date("2026-09-19T12:00:00Z") }), kolkata, evening);
+    // Held until 07:00 in Kolkata, which is 01:30 UTC.
+    expect(deliverAt.toISOString()).toBe("2026-09-18T01:30:00.000Z");
   });
 
   it("waits until morning rather than waking the household", () => {

@@ -24,16 +24,23 @@ export async function deliverNotification(
 ): Promise<{ sent: DeliveryChannel[]; failed: DeliveryChannel[] }> {
   const now = input.now ?? new Date();
   try {
-    const { data } = await admin
-      .from("notification_preferences")
-      .select("channel, enabled, quiet_from, quiet_until, target")
-      .eq("member_id", input.recipientMemberId)
-      .neq("channel", "in_app");
+    const [{ data }, { data: household }] = await Promise.all([
+      admin
+        .from("notification_preferences")
+        .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
+        .eq("member_id", input.recipientMemberId)
+        .neq("channel", "in_app"),
+      admin.from("households").select("timezone").eq("id", input.householdId).maybeSingle(),
+    ]);
+    // Quiet hours are the household's own clock, never the server's.
+    const timeZone = ((household as { timezone?: string } | null)?.timezone ?? "Asia/Kolkata") as string;
     const preferences: ChannelPreference[] = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
       channel: row.channel as DeliveryChannel,
       enabled: row.enabled === true,
       quietFrom: (row.quiet_from as number | null) ?? null,
       quietUntil: (row.quiet_until as number | null) ?? null,
+      quietFromMinute: (row.quiet_from_minute as number | null) ?? 0,
+      quietUntilMinute: (row.quiet_until_minute as number | null) ?? 0,
       target: (row.target as string | null) ?? null,
     }));
     // Only channels that can actually reach someone; a fixture's "not
@@ -41,7 +48,7 @@ export async function deliverNotification(
     const live = preferences.filter((preference) => adapters[preference.channel]?.live);
     if (live.length === 0) return { sent: [], failed: [] };
 
-    const attempts = await dispatchToChannels(live, input.notification, now, adapters);
+    const attempts = await dispatchToChannels(live, input.notification, now, timeZone, adapters);
     const rows = attempts.map((attempt) => ({
       household_id: input.householdId,
       notification_id: input.notificationId,

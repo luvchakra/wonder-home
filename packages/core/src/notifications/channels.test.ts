@@ -36,7 +36,7 @@ const preference = (over: Partial<ChannelPreference> = {}): ChannelPreference =>
 
 describe("selectChannels", () => {
   it("skips a disabled channel", () => {
-    const selected = selectChannels([preference({ enabled: false })], notification(), NOW);
+    const selected = selectChannels([preference({ enabled: false })], notification(), NOW, "UTC");
     expect(selected).toHaveLength(0);
   });
 
@@ -45,17 +45,18 @@ describe("selectChannels", () => {
       [preference({ channel: "push", target: null }), preference({ channel: "whatsapp", target: null })],
       notification(),
       NOW,
+      "UTC",
     );
     expect(selected).toHaveLength(0);
   });
 
   it("email needs no stored address — it resolves from the account", () => {
-    const selected = selectChannels([preference({ channel: "email", target: null })], notification(), NOW);
+    const selected = selectChannels([preference({ channel: "email", target: null })], notification(), NOW, "UTC");
     expect(selected.map((s) => s.channel)).toEqual(["email"]);
   });
 
   it("in_app needs no address either", () => {
-    const selected = selectChannels([preference({ channel: "in_app", target: null })], notification(), NOW);
+    const selected = selectChannels([preference({ channel: "in_app", target: null })], notification(), NOW, "UTC");
     expect(selected).toHaveLength(1);
   });
 
@@ -67,6 +68,7 @@ describe("selectChannels", () => {
       ],
       notification(),
       NOW,
+      "UTC",
     );
     expect(selected.map((s) => s.channel).sort()).toEqual(["push", "whatsapp"]);
   });
@@ -77,6 +79,7 @@ describe("selectChannels", () => {
       [preference({ channel: "push", target: "sub-abc", quietFrom: 13, quietUntil: 15 })],
       notification(),
       NOW,
+      "UTC",
     );
     expect(selected).toHaveLength(0);
   });
@@ -86,6 +89,7 @@ describe("selectChannels", () => {
       [preference({ channel: "push", target: "sub-abc", quietFrom: 13, quietUntil: 15 })],
       notification({ priority: "critical" }),
       NOW,
+      "UTC",
     );
     expect(selected).toHaveLength(1);
   });
@@ -98,8 +102,25 @@ describe("selectChannels", () => {
       ],
       notification(),
       NOW,
+      "UTC",
     );
     expect(selected.map((s) => s.channel)).toEqual(["email"]);
+  });
+
+  it("reads quiet hours on the household's clock, not the server's", () => {
+    // NOW is 14:00 UTC = 19:30 in Kolkata. Quiet 19:00-22:00 there covers it;
+    // read in UTC it would not.
+    const kolkata = preference({ channel: "push", target: "sub-abc", quietFrom: 19, quietUntil: 22 });
+    expect(selectChannels([kolkata], notification(), NOW, "Asia/Kolkata")).toHaveLength(0);
+    expect(selectChannels([kolkata], notification(), NOW, "UTC")).toHaveLength(1);
+  });
+
+  it("honours quiet hours to the minute", () => {
+    // 14:00 UTC: quiet from 13:30 covers it, quiet from 14:30 does not.
+    const from1330 = preference({ channel: "push", target: "sub-abc", quietFrom: 13, quietFromMinute: 30, quietUntil: 16 });
+    const from1430 = preference({ channel: "push", target: "sub-abc", quietFrom: 14, quietFromMinute: 30, quietUntil: 16 });
+    expect(selectChannels([from1330], notification(), NOW, "UTC")).toHaveLength(0);
+    expect(selectChannels([from1430], notification(), NOW, "UTC")).toHaveLength(1);
   });
 });
 
@@ -141,6 +162,7 @@ describe("dispatchToChannels", () => {
       [preference({ channel: "in_app" }), preference({ channel: "email" }), preference({ channel: "push", target: null })],
       notification(),
       NOW,
+      "UTC",
     );
     // push is not selected at all (no target), so only in_app and email are attempted.
     expect(attempts.map((a) => a.channel).sort()).toEqual(["email", "in_app"]);
@@ -154,6 +176,7 @@ describe("dispatchToChannels", () => {
       [preference({ channel: "push", target: "sub-abc" })],
       notification(),
       NOW,
+      "UTC",
       { ...CHANNEL_ADAPTERS, push: stub },
     );
     expect(attempts).toEqual([{ channel: "push", result: { ok: true } }]);
