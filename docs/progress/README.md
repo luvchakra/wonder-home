@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Notifications screen in each person's language (22-004, one screen)](2026-09-24-notifications-screen-localized.md) |
 | 2026-09-24 | [Localized reminders (story 22-006)](2026-09-24-localized-reminders.md) |
 | 2026-09-24 | [Deep Document Understanding 2.0, part 3: HomeTalk says what a document did from its receipt and answers "what did the notice change?" from stored changes; golden scenario 4, eval HS-16, §50 document metrics (story 14-019 Done, module 14 complete)](2026-09-24-document-understanding-hometalk.md) |
 | 2026-09-24 | [Deep Document Understanding 2.0, part 2: the grouped review ("Found N items"), apply through the domain services with a server-rebuilt plan, field-level change history, the exact receipt with partial failure and no-op, and Undo all (story 14-018 Done)](2026-09-24-document-plan-review-and-receipt.md) |
