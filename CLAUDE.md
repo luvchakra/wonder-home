@@ -541,13 +541,41 @@ last one applied, or one about another subscription. A failed payment keeps
 the plan as past-due, and a cancellation falls back to free. Neither ever
 touches a household's records.
 
-The Stripe adapter (`billing/stripe.ts`) is code-complete and inert. It
-needs `WONDERHOME_BILLING_PROVIDER=stripe`, `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET` and a `STRIPE_PRICE_<PLAN>` for each plan it sells.
-The intent id is Stripe's Idempotency-Key (`billing_intents` holds one open
-intent per household and plan), so a retry is never a second transaction.
-Webhooks are believed only after HMAC verification of the raw body, and
-each provider event is applied once (`billing_events`).
+Payments (story 20-009) take two providers behind that one port: Razorpay
+(`billing/razorpay.ts`) for India and Stripe (`billing/stripe.ts`) for
+everywhere else. The provider is never the source of truth:
+- **Prices are ours.** `plan_prices` holds what a plan costs per interval
+  and currency, in major units. `payment_provider_plans` maps each price to
+  the provider's plan or price id. It is service-role only, so the browser
+  never names or sees a provider id. Both start empty. Pricing is a
+  person's decision, never invent one.
+- **The router chooses.** `billing/router.ts`'s `selectPaymentProvider`
+  sends INR or a household in India to the India provider (default
+  razorpay) and anything else to the international one (default stripe).
+  A preference is honoured only where that provider is eligible. A provider
+  is live only when it is listed in `WONDERHOME_BILLING_PROVIDERS` (the
+  older `WONDERHOME_BILLING_PROVIDER` is still read) and fully configured.
+  Razorpay needs `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and
+  `RAZORPAY_WEBHOOK_SECRET`. Stripe needs `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET`; `STRIPE_PRICE_<PLAN>` is only the legacy
+  fallback. `WONDERHOME_BILLING_INDIA_PROVIDER` and
+  `WONDERHOME_BILLING_INTERNATIONAL_PROVIDER` change the defaults.
+- **Money converts at the adapter.** Minor units exist only inside an
+  adapter (`billing/money.ts`, by the currency's own exponent).
+- **Webhooks are verified and applied once.** Each provider has its own
+  endpoint, `/api/v1/billing/webhook/{provider}` (the bare path stays
+  Stripe's). A delivery is believed only after HMAC verification of the raw
+  body, and each provider event is applied once (`billing_events`). The
+  intent id is the idempotency key (`billing_intents` holds one open intent
+  per household and plan), so a retry is never a second transaction.
+- **The ledger is what providers reported.** `payments` only ever move
+  forward (`billing/states.ts`). A refund in `payment_refunds` is pending
+  until the provider confirms it, and its household comes from our own
+  ledger, never the payload. `billing_invoices` and `payment_customers`
+  complete it. Admins read the ledger, only the server writes it, and it
+  holds no card number, no secret and no provider prose.
+- **Nothing is taken away early.** A cancellation or downgrade waits for the
+  end of the paid period (`cancel_at_period_end`, `scheduled_plan_key`).
 
 A plan marked `plans.requires_payment` can never be written onto a
 subscription from a household session: RLS and `changePlan` both refuse

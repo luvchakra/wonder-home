@@ -70,8 +70,53 @@ describe("Stripe's vocabulary becomes WonderHome's", () => {
     });
     expect(eventFromStripe(invoice({}))).toMatchObject({ type: "subscription.renewed", externalRef: "sub_123" });
     expect(eventFromStripe(invoice({ attempt_count: 3 }))).toMatchObject({ type: "payment.recovered" });
-    // The first invoice is the checkout itself.
-    expect(eventFromStripe(invoice({ billing_reason: "subscription_create" }))).toBeNull();
+    // The first invoice is the checkout itself: the ledger records it, the subscription does not move on it.
+    expect(eventFromStripe(invoice({ billing_reason: "subscription_create" }))).toMatchObject({ type: "payment.succeeded" });
+  });
+
+  it("an invoice carries its payment and itself to the ledger, in major units", () => {
+    const event = eventFromStripe({
+      id: "evt_inv2",
+      type: "invoice.paid",
+      created: 1790300000,
+      data: {
+        object: {
+          id: "in_42",
+          number: "WH-0042",
+          billing_reason: "subscription_cycle",
+          attempt_count: 1,
+          amount_paid: 700,
+          currency: "usd",
+          payment_intent: "pi_42",
+          hosted_invoice_url: "https://invoice.stripe.com/i/in_42",
+          invoice_pdf: "https://pay.stripe.com/invoice/in_42/pdf",
+          period_start: 1790300000,
+          period_end: 1792900000,
+          parent: { subscription_details: { subscription: "sub_123", metadata: { household_id: HOUSEHOLD, interval: "month" } } },
+        },
+      },
+    });
+    expect(event?.payment).toMatchObject({ providerPaymentId: "pi_42", amount: 7, currency: "USD", status: "succeeded" });
+    expect(event?.invoice).toMatchObject({ providerInvoiceId: "in_42", number: "WH-0042", amount: 7, status: "paid", invoiceUrl: "https://invoice.stripe.com/i/in_42" });
+    expect(event?.terms).toMatchObject({ interval: "month", currency: "USD", amount: 7 });
+  });
+
+  it("a subscription set to end at the period's end says so, and taking it back says that too", () => {
+    const updated = (flag: boolean) => ({
+      id: `evt_u_${flag}`,
+      type: "customer.subscription.updated",
+      created: 1790400000,
+      data: { object: { id: "sub_123", cancel_at_period_end: flag, current_period_end: 1792900000, metadata: { household_id: HOUSEHOLD } } },
+    });
+    expect(eventFromStripe(updated(true))).toMatchObject({ type: "subscription.cancel_scheduled", cancelAtPeriodEnd: true, externalRef: "sub_123" });
+    expect(eventFromStripe(updated(false))).toMatchObject({ type: "subscription.cancel_scheduled", cancelAtPeriodEnd: false });
+  });
+
+  it("a refund is tied to its payment, never to a household the payload claims", () => {
+    const refund = { id: "evt_r", type: "refund.updated", created: 1790500000, data: { object: { id: "re_1", payment_intent: "pi_42", amount: 350, currency: "usd", status: "succeeded", metadata: {} } } };
+    expect(eventFromStripe(refund)).toMatchObject({ type: "refund.succeeded", householdId: "", refund: { providerRefundId: "re_1", providerPaymentId: "pi_42", amount: 3.5, status: "succeeded" } });
+    // Still pending at the provider: nothing yet.
+    expect(eventFromStripe({ ...refund, data: { object: { ...refund.data.object, status: "pending" } } })).toBeNull();
   });
 
   it("reads the older API's subscription_details too", () => {
@@ -114,6 +159,33 @@ describe("a checkout retry is the same transaction", () => {
     expect(form.get("metadata[intent_id]")).toBe("i-42");
   });
 
+  it("a catalogue price is used as given by the server, and cancel and refund speak Stripe's minor units", async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const provider = createStripeProvider({
+      secretKey: "sk_test_x",
+      webhookSecret: SECRET,
+      prices: {},
+      fetch: (async (url: string, init: RequestInit) => {
+        calls.push({ url, init });
+        const body = url.endsWith("/v1/refunds") ? { id: "re_9" } : { id: "cs_2", url: "https://checkout.stripe.com/c/cs_2" };
+        return new Response(JSON.stringify(body), { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    await provider.createCheckout({ intentId: "i-7", householdId: HOUSEHOLD, planKey: "pro", successUrl: "a", cancelUrl: "b", providerPlanRef: "price_catalogue_usd", interval: "year" });
+    const form = new URLSearchParams(calls[0]!.init.body as string);
+    expect(form.get("line_items[0][price]")).toBe("price_catalogue_usd");
+    expect(form.get("subscription_data[metadata][interval]")).toBe("year");
+
+    await provider.cancelSubscription!({ externalRef: "sub_9", atPeriodEnd: true });
+    expect(calls[1]!.url).toMatch(/\/v1\/subscriptions\/sub_9$/);
+    expect(new URLSearchParams(calls[1]!.init.body as string).get("cancel_at_period_end")).toBe("true");
+
+    const refund = await provider.refundPayment!({ providerPaymentId: "pi_9", amount: 3.5, currency: "USD", idempotencyKey: "rf-1" });
+    expect(refund.providerRefundId).toBe("re_9");
+    expect(new URLSearchParams(calls[2]!.init.body as string).get("amount")).toBe("350");
+    expect((calls[2]!.init.headers as Record<string, string>)["idempotency-key"]).toBe("rf-1");
+  });
+
   it("a plan with no price is never sold through Stripe", async () => {
     const provider = createStripeProvider({ secretKey: "sk", webhookSecret: SECRET, prices: { pro: "price_pro" } });
     expect(provider.sells("max")).toBe(false);
@@ -122,11 +194,14 @@ describe("a checkout retry is the same transaction", () => {
 });
 
 describe("a half-configured provider is not a provider", () => {
-  it("needs the switch, both secrets and at least one price", () => {
-    const full = { WONDERHOME_BILLING_PROVIDER: "stripe", STRIPE_SECRET_KEY: "sk", STRIPE_WEBHOOK_SECRET: "wh", STRIPE_PRICE_PRO: "price_pro" };
+  it("needs both secrets; a configuration price is optional now that the catalogue can price plans", () => {
+    const full = { STRIPE_SECRET_KEY: "sk", STRIPE_WEBHOOK_SECRET: "wh", STRIPE_PRICE_PRO: "price_pro" };
     expect(stripeFromEnv(full)?.sells("pro")).toBe(true);
-    expect(stripeFromEnv({ ...full, WONDERHOME_BILLING_PROVIDER: undefined })).toBeNull();
     expect(stripeFromEnv({ ...full, STRIPE_WEBHOOK_SECRET: "" })).toBeNull();
-    expect(stripeFromEnv({ ...full, STRIPE_PRICE_PRO: undefined })).toBeNull();
+    expect(stripeFromEnv({ ...full, STRIPE_SECRET_KEY: undefined })).toBeNull();
+    // Live without a configuration price: it sells what the catalogue maps to it.
+    const catalogueOnly = stripeFromEnv({ ...full, STRIPE_PRICE_PRO: undefined });
+    expect(catalogueOnly?.live).toBe(true);
+    expect(catalogueOnly?.sells("pro")).toBe(false);
   });
 });

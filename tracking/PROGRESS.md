@@ -4,14 +4,14 @@
 
 | Metric | Value |
 |---|---:|
-| Total stories | 219 |
-| Done | 213 |
+| Total stories | 222 |
+| Done | 214 |
 | In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 1 |
-| Completion | 97.3% |
-| Current module | 01 Identity (Settings & Profile) |
-| Current story | 01-009 Settings & Profile consolidation done; payments (Razorpay + Stripe) next |
+| Not Started | 3 |
+| Completion | 96.4% |
+| Current module | 20 Subscriptions (Payments) |
+| Current story | 20-009 multi-provider payments backend done; 20-010 payment screens next (waits on pricing) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -44,7 +44,7 @@ disagree again.)
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
-| 20 | Subscriptions, Entitlements & Usage | 8 | 4 | 2 | 2 | 8 | Done |
+| 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 9 | In Progress |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 4 | In Progress |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
@@ -247,3 +247,4 @@ disagree again.)
 | 2026-09-24 | 14 | 14-015 | Done | whatsapp intake 18 unit (reading payloads, codes, linking, unknown senders, idempotent retries, forged ids ignored, signature and size refusals, text/photo into HomeSend once, media outage retried silently, unsupported refused, injected instruction kept as content, replies never echo amounts or health), WhatsApp database suite 10 (single-use and expiring codes, one number one member, adults only, number visible to its member and admins only, no client writes, message bound to its link, HomeSend sources, disconnect keeps history), verify:live 199/199 | WhatsApp into HomeSend, backend: migration `20261002090000_whatsapp_intake.sql` applied live; the webhook links numbers by CONNECT code and records linked members' messages once, processing them after the response on the job queue into `whatsapp`/`whatsapp_media` HomeSend items with a short acknowledgement. Inert until the WhatsApp credentials are set; the screens are 14-016 |
 | 2026-09-24 | 14 | 14-016 | Done | channels 5 unit (every source in one tab, unknown reads as All, no tabs with uploads only, WhatsApp tab once available or used, waiting counts and links), security/api 210, whatsapp 18; browser QA at 360px and 1280px against a local server with placeholder WhatsApp settings: connect intro, code and Open WhatsApp link, "not linked yet" on an early check, a locally signed CONNECT linking the number, the confirmation, disconnect and reconnect, a WhatsApp text becoming a HomeSend item "from Priya", the All/WhatsApp/Uploads filter and its empty state, the member badge and the Settings row; no horizontal scroll | WhatsApp into HomeSend, screens: `/settings/whatsapp` (connect, confirmation, your link, an admin's view of everyone's, disconnect), a Settings row, "WhatsApp connected" on Manage Household members, a WhatsApp card among HomeSend's channels, the inbox filter by channel and who sent each WhatsApp item. Nothing is offered until the deployment has a WhatsApp number |
 | 2026-09-24 | 01 | 01-009 | Done | typecheck and lint clean; browser QA at 360px and 1280px against the live project with a QA household: the grouped Settings page with the profile, chevrons and no horizontal scroll, the new AI Assistant and Your plan pages, Privacy linking to AI Assistant, your own Family card linking to Settings and the link landing there, and an Admin still editing a child's card on Family | Settings & Profile consolidation: one editor per setting. `/settings` keeps the profile and becomes grouped rows; the AI key and data use moved to `/settings/ai`, the plan and usage to `/settings/plan`; your own profile elsewhere links to Settings |
+| 2026-09-24 | 20 | 20-009 | Done | billing 116 unit (Razorpay signature, vocabulary, subscriptions, cancel and refund calls in paise; router, money and forward-only payment states; a Razorpay subscription's whole life through the webhook into the ledger; Stripe invoice ledger, cancel-at-period-end and refunds), payments database suite 11 (prices readable, provider plans unreadable, ledger Admin-read and server-written, one payment per provider id, codes and last four only, refunds pending until confirmed), verify:live 212/212 | Multi-provider payments backend: Razorpay and Stripe behind the one billing port, a configurable router, our own price catalogue mapped server-side to provider plans, and a ledger of payments, invoices and refunds. Migration `20261003090000_payments_multi_provider.sql` applied live. Inert: the catalogue is empty and no provider is configured until a person decides prices and sets keys |

@@ -34,6 +34,8 @@ const NON_TENANT_TABLES = new Set([
   "platform_admins", // the separate platform-admin boundary
   "homesend_share_handoffs", // a share sheet staged before sign-in; no household is known yet
   "rate_limit_counters", // counters keyed by bucket and subject (member, household or IP hash); some subjects have no household
+  "plan_prices", // what a plan costs; a property of the plan, like plan_features
+  "payment_provider_plans", // which provider plan backs a price; server-only configuration of the catalogue
 ]);
 
 const ALICE = "11111111-1111-4111-8111-111111111111";

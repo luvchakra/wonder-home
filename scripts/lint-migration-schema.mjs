@@ -31,6 +31,8 @@ const FILENAME = /^\d{14}_[a-z0-9_]+\.sql$/;
  *   platform_admins           — the separate platform-admin boundary
  *   homesend_share_handoffs   — a share sheet staged before sign-in; no household is known yet
  *   rate_limit_counters       — request counters keyed by a bucket and a subject (member, household or IP hash); some subjects have no household
+ *   plan_prices               — what a plan costs; a property of the plan, not a tenant
+ *   payment_provider_plans    — which provider plan/price backs one of those prices; platform configuration
  */
 const NON_TENANT_TABLES = new Set([
   "households",
@@ -43,6 +45,8 @@ const NON_TENANT_TABLES = new Set([
   "platform_admins",
   "homesend_share_handoffs",
   "rate_limit_counters",
+  "plan_prices",
+  "payment_provider_plans",
 ]);
 
 export function lintMigrationSource(filename, sql) {

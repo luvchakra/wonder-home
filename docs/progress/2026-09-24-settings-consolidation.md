@@ -101,6 +101,19 @@ The reminder number's hint now says so and points to the right place.
   convention. The full right-to-left pass is story 22-008.
 - **Payments.** The Razorpay + Stripe work builds on `/settings/plan`.
 
+## Cleanup
+
+Done after the merge (#168, `680033c`):
+- **QA household.** "Mehta QA Home" (`167f83f2-4bba-4b85-a51e-7645ff637aba`)
+  was deleted with every row in it, including the child added for the Admin
+  check.
+- **QA account.** `67b2a3c2-9a87-47b5-a94e-07195c1209bd` was deleted.
+- **Local debris.** The scratch scripts and screenshots were removed, and the
+  dev server was stopped.
+
+A count over the household's tables, the auth user and Storage found nothing
+left.
+
 ## Where the code lives
 
 - `apps/web/app/settings/page.tsx`

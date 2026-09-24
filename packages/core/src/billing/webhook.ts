@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { log } from "../observability/logger";
 import { recordBillingEvent } from "./checkout";
 import type { BillingProvider } from "./provider";
-import { WebhookSignatureError } from "./stripe";
+import { WebhookSignatureError } from "./signature";
 
 /**
  * The billing provider's webhook, end to end (story 20-006).
@@ -41,6 +41,11 @@ export async function handleBillingWebhook(
   if (!event) return json(200, { received: true, acted: false });
 
   const result = await recordBillingEvent(deps.admin(), deps.provider.name, event);
+  if (!result.recorded && !result.duplicate) {
+    // A refund for a payment we never recorded: nothing to tie it to.
+    log.warn("billing webhook unmatched", { provider: deps.provider.name, type: event.type });
+    return json(200, { received: true, acted: false });
+  }
   return json(200, { received: true, acted: result.recorded && result.applied, duplicate: !result.recorded });
 }
 

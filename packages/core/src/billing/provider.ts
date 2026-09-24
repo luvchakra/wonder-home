@@ -25,7 +25,20 @@ export type BillingEventType =
   /** Recovered after a failure. */
   | "payment.recovered"
   /** The subscription ended at the provider. */
-  | "subscription.cancelled";
+  | "subscription.cancelled"
+  /** The subscription will end at the period's end (or no longer will): the plan stays until then. */
+  | "subscription.cancel_scheduled"
+  /** A payment went through. Ledger only: the subscription moves on activation or renewal, not on this. */
+  | "payment.succeeded"
+  /**
+   * One charge attempt was declined — at checkout, say. Ledger only: a
+   * subscription falls behind on `payment.failed`, which the provider sends
+   * about the subscription itself.
+   */
+  | "payment.attempt_failed"
+  /** A refund the provider confirmed, or refused. Ledger only. */
+  | "refund.succeeded"
+  | "refund.failed";
 
 export const BILLING_EVENT_TYPES: readonly BillingEventType[] = [
   "subscription.activated",
@@ -33,7 +46,58 @@ export const BILLING_EVENT_TYPES: readonly BillingEventType[] = [
   "payment.failed",
   "payment.recovered",
   "subscription.cancelled",
+  "subscription.cancel_scheduled",
+  "payment.succeeded",
+  "payment.attempt_failed",
+  "refund.succeeded",
+  "refund.failed",
 ];
+
+/** Events that only add to the ledger; `applyBillingEvent` leaves the subscription alone for them. */
+export const LEDGER_ONLY_EVENTS: readonly BillingEventType[] = ["payment.succeeded", "payment.attempt_failed", "refund.succeeded", "refund.failed"];
+
+export type PaymentProviderName = "razorpay" | "stripe";
+export type BillingInterval = "month" | "year";
+export type PaymentStatus = "created" | "requires_action" | "processing" | "succeeded" | "failed" | "cancelled" | "refunded" | "partially_refunded";
+export type PaymentMethodKind = "card" | "upi" | "netbanking" | "wallet" | "emi" | "bank_transfer" | "other";
+
+/** A payment as the provider reported it, in major units. Never a card number, never a secret. */
+export type LedgerPayment = {
+  providerPaymentId: string;
+  orderRef: string | null;
+  amount: number | null;
+  currency: string | null;
+  status: PaymentStatus;
+  /** The provider's own code, never its prose. */
+  failureCode: string | null;
+  method: PaymentMethodKind | null;
+  methodLast4: string | null;
+  paidAt: Date | null;
+};
+
+export type LedgerInvoice = {
+  providerInvoiceId: string;
+  number: string | null;
+  amount: number | null;
+  currency: string | null;
+  status: "paid" | "open" | "void" | "uncollectible";
+  invoiceUrl: string | null;
+  receiptUrl: string | null;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  issuedAt: Date;
+};
+
+export type LedgerRefund = {
+  providerRefundId: string;
+  providerPaymentId: string;
+  amount: number;
+  currency: string;
+  status: "processing" | "succeeded" | "failed";
+};
+
+/** What the subscription costs and how often, as the provider billed it. */
+export type SubscriptionTerms = { interval: BillingInterval | null; currency: string | null; amount: number | null };
 
 /** One thing a provider told us, in WonderHome's words. */
 export type BillingEvent = {
@@ -52,6 +116,14 @@ export type BillingEvent = {
   occurredAt: Date;
   /** Present when the event completes one of our checkout intents. */
   intentId: string | null;
+  /** What the provider reported for the ledger, when the event carries it. */
+  payment?: LedgerPayment | null;
+  invoice?: LedgerInvoice | null;
+  refund?: LedgerRefund | null;
+  /** The subscription's price and interval, when the provider told us. */
+  terms?: SubscriptionTerms | null;
+  /** On `subscription.cancel_scheduled`: whether it now ends at the period's end. */
+  cancelAtPeriodEnd?: boolean;
 };
 
 export type CheckoutRequest = {
@@ -61,12 +133,24 @@ export type CheckoutRequest = {
   planKey: string;
   successUrl: string;
   cancelUrl: string;
+  /**
+   * What the provider calls the price being bought — resolved on the server
+   * from our own catalogue (`payment_provider_plans`), never from the browser.
+   * Absent for a deployment still pricing through configuration.
+   */
+  providerPlanRef?: string | null;
+  interval?: BillingInterval | null;
+  currency?: string | null;
+  /** Who is paying, for the provider's receipt: never required, never guessed. */
+  customerEmail?: string | null;
 };
 
 export type Checkout = { providerSessionId: string; url: string; expiresAt: Date | null };
 
 export type BillingProvider = {
   readonly name: string;
+  /** The currencies this provider can take money in here, as configured. */
+  readonly currencies?: readonly string[];
   /**
    * Whether this is a real processor. A fixture is never shown to a household
    * as a way to pay, so the product cannot imply billing that does not exist.
@@ -82,6 +166,14 @@ export type BillingProvider = {
   createCheckout(request: CheckoutRequest): Promise<Checkout>;
   /** Verifies a webhook delivery and reads it; `null` for an event we do not act on. Throws on a bad signature. */
   readWebhook(rawBody: string, headers: Headers, now?: Date): Promise<BillingEvent | null>;
+  /**
+   * Ends a subscription at the provider — at the period's end unless told
+   * otherwise. The local subscription changes only when the provider's own
+   * event arrives, so a call that "succeeded" is never taken as the outcome.
+   */
+  cancelSubscription?(input: { externalRef: string; atPeriodEnd: boolean }): Promise<void>;
+  /** Asks the provider to refund a payment. Pending until the provider's refund event confirms it. */
+  refundPayment?(input: { providerPaymentId: string; amount: number; currency: string; idempotencyKey: string }): Promise<{ providerRefundId: string }>;
 };
 
 export type SubscriptionState = {
@@ -92,6 +184,12 @@ export type SubscriptionState = {
   externalRef: string | null;
   /** When the last applied billing event happened, so an older one arriving late cannot rewind the state. */
   lastEventAt: Date | null;
+  /** Ends at `currentPeriodEnd`: the plan stays until then. */
+  cancelAtPeriodEnd?: boolean;
+  /** A downgrade that takes effect at `currentPeriodEnd`. */
+  scheduledPlanKey?: string | null;
+  provider?: string | null;
+  terms?: SubscriptionTerms | null;
 };
 
 export type BillingDecision =
@@ -131,6 +229,10 @@ export function applyBillingEvent(current: SubscriptionState | null, event: Bill
 
   const sameSubscription = !base.externalRef || !event.externalRef || base.externalRef === event.externalRef;
 
+  if (LEDGER_ONLY_EVENTS.includes(event.type)) {
+    return { apply: false, reason: "Recorded in the ledger; the subscription is unchanged." };
+  }
+
   switch (event.type) {
     case "subscription.activated": {
       if (!event.planKey) return { apply: false, reason: "An activation that names no plan cannot be applied." };
@@ -144,6 +246,10 @@ export function applyBillingEvent(current: SubscriptionState | null, event: Bill
           currentPeriodEnd: event.periodEnd,
           externalRef: event.externalRef ?? base.externalRef,
           lastEventAt: event.occurredAt,
+          // A fresh subscription starts with no end and no pending change.
+          cancelAtPeriodEnd: false,
+          scheduledPlanKey: null,
+          terms: event.terms ?? null,
         },
       };
     }
@@ -155,10 +261,15 @@ export function applyBillingEvent(current: SubscriptionState | null, event: Bill
         reason: event.type === "payment.recovered" ? "Payment recovered; the plan is active again." : "Renewed.",
         next: {
           ...base,
+          // A renewal may carry the plan the provider moved to at the period's
+          // end — a scheduled downgrade arriving — and then it is the plan.
+          planKey: event.planKey ?? base.planKey,
+          scheduledPlanKey: event.planKey && event.planKey === base.scheduledPlanKey ? null : (base.scheduledPlanKey ?? null),
           status: "active",
           currentPeriodStart: event.periodStart ?? base.currentPeriodStart,
           currentPeriodEnd: event.periodEnd ?? base.currentPeriodEnd,
           lastEventAt: event.occurredAt,
+          terms: event.terms ?? base.terms ?? null,
         },
       };
     }
@@ -182,9 +293,24 @@ export function applyBillingEvent(current: SubscriptionState | null, event: Bill
           currentPeriodEnd: null,
           externalRef: null,
           lastEventAt: event.occurredAt,
+          cancelAtPeriodEnd: false,
+          scheduledPlanKey: null,
+          provider: null,
+          terms: null,
         },
       };
     }
+    case "subscription.cancel_scheduled": {
+      if (!sameSubscription) return { apply: false, reason: "About a different subscription than the one on record." };
+      const ending = event.cancelAtPeriodEnd ?? true;
+      return {
+        apply: true,
+        reason: ending ? "It ends at the end of the period; the plan stays until then." : "No longer ending; the plan continues.",
+        next: { ...base, cancelAtPeriodEnd: ending, currentPeriodEnd: event.periodEnd ?? base.currentPeriodEnd, lastEventAt: event.occurredAt },
+      };
+    }
+    default:
+      return { apply: false, reason: "Recorded in the ledger; the subscription is unchanged." };
   }
 }
 

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**213 of 219 stories done — 97.3%**
+**214 of 222 stories done — 96.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 213 |
+| Done | 214 |
 | In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 2 |
+| Not Started | 4 |
 
 ## By module
 
@@ -44,7 +44,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 17 External Integrations | `██████████` | 8 | 8 | — |
 | 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
-| 20 Subscriptions, Entitlements & Usage | `██████████` | 8 | 8 | — |
+| 20 Subscriptions, Entitlements & Usage | `████████░░` | 9 | 11 | 2 not started |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `█████░░░░░` | 4 | 8 | 3 in progress, 1 not started |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
@@ -55,6 +55,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
+| `20-010` Plan, checkout and billing screens | 20 Subscriptions, Entitlements & Usage | P1 | Not Started |
+| `20-011` Payment operations | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
 | `22-006` Localized notifications | 22 Internationalization and Localization | P0 | Not Started |
 | `22-007` Multi-currency household records | 22 Internationalization and Localization | P1 | In Progress |
@@ -387,7 +389,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 20 — Subscriptions, Entitlements & Usage
 
-8 of 8 done `██████████`
+9 of 11 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -399,6 +401,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `20-006` Billing abstraction | P1 | Done | Provider-neutral `BillingProvider` port + pure `applyBillingEvent` (out-of-order and other-subscription events ignored, cancellation falls back to free, never deletes); Stripe adapter code-complete and inert (intent id as Idempotency-Key, HMAC-verified webhooks); `billing_intents` (one open per household+plan) and `billing_events` (unique per provider event) with RLS; `plans.requires_payment` keeps paid plans out of reach of any household session |
 | `20-007` Quota automation | P2 | Done | Burst (N per fixed W-second window) and fair-use (past N in the period, served more simply, never refused) as plan data on `plan_features`, enforced in the one entitlement service (`consume`); HomeTalk answers from the rules past fair use, with a disclosure, and refuses a burst as temporary; staff set policies through `PATCH /platform-admin/plans/{planKey}/policies` (`subscription.manage`, reason code), every change kept in `plan_policy_events` |
 | `20-008` Plan experiments | P2 | Done | `entitlement_experiments`: one feature changed (on, off, or a different allowance) for a stable hashed share of the households on named plans, applied inside `loadSubscription` so `may`/`consume` and every screen agree and a direct API call cannot bypass it; terms frozen once running and draft → running → stopped only (database trigger); a household reads only a running experiment's terms (column grants), never staff's description; staff create/start/stop through `/platform-admin/experiments` (`subscription.manage`, reason code, `entitlement_experiment_events`) and read per-group household counts and usage — counts only; Settings tells a household plainly when a feature is part of a trial |
+| `20-009` Multi-provider payments backend | P1 | Done | Razorpay (India) and Stripe (international) behind the one `BillingProvider` port, chosen per checkout by `selectPaymentProvider` (INR or an Indian household → the India provider, anything else → the international one, a preference honoured only where eligible, both defaults deployment config); our own price catalogue in major units (`plan_prices`, readable when active) mapped server-side to provider plans (`payment_provider_plans`, service role only); a ledger of what providers report (`payments` forward-only, `billing_invoices`, `payment_refunds` pending until the provider confirms, `payment_customers`), Admin-read and server-written; the subscription learns provider, interval, currency, amount, cancel-at-period-end and a scheduled downgrade; per-provider webhooks at `/api/v1/billing/webhook/{provider}`, HMAC-verified and applied once; a refund's household comes from our ledger, never the payload. Inert until a person prices the plans and sets a provider's keys |
+| `20-010` Plan, checkout and billing screens | P1 | Not Started | Choose plan (monthly/yearly), checkout with region and provider, success, subscription overview, upgrade/downgrade, payment methods, billing history and invoice detail — waits on a person's pricing decision |
+| `20-011` Payment operations | P2 | Not Started | Payment notifications, platform-admin payment monitoring, staff refunds and provider reconciliation |
 
 ### 21 — Health and Fitness
 

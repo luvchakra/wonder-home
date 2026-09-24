@@ -1603,7 +1603,7 @@ export function buildOpenApiDocument(): Json {
         post: {
           summary: "Change the household's plan",
           description:
-            "An administrator's action. Only ever writes the row saying which plan the household is on: a plan change never touches a household's own records, not to tidy them and not to bring them under a new limit. A change that takes a capability away must carry back what the person was shown, which is re-derived and compared — a browser that skipped the preview cannot skip the consequence, and a change that moved while somebody read it is refused. Audited as subscription.changed.",
+            "An administrator's action. Only ever writes the row saying which plan the household is on: a plan change never touches a household's own records, not to tidy them and not to bring them under a new limit. A change that takes a capability away must carry back what the person was shown, which is re-derived and compared — a browser that skipped the preview cannot skip the consequence, and a change that moved while somebody read it is refused. Audited as subscription.changed. A plan that needs a payment returns a checkout instead, and the plan changes only when the provider's verified webhook says it was paid. With `priceId` (one of our catalogue's prices, story 20-009) the price is checked against the plan on the server, the provider is chosen by the router among the live providers that have it mapped — `preferredProvider` honoured only where eligible — and the amount is never taken from the browser.",
           responses: {
             "200": { description: "The new plan and what the change did" },
             "400": { $ref: "#/components/responses/BadRequest" },
@@ -1694,11 +1694,24 @@ export function buildOpenApiDocument(): Json {
       },
       "/billing/webhook": {
         post: {
-          summary: "Billing provider webhook (story 20-006)",
+          summary: "Stripe webhook at its original address (story 20-006)",
           description:
-            "The configured billing provider's webhook, not a household session: believed only after its signature verifies over the raw body (Stripe: HMAC-SHA256, five-minute tolerance). Each provider event is recorded once by its own id, and only `applyBillingEvent` moves a subscription — never a household's records. 404 when no billing provider is configured. Live only once WONDERHOME_BILLING_PROVIDER, the provider's secret and webhook secret, and a price per sold plan are set.",
+            "Stripe's webhook, kept at the address story 20-006 registered; identical to /billing/webhook/stripe. Believed only after its signature verifies over the raw body (HMAC-SHA256, five-minute tolerance). 401 when Stripe is not configured, the same as a bad signature.",
           responses: {
             "200": { description: "Acknowledged — applied, a duplicate delivery, or an event this endpoint does not act on" },
+            "400": { description: "A verified body that could not be read; nothing changed" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+      },
+      "/billing/webhook/{provider}": {
+        post: {
+          summary: "Payment provider webhook (stories 20-006, 20-009)",
+          description:
+            "One payment provider's webhook — razorpay or stripe — not a household session: believed only after that provider's signature verifies over the raw body (Razorpay: X-Razorpay-Signature, HMAC-SHA256 of the body; Stripe: Stripe-Signature, HMAC-SHA256, five-minute tolerance). Each provider event is recorded once by its own id; payments, invoices and refunds go to the ledger once per provider id, a payment's status only ever moving forward; only `applyBillingEvent` moves a subscription, never a household's records. A refund is tied to its household through the ledger's own payment, never through the payload. 401 when that provider is not configured, the same as a bad signature. Live only once the provider is listed in WONDERHOME_BILLING_PROVIDERS, its keys and webhook secret are set, and a person has mapped our prices to its plans.",
+          parameters: [{ name: "provider", in: "path", required: true, schema: { type: "string", enum: ["razorpay", "stripe"] } }],
+          responses: {
+            "200": { description: "Acknowledged — applied, recorded in the ledger, a duplicate delivery, or an event this endpoint does not act on" },
             "400": { description: "A verified body that could not be read; nothing changed" },
             "401": { $ref: "#/components/responses/Unauthenticated" },
           },

@@ -4,7 +4,9 @@ import { requireUser } from "@wonderhome/core/api/auth";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { featureSummary } from "@wonderhome/core/billing/entitlements";
 import { describePlanChange, needsConfirmation } from "@wonderhome/core/billing/plan-change";
-import { billingProviderFromEnv, startCheckout } from "@wonderhome/core/billing/checkout";
+import { billingProviderFromEnv, startCheckout, startPricedCheckout } from "@wonderhome/core/billing/checkout";
+import { purchasablePriceIds } from "@wonderhome/core/billing/prices";
+import { billingProvidersFromEnv } from "@wonderhome/core/billing/router";
 import {
   changePlan,
   listPlans,
@@ -50,6 +52,12 @@ export async function GET(request: Request, { params }: Params) {
     const assessment = await previewPlanChange(supabase, householdId, to);
     const provider = billingProviderFromEnv();
     const requiresPayment = plans.find((plan) => plan.key === to)?.requiresPayment ?? false;
+    // Sold through a checkout either by configuration (story 20-006) or by a
+    // catalogue price some live provider has mapped (story 20-009).
+    const catalogue = requiresPayment
+      ? await purchasablePriceIds(createAdminClient(), to, billingProvidersFromEnv().map((live) => live.name)).catch(() => new Set<string>())
+      : new Set<string>();
+    const sold = Boolean(provider?.live && provider.sells(to)) || catalogue.size > 0;
     return {
       current: featureSummary(current),
       plans,
@@ -60,8 +68,9 @@ export async function GET(request: Request, { params }: Params) {
         // Whether confirming goes to a payment page (story 20-006). Only ever
         // true when a real provider sells this plan: a checkout that goes
         // nowhere is never offered.
-        checkout: requiresPayment && Boolean(provider?.live && provider.sells(to)),
-        unavailable: requiresPayment && !(provider?.live && provider.sells(to)),
+        checkout: requiresPayment && sold,
+        unavailable: requiresPayment && !sold,
+        purchasablePriceIds: [...catalogue],
       },
     };
   })(request);
@@ -74,6 +83,14 @@ const changeSchema = z.object({
    * browser that skipped the preview cannot skip the consequence.
    */
   acknowledged: z.object({ stopping: z.number().int().min(0), exceeded: z.number().int().min(0) }).optional(),
+  /**
+   * Which of our catalogue prices to pay (story 20-009) — a choice, checked on
+   * the server against the plan and the catalogue. The browser never names a
+   * provider's price, only ours, and never an amount.
+   */
+  priceId: z.uuid().optional(),
+  /** A payment method preference, honoured only where that provider is eligible. */
+  preferredProvider: z.enum(["razorpay", "stripe"]).optional(),
 });
 
 export async function POST(request: Request, { params }: Params) {
@@ -86,6 +103,20 @@ export async function POST(request: Request, { params }: Params) {
     // A paid plan goes through a checkout, and the plan changes only once
     // the provider's verified webhook says it was paid (story 20-006).
     if (await planRequiresPayment(supabase, body.toPlanKey)) {
+      if (body.priceId) {
+        const user = await requireUser();
+        const checkout = await startPricedCheckout(supabase, createAdminClient(), {
+          householdId,
+          memberId: membership.memberId,
+          toPlanKey: body.toPlanKey,
+          priceId: body.priceId,
+          preferredProvider: body.preferredProvider ?? null,
+          country: membership.locale?.household.region ?? null,
+          returnUrl: new URL("/settings/plan", request.url).toString(),
+          customerEmail: user.email ?? null,
+        });
+        return { checkout: { url: checkout.url, reused: checkout.reused, provider: checkout.provider } };
+      }
       const provider = billingProviderFromEnv();
       if (!provider?.live || !provider.sells(body.toPlanKey)) {
         throw ApiError.conflict("This plan can't be bought here yet. Nothing has changed.");
