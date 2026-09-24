@@ -40,6 +40,13 @@ export type CreateInvitationInput = {
   displayName: string;
   memberType: MemberType & ("adult" | "helper");
   role: Extract<HouseholdRole, "administrator" | "adult" | "helper">;
+  /**
+   * The member this invitation is for, when they were already added without a
+   * login (story 02-009). Accepting links the new account to that member. The
+   * database only honours it for an unlinked, active member of this same
+   * household; anything else joins as a new member, as before.
+   */
+  memberId?: string | null;
 };
 
 export type CreatedInvitation = {
@@ -76,6 +83,7 @@ export async function createInvitation(
       display_name: input.displayName,
       member_type: input.memberType,
       role: input.role,
+      member_id: input.memberId ?? null,
       token_hash: tokenHash,
       expires_at: expiresAt,
     })

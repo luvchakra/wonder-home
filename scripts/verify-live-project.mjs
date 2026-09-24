@@ -29,6 +29,8 @@ const SHIPPED_TABLES = [
   "entitlement_experiment_events",
   "backup_services",
   "home_device_links",
+  "household_onboarding",
+  "onboarding_events",
   "profiles",
   "households",
   "household_members",
@@ -650,6 +652,23 @@ async function main() {
   );
   const anonRevoke = await anon.rpc("revoke_voice_identity", { p_identity_id: "00000000-0000-4000-8000-000000000000" });
   check("anonymous cannot revoke a voice link", anonRevoke.error?.code === "42501", anonRevoke.error?.code ?? "no error");
+
+  const anonSetup = await anon.from("household_onboarding").select("household_id").limit(1);
+  check(
+    "anonymous cannot read household setup",
+    Boolean(anonSetup.error) || (Array.isArray(anonSetup.data) && anonSetup.data.length === 0),
+    anonSetup.error ? anonSetup.error.code : `${anonSetup.data?.length ?? "?"} rows`,
+  );
+  const anonSetupEvents = await anon.from("onboarding_events").select("id").limit(1);
+  check(
+    "anonymous cannot read setup events",
+    Boolean(anonSetupEvents.error) || (Array.isArray(anonSetupEvents.data) && anonSetupEvents.data.length === 0),
+    anonSetupEvents.error ? anonSetupEvents.error.code : `${anonSetupEvents.data?.length ?? "?"} rows`,
+  );
+  const workColumn = await admin.from("household_members").select("work_arrangement, age_years, age_recorded_on").limit(1);
+  check("household members carry work and stated age", !workColumn.error, workColumn.error?.code ?? "ok");
+  const claimColumn = await admin.from("household_invitations").select("member_id").limit(1);
+  check("an invitation can name the member it claims", !claimColumn.error, claimColumn.error?.code ?? "ok");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

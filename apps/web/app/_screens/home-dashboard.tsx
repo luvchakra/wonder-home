@@ -13,6 +13,8 @@ import Link from "next/link";
 
 import { listEvents } from "@wonderhome/core/family/repository";
 import { describeAction, type FamilyEvent } from "@wonderhome/core/family/schedule";
+import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
+import { loadOnboarding, loadOnboardingSnapshot } from "@wonderhome/core/household/onboarding-repository";
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
@@ -37,6 +39,8 @@ import { Badge, PillLink, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
+
+import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
@@ -292,11 +296,13 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
   const todayIso = now.toISOString().slice(0, 10);
 
-  const [agenda, members, upcoming, setupFacts, responsibilityRows] = await Promise.all([
+  const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows] = await Promise.all([
     householdAgenda(supabase, householdId, view),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
     manages ? loadSetupFacts(supabase, membership.household).catch(() => null) : Promise.resolve(null),
+    // Guided setup still under way (story 02-009): its own resume row.
+    manages ? loadOnboardingProgress(supabase, membership.household).catch(() => null) : Promise.resolve(null),
     // The same join the Responsibilities and Househelper screens read, so
     // "3 responsibilities" here means the same three rows those screens show.
     (async (): Promise<ResponsibilityJoinRow[]> => {
@@ -498,7 +504,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       {/* One row with a chevron, whether it is somebody's first week or not:
           Home is where the household looks for what needs them today, and
           setup is a thing to go and finish rather than a block to read. */}
-      {setup && !setup.complete ? <SetupProgressCard assessment={setup} variant="compact" /> : null}
+      {onboarding ? <OnboardingResumeCard summary={onboarding} /> : setup && !setup.complete ? <SetupProgressCard assessment={setup} variant="compact" /> : null}
 
       {/* Four counts, two to a row on a phone (rule 19), each opening in
           place onto its real entries (rule 21) instead of only linking away. */}
@@ -802,3 +808,13 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   );
 }
 
+/** Guided setup's progress, while it is still under way — nothing once it is finished or never begun. */
+async function loadOnboardingProgress(
+  supabase: Session["supabase"],
+  household: { id: string; ownerMemberId: string | null },
+): Promise<OnboardingSummary | null> {
+  const state = await loadOnboarding(supabase, household.id);
+  if (!state || state.status === "completed") return null;
+  const snapshot = await loadOnboardingSnapshot(supabase, household, state);
+  return onboardingSummary(snapshot.facts);
+}

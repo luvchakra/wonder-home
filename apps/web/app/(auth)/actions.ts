@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { createClient } from "@wonderhome/core/db/server";
+import { recordOnboardingEvent, startOnboarding } from "@wonderhome/core/household/onboarding-repository";
 import { createHousehold } from "@wonderhome/core/identity/households";
 import { createHouseholdSchema } from "@wonderhome/core/identity/schemas";
 import { signOut as sharedSignOut } from "@wonderhome/core/identity/session-actions";
@@ -230,14 +231,24 @@ export async function createHouseholdAction(
   }
 
   const supabase = await createClient();
+  let created: { householdId: string; memberId: string };
   try {
-    await createHousehold(supabase, parsed.data);
+    created = await createHousehold(supabase, parsed.data);
   } catch (error) {
     log.error("household creation failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "We could not create the household. Please try again." };
   }
 
-  redirect("/");
+  // Straight into guided setup (story 02-009). If starting it fails, the
+  // household still exists and setup starts itself on the first press.
+  try {
+    await startOnboarding(supabase, created);
+    await recordOnboardingEvent(supabase, { householdId: created.householdId, event: "onboarding_started", step: "welcome" });
+  } catch (error) {
+    log.warn("onboarding not started", { reason: error instanceof Error ? error.name : "unknown" });
+  }
+
+  redirect("/onboarding");
 }
 
 /** Only same-site paths are honoured, so ?next= cannot become an open redirect. */

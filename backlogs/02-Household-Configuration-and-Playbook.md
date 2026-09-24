@@ -12,6 +12,7 @@
 | 6 | P0 | 02-006 | Configure by conversation | Done | Deterministic grammar → previewed proposal → the same validated, audited write |
 | 7 | P1 | 02-007 | Conflict detection | Done | `detectConflicts` over the household's current responsibilities and active members; orphaned owner/backup, a backup who is the owner, a child now on an adult-only outcome — each names the outcome, the member(s) and one resolution |
 | 8 | P2 | 02-008 | Advanced rule builder | Done | A policy can carry one condition (member type, or an hour window) narrowing it to a specific case; `selectApplicablePolicy` picks the most specific match, falling back to the household's unconditional default |
+| 9 | P0 | 02-009 | Intelligent household onboarding | Done | Twelve resumable screens at `/onboarding` (welcome → counts → overview → adults → children → pets & help → suggested responsibilities → per-category review → readiness summary → one-question-at-a-time guided setup → "Your home is ready"). A deterministic template engine (`household/onboarding.ts`) suggests owners from ages, work arrangements and helper roles, never from gender or relationship; suggestions are computed, never stored, and only accepting one writes a responsibility through `saveResponsibility`; readiness is weighted arithmetic over what is really set up. `household_onboarding`/`onboarding_events` (migration `20260928090000`, applied live), stated ages and work arrangements on members, an invitation that claims an adult named during setup, a Home resume card, and every new fact in HomeBrain's context |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -20,7 +21,7 @@ Implement Household Configuration & Playbook as a first-class WonderHome domain.
 
 ## Epic Map
 
-- **Epic 02-E01 — Household Setup & Operating Model:** stories 02-001 through 02-003.
+- **Epic 02-E01 — Household Setup & Operating Model:** stories 02-001 through 02-003, and 02-009.
 - **Epic 02-E04 — Policies, Autonomy & Conversational Configuration:** stories 02-004 through 02-006.
 - **Epic 02-E07 — Consistency & Advanced Rules:** stories 02-007 through 02-008.
 
@@ -205,6 +206,29 @@ protected time .
 - Policies are versioned and evaluated server-side so a UI or LLM cannot bypass a spending, privacy, notification or approval rule.
 - Household Playbook entries define an outcome, operating window, dependencies and escalation behavior sufficiently for automated planning.
 - Configuration changes show the affected downstream behaviors and create an auditable version/change record.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 02-009 — Intelligent household onboarding
+**Epic:** Household Setup & Operating Model
+**Priority:** P0
+**Goal:** Take a new household from "nothing on record" to a working operating model in minutes — people, pets, help, and who owns what — without asking it to design anything from scratch (source: `Intelligent_Household_Onboarding_Requirements.md` and the 12-screen onboarding sheet).
+
+**Acceptance criteria**
+- Progressive and resumable: every screen saves as it goes, "I'll do this later" is available throughout, and Home shows how far setup got and the one next thing, returning to where the household left off.
+- A deterministic template engine suggests responsibilities from the household's real composition — ages, work arrangements, helper roles, pets — and never assumes anything from gender or relationship; suggestions move Suggested → Confirmed only when a person keeps them.
+- Suggestions never count as configured: readiness is weighted arithmetic over real records, with configurable weights.
+- Guided setup asks one question at a time, never repeats a question whose answer is on record, and anything else goes through HomeTalk, the one door.
+- Idempotent: people and pets are matched by name, responsibilities are upserts on their outcome key; a retry or a double tap never duplicates anything.
+- Every write goes through the domain's own validated, audited function under the Admin's own RLS session; nothing bypasses authorization or governance.
+- Closed-word analytics events for every step of setup; no names or answers are stored in them.
+- What setup records (schools, ages, work arrangements) reaches HomeBrain's grounded context.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

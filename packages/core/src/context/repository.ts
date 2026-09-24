@@ -15,6 +15,7 @@ import type { HomeSendChange } from "../homesend/items";
 import { listHomeSendItems } from "../homesend/repository";
 import { listResponsibilities } from "../household/configuration-repository";
 import { listChildren } from "../identity/children";
+import { listEnrolments } from "../school/enrolments";
 import { listMembers } from "../identity/households";
 import { listIntegrations } from "../integrations/repository";
 import { listMeals } from "../meals/repository";
@@ -80,12 +81,14 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
     label: "who is in the household",
     permitted: anyone,
     read: async (supabase, scope) => {
-      const [members, children] = await Promise.all([
+      const [members, children, enrolments] = await Promise.all([
         listMembers(supabase, scope.householdId, null),
         listChildren(supabase, scope.householdId, scope.now).catch(() => []),
+        listEnrolments(supabase, scope.householdId).catch(() => []),
       ]);
       return {
         members,
+        enrolments,
         guardianOf: children.filter((child) => child.guardianMemberIds.includes(scope.viewer.memberId)).map((child) => child.memberId),
       };
     },
