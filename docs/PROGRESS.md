@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**217 of 225 stories done — 96.4%**
+**218 of 225 stories done — 96.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 217 |
+| Done | 218 |
 | In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 4 |
+| Not Started | 3 |
 
 ## By module
 
@@ -38,7 +38,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `█████████░` | 18 | 19 | 1 not started |
+| 14 AI Orchestration & Learning | `██████████` | 19 | 19 | — |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -54,7 +54,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `14-019` Deep document understanding — HomeTalk attachments & certification | 14 AI Orchestration & Learning | P0 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `20-011` Payment operations | 20 Subscriptions, Entitlements & Usage | P2 | Not Started |
 | `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
@@ -291,7 +290,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-18 of 19 done `█████████░`
+19 of 19 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -313,7 +312,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-016` WhatsApp into HomeSend — in the app | P0 | Done | The mockup flow: connect WhatsApp (intro, save the number and send CONNECT, confirmation), another adult connecting, WhatsApp status beside members in Manage Household, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and provenance on each item, and connection management in Settings |
 | `14-017` Deep document understanding — whole-document reader & change plan | P0 | Done | Spec: `design/HOMESEND-DEEP-DOCUMENT-UNDERSTANDING-2.0.md` (mockup `design/HomeSend-Deep-Document-Understanding-Mockup.png`), phases A–C. The classifier reads the whole document into every household-relevant record across its pages (`records[]`: each event, each date of a series, each fee, each thing to buy), each with page, section and quote as evidence, plus pages read/unreadable and the day the document is dated (`issuedOn`). Deterministic backstop per record (no ids, no field a domain does not own); each record's day and time grounded by WonderHome, never the model. `homesend/document.ts` keeps the reading on the understanding (older readings derive records from the headline and needs); `homesend/plan.ts` reconciles every record on its own — create / update (field by field, before → after) / cancel / no change / conflict (a newer record wins, §28) / needs your answer (one question, §29) — with a series of dates read as occurrences, one record on file answering for one thing, a same-amount-same-day bill recognised, and school/class enrichment from the household's records marked as such (§30). Matcher fixes: a part of an occasion (rehearsal, fee, registration) is never the occasion; equal matches ordered by name. Golden scenarios 1–3 (§46–48) are permanent tests |
 | `14-018` Deep document understanding — review, apply and receipt | P0 | Done | Phases D–E. A document with two or more records is reviewed as its plan in HomeSend and in the HomeTalk paperclip sheet (`_components/home-send-plan.tsx`): Found N items, grouped Updates / New / Already on record / Conflicts / Needs your answer, each row opening to its fields, before → after, household-record enrichment and source page, with per-record include, edit and "who is it for"; "Review and apply (N)". `applyDocumentPlanAction` rebuilds the plan on the server from the stored reading (the browser sends only choices), writes each included record through its domain service (writes moved to the server-only `home-send-writes.ts`), verifies updates by reading them back, records each change with its plan key, field-level before/after and evidence (migration `20261005090000_homesend_document_plan_receipt.sql`, applied live), and keeps the exact plan and receipt on the item. `homesend/apply.ts` makes the receipt: created / updated / cancelled / unchanged / skipped / needs_clarification / failed, partial never reported as done, "Nothing new found. No records changed." as a success; a second apply returns the stored receipt. "Undo all" reverses every change of a document; history names each change. A document with a plan never applies on its own |
-| `14-019` Deep document understanding — HomeTalk attachments & certification | P0 | Not Started | Phases F–G: a HomeTalk attachment goes through the same plan and shows it in the conversation ("I read the 6-page school notice…"), the receipt posted back, "what did the school notice change?" answered from stored changes, golden scenario 4 (same file through HomeTalk), eval cases and observability counts |
+| `14-019` Deep document understanding — HomeTalk attachments & certification | P0 | Done | Phases F–G. The paperclip in HomeTalk opens the same HomeSend sheet, pipeline, plan and apply — no second parser — and once a plan is applied HomeTalk posts what it did into the conversation from the stored receipt (`documentReceipt` turn, `homesend/talk.ts` `documentReplyText`: "I read the 2-page school notice and found 7 things… Done. Updated: • Annual Day — 12 Oct → 15 Oct …"). "What did the school notice change?" is answered by rules from the receipt and the change rows (`readDocumentChangeQuestion` / `answerDocumentChanges`), never from the model's reading: undone changes are said to be undone, and a question no applied document fits goes on to HomeBrain; not over a voice link, whose content limits the HomeBrain path applies. Golden scenario 4 (same reading → same plan whichever door) in `talk.test.ts`; eval HS-16 (a part of an occasion is not the occasion, 50/50); §50 counts in HomeSend metrics (`documents`: applied, outcomes, changes standing, correct household changes per document). A receipt with a question still open says so ("1 change applied, 1 waiting on your answer") |
 
 ### 15 — Privacy, Security & Governance
 

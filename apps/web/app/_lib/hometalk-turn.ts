@@ -55,7 +55,9 @@ import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
-import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
+import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
+import { getHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
+import { answerDocumentChanges, documentReplyClasses, documentReplyText, readDocumentChangeQuestion } from "@wonderhome/core/homesend/talk";
 import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
 import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
@@ -104,7 +106,15 @@ const summarizeScheme = z.object({
   summarizeSince: z.uuid(),
 });
 
-export const bodySchema = z.union([sayScheme, decideScheme, summarizeScheme]);
+/**
+ * A document applied from HomeTalk's paperclip (DDU 2.0 §31–33): post what
+ * it actually did into the conversation, from its stored receipt.
+ */
+const documentScheme = z.object({
+  documentReceipt: z.uuid(),
+});
+
+export const bodySchema = z.union([sayScheme, decideScheme, summarizeScheme, documentScheme]);
 
 export type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -232,6 +242,20 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     return { reply: { id: messageId, text, action: null } };
   }
 
+  if ("documentReceipt" in body) {
+    const entitlement = await may(supabase, householdId, "conversation.text");
+    if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
+    // Read through the member's own client: a document another household
+    // sent is simply not found.
+    const item = await getHomeSendItem(supabase, householdId, body.documentReceipt);
+    const text = item ? documentReplyText(item) : null;
+    if (!item || !text) throw ApiError.notFound("That document has not been applied yet.");
+    carry(speaking, documentReplyClasses(item.receipt));
+    const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: "text" });
+    const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { kind: "homesend_receipt", homesendIntakeId: item.id, mode: "answer" } });
+    return { reply: { id: messageId, text, action: null } };
+  }
+
   // Entitlement first, on the server, before anything is read or written.
   const feature = body.channel === "voice" ? "conversation.voice" : "conversation.text";
   // Spent here, atomically, rather than checked here and spent later: the
@@ -296,6 +320,28 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     transcriptConfidence: body.transcriptConfidence,
     metadata: { channel: body.channel },
   });
+
+  // "What did the school notice change?" (DDU 2.0 §33) is answered from what
+  // the document actually did — its receipt and the change rows undo reads —
+  // never from what a model read in it. Anything the rules do not place as
+  // such a question goes on as any other turn.
+  // Not over a voice link: what an external assistant may hear is narrowed
+  // by the HomeBrain path, which such a turn takes instead.
+  const documentQuestion = !limits && !readCorrection(body.utterance) ? readDocumentChangeQuestion(body.utterance) : null;
+  if (documentQuestion) {
+    const [items, changes] = await Promise.all([
+      listHomeSendItems(supabase, householdId, { limit: 50 }).catch(() => []),
+      listHomeSendChanges(supabase, householdId).catch(() => []),
+    ]);
+    const answer = answerDocumentChanges(items, changes, documentQuestion.about);
+    if (answer) {
+      const { text } = answer;
+      carry(speaking, documentReplyClasses(answer.receipt));
+      const memberMessageId = await memberMessageWrite;
+      const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { kind: "homesend_changes", mode: "answer", provider: routing.code } });
+      return { sessionId, memberMessageId, reply: { id, text, action: null, preview: null, proposal: "answer", mode: "answer" as BrainMode }, privacy: { provider: routing.code, disclosure: routing.disclosure } };
+    }
+  }
 
   // A plain question about the home, or a hello, is read by the rules with
   // certainty; asking a model to confirm it is a round trip that changes

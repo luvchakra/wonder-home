@@ -109,6 +109,12 @@ describe("applying a plan", () => {
     expect(receipt.changes[0]?.error).toMatch(/could not be recorded for undo/);
   });
 
+  it("done with a question still open says so — never folded into 'all done'", async () => {
+    const receipt = await applyDocumentPlan(plan([entry("r1", "create"), entry("r2", "needs_answer", { question: { text: "Who is it for?", options: [] } })]), new Set(["r1"]), writer(), { intakeId: "intake" });
+    expect(receipt.status).toBe("completed");
+    expect(receiptHeadline(receipt)).toBe("1 change applied, 1 waiting on your answer");
+  });
+
   it("nothing new is a successful outcome in its own words (§27, §42)", async () => {
     const receipt = await applyDocumentPlan(plan([entry("r1", "no_change")]), new Set(), writer(), { intakeId: "intake" });
     expect(receipt.status).toBe("no_change");

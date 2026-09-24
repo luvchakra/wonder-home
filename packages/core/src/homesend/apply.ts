@@ -165,7 +165,15 @@ export function receiptText(receipt: IntakeChangeReceipt): string {
     if (!heading || matching.length === 0) continue;
     lines.push("", `${heading}:`);
     for (const change of matching) {
-      const detail = action === "updated" ? ` — ${change.fields.map((field) => `${field.before ?? "—"} → ${field.after}`).join(", ")}` : action === "failed" && change.error ? ` — ${change.error}` : "";
+      // Who and when, so two rehearsals on different days read as two.
+      const detail =
+        action === "updated"
+          ? ` — ${change.fields.map((field) => `${field.before ?? "—"} → ${field.after}`).join(", ")}`
+          : action === "failed" && change.error
+            ? ` — ${change.error}`
+            : action === "created" && change.reason !== "Added."
+              ? ` — ${change.reason}`
+              : "";
       lines.push(`• ${change.title}${detail}`);
     }
   }
@@ -185,7 +193,10 @@ export function receiptHeadline(receipt: IntakeChangeReceipt): string {
       return `${written} applied, ${receipt.counts.failed} could not be`;
     case "needs_review":
       return "Waiting on your answer";
-    default:
-      return written === 1 ? "1 change applied" : `${written} changes applied`;
+    default: {
+      const applied = written === 1 ? "1 change applied" : `${written} changes applied`;
+      // Done, but not everything: a question left unanswered is said, never folded into "all done".
+      return receipt.counts.needs_clarification > 0 ? `${applied}, ${receipt.counts.needs_clarification} waiting on your answer` : applied;
+    }
   }
 }

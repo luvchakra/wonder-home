@@ -36,6 +36,7 @@ export function HomeSendSheet({
   open,
   onOpenChange,
   canAddChild = false,
+  onDocumentApplied,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
@@ -43,6 +44,8 @@ export function HomeSendSheet({
   canAddChild?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Told once a document's plan was applied here, so HomeTalk can say what it did (DDU 2.0 §32). */
+  onDocumentApplied?: (itemId: string) => void;
 }) {
   const [mode, setMode] = useState<"choose" | "upload" | "paste">("choose");
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});
@@ -199,7 +202,10 @@ export function HomeSendSheet({
             subject={item.subject ?? null}
             confirmation={item.confirmation ?? null}
             plan={item.plan ?? null}
-            onApplied={() => setPlanApplied(true)}
+            onApplied={() => {
+              setPlanApplied(true);
+              onDocumentApplied?.(item.id);
+            }}
             onDone={() => {
               setLatest({});
               setMode("choose");

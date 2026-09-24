@@ -266,6 +266,29 @@ export function Assistant({
     [firstName],
   );
 
+  /**
+   * A document applied from the paperclip (DDU 2.0 §32): HomeTalk says what
+   * it actually did, from the stored receipt — the same pipeline and writes
+   * HomeSend's own screen uses, only told in the conversation.
+   */
+  const postDocumentReceipt = useCallback(
+    async (itemId: string) => {
+      try {
+        const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "idempotency-key": `document-${itemId}` },
+          body: JSON.stringify({ documentReceipt: itemId }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error?.message ?? "Could not say what that document did.");
+        setMessages((current) => (current.some((message) => message.id === payload.reply.id) ? current : current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() })));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Could not say what that document did.");
+      }
+    },
+    [householdId],
+  );
+
   /** Ends a live session: fetches the recap for everything said since it began, and posts it as a message. */
   const endLiveSession = useCallback(async () => {
     const startId = liveStartMessageId.current;
@@ -539,7 +562,7 @@ export function Assistant({
         </p>
       </div>
 
-      <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} />
+      <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} onDocumentApplied={postDocumentReceipt} />
     </div>
   );
 }

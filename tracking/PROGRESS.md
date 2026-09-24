@@ -5,13 +5,13 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 225 |
-| Done | 217 |
+| Done | 218 |
 | In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 3 |
-| Completion | 96.4% |
+| Not Started | 2 |
+| Completion | 96.9% |
 | Current module | 14 AI Orchestration (Deep Document Understanding 2.0) |
-| Current story | 14-018 review, apply and receipt done; 14-019 HomeTalk attachments & certification next |
+| Current story | Deep Document Understanding 2.0 (14-017..019) complete; next: payments P3 (20-011) or i18n 22-006/22-008 |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -38,7 +38,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 18 | In Progress |
+| 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 19 | Done |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -251,3 +251,4 @@ disagree again.)
 | 2026-09-24 | 20 | 20-010 | Done | billing 122 unit (account: prices from the catalogue, yearly arithmetic, early access, money in words, closed payment words); payments database suite 11 (the catalogue ships with the decided prices, nothing paid for yet); tenant isolation, entitlements; security gate 12/12; verify:live 213/213; browser QA at 360px and 1280px with a QA household: early-access plans with monthly/yearly prices, a free switch to Pro, a seeded Razorpay-paid state (renewal date, billing history, invoice detail, cancel refused honestly with no live provider), landing pricing | Plan, checkout and billing screens. Prices seeded live (`20261004090000_plan_prices_inr.sql`); no plan requires payment yet, so switching is free during early access. Checkout, confirmation, billing history, invoice detail and cancel-at-period-end are built and go live the moment a provider is configured and the plans are marked paid |
 | 2026-09-24 | 14 | 14-017 | Done | plan 26 unit (golden scenarios 1–3 of the spec, cancel, field-level bill update, next month's bill as a new occurrence, no-op, the per-record backstop, record date grounding, page report); core suite 2871 green; eval 49/49 with 0/14 unsafe | Deep Document Understanding 2.0, phases A–C: whole-document reading into records with page evidence, pages read, the document's own date; the change plan reconciles each record on its own (create / field-level update / cancel / no change / conflict / one question). Matcher: an occasion's part (rehearsal, fee) is never the occasion. Review, apply and receipt are 14-018; HomeTalk and certification 14-019 |
 | 2026-09-24 | 14 | 14-018 | Done | apply 8 unit (writes once and records each, skipped, never-written outcomes, partial failure, plain refusals, unrecorded write, no-op, receipt text) + plan 27; typecheck/lint; verify:live 218/218 (including the five new column probes); browser QA at 360px and 1280px on a seeded QA household (golden scenario 1 + an unassigned Maths assessment): plan grouped 1 / 2 / 3 / 1, answer "Manan", apply 4, receipt "All done!", database checked (Annual Day 12 → 15 Oct, three new school items, field history and page on each change), newer-record conflict after a later edit, Undo all 3 restored | Deep Document Understanding 2.0 phases D–E: grouped review, per-record include/edit/answer, server-rebuilt plan applied through the domain services with verification, field-level change history, the exact receipt with partial failure and no-op, Undo all. Migration `20261005090000_homesend_document_plan_receipt.sql` applied live |
+| 2026-09-24 | 14 | 14-019 | Done | talk 8 unit (golden scenario 4, receipt reply and its content classes, question reading, answers from stored changes incl. undone and no match), apply 9, metrics 8 (document counts); HomeSend 341 unit; eval 50/50 with 0/14 unsafe (new HS-16); browser QA at 360px and 1280px on the seeded QA household: plan applied in HomeSend, the receipt posted into HomeTalk, "What did the school notice change?" answered from the changes ("moved Annual Day from 12 Oct to 15 Oct, added … 3 things were already on record") | Deep Document Understanding 2.0 phases F–G: HomeTalk shows what a document did from its receipt and answers what it changed from stored changes; §50 document metrics; module 14 complete |
