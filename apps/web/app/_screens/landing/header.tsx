@@ -11,6 +11,7 @@ import { ButtonLink } from "@wonderhome/core/ui/button";
 const NAV = [
   { href: "#why", label: "Why WonderHome" },
   { href: "#features", label: "Features" },
+  { href: "#new", label: "What's new" },
   { href: "#families", label: "For Families" },
   { href: "#pricing", label: "Pricing" },
   { href: "#security", label: "Security" },
