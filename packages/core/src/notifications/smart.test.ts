@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import { formatterFor } from "../i18n/format";
 import { DEFAULT_PREFERENCES } from "../i18n/preferences";
 import { SNOOZE_PRESETS, snoozeUntil, validSnoozeTime } from "./actions";
-import { chooseReminderRecipient, planReminder, type Directory, type DirectoryMember, type RecipientSettings } from "./plan";
-import { REMINDER_POLICIES, TUNABLE_CATEGORIES, placeOutsideQuiet, planStages, presetFor } from "./policies";
-import { buildDirectory, patchFor, quietFromPolicy, type OpenRow } from "./reconcile";
+import { learnedMinuteFrom } from "./learning";
+import { backupFor, chooseReminderRecipient, isUnanswered, planEscalation, planReminder, type Directory, type DirectoryMember, type RecipientSettings } from "./plan";
+import { REMINDER_POLICIES, TUNABLE_CATEGORIES, maxRemindersFor, placeOutsideQuiet, planStages, presetFor, withLearnedTime } from "./policies";
+import { batchSchoolDays, buildDirectory, decisionFactors, patchFor, quietFromPolicy, type OpenRow } from "./reconcile";
 import {
   billSubject,
   familySubject,
@@ -14,6 +15,7 @@ import {
   petCareDueOn,
   petSubject,
   schoolSubject,
+  type SchoolItemRow,
   type SourceContext,
 } from "./sources";
 import { atLocal, endOfQuiet, inQuietHours, localMoment } from "./timing";
@@ -474,6 +476,137 @@ describe("snooze and custom reminders (§15, §16)", () => {
   });
 });
 
+describe("smart batching (§21, story 23-008)", () => {
+  const now = "2026-09-24T10:00";
+  const item = (id: string, title: string, kind: string, child = "aarav", dueAt = at("2026-09-25T09:00").toISOString()): SchoolItemRow => ({
+    id, child_member_id: child, kind, title, due_at: dueAt, due_time_known: true, status: "pending",
+  });
+  const route = (rows: SchoolItemRow[], to = "kunal") => {
+    const schoolRows = new Map();
+    const routed = rows.map((row) => {
+      const subject = schoolSubject(row, row.child_member_id === "aarav" ? "Aarav" : "Diya", ctx(now))!;
+      schoolRows.set(subject, row);
+      return { subject, recipient: { memberId: to, role: "primary" as const } };
+    });
+    return batchSchoolDays(routed, schoolRows, new Map([["aarav", "Aarav"], ["diya", "Diya"]]), ctx(now));
+  };
+
+  it("a child's things due the same day become one reminder that names each of them", () => {
+    const [one, ...rest] = route([item("s1", "Science project", "project"), item("s2", "Maths worksheet", "worksheet"), item("s3", "Sports day", "event")]);
+    expect(rest).toHaveLength(0);
+    expect(one!.subject.sourceType).toBe("school_day");
+    expect(one!.subject.items).toEqual(["s1", "s2", "s3"]);
+    const planned = planReminder(one!.subject, owner, open, 0, TZ, at(now))!;
+    expect(planned.title).toBe("Aarav — 3 things for tomorrow");
+    expect(planned.body).toBe("Science project, Maths worksheet and Sports day.");
+    expect(decisionFactors(planned).items).toEqual(["s1", "s2", "s3"]);
+  });
+
+  it("is as urgent as the most urgent thing in it — nothing is hidden in a quieter group", () => {
+    const [one] = route([item("s1", "Sports day", "event"), item("s2", "Maths worksheet", "worksheet")]);
+    expect(planReminder(one!.subject, owner, open, 0, TZ, at(now))!.priority).toBe("medium");
+  });
+
+  it("never groups different children, different days, or a single item", () => {
+    expect(route([item("s1", "Project", "project"), item("s2", "Worksheet", "worksheet", "diya")]).map((entry) => entry.subject.sourceType)).toEqual(["school_item", "school_item"]);
+    expect(route([item("s1", "Project", "project"), item("s2", "Worksheet", "worksheet", "aarav", at("2026-09-26T09:00").toISOString())]).map((entry) => entry.subject.sourceType)).toEqual(["school_item", "school_item"]);
+    expect(route([item("s1", "Project", "project")])[0]!.subject.sourceType).toBe("school_item");
+  });
+});
+
+describe("escalation (§20, §22, story 23-010)", () => {
+  const primary = planReminder(
+    billSubject({ id: "b1", name: "Electricity bill", payee: null, amount_minor: null, currency: null, due_on: "2026-09-26", status: "expected", responsible_member_id: null }, ctx("2026-09-26T10:00"))!,
+    owner,
+    open,
+    0,
+    TZ,
+    at("2026-09-26T10:00"),
+  )!;
+  const delivered = (hoursAgo: number, over: Partial<{ reminder_seq: number; status: string; snooze_count: number }> = {}) => ({
+    reminder_seq: primary.reminderSeq,
+    status: "delivered",
+    snooze_count: 0,
+    delivered_at: new Date(at("2026-09-26T10:00").getTime() - hoursAgo * 3_600_000).toISOString(),
+    ...over,
+  });
+
+  it("every policy has a maximum: its stages, and one backup at most", () => {
+    expect(maxRemindersFor("bills", null)).toBe(3);
+    expect(maxRemindersFor("meals", null)).toBe(1);
+    for (const category of TUNABLE_CATEGORIES) {
+      for (const preset of REMINDER_POLICIES[category].presets) expect(maxRemindersFor(category, preset.key)).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it("the backup hears only once the last reminder has gone unanswered for the policy's wait", () => {
+    expect(primary.finalStage).toBe(true);
+    expect(isUnanswered(primary, delivered(1), at("2026-09-26T10:00"))).toBe(false);
+    expect(isUnanswered(primary, delivered(4), at("2026-09-26T10:00"))).toBe(true);
+    // Snoozed back to waiting, or not the last stage: not yet.
+    expect(isUnanswered(primary, delivered(4, { status: "generated" }), at("2026-09-26T10:00"))).toBe(false);
+    expect(isUnanswered({ ...primary, finalStage: false }, delivered(4), at("2026-09-26T10:00"))).toBe(false);
+    // A kind that never escalates never does.
+    expect(isUnanswered({ ...primary, category: "meals" }, delivered(4), at("2026-09-26T10:00"))).toBe(false);
+  });
+
+  it("goes to the responsibility's backup, says who has not answered, and never again once dismissed", () => {
+    const dir = directory([member("kunal"), member("priya"), member("aarav", { memberType: "child" })], {
+      responsibilities: new Map([["finance.bills_paid", { primary: "kunal", backup: "priya" }]]),
+    });
+    const subject = billSubject({ id: "b1", name: "Electricity bill", payee: null, amount_minor: null, currency: null, due_on: "2026-09-26", status: "expected", responsible_member_id: null }, ctx("2026-09-26T10:00"))!;
+    expect(backupFor(subject, dir, "kunal")).toBe("priya");
+    expect(backupFor(subject, dir, "priya")).toBeNull();
+
+    const escalation = planEscalation(primary, "priya", "Kunal", open, 0, TZ, at("2026-09-26T13:30"))!;
+    expect(escalation).toMatchObject({ recipientMemberId: "priya", recipientRole: "backup", escalatedFrom: "kunal" });
+    expect(escalation.body).toContain("Kunal has not marked it done yet.");
+    expect(decisionFactors(escalation).escalatedFrom).toBe("kunal");
+    expect(planEscalation(primary, "priya", "Kunal", open, primary.reminderSeq, TZ, at("2026-09-26T13:30"))).toBeNull();
+    expect(planEscalation(primary, "priya", "Kunal", { ...open, enabled: false }, 0, TZ, at("2026-09-26T13:30"))).toBeNull();
+  });
+
+  it("respects the backup's own quiet hours", () => {
+    const late = planEscalation(primary, "priya", "Kunal", { ...open, quiet: { fromMinute: 22 * 60, untilMinute: 7 * 60 } }, 0, TZ, at("2026-09-26T22:30"))!;
+    expect(late.scheduledFor).not.toEqual(at("2026-09-26T22:30"));
+    expect(inQuietHours(late.scheduledFor, { fromMinute: 22 * 60, untilMinute: 7 * 60 }, TZ) && late.placement !== "breaks_quiet_hours").toBe(false);
+  });
+});
+
+describe("timing learned from behaviour (§24, story 23-012)", () => {
+  const days = (minute: number, count: number, jitter = 0) =>
+    Array.from({ length: count }, (_, index) => atLocal(`2026-09-${String(10 + index).padStart(2, "0")}`, minute + (index % 2 === 0 ? jitter : -jitter), TZ));
+
+  it("needs five consistent times; fewer, or scattered ones, teach nothing", () => {
+    expect(learnedMinuteFrom(days(19 * 60 + 15, 4), TZ)).toBeNull();
+    expect(learnedMinuteFrom(days(19 * 60 + 13, 6, 10), TZ)).toEqual({ minute: 19 * 60 + 15, evidence: 6 });
+    const scattered = [...days(9 * 60, 3), ...days(21 * 60, 3)];
+    expect(learnedMinuteFrom(scattered, TZ)).toBeNull();
+  });
+
+  it("moves only the advance notice, and only when it still comes before the next reminder", () => {
+    const bills = withLearnedTime(presetFor("bills", null), 19 * 60)!;
+    expect(bills.stages[0]!.at).toEqual({ kind: "daysBefore", days: 3, atMinute: 19 * 60 });
+    expect(bills.stages[1]!.at).toEqual(presetFor("bills", null).stages[1]!.at);
+    // "Before" stages (an hour before an outing) are never moved.
+    expect(withLearnedTime(presetFor("family", null), 19 * 60)).toBeNull();
+    // A shift that would land it after the next stage on the same day is refused.
+    const sameDay = { key: "x", label: "x", stages: [{ key: "a", at: { kind: "dayOf" as const, atMinute: 8 * 60 } }, { key: "b", at: { kind: "dayOf" as const, atMinute: 12 * 60 } }] };
+    expect(withLearnedTime(sameDay, 13 * 60)).toBeNull();
+  });
+
+  it("a learned time is claimed only when it actually moved the reminder", () => {
+    const subject = billSubject({ id: "b1", name: "Electricity bill", payee: null, amount_minor: null, currency: null, due_on: "2026-09-29", status: "expected", responsible_member_id: null }, ctx("2026-09-24T10:00"))!;
+    const learned = planReminder(subject, owner, { ...open, learnedMinute: 19 * 60 + 15 }, 0, TZ, at("2026-09-24T10:00"))!;
+    expect(learned.scheduledFor).toEqual(at("2026-09-26T19:15"));
+    expect(learned.timing).toBe("learned");
+    expect(decisionFactors(learned).timing).toBe("learned");
+    // Meals never learn (their time is the recipe's), so nothing is claimed.
+    const meal = mealSubject({ id: "m1", name: "Dal", slot: "dinner", ready_by: at("2026-09-24T20:00").toISOString(), status: "planned", cook_member_id: "kunal", recipe_total_minutes: 30 }, ctx("2026-09-24T10:00"))!;
+    expect(planReminder(meal, owner, { ...open, learnedMinute: 19 * 60 }, 0, TZ, at("2026-09-24T10:00"))!.timing).toBe("policy");
+  });
+});
+
 function openRow(over: Partial<OpenRow>): OpenRow {
   return {
     id: "n1",
@@ -491,6 +624,7 @@ function openRow(over: Partial<OpenRow>): OpenRow {
     latest_at: null,
     expires_at: null,
     reminder_policy: null,
+    delivered_at: null,
     ...over,
   };
 }

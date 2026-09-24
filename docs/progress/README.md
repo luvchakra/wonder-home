@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [Smart notifications, part 3: batching, escalation, the day's summary, learned timing (23-008..012) — module 23 complete](2026-09-24-smart-notifications-part-3.md) |
 | 2026-09-24 | [HomeTalk reminders: "later today", the trip home, and never a time in the past](2026-09-24-reminder-times.md) |
 | 2026-09-24 | [Notification center: feed, detail, actions, snooze, settings (23-005..007)](2026-09-24-notification-center.md) |
 | 2026-09-24 | [Smart notifications, part 1: reminders derived from real records and reconciled (created, updated, resolved, expired, never duplicated), data-driven timing policies per category, quiet hours fixed from UTC to the household's clock, recipients change state never content (stories 23-001..004 Done)](2026-09-24-smart-notifications-engine.md) |

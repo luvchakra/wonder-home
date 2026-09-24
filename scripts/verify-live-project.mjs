@@ -120,6 +120,8 @@ const SHIPPED_COLUMNS = [
   { table: "household_members", column: "gender" },
   { table: "pets", column: "gender" },
   { table: "notification_preferences", column: "target" },
+  { table: "notification_preferences", column: "daily_digest" },
+  { table: "notification_preferences", column: "learn_timing" },
   { table: "recipes", column: "calories_per_serving" },
   { table: "households", column: "key_member_id" },
   { table: "home_send_items", column: "security_status" },

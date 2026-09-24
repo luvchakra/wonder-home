@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, GraduationCap, HeartHandshake, HeartPulse, PawPrint, ShoppingBasket, Utensils, Wallet, Wrench } from "lucide-react";
+import { Bell, GraduationCap, HeartHandshake, HeartPulse, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useId } from "react";
 import { useFormStatus } from "react-dom";
@@ -12,6 +12,7 @@ import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { Button } from "@wonderhome/core/ui/button";
+import { Card } from "@wonderhome/core/ui/card";
 
 import { completeReminderSourceAction, dismissReminderAction, snoozeReminderAction } from "../(auth)/notification-actions";
 import type { ActionState } from "../(auth)/actions";
@@ -224,5 +225,46 @@ function DismissForm({ id, householdId }: { id: string; householdId: string }) {
       <Pending pendingLabel="…" variant="quiet">Dismiss</Pending>
       <Feedback state={state} />
     </form>
+  );
+}
+
+/**
+ * The day in one card (story 23-011): what is waiting on this person today,
+ * in the order it comes, built from the very reminders listed below it — a
+ * summary, never a second source, and never a number the list does not
+ * show. Shown only when there is more than one thing, and only to someone
+ * who has not turned it off.
+ */
+export function ReminderDigest({
+  firstName,
+  items,
+}: {
+  firstName: string;
+  items: readonly { id: string; category: NotificationCategory; title: string; when: string }[];
+}) {
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-start gap-3">
+        <IconTile icon={Sparkles} tone="primary" />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold">HomeBrain summary · Today</h2>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
+            {items.length} things to take care of. Here&rsquo;s what&rsquo;s important for you, {firstName}.
+          </p>
+        </div>
+      </div>
+      <ol className="divide-y divide-[var(--wh-border)]">
+        {items.map((item) => {
+          const category = CATEGORY[item.category];
+          return (
+            <li key={item.id} className="flex items-center gap-3 py-2">
+              <IconTile icon={category.icon} tone={category.tone} size="sm" />
+              <span className="min-w-0 flex-1 text-sm">{item.title}</span>
+              <span className="shrink-0 text-sm text-[var(--wh-foreground-muted)]">{item.when}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
   );
 }

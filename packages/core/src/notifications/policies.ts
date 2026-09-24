@@ -80,11 +80,28 @@ export type ReminderPolicy = {
   category: TunableCategory;
   defaultPreset: string;
   presets: readonly ReminderPreset[];
-  /** Whether reminders of this kind may be grouped into one (story 23-006). */
+  /** Whether reminders of this kind may be grouped into one (story 23-008). */
   batching: boolean;
   /** Whether a reminder may break quiet hours when it could not wait. */
   quietHours: "defer" | "break_when_urgent";
+  /**
+   * When the responsibility's backup hears about it too (story 23-010): only
+   * once the primary's last reminder has gone unanswered this long, and only
+   * ever once. Null for kinds where a second person would just be noise.
+   */
+  escalation: { afterMinutes: number } | null;
+  /** Whether the time a person usually acts may move the first reminder (story 23-012). */
+  learnsTiming: boolean;
 };
+
+/**
+ * The most reminders any one thing can produce: its preset's stages for the
+ * responsible person, plus one for the backup when the policy escalates.
+ * Nothing is repeated beyond this (spec §22: "do not escalate indefinitely").
+ */
+export function maxRemindersFor(category: TunableCategory, preset: string | null | undefined): number {
+  return presetFor(category, preset).stages.length + (REMINDER_POLICIES[category].escalation ? 1 : 0);
+}
 
 const hm = (hour: number, minute = 0) => hour * 60 + minute;
 
@@ -94,6 +111,8 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     defaultPreset: "three_days_and_due",
     batching: false,
     quietHours: "defer",
+    escalation: { afterMinutes: 180 },
+    learnsTiming: true,
     presets: [
       {
         key: "three_days_and_due",
@@ -128,6 +147,8 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     defaultPreset: "evening_and_morning",
     batching: true,
     quietHours: "defer",
+    escalation: { afterMinutes: 60 },
+    learnsTiming: true,
     presets: [
       {
         key: "evening_and_morning",
@@ -146,6 +167,8 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     defaultPreset: "prep_start",
     batching: false,
     quietHours: "defer",
+    escalation: null,
+    learnsTiming: false,
     presets: [
       // `before` here counts back from when cooking has to start, not from the meal.
       { key: "prep_start", label: "When it's time to start cooking", stages: [{ key: "start_cooking", at: { kind: "before", minutes: 0 } }] },
@@ -158,6 +181,8 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     defaultPreset: "late_afternoon",
     batching: true,
     quietHours: "defer",
+    escalation: null,
+    learnsTiming: true,
     presets: [
       { key: "late_afternoon", label: "Late afternoon (5 PM)", stages: [{ key: "list_needs_attention", at: { kind: "dayOf", atMinute: hm(17) } }] },
       { key: "morning", label: "Morning (9 AM)", stages: [{ key: "list_needs_attention", at: { kind: "dayOf", atMinute: hm(9) } }] },
@@ -169,6 +194,8 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     defaultPreset: "on_time",
     batching: false,
     quietHours: "defer",
+    escalation: { afterMinutes: 120 },
+    learnsTiming: true,
     presets: [
       { key: "on_time", label: "On the day (8 AM)", stages: [{ key: "due_today", at: { kind: "dayOf", atMinute: hm(8) } }] },
       {
@@ -186,6 +213,8 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     defaultPreset: "hour_before",
     batching: false,
     quietHours: "defer",
+    escalation: null,
+    learnsTiming: false,
     presets: [
       { key: "hour_before", label: "An hour before", stages: [{ key: "starts_soon", at: { kind: "before", minutes: 60 } }] },
       {
@@ -209,6 +238,30 @@ export function presetFor(category: TunableCategory, chosen: string | null | und
     policy.presets.find((preset) => preset.key === policy.defaultPreset) ??
     policy.presets[0]!
   );
+}
+
+/**
+ * The preset with its first reminder moved to the time this person usually
+ * acts on this kind of thing (story 23-012), or null when that would not be
+ * safe. Only the advance notice moves — a "this morning" or "due today"
+ * reminder keeps its time — and only when it still lands before the next
+ * reminder of the preset, on the same day it was planned for.
+ */
+export function withLearnedTime(preset: ReminderPreset, learnedMinute: number): ReminderPreset | null {
+  const first = preset.stages[0];
+  if (!first || first.at.kind === "before") return null;
+  if (!Number.isInteger(learnedMinute) || learnedMinute < 0 || learnedMinute >= 24 * 60) return null;
+  if (first.at.atMinute === learnedMinute) return null;
+  const next = preset.stages[1];
+  if (next) {
+    // The shifted advance notice must still come before the next reminder.
+    const firstDay = first.at.kind === "daysBefore" ? -first.at.days : 0;
+    if (next.at.kind === "before") return null;
+    const nextDay = next.at.kind === "daysBefore" ? -next.at.days : 0;
+    if (firstDay > nextDay || (firstDay === nextDay && learnedMinute >= next.at.atMinute)) return null;
+  }
+  const moved: ReminderStage = { key: first.key, at: { ...first.at, atMinute: learnedMinute } };
+  return { ...preset, stages: [moved, ...preset.stages.slice(1)] };
 }
 
 export function isPresetFor(category: TunableCategory, preset: string): boolean {
