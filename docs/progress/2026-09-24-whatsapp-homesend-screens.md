@@ -121,8 +121,19 @@ link on the server and never takes the browser's word for anything.
 
 ## Cleanup
 
-See the PR. QA account `7c8d1e43-75b3-4a7d-a395-89abb9015f32`, household
-`706dd6b7-77f3-46d9-b5e2-e4168dafe4da`.
+Done after the merge (#166, `97c2468`):
+- **QA household.** "Sharma QA Home" (`706dd6b7-77f3-46d9-b5e2-e4168dafe4da`)
+  was deleted with every row in it: its WhatsApp links, codes, message,
+  telemetry, the HomeSend item and the job.
+- **QA account.** `7c8d1e43-75b3-4a7d-a395-89abb9015f32` was deleted.
+- **Stray telemetry.** The one `rate_limited` event without a household
+  came from the local test, since production's webhook has no credentials.
+  It was deleted too.
+- **Local debris.** The scratch scripts, screenshots and logs were removed,
+  and the dev server was stopped.
+
+A count over the household's tables, the auth user, both test numbers and
+Storage found nothing left.
 
 ## Where the code lives
 
