@@ -6,14 +6,19 @@ import { consumableNames, purchaseLabels } from "@wonderhome/core/commerce/repos
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
+import { inboxSegments, inChannel, readInboxChannel } from "@wonderhome/core/homesend/channels";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
+import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
+import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
 import { HomeSendChannels } from "../_components/home-send-channels";
 import { prepareReview } from "../(auth)/home-send-review";
@@ -73,9 +78,9 @@ async function resumeShareHandoff(
 export default async function HomeSendPage({
   searchParams,
 }: {
-  searchParams: Promise<{ handoff?: string; shareError?: string }>;
+  searchParams: Promise<{ handoff?: string; shareError?: string; channel?: string }>;
 }) {
-  const [{ handoff, shareError }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
+  const [{ handoff, shareError, channel: channelParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
 
@@ -104,12 +109,30 @@ export default async function HomeSendPage({
     );
   }
 
-  const [items, members, changes, address] = await Promise.all([
+  // WhatsApp is a channel only once the deployment has a business number
+  // to show; before that no card, tab or link offers it (story 14-016).
+  const whatsappNumber = whatsappConfigFromEnv() ? whatsappBusinessNumber() : null;
+  const emailConfigured = platformHomeSendEmailDomain() !== null;
+  const [allItems, members, changes, address, whatsappLinks] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listHomeSendChanges(supabase, householdId).catch(() => []),
     getHomeSendAddress(supabase, householdId).catch(() => null),
+    whatsappNumber ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
   ]);
+
+  // "All | WhatsApp | Email | Uploads": the tabs filter what is listed, never
+  // what can be sent — the drop zone above them always takes anything.
+  const segments = inboxSegments(
+    allItems.map((item) => ({ source: item.source, waiting: item.status === "received" || item.status === "classified" })),
+    { whatsapp: whatsappNumber !== null, email: emailConfigured },
+  );
+  // A tab that isn't offered (a hand-typed ?channel=email with no email) reads as All.
+  const requested = readInboxChannel(channelParam);
+  const channel = segments.some((segment) => segment.key === requested) ? requested : "all";
+  const items = inChannel(allItems, channel);
+  const senders = Object.fromEntries(members.map((member) => [member.id, member.displayName]));
+  const myWhatsApp = whatsappLinks.find((link) => link.memberId === membership.memberId) ?? null;
 
   const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   // Pending intake survives closing the page (Wave 3 §14): whatever is
@@ -147,13 +170,32 @@ export default async function HomeSendPage({
 
         {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
 
-        <HomeSendInbox householdId={householdId} kids={kids} canAddChild={isHouseholdAdmin(membership)} pending={pending} failed={failed} history={history} changes={changes} reviews={reviews} groceryNames={groceryNames} purchaseNames={purchaseNames} />
+        <HomeSendInbox
+          householdId={householdId}
+          kids={kids}
+          canAddChild={isHouseholdAdmin(membership)}
+          pending={pending}
+          failed={failed}
+          history={history}
+          changes={changes}
+          reviews={reviews}
+          groceryNames={groceryNames}
+          purchaseNames={purchaseNames}
+          senders={senders}
+          filterLabel={channel === "all" ? null : (segments.find((segment) => segment.key === channel)?.label ?? null)}
+          filter={segments.length > 0 ? <SegmentedControl segments={segments} active={channel} label="Show items sent by" /> : null}
+        />
 
         <HomeSendChannels
           householdId={householdId}
           isAdmin={isHouseholdAdmin(membership)}
-          emailConfigured={platformHomeSendEmailDomain() !== null}
+          emailConfigured={emailConfigured}
           address={address}
+          whatsapp={
+            whatsappNumber && membership.memberType === "adult"
+              ? { number: formatWhatsAppNumber(whatsappNumber), connected: myWhatsApp !== null }
+              : null
+          }
         />
 
         <QuoteCard>Send it in. WonderHome takes it from here.</QuoteCard>

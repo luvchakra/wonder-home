@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Copy, Download, Mail } from "lucide-react";
+import { Check, ChevronRight, Copy, Download, Mail, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import type { HomeSendAddress } from "@wonderhome/core/homesend/items";
@@ -32,26 +33,56 @@ export function HomeSendChannels({
   isAdmin,
   emailConfigured,
   address,
+  whatsapp = null,
 }: {
   householdId: string;
   isAdmin: boolean;
   emailConfigured: boolean;
   address: HomeSendAddress | null;
+  /** WonderHome's WhatsApp number, and whether this adult has linked theirs — null when WhatsApp isn't available to them. */
+  whatsapp?: { number: string; connected: boolean } | null;
 }) {
   const install = useInstallPrompt();
 
-  if (!emailConfigured && install.installed) return null;
+  if (!emailConfigured && !whatsapp && install.installed) return null;
 
   return (
     <section>
       <SectionHeader title="Other ways to send things in" />
       <div className="space-y-3">
+        {whatsapp ? <WhatsAppChannel number={whatsapp.number} connected={whatsapp.connected} /> : null}
         {emailConfigured ? (
           <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} />
         ) : null}
         {!install.installed ? <InstallChannel /> : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * WhatsApp (story 14-016): the whole row opens its settings, where a number
+ * is connected or managed — connecting needs the one-time code, so it never
+ * happens from here.
+ */
+function WhatsAppChannel({ number, connected }: { number: string; connected: boolean }) {
+  return (
+    <Link href="/settings/whatsapp" className="block rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]">
+      <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--wh-surface-muted)]">
+        <IconTile icon={MessageCircle} tone="handled" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Forward it on WhatsApp</p>
+          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">
+            {connected ? (
+              <>Send to <span className="tabular-nums">{number}</span> — it arrives here as from you.</>
+            ) : (
+              "Connect your number, then forward messages, photos and documents here."
+            )}
+          </p>
+        </div>
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
+      </Card>
+    </Link>
   );
 }
 

@@ -110,7 +110,18 @@ const CHANNEL_LABEL: Record<string, string> = {
   audio_note: "A voice note",
   email: "A forwarded email",
   email_attachment: "An email attachment",
+  whatsapp: "A WhatsApp message",
+  whatsapp_media: "A file sent on WhatsApp",
 };
+
+/** What a WhatsApp attachment was, from its bytes — "A photo sent on WhatsApp" (story 14-016). */
+function whatsappMediaLabel(contentType: string | null): string {
+  if (!contentType) return CHANNEL_LABEL.whatsapp_media!;
+  if (contentType.startsWith("image/")) return "A photo sent on WhatsApp";
+  if (contentType.startsWith("audio/")) return "A voice note sent on WhatsApp";
+  if (contentType === "application/pdf") return "A PDF sent on WhatsApp";
+  return CHANNEL_LABEL.whatsapp_media!;
+}
 
 const CONTENT_LABEL: Record<string, string> = {
   "application/pdf": "A PDF you sent",
@@ -128,7 +139,7 @@ const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 /** "School email · 23 Sep" (§13): where it came from and when, in words. */
 export function describeSource(
   understanding: Pick<IntakeUnderstanding, "provenance"> | null | undefined,
-  options: { contentType?: string | null; receivedAt?: string | null } = {},
+  options: { contentType?: string | null; receivedAt?: string | null; from?: string | null } = {},
 ): string {
   const provenance = understanding?.provenance;
   let label = provenance ? (CHANNEL_LABEL[provenance.channel] ?? "Something you sent") : "Something you sent";
@@ -142,6 +153,9 @@ export function describeSource(
     }
   }
   if (provenance?.channel === "email" && provenance.subject) label = `A forwarded email: "${provenance.subject}"`;
+  if (provenance?.channel === "whatsapp_media") label = whatsappMediaLabel(contentType);
+  // WhatsApp items always come from one linked member; saying who is the provenance.
+  if ((provenance?.channel === "whatsapp" || provenance?.channel === "whatsapp_media") && options.from) label = `${label} from ${options.from}`;
   const when = options.receivedAt ? new Date(options.receivedAt) : null;
   // One fixed format ("23 Sep", as §13 writes it), so the server's render and the browser's agree.
   const day = when && !Number.isNaN(when.getTime()) ? `${when.getUTCDate()} ${SHORT_MONTHS[when.getUTCMonth()]}` : null;

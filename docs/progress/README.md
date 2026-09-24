@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-24 | [WhatsApp into HomeSend, part 2: connect with a one-time code and a confirmation from the server's own link, "WhatsApp connected" beside members, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and who sent each item (story 14-016 Done, module 14 complete)](2026-09-24-whatsapp-homesend-screens.md) |
 | 2026-09-24 | [WhatsApp into HomeSend, part 1: a number linked by single-use code, linked members' messages recorded once and turned into HomeSend items, never an authorization channel (story 14-015 Done)](2026-09-24-whatsapp-homesend-intake.md) |
 | 2026-09-24 | [Multilingual HomeTalk: understood in the person's language, answered in it through a checked translation, never beyond what the household agreed to send (story 22-005 Done)](2026-09-24-multilingual-hometalk.md) |
 | 2026-09-24 | [Smart notifications, part 3: batching, escalation, the day's summary, learned timing (23-008..012) — module 23 complete](2026-09-24-smart-notifications-part-3.md) |

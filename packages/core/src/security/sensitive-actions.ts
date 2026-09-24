@@ -244,6 +244,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "apps/web/app/(auth)/voice-link-actions.ts",
   },
   {
+    event: "whatsapp.connect_requested",
+    because: "Someone asked for a one-time code that links a WhatsApp number to them in this household.",
+    recordedIn: "apps/web/app/(auth)/whatsapp-actions.ts",
+  },
+  {
+    event: "whatsapp.linked",
+    because: "A WhatsApp number can now send things into this household's HomeSend as coming from a member.",
+    recordedIn: "packages/core/src/whatsapp/intake.ts",
+  },
+  {
+    event: "whatsapp.disconnected",
+    because: "A WhatsApp number stopped reaching this household — nothing it sends is taken in any more.",
+    recordedIn: "apps/web/app/(auth)/whatsapp-actions.ts",
+  },
+  {
     event: "webhook.subscription_disabled",
     because: "Stops an external system receiving this household's events. As worth recording as turning it on.",
     recordedIn: "packages/core/src/webhooks/repository.ts",
@@ -570,6 +585,12 @@ export function describeAuditEvent(
       return { title: "A voice assistant was linked", detail: Array.isArray(metadata.scopes) ? `It may: ${(metadata.scopes as unknown[]).filter((scope): scope is string => typeof scope === "string").join(", ")}` : null };
     case "voice_link.revoked":
       return { title: "A voice assistant was unlinked", detail: "Every token it held stopped working." };
+    case "whatsapp.connect_requested":
+      return { title: "A WhatsApp connection was started", detail: "A one-time code was issued. Nothing is linked until it is sent from the phone." };
+    case "whatsapp.linked":
+      return { title: "A WhatsApp number was connected", detail: "What it sends arrives in HomeSend for review." };
+    case "whatsapp.disconnected":
+      return { title: "A WhatsApp number was disconnected", detail: "What it already sent stays in HomeSend." };
     case "webhook.subscription_disabled":
       return { title: "A webhook was turned off", detail: null };
     case "webhook.subscription_enabled":

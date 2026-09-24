@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**211 of 218 stories done — 96.8%**
+**212 of 218 stories done — 97.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 211 |
+| Done | 212 |
 | In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 3 |
+| Not Started | 2 |
 
 ## By module
 
@@ -38,7 +38,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `█████████░` | 15 | 16 | 1 not started |
+| 14 AI Orchestration & Learning | `██████████` | 16 | 16 | — |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -54,7 +54,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `14-016` WhatsApp into HomeSend — in the app | 14 AI Orchestration & Learning | P0 | Not Started |
 | `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
 | `22-006` Localized notifications | 22 Internationalization and Localization | P0 | Not Started |
@@ -289,7 +288,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-15 of 16 done `█████████░`
+16 of 16 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -308,7 +307,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-013` Unified AI evaluation, reliability & production hardening (Wave 5) | P0 | Done | Spec: `design/AI-EVALUATION-WAVE-5.md`. One evaluation framework for HomeTalk, HomeSend and HomeBrain; synthetic golden households; §8 metrics and the §10 error taxonomy; corrections as structured evaluation evidence; provider/model/prompt/context versions recorded per run; release artifact and gates; rate and payload limits; failure semantics; idempotency; email-forwarding monitoring |
 | `14-014` HomeSend reads the time of day | P1 | Done | Local start and end read deterministically from the notice's own date words (`timeFromDateText`); `school_items.due_time_known` + `ends_at` (migration `20260927090000`, applied live); all-day items never show a time |
 | `14-015` WhatsApp into HomeSend — linking and intake | P0 | Done | Spec: the WhatsApp HomeSend integration brief. WhatsApp becomes an input channel, never an authorization channel (`packages/core/src/whatsapp/`, migration `20261002090000_whatsapp_intake.sql`, applied live). A number is linked to one adult member only through a single-use code: fifteen minutes, SHA-256 hash only, completed atomically by the service-role-only `public.complete_whatsapp_link` from a signature-verified "CONNECT <code>". One number, one member, anywhere. `public.disconnect_whatsapp` keeps history. A linked number's messages are recorded once by WhatsApp's message id and queued (`whatsapp.process` on the job queue, run after the response with `after()`, retried with backoff and dead after five tries). They become `whatsapp` / `whatsapp_media` HomeSend items from that member (`ingestWhatsAppText` / `ingestWhatsAppMedia`: media fetched from Meta's CDN only, type from bytes, private bucket), and a short acknowledgement never echoes an amount, a health detail or a number. An unlinked number is told how to connect, and nothing it sent is kept. Closed-word telemetry lives in `whatsapp_events`. Inert until a deployment sets the WhatsApp credentials |
-| `14-016` WhatsApp into HomeSend — in the app | P0 | Not Started | The mockup flow: connect WhatsApp (intro, save the number and send CONNECT, confirmation), another adult connecting, WhatsApp status beside members in Manage Household, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and provenance on each item, and connection management in Settings |
+| `14-016` WhatsApp into HomeSend — in the app | P0 | Done | The mockup flow: connect WhatsApp (intro, save the number and send CONNECT, confirmation), another adult connecting, WhatsApp status beside members in Manage Household, WhatsApp as a HomeSend channel with an All / WhatsApp / Email / Uploads filter and provenance on each item, and connection management in Settings |
 
 ### 15 — Privacy, Security & Governance
 
