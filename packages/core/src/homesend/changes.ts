@@ -32,11 +32,14 @@ function fromRow(row: Row): HomeSendChange {
     undoneByMemberId: (row.undone_by_member_id as string | null) ?? null,
     changeType: ((row.change_type as HomeSendChangeType | undefined) ?? "created"),
     previous: (row.previous as Record<string, unknown> | null) ?? null,
+    planKey: (row.plan_key as string | null) ?? null,
+    fields: (row.fields as HomeSendChange["fields"]) ?? null,
+    evidence: (row.evidence as HomeSendChange["evidence"]) ?? null,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, intake_id, domain, entity_id, created_by_member_id, created_at, undone_at, undone_by_member_id, change_type, previous";
+  "id, household_id, intake_id, domain, entity_id, created_by_member_id, created_at, undone_at, undone_by_member_id, change_type, previous, plan_key, fields, evidence";
 
 export async function listHomeSendChanges(supabase: SupabaseClient, householdId: string): Promise<HomeSendChange[]> {
   const { data, error } = await supabase
@@ -91,6 +94,10 @@ export type RecordHomeSendChangeInput = {
   /** Defaults to `created`. An update or a cancellation must say what it replaced, so undo can put it back (§10). */
   changeType?: HomeSendChangeType;
   previous?: Record<string, unknown> | null;
+  /** From a document plan (DDU 2.0): which record, what changed, and where it was read. */
+  planKey?: string | null;
+  fields?: HomeSendChange["fields"];
+  evidence?: HomeSendChange["evidence"];
 };
 
 export async function recordHomeSendChange(
@@ -107,6 +114,7 @@ export async function recordHomeSendChange(
       created_by_member_id: input.createdByMemberId,
       change_type: input.changeType ?? "created",
       previous: input.changeType && input.changeType !== "created" ? (input.previous ?? {}) : null,
+      ...(input.planKey ? { plan_key: input.planKey, fields: input.fields ?? [], evidence: input.evidence ?? null } : {}),
     })
     .select(SELECT_COLUMNS)
     .single();

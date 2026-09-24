@@ -4,33 +4,31 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
-import { may } from "@wonderhome/core/billing/repository";
-import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
-import { cancelObligation, createObligation, listObligations, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
+import { cancelObligation, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, listConsumables, recordPurchase, removePurchase, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { currencyCode, unitCostMinor } from "@wonderhome/core/commerce/receipts";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
-import { archiveRecord, createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
-import { getHomeSendChange, hasActiveHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
+import { archiveRecord } from "@wonderhome/core/health/records";
+import { getHomeSendChange, hasActiveHomeSendChanges, listHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
-import { HOME_SEND_REVIEW_PROPOSALS, HOME_SEND_REVIEW_SUBJECTS, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
+import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
+import { type HomeSendChange, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
 import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
-import { createChildMember } from "@wonderhome/core/identity/children";
-import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
+import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
-import { cancelSchoolItem, createSchoolItem, listSchoolItems, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
-import { movedSchoolWhen, schoolWhen } from "@wonderhome/core/school/times";
+import { cancelSchoolItem, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 
 import { prepareReview } from "./home-send-review";
+import { addChildFromNotice, createNew, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
 
 /**
  * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
@@ -63,6 +61,8 @@ export type SendHomeItemState = {
     subject?: SubjectResolution | null;
     /** How it is confirmed (§12): the reason, or the one question, the review opens with. */
     confirmation?: ConfirmationDecision | null;
+    /** A document with several records, as its change plan (DDU 2.0). */
+    plan?: DocumentPlan | null;
   };
 };
 
@@ -88,13 +88,13 @@ async function withReview(
   }).catch(() => null);
   if (!review) return state;
   // Something already waiting is shown again, never applied a second time.
-  if (review.confirmation.mode === "auto_apply" && !state.duplicate) {
+  if (review.confirmation.mode === "auto_apply" && !state.duplicate && !review.plan) {
     const applied = await autoApply(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject }).catch(() => null);
     if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own. ${review.confirmation.reason}`, autoApplied: applied };
   }
   return {
     ...state,
-    item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject, confirmation: review.confirmation },
+    item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject, confirmation: review.confirmation, plan: review.plan ?? null },
   };
 }
 
@@ -245,61 +245,6 @@ export async function confirmTranscriptAction(_previous: SendHomeItemState, form
   }
 }
 
-const routeSchema = z.object({
-  householdId: z.uuid(),
-  itemId: z.uuid(),
-  /**
-   * What the person decided (Wave 3 §10, §13): add it as new, update or
-   * cancel the record it matched, or keep the existing one and change
-   * nothing. The last three only ever act on `existingId`, which the server
-   * re-checks is part of this household before touching it.
-   */
-  decision: z.enum(["add", "update", "cancel", "keep"]).default("add"),
-  existingId: z.uuid().optional(),
-  kind: z.enum(["bill", "school_item", "grocery_item", "health_document"]),
-  title: z.string().trim().min(1, { error: "What is it?" }).max(160),
-  notes: z.string().trim().max(2000).optional(),
-  // bill
-  billKind: z.enum(OBLIGATION_KINDS).optional(),
-  payee: z.string().trim().max(120).optional(),
-  amount: z.union([z.coerce.number().min(0).max(10_000_000), z.literal("")]).optional(),
-  currency: z.string().trim().max(8).optional(),
-  dueDate: z.string().optional(),
-  // school — a local start and end ("HH:MM"); empty means all day.
-  dueTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
-  endTime: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
-  // A child already on record, or "new": a child the notice names who is not
-  // on record yet, added in the same step (story 08-009).
-  childMemberId: z.union([z.uuid(), z.literal("new")]).optional(),
-  newChildName: z.string().trim().min(1, { error: "What is the child's name?" }).max(80).optional(),
-  newChildDob: z.union([z.iso.date(), z.literal("")]).optional(),
-  schoolKind: z.enum(SCHOOL_ITEM_KINDS).optional(),
-  subject: z.string().trim().max(60).optional(),
-  // grocery
-  quantity: z.union([z.coerce.number().min(0.01).max(10_000), z.literal("")]).optional(),
-  unit: z.string().trim().max(40).optional(),
-  category: z.string().trim().max(40).optional(),
-  // health_document — subjectMemberId empty/omitted means "for me" (see
-  // routing below): the extracted subjectMemberName is only ever a hint
-  // shown beside this picker, never trusted to select an identity itself.
-  subjectMemberId: z.uuid().optional(),
-  healthRecordType: z.enum(RECORD_TYPES).optional(),
-  documentDate: z.string().optional(),
-  // Needs the same content implies (§11): each ticked one becomes its own
-  // grocery row, separately undoable. Nothing unticked is ever written.
-  needs: z.array(z.string().trim().min(1).max(160)).max(5).default([]),
-  // Set once the person has seen a reconciliation candidate and said this
-  // really is a different one.
-  confirmDuplicate: z.literal("on").optional(),
-  // What the review showed (§19's metrics): the reconciliation it offered
-  // and whether "who is this for" had to be asked. Closed words only; they
-  // describe the review, never decide anything.
-  proposal: z.enum(HOME_SEND_REVIEW_PROPOSALS).optional(),
-  subjectState: z.enum(HOME_SEND_REVIEW_SUBJECTS).optional(),
-});
-
-type RouteInput = z.infer<typeof routeSchema>;
-
 /**
  * The confirm step's own submit: writes into the real domain table via that
  * domain's already-governed service, then marks the intake item routed.
@@ -307,153 +252,6 @@ type RouteInput = z.infer<typeof routeSchema>;
  * this is the one place that does, and only once a person has reviewed it.
  */
 export type RouteHomeItemState = { error?: string; notice?: string; reconciliation?: HomeSendReconciliation };
-
-type Supabase = Awaited<ReturnType<typeof createClient>>;
-type Membership = Awaited<ReturnType<typeof requireMembership>>;
-
-
-/**
- * Updating or cancelling a record already on record (§10) — through the same
- * governed service a manual edit or remove uses, keeping what it replaced so
- * undo can put it back exactly.
- */
-async function reviseExisting(
-  supabase: Supabase,
-  membership: Membership,
-  input: RouteInput & { existingId: string; decision: "update" | "cancel" },
-): Promise<{ routedTable: string; routedId: string; changeType: "updated" | "cancelled"; previous: Record<string, unknown>; domain: "bill" | "school_item" }> {
-  const householdId = input.householdId;
-  if (input.kind === "school_item") {
-    const existing = (await listSchoolItems(supabase, householdId)).find((item) => item.id === input.existingId);
-    if (!existing) throw new Error("existing school item not found");
-    const previous = { dueAt: existing.dueAt?.toISOString() ?? null, dueTimeKnown: existing.dueTimeKnown, endsAt: existing.endsAt?.toISOString() ?? null, status: existing.status };
-    if (input.decision === "cancel") {
-      await cancelSchoolItem(supabase, householdId, existing.id);
-      return { routedTable: "school_items", routedId: existing.id, changeType: "cancelled", previous, domain: "school_item" };
-    }
-    // A new time from the notice wins; otherwise a moved day keeps the time it had (14-014).
-    const timezone = membership.household.timezone;
-    const when = !input.dueDate
-      ? { dueAt: previous.dueAt, dueTimeKnown: existing.dueTimeKnown, endsAt: previous.endsAt }
-      : input.dueTime
-        ? schoolWhen({ date: input.dueDate, time: input.dueTime, endTime: input.endTime, timezone })
-        : movedSchoolWhen(existing, input.dueDate, timezone);
-    await updateSchoolItem(supabase, householdId, existing.id, when);
-    return { routedTable: "school_items", routedId: existing.id, changeType: "updated", previous, domain: "school_item" };
-  }
-  if (input.kind === "bill") {
-    const existing = (await listObligations(supabase, householdId)).find((bill) => bill.id === input.existingId);
-    if (!existing) throw new Error("existing bill not found");
-    const previous = { dueOn: existing.dueOn, amountMinor: existing.amountMinor, status: existing.status };
-    if (input.decision === "cancel") {
-      await cancelObligation(supabase, { id: existing.id, householdId });
-      return { routedTable: "obligations", routedId: existing.id, changeType: "cancelled", previous, domain: "bill" };
-    }
-    await updateObligation(supabase, {
-      id: existing.id,
-      householdId,
-      dueOn: input.dueDate || existing.dueOn,
-      amountMinor: input.amount ? Math.round(Number(input.amount) * 100) : existing.amountMinor,
-    });
-    return { routedTable: "obligations", routedId: existing.id, changeType: "updated", previous, domain: "bill" };
-  }
-  throw new Error("only a bill or a school item can be updated or cancelled from HomeSend");
-}
-
-async function addChildFromNotice(supabase: Supabase, input: RouteInput): Promise<{ memberId: string } | { error: string }> {
-  if (!input.newChildName) return { error: "What is the child's name?" };
-  let actor: Membership;
-  try {
-    actor = await requireHouseholdAdmin(supabase, input.householdId);
-  } catch {
-    return { error: "Only an Admin can add a child. Ask one to add them from Family, then confirm this for them." };
-  }
-  try {
-    const added = await createChildMember(supabase, {
-      householdId: input.householdId,
-      displayName: input.newChildName,
-      dateOfBirth: input.newChildDob || null,
-      guardianMemberIds: [actor.memberId],
-    });
-    revalidatePath("/family");
-    revalidatePath("/school");
-    return added;
-  } catch (thrown) {
-    log.warn("adding a child from a school notice failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
-    return { error: "We could not add that child. Nothing was saved — please try again." };
-  }
-}
-
-async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<{ routedTable: string; routedId: string } | { error: string }> {
-  const householdId = input.householdId;
-  if (input.kind === "bill") {
-    const created = await createObligation(supabase, {
-      householdId,
-      name: input.title,
-      kind: input.billKind ?? "other",
-      payee: input.payee || null,
-      amountMinor: input.amount ? Math.round(Number(input.amount) * 100) : null,
-      currency: input.currency || null,
-      dueOn: input.dueDate || null,
-    });
-    return { routedTable: "obligations", routedId: created.id };
-  }
-  if (input.kind === "school_item") {
-    if (!input.childMemberId) return { error: "Choose who this is for." };
-    const created = await createSchoolItem(supabase, {
-      householdId,
-      childMemberId: input.childMemberId,
-      kind: input.schoolKind ?? "homework",
-      title: input.title,
-      subject: input.subject || null,
-      detail: input.notes || null,
-      ...schoolWhen({ date: input.dueDate, time: input.dueTime, endTime: input.endTime, timezone: membership.household.timezone }),
-      estimatedMinutes: null,
-    });
-    return { routedTable: "school_items", routedId: created.id };
-  }
-  if (input.kind === "health_document") {
-    const entitlement = await may(supabase, householdId, "health.tracking");
-    if (!entitlement.allowed) return { error: entitlement.reason };
-
-    // No selection means "for me" — the extracted subjectMemberName is a
-    // hint the confirm screen shows, never something trusted to pick an
-    // identity on its own; RLS is what actually decides whether this
-    // member (self, or a child the actor guards) is one they may file for.
-    const subjectMemberId = input.subjectMemberId || membership.memberId;
-
-    let filePath: string | null = null;
-    const item = await getHomeSendItem(supabase, householdId, input.itemId);
-    if (item?.filePath) {
-      const { data: downloaded, error: downloadError } = await supabase.storage.from("home-send").download(item.filePath);
-      if (downloadError) throw new Error(`home-send download failed: ${downloadError.message}`);
-      const newPath = `${householdId}/${crypto.randomUUID()}`;
-      const { error: uploadError } = await supabase.storage.from("health-records").upload(newPath, downloaded);
-      if (uploadError) throw new Error(`health-records upload failed: ${uploadError.message}`);
-      filePath = newPath;
-    }
-
-    const created = await createRecord(supabase, { householdId, memberId: membership.memberId }, {
-      memberId: subjectMemberId,
-      label: input.title,
-      recordType: input.healthRecordType ?? "other",
-      documentDate: input.documentDate || null,
-      filePath,
-      notes: input.notes || null,
-      privacyScope: "private",
-      sourceType: "home_send_document",
-    });
-    return { routedTable: "health_records", routedId: created.id };
-  }
-  const created = await createConsumable(supabase, {
-    householdId,
-    name: input.title,
-    category: input.category || CONSUMABLE_CATEGORIES[0],
-    unit: input.unit || "unit",
-    typicalQuantity: input.quantity ? Number(input.quantity) : 1,
-  });
-  return { routedTable: "consumables", routedId: created.id };
-}
 
 function revalidateDomains() {
   revalidatePath("/ai");
@@ -798,6 +596,51 @@ export async function dismissHomeSendItemAction(_previous: RouteHomeItemState, f
   }
 }
 
+/**
+ * Reverses one recorded change through the same domain service a manual
+ * edit or remove would use: removes what it created, or puts back what it
+ * updated or cancelled (rule 12, Wave 3 §10, DDU 2.0 §26).
+ */
+async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string, memberId: string, change: HomeSendChange): Promise<void> {
+  const previous = change.previous ?? {};
+
+  if (change.changeType === "updated") {
+    if (change.domain === "school_item") {
+      const dueAt = (previous.dueAt as string | null | undefined) ?? null;
+      // Changes recorded before 14-014 kept no time flag: read it the way a
+      // portal's due date is read, midnight UTC being a day.
+      const dueTimeKnown = typeof previous.dueTimeKnown === "boolean" ? previous.dueTimeKnown : Boolean(dueAt && !dueAt.includes("T00:00:00"));
+      await updateSchoolItem(supabase, householdId, change.entityId, { dueAt, dueTimeKnown, endsAt: (previous.endsAt as string | null | undefined) ?? null });
+    } else if (change.domain === "bill") {
+      await updateObligation(supabase, {
+        id: change.entityId,
+        householdId,
+        dueOn: (previous.dueOn as string | null | undefined) ?? null,
+        amountMinor: (previous.amountMinor as number | null | undefined) ?? null,
+      });
+    }
+  } else if (change.changeType === "cancelled") {
+    const status = typeof previous.status === "string" ? previous.status : null;
+    if (change.domain === "school_item") {
+      await restoreSchoolItem(supabase, householdId, change.entityId, (status && status !== "cancelled" ? status : "pending") as "pending");
+    } else if (change.domain === "bill") {
+      await restoreObligation(supabase, { id: change.entityId, householdId, status: status && status !== "cancelled" ? status : "expected" });
+    }
+  } else if (change.domain === "bill") {
+    await cancelObligation(supabase, { id: change.entityId, householdId });
+  } else if (change.domain === "school_item") {
+    await cancelSchoolItem(supabase, householdId, change.entityId);
+  } else if (change.domain === "purchase") {
+    // A recorded purchase goes, and the item's history is what the
+    // remaining purchases say (09-009).
+    await removePurchase(supabase, { householdId, purchaseId: change.entityId });
+  } else if (change.domain === "health_document") {
+    await archiveRecord(supabase, { householdId, memberId: memberId }, change.entityId);
+  } else {
+    await retireConsumable(supabase, { id: change.entityId, householdId });
+  }
+}
+
 const undoSchema = z.object({ householdId: z.uuid(), changeId: z.uuid() });
 
 /**
@@ -818,43 +661,7 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
     const change = await getHomeSendChange(supabase, householdId, parsed.data.changeId);
     if (!change) return { error: "That is not part of this household." };
     if (change.undoneAt) return { error: "Already undone." };
-    const previous = change.previous ?? {};
-
-    if (change.changeType === "updated") {
-      if (change.domain === "school_item") {
-        const dueAt = (previous.dueAt as string | null | undefined) ?? null;
-        // Changes recorded before 14-014 kept no time flag: read it the way a
-        // portal's due date is read, midnight UTC being a day.
-        const dueTimeKnown = typeof previous.dueTimeKnown === "boolean" ? previous.dueTimeKnown : Boolean(dueAt && !dueAt.includes("T00:00:00"));
-        await updateSchoolItem(supabase, householdId, change.entityId, { dueAt, dueTimeKnown, endsAt: (previous.endsAt as string | null | undefined) ?? null });
-      } else if (change.domain === "bill") {
-        await updateObligation(supabase, {
-          id: change.entityId,
-          householdId,
-          dueOn: (previous.dueOn as string | null | undefined) ?? null,
-          amountMinor: (previous.amountMinor as number | null | undefined) ?? null,
-        });
-      }
-    } else if (change.changeType === "cancelled") {
-      const status = typeof previous.status === "string" ? previous.status : null;
-      if (change.domain === "school_item") {
-        await restoreSchoolItem(supabase, householdId, change.entityId, (status && status !== "cancelled" ? status : "pending") as "pending");
-      } else if (change.domain === "bill") {
-        await restoreObligation(supabase, { id: change.entityId, householdId, status: status && status !== "cancelled" ? status : "expected" });
-      }
-    } else if (change.domain === "bill") {
-      await cancelObligation(supabase, { id: change.entityId, householdId });
-    } else if (change.domain === "school_item") {
-      await cancelSchoolItem(supabase, householdId, change.entityId);
-    } else if (change.domain === "purchase") {
-      // A recorded purchase goes, and the item's history is what the
-      // remaining purchases say (09-009).
-      await removePurchase(supabase, { householdId, purchaseId: change.entityId });
-    } else if (change.domain === "health_document") {
-      await archiveRecord(supabase, { householdId, memberId: membership.memberId }, change.entityId);
-    } else {
-      await retireConsumable(supabase, { id: change.entityId, householdId });
-    }
+    await reverseChange(supabase, householdId, membership.memberId, change);
 
     await undoHomeSendChange(supabase, householdId, change.id, membership.memberId);
 
@@ -865,6 +672,41 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
 
     revalidateDomains();
     return { notice: change.changeType === "created" ? "Undone. WonderHome forgot it again." : "Undone. The record is back the way it was." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "homesend").body.error.message };
+  }
+}
+
+const undoDocumentSchema = z.object({ householdId: z.uuid(), itemId: z.uuid() });
+
+/**
+ * Undo everything a document did (DDU 2.0 §26): each of its live changes,
+ * newest first, through its own domain service. What cannot be reversed is
+ * said, and the rest is still undone — never all-or-nothing silence.
+ */
+export async function undoHomeSendDocumentAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
+  const parsed = undoDocumentSchema.safeParse({ householdId: formData.get("householdId"), itemId: formData.get("itemId") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const householdId = parsed.data.householdId;
+    const live = (await listHomeSendChanges(supabase, householdId)).filter((change) => change.intakeId === parsed.data.itemId && !change.undoneAt);
+    if (live.length === 0) return { error: "Nothing from this is left to undo." };
+    let undone = 0;
+    for (const change of live) {
+      try {
+        await reverseChange(supabase, householdId, membership.memberId, change);
+        await undoHomeSendChange(supabase, householdId, change.id, membership.memberId);
+        undone += 1;
+      } catch (thrown) {
+        log.warn("undoing a document change failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+      }
+    }
+    if (!(await hasActiveHomeSendChanges(supabase, householdId, parsed.data.itemId))) await markHomeSendUndone(supabase, householdId, parsed.data.itemId);
+    revalidateDomains();
+    if (undone === live.length) return { notice: `Undone — ${undone === 1 ? "the one change" : `all ${undone} changes`} from it.` };
+    return { error: `Undid ${undone} of ${live.length}. The rest could not be undone here — change them on their own screens.` };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }

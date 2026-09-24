@@ -13,6 +13,8 @@ import type {
   HomeSendSource,
   HomeSendStatus,
 } from "./items";
+import type { IntakeChangeReceipt } from "./apply";
+import type { DocumentPlan } from "./plan";
 import type { IntakeUnderstanding } from "./understanding";
 
 /**
@@ -53,12 +55,13 @@ function fromRow(row: Row): HomeSendItem {
     failureReason: (row.failure_reason as HomeSendFailureReason | null) ?? null,
     reviewDecision: (row.review_decision as HomeSendReviewDecision | null) ?? null,
     reviewedAt: (row.reviewed_at as string | null) ?? null,
+    receipt: (row.receipt as IntakeChangeReceipt | null) ?? null,
     createdAt: row.created_at as string,
   };
 }
 
 const SELECT_COLUMNS =
-  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, content_type, content_hash, source_url, subject, parent_item_id, understanding, transcript_confidence, failure_reason, review_decision, reviewed_at, created_at";
+  "id, household_id, created_by_member_id, source, file_path, raw_text, status, classified_kind, extracted, routed_table, routed_id, security_status, external_id, sender_address, content_type, content_hash, source_url, subject, parent_item_id, understanding, transcript_confidence, failure_reason, review_decision, reviewed_at, receipt, created_at";
 
 /** The item a provider already delivered with this id, if any — so a retried webhook never creates a second one (§15). */
 export async function findByExternalId(supabase: SupabaseClient, householdId: string, externalId: string): Promise<HomeSendItem | null> {
@@ -380,4 +383,28 @@ export async function markHomeSendFailed(
   if (extra?.understanding) update.understanding = extra.understanding;
   const { error } = await supabase.from("home_send_items").update(update).eq("household_id", householdId).eq("id", itemId);
   if (error) throw new Error(`markHomeSendFailed failed: ${error.code ?? "unknown"}`);
+}
+
+/**
+ * What applying a document's plan did, kept on the item (DDU 2.0 §22, §44):
+ * the plan as applied and its receipt. Something written routes the item to
+ * its first write; nothing new at all sets it aside as kept; a result still
+ * waiting on an answer, or one where every write failed, stays in review so
+ * the person can come back to it.
+ */
+export async function recordDocumentApplied(
+  supabase: SupabaseClient,
+  householdId: string,
+  itemId: string,
+  input: { plan: DocumentPlan; receipt: IntakeChangeReceipt; routed: { table: string; id: string } | null; review: HomeSendReviewOutcome | null },
+): Promise<void> {
+  const now = new Date().toISOString();
+  const update: Record<string, unknown> = { plan: input.plan, receipt: input.receipt };
+  if (input.routed) {
+    Object.assign(update, { status: "routed", routed_table: input.routed.table, routed_id: input.routed.id, routed_at: now, ...reviewColumns(input.review ?? undefined, now) });
+  } else if (input.receipt.status === "no_change") {
+    Object.assign(update, { status: "dismissed", ...reviewColumns(input.review ?? { decision: "kept_existing" }, now) });
+  }
+  const { error } = await supabase.from("home_send_items").update(update).eq("household_id", householdId).eq("id", itemId);
+  if (error) throw new Error(`recordDocumentApplied failed: ${error.code ?? "unknown"}`);
 }

@@ -3,11 +3,14 @@
 import { Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
+import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { Pill } from "@wonderhome/core/ui/pill";
 
+import { DocumentPlanReview } from "./home-send-plan";
 import { HomeSendReceiptFields } from "./home-send-receipt";
 
 export const OBLIGATION_KIND_OPTIONS = [
@@ -282,6 +285,9 @@ export function HomeSendConfirmStep({
   subject,
   confirmation,
   canAddChild = false,
+  plan = null,
+  onDone,
+  onApplied,
 }: {
   item: { id: string };
   defaultKind: string;
@@ -304,13 +310,44 @@ export function HomeSendConfirmStep({
   confirmation?: ReviewConfirmation | null;
   /** Whether this person may add a child right here (story 08-009) — the Family screen's rule. */
   canAddChild?: boolean;
+  /** A document with several records is reviewed as its change plan (DDU 2.0), not as one item. */
+  plan?: DocumentPlan | null;
+  /** Closes the review once a plan's receipt has been read. */
+  onDone?: () => void;
+  /** Told once a plan has been applied, so the surrounding screen can drop its "Not worth adding". */
+  onApplied?: () => void;
 }) {
   const [kind, setKind] = useState(defaultKind);
+  const [byHand, setByHand] = useState(false);
+  const [planApplied, setPlanApplied] = useState(false);
   const needs = (kind !== "grocery_item" && kind !== "receipt" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
     (need) => typeof need?.title === "string" && need.title.trim() !== "",
   );
   const proposal = reconciliation?.proposal?.type ?? (reconciliation ? "duplicate" : null);
   const primaryLabel = prefill?.title ?? KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "This";
+
+  if (plan && !byHand) {
+    return (
+      <div className="space-y-3">
+        <DocumentPlanReview
+          householdId={householdId}
+          itemId={item.id}
+          plan={plan}
+          summary={understanding?.contentSummary ?? null}
+          onDone={onDone}
+          onApplied={() => {
+            setPlanApplied(true);
+            onApplied?.();
+          }}
+        />
+        {planApplied ? null : (
+          <Pill type="button" tone="quiet" onClick={() => setByHand(true)} className="w-full justify-center">
+            Fill it in by hand instead
+          </Pill>
+        )}
+      </div>
+    );
+  }
 
   return (
     <form action={routeAction} className="space-y-3">

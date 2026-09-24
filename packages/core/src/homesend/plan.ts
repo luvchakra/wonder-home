@@ -205,7 +205,12 @@ export function buildDocumentPlan(reading: DocumentReading, context: PlanContext
   const now = options.now ?? new Date();
   // Newer record wins (§28): the document's own date is when it was
   // written; failing that, when it arrived.
-  const capturedAt = reading.issuedOn ? `${reading.issuedOn}T00:00:00Z` : (options.receivedAt ?? now.toISOString());
+  // A document dated a day was written some time that day, so only a record
+  // changed after that day is newer than it — and nothing is newer than when
+  // the document actually arrived.
+  const received = options.receivedAt ?? now.toISOString();
+  const endOfIssuedDay = reading.issuedOn ? `${reading.issuedOn}T23:59:59Z` : null;
+  const capturedAt = endOfIssuedDay && Date.parse(endOfIssuedDay) < Date.parse(received) ? endOfIssuedDay : received;
   const memberNames = new Map(options.people.filter((item) => item.entityType === "member").map((item) => [item.entityId, String(item.attributes.displayName)]));
   const series = seriesKeys(reading.records);
 

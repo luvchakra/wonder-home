@@ -148,7 +148,7 @@ export default async function HomeSendPage({
   await Promise.all(
     pending.slice(0, 10).map(async (item) => {
       const review = await prepareReview(supabase, membership, item).catch(() => null);
-      if (review) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation, confirmation: review.confirmation };
+      if (review) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation, confirmation: review.confirmation, plan: review.plan ?? null };
     }),
   );
   const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);

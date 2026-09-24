@@ -1,3 +1,4 @@
+import type { IntakeChangeReceipt } from "./apply";
 import type { IntakeUnderstanding } from "./understanding";
 
 /**
@@ -142,6 +143,8 @@ export type HomeSendItem = {
   /** What was decided at review (§19); null until reviewed. */
   reviewDecision?: HomeSendReviewDecision | null;
   reviewedAt?: string | null;
+  /** What applying a document's plan did, record by record (DDU 2.0 §44); null for anything not applied as a plan. */
+  receipt?: IntakeChangeReceipt | null;
   createdAt: string;
 };
 
@@ -177,4 +180,10 @@ export type HomeSendChange = {
   changeType: HomeSendChangeType;
   /** For an update or a cancellation: the fields as they were, which undo restores. */
   previous: Record<string, unknown> | null;
+  /** Which record of the document it was, when it came from a document plan (DDU 2.0). */
+  planKey?: string | null;
+  /** The fields it changed, as the household was shown them (DDU 2.0 §25). */
+  fields?: { field: string; label: string; before: string | null; after: string }[] | null;
+  /** Where in the document it came from. */
+  evidence?: { page: number | null; section: string | null; quote: string } | null;
 };
