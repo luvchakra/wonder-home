@@ -94,7 +94,14 @@ suggests and never decides.
 
 ## Cleanup
 
-Planned for after the merge:
-- QA accounts `aa433d0d-e3e8-4266-9d46-a95a6f19ecaf` and
-  `dee3da8e-c383-42dd-82f4-9bacc4ae8dba`;
-- household `554226fb-055d-49d1-a03a-ab640223aac6` ("QA Escalation Home").
+Done after the merge (#161, `1b2852c`):
+- The QA household "QA Escalation Home" (`554226fb-055d-49d1-a03a-ab640223aac6`)
+  was deleted with every row in it, including the bill, the school items and
+  the responsibility inserted by hand to set up the scenarios.
+- The QA accounts `aa433d0d-e3e8-4266-9d46-a95a6f19ecaf` and
+  `dee3da8e-c383-42dd-82f4-9bacc4ae8dba` were deleted.
+- The scratch env files, screenshots and logs were removed, and the dev
+  server was stopped.
+
+A count over every `household_id` table in `public` and `wh`, the auth users
+and Storage found nothing left.
