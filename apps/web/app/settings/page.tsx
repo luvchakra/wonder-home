@@ -25,7 +25,7 @@ import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 import { signOut } from "../(auth)/actions";
 import { MemberAvatarControl } from "../_components/member-avatar-control";
 import { MemberProfileForm } from "../_components/member-profile-form";
-import { requireSession } from "../_lib/session";
+import { requireSession, roleWords } from "../_lib/session";
 
 export const metadata = { title: "Settings & Profile" };
 export const dynamic = "force-dynamic";
@@ -141,7 +141,7 @@ export default async function SettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
-              <p className="text-sm text-[var(--wh-foreground-muted)]">{view.roleLabel} · {view.householdName}</p>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{roleWords(view.roleLabel, t)} · {view.householdName}</p>
               <p className="text-xs break-all text-[var(--wh-foreground-subtle)]">{user?.email}</p>
             </div>
             {me ? (
