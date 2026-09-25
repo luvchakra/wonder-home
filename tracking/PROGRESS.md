@@ -11,7 +11,7 @@
 | Not Started | 2 |
 | Completion | 97.3% |
 | Current module | 22 Internationalization and Localization |
-| Current story | 22-004 HomeTalk, Today, More and Family screens localized; next: 22-004 catalog coverage on the remaining screens; 20-011 payment operations done; 22-008 RTL deferred by the owner; 22-007 multi-currency audit done |
+| Current story | 22-004 HomeTalk, Today, More and Family screens localized; next: 22-004 catalog coverage on the remaining screens; 20-011 payment operations and 18-008 developer platform done; 22-008 RTL deferred by the owner; 22-007 multi-currency audit done |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this

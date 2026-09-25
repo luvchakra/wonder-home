@@ -25,6 +25,7 @@
     "./security/*": "./src/security/*.ts",
     "./api/*": "./src/api/*.ts",
     "./billing/*": "./src/billing/*.ts",
+    "./developer/*": "./src/developer/*.ts",
     "./commerce/*": "./src/commerce/*.ts",
     "./meals/*": "./src/meals/*.ts",
     "./finance/*": "./src/finance/*.ts",

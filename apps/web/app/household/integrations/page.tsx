@@ -15,6 +15,10 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { createAdminClient } from "@wonderhome/core/db/admin";
+import { developerApiEnabled, listDeveloperKeys, PARTNER_SCOPES, SCOPE_WORDS } from "@wonderhome/core/developer/keys";
+
+import { DeveloperKeys } from "../../_components/developer-keys";
 import { DeviceLinkControls } from "../../_components/device-link-controls";
 import { WeatherArea } from "../../_components/weather-area";
 import { formatDate, formatTime, requireSession } from "../../_lib/session";
@@ -57,6 +61,9 @@ export default async function IntegrationsPage() {
   // Weather is the one provider a deployment can switch on without a
   // household credential (story 17-007), so its area is chosen right here.
   const weatherOn = weatherProviderFromEnv() !== null;
+  // Partner keys (story 18-008): shown only where the deployment has switched the API on.
+  const developerOn = developerApiEnabled();
+  const developerKeys = developerOn ? await listDeveloperKeys(createAdminClient(), householdId).catch(() => []) : [];
   const [integrations, weather, weatherEntitled, devices, assets] = await Promise.all([
     listIntegrations(supabase, householdId).catch(() => []),
     weatherOn ? householdWeather(supabase, householdId) : Promise.resolve(null),
@@ -191,6 +198,28 @@ export default async function IntegrationsPage() {
                   </div>
                 )}
               </div>
+            </Card>
+          </section>
+        ) : null}
+
+        {developerOn ? (
+          <section id="developer">
+            <SectionHeader title="Developer access" />
+            <Card className="p-4">
+              <DeveloperKeys
+                householdId={householdId}
+                scopes={PARTNER_SCOPES.map((scope) => ({ value: scope, label: SCOPE_WORDS[scope] }))}
+                keys={developerKeys.map((key) => ({
+                  id: key.id,
+                  name: key.name,
+                  environment: key.environment,
+                  prefix: key.prefix,
+                  scopes: key.scopes.map((scope) => SCOPE_WORDS[scope]),
+                  lastUsed: key.lastUsedAt ? `Used ${formatDate(timezone, new Date(key.lastUsedAt), "long")}, ${formatTime(timezone, new Date(key.lastUsedAt))}` : "Not used yet",
+                  expires: key.revokedAt ? null : key.expiresAt ? `Stops working ${formatDate(timezone, new Date(key.expiresAt), "long")}` : "Works until revoked",
+                  revoked: Boolean(key.revokedAt),
+                }))}
+              />
             </Card>
           </section>
         ) : null}
