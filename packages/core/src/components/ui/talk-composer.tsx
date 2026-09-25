@@ -2,16 +2,7 @@
 
 import { ArrowUp, AudioLines, ChevronDown, Mic, Plus, Square, X } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, createContext, useContext } from "react";
 
 import { cn } from "../../lib/cn";
 import { BrandMark } from "./brand";
@@ -80,6 +71,79 @@ export function talkComposerState(input: {
   return input.hasText ? "typing" : "idle";
 }
 
+/**
+ * The composer's own words (story 22-004). English by default; a screen that
+ * knows the viewer's language passes its catalog's wording in `labels`.
+ */
+export type TalkComposerLabels = {
+  /** The text box's accessible name. */
+  messageLabel: string;
+  placeholder: string;
+  placeholderShort: string;
+  attach: string;
+  stopTranscribing: string;
+  stopListening: string;
+  endLive: string;
+  speak: string;
+  send: string;
+  /** `{engine}` is the engine's name. */
+  startLive: string;
+  engineTrigger: string;
+  enginePicker: string;
+  transcribing: string;
+  listening: string;
+  paused: string;
+  thinking: string;
+  speaking: string;
+  /** `{who}` is HomeTalk or Gemini Live. */
+  whoListening: string;
+  resumeConversation: string;
+  pauseConversation: string;
+  resume: string;
+  pause: string;
+  tapToResume: string;
+  tapToPause: string;
+  stepListening: string;
+  stepTranscribing: string;
+  stepReady: string;
+};
+
+export const TALK_COMPOSER_LABELS: TalkComposerLabels = {
+  messageLabel: "Message WonderHome",
+  placeholder: "Ask WonderHome anything…",
+  placeholderShort: "Ask anything…",
+  attach: "Send a photo or paste something — WonderHome reads it and asks you to confirm",
+  stopTranscribing: "Stop transcribing",
+  stopListening: "Stop listening",
+  endLive: "End voice conversation",
+  speak: "Speak — your words go in the box for review",
+  send: "Send message",
+  startLive: "Start a voice conversation with {engine} — it answers out loud",
+  engineTrigger: "Live conversation with {engine}. Change",
+  enginePicker: "Who answers a live conversation",
+  transcribing: "Transcribing…",
+  listening: "Listening…",
+  paused: "Paused",
+  thinking: "Thinking…",
+  speaking: "Speaking…",
+  whoListening: "{who} is listening…",
+  resumeConversation: "Resume the voice conversation",
+  pauseConversation: "Pause the voice conversation",
+  resume: "Resume",
+  pause: "Pause",
+  tapToResume: "Tap to resume",
+  tapToPause: "Tap to pause",
+  stepListening: "Listening",
+  stepTranscribing: "Transcribing",
+  stepReady: "Ready to send",
+};
+
+const LabelsContext = createContext<TalkComposerLabels>(TALK_COMPOSER_LABELS);
+
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_match, name: string) => values[name] ?? "");
+}
+
 export function TalkComposer({
   onSend,
   onLiveTurn,
@@ -89,8 +153,9 @@ export function TalkComposer({
   onAttach,
   householdId,
   disabled = false,
-  placeholder = "Ask WonderHome anything…",
-  placeholderShort = "Ask anything…",
+  labels: labelOverrides,
+  placeholder: placeholderProp,
+  placeholderShort: placeholderShortProp,
   initialValue = "",
   autoFocus = false,
   liveConversationAvailable = false,
@@ -101,6 +166,8 @@ export function TalkComposer({
   onLiveTranscript,
   className,
 }: {
+  /** The composer's words in the viewer's language; English when absent. */
+  labels?: Partial<TalkComposerLabels>;
   onSend: (text: string, channel: "text" | "voice", confidence?: number) => void;
   /** One spoken turn of a live conversation; resolves with what to say back. */
   onLiveTurn?: (transcript: string, confidence: number) => Promise<string>;
@@ -143,6 +210,9 @@ export function TalkComposer({
   onLiveTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
   className?: string;
 }) {
+  const labels: TalkComposerLabels = { ...TALK_COMPOSER_LABELS, ...labelOverrides };
+  const placeholder = placeholderProp ?? labels.placeholder;
+  const placeholderShort = placeholderShortProp ?? labels.placeholderShort;
   const [value, setValue] = useState(initialValue);
   /** Set only while `value` is exactly what speech produced, untouched since. */
   const [spokenConfidence, setSpokenConfidence] = useState<number | undefined>(undefined);
@@ -241,6 +311,7 @@ export function TalkComposer({
   const inLive = state === "live" || state === "paused";
 
   return (
+    <LabelsContext.Provider value={labels}>
     <form onSubmit={onSubmit} className={cn("w-full", className)}>
       <div
         className={cn(
@@ -264,7 +335,7 @@ export function TalkComposer({
           ) : (
             <>
               <label htmlFor="wh-composer" className="sr-only">
-                Message WonderHome
+                {labels.messageLabel}
               </label>
               <div className="relative min-w-0 flex-1 self-center">
                 <textarea
@@ -306,7 +377,7 @@ export function TalkComposer({
               {onAttach ? (
                 <RoundButton
                   tone="soft"
-                  label="Send a photo or paste something — WonderHome reads it and asks you to confirm"
+                  label={labels.attach}
                   onClick={onAttach}
                   disabled={disabled}
                 >
@@ -324,13 +395,13 @@ export function TalkComposer({
           {voiceBusy ? (
             <RoundButton
               tone="listening"
-              label={state === "transcribing" ? "Stop transcribing" : "Stop listening"}
+              label={state === "transcribing" ? labels.stopTranscribing : labels.stopListening}
               onClick={() => (state === "transcribing" ? speech.cancel() : speech.stop())}
             >
               <Square className="size-4" fill="currentColor" />
             </RoundButton>
           ) : inLive ? (
-            <RoundButton tone="danger" label="End voice conversation" onClick={endLive}>
+            <RoundButton tone="danger" label={labels.endLive} onClick={endLive}>
               <X className="size-5" />
             </RoundButton>
           ) : (
@@ -338,7 +409,7 @@ export function TalkComposer({
               {speech.available ? (
                 <RoundButton
                   tone="soft"
-                  label="Speak — your words go in the box for review"
+                  label={labels.speak}
                   onClick={speech.start}
                   disabled={disabled}
                 >
@@ -347,13 +418,13 @@ export function TalkComposer({
               ) : null}
 
               {state === "typing" || !liveConversationAvailable ? (
-                <RoundButton tone="primary" label="Send message" type="submit" disabled={disabled || !value.trim()}>
+                <RoundButton tone="primary" label={labels.send} type="submit" disabled={disabled || !value.trim()}>
                   <ArrowUp className="size-5" />
                 </RoundButton>
               ) : (
                 <RoundButton
                   tone="primary"
-                  label={`Start a voice conversation with ${LIVE_ENGINE_NAMES[engine]} — it answers out loud`}
+                  label={fill(labels.startLive, { engine: LIVE_ENGINE_NAMES[engine] })}
                   onClick={live.start}
                   disabled={disabled}
                 >
@@ -367,6 +438,7 @@ export function TalkComposer({
 
       {voiceBusy ? <Steps transcribing={state === "transcribing"} /> : null}
     </form>
+    </LabelsContext.Provider>
   );
 }
 
@@ -449,6 +521,7 @@ function LiveEnginePicker({
   geminiLive: { available: boolean; reason?: string };
   disabled?: boolean;
 }) {
+  const labels = useContext(LabelsContext);
   const options: { engine: LiveEngineChoice; available: boolean; note?: string }[] = [
     { engine: "wonderhome", available: true },
     { engine: "gemini_live", available: geminiLive.available, note: geminiLive.available ? undefined : geminiLive.reason },
@@ -458,7 +531,7 @@ function LiveEnginePicker({
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         disabled={disabled}
-        aria-label={`Live conversation with ${LIVE_ENGINE_NAMES[value]}. Change`}
+        aria-label={fill(labels.engineTrigger, { engine: LIVE_ENGINE_NAMES[value] })}
         className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[var(--wh-primary-soft)] pr-2 pl-1 text-sm sm:h-11 sm:gap-2 sm:pr-2.5 sm:pl-1.5 font-semibold text-[var(--wh-foreground)] transition-colors hover:bg-[var(--wh-info-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:cursor-not-allowed disabled:opacity-40"
       >
         <span className="grid size-8 place-items-center rounded-full bg-[var(--wh-surface)]">
@@ -476,7 +549,7 @@ function LiveEnginePicker({
           collisionPadding={16}
           className="z-50 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] shadow-[var(--wh-shadow-float)]"
         >
-          <DropdownMenu.Label className="sr-only">Who answers a live conversation</DropdownMenu.Label>
+          <DropdownMenu.Label className="sr-only">{labels.enginePicker}</DropdownMenu.Label>
           <DropdownMenu.RadioGroup value={value} onValueChange={(next) => onChange(next as LiveEngineChoice)}>
             {options.map((option, index) => (
               <DropdownMenu.RadioItem
@@ -516,6 +589,7 @@ function LiveEnginePicker({
 
 /** The field while the microphone is open: what is happening, where the words will appear. */
 function ListeningField({ transcribing }: { transcribing: boolean }) {
+  const labels = useContext(LabelsContext);
   return (
     <div
       className="flex min-h-11 min-w-0 flex-1 items-center gap-3 self-center rounded-full bg-[var(--wh-primary-soft)] px-3.5"
@@ -524,7 +598,7 @@ function ListeningField({ transcribing }: { transcribing: boolean }) {
     >
       <Bars active={!transcribing} tone="primary" />
       <span className="min-w-0 text-[0.9375rem] font-medium text-[var(--wh-primary)]">
-        {transcribing ? "Transcribing…" : "Listening…"}
+        {transcribing ? labels.transcribing : labels.listening}
       </span>
     </div>
   );
@@ -544,21 +618,22 @@ function LiveField({
   engine: LiveEngineChoice;
   onToggle: () => void;
 }) {
+  const labels = useContext(LabelsContext);
   const who = engine === "gemini_live" ? "Gemini Live" : "HomeTalk";
-  const status = paused ? "Paused" : thinking ? "Thinking…" : speaking ? "Speaking…" : `${who} is listening…`;
+  const status = paused ? labels.paused : thinking ? labels.thinking : speaking ? labels.speaking : fill(labels.whoListening, { who });
 
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-label={paused ? "Resume the voice conversation" : "Pause the voice conversation"}
-      title={paused ? "Resume" : "Pause"}
+      aria-label={paused ? labels.resumeConversation : labels.pauseConversation}
+      title={paused ? labels.resume : labels.pause}
       className="flex min-h-11 min-w-0 flex-1 items-center gap-3 self-center rounded-full px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
     >
       <Bars active={!paused} tone="primary" tall />
       <span className="min-w-0">
         <span className="block text-[0.9375rem] font-semibold text-[var(--wh-primary)]">{status}</span>
-        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{paused ? "Tap to resume" : "Tap to pause"}</span>
+        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{paused ? labels.tapToResume : labels.tapToPause}</span>
       </span>
     </button>
   );
@@ -572,10 +647,11 @@ function LiveField({
  * transcription from a microphone that never opened.
  */
 function Steps({ transcribing }: { transcribing: boolean }) {
+  const labels = useContext(LabelsContext);
   const steps = [
-    { label: "Listening", done: true },
-    { label: "Transcribing", done: transcribing },
-    { label: "Ready to send", done: false },
+    { label: labels.stepListening, done: true },
+    { label: labels.stepTranscribing, done: transcribing },
+    { label: labels.stepReady, done: false },
   ];
 
   return (
