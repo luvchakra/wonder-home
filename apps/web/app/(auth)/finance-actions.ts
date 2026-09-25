@@ -12,6 +12,8 @@ import {
   removeTransaction,
   updateObligation,
 } from "@wonderhome/core/finance/repository";
+import { retireBudget, saveBudget } from "@wonderhome/core/finance/budget-repository";
+import { BUDGET_PERIODS } from "@wonderhome/core/finance/budgets";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
@@ -276,6 +278,61 @@ export async function removeTransactionAction(
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await removeTransaction(supabase, parsed.data);
+    revalidatePath("/bills");
+    return { notice: "Removed." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+const budgetSchema = z.object({
+  householdId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  category: z.enum(OBLIGATION_KINDS, { error: "Pick which kind of bill this budget is for." }),
+  period: z.enum(BUDGET_PERIODS, { error: "Pick a month, a quarter or a year." }),
+  // Decimal major units as typed (CLAUDE.md principle 22), converted once here.
+  amount: z.coerce.number({ error: "Add the amount." }).positive({ error: "Add an amount above zero." }),
+  currency: z.string().trim().regex(/^[A-Z]{3}$/, { error: "Pick a currency." }),
+});
+
+/** Setting or changing a budget for one kind of bill (story 11-007). Planning only — a budget never blocks a bill. */
+export async function saveBudgetAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = budgetSchema.safeParse({
+    householdId: formData.get("householdId"),
+    id: formData.get("id") || undefined,
+    category: formData.get("category"),
+    period: formData.get("period"),
+    amount: formData.get("amount"),
+    currency: formData.get("currency"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await saveBudget(supabase, {
+      householdId: parsed.data.householdId,
+      id: parsed.data.id || undefined,
+      category: parsed.data.category,
+      period: parsed.data.period,
+      limitMinor: Math.round(parsed.data.amount * 100),
+      currency: parsed.data.currency,
+    });
+    revalidatePath("/bills");
+    return { notice: "Saved." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+/** Turning a budget off — kept, never deleted (CLAUDE.md principle 12). */
+export async function retireBudgetAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = cancelSchema.safeParse({ id: formData.get("id"), householdId: formData.get("householdId") });
+  if (!parsed.success) return { error: "Something is missing." };
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await retireBudget(supabase, parsed.data);
     revalidatePath("/bills");
     return { notice: "Removed." };
   } catch (thrown) {

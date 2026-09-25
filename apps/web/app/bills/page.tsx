@@ -10,7 +10,10 @@ import {
 } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { listBudgets } from "@wonderhome/core/finance/budget-repository";
+import { budgetSpend, type BudgetPayment } from "@wonderhome/core/finance/budgets";
 import { describeEmailHealth } from "@wonderhome/core/finance/email-connector";
+import { isoDateIn } from "@wonderhome/core/context/format";
 import {
   budgetView,
   format as formatMoney,
@@ -43,11 +46,14 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import {
   AddBillButton,
+  AddBudgetButton,
   AddTransactionButton,
+  BudgetRowControls,
   EditTransactionControl,
   ObligationRowControls,
   RemoveTransactionControl,
 } from "../_components/finance-forms";
+import { billKindLabel } from "../_lib/bill-kinds";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Bills & Finance" };
@@ -62,13 +68,6 @@ type HistoryRow = {
   payee: string | null;
   kind: string | null;
   owner_member_id: string | null;
-};
-type BudgetRow = {
-  id: string;
-  category: string;
-  limit_minor: number;
-  currency: string;
-  spent_minor: number;
 };
 
 /**
@@ -140,10 +139,7 @@ export default async function BillsPage({
         .eq("household_id", householdId)
         .order("period_label", { ascending: false })
         .limit(120),
-      supabase
-        .from("budgets")
-        .select("id, category, limit_minor, currency, spent_minor")
-        .eq("household_id", householdId),
+      listBudgets(supabase, householdId).catch(() => []),
       listIntegrations(supabase, householdId).catch(() => []),
     ]);
 
@@ -161,7 +157,16 @@ export default async function BillsPage({
       .find((health) => health.tone !== "silent") ?? null;
 
   const history = (historyRows.data as HistoryRow[] | null) ?? [];
-  const budgets = (budgetRows.data as BudgetRow[] | null) ?? [];
+  // What each budget has used this period, from the payments on record, in
+  // the budget's own currency only (story 22-007). A payment's kind is its
+  // own when recorded, else its bill's.
+  const kindOfBill = new Map(obligations.map((o) => [o.id, o.kind as string]));
+  const payments: BudgetPayment[] = history.flatMap((row) => {
+    const kind = row.kind ?? kindOfBill.get(row.obligation_id);
+    return kind ? [{ kind, currency: row.currency, amountMinor: Number(row.amount_minor), paidOn: row.paid_on, periodLabel: row.period_label }] : [];
+  });
+  const today = isoDateIn(new Date(), timezone);
+  const budgets = budgetRows.map((budget) => ({ ...budget, ...budgetSpend(budget, payments, today) }));
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const admin = isHouseholdAdmin(membership);
@@ -202,9 +207,15 @@ export default async function BillsPage({
     kindOptions: distinct(history.map((row) => row.kind)),
   };
 
-  // Monthly spend from recorded history: a trend, not a ledger.
-  const byPeriod = new Map<string, number>();
+  // Monthly spend from recorded history: a trend, not a ledger. Only the
+  // amounts in the currency shown are added; any others are counted, never
+  // converted or mixed in (story 22-007).
+  const trendRows = history.filter((row) => row.currency === currency);
+  const otherCurrencyCounts = new Map<string, number>();
   for (const row of history)
+    if (row.currency !== currency) otherCurrencyCounts.set(row.currency, (otherCurrencyCounts.get(row.currency) ?? 0) + 1);
+  const byPeriod = new Map<string, number>();
+  for (const row of trendRows)
     byPeriod.set(
       row.period_label,
       (byPeriod.get(row.period_label) ?? 0) + Number(row.amount_minor),
@@ -482,51 +493,77 @@ export default async function BillsPage({
                     </div>
                   </>
                 )}
+                {otherCurrencyCounts.size > 0 ? (
+                  <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">
+                    In {currency} only. Not added in:{" "}
+                    {[...otherCurrencyCounts.entries()]
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([other, count]) => `${count} ${count === 1 ? "payment" : "payments"} in ${other}`)
+                      .join(", ")}
+                    , since nothing is converted.
+                  </p>
+                ) : null}
               </Card>
               <Card>
-                <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                  Budgets
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+                    Budgets
+                  </p>
+                  {admin ? <AddBudgetButton householdId={householdId} defaultCurrency={householdCurrency} /> : null}
+                </div>
                 {budgets.length === 0 ? (
                   <p className="mt-2 text-sm text-[var(--wh-foreground-muted)]">
-                    Set a budget per category to see what is left. A budget
-                    never blocks a bill — the rent is due regardless.
+                    {admin
+                      ? "Set a budget for a kind of bill to see what is left. A budget never blocks a bill — the rent is due regardless."
+                      : "No budgets are set. An Admin can set one for a kind of bill."}
                   </p>
                 ) : (
-                  <ul className="mt-2 space-y-2.5">
+                  <ul className="mt-3 space-y-3">
                     {budgets.map((budget) => {
                       const v = budgetView({
                         category: budget.category,
-                        limitMinor: Number(budget.limit_minor),
+                        limitMinor: budget.limitMinor,
                         currency: budget.currency,
-                        spentMinor: Number(budget.spent_minor),
+                        spentMinor: budget.spentMinor,
                       });
-                      const pct = Math.min(
-                        100,
-                        Math.round(
-                          (Number(budget.spent_minor) /
-                            Math.max(1, Number(budget.limit_minor))) *
-                            100,
-                        ),
-                      );
+                      const pct = Math.min(100, Math.round((budget.spentMinor / Math.max(1, budget.limitMinor)) * 100));
+                      const periodWord = budget.period === "month" ? "this month" : budget.period === "quarter" ? "this quarter" : "this year";
                       return (
                         <li key={budget.id}>
-                          <div className="flex justify-between text-xs">
-                            <span className="font-medium capitalize">
-                              {budget.category}
-                            </span>
-                            <span className="text-[var(--wh-foreground-muted)]">
-                              {v.overBy
-                                ? `over by ${formatMoney(v.overBy, budget.currency)}`
-                                : `${formatMoney(v.remainingMinor, budget.currency)} left`}
-                            </span>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium">{billKindLabel(budget.category)}</p>
+                              <p className="text-xs text-[var(--wh-foreground-muted)]">
+                                {formatMoney(budget.spentMinor, budget.currency)} of {formatMoney(budget.limitMinor, budget.currency)} {periodWord} ·{" "}
+                                {v.overBy ? `over by ${formatMoney(v.overBy, budget.currency)}` : `${formatMoney(v.remainingMinor, budget.currency)} left`}
+                              </p>
+                            </div>
+                            {admin ? (
+                              <BudgetRowControls
+                                householdId={householdId}
+                                budget={{ id: budget.id, category: budget.category, period: budget.period, limitMinor: budget.limitMinor, currency: budget.currency }}
+                              />
+                            ) : null}
                           </div>
-                          <div className="mt-1 h-1.5 rounded-full bg-[var(--wh-surface-muted)]">
+                          <div
+                            className="mt-1.5 h-1.5 rounded-full bg-[var(--wh-surface-muted)]"
+                            role="img"
+                            aria-label={`${pct}% of the budget used`}
+                          >
                             <div
                               className={`h-full rounded-full ${v.overBy ? "bg-[var(--wh-attention)]" : "bg-[var(--wh-primary)]"}`}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
+                          {budget.otherCurrencies.length > 0 ? (
+                            <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">
+                              Not counted:{" "}
+                              {budget.otherCurrencies
+                                .map((other) => `${other.count} ${other.count === 1 ? "payment" : "payments"} in ${other.currency}`)
+                                .join(", ")}
+                              , since nothing is converted.
+                            </p>
+                          ) : null}
                         </li>
                       );
                     })}

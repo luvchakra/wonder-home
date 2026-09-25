@@ -330,10 +330,14 @@ function clockTimesIn(text: string): { text: string; minutes: number[] }[] {
   return out;
 }
 
-/** Amounts with a currency mark or word: "₹1,200", "rs 450", "1200 rupees", "$20". */
+/**
+ * Amounts with a currency mark, code or word, in every currency a household
+ * can keep (story 22-007): "₹1,200", "rs 450", "1200 rupees", "$20", "S$20",
+ * "SGD 20", "AED 300", "300 dirhams".
+ */
 function amountsIn(text: string): number[] {
   const out: number[] = [];
-  const pattern = /(?:₹|\brs\.?\s?|\binr\s?|\$|\busd\s?|€|£)\s?(\d[\d,]*(?:\.\d+)?)|(\d[\d,]*(?:\.\d+)?)\s?(?:rupees|dollars|\brs\b|\binr\b|\busd\b)/gi;
+  const pattern = /(?:₹|\brs\.?\s?|\b(?:inr|usd|eur|gbp|cad|aud|sgd|aed)\s?|\$|€|£)\s?(\d[\d,]*(?:\.\d+)?)|(\d[\d,]*(?:\.\d+)?)\s?(?:rupees|dollars|euros|pounds|dirhams|\brs\b|\b(?:inr|usd|eur|gbp|cad|aud|sgd|aed)\b)/gi;
   for (const match of text.matchAll(pattern)) {
     const value = Number((match[1] ?? match[2] ?? "").replace(/,/g, ""));
     if (Number.isFinite(value) && value > 0) out.push(value);
