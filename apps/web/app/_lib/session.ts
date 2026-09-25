@@ -104,7 +104,7 @@ export async function buildSession(
     view,
     viewer: {
       displayName: view.displayName,
-      roleLabel: view.roleLabel,
+      roleLabel: roleWords(view.roleLabel, t),
       householdName: view.householdName,
       unread,
       language: preferences.language,
@@ -114,6 +114,7 @@ export async function buildSession(
     secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }).map((item) => ({
       ...item,
       label: t(`nav.item.${item.key}`) || item.label,
+      purpose: t(`nav.purpose.${item.key}`) || item.purpose,
       ...(item.key === "notifications" && unread > 0 ? { badge: unread } : {}),
     })),
     locale: { preferences, t, format: requestFormat() },
@@ -171,4 +172,12 @@ export function greetingFor(timezone: string, now = new Date()): string {
   if (hour < 12) return t("greeting.morning");
   if (hour < 17) return t("greeting.afternoon");
   return t("greeting.evening");
+}
+
+const ROLE_KEYS = { Admin: "role.admin", Adult: "role.adult", Child: "role.child", Househelper: "role.househelper" } as const;
+
+/** The viewer's role in their language (story 22-004); an unknown label is shown as it is. */
+export function roleWords(label: string, t: Translate): string {
+  const key = ROLE_KEYS[label as keyof typeof ROLE_KEYS];
+  return key ? t(key) : label;
 }

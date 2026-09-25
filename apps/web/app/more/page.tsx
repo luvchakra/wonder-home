@@ -28,9 +28,10 @@ export const dynamic = "force-dynamic";
  * drift apart on which item lives in which section.
  */
 export default async function MorePage() {
-  const { viewer, secondary } = await requireSession("/more");
+  const { viewer, secondary, locale } = await requireSession("/more");
+  const { t } = locale;
 
-  const sections = groupSecondaryNavigation(secondary);
+  const sections = groupSecondaryNavigation(secondary, viewer.labels?.groups);
   const domainSections = sections.filter((section) => section.group !== "manage");
   const manageSection = sections.find((section) => section.group === "manage");
 
@@ -90,7 +91,7 @@ export default async function MorePage() {
         ) : null}
 
         <section>
-          <SectionHeader title="Help" />
+          <SectionHeader title={t("more.help")} />
           <Card className="p-2">
             <Link
               href="/help"
@@ -100,9 +101,9 @@ export default async function MorePage() {
                 <LifeBuoy className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">Get Help</span>
+                <span className="block text-sm font-medium">{t("more.getHelp")}</span>
                 <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                  User guide, common questions, and a way to search them
+                  {t("more.getHelpHint")}
                 </span>
               </span>
               <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
@@ -112,11 +113,11 @@ export default async function MorePage() {
 
         <form action={signOut}>
           <Button type="submit" variant="secondary" className="w-full gap-2">
-            <LogOut aria-hidden className="size-4" /> Sign out
+            <LogOut aria-hidden className="size-4" /> {t("more.signOut")}
           </Button>
         </form>
 
-        <QuoteCard>Less mental load. More family time!</QuoteCard>
+        <QuoteCard>{t("more.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
