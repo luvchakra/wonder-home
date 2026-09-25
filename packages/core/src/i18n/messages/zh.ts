@@ -1,4 +1,11 @@
 import type { Catalog } from "./en";
+import { billsZh } from "./areas/bills/zh";
+import { schoolZh } from "./areas/school/zh";
+import { healthZh } from "./areas/health/zh";
+import { helpersZh } from "./areas/helpers/zh";
+import { homesendZh } from "./areas/homesend/zh";
+import { settingsZh } from "./areas/settings/zh";
+import { householdZh } from "./areas/household/zh";
 
 export const zh: Catalog = {
   "common.next": "下一步",
@@ -705,4 +712,11 @@ export const zh: Catalog = {
   "mealForm.stillNeeds": "还缺：{items}",
   "mealForm.runningLow": "快用完了：{items}——最好尽快补货。",
   "mealForm.addToPlan": "加入计划",
+  ...billsZh,
+  ...schoolZh,
+  ...healthZh,
+  ...helpersZh,
+  ...homesendZh,
+  ...settingsZh,
+  ...householdZh,
 };

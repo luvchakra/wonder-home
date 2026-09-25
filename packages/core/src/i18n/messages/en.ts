@@ -8,6 +8,15 @@
  * `Intl.PluralRules` from the `count` parameter. Product names — WonderHome,
  * HomeTalk, HomeBrain, HomeSend — are names, and stay as they are.
  */
+import { billsEn } from "./areas/bills/en";
+import { schoolEn } from "./areas/school/en";
+import { healthEn } from "./areas/health/en";
+import { helpersEn } from "./areas/helpers/en";
+import { homesendEn } from "./areas/homesend/en";
+import { settingsEn } from "./areas/settings/en";
+import { householdEn } from "./areas/household/en";
+
+// Each area's words are spread in at the end (story 22-004).
 export const en = {
   "common.next": "Next",
   "common.back": "Back",
@@ -713,6 +722,13 @@ export const en = {
   "mealForm.stillNeeds": "Still needs: {items}",
   "mealForm.runningLow": "Running low: {items} — worth restocking soon.",
   "mealForm.addToPlan": "Add to the plan",
+  ...billsEn,
+  ...schoolEn,
+  ...healthEn,
+  ...helpersEn,
+  ...homesendEn,
+  ...settingsEn,
+  ...householdEn,
 } as const;
 
 export type MessageKey = keyof typeof en;

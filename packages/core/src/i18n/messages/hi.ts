@@ -1,4 +1,11 @@
 import type { Catalog } from "./en";
+import { billsHi } from "./areas/bills/hi";
+import { schoolHi } from "./areas/school/hi";
+import { healthHi } from "./areas/health/hi";
+import { helpersHi } from "./areas/helpers/hi";
+import { homesendHi } from "./areas/homesend/hi";
+import { settingsHi } from "./areas/settings/hi";
+import { householdHi } from "./areas/household/hi";
 
 export const hi: Catalog = {
   "common.next": "आगे",
@@ -705,4 +712,11 @@ export const hi: Catalog = {
   "mealForm.stillNeeds": "अभी चाहिए: {items}",
   "mealForm.runningLow": "कम हो रहा है: {items} — जल्द भर लेना अच्छा रहेगा।",
   "mealForm.addToPlan": "योजना में जोड़ें",
+  ...billsHi,
+  ...schoolHi,
+  ...healthHi,
+  ...helpersHi,
+  ...homesendHi,
+  ...settingsHi,
+  ...householdHi,
 };
