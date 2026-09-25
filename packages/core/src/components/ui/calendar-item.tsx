@@ -18,6 +18,8 @@ export type CalendarItemProps = {
   month: string;
   action?: ReactNode;
   className?: string;
+  /** The "Protected" badge in the viewer's language; English by default. */
+  protectedLabel?: string;
 };
 
 const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
@@ -30,7 +32,7 @@ const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; t
   special_occasion: { icon: Gift, tone: "people" },
 };
 
-export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className }: CalendarItemProps) {
+export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className, protectedLabel = "Protected" }: CalendarItemProps) {
   const presentation = (kind && KIND_ICON[kind]) || { icon: CalendarDays, tone: "primary" as IconTone };
 
   return (
@@ -48,7 +50,7 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
           {title}
           {protectedTime ? (
             <span className="ml-1.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-tone-people-soft)] px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--wh-tone-people)]">
-              Protected
+              {protectedLabel}
             </span>
           ) : null}
         </p>

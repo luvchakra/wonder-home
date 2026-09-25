@@ -16,6 +16,7 @@ import {
 import { syncCheckupForAppointment } from "@wonderhome/core/health/checkups";
 import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { householdInstant } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
 
@@ -82,8 +83,11 @@ export async function createAppointmentAction(_previous: ActionState, formData: 
     const entitlement = await may(supabase, parsed.data.householdId, "health.tracking");
     if (!entitlement.allowed) return { error: entitlement.reason };
 
-    const startsAt = new Date(parsed.data.startsAt).toISOString();
-    const endsAt = parsed.data.endsAt ? new Date(parsed.data.endsAt).toISOString() : undefined;
+    // The form's times are the household's wall clock, not the server's.
+    const zone = membership.household.timezone;
+    const startsAt = householdInstant(parsed.data.startsAt, zone);
+    const endsAt = parsed.data.endsAt ? (householdInstant(parsed.data.endsAt, zone) ?? undefined) : undefined;
+    if (!startsAt) return { error: "Those times did not make sense." };
 
     const result = await createAppointment(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, {
       memberId: parsed.data.memberId,
@@ -172,10 +176,13 @@ export async function rescheduleAppointmentAction(_previous: ActionState, formDa
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
 
+    const zone = membership.household.timezone;
+    const startsAt = householdInstant(parsed.data.startsAt, zone);
+    if (!startsAt) return { error: "Those times did not make sense." };
     await rescheduleAppointment(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, parsed.data.appointmentId, {
       memberDisplayName: parsed.data.memberDisplayName,
-      startsAt: new Date(parsed.data.startsAt).toISOString(),
-      endsAt: parsed.data.endsAt ? new Date(parsed.data.endsAt).toISOString() : undefined,
+      startsAt,
+      endsAt: parsed.data.endsAt ? (householdInstant(parsed.data.endsAt, zone) ?? undefined) : undefined,
     });
 
     revalidatePath("/health");

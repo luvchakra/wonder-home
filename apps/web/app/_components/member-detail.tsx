@@ -2,6 +2,7 @@ import { completedYears, parseDateOfBirth } from "@wonderhome/core/identity/age"
 import { siblingOrder } from "@wonderhome/core/identity/households";
 import type { HouseholdMember } from "@wonderhome/core/identity/households";
 
+import { requestT } from "@wonderhome/core/i18n/request";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { UserRoundPen } from "lucide-react";
 
@@ -48,8 +49,9 @@ export function MemberDetail({
   statusLabel?: string | null;
   currentMemberId: string;
 }) {
+  const t = requestT();
   const dob = parseDateOfBirth(member.dateOfBirth);
-  const age = dob ? `${completedYears(dob)} years old` : null;
+  const age = dob ? t("family.fact.yearsOld", { count: completedYears(dob) }) : null;
   const born = member.dateOfBirth ? formatDate(timezone, new Date(member.dateOfBirth), "long") : null;
   const occasion =
     member.specialOccasionLabel && member.specialOccasionDate
@@ -68,28 +70,28 @@ export function MemberDetail({
         <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
       ) : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-        <Fact label="Role" value={describeRoles(member.roles, member.isOwner)} />
-        <Fact label="Status" value={statusLabel ?? null} />
-        <Fact label="Nickname" value={member.nickname} />
-        <Fact label="Family calls me" value={member.relationship} />
-        <Fact label="Age" value={age} />
-        <Fact label="Date of birth" value={born} />
-        <Fact label="Gender" value={member.gender} />
-        <Fact label="Occupation" value={member.occupation} />
-        <Fact label="School / work" value={member.schoolOrWorkLocation} />
-        <Fact label="Special occasion" value={occasion} />
-        <Fact label="Siblings" value={siblings} />
+        <Fact label={t("family.fact.role")} value={describeRoles(member.roles, member.isOwner)} />
+        <Fact label={t("family.fact.status")} value={statusLabel ?? null} />
+        <Fact label={t("family.fact.nickname")} value={member.nickname} />
+        <Fact label={t("family.fact.familyCallsMe")} value={member.relationship} />
+        <Fact label={t("family.fact.age")} value={age} />
+        <Fact label={t("family.fact.dateOfBirth")} value={born} />
+        <Fact label={t("family.fact.gender")} value={member.gender} />
+        <Fact label={t("family.fact.occupation")} value={member.occupation} />
+        <Fact label={t("family.fact.schoolOrWork")} value={member.schoolOrWorkLocation} />
+        <Fact label={t("family.fact.specialOccasion")} value={occasion} />
+        <Fact label={t("family.fact.siblings")} value={siblings} />
       </dl>
       {member.notes ? (
         <div>
-          <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Notes</p>
+          <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("family.fact.notes")}</p>
           <p className="text-sm whitespace-pre-line">{member.notes}</p>
         </div>
       ) : null}
       {isMe ? (
         <PillLink href="/settings" tone="quiet">
           <UserRoundPen aria-hidden className="size-3.5" />
-          Edit your profile in Settings
+          {t("family.editInSettings")}
         </PillLink>
       ) : null}
       {editsHere ? (

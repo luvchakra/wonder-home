@@ -9,6 +9,7 @@ import { createClient } from "@wonderhome/core/db/server";
 import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { archiveVital, createVital, reactivateVital, updateVital, VITAL_TYPES } from "@wonderhome/core/health/vitals";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { householdInstant } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
 
@@ -56,7 +57,8 @@ export async function createVitalAction(_previous: ActionState, formData: FormDa
       value,
       secondaryValue,
       unit,
-      measuredAt: measuredAt ? new Date(measuredAt).toISOString() : undefined,
+      // The household's wall clock, not the server's.
+      measuredAt: measuredAt ? (householdInstant(measuredAt, membership.household.timezone) ?? undefined) : undefined,
       privacyScope,
       notes,
     });

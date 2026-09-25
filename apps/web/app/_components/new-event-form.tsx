@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -43,11 +43,11 @@ export const NEW_EVENT_FORM_LABELS: NewEventFormLabels = {
     family_time: "Family time",
     outing: "Outing",
     birthday: "Birthday",
-    special_occasion: "Special occasion",
-    visit: "Visit",
-    travel: "Travel",
+    gathering: "Gathering",
     appointment: "Appointment",
-    other: "Something else",
+    school_event: "School event",
+    travel: "Travel",
+    special_occasion: "Special occasion",
   },
   starts: "Starts",
   ends: "Ends",
@@ -85,6 +85,12 @@ export function NewEventForm({
   const label = labelProp ?? labels.add;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createEventAction, {});
+  // A save that came back without an error closes the sheet; one that failed keeps it open with the reason.
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !pending && !state.error) setOpen(false);
+    wasPending.current = pending;
+  }, [pending, state]);
 
   return (
     <>

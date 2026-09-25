@@ -42,6 +42,23 @@ export function localInstant(date: string, time: string, timeZone: string): stri
 }
 
 /**
+ * A form's `datetime-local` value ("2026-10-04T17:00") as a UTC instant. That
+ * value carries no zone: it is the wall clock the person typed, which is the
+ * household's, never the server's. Reading it with `new Date()` on a server
+ * running in UTC stores 5 pm in Mumbai as 10:30 pm. A value that already
+ * names its offset ("…Z", "…+05:30") is an instant and is read as one.
+ */
+export function householdInstant(value: string, timeZone: string): string | null {
+  const text = value.trim();
+  if (/(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(text)) {
+    const at = new Date(text);
+    return Number.isNaN(at.getTime()) ? null : at.toISOString();
+  }
+  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(text);
+  return match ? localInstant(match[1]!, match[2]!, timeZone) : null;
+}
+
+/**
  * The stored shape of "when": a date with no time is all-day; a time without
  * a date decides nothing (a time never invents a day); an end that is not
  * after the start is dropped rather than stored as nonsense.
