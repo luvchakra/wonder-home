@@ -47,6 +47,8 @@ const NON_TENANT_TABLES = new Set([
   "rate_limit_counters",
   "plan_prices",
   "payment_provider_plans",
+  // One reconciliation pass per provider across every household (story 20-011); its findings carry household_id.
+  "billing_reconciliation_runs",
 ]);
 
 export function lintMigrationSource(filename, sql) {

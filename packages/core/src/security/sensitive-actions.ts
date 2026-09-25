@@ -169,6 +169,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/billing/repository.ts",
   },
   {
+    event: "payment.refund_requested",
+    because: "Platform staff sent money back to the household. The family can see who asked, why and how much.",
+    recordedIn: "packages/core/src/platform/payments.ts",
+  },
+  {
     event: "support.access_granted",
     because: "Somebody outside the family was allowed in. The family can read this row.",
     recordedIn: "packages/core/src/platform/admin.ts",
@@ -544,6 +549,11 @@ export function describeAuditEvent(
       return { title: "A deletion request was fulfilled", detail: "The member's personal details were removed." };
     case "privacy.request_refused":
       return { title: "A privacy request was refused", detail: null };
+    case "payment.refund_requested":
+      return {
+        title: "WonderHome support started a refund",
+        detail: typeof metadata.amount === "number" && typeof metadata.currency === "string" ? `${metadata.amount} ${metadata.currency}` : null,
+      };
     case "subscription.changed":
       // An Admin asking the provider to stop renewing (story 20-010): the plan
       // itself has not changed yet, so this says what did.

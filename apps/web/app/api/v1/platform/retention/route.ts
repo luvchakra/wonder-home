@@ -1,4 +1,5 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
+import { reconcileAllProviders, type ReconciliationSummary } from "@wonderhome/core/billing/reconcile";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
@@ -171,6 +172,17 @@ export async function POST(request: Request) {
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
+    // Payments reconciliation (story 20-011): nightly, like the rest, and a
+    // no-op for any provider that is not configured.
+    let reconciliation: ReconciliationSummary[] | null = null;
+    let reconciliationError: string | undefined;
+    try {
+      reconciliation = await reconcileAllProviders(admin);
+    } catch (thrown) {
+      reconciliationError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("payments reconciliation failed", { reason: reconciliationError, allow: ["reason"] });
+    }
+
     return Response.json(
       {
         swept,
@@ -180,9 +192,10 @@ export async function POST(request: Request) {
         routineReminders: routineReminderSummary ?? { error: routineReminderError },
         smartReminders: smartReminderSummary ?? { error: smartReminderError },
         jobs: jobsSummary ?? { error: jobsError },
+        reconciliation: reconciliation ?? { error: reconciliationError },
       },
       {
-        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError ? 207 : 200,
+        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError || reconciliationError ? 207 : 200,
         headers: { "cache-control": "no-store" },
       },
     );

@@ -50,6 +50,7 @@ export const AUDIT_EVENTS = [
   "privacy.deletion_fulfilled",
   "privacy.request_refused",
   "subscription.changed",
+  "payment.refund_requested",
   "support.access_granted",
   "feature_flag.changed",
   "homesend.intake_received",

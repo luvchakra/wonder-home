@@ -1,5 +1,5 @@
 import { fromMinorUnits, toMinorUnits } from "./money";
-import type { BillingEvent, BillingProvider, Checkout, CheckoutRequest, LedgerInvoice, LedgerPayment } from "./provider";
+import type { BillingEvent, BillingProvider, Checkout, CheckoutRequest, LedgerInvoice, LedgerPayment, PaymentStatus, RemotePayment } from "./provider";
 import { constantTimeEqual, hmacHex, WebhookSignatureError } from "./signature";
 
 export { WebhookSignatureError } from "./signature";
@@ -128,7 +128,42 @@ export function createStripeProvider(config: StripeConfig): BillingProvider {
       if (typeof body.id !== "string") throw new Error("Stripe sent a refund we could not read.");
       return { providerRefundId: body.id };
     },
+
+    async fetchPayment(providerPaymentId) {
+      const url = `${API}/v1/payment_intents/${encodeURIComponent(providerPaymentId)}?expand[]=latest_charge`;
+      const response = await doFetch(url, { headers: { authorization: `Bearer ${config.secretKey}` }, signal: AbortSignal.timeout(10_000) });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error(`Stripe refused the request (${response.status}).`);
+      return stripeRemotePayment((await response.json()) as Record<string, unknown>);
+    },
   };
+}
+
+/** A Stripe PaymentIntent (with its latest charge) as a status we compare with the ledger. */
+export function stripeRemotePayment(intent: Record<string, unknown>): RemotePayment | null {
+  const currency = typeof intent.currency === "string" ? intent.currency.toUpperCase() : null;
+  const minor = typeof intent.amount === "number" ? intent.amount : null;
+  if (!currency || minor === null) return null;
+  const charge = intent.latest_charge && typeof intent.latest_charge === "object" ? (intent.latest_charge as Record<string, unknown>) : null;
+  const refunded = typeof charge?.amount_refunded === "number" ? charge.amount_refunded : 0;
+  const raw = intent.status;
+  const status: PaymentStatus =
+    raw === "succeeded"
+      ? refunded >= minor && minor > 0
+        ? "refunded"
+        : refunded > 0
+          ? "partially_refunded"
+          : "succeeded"
+      : raw === "canceled"
+        ? "cancelled"
+        : raw === "processing"
+          ? "processing"
+          : raw === "requires_action" || raw === "requires_confirmation"
+            ? "requires_action"
+            : raw === "requires_payment_method" && intent.last_payment_error
+              ? "failed"
+              : "created";
+  return { status, amount: fromMinorUnits(minor, currency), currency };
 }
 
 /** `Stripe-Signature: t=<unix>,v1=<hex>[,v1=<hex>]` over `${t}.${rawBody}`, HMAC-SHA256 with the endpoint secret. */

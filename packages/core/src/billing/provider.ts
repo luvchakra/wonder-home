@@ -174,7 +174,16 @@ export type BillingProvider = {
   cancelSubscription?(input: { externalRef: string; atPeriodEnd: boolean }): Promise<void>;
   /** Asks the provider to refund a payment. Pending until the provider's refund event confirms it. */
   refundPayment?(input: { providerPaymentId: string; amount: number; currency: string; idempotencyKey: string }): Promise<{ providerRefundId: string }>;
+  /**
+   * Reads one payment back from the provider, for reconciliation (story
+   * 20-011). `null` when the provider has no such payment. Never changes
+   * anything; the ledger still moves only on a verified event.
+   */
+  fetchPayment?(providerPaymentId: string): Promise<RemotePayment | null>;
 };
+
+/** A payment as the provider reports it, in major units — what reconciliation compares the ledger with. */
+export type RemotePayment = { status: PaymentStatus; amount: number; currency: string };
 
 export type SubscriptionState = {
   planKey: string;
