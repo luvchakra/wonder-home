@@ -19,7 +19,7 @@ function GoogleMark() {
   );
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -28,7 +28,7 @@ function Submit({ label }: { label: string }) {
       className="flex min-h-11 w-full items-center justify-center gap-2.5 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
     >
       <GoogleMark />
-      {pending ? "Taking you to Google…" : label}
+      {pending ? pendingLabel : label}
     </button>
   );
 }
@@ -44,10 +44,13 @@ function Submit({ label }: { label: string }) {
 export function GoogleButton({
   action,
   label,
+  pendingLabel = "Taking you to Google…",
   next,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   label: string;
+  /** "Taking you to Google…" in the reader's language (story 22-004). */
+  pendingLabel?: string;
   next?: string;
 }) {
   const [state, formAction] = useActionState(action, {});
@@ -56,17 +59,17 @@ export function GoogleButton({
     <form action={formAction} className="space-y-3">
       {state.error ? <Alert>{state.error}</Alert> : null}
       <input type="hidden" name="next" value={next ?? "/"} />
-      <Submit label={label} />
+      <Submit label={label} pendingLabel={pendingLabel} />
     </form>
   );
 }
 
 /** The "or" rule between Google and the email form. */
-export function AuthDivider() {
+export function AuthDivider({ label = "or" }: { label?: string }) {
   return (
     <div className="flex items-center gap-3" aria-hidden>
       <span className="h-px flex-1 bg-[var(--wh-border)]" />
-      <span className="text-xs font-medium text-[var(--wh-foreground-subtle)]">or</span>
+      <span className="text-xs font-medium text-[var(--wh-foreground-subtle)]">{label}</span>
       <span className="h-px flex-1 bg-[var(--wh-border)]" />
     </div>
   );

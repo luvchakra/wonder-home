@@ -5,6 +5,7 @@ import { Field } from "@wonderhome/core/ui/field";
 import { requestPasswordReset } from "../(auth)/actions";
 import { AuthForm } from "../_components/auth-form";
 import { AuthLayout } from "../_components/auth-layout";
+import { aroundLink, visitorLocale } from "../_lib/entry-locale";
 
 export const metadata = { title: "Reset your password" };
 
@@ -16,33 +17,38 @@ export const metadata = { title: "Reset your password" };
  * notice on this page rather than a redirect: a redirect that only happened
  * for real accounts would leak exactly what the wording is protecting.
  */
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  const locale = await visitorLocale();
+  const { t } = locale;
+  const [hintBefore, hintAfter] = aroundLink(t, "entry.forgot.hint");
+
   return (
     <AuthLayout
-      title="Reset your password"
-      lede="We'll email you a link to set a new one."
-      footer={{ prompt: "Remembered it?", href: "/sign-in", label: "Sign in" }}
-      accent="Happens to everyone."
+      locale={locale}
+      title={t("entry.forgot.title")}
+      lede={t("entry.forgot.lede")}
+      footer={{ prompt: t("entry.forgot.footerPrompt"), href: "/sign-in", label: t("entry.link.signIn") }}
+      accent={t("entry.forgot.accent")}
       promise={{
-        headline: "Back in, in a minute.",
-        points: ["A link, not a password, by email", "It expires in an hour", "One use only"],
+        headline: t("entry.forgot.headline"),
+        points: [t("entry.forgot.point1"), t("entry.forgot.point2"), t("entry.forgot.point3")],
       }}
     >
-      <AuthForm action={requestPasswordReset} submitLabel="Send reset link" pendingLabel="Sending…">
+      <AuthForm action={requestPasswordReset} submitLabel={t("entry.forgot.submit")} pendingLabel={t("entry.forgot.pending")}>
         <Field
-          label="Email address"
+          label={t("entry.field.emailAddress")}
           name="email"
           type="email"
           autoComplete="email"
           required
-          placeholder="you@example.com"
+          placeholder={t("entry.field.emailPlaceholder")}
           hint={
             <>
-              The address you signed up with. Not sure?{" "}
+              {hintBefore}
               <Link href="/sign-up" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-                Create an account
+                {t("entry.forgot.hintLink")}
               </Link>
-              .
+              {hintAfter}
             </>
           }
         />

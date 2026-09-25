@@ -6,6 +6,8 @@ import { helpersZh } from "./areas/helpers/zh";
 import { homesendZh } from "./areas/homesend/zh";
 import { settingsZh } from "./areas/settings/zh";
 import { householdZh } from "./areas/household/zh";
+import { entryZh } from "./areas/entry/zh";
+import { helpZh } from "./areas/help/zh";
 
 export const zh: Catalog = {
   "common.next": "下一步",
@@ -101,7 +103,7 @@ export const zh: Catalog = {
   "l10n.language.title": "选择你的语言",
   "l10n.language.lede": "用于应用界面，以及已翻译的回复和通知。",
   "l10n.language.search": "搜索语言…",
-  "l10n.language.coverage": "菜单、首页和设置已使用此语言。部分页面仍为英文，我们正在翻译中。",
+  "l10n.language.coverage": "所有页面都已使用此语言。名字和家人输入的内容保持原样，WonderHome 的少数简短提示仍为英文。",
   "l10n.region.title": "选择你的地区",
   "l10n.region.lede": "这能帮我们设置日期、时间、数字格式和推荐货币。",
   "l10n.region.search": "搜索国家或地区…",
@@ -719,4 +721,6 @@ export const zh: Catalog = {
   ...homesendZh,
   ...settingsZh,
   ...householdZh,
+  ...entryZh,
+  ...helpZh,
 };

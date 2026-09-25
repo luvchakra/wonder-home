@@ -6,6 +6,8 @@ import { helpersMr } from "./areas/helpers/mr";
 import { homesendMr } from "./areas/homesend/mr";
 import { settingsMr } from "./areas/settings/mr";
 import { householdMr } from "./areas/household/mr";
+import { entryMr } from "./areas/entry/mr";
+import { helpMr } from "./areas/help/mr";
 
 export const mr: Catalog = {
   "common.next": "पुढे",
@@ -101,7 +103,7 @@ export const mr: Catalog = {
   "l10n.language.title": "तुमची भाषा निवडा",
   "l10n.language.lede": "अ‍ॅपसाठी, आणि भाषांतर होईल तसे उत्तरे आणि सूचनांसाठी.",
   "l10n.language.search": "भाषा शोधा…",
-  "l10n.language.coverage": "मेनू, होम आणि सेटिंग्ज या भाषेत आहेत. काही स्क्रीन अजून इंग्रजीत आहेत, त्यांचे भाषांतर सुरू आहे.",
+  "l10n.language.coverage": "प्रत्येक स्क्रीन या भाषेत आहे. नावे आणि तुमचे कुटुंब जे लिहिते ते जसेच्या तसे राहते, आणि WonderHome चे काही छोटे संदेश अजून इंग्रजीत आहेत.",
   "l10n.region.title": "तुमचा प्रदेश निवडा",
   "l10n.region.lede": "यामुळे आम्ही तारीख, वेळ, संख्या आणि सुचवलेले चलन ठरवतो.",
   "l10n.region.search": "देश किंवा प्रदेश शोधा…",
@@ -719,4 +721,6 @@ export const mr: Catalog = {
   ...homesendMr,
   ...settingsMr,
   ...householdMr,
+  ...entryMr,
+  ...helpMr,
 };

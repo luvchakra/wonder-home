@@ -8,6 +8,7 @@ import { signInWithGoogle, signUp } from "../(auth)/actions";
 import { AuthForm } from "../_components/auth-form";
 import { AuthLayout } from "../_components/auth-layout";
 import { AuthDivider, GoogleButton } from "../_components/google-button";
+import { aroundLink, visitorLocale } from "../_lib/entry-locale";
 
 export const metadata = { title: "Create your account" };
 
@@ -18,42 +19,62 @@ export const metadata = { title: "Create your account" };
  * a "Continue with Google" button going nowhere is worse than none is now
  * enforced at runtime rather than by leaving the feature unbuilt.
  */
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const locale = await visitorLocale();
+  const { t } = locale;
   const google = googleAuthEnabled();
+  const [termsBefore, termsAfter] = aroundLink(t, "entry.signUp.terms");
 
   return (
     <AuthLayout
-      title="Create your account"
-      lede="Join families building happier homes together."
-      footer={{ prompt: "Already have an account?", href: "/sign-in", label: "Sign in" }}
+      locale={locale}
+      title={t("entry.signUp.title")}
+      lede={t("entry.signUp.lede")}
+      footer={{ prompt: t("entry.signUp.footerPrompt"), href: "/sign-in", label: t("entry.link.signIn") }}
       step={{ current: 1, total: 3 }}
-      accent="A brighter tomorrow starts at home."
+      accent={t("entry.signUp.accent")}
     >
       <div className="space-y-4">
         {google ? (
           <>
-            <GoogleButton action={signInWithGoogle} label="Sign up with Google" next="/welcome" />
-            <AuthDivider />
+            <GoogleButton action={signInWithGoogle} label={t("entry.signUp.google")} pendingLabel={t("entry.google.pending")} next="/welcome" />
+            <AuthDivider label={t("entry.google.or")} />
           </>
         ) : null}
 
-        <AuthForm action={signUp} submitLabel="Create account" pendingLabel="Creating account…">
-          <Field label="Full name" name="displayName" autoComplete="name" required placeholder="Kunal Chakraborty" hint="What your family calls you." />
-          <Field label="Email address" name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
+        <AuthForm action={signUp} submitLabel={t("entry.signUp.submit")} pendingLabel={t("entry.signUp.pending")}>
+          <Field
+            label={t("entry.signUp.fullName")}
+            name="displayName"
+            autoComplete="name"
+            required
+            placeholder={t("entry.signUp.fullNamePlaceholder")}
+            hint={t("entry.signUp.fullNameHint")}
+          />
+          <Field
+            label={t("entry.field.emailAddress")}
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder={t("entry.field.emailPlaceholder")}
+          />
           <PasswordField
-            label="Password"
+            label={t("entry.field.password")}
             name="password"
             autoComplete="new-password"
             required
             minLength={8}
-            hint="At least 8 characters."
+            hint={t("entry.field.passwordHint")}
+            showLabel={t("entry.field.showPassword")}
+            hideLabel={t("entry.field.hidePassword")}
           />
           <p className="text-xs text-[var(--wh-foreground-subtle)]">
-            By creating an account you agree to our{" "}
+            {termsBefore}
             <Link href="/legal" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-              terms and privacy
+              {t("entry.signUp.termsLink")}
             </Link>
-            . Your household&apos;s data is never used to train models by default.
+            {termsAfter}
           </p>
         </AuthForm>
       </div>

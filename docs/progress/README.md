@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-25 | [Every screen in each person's language — 22-004 Done: Help (guide, FAQ, search), sign-in and sign-up, household creation, the setup wizard and voice-link consent; signed-out screens by the browser's language](2026-09-25-every-screen-localized.md) |
 | 2026-09-25 | [Every signed-in screen in each person's language: Bills, School, Health, Househelper, Upkeep, HomeSend, Manage Household, HomeBrain Review, Home and Settings (story 22-004 slice)](2026-09-25-remaining-screens-localized.md) |
 | 2026-09-25 | [Groceries and Meals screens, and every sheet they open, in each person's language (story 22-004 slice)](2026-09-25-groceries-meals-localized.md) |
 | 2026-09-25 | [Developer platform (18-008): hashed, scoped, revocable partner keys, a no-write sandbox, and a small partner API; off unless switched on](2026-09-25-developer-platform.md) |

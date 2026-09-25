@@ -5,14 +5,16 @@ import { listMemberships } from "@wonderhome/core/identity/households";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { readAuthorizeRequest, redirectWith } from "@wonderhome/core/voicelink/oauth";
-import { DEFAULT_VOICE_SCOPES, SCOPE_LABELS, SENSITIVE_VOICE_SCOPES } from "@wonderhome/core/voicelink/scopes";
+import { DEFAULT_VOICE_SCOPES, SENSITIVE_VOICE_SCOPES } from "@wonderhome/core/voicelink/scopes";
 
 import { approveVoiceLinkAction, denyVoiceLinkAction } from "../../../(auth)/voice-link-actions";
 import { AuthLayout } from "../../../_components/auth-layout";
+import { memberLocale, visitorLocale } from "../../../_lib/entry-locale";
 
 export const metadata = { title: "Link a voice assistant" };
 export const dynamic = "force-dynamic";
 
+/** Product names, never translated. */
 const PROVIDER_NAMES = { amazon_alexa: "Alexa", gemini: "Gemini Voice" } as const;
 
 /**
@@ -26,6 +28,9 @@ const PROVIDER_NAMES = { amazon_alexa: "Alexa", gemini: "Gemini Voice" } as cons
  * it may do — the everyday things on, a child's school, money, health and
  * changing the home off until they say so. Declining sends the provider away
  * with nothing.
+ *
+ * The member reads it in their own language (story 22-004); a refused
+ * request, shown before anybody is known, in the browser's.
  */
 export default async function VoiceAuthorizePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const raw = await searchParams;
@@ -35,9 +40,11 @@ export default async function VoiceAuthorizePage({ searchParams }: { searchParam
   const reading = readAuthorizeRequest(params);
   if (!reading.ok) {
     if ("redirectUri" in reading) redirect(redirectWith(reading.redirectUri, { error: reading.error, state: reading.state }));
+    const locale = await visitorLocale();
+    const { t } = locale;
     return (
-      <AuthLayout title="Nothing was linked" lede={reading.message} accent="Your home stays yours.">
-        <Alert tone="attention">If you were linking a voice assistant, start again from its app. If this keeps happening, the assistant isn&apos;t set up for WonderHome yet.</Alert>
+      <AuthLayout locale={locale} title={t("entry.voice.nothing.title")} lede={reading.message} accent={t("entry.voice.nothing.accent")}>
+        <Alert tone="attention">{t("entry.voice.nothing.body")}</Alert>
       </AuthLayout>
     );
   }
@@ -47,11 +54,18 @@ export default async function VoiceAuthorizePage({ searchParams }: { searchParam
   const membership = (await listMemberships(await createClient()))[0];
   if (!membership) redirect("/welcome");
 
+  const locale = await memberLocale(membership);
+  const { t } = locale;
   const provider = PROVIDER_NAMES[reading.request.client.provider];
   if (membership.memberType !== "adult") {
     return (
-      <AuthLayout title={`Linking ${provider}`} lede="Only an adult in the household can link a voice assistant." accent="Home runs smoother. Together.">
-        <Alert tone="attention">Ask an adult in {membership.household.name} to link it from their own account.</Alert>
+      <AuthLayout
+        locale={locale}
+        title={t("entry.voice.adultOnly.title", { provider })}
+        lede={t("entry.voice.adultOnly.lede")}
+        accent={t("entry.script.together")}
+      >
+        <Alert tone="attention">{t("entry.voice.adultOnly.body", { household: membership.household.name })}</Alert>
       </AuthLayout>
     );
   }
@@ -63,38 +77,38 @@ export default async function VoiceAuthorizePage({ searchParams }: { searchParam
 
   return (
     <AuthLayout
-      title={`Link ${provider} to WonderHome`}
-      lede={`${provider} will speak for you, ${membership.displayName}, in ${membership.household.name} — and only for what you tick below.`}
-      accent="Less mental load. More family time."
+      locale={locale}
+      title={t("entry.voice.title", { provider })}
+      lede={t("entry.voice.lede", { provider, name: membership.displayName, household: membership.household.name })}
+      accent={t("entry.script.lessLoad")}
     >
       <form className="space-y-5">
         {hidden.map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-[var(--wh-foreground)]">What {provider} may do</legend>
+          <legend className="text-sm font-semibold text-[var(--wh-foreground)]">{t("entry.voice.legend", { provider })}</legend>
           {offered.map((scope) => {
             const sensitive = SENSITIVE_VOICE_SCOPES.includes(scope);
             return (
               <label key={scope} className="flex items-start gap-3 rounded-2xl bg-[var(--wh-surface)] p-3 text-sm">
                 <input type="checkbox" name="scope_choice" value={scope} defaultChecked={DEFAULT_VOICE_SCOPES.includes(scope)} className="mt-1 size-5 shrink-0 accent-[var(--wh-primary)]" />
                 <span>
-                  <span className="block font-medium text-[var(--wh-foreground)]">{SCOPE_LABELS[scope]}</span>
-                  {sensitive ? <span className="block text-[var(--wh-foreground-muted)]">Off unless you turn it on — anyone near the speaker will hear it.</span> : null}
+                  {/* The same words Settings shows for each permission. */}
+                  <span className="block font-medium text-[var(--wh-foreground)]">{t(`settingsPage.voiceAssistants.scope.${scope}`)}</span>
+                  {sensitive ? <span className="block text-[var(--wh-foreground-muted)]">{t("entry.voice.sensitive")}</span> : null}
                 </span>
               </label>
             );
           })}
         </fieldset>
-        <p className="text-sm text-[var(--wh-foreground-muted)]">
-          Paying, ordering and changing who does what always stay in the WonderHome app. You can unlink {provider} at any time in Settings — nothing in your home is deleted when you do.
-        </p>
+        <p className="text-sm text-[var(--wh-foreground-muted)]">{t("entry.voice.note", { provider })}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button type="submit" formAction={approveVoiceLinkAction} className="w-full sm:w-auto">
-            Link {provider}
+            {t("entry.voice.approve", { provider })}
           </Button>
           <Button type="submit" variant="secondary" formAction={denyVoiceLinkAction} className="w-full sm:w-auto">
-            Not now
+            {t("entry.voice.deny")}
           </Button>
         </div>
       </form>
