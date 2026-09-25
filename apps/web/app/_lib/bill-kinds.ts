@@ -1,7 +1,9 @@
 /**
- * The kinds of bill, in the words the Bills screen uses. A plain module so a
- * server page and a client form read the same list — a "use client" module
- * cannot hand plain values to server code.
+ * The kinds of bill. A plain module so a server page and a client form read
+ * the same list — a "use client" module cannot hand plain values to server
+ * code. `value` is what is stored; what a person reads is `bills.kind.*` in
+ * their language (story 22-004, `billKindName`). `label` is the English a
+ * transaction's free-text kind is written in, which stays as saved.
  */
 export const BILL_KINDS = [
   { value: "utility", label: "Utility" },
@@ -14,7 +16,3 @@ export const BILL_KINDS = [
   { value: "service", label: "Service" },
   { value: "other", label: "Other" },
 ] as const;
-
-export function billKindLabel(kind: string): string {
-  return BILL_KINDS.find((k) => k.value === kind)?.label ?? kind;
-}
