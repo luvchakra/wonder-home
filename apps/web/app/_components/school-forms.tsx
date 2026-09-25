@@ -17,14 +17,52 @@ import {
   type ExtractSchoolItemState,
 } from "../(auth)/school-actions";
 
-const KINDS = [
-  { value: "homework", label: "Homework" },
-  { value: "worksheet", label: "Worksheet" },
-  { value: "exam", label: "Exam" },
-  { value: "project", label: "Project" },
-  { value: "event", label: "Event" },
-  { value: "notice", label: "Notice" },
-] as const;
+const KINDS = ["homework", "worksheet", "exam", "project", "event", "notice"] as const;
+type Kind = (typeof KINDS)[number];
+
+/**
+ * The school sheets' words in the viewer's language, built on the server by
+ * `schoolFormLabels` (story 22-004). `{name}` and `{minutes}` stay
+ * placeholders, filled in here with the item's own title and its minutes; a
+ * kind's label is only ever shown — the stored value stays the enum.
+ */
+export type SchoolFormLabels = {
+  kinds: Record<Kind, string>;
+  add: string;
+  title: string;
+  description: string;
+  readingPhoto: string;
+  fromScreenshot: string;
+  for: string;
+  kind: string;
+  what: string;
+  whatPlaceholder: string;
+  subject: string;
+  subjectPlaceholder: string;
+  notes: string;
+  due: string;
+  dueOptional: string;
+  noticeHint: string;
+  minutes: string;
+  starts: string;
+  allDayHint: string;
+  ends: string;
+  submit: string;
+  adding: string;
+  save: string;
+  saving: string;
+  factSubject: string;
+  factTime: string;
+  factNotes: string;
+  factEstimate: string;
+  /** "{minutes} minutes" in each plural form the viewer's language has, keyed by `Intl.PluralRules` category. */
+  minuteForms: Record<string, string>;
+  /** The viewer's language, for choosing among `minuteForms`. */
+  language: string;
+  remove: string;
+  removeTitle: string;
+  removeDescription: string;
+};
 
 /**
  * "Add a piece of homework" as a sheet — the manual half of "Connect
@@ -33,7 +71,7 @@ const KINDS = [
  * misread gets caught by the household reviewing the fields before Add,
  * exactly the same trust level typing them in by hand already has.
  */
-export function AddHomeworkButton({ householdId, kids }: { householdId: string; kids: { id: string; displayName: string }[] }) {
+export function AddHomeworkButton({ householdId, kids, labels }: { householdId: string; kids: { id: string; displayName: string }[]; labels: SchoolFormLabels }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createSchoolItemAction, {});
   const [extractState, extractAction, extracting] = useActionState<ExtractSchoolItemState, FormData>(extractSchoolItemFromPhotoAction, {});
@@ -44,10 +82,10 @@ export function AddHomeworkButton({ householdId, kids }: { householdId: string; 
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Add homework
+        <Plus aria-hidden className="size-3.5" /> {labels.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Add a piece of school work" description="WonderHome tracks it against its due date from here — no portal needed.">
+      <Sheet open={open} onOpenChange={setOpen} title={labels.title} description={labels.description}>
         <div className="space-y-4">
           <form ref={extractFormRef} action={extractAction}>
             <input type="hidden" name="householdId" value={householdId} />
@@ -60,7 +98,7 @@ export function AddHomeworkButton({ householdId, kids }: { householdId: string; 
               onChange={() => extractFormRef.current?.requestSubmit()}
             />
             <Pill type="button" tone="quiet" onClick={() => fileInputRef.current?.click()} disabled={extracting} className="w-full justify-center">
-              <Camera aria-hidden className="size-3.5" /> {extracting ? "Reading photo…" : "Upload a screenshot instead"}
+              <Camera aria-hidden className="size-3.5" /> {extracting ? labels.readingPhoto : labels.fromScreenshot}
             </Pill>
           </form>
           {extractState.error ? <Alert>{extractState.error}</Alert> : null}
@@ -74,6 +112,7 @@ export function AddHomeworkButton({ householdId, kids }: { householdId: string; 
             state={state}
             formAction={formAction}
             pending={pending}
+            labels={labels}
           />
         </div>
       </Sheet>
@@ -94,6 +133,7 @@ function AddHomeworkForm({
   state,
   formAction,
   pending,
+  labels,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
@@ -101,8 +141,9 @@ function AddHomeworkForm({
   state: ActionState;
   formAction: (formData: FormData) => void;
   pending: boolean;
+  labels: SchoolFormLabels;
 }) {
-  const [kind, setKind] = useState<(typeof KINDS)[number]["value"]>(prefill?.kind ?? "homework");
+  const [kind, setKind] = useState<Kind>(prefill?.kind ?? "homework");
   const dueRequired = kind !== "notice";
 
   return (
@@ -111,7 +152,7 @@ function AddHomeworkForm({
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       <div className="space-y-1.5">
-        <label htmlFor="childMemberId" className="block text-sm font-medium">For</label>
+        <label htmlFor="childMemberId" className="block text-sm font-medium">{labels.for}</label>
         <select
           id="childMemberId"
           name="childMemberId"
@@ -123,39 +164,39 @@ function AddHomeworkForm({
         </select>
       </div>
       <div className="space-y-1.5">
-        <label htmlFor="kind" className="block text-sm font-medium">Kind</label>
+        <label htmlFor="kind" className="block text-sm font-medium">{labels.kind}</label>
         <select
           id="kind"
           name="kind"
           value={kind}
-          onChange={(event) => setKind(event.target.value as (typeof KINDS)[number]["value"])}
+          onChange={(event) => setKind(event.target.value as Kind)}
           className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
         >
-          {KINDS.map((k) => (
-            <option key={k.value} value={k.value}>{k.label}</option>
+          {KINDS.map((value) => (
+            <option key={value} value={value}>{labels.kinds[value]}</option>
           ))}
         </select>
       </div>
-      <Field label="What is it?" name="title" required defaultValue={prefill?.title ?? ""} placeholder="Maths worksheet, chapter 4" autoComplete="off" />
-      <Field label="Subject (optional)" name="subject" defaultValue={prefill?.subject ?? ""} placeholder="Maths" autoComplete="off" />
-      <Field label="Notes (optional)" name="detail" defaultValue={prefill?.notes ?? ""} autoComplete="off" />
+      <Field label={labels.what} name="title" required defaultValue={prefill?.title ?? ""} placeholder={labels.whatPlaceholder} autoComplete="off" />
+      <Field label={labels.subject} name="subject" defaultValue={prefill?.subject ?? ""} placeholder={labels.subjectPlaceholder} autoComplete="off" />
+      <Field label={labels.notes} name="detail" defaultValue={prefill?.notes ?? ""} autoComplete="off" />
       <div className="grid grid-cols-2 gap-3">
         <Field
-          label={dueRequired ? "Due" : "Due (optional)"}
+          label={dueRequired ? labels.due : labels.dueOptional}
           name="dueAt"
           type="date"
           required={dueRequired}
           defaultValue={prefill?.dueDate ?? ""}
-          hint={dueRequired ? undefined : "A notice does not need a date of its own."}
+          hint={dueRequired ? undefined : labels.noticeHint}
         />
-        <Field label="Est. minutes (optional)" name="estimatedMinutes" type="number" min={1} placeholder="30" />
+        <Field label={labels.minutes} name="estimatedMinutes" type="number" min={1} placeholder="30" />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Starts (optional)" name="dueTime" type="time" hint="Leave empty for all day." />
-        <Field label="Ends (optional)" name="endTime" type="time" />
+        <Field label={labels.starts} name="dueTime" type="time" hint={labels.allDayHint} />
+        <Field label={labels.ends} name="endTime" type="time" />
       </div>
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Adding…" : "Add"}
+        {pending ? labels.adding : labels.submit}
       </Button>
     </form>
   );

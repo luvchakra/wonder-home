@@ -13,15 +13,23 @@ import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import { cancelSchoolItemAction, updateSchoolItemAction } from "../(auth)/school-actions";
+import type { SchoolFormLabels } from "./school-forms";
 
-const KINDS = [
-  { value: "homework", label: "Homework" },
-  { value: "worksheet", label: "Worksheet" },
-  { value: "exam", label: "Exam" },
-  { value: "project", label: "Project" },
-  { value: "event", label: "Event" },
-  { value: "notice", label: "Notice" },
-];
+const KINDS = ["homework", "worksheet", "exam", "project", "event", "notice"] as const satisfies readonly SchoolItem["kind"][];
+
+const withName = (template: string, name: string) => template.replace("{name}", () => name);
+
+/** "{minutes} minutes" in the viewer's own plural form (the forms themselves come from the server). */
+function minutesWords(labels: SchoolFormLabels, minutes: number): string {
+  let category = "other";
+  try {
+    category = new Intl.PluralRules(labels.language).select(minutes);
+  } catch {
+    // An unknown language reads the "other" form.
+  }
+  const template = labels.minuteForms[category] ?? labels.minuteForms.other ?? "{minutes}";
+  return template.replace("{minutes}", () => String(minutes));
+}
 
 /**
  * Everything a piece of school work carries, read from an `ExpandableRow`'s
@@ -36,6 +44,7 @@ export function SchoolItemDetail({
   timezone,
   editable,
   onRemoved,
+  labels,
 }: {
   item: SchoolItem;
   householdId: string;
@@ -43,6 +52,7 @@ export function SchoolItemDetail({
   timezone: string;
   editable: boolean;
   onRemoved?: () => void;
+  labels: SchoolFormLabels;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateSchoolItemAction, {});
   const [kind, setKind] = useState(item.kind);
@@ -51,11 +61,11 @@ export function SchoolItemDetail({
   if (!editable) {
     return (
       <dl className="space-y-2 text-sm">
-        <Fact label="For" value={kids.find((kid) => kid.id === item.childMemberId)?.displayName ?? null} />
-        <Fact label="Subject" value={item.subject} />
-        <Fact label="Time" value={schoolTimeWords(item, timezone)} />
-        <Fact label="Notes" value={item.detail} />
-        <Fact label="Estimated time" value={item.estimatedMinutes ? `${item.estimatedMinutes} minutes` : null} />
+        <Fact label={labels.for} value={kids.find((kid) => kid.id === item.childMemberId)?.displayName ?? null} />
+        <Fact label={labels.factSubject} value={item.subject} />
+        <Fact label={labels.factTime} value={schoolTimeWords(item, timezone)} />
+        <Fact label={labels.factNotes} value={item.detail} />
+        <Fact label={labels.factEstimate} value={item.estimatedMinutes ? minutesWords(labels, item.estimatedMinutes) : null} />
       </dl>
     );
   }
@@ -68,7 +78,7 @@ export function SchoolItemDetail({
         <input type="hidden" name="householdId" value={householdId} />
         <input type="hidden" name="itemId" value={item.id} />
         <div className="space-y-1.5">
-          <label htmlFor={`for-${item.id}`} className="block text-sm font-medium">For</label>
+          <label htmlFor={`for-${item.id}`} className="block text-sm font-medium">{labels.for}</label>
           <select
             id={`for-${item.id}`}
             name="childMemberId"
@@ -81,7 +91,7 @@ export function SchoolItemDetail({
           </select>
         </div>
         <div className="space-y-1.5">
-          <label htmlFor={`kind-${item.id}`} className="block text-sm font-medium">Kind</label>
+          <label htmlFor={`kind-${item.id}`} className="block text-sm font-medium">{labels.kind}</label>
           <select
             id={`kind-${item.id}`}
             name="kind"
@@ -89,34 +99,34 @@ export function SchoolItemDetail({
             onChange={(event) => setKind(event.target.value as SchoolItem["kind"])}
             className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
           >
-            {KINDS.map((k) => (
-              <option key={k.value} value={k.value}>{k.label}</option>
+            {KINDS.map((value) => (
+              <option key={value} value={value}>{labels.kinds[value]}</option>
             ))}
           </select>
         </div>
-        <Field label="What is it?" name="title" required defaultValue={item.title} autoComplete="off" />
-        <Field label="Subject (optional)" name="subject" defaultValue={item.subject ?? ""} autoComplete="off" />
-        <Field label="Notes (optional)" name="detail" defaultValue={item.detail ?? ""} autoComplete="off" />
+        <Field label={labels.what} name="title" required defaultValue={item.title} autoComplete="off" />
+        <Field label={labels.subject} name="subject" defaultValue={item.subject ?? ""} autoComplete="off" />
+        <Field label={labels.notes} name="detail" defaultValue={item.detail ?? ""} autoComplete="off" />
         <div className="grid grid-cols-2 gap-3">
           <Field
-            label={dueRequired ? "Due" : "Due (optional)"}
+            label={dueRequired ? labels.due : labels.dueOptional}
             name="dueAt"
             type="date"
             required={dueRequired}
             defaultValue={schoolDateValue(item, timezone)}
-            hint={dueRequired ? undefined : "A notice does not need a date of its own."}
+            hint={dueRequired ? undefined : labels.noticeHint}
           />
-          <Field label="Est. minutes (optional)" name="estimatedMinutes" type="number" min={1} defaultValue={item.estimatedMinutes ?? ""} />
+          <Field label={labels.minutes} name="estimatedMinutes" type="number" min={1} defaultValue={item.estimatedMinutes ?? ""} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Starts (optional)" name="dueTime" type="time" defaultValue={item.dueTimeKnown ? localTimeValue(item.dueAt, timezone) : ""} hint="Leave empty for all day." />
-          <Field label="Ends (optional)" name="endTime" type="time" defaultValue={item.endsAt ? localTimeValue(item.endsAt, timezone) : ""} />
+          <Field label={labels.starts} name="dueTime" type="time" defaultValue={item.dueTimeKnown ? localTimeValue(item.dueAt, timezone) : ""} hint={labels.allDayHint} />
+          <Field label={labels.ends} name="endTime" type="time" defaultValue={item.endsAt ? localTimeValue(item.endsAt, timezone) : ""} />
         </div>
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "Saving…" : "Save"}
+          {pending ? labels.saving : labels.save}
         </Button>
       </form>
-      <CancelSchoolItemControl householdId={householdId} itemId={item.id} title={item.title} onRemoved={onRemoved} />
+      <CancelSchoolItemControl householdId={householdId} itemId={item.id} title={item.title} onRemoved={onRemoved} labels={labels} />
     </div>
   );
 }
@@ -136,11 +146,13 @@ function CancelSchoolItemControl({
   itemId,
   title,
   onRemoved,
+  labels,
 }: {
   householdId: string;
   itemId: string;
   title: string;
   onRemoved?: () => void;
+  labels: SchoolFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(cancelSchoolItemAction, {});
@@ -156,15 +168,15 @@ function CancelSchoolItemControl({
   return (
     <>
       <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="text-[var(--wh-risk)]">
-        <Trash2 aria-hidden className="size-3.5" /> Remove
+        <Trash2 aria-hidden className="size-3.5" /> {labels.remove}
       </Pill>
 
       <ConfirmationSheet
         open={open}
         onOpenChange={setOpen}
-        title={`Remove ${title}?`}
-        description="WonderHome stops tracking it and it drops off the deadline list. This does not undo anything already turned in."
-        confirmLabel="Remove"
+        title={withName(labels.removeTitle, title)}
+        description={labels.removeDescription}
+        confirmLabel={labels.remove}
         destructive
         pending={pending}
         onConfirm={() => {
