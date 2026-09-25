@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-25 | [Get Help brought up to date: 25 sections covering HomeSend, voice, language, reminders, health, upkeep, family, household help, plans, privacy export and deletion, and connections, with no platform-level detail](2026-09-25-help-guide-refresh.md) |
 | 2026-09-25 | [More screen in each person's language: section names, each area's purpose, the viewer's role (also in the account menu and Settings), Help and Sign out (story 22-004, one screen)](2026-09-25-more-screen-localized.md) |
 | 2026-09-25 | [Today screen in each person's language: views, timeline rows, empty states and the shared "Add to the family calendar" sheet that Today and Home open (story 22-004, one screen)](2026-09-25-today-screen-localized.md) |
 | 2026-09-25 | [HomeTalk screen in each person's language: greeting, suggestions, confirm/change/cancel, the composer and its voice states, the action preview's frame, message times and the conversation search, in seven languages (story 22-004, one screen)](2026-09-25-hometalk-screen-localized.md) |
