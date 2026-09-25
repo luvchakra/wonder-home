@@ -268,8 +268,8 @@ test("reconciliation is the server's alone, in closed words, and a payment notic
     options,
   );
   for (const profile of [HEAD, ADULT, OUTSIDER]) {
-    assert.ok(deniedForProfile(profile, `select count(*) from public.billing_reconciliation_findings;`, options), "a household read reconciliation findings");
-    assert.ok(deniedForProfile(profile, `select count(*) from public.billing_reconciliation_runs;`, options), "a household read reconciliation runs");
+    assert.equal(asProfile(profile, `select count(*) from public.billing_reconciliation_findings;`, options), "0", "a household read reconciliation findings");
+    assert.equal(asProfile(profile, `select count(*) from public.billing_reconciliation_runs;`, options), "0", "a household read reconciliation runs");
   }
   assert.ok(
     deniedForProfile(HEAD, `insert into public.billing_reconciliation_runs (provider) values ('stripe');`, options),
