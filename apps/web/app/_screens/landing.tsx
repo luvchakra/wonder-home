@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BadgeCheck,
   Bell,
+  BellRing,
   BookOpen,
   Brain,
   CalendarDays,
@@ -15,6 +16,7 @@ import {
   HeartPulse,
   House,
   Compass,
+  Languages,
   Laptop,
   Leaf,
   ListChecks,
@@ -28,6 +30,7 @@ import {
   Users,
   Utensils,
   Wallet,
+  Wrench,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -182,7 +185,7 @@ export async function Landing() {
               <HomeIllustration className="wh-rise w-full" />
               <FloatingCard icon={Utensils} tone="meals" title="Dinner plan ready" meta="Paneer pulao · view recipe" className="absolute -top-2 right-0 w-52 sm:right-6" delay="0.3s" tilt="2deg" />
               <FloatingCard icon={GraduationCap} tone="school" title="Homework done" meta="2 tasks completed · great job!" className="absolute top-1/3 -left-2 w-52 sm:left-0" delay="1.1s" tilt="-2deg" />
-              <FloatingCard icon={ShoppingBasket} tone="care" title="Grocery order delivered" meta="7 items · ₹1,840" className="absolute right-2 bottom-6 w-56 sm:right-10" delay="0.7s" tilt="1.5deg" />
+              <FloatingCard icon={ShoppingBasket} tone="care" title="Grocery list ready" meta="7 items · before Saturday" className="absolute right-2 bottom-6 w-56 sm:right-10" delay="0.7s" tilt="1.5deg" />
               <FloatingCard icon={Wallet} tone="money" title="Electricity bill" meta="Due tomorrow · reminder handled" className="absolute -bottom-3 left-4 w-56 sm:left-10" delay="1.6s" tilt="-1deg" />
             </div>
           </div>
@@ -231,7 +234,7 @@ export async function Landing() {
                   { icon: House, label: "Manage households", copy: "One home, every member, every routine.", tone: "care" },
                   { icon: CalendarDays, label: "Plan & organize", copy: "Days, meals and schedules, already sorted.", tone: "primary" },
                   { icon: Heart, label: "Care for family", copy: "School, health and helpers, looked after.", tone: "people" },
-                  { icon: Zap, label: "Save time", copy: "Groceries ordered, bills paid, reminders handled.", tone: "school" },
+                  { icon: Zap, label: "Save time", copy: "Lists built, bills lined up, reminders handled.", tone: "school" },
                   { icon: Leaf, label: "Live better", copy: "Less stress. More life.", tone: "home" },
                 ].map((item) => (
                   <li key={item.label} className="flex items-center gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)]/70 px-3 py-2">
@@ -275,7 +278,11 @@ export async function Landing() {
               { icon: HeartPulse, tone: "health", title: "Health & Fitness", description: "Check-ups and routines, kept private." },
               { icon: Paperclip, tone: "primary", title: "HomeSend", description: "Snap it, send it, sorted." },
               { icon: BadgeCheck, tone: "ai", title: "HomeBrain Review", description: "Your home, understood." },
-              { icon: Sparkles, tone: "ai", title: "AI Assistant", description: "Always here for your family." },
+              { icon: CalendarHeart, tone: "people", title: "Family time", description: "Protected time, planned around." },
+              { icon: Wrench, tone: "home", title: "Home & Upkeep", description: "Repairs, laundry and pets, remembered." },
+              { icon: BellRing, tone: "attention", title: "Reminders", description: "One nudge, at the right time." },
+              { icon: Sparkles, tone: "ai", title: "HomeTalk", description: "Talk or type. It asks before it acts." },
+              { icon: Languages, tone: "ai", title: "Your language", description: "Seven languages, one home." },
             ].map((item, index) => (
               <div key={item.title} className="wh-reveal" style={{ "--wh-reveal-delay": `${index * 50}ms` } as React.CSSProperties}>
                 <DomainCard icon={item.icon} tone={item.tone as IconTone} title={item.title} description={item.description} className="h-full" />
@@ -302,7 +309,7 @@ export async function Landing() {
                 You don&apos;t have to tell WonderHome everything. It learns the rhythm of your home.
               </h2>
               <p className="mt-5 max-w-lg text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
-                Say it or type it, in the language your family speaks at home — &ldquo;Plan a family outing this weekend&rdquo; — and WonderHome checks availability, preferences and what&apos;s already planned, then shows you exactly what it would do before it does it.
+                Say it or type it, in the language your family speaks at home — &ldquo;Plan a family outing this weekend&rdquo; — and WonderHome checks availability, preferences and what&apos;s already planned, then shows you exactly what it would do before it does it. Got a detail wrong? Just say &ldquo;no, I meant Friday&rdquo;, the way you would to a person.
               </p>
               <ol className="mt-8 flex flex-wrap items-center gap-2 text-xs font-semibold">
                 {["Observe", "Understand", "Plan", "Act", "Monitor", "Result", "Learn"].map((step, index, all) => (
@@ -413,7 +420,7 @@ export async function Landing() {
             ))}
           </div>
           <p className="wh-reveal mt-6 text-center text-xs text-[var(--wh-foreground-subtle)]">
-            Household data is not used to train models by default. Integrations are connected only with your consent and only for what they need.
+            Household data is not used to train models by default. Integrations are connected only with your consent and only for what they need. Download a copy of your data or ask for it to be deleted, any time, from Settings.
           </p>
         </Section>
 
