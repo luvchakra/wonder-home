@@ -23,16 +23,36 @@ import { ignoreDeviceAction, linkDeviceAction } from "../(auth)/device-actions";
 type Asset = { id: string; name: string };
 type Device = { id: string; label: string; assetId: string | null; ignored: boolean };
 
-const CATEGORIES = [
-  { value: "appliance", label: "Appliance" },
-  { value: "fixture", label: "Fixture (a door, a tap, a tank)" },
-  { value: "electronics", label: "Electronics" },
-  { value: "vehicle", label: "Vehicle" },
-  { value: "furniture", label: "Furniture" },
-  { value: "other", label: "Something else" },
-];
+const CATEGORIES = ["appliance", "fixture", "electronics", "vehicle", "furniture", "other"] as const;
 
-export function DeviceLinkControls({ householdId, device, assets }: { householdId: string; device: Device; assets: Asset[] }) {
+/**
+ * The controls' words in the viewer's language, built on the server by
+ * `deviceLinkLabels` (story 22-004). `{name}` is filled in here with the
+ * device's own label, which is the provider's and never translated.
+ */
+export type DeviceLinkLabels = {
+  which: string;
+  useAgain: string;
+  ignore: string;
+  whichLede: string;
+  appliance: string;
+  notLinked: string;
+  notListed: string;
+  newName: string;
+  newNamePlaceholder: string;
+  newCategory: string;
+  categories: Record<(typeof CATEGORIES)[number], string>;
+  saving: string;
+  save: string;
+  ignoreTitle: string;
+  ignoreLede: string;
+  ignoreConfirm: string;
+};
+
+const withName = (template: string, name: string) => template.replace(/\{name\}/g, () => name);
+
+export function DeviceLinkControls({ householdId, device, assets, labels }: { householdId: string; device: Device; assets: Asset[]; labels: DeviceLinkLabels }) {
+  const which = withName(labels.which, device.label);
   const [linkOpen, setLinkOpen] = useState(false);
   const [ignoreOpen, setIgnoreOpen] = useState(false);
   const [choice, setChoice] = useState(device.assetId ?? "");
@@ -51,44 +71,44 @@ export function DeviceLinkControls({ householdId, device, assets }: { householdI
 
   return (
     <div className="flex items-center gap-1.5">
-      <Pill type="button" tone="quiet" onClick={() => setLinkOpen(true)} aria-label={`Which appliance is ${device.label}?`} title={`Which appliance is ${device.label}?`}>
+      <Pill type="button" tone="quiet" onClick={() => setLinkOpen(true)} aria-label={which} title={which}>
         <Link2 aria-hidden className="size-3.5" />
       </Pill>
       {device.ignored ? (
-        <Pill type="button" tone="quiet" disabled={ignorePending} onClick={() => setIgnored(false)} aria-label={`Use ${device.label} again`} title={`Use ${device.label} again`}>
+        <Pill type="button" tone="quiet" disabled={ignorePending} onClick={() => setIgnored(false)} aria-label={withName(labels.useAgain, device.label)} title={withName(labels.useAgain, device.label)}>
           <Eye aria-hidden className="size-3.5" />
         </Pill>
       ) : (
-        <Pill type="button" tone="quiet" onClick={() => setIgnoreOpen(true)} aria-label={`Ignore ${device.label}`} title={`Ignore ${device.label}`}>
+        <Pill type="button" tone="quiet" onClick={() => setIgnoreOpen(true)} aria-label={withName(labels.ignore, device.label)} title={withName(labels.ignore, device.label)}>
           <EyeOff aria-hidden className="size-3.5" />
         </Pill>
       )}
 
-      <Sheet open={linkOpen} onOpenChange={setLinkOpen} title={`Which appliance is ${device.label}?`} description="Its readings only count once you say. WonderHome never guesses which machine a device is.">
+      <Sheet open={linkOpen} onOpenChange={setLinkOpen} title={which} description={labels.whichLede}>
         <form action={linkAction} className="space-y-3">
           {linkState.error ? <Alert>{linkState.error}</Alert> : null}
           {linkState.notice ? <Alert tone="info">{linkState.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="linkId" value={device.id} />
-          <Select label="Appliance" name="asset" value={choice} onChange={(event) => setChoice(event.target.value)}>
-            <option value="">Not linked to anything</option>
+          <Select label={labels.appliance} name="asset" value={choice} onChange={(event) => setChoice(event.target.value)}>
+            <option value="">{labels.notLinked}</option>
             {assets.map((asset) => (
               <option key={asset.id} value={asset.id}>{asset.name}</option>
             ))}
-            <option value="new">Something not listed — add it</option>
+            <option value="new">{labels.notListed}</option>
           </Select>
           {choice === "new" ? (
             <>
-              <Field label="What is it called?" name="newName" required maxLength={120} placeholder="Washing machine" autoComplete="off" />
-              <Select label="What kind of thing" name="newCategory" defaultValue="appliance">
+              <Field label={labels.newName} name="newName" required maxLength={120} placeholder={labels.newNamePlaceholder} autoComplete="off" />
+              <Select label={labels.newCategory} name="newCategory" defaultValue="appliance">
                 {CATEGORIES.map((category) => (
-                  <option key={category.value} value={category.value}>{category.label}</option>
+                  <option key={category} value={category}>{labels.categories[category]}</option>
                 ))}
               </Select>
             </>
           ) : null}
           <Button type="submit" disabled={linkPending} className="w-full">
-            {linkPending ? "Saving…" : "Save"}
+            {linkPending ? labels.saving : labels.save}
           </Button>
         </form>
       </Sheet>
@@ -96,9 +116,9 @@ export function DeviceLinkControls({ householdId, device, assets }: { householdI
       <ConfirmationSheet
         open={ignoreOpen}
         onOpenChange={setIgnoreOpen}
-        title={`Ignore ${device.label}?`}
-        description="Nothing it reports will be used. Readings already recorded age out on their own, and you can stop ignoring it at any time."
-        confirmLabel="Ignore"
+        title={withName(labels.ignoreTitle, device.label)}
+        description={labels.ignoreLede}
+        confirmLabel={labels.ignoreConfirm}
         pending={ignorePending}
         onConfirm={() => {
           setIgnored(true);

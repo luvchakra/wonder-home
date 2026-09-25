@@ -7,6 +7,8 @@ export type MemberRoleControlProps = {
   householdId: string;
   memberId: string;
   isAdministrator: boolean;
+  /** "Make Admin" / "Remove Admin" in the viewer's language (story 22-004). */
+  labels?: { makeAdmin: string; removeAdmin: string };
 };
 
 /**
@@ -21,8 +23,9 @@ export function MemberRoleControl({
   householdId,
   memberId,
   isAdministrator,
+  labels = { makeAdmin: "Make Admin", removeAdmin: "Remove Admin" },
 }: MemberRoleControlProps) {
-  const label = isAdministrator ? "Remove Admin" : "Make Admin";
+  const label = isAdministrator ? labels.removeAdmin : labels.makeAdmin;
   return (
     <form action={setMemberRoleAction}>
       <input type="hidden" name="householdId" value={householdId} />

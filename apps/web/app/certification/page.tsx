@@ -4,13 +4,13 @@ import {
   alertsFor,
   CERTIFICATION_CATEGORIES,
   certificationHealth,
-  DECISION_LABEL,
   summarize,
   type CertificationAlert,
   type CertificationHistoryEntry,
   type CertificationItem as Item,
   type ReviewDecision,
 } from "@wonderhome/core/household/certification";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { CertificationItem } from "@wonderhome/core/ui/certification-item";
@@ -23,27 +23,14 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AddBeliefButton, CertificationControls } from "../_components/certification-controls";
+import { certificationControlLabels, certificationItemLabels, reviewCategoryWords, reviewReason } from "../_lib/review-labels";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "HomeBrain Review" };
 export const dynamic = "force-dynamic";
 
-const CATEGORY_LABEL: Record<(typeof CERTIFICATION_CATEGORIES)[number], string> = {
-  family_roles: "Family & roles",
-  home_routines: "Home routines",
-  education: "Education",
-  finance: "Finance",
-  lifestyle: "Lifestyle preferences",
-  safety: "Safety",
-};
-
 /** The alert's one-word action, as the badge — so "Needs review" says which kind of look. */
-const ALERT_ACTION_LABEL: Record<CertificationAlert["action"], string> = {
-  fix: "Needs fixing",
-  confirm: "Confirm this",
-  review: "Needs review",
-  set_up: "Set this up",
-};
+const alertActionWords = (action: CertificationAlert["action"], t: Translate) => t(`review.alert.${action}`);
 
 /** One glyph and tone per decision, wherever history shows one (rule 4). */
 const DECISION_ICON: Record<ReviewDecision, typeof CircleCheck> = {
@@ -59,30 +46,14 @@ const DECISION_TONE: Record<ReviewDecision, IconTone> = {
   deferred: "neutral",
 };
 
-const SOURCE_LABEL: Record<Item["sourceType"], string> = {
-  setup: "setup",
-  conversation: "something said in HomeTalk",
-  integration: "a connected account",
-  observed: "a pattern WonderHome noticed",
-};
-
 /**
  * How sure WonderHome is, in words (rule 9: never a percentage nobody can
  * explain) — from where a belief came from and whether the family has
  * confirmed it, which is all the certainty there really is.
  */
-function confidenceFor(sourceType: Item["sourceType"], status: Item["status"]): string {
-  if (status === "confirmed") return "Confirmed by the family";
-  switch (sourceType) {
-    case "setup":
-      return "Stated by the household, not yet confirmed";
-    case "conversation":
-      return "Said in HomeTalk, not yet confirmed";
-    case "integration":
-      return "From a connected account, not yet confirmed";
-    case "observed":
-      return "Worked out from a pattern — the least certain kind";
-  }
+function confidenceFor(sourceType: Item["sourceType"], status: Item["status"], t: Translate): string {
+  if (status === "confirmed") return t("review.confidence.confirmed");
+  return t(`review.confidence.${sourceType}`);
 }
 
 /**
@@ -93,11 +64,12 @@ function confidenceFor(sourceType: Item["sourceType"], status: Item["status"]): 
  */
 export default async function CertificationPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [{ tab }, session] = await Promise.all([searchParams, requireSession("/certification")]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "review";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: "Back" }, title: "HomeBrain Review" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: t("common.back") }, title: t("nav.item.certification") };
 
   const [{ data }, { data: historyRows }] = await Promise.all([
     supabase
@@ -118,7 +90,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
 
   const history: CertificationHistoryEntry[] = ((historyRows as Record<string, unknown>[] | null) ?? []).map((row) => {
     const reviewer = row.household_members as { display_name: string } | { display_name: string }[] | null;
-    const reviewerName = (Array.isArray(reviewer) ? reviewer[0]?.display_name : reviewer?.display_name) ?? "Someone";
+    const reviewerName = (Array.isArray(reviewer) ? reviewer[0]?.display_name : reviewer?.display_name) ?? t("review.someone");
     const previous = row.previous_value as { claim?: string } | null;
     const next = row.new_value as { claim?: string } | null;
     return {
@@ -151,45 +123,55 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const live = items.filter((item) => item.status !== "removed" && item.status !== "corrected");
   const shown = active === "review" ? live.filter((item) => alertIds.has(item.id)) : active === "confirmed" ? live.filter((item) => item.status === "confirmed" && !alertIds.has(item.id)) : live.filter((item) => item.status === "learned" && !alertIds.has(item.id));
   const canReview = view.tone !== "child";
+  const itemLabels = certificationItemLabels(t);
+  const controlLabels = certificationControlLabels(t);
+  // The explanation `certificationHealth` writes, from the same counts, in the reader's words.
+  const highRiskNeedsReview = health.byRisk.high.needsReview + health.byRisk.critical.needsReview;
+  const healthExplanation =
+    health.byRisk.critical.needsReview > 0
+      ? t("review.health.highRiskCritical", { count: highRiskNeedsReview, critical: health.byRisk.critical.needsReview })
+      : t("review.health.highRisk", { count: highRiskNeedsReview });
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">HomeBrain Review</h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">What WonderHome understands about your home — and where each belief came from.</p>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.certification")}</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("review.lede")}</p>
           </div>
-          {canReview ? <AddBeliefButton householdId={householdId} /> : null}
+          {canReview ? <AddBeliefButton householdId={householdId} labels={controlLabels} /> : null}
         </header>
 
         <Card className="flex items-center gap-5 p-5">
-          <ProgressRing value={summary.understanding} label="How much of the household WonderHome has confirmed" />
+          <ProgressRing value={summary.understanding} label={t("review.ringLabel")} />
           <div className="min-w-0">
-            <p className="text-base font-semibold">WonderHome understands your household {summary.understanding >= 80 ? "well" : summary.understanding >= 40 ? "partly" : "a little"}</p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{summary.confirmed} of {live.length} beliefs confirmed by the family. Nothing here is a guess about confidence — it is a count.</p>
+            <p className="text-base font-semibold">
+              {summary.understanding >= 80 ? t("review.understands.well") : summary.understanding >= 40 ? t("review.understands.partly") : t("review.understands.little")}
+            </p>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("review.confirmedCount", { confirmed: summary.confirmed, count: live.length })}</p>
             {health.highRiskGapExists ? (
-              <p className="mt-1 text-sm font-medium text-[var(--wh-attention)]">{health.explanation}</p>
+              <p className="mt-1 text-sm font-medium text-[var(--wh-attention)]">{healthExplanation}</p>
             ) : null}
           </div>
         </Card>
 
         <MetricGrid
           metrics={[
-            { label: "Confirmed", value: summary.confirmed, icon: CircleCheck, tone: "handled", href: "/certification?tab=confirmed" },
-            { label: "Learned", value: summary.learned, icon: Sparkles, tone: "ai", href: "/certification?tab=learned" },
-            { label: "Need review", value: summary.needsReview, icon: TriangleAlert, tone: "attention", href: "/certification?tab=review" },
+            { label: t("review.metric.confirmed"), value: summary.confirmed, icon: CircleCheck, tone: "handled", href: "/certification?tab=confirmed" },
+            { label: t("review.metric.learned"), value: summary.learned, icon: Sparkles, tone: "ai", href: "/certification?tab=learned" },
+            { label: t("review.metric.needReview"), value: summary.needsReview, icon: TriangleAlert, tone: "attention", href: "/certification?tab=review" },
           ]}
         />
 
         <SegmentedControl
-          label="Certification view"
+          label={t("review.view")}
           active={active}
           segments={[
-            { key: "review", label: "Needs review", href: "/certification?tab=review", count: summary.needsReview },
-            { key: "learned", label: "Learned", href: "/certification?tab=learned" },
-            { key: "confirmed", label: "Confirmed", href: "/certification?tab=confirmed" },
-            { key: "history", label: "History", href: "/certification?tab=history" },
+            { key: "review", label: t("review.tab.review"), href: "/certification?tab=review", count: summary.needsReview },
+            { key: "learned", label: t("review.tab.learned"), href: "/certification?tab=learned" },
+            { key: "confirmed", label: t("review.tab.confirmed"), href: "/certification?tab=confirmed" },
+            { key: "history", label: t("review.tab.history"), href: "/certification?tab=history" },
           ]}
         />
 
@@ -201,8 +183,8 @@ export default async function CertificationPage({ searchParams }: { searchParams
             <EmptyState
               icon={History}
               tone="ai"
-              title="Nothing reviewed yet"
-              description="Every confirm, correction or removal will show up here, with who did it and when."
+              title={t("review.history.emptyTitle")}
+              description={t("review.history.emptyLede")}
             />
           ) : (
             <Card className="p-2">
@@ -212,7 +194,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
                     <IconTile icon={DECISION_ICON[entry.decision]} tone={DECISION_TONE[entry.decision]} size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">
-                        {entry.reviewerName} · {DECISION_LABEL[entry.decision]}
+                        {entry.reviewerName} · {t(`review.decision.${entry.decision}`)}
                       </p>
                       <p className="text-xs text-[var(--wh-foreground-muted)]">
                         {entry.previousClaim ? (
@@ -236,35 +218,36 @@ export default async function CertificationPage({ searchParams }: { searchParams
           )
         ) : (
           <>
-            <SectionHeader title="What WonderHome knows" />
+            <SectionHeader title={t("review.knows")} />
             {shown.length === 0 ? (
               <EmptyState
                 icon={BadgeCheck}
                 tone="ai"
-                title={live.length === 0 ? "WonderHome has nothing recorded yet" : active === "review" ? "You're all caught up — nothing needs your review" : "Nothing here yet"}
-                description={live.length === 0 ? "As you set things up and talk to WonderHome, what it learns appears here for you to confirm or correct." : active === "review" ? "Everything has been checked recently enough for how much it matters. Thank you for keeping WonderHome honest." : "Beliefs move here as they are learned and confirmed."}
-                action={live.length === 0 && canReview ? <AddBeliefButton householdId={householdId} /> : null}
+                title={live.length === 0 ? t("review.empty.nothingTitle") : active === "review" ? t("review.empty.caughtUpTitle") : t("review.empty.hereTitle")}
+                description={live.length === 0 ? t("review.empty.nothingLede") : active === "review" ? t("review.empty.caughtUpLede") : t("review.empty.hereLede")}
+                action={live.length === 0 && canReview ? <AddBeliefButton householdId={householdId} labels={controlLabels} /> : null}
               />
             ) : (
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {shown.map((item) => {
                     const alert = alerts.find((a) => a.itemId === item.id);
-                    const sourceLabel = `${SOURCE_LABEL[item.sourceType]}${item.sourceDetail ? ` (${item.sourceDetail})` : ""}`;
+                    const sourceLabel = `${t(`review.source.${item.sourceType}`)}${item.sourceDetail ? ` (${item.sourceDetail})` : ""}`;
                     return (
                       <CertificationItem
                         key={item.id}
                         claim={item.claim}
                         status={alert ? "needs_review" : item.status}
-                        badgeLabel={alert ? ALERT_ACTION_LABEL[alert.action] : undefined}
+                        badgeLabel={alert ? alertActionWords(alert.action, t) : undefined}
                         sourceLabel={sourceLabel}
-                        category={CATEGORY_LABEL[item.category]}
+                        category={reviewCategoryWords(item.category, t)}
                         risk={item.riskLevel}
                         lastReviewed={item.lastReviewedAt ? `${formatDate(timezone, item.lastReviewedAt, "long")} · ${formatTime(timezone, item.lastReviewedAt)}` : null}
                         learnedAt={learnedAt.get(item.id) ? formatDate(timezone, learnedAt.get(item.id)!, "long") : null}
-                        confidence={confidenceFor(item.sourceType, item.status)}
-                        reason={alert?.reason}
-                        controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} /> : undefined}
+                        confidence={confidenceFor(item.sourceType, item.status, t)}
+                        reason={alert ? reviewReason(item, now, t) : undefined}
+                        controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} labels={controlLabels} /> : undefined}
+                        labels={itemLabels}
                       />
                     );
                   })}
@@ -273,7 +256,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
             )}
 
             <section>
-              <SectionHeader title="Household understanding" />
+              <SectionHeader title={t("review.understanding")} />
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {CERTIFICATION_CATEGORIES.map((category) => {
@@ -281,7 +264,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
                     return (
                       <li key={category} className="flex items-center gap-3 px-2 py-2.5 text-sm">
                         <CircleCheck aria-hidden className={`size-4 ${counts.total > 0 && counts.confirmed === counts.total ? "text-[var(--wh-handled)]" : "text-[var(--wh-foreground-subtle)]"}`} />
-                        <span className="flex-1">{CATEGORY_LABEL[category]}</span>
+                        <span className="flex-1">{reviewCategoryWords(category, t)}</span>
                         <span className="text-xs text-[var(--wh-foreground-muted)] tabular-nums">{counts.confirmed}/{counts.total}</span>
                       </li>
                     );
@@ -292,7 +275,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
           </>
         )}
 
-        <QuoteCard>Your home, understood — and corrected by you.</QuoteCard>
+        <QuoteCard>{t("review.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

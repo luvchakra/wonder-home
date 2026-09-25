@@ -53,7 +53,8 @@ const PRESENTATION: Record<string, { icon: ComponentType<{ className?: string }>
 
 export default async function ActivityPage() {
   const session = await requireSession("/household/activity");
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
 
@@ -62,8 +63,8 @@ export default async function ActivityPage() {
     viewer,
     secondary,
     pathname: "/household/activity",
-    back: { href: "/household", label: "Back to manage household" },
-    title: "Activity",
+    back: { href: "/household", label: t("manage.backToManage") },
+    title: t("manage.section.activity"),
   };
 
   if (!view.permissions.includes("household.manage")) {
@@ -71,8 +72,8 @@ export default async function ActivityPage() {
       <AppShell {...shell}>
         <EmptyState
           icon={FileClock}
-          title="For Admins"
-          description="The activity trail records who changed what. It is theirs to read."
+          title={t("manage.forAdmins")}
+          description={t("manage.activity.adminOnlyLede")}
         />
       </AppShell>
     );
@@ -84,24 +85,21 @@ export default async function ActivityPage() {
   ]);
 
   const nameOf = (id: string | null) =>
-    id ? (members.find((member) => member.id === id)?.displayName ?? "Somebody no longer here") : "WonderHome";
+    id ? (members.find((member) => member.id === id)?.displayName ?? t("manage.activity.somebodyGone")) : "WonderHome";
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Activity</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            Everything that changed who may see or do what, what WonderHome may do on its own, and what
-            reaches outside the household. Kept as a record, never edited.
-          </p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("manage.section.activity")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.activity.lede")}</p>
         </header>
 
         {events.length === 0 ? (
           <EmptyState
             icon={FileClock}
-            title="Nothing recorded yet"
-            description="Changes to roles, invitations, the playbook, your rules and connected accounts show up here as they happen."
+            title={t("manage.activity.emptyTitle")}
+            description={t("manage.activity.emptyLede")}
           />
         ) : (
           <Card className="p-2">
@@ -134,15 +132,11 @@ export default async function ActivityPage() {
         )}
 
         <Card className="space-y-2 p-4 text-sm text-[var(--wh-foreground-muted)]">
-          <p className="font-semibold text-[var(--wh-foreground)]">What is not here</p>
-          <p>
-            Nothing anybody said, wrote or asked. No keys, tokens or passwords — they are stripped before a
-            record is written, not hidden afterwards. The trail answers who changed what and when; it is
-            deliberately unable to answer what was talked about.
-          </p>
+          <p className="font-semibold text-[var(--wh-foreground)]">{t("manage.activity.notHere")}</p>
+          <p>{t("manage.activity.notHereBody")}</p>
         </Card>
 
-        <QuoteCard>A home that remembers, so nobody has to.</QuoteCard>
+        <QuoteCard>{t("manage.activity.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

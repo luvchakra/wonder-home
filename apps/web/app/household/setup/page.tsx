@@ -24,8 +24,9 @@ import {
   saveResponsibilityAction,
 } from "../../(auth)/configuration-actions";
 import { PlaybookForm, PolicyForm, ResponsibilityForm, TeachForm } from "../../_components/config-forms";
-import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
+import { configFormLabels, starterOutcomes } from "../../_lib/manage-labels";
 import { requireSession } from "../../_lib/session";
+import { localizeSetup } from "../../_lib/setup-labels";
 
 export const metadata = { title: "Set up your household" };
 export const dynamic = "force-dynamic";
@@ -43,12 +44,12 @@ export const dynamic = "force-dynamic";
  * Steps that do not apply to a household are absent rather than skipped.
  */
 const STEPS = [
-  { key: "family", label: "Family", icon: Users },
-  { key: "responsibilities", label: "Who does what", icon: ListChecks },
-  { key: "playbook", label: "Playbook", icon: BookOpen },
-  { key: "policies", label: "Policies", icon: ShieldCheck },
-  { key: "connections", label: "Connections", icon: Plug },
-  { key: "teach", label: "Just tell me", icon: MessageSquareText },
+  { key: "family", icon: Users },
+  { key: "responsibilities", icon: ListChecks },
+  { key: "playbook", icon: BookOpen },
+  { key: "policies", icon: ShieldCheck },
+  { key: "connections", icon: Plug },
+  { key: "teach", icon: MessageSquareText },
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
@@ -62,15 +63,16 @@ export default async function SetupWizardPage({
     searchParams,
     requireSession("/household/setup"),
   ]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const shell = {
     active: "more" as const,
     viewer,
     secondary,
     pathname: "/household/setup",
-    back: { href: "/household", label: "Back to manage household" },
-    title: "Set up your household",
+    back: { href: "/household", label: t("manage.backToManage") },
+    title: t("manage.section.setup"),
   };
 
   if (!view.permissions.includes("household.manage")) {
@@ -78,8 +80,8 @@ export default async function SetupWizardPage({
       <AppShell {...shell}>
         <EmptyState
           icon={ShieldCheck}
-          title="For Admins"
-          description="Setting up how the household runs is theirs to do. Ask them if something needs changing."
+          title={t("manage.forAdmins")}
+          description={t("manage.setup.adminOnlyLede")}
         />
       </AppShell>
     );
@@ -96,10 +98,11 @@ export default async function SetupWizardPage({
   const defined = playbook.map((outcome) => ({ key: outcome.key, label: outcome.name }));
   const assignable = [
     ...defined,
-    ...STARTER_OUTCOMES.filter((starter) => !playbook.some((outcome) => outcome.key === starter.key)),
+    ...starterOutcomes(t).filter((starter) => !playbook.some((outcome) => outcome.key === starter.key)),
   ];
+  const formLabels = configFormLabels(t);
 
-  const setup = facts ? assessSetup(facts) : null;
+  const setup = facts ? localizeSetup(assessSetup(facts), t) : null;
   const active: StepKey = STEPS.some((step) => step.key === requested)
     ? (requested as StepKey)
     : "family";
@@ -125,22 +128,19 @@ export default async function SetupWizardPage({
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise flex items-start gap-4">
-          {setup ? <ProgressRing value={setup.percent} label="Household setup" size={72} stroke={7} /> : null}
+          {setup ? <ProgressRing value={setup.percent} label={t("homeScreen.setup.title")} size={72} stroke={7} /> : null}
           <div className="min-w-0 flex-1">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Set up your household</h1>
-            <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-              Each step saves as you go, so you can stop anywhere and pick it up later. Nothing is
-              lost between visits.
-            </p>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("manage.section.setup")}</h1>
+            <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.setup.lede")}</p>
           </div>
         </header>
 
         <SegmentedControl
-          label="Setup step"
+          label={t("manage.setup.stepLabel")}
           active={active}
           segments={STEPS.map((step) => ({
             key: step.key,
-            label: step.label,
+            label: t(`manage.setup.tab.${step.key}`),
             href: `/household/setup?step=${step.key}`,
           }))}
         />
@@ -149,22 +149,21 @@ export default async function SetupWizardPage({
         {active === "family" ? (
           <Step
             icon={Users}
-            title="Who lives here"
-            purpose="Everyone gets their own view, and nothing is asked of the wrong person. Children get age-appropriate access; a househelper is never asked to update chores."
+            title={t("manage.setup.family.title")}
+            purpose={t("manage.setup.family.purpose")}
             done={done("family")}
+            doneLabel={t("manage.setup.done")}
           >
             <div className="space-y-3">
               <p className="text-sm text-[var(--wh-foreground-muted)]">
-                {members.length === 1
-                  ? "Just you so far."
-                  : `${members.length} people in this household.`}
+                {t("manage.setup.people", { count: members.length })}
               </p>
               <div className="flex flex-wrap gap-2">
                 {members.map((member) => (
                   <Badge key={member.id}>{member.displayName}</Badge>
                 ))}
               </div>
-              <PillLink href="/household/members" tone="primary">Invite someone</PillLink>
+              <PillLink href="/household/members" tone="primary">{t("family.inviteSomeone")}</PillLink>
             </div>
           </Step>
         ) : null}
@@ -172,27 +171,29 @@ export default async function SetupWizardPage({
         {active === "playbook" ? (
           <Step
             icon={BookOpen}
-            title="How the home should run"
-            purpose="Describe the state you want rather than the steps to get there. WonderHome plans around it, stays silent while it is on track, and speaks up when it is at risk."
+            title={t("manage.setup.playbook.title")}
+            purpose={t("manage.setup.playbook.purpose")}
             done={done("playbook")}
+            doneLabel={t("manage.setup.done")}
           >
-            <PlaybookForm action={savePlaybookAction} householdId={householdId} existing={defined} />
+            <PlaybookForm action={savePlaybookAction} householdId={householdId} existing={defined} labels={formLabels} />
           </Step>
         ) : null}
 
         {active === "responsibilities" ? (
           <Step
             icon={ListChecks}
-            title="Who looks after what"
-            purpose="An outcome with an owner has somebody to ask. One without is a gap — and showing you the gap is the most useful thing this does."
+            title={t("manage.setup.responsibilities.title")}
+            purpose={t("manage.setup.responsibilities.purpose")}
             done={done("responsibilities")}
+            doneLabel={t("manage.setup.done")}
           >
             {members.length === 0 ? (
               <EmptyState
                 icon={Users}
-                title="Invite somebody first"
-                description="An outcome needs a person to own it."
-                action={<PillLink href="/household/members">Invite someone</PillLink>}
+                title={t("manage.setup.inviteFirst")}
+                description={t("manage.setup.inviteFirstLede")}
+                action={<PillLink href="/household/members">{t("family.inviteSomeone")}</PillLink>}
               />
             ) : (
               <ResponsibilityForm
@@ -200,6 +201,7 @@ export default async function SetupWizardPage({
                 householdId={householdId}
                 members={members.map((member) => ({ id: member.id, displayName: member.displayName }))}
                 outcomes={assignable}
+                labels={formLabels}
               />
             )}
           </Step>
@@ -208,28 +210,26 @@ export default async function SetupWizardPage({
         {active === "policies" ? (
           <Step
             icon={ShieldCheck}
-            title="Your household's rules"
-            purpose="Spending limits, privacy, quiet hours. Policies are versioned and checked on the server every time, so neither a screen nor the assistant can go around one. Until you set them, WonderHome asks before anything consequential."
+            title={t("manage.setup.policies.title")}
+            purpose={t("manage.setup.policies.purpose")}
             done={done("policies")}
+            doneLabel={t("manage.setup.done")}
           >
-            <PolicyForm action={savePolicyAction} householdId={householdId} />
+            <PolicyForm action={savePolicyAction} householdId={householdId} labels={formLabels} />
           </Step>
         ) : null}
 
         {active === "connections" ? (
           <Step
             icon={Plug}
-            title="Connected accounts"
-            purpose="Calendars, school portals, mail and shopping."
+            title={t("manage.setup.connections.title")}
+            purpose={t("manage.setup.connections.purpose")}
             done={false}
+            doneLabel={t("manage.setup.done")}
           >
             <div className="space-y-3">
-              <p className="text-sm text-[var(--wh-foreground-muted)]">
-                No provider is live yet. A provider counts as live only once its credentials, consent
-                flow and integration tests exist — so rather than offer a button that goes nowhere,
-                WonderHome says so and works from what you tell it.
-              </p>
-              <PillLink href="/household/integrations" tone="quiet">See what is connected</PillLink>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.setup.connections.none")}</p>
+              <PillLink href="/household/integrations" tone="quiet">{t("manage.setup.connections.see")}</PillLink>
             </div>
           </Step>
         ) : null}
@@ -237,22 +237,24 @@ export default async function SetupWizardPage({
         {active === "teach" ? (
           <Step
             icon={MessageSquareText}
-            title="Or just say it"
-            purpose="The same configuration, reached in a sentence. WonderHome reads it back and spells out what it would mean before anything is saved — and if it did not follow you, it asks rather than guesses."
+            title={t("manage.setup.teach.title")}
+            purpose={t("manage.setup.teach.purpose")}
             done={false}
+            doneLabel={t("manage.setup.done")}
           >
             <TeachForm
               preview={previewConfigurationAction}
               apply={applyConfigurationAction}
               householdId={householdId}
               shapes={[...UNDERSTOOD_SHAPES]}
+              labels={formLabels}
             />
           </Step>
         ) : null}
 
         {setup && setup.next.length > 0 ? (
           <section>
-            <SectionHeader title="Worth doing next" />
+            <SectionHeader title={t("manage.setup.worthNext")} />
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {setup.next.map((next) => (
@@ -273,7 +275,7 @@ export default async function SetupWizardPage({
           </section>
         ) : null}
 
-        <QuoteCard>A home that runs itself, because you told it how.</QuoteCard>
+        <QuoteCard>{t("manage.setup.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
@@ -284,12 +286,14 @@ function Step({
   title,
   purpose,
   done,
+  doneLabel,
   children,
 }: {
   icon: typeof Users;
   title: string;
   purpose: string;
   done: boolean;
+  doneLabel: string;
   children: React.ReactNode;
 }) {
   return (
@@ -301,7 +305,7 @@ function Step({
             <h2 className="text-base font-semibold tracking-tight">{title}</h2>
             {done ? (
               <span className="flex items-center gap-1 text-xs font-semibold text-[var(--wh-handled)]">
-                <CircleCheck aria-hidden className="size-3.5" /> Done
+                <CircleCheck aria-hidden className="size-3.5" /> {doneLabel}
               </span>
             ) : null}
           </div>

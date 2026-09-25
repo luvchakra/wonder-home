@@ -10,33 +10,55 @@ import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 import type { ActionState } from "../(auth)/actions";
 import { acceptRebalanceAction, removeResponsibilityAction, saveResponsibilityAction } from "../(auth)/configuration-actions";
 import { iconForOutcome } from "../_lib/outcome-icons";
-import { ResponsibilityForm, type MemberOption, type ResponsibilityInitial } from "./config-forms";
+import { ResponsibilityForm, type ConfigFormLabels, type MemberOption, type ResponsibilityInitial } from "./config-forms";
+
+/**
+ * The Responsibilities controls' words in the viewer's language, built on
+ * the server by `responsibilityLabels` (story 22-004). `{name}` stays a
+ * placeholder, filled in here with a name the household gave.
+ */
+export type ResponsibilityLabels = {
+  add: string;
+  addTitle: string;
+  addLede: string;
+  owner: string;
+  backup: string;
+  frequency: string;
+  adminOnly: string;
+  remove: string;
+  removeTitle: string;
+  removeLede: string;
+  removeConfirm: string;
+  giveTo: string;
+  swapping: string;
+  swap: string;
+  form: ConfigFormLabels;
+};
+
+const withName = (template: string, name: string) => template.replace(/\{name\}/g, () => name);
 
 /** "Add responsibility" as a sheet, so the list stays where it was (rule 6). */
 export function AddResponsibilityButton({
   householdId,
   members,
   outcomes,
+  labels,
 }: {
   householdId: string;
   members: MemberOption[];
   outcomes: { key: string; label: string }[];
+  labels: ResponsibilityLabels;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Pill type="button" onClick={() => setOpen(true)} tone="primary">
-        <Plus aria-hidden className="size-3.5" /> Add responsibility
+        <Plus aria-hidden className="size-3.5" /> {labels.add}
       </Pill>
 
-      <Sheet
-        open={open}
-        onOpenChange={setOpen}
-        title="Add a responsibility"
-        description="Every outcome gets an owner, a backup and how much WonderHome may do on its own."
-      >
-        <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} outcomes={outcomes} />
+      <Sheet open={open} onOpenChange={setOpen} title={labels.addTitle} description={labels.addLede}>
+        <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} outcomes={outcomes} labels={labels.form} />
       </Sheet>
     </>
   );
@@ -66,8 +88,10 @@ export function ResponsibilityRow({
   members,
   initial,
   autoOpen,
+  labels,
 }: {
   card: Omit<ResponsibilityCardProps, "onExpand" | "icon" | "tone">;
+  labels: ResponsibilityLabels;
   outcomeKey: string;
   /** "What good looks like", from the playbook entry — not shown collapsed. */
   definition?: string;
@@ -89,11 +113,11 @@ export function ResponsibilityRow({
       <Sheet open={open} onOpenChange={setOpen} title={initial.outcomeLabel} description={definition}>
         {editable ? (
           <div className="space-y-4">
-            <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} initial={initial} />
-            <RemoveResponsibilityControl householdId={householdId} outcomeKey={outcomeKey} outcomeLabel={initial.outcomeLabel} onRemoved={() => setOpen(false)} />
+            <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} initial={initial} labels={labels.form} />
+            <RemoveResponsibilityControl householdId={householdId} outcomeKey={outcomeKey} outcomeLabel={initial.outcomeLabel} onRemoved={() => setOpen(false)} labels={labels} />
           </div>
         ) : (
-          <ReadOnlyDetail card={card} />
+          <ReadOnlyDetail card={card} labels={labels} />
         )}
       </Sheet>
     </>
@@ -110,11 +134,13 @@ function RemoveResponsibilityControl({
   outcomeKey,
   outcomeLabel,
   onRemoved,
+  labels,
 }: {
   householdId: string;
   outcomeKey: string;
   outcomeLabel: string;
   onRemoved: () => void;
+  labels: ResponsibilityLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(removeResponsibilityAction, {});
@@ -130,15 +156,15 @@ function RemoveResponsibilityControl({
   return (
     <>
       <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="text-[var(--wh-risk)]">
-        <Trash2 aria-hidden className="size-3.5" /> Remove responsibility
+        <Trash2 aria-hidden className="size-3.5" /> {labels.remove}
       </Pill>
 
       <ConfirmationSheet
         open={open}
         onOpenChange={setOpen}
-        title={`Remove ${outcomeLabel}?`}
-        description="Nobody will own this outcome anymore, and WonderHome stops planning around it. You can add it again any time — it just starts over, with nobody assigned."
-        confirmLabel="Remove"
+        title={withName(labels.removeTitle, outcomeLabel)}
+        description={labels.removeLede}
+        confirmLabel={labels.removeConfirm}
         destructive
         pending={pending}
         onConfirm={() => {
@@ -155,27 +181,27 @@ function RemoveResponsibilityControl({
   );
 }
 
-function ReadOnlyDetail({ card }: { card: Omit<ResponsibilityCardProps, "onExpand" | "icon" | "tone"> }) {
+function ReadOnlyDetail({ card, labels }: { card: Omit<ResponsibilityCardProps, "onExpand" | "icon" | "tone">; labels: ResponsibilityLabels }) {
   return (
     <dl className="space-y-3 text-sm">
       <div>
-        <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Owner</dt>
+        <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{labels.owner}</dt>
         <dd>{card.owner}</dd>
       </div>
       {card.backup ? (
         <div>
-          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Backup</dt>
+          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{labels.backup}</dt>
           <dd>{card.backup}</dd>
         </div>
       ) : null}
       {card.frequency ? (
         <div>
-          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Frequency</dt>
+          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{labels.frequency}</dt>
           <dd>{card.frequency}</dd>
         </div>
       ) : null}
       <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        Only an Admin can change who owns this.
+        {labels.adminOnly}
       </p>
     </dl>
   );
@@ -192,12 +218,14 @@ export function AcceptRebalanceButton({
   fromMemberId,
   toMemberId,
   toName,
+  labels,
 }: {
   householdId: string;
   outcomeKey: string;
   fromMemberId: string;
   toMemberId: string;
   toName: string;
+  labels: Pick<ResponsibilityLabels, "giveTo" | "swapping" | "swap">;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(acceptRebalanceAction, {});
 
@@ -209,8 +237,8 @@ export function AcceptRebalanceButton({
       <input type="hidden" name="outcomeKey" value={outcomeKey} />
       <input type="hidden" name="fromMemberId" value={fromMemberId} />
       <input type="hidden" name="toMemberId" value={toMemberId} />
-      <Pill type="submit" tone="primary" disabled={pending} aria-label={`Give this to ${toName}`}>
-        {pending ? "Swapping…" : "Swap"}
+      <Pill type="submit" tone="primary" disabled={pending} aria-label={withName(labels.giveTo, toName)}>
+        {pending ? labels.swapping : labels.swap}
       </Pill>
       {state.error ? <p className="max-w-48 text-right text-xs text-[var(--wh-risk)]" role="alert">{state.error}</p> : null}
     </form>

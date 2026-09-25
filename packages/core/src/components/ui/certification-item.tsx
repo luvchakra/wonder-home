@@ -33,6 +33,22 @@ export type CertificationItemProps = {
   controls?: ReactNode;
   /** Overrides the status word on the badge — "Needs fixing" rather than "Needs review" when the alert says what kind of look it needs. */
   badgeLabel?: string;
+  /** The row's own words in the reader's language (story 22-004); English otherwise. */
+  labels?: CertificationItemLabels;
+};
+
+/** `from` carries `{source}` and `{category}`, filled in here. */
+export type CertificationItemLabels = {
+  from: string;
+  source: string;
+  category: string;
+  learned: string;
+  confidence: string;
+  matters: string;
+  lastChecked: string;
+  never: string;
+  status: Record<CertificationItemProps["status"], string>;
+  risk: Record<CertificationItemProps["risk"], string>;
 };
 
 const STATUS: Record<
@@ -59,6 +75,19 @@ const RISK_BADGE: Record<CertificationItemProps["risk"], "handled" | "attention"
   critical: "risk",
 };
 
+const ENGLISH: CertificationItemLabels = {
+  from: "From {source} · {category}",
+  source: "Source",
+  category: "Category",
+  learned: "When learned",
+  confidence: "Confidence",
+  matters: "How much it matters",
+  lastChecked: "Last checked",
+  never: "Never",
+  status: { confirmed: "Confirmed", learned: "Learned", needs_review: "Needs review", corrected: "Corrected", removed: "Removed" },
+  risk: RISK_LABEL,
+};
+
 function Fact({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
@@ -81,8 +110,10 @@ export function CertificationItem({
   reason,
   controls,
   badgeLabel,
+  labels = ENGLISH,
 }: CertificationItemProps) {
   const presentation = STATUS[status];
+  const from = labels.from.replace("{source}", () => sourceLabel).replace("{category}", () => category);
 
   return (
     <ExpandableRow
@@ -91,10 +122,10 @@ export function CertificationItem({
           <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium leading-snug">{claim}</span>
-            <span className="block text-xs text-[var(--wh-foreground-subtle)]">From {sourceLabel} · {category}</span>
+            <span className="block text-xs text-[var(--wh-foreground-subtle)]">{from}</span>
           </span>
           <Badge tone={presentation.badge} className="shrink-0">
-            {badgeLabel ?? presentation.label}
+            {badgeLabel ?? labels.status[status] ?? presentation.label}
           </Badge>
         </>
       }
@@ -102,17 +133,17 @@ export function CertificationItem({
       <div className="space-y-3">
         {reason ? <p className="text-sm text-[var(--wh-foreground-muted)]">{reason}</p> : null}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-          <Fact label="Source" value={sourceLabel} />
-          <Fact label="Category" value={category} />
-          <Fact label="When learned" value={learnedAt ?? null} />
-          <Fact label="Confidence" value={confidence ?? null} />
+          <Fact label={labels.source} value={sourceLabel} />
+          <Fact label={labels.category} value={category} />
+          <Fact label={labels.learned} value={learnedAt ?? null} />
+          <Fact label={labels.confidence} value={confidence ?? null} />
           <div>
-            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">How much it matters</dt>
+            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{labels.matters}</dt>
             <dd className="text-sm">
-              <Badge tone={RISK_BADGE[risk]}>{RISK_LABEL[risk]}</Badge>
+              <Badge tone={RISK_BADGE[risk]}>{labels.risk[risk]}</Badge>
             </dd>
           </div>
-          <Fact label="Last checked" value={lastReviewed ?? "Never"} />
+          <Fact label={labels.lastChecked} value={lastReviewed ?? labels.never} />
         </dl>
         {controls ? <div className="flex flex-wrap gap-1.5">{controls}</div> : null}
       </div>

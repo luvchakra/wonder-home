@@ -51,6 +51,10 @@ export type ResponsibilityCardProps = {
   backup?: string | null;
   frequency?: string;
   aiMode: "observe" | "prepare" | "approve" | "execute";
+  /** The autonomy level in the reader's language; `AI_MODE_LABEL` otherwise. */
+  aiModeLabel?: string;
+  /** "backup Priya" in the reader's language; the English otherwise. */
+  backupLabel?: string;
   action?: ReactNode;
   /** When present, the whole row opens something — a chevron says so. */
   onExpand?: () => void;
@@ -65,7 +69,7 @@ export const AI_MODE_LABEL: Record<ResponsibilityCardProps["aiMode"], string> = 
   execute: "WonderHome handles it",
 };
 
-export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency, aiMode, action, onExpand, className }: ResponsibilityCardProps) {
+export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency, aiMode, aiModeLabel, backupLabel, action, onExpand, className }: ResponsibilityCardProps) {
   const body = (
     <>
       <IconTile icon={icon} tone={tone} />
@@ -73,10 +77,10 @@ export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-[var(--wh-foreground-subtle)]">
           {owner}
-          {backup ? ` · backup ${backup}` : ""}
+          {backup ? ` · ${backupLabel ?? `backup ${backup}`}` : ""}
           {frequency ? ` · ${frequency}` : ""}
         </p>
-        <p className="mt-0.5 text-[0.6875rem] font-medium text-[var(--wh-primary)]">{AI_MODE_LABEL[aiMode]}</p>
+        <p className="mt-0.5 text-[0.6875rem] font-medium text-[var(--wh-primary)]">{aiModeLabel ?? AI_MODE_LABEL[aiMode]}</p>
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
       {onExpand ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}
