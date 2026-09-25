@@ -25,9 +25,26 @@ function parts(at: Date, timeZone: string): { year: number; month: number; day: 
   return { year: year!, month: month!, day: day! };
 }
 
+/**
+ * How a viewer reads times and days (story 22-004): their locale, 12- or
+ * 24-hour, and their language's words for today and yesterday. Absent, it is
+ * the English it has always been.
+ */
+export type MessageTimeStyle = { locale?: string; hour12?: boolean; today?: string; yesterday?: string };
+
+function locale(style?: MessageTimeStyle): string {
+  const wanted = style?.locale ?? "en-US";
+  try {
+    new Intl.DateTimeFormat(wanted);
+    return wanted;
+  } catch {
+    return "en-US";
+  }
+}
+
 /** "4:07 PM". */
-export function messageTime(at: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-US", { timeZone: zone(timeZone), hour: "numeric", minute: "2-digit", hour12: true }).format(at);
+export function messageTime(at: Date, timeZone: string, style?: MessageTimeStyle): string {
+  return new Intl.DateTimeFormat(locale(style), { timeZone: zone(timeZone), hour: "numeric", minute: "2-digit", hour12: style?.hour12 ?? true }).format(at);
 }
 
 /** The local day a message belongs to, as `YYYY-MM-DD`: what decides where a date divider goes. */
@@ -37,14 +54,14 @@ export function messageDay(at: Date, timeZone: string): string {
 }
 
 /** "Today", "Yesterday", else "September 7, 2026". */
-export function messageDayLabel(at: Date, timeZone: string, now: Date = new Date()): string {
+export function messageDayLabel(at: Date, timeZone: string, now: Date = new Date(), style?: MessageTimeStyle): string {
   const day = messageDay(at, timeZone);
   const today = messageDay(now, timeZone);
-  if (day === today) return "Today";
+  if (day === today) return style?.today ?? "Today";
   // Calendar arithmetic on the local date itself, so a day that is 23 or 25
   // hours long never makes yesterday look like two days ago.
   const { year, month, day: date } = parts(now, timeZone);
   const yesterday = new Date(Date.UTC(year, month - 1, date - 1));
-  if (day === yesterday.toISOString().slice(0, 10)) return "Yesterday";
-  return new Intl.DateTimeFormat("en-US", { timeZone: zone(timeZone), month: "long", day: "numeric", year: "numeric" }).format(at);
+  if (day === yesterday.toISOString().slice(0, 10)) return style?.yesterday ?? "Yesterday";
+  return new Intl.DateTimeFormat(locale(style), { timeZone: zone(timeZone), month: "long", day: "numeric", year: "numeric" }).format(at);
 }

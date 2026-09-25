@@ -11,7 +11,7 @@
 | Not Started | 2 |
 | Completion | 97.3% |
 | Current module | 22 Internationalization and Localization |
-| Current story | 22-006 localized notifications complete; next: 22-004 catalog coverage / 22-008 RTL, then payments P3 (20-011) |
+| Current story | 22-004 HomeTalk screen localized; next: 22-004 catalog coverage on the remaining screens / 22-008 RTL, then payments P3 (20-011) |
 | Last updated | 2026-09-24 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this

@@ -13,6 +13,7 @@ import { geminiLiveGate } from "../_lib/gemini-live";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
 import { ConversationSearch } from "./conversation-search";
+import { assistantLabels, conversationSearchLabels } from "./hometalk-labels";
 
 export const metadata = { title: "HomeTalk" };
 export const dynamic = "force-dynamic";
@@ -25,7 +26,9 @@ export const dynamic = "force-dynamic";
  */
 export default async function AiPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const [{ q }, session] = await Promise.all([searchParams, requireSession("/ai")]);
-  const { supabase, membership, viewer, secondary } = session;
+  const { supabase, membership, viewer, secondary, locale } = session;
+  const timeStyle = { locale: locale.format.locale, hour12: locale.preferences.timeFormat === "12h" };
+  const labels = assistantLabels(locale.t, timeStyle);
 
   const [entitlement, voiceEntitlement, voiceSettings, members] = await Promise.all([
     may(supabase, membership.household.id, "conversation.text"),
@@ -76,7 +79,11 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
       pathname="/ai"
       title="HomeTalk"
       fill
-      headerSearch={entitlement.allowed ? <ConversationSearch householdId={membership.household.id} timeZone={membership.household.timezone} /> : undefined}
+      headerSearch={entitlement.allowed ? <ConversationSearch
+            householdId={membership.household.id}
+            timeZone={membership.household.timezone}
+            labels={conversationSearchLabels(locale.t, timeStyle)}
+          /> : undefined}
     >
       {entitlement.allowed ? (
         <Assistant
@@ -93,12 +100,13 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           kids={kids}
           canAddChild={isHouseholdAdmin(membership)}
           timeZone={membership.household.timezone}
+          labels={labels}
         />
       ) : (
         <EmptyState
           icon={Sparkles}
           tone="ai"
-          title="Conversation is not part of this plan"
+          title={locale.t("hometalk.ui.notInPlan")}
           description={entitlement.reason}
         />
       )}

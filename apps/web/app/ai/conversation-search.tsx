@@ -3,7 +3,7 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-import { messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
+import { messageDayLabel, messageTime, type MessageTimeStyle } from "@wonderhome/core/conversation/message-time";
 import { plainText } from "@wonderhome/core/conversation/reply-format";
 
 /**
@@ -15,6 +15,33 @@ import { plainText } from "@wonderhome/core/conversation/reply-format";
  * one door (rule 13), which is why this does not submit to the assistant the
  * way the global search bar does.
  */
+
+/** The search's wording, in the viewer's language; the page builds it from the catalog. */
+export type ConversationSearchLabels = {
+  label: string;
+  placeholder: string;
+  clear: string;
+  searching: string;
+  failed: string;
+  /** `{query}` is what was typed. */
+  none: string;
+  /** "1 message", "2 messages"… indexed by count, up to the most a search returns. */
+  counts: string[];
+  you: string;
+  time: MessageTimeStyle;
+};
+
+export const CONVERSATION_SEARCH_LABELS: ConversationSearchLabels = {
+  label: "Search your messages with WonderHome",
+  placeholder: "Search messages",
+  clear: "Clear the search",
+  searching: "Searching…",
+  failed: "The search did not work just now. Try again in a moment.",
+  none: "No messages mention “{query}”.",
+  counts: [],
+  you: "You",
+  time: {},
+};
 
 type Match = { id: string; role: "member" | "assistant"; text: string; at: string };
 type State =
@@ -54,7 +81,15 @@ function highlighted(text: string, query: string): ReactNode {
   return parts;
 }
 
-export function ConversationSearch({ householdId, timeZone }: { householdId: string; timeZone: string }) {
+export function ConversationSearch({
+  householdId,
+  timeZone,
+  labels = CONVERSATION_SEARCH_LABELS,
+}: {
+  householdId: string;
+  timeZone: string;
+  labels?: ConversationSearchLabels;
+}) {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const [open, setOpen] = useState(false);
@@ -131,7 +166,7 @@ export function ConversationSearch({ householdId, timeZone }: { householdId: str
   return (
     <div ref={rootRef} className="relative" role="search">
       <label htmlFor={`${listId}-input`} className="sr-only">
-        Search your messages with WonderHome
+        {labels.label}
       </label>
       <Search aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-[var(--wh-foreground-subtle)]" />
       <input
@@ -144,7 +179,7 @@ export function ConversationSearch({ householdId, timeZone }: { householdId: str
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Search messages"
+        placeholder={labels.placeholder}
         autoComplete="off"
         enterKeyHint="search"
         aria-controls={showPanel ? listId : undefined}
@@ -158,7 +193,7 @@ export function ConversationSearch({ householdId, timeZone }: { householdId: str
             setOpen(false);
             inputRef.current?.focus();
           }}
-          aria-label="Clear the search"
+          aria-label={labels.clear}
           className="absolute top-1/2 right-1 grid size-8 -translate-y-1/2 place-items-center rounded-full text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)]"
         >
           <X aria-hidden className="size-4" />
@@ -172,20 +207,20 @@ export function ConversationSearch({ householdId, timeZone }: { householdId: str
         >
           {current.kind === "searching" ? (
             <p role="status" className="px-3 py-3 text-sm text-[var(--wh-foreground-muted)]">
-              Searching…
+              {labels.searching}
             </p>
           ) : current.kind === "failed" ? (
             <p role="alert" className="px-3 py-3 text-sm text-[var(--wh-risk)]">
-              The search did not work just now. Try again in a moment.
+              {labels.failed}
             </p>
           ) : current.kind === "done" && current.matches.length === 0 ? (
             <p role="status" className="px-3 py-3 text-sm text-[var(--wh-foreground-muted)]">
-              No messages mention “{current.query}”.
+              {labels.none.replace("{query}", () => current.query)}
             </p>
           ) : current.kind === "done" ? (
             <>
               <p role="status" className="px-3 pt-1.5 pb-1 text-xs font-medium text-[var(--wh-foreground-subtle)]">
-                {current.matches.length === 1 ? "1 message" : `${current.matches.length} messages`}
+                {labels.counts[current.matches.length] ?? (current.matches.length === 1 ? "1 message" : `${current.matches.length} messages`)}
               </p>
               <ul className="space-y-0.5">
                 {current.matches.map((match) => {
@@ -201,9 +236,9 @@ export function ConversationSearch({ householdId, timeZone }: { householdId: str
                         className="block w-full rounded-[var(--wh-radius-sm)] px-3 py-2.5 text-left hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
                       >
                         <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                          <span className="text-xs font-semibold text-[var(--wh-foreground)]">{match.role === "member" ? "You" : "WonderHome"}</span>
+                          <span className="text-xs font-semibold text-[var(--wh-foreground)]">{match.role === "member" ? labels.you : "WonderHome"}</span>
                           <span className="text-xs text-[var(--wh-foreground-subtle)] tabular-nums">
-                            {messageDayLabel(when, timeZone)} · {messageTime(when, timeZone)}
+                            {messageDayLabel(when, timeZone, undefined, labels.time)} · {messageTime(when, timeZone, labels.time)}
                           </span>
                         </span>
                         <span className="mt-0.5 block text-sm leading-snug whitespace-pre-line text-[var(--wh-foreground-muted)]">

@@ -11,7 +11,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
 import { plainText } from "@wonderhome/core/conversation/reply-format";
@@ -20,6 +20,10 @@ import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conve
 import { AiOrb, ChatDayDivider, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
 import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-composer";
+import { en } from "@wonderhome/core/i18n/messages/en";
+import { translator } from "@wonderhome/core/i18n/translate";
+
+import { assistantLabels, type AssistantLabels, type SuggestionKey } from "./hometalk-labels";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
@@ -53,14 +57,17 @@ export type AssistantMessage = {
 /** Far enough back to be deliberate rather than a stray touch. */
 const BACK_AT_LEAST = 120;
 
-const SUGGESTIONS = [
-  { label: "Plan a family outing this weekend", utterance: "Plan a family outing this weekend.", icon: <CalendarHeart aria-hidden className="size-4 text-[var(--wh-tone-people)]" /> },
-  { label: "Add coriander to the grocery list", utterance: "Add coriander to the grocery list.", icon: <ShoppingBasket aria-hidden className="size-4 text-[var(--wh-tone-care)]" /> },
-  { label: "How is Anaya's project coming along?", utterance: "How is Anaya's project coming along?", icon: <GraduationCap aria-hidden className="size-4 text-[var(--wh-tone-school)]" /> },
-  { label: "Show me tomorrow's schedule", utterance: "Show me tomorrow's schedule.", icon: <Sparkles aria-hidden className="size-4 text-[var(--wh-tone-ai)]" /> },
-  { label: "Pay the electricity bill", utterance: "Pay the electricity bill.", icon: <Wallet aria-hidden className="size-4 text-[var(--wh-tone-money)]" /> },
-  { label: "Priya handles the school run from now on", utterance: "Priya handles the school run from now on.", icon: <ListChecks aria-hidden className="size-4 text-[var(--wh-primary)]" /> },
+const SUGGESTIONS: { key: SuggestionKey; utterance: string; icon: ReactNode }[] = [
+  { key: "outing", utterance: "Plan a family outing this weekend.", icon: <CalendarHeart aria-hidden className="size-4 text-[var(--wh-tone-people)]" /> },
+  { key: "coriander", utterance: "Add coriander to the grocery list.", icon: <ShoppingBasket aria-hidden className="size-4 text-[var(--wh-tone-care)]" /> },
+  { key: "project", utterance: "How is Anaya's project coming along?", icon: <GraduationCap aria-hidden className="size-4 text-[var(--wh-tone-school)]" /> },
+  { key: "schedule", utterance: "Show me tomorrow's schedule.", icon: <Sparkles aria-hidden className="size-4 text-[var(--wh-tone-ai)]" /> },
+  { key: "bill", utterance: "Pay the electricity bill.", icon: <Wallet aria-hidden className="size-4 text-[var(--wh-tone-money)]" /> },
+  { key: "schoolRun", utterance: "Priya handles the school run from now on.", icon: <ListChecks aria-hidden className="size-4 text-[var(--wh-primary)]" /> },
 ];
+
+/** English, for a caller that passes no labels. */
+const ENGLISH_LABELS = assistantLabels(translator("en", en));
 
 export function Assistant({
   householdId,
@@ -76,6 +83,7 @@ export function Assistant({
   kids = [],
   canAddChild = false,
   timeZone = "Asia/Kolkata",
+  labels = ENGLISH_LABELS,
 }: {
   householdId: string;
   memberName: string;
@@ -97,7 +105,10 @@ export function Assistant({
   canAddChild?: boolean;
   /** The household's own zone, which every message time and date divider is shown in. */
   timeZone?: string;
+  /** The screen's own words in the viewer's language (story 22-004). */
+  labels?: AssistantLabels;
 }) {
+  const errorWords = labels.error;
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +207,7 @@ export function Assistant({
         const payload = await response.json();
 
         if (!response.ok) {
-          throw new Error(payload?.error?.message ?? "WonderHome could not answer just now.");
+          throw new Error(payload?.error?.message ?? errorWords.answer);
         }
 
         if (live && payload.memberMessageId && !liveStartMessageId.current) {
@@ -227,14 +238,14 @@ export function Assistant({
         return replies.map((reply) => reply.text).join("\n\n");
       } catch (caught) {
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
-        setError(caught instanceof Error ? caught.message : "WonderHome could not answer just now.");
+        setError(caught instanceof Error ? caught.message : errorWords.answer);
         setFailed({ utterance, channel, transcriptConfidence, key: idempotencyKey, editMessageId });
         return "";
       } finally {
         setBusy(false);
       }
     },
-    [busy, householdId, firstName],
+    [busy, householdId, firstName, errorWords],
   );
 
   /** A live turn: send what was heard, and read back what to say (never throws — the hook's own contract). */
@@ -280,13 +291,13 @@ export function Assistant({
           body: JSON.stringify({ documentReceipt: itemId }),
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error?.message ?? "Could not say what that document did.");
+        if (!response.ok) throw new Error(payload?.error?.message ?? errorWords.document);
         setMessages((current) => (current.some((message) => message.id === payload.reply.id) ? current : current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() })));
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Could not say what that document did.");
+        setError(caught instanceof Error ? caught.message : errorWords.document);
       }
     },
-    [householdId],
+    [householdId, errorWords],
   );
 
   /** Ends a live session: fetches the recap for everything said since it began, and posts it as a message. */
@@ -301,12 +312,12 @@ export function Assistant({
         body: JSON.stringify({ summarizeSince: startId }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not summarise that conversation.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? errorWords.summary);
       setMessages((current) => current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not summarise that conversation.");
+      setError(caught instanceof Error ? caught.message : errorWords.summary);
     }
-  }, [householdId]);
+  }, [householdId, errorWords]);
 
   /**
    * What the composer is doing. The screen only needs this for one
@@ -355,7 +366,7 @@ export function Assistant({
           body: JSON.stringify({ actionId, decision, ...(fingerprint ? { fingerprint } : {}) }),
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error?.message ?? "That decision did not go through.");
+        if (!response.ok) throw new Error(payload?.error?.message ?? errorWords.decision);
 
         setMessages((current) =>
           current
@@ -365,12 +376,12 @@ export function Assistant({
             .concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() }),
         );
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "That decision did not go through.");
+        setError(caught instanceof Error ? caught.message : errorWords.decision);
       } finally {
         setBusy(false);
       }
     },
-    [busy, householdId],
+    [busy, householdId, errorWords],
   );
 
   useEffect(() => {
@@ -413,18 +424,16 @@ export function Assistant({
         <div className="wh-rise m-auto flex flex-col items-center px-2 py-8 text-center">
           <AiOrb size={88} />
           <h1 className="mt-6 text-2xl font-semibold tracking-tight text-balance">
-            Hi {firstName}! <span aria-hidden>👋</span>
+            {labels.greeting.replace("{name}", firstName)} <span aria-hidden>👋</span>
             <br />
-            How can I help you today?
+            {labels.helpQuestion}
           </h1>
-          <p className="mt-2 max-w-sm text-sm text-[var(--wh-foreground-muted)]">
-            Ask in your own words. I will check the household, propose what I would do, and wait for
-            your OK before anything that matters.
-          </p>
+          <p className="mt-2 max-w-sm text-sm text-[var(--wh-foreground-muted)]">{labels.intro}</p>
           <p className="mt-6 mb-2 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-            Here are some things you can ask
+            {labels.suggestionsHeading}
           </p>
-          <SuggestionChips suggestions={SUGGESTIONS} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
+          <SuggestionChips
+            suggestions={SUGGESTIONS.map(({ key, utterance, icon }) => ({ label: labels.suggestions[key], utterance, icon }))} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
         </div>
         </div>
       ) : (
@@ -438,33 +447,34 @@ export function Assistant({
           {messages.map((message, index) => (
             <Fragment key={message.id}>
             {/* A date between the days, as a messaging app shows it. */}
-            {message.at && dayChanges(messages, index, timeZone) ? <ChatDayDivider label={messageDayLabel(new Date(message.at), timeZone)} /> : null}
+            {message.at && dayChanges(messages, index, timeZone) ? <ChatDayDivider label={messageDayLabel(new Date(message.at), timeZone, new Date(), labels.time)} /> : null}
             <ChatMessage
               id={`message-${message.id}`}
               role={message.role}
               name={memberName}
               speaker={message.speaker}
               pending={message.pending}
-              sentAt={message.at ? { label: messageTime(new Date(message.at), timeZone), dateTime: message.at } : undefined}
+              sentAt={message.at ? { label: messageTime(new Date(message.at), timeZone, labels.time), dateTime: message.at } : undefined}
               aside={
                 message.action?.preview || message.preview ? (
                   <ActionPreview
+                    labels={labels.preview}
                     state={stateOf(message)}
                     understood={(message.action?.preview ?? message.preview)!.summary}
-                    plan={message.action?.unchanged ? ["It was already on record, so nothing was added or changed."] : (message.action?.preview ?? message.preview)!.changes}
+                    plan={message.action?.unchanged ? [labels.alreadyOnRecord] : (message.action?.preview ?? message.preview)!.changes}
                     impact={(message.action?.preview ?? message.preview)!.because}
                     reversible={(message.action?.preview ?? message.preview)!.reversible}
                     controls={
                       message.action?.status === "proposed" ? (
                         <>
                           <Button onClick={() => void decide(message.action!.id, "approved", message.action!.fingerprint ?? null)} disabled={busy}>
-                            Confirm
+                            {labels.confirm}
                           </Button>
                           <Pill type="button" tone="quiet" onClick={() => void send("Actually, let me change that.", "text")} disabled={busy}>
-                            Change
+                            {labels.change}
                           </Pill>
                           <Pill type="button" tone="quiet" onClick={() => void decide(message.action!.id, "rejected")} disabled={busy}>
-                            Cancel
+                            {labels.cancel}
                           </Pill>
                         </>
                       ) : null
@@ -476,10 +486,10 @@ export function Assistant({
                       type="button"
                       onClick={() => startEdit(message)}
                       disabled={busy || editing?.id === message.id}
-                      aria-label="Edit your last message"
+                      aria-label={labels.editAria}
                       className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-[var(--wh-foreground-subtle)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-40"
                     >
-                      <Pencil aria-hidden className="size-3" /> Edit
+                      <Pencil aria-hidden className="size-3" /> {labels.edit}
                     </button>
                   </div>
                 ) : null
@@ -503,7 +513,7 @@ export function Assistant({
               disabled={busy}
               onClick={() => void send(failed.utterance, failed.channel, failed.transcriptConfidence, failed.key, failed.editMessageId)}
             >
-              Try again
+              {labels.tryAgain}
             </Pill>
           ) : null}
         </div>
@@ -518,8 +528,8 @@ export function Assistant({
           <button
             type="button"
             onClick={jumpToLatest}
-            aria-label="Jump to the latest message"
-            title="Jump to the latest message"
+            aria-label={labels.jumpLatest}
+            title={labels.jumpLatest}
             className="wh-rise absolute -top-11 left-1/2 z-10 grid size-10 -translate-x-1/2 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)] shadow-[var(--wh-shadow-float)] transition-colors hover:border-[var(--wh-primary)] hover:text-[var(--wh-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
           >
             <ArrowDown aria-hidden className="size-5" />
@@ -527,11 +537,11 @@ export function Assistant({
         ) : null}
         {editing ? (
           <div className="mb-2 flex items-center justify-between rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--wh-primary)]">
-            <span>Editing your message</span>
+            <span>{labels.editing}</span>
             <button
               type="button"
               onClick={() => setEditing(null)}
-              aria-label="Cancel editing"
+              aria-label={labels.cancelEditing}
               className="grid size-5 place-items-center rounded-full hover:bg-[var(--wh-primary)]/10"
             >
               <X aria-hidden className="size-3.5" />
@@ -539,6 +549,7 @@ export function Assistant({
           </div>
         ) : null}
         <TalkComposer
+          labels={labels.composer}
           key={editing?.id ?? "compose"}
           householdId={householdId}
           onSend={handleComposerSend}
@@ -558,7 +569,7 @@ export function Assistant({
           onLiveTranscript={handleLiveTranscript}
         />
         <p className="mt-1.5 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
-          WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.
+          {labels.footer}
         </p>
       </div>
 
