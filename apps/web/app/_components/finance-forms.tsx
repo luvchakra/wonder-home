@@ -18,21 +18,14 @@ import {
   createObligationAction,
   recordAmountAction,
   removeTransactionAction,
+  retireBudgetAction,
+  saveBudgetAction,
   updateObligationAction,
 } from "../(auth)/finance-actions";
+import { BILL_KINDS, billKindLabel } from "../_lib/bill-kinds";
 import { CurrencyField } from "./currency-field";
 
-const KINDS = [
-  { value: "utility", label: "Utility" },
-  { value: "rent", label: "Rent" },
-  { value: "school_fee", label: "School fee" },
-  { value: "subscription", label: "Subscription" },
-  { value: "insurance", label: "Insurance" },
-  { value: "loan", label: "Loan" },
-  { value: "tax", label: "Tax" },
-  { value: "service", label: "Service" },
-  { value: "other", label: "Other" },
-];
+const KINDS = BILL_KINDS;
 
 export type ObligationInitial = {
   id: string;
@@ -574,5 +567,145 @@ export function RemoveTransactionControl({
         {state.error ? <p className="text-sm text-[var(--wh-risk)]">{state.error}</p> : null}
       </ConfirmationSheet>
     </>
+  );
+}
+
+export type BudgetInitial = {
+  id: string;
+  category: string;
+  period: "month" | "quarter" | "year";
+  limitMinor: number;
+  currency: string;
+};
+
+const BUDGET_PERIOD_OPTIONS = [
+  { value: "month", label: "Each month" },
+  { value: "quarter", label: "Each quarter" },
+  { value: "year", label: "Each year" },
+];
+
+function BudgetFields({
+  householdId,
+  initial,
+  state,
+  defaultCurrency = "INR",
+}: {
+  householdId: string;
+  initial?: BudgetInitial;
+  state: ActionState;
+  defaultCurrency?: string;
+}) {
+  const selectClass =
+    "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
+  return (
+    <>
+      {state.error ? <Alert>{state.error}</Alert> : null}
+      {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+      <input type="hidden" name="householdId" value={householdId} />
+      {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label htmlFor="budget-category" className="block text-sm font-medium">
+            For
+          </label>
+          <select id="budget-category" name="category" defaultValue={initial?.category ?? "utility"} className={selectClass}>
+            {KINDS.map((k) => (
+              <option key={k.value} value={k.value}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="budget-period" className="block text-sm font-medium">
+            How often
+          </label>
+          <select id="budget-period" name="period" defaultValue={initial?.period ?? "month"} className={selectClass}>
+            {BUDGET_PERIOD_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Up to"
+          name="amount"
+          type="number"
+          min={0.01}
+          step="0.01"
+          required
+          placeholder="5000"
+          defaultValue={initial ? initial.limitMinor / 100 : undefined}
+        />
+        <CurrencyField value={initial?.currency ?? defaultCurrency} />
+      </div>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">
+        Only payments in this currency count towards it. Nothing is converted.
+      </p>
+    </>
+  );
+}
+
+/** "Set a budget" — planning only; a budget never blocks a bill. */
+export function AddBudgetButton({ householdId, defaultCurrency }: { householdId: string; defaultCurrency?: string }) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction] = useActionState<ActionState, FormData>(saveBudgetAction, {});
+  return (
+    <>
+      <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
+        <Plus aria-hidden className="size-3.5" /> Set a budget
+      </Pill>
+      <Sheet open={open} onOpenChange={setOpen} title="Set a budget" description="What the household means to spend on one kind of bill. It never stops a bill being paid.">
+        <form action={formAction} className="space-y-3">
+          <BudgetFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} />
+          <Submit label="Save budget" pendingLabel="Saving…" />
+        </form>
+      </Sheet>
+    </>
+  );
+}
+
+/** Changing or removing a budget already set — the other two thirds of "Set a budget". */
+export function BudgetRowControls({ householdId, budget }: { householdId: string; budget: BudgetInitial }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [editState, editAction] = useActionState<ActionState, FormData>(saveBudgetAction, {});
+  const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(retireBudgetAction, {});
+  const name = `${billKindLabel(budget.category)} budget`;
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <Pill type="button" tone="quiet" onClick={() => setEditOpen(true)} aria-label={`Edit ${name}`} title={`Edit ${name}`}>
+        <Pencil aria-hidden className="size-3.5" />
+      </Pill>
+      <Pill type="button" tone="quiet" onClick={() => setRemoveOpen(true)} aria-label={`Remove ${name}`} title={`Remove ${name}`}>
+        <Trash2 aria-hidden className="size-3.5" />
+      </Pill>
+      <Sheet open={editOpen} onOpenChange={setEditOpen} title={`Edit ${name}`} description="Change the kind of bill, how often, or the amount.">
+        <form action={editAction} className="space-y-3">
+          <BudgetFields householdId={householdId} initial={budget} state={editState} />
+          <Submit label="Save changes" pendingLabel="Saving…" />
+        </form>
+      </Sheet>
+      <ConfirmationSheet
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        title={`Remove the ${name.toLowerCase()}?`}
+        description="Bills and payments stay exactly as they are. You can set it again any time."
+        confirmLabel="Remove"
+        destructive
+        pending={removing}
+        onConfirm={() => {
+          const formData = new FormData();
+          formData.set("householdId", householdId);
+          formData.set("id", budget.id);
+          startTransition(() => removeAction(formData));
+        }}
+      >
+        {removeState.error ? <p className="text-sm text-[var(--wh-risk)]">{removeState.error}</p> : null}
+      </ConfirmationSheet>
+    </div>
   );
 }

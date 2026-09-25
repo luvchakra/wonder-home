@@ -4,6 +4,7 @@ import { may } from "@wonderhome/core/billing/repository";
 import { describeBasis, expectedDepletion } from "@wonderhome/core/commerce/consumables";
 import { listConsumables, listOrders, listPurchases, shoppingAgenda } from "@wonderhome/core/commerce/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
+import { totalsByCurrency } from "@wonderhome/core/finance/totals";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
@@ -84,9 +85,10 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
     const embedded = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
     return { ...row, name: embedded?.name ?? "Item", unit: embedded?.unit ?? "" };
   });
-  const currency = suggestions.find((row) => row.currency)?.currency ?? session.locale.preferences.currency;
-  const total = suggestions.reduce((sum, row) => sum + (row.estimated_cost_minor ?? 0), 0);
-  const priced = suggestions.filter((row) => row.estimated_cost_minor !== null).length;
+  // One estimate per currency, never one number mixing them (story 22-007).
+  const estimates = totalsByCurrency(suggestions.map((row) => ({ minor: row.estimated_cost_minor, currency: row.currency })));
+  const priced = estimates.reduce((sum, estimate) => sum + estimate.count, 0);
+  const estimateText = estimates.map((estimate) => formatMoney(estimate.minor, estimate.currency)).join(" + ");
   const needs = agenda ? [...agenda.needed, ...agenda.lateOrders] : [];
   const existingNames = Array.from(new Set(consumables.map((item) => item.name))).sort((a, b) => a.localeCompare(b));
   const existingCategories = Array.from(new Set(consumables.map((item) => item.category))).sort((a, b) => a.localeCompare(b));
@@ -133,7 +135,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                   </ul>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm text-[var(--wh-foreground-muted)]">
-                      {suggestions.length} items{priced > 0 ? ` · est. ${formatMoney(total, currency)}${priced < suggestions.length ? " (partly priced)" : ""}` : ""}
+                      {suggestions.length} items{priced > 0 ? ` · est. ${estimateText}${priced < suggestions.length ? " (partly priced)" : ""}` : ""}
                     </p>
                     <PillLink href="/groceries?tab=list" tone="primary">Review order</PillLink>
                   </div>
@@ -159,7 +161,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
 
         {active === "list" ? (
           <>
-            <MetricGrid metrics={[{ label: "Items", value: suggestions.length, icon: ShoppingBasket, tone: "care" }, { label: "Estimated", value: priced > 0 ? formatMoney(total, currency) : "—", icon: Lightbulb, tone: "money" }, { label: "Tracked", value: consumables.length, icon: PackageCheck, tone: "handled" }]} />
+            <MetricGrid metrics={[{ label: "Items", value: suggestions.length, icon: ShoppingBasket, tone: "care" }, { label: "Estimated", value: priced > 0 ? estimateText : "—", icon: Lightbulb, tone: "money" }, { label: "Tracked", value: consumables.length, icon: PackageCheck, tone: "handled" }]} />
             {suggestions.length === 0 ? (
               <EmptyState icon={ShoppingBasket} tone="care" title="The list is empty" description="Suggestions arrive as WonderHome learns what you use. You can always ask it to add something." />
             ) : (

@@ -10,7 +10,7 @@
 | 4 | P0 | 11-004 | Approval | Done | approval is for one exact amount; a changed figure invalidates it |
 | 5 | P0 | 11-005 | Payment safety | Done | step-up is separate from being signed in; one success per intent, enforced by index |
 | 6 | P1 | 11-006 | Anomaly detection | Done | an anomaly carries its comparison and is a review, never a block |
-| 7 | P1 | 11-007 | Budget planning | Done | a budget describes intent; it never stops the rent being paid |
+| 7 | P1 | 11-007 | Budget planning | Done | a budget describes intent; it never stops the rent being paid. Since 2026-09-25 an Admin sets, changes and removes (retires) a budget per kind of bill on Bills & Finance; what it has used is the period's payments in its own currency (`finance/budgets.ts`) — before that the screen read a column that does not exist and always showed the empty state |
 | 8 | P2 | 11-008 | Autonomous recurring payments | Done | policy and idempotency in place; no payment provider is live |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
