@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { localInstant, localTimeValue, movedSchoolWhen, schoolDateValue, schoolWhen } from "./times";
+import { householdInstant, localInstant, localTimeValue, movedSchoolWhen, schoolDateValue, schoolWhen } from "./times";
 
 describe("schoolWhen (14-014)", () => {
   it("a date with no time is all-day, on the long-standing midnight-UTC convention", () => {
@@ -52,5 +52,27 @@ describe("showing when (14-014)", () => {
     expect(schoolDayZone(timed, "Asia/Kolkata")).toBe("Asia/Kolkata");
     expect(schoolTimeWords(timed, "Asia/Kolkata")).toBe("9:00 AM – 11:00 AM");
     expect(schoolTimeWords({ ...timed, endsAt: null }, "Asia/Kolkata")).toBe("9:00 AM");
+  });
+});
+
+describe("householdInstant: a form's wall-clock time is the household's", () => {
+  it("reads 5 pm in Kolkata as 11:30 UTC, whatever zone the server runs in", () => {
+    expect(householdInstant("2026-10-04T17:00", "Asia/Kolkata")).toBe("2026-10-04T11:30:00.000Z");
+  });
+
+  it("follows the zone's own offset across a DST change", () => {
+    expect(householdInstant("2026-07-01T09:00", "Europe/London")).toBe("2026-07-01T08:00:00.000Z");
+    expect(householdInstant("2026-12-01T09:00", "Europe/London")).toBe("2026-12-01T09:00:00.000Z");
+  });
+
+  it("keeps a value that already names its offset as the instant it is", () => {
+    expect(householdInstant("2026-10-04T17:00:00Z", "Asia/Kolkata")).toBe("2026-10-04T17:00:00.000Z");
+    expect(householdInstant("2026-10-04T17:00+05:30", "UTC")).toBe("2026-10-04T11:30:00.000Z");
+  });
+
+  it("accepts seconds, and refuses what is not a date and time", () => {
+    expect(householdInstant("2026-10-04T17:00:30", "Asia/Kolkata")).toBe("2026-10-04T11:30:00.000Z");
+    expect(householdInstant("tomorrow", "Asia/Kolkata")).toBeNull();
+    expect(householdInstant("", "Asia/Kolkata")).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { householdInstant } from "@wonderhome/core/school/times";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
@@ -41,14 +42,14 @@ export async function createEventAction(_previous: ActionState, formData: FormDa
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
 
-  const startsAt = new Date(parsed.data.startsAt);
-  const endsAt = new Date(parsed.data.endsAt);
-  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return { error: "Those times did not make sense." };
-  if (endsAt <= startsAt) return { error: "An event has to end after it starts." };
-
   const supabase = await createClient();
   try {
     const membership = await requireMembership(supabase, parsed.data.householdId);
+    // The form's times are the household's wall clock, not the server's.
+    const startsAt = householdInstant(parsed.data.startsAt, membership.household.timezone);
+    const endsAt = householdInstant(parsed.data.endsAt, membership.household.timezone);
+    if (!startsAt || !endsAt) return { error: "Those times did not make sense." };
+    if (endsAt <= startsAt) return { error: "An event has to end after it starts." };
     const entitlement = await may(supabase, parsed.data.householdId, "family.events");
     if (!entitlement.allowed) return { error: entitlement.reason };
 
@@ -56,8 +57,8 @@ export async function createEventAction(_previous: ActionState, formData: FormDa
       householdId: parsed.data.householdId,
       title: parsed.data.title,
       kind: parsed.data.kind,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
+      startsAt,
+      endsAt,
       location: parsed.data.location ?? null,
       protected: parsed.data.protected === "on",
       ownerMemberId: membership.memberId,

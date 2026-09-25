@@ -20,6 +20,7 @@ import {
 } from "@wonderhome/core/health/fitness";
 import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { householdInstant } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
 
@@ -200,7 +201,8 @@ export async function createFitnessSessionAction(_previous: ActionState, formDat
       durationMinutes,
       distanceValue,
       distanceUnit,
-      startedAt: startedAt ? new Date(startedAt).toISOString() : undefined,
+      // The household's wall clock, not the server's.
+      startedAt: startedAt ? (householdInstant(startedAt, membership.household.timezone) ?? undefined) : undefined,
       privacyScope,
       notes,
     });

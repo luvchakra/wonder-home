@@ -1,7 +1,8 @@
 /**
  * The kinds of family-calendar event the "Add to the family calendar" sheet
- * offers. Kept outside the sheet's `"use client"` module so server code can
- * read the list too (a client module hands the server only components).
+ * offers: exactly the kinds the server accepts (`EVENT_KINDS` in the family
+ * domain), so no choice in the picker can be refused on save. Re-exported
+ * here, outside the sheet's `"use client"` module, so server code can read
+ * the list too.
  */
-export const EVENT_KINDS = ["family_time", "outing", "birthday", "special_occasion", "visit", "travel", "appointment", "other"] as const;
-export type EventKind = (typeof EVENT_KINDS)[number];
+export { EVENT_KINDS, type EventKind } from "@wonderhome/core/family/schedule";

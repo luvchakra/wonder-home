@@ -25,20 +25,55 @@ function Submit({ label, tone }: { label: string; tone: "primary" | "soft" | "qu
   );
 }
 
-const EVENT_DONE: Record<string, string> = {
-  needs_rsvp: "Replied",
-  needs_gift: "Gift sorted",
-  needs_preparation: "Prepared",
-  needs_travel: "Travel sorted",
+/** The pills' words; the page passes them in the viewer's language (story 22-004). */
+export type FamilyNeedLabels = {
+  replied: string;
+  giftSorted: string;
+  prepared: string;
+  travelSorted: string;
+  done: string;
+  chosen: string;
+  ordered: string;
+  given: string;
+  sorted: string;
+  fineAsIs: string;
 };
 
-const GIFT_STEP: Record<string, { step: "chosen" | "ordered" | "given"; label: string }> = {
-  choose_gift: { step: "chosen", label: "Chosen" },
-  order_gift: { step: "ordered", label: "Ordered" },
-  sort_gift: { step: "given", label: "Given" },
+export const FAMILY_NEED_LABELS: FamilyNeedLabels = {
+  replied: "Replied",
+  giftSorted: "Gift sorted",
+  prepared: "Prepared",
+  travelSorted: "Travel sorted",
+  done: "Done",
+  chosen: "Chosen",
+  ordered: "Ordered",
+  given: "Given",
+  sorted: "Sorted",
+  fineAsIs: "Fine as is",
 };
 
-export function FamilyNeedAction({ householdId, item }: { householdId: string; item: HomeAssessment }) {
+const EVENT_DONE: Record<string, keyof FamilyNeedLabels> = {
+  needs_rsvp: "replied",
+  needs_gift: "giftSorted",
+  needs_preparation: "prepared",
+  needs_travel: "travelSorted",
+};
+
+const GIFT_STEP: Record<string, { step: "chosen" | "ordered" | "given"; label: keyof FamilyNeedLabels }> = {
+  choose_gift: { step: "chosen", label: "chosen" },
+  order_gift: { step: "ordered", label: "ordered" },
+  sort_gift: { step: "given", label: "given" },
+};
+
+export function FamilyNeedAction({
+  householdId,
+  item,
+  labels = FAMILY_NEED_LABELS,
+}: {
+  householdId: string;
+  item: HomeAssessment;
+  labels?: FamilyNeedLabels;
+}) {
   const domain = item.subjectKey.split(".")[0];
   const target = item.action?.target;
   const kind = item.action?.action;
@@ -55,7 +90,7 @@ export function FamilyNeedAction({ householdId, item }: { householdId: string; i
       <form action={settle} className="flex flex-col items-end gap-1">
         <input type="hidden" name="householdId" value={householdId} />
         <input type="hidden" name="eventId" value={target} />
-        <Submit label={EVENT_DONE[kind] ?? "Done"} tone={tone} />
+        <Submit label={labels[EVENT_DONE[kind] ?? "done"]} tone={tone} />
         {eventState.error ? <span className="text-[0.6875rem] text-[var(--wh-risk)]">{eventState.error}</span> : null}
       </form>
     );
@@ -68,7 +103,7 @@ export function FamilyNeedAction({ householdId, item }: { householdId: string; i
         <input type="hidden" name="householdId" value={householdId} />
         <input type="hidden" name="giftId" value={target} />
         <input type="hidden" name="step" value={step.step} />
-        <Submit label={step.label} tone={tone} />
+        <Submit label={labels[step.label]} tone={tone} />
         {giftState.error ? <span className="text-[0.6875rem] text-[var(--wh-risk)]">{giftState.error}</span> : null}
       </form>
     );
@@ -82,13 +117,13 @@ export function FamilyNeedAction({ householdId, item }: { householdId: string; i
             <input type="hidden" name="householdId" value={householdId} />
             <input type="hidden" name="conflictId" value={target} />
             <input type="hidden" name="outcome" value="resolved" />
-            <Submit label="Sorted" tone="primary" />
+            <Submit label={labels.sorted} tone="primary" />
           </form>
           <form action={resolve}>
             <input type="hidden" name="householdId" value={householdId} />
             <input type="hidden" name="conflictId" value={target} />
             <input type="hidden" name="outcome" value="declined" />
-            <Submit label="Fine as is" tone="quiet" />
+            <Submit label={labels.fineAsIs} tone="quiet" />
           </form>
         </div>
         {conflictState.error ? <span className="text-[0.6875rem] text-[var(--wh-risk)]">{conflictState.error}</span> : null}
