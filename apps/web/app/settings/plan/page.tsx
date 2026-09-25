@@ -1,6 +1,6 @@
 import { Receipt, Sparkles } from "lucide-react";
 
-import { bestYearlySaving, DEFAULT_PRICE_CURRENCY, formatPrice, listBillingHistory, loadBillingTerms, priceLines, type PriceLine } from "@wonderhome/core/billing/account";
+import { bestYearlySaving, DEFAULT_PRICE_CURRENCY, formatPrice, listBillingHistory, loadBillingTerms, priceLines } from "@wonderhome/core/billing/account";
 import { describeTrial } from "@wonderhome/core/billing/experiments";
 import { listPlanPrices } from "@wonderhome/core/billing/prices";
 import type { BillingInterval } from "@wonderhome/core/billing/provider";
@@ -18,22 +18,11 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 
 import { CancelPlanButton } from "../../_components/cancel-plan-button";
 import { PlanForm } from "../../_components/plan-form";
+import { cancelPlanLabels, planFormLabels, planPriceNote, planPriceText } from "../../_lib/plan-labels";
 import { formatDate, requireSession } from "../../_lib/session";
 
 export const metadata = { title: "Your plan" };
 export const dynamic = "force-dynamic";
-
-/** "₹299 a month", "₹2,870 a year" — a catalogue price in words. */
-function priceText(line: PriceLine): string {
-  return `${formatPrice(line.amount, line.currency)} ${line.interval === "year" ? "a year" : "a month"}`;
-}
-
-/** The arithmetic behind a yearly price, stated as arithmetic. */
-function priceNote(line: PriceLine): string | null {
-  if (line.interval !== "year" || line.perMonth === null) return null;
-  const perMonth = `${formatPrice(line.perMonth, line.currency)} a month`;
-  return line.savingPercent ? `${perMonth} · save ${line.savingPercent}%` : perMonth;
-}
 
 /**
  * The plan, what it costs, and what it has used this period (story 20-010):
@@ -74,17 +63,21 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
   const currentPrice = currentLines[currentKey] ?? null;
   const paid = Boolean(terms?.provider && terms.amount !== null && terms.currency);
   const lastPayment = history[0] ?? null;
+  const { t } = session.locale;
+  const endsOn = terms?.periodEnd ? formatDate(timezone, terms.periodEnd, "long") : null;
+  // The paid amount keeps its emphasis wherever the sentence puts it.
+  const [paidBefore, paidAfter] = t(terms?.interval === "year" ? "settingsPage.plan.perYear" : "settingsPage.plan.perMonth", { price: "{price}" }).split("{price}");
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/plan" back={{ href: "/settings", label: "Back to settings" }} title="Your plan">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/plan" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("settingsPage.plan.title")}>
       <div className="space-y-6">
         <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Your plan</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{membership.household.name} is on the {current} plan.</p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.plan.title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.plan.lede", { household: membership.household.name, plan: current })}</p>
         </header>
 
         {/* Back from the payment provider without paying (story 20-006). */}
-        {checkout === "cancelled" ? <Alert tone="info">No payment was taken, and your plan is as it was.</Alert> : null}
+        {checkout === "cancelled" ? <Alert tone="info">{t("settingsPage.plan.checkoutCancelled")}</Alert> : null}
 
         {/* The plan the household is on, and what it costs — the primary card (rule 19). */}
         <Card className="flex gap-3.5 p-4">
@@ -92,47 +85,47 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
           <div className="min-w-0 flex-1 space-y-1">
             <p className="flex flex-wrap items-center gap-2 text-lg font-semibold">
               {current}
-              {terms?.status === "past_due" ? <Badge tone="attention">Payment due</Badge> : null}
-              {terms?.cancelAtPeriodEnd ? <Badge tone="neutral">Ends with this period</Badge> : null}
-              {!paid && currentPrice?.earlyAccess ? <Badge tone="handled">Free during early access</Badge> : null}
+              {terms?.status === "past_due" ? <Badge tone="attention">{t("settingsPage.plan.badge.pastDue")}</Badge> : null}
+              {terms?.cancelAtPeriodEnd ? <Badge tone="neutral">{t("settingsPage.plan.badge.endsWithPeriod")}</Badge> : null}
+              {!paid && currentPrice?.earlyAccess ? <Badge tone="handled">{t("settingsPage.plan.earlyAccess")}</Badge> : null}
             </p>
             {paid && terms?.amount !== null && terms?.currency ? (
               <p className="text-sm">
-                <span className="font-semibold">{formatPrice(terms.amount, terms.currency)}</span> {terms.interval === "year" ? "a year" : "a month"}
+                {paidBefore}
+                <span className="font-semibold">{formatPrice(terms.amount, terms.currency)}</span>
+                {paidAfter}
               </p>
             ) : currentPrice ? (
               <p className="text-sm text-[var(--wh-foreground-muted)]">
-                {priceText(currentPrice)} once payments open. Until then, nothing is charged.
+                {t("settingsPage.plan.oncePaymentsOpen", { price: planPriceText(t, currentPrice) })}
               </p>
             ) : (
-              <p className="text-sm text-[var(--wh-foreground-muted)]">Free, always. Nothing is charged.</p>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.plan.freeAlways")}</p>
             )}
             {paid && terms?.periodEnd ? (
               <p className="text-xs text-[var(--wh-foreground-subtle)]">
                 {terms.cancelAtPeriodEnd
-                  ? `${current} stays until ${formatDate(timezone, terms.periodEnd, "long")}, then the household moves to Free. Nothing is deleted.`
-                  : `Renews on ${formatDate(timezone, terms.periodEnd, "long")}.`}
+                  ? t("settingsPage.plan.staysUntil", { plan: current, date: formatDate(timezone, terms.periodEnd, "long") })
+                  : t("settingsPage.plan.renews", { date: formatDate(timezone, terms.periodEnd, "long") })}
               </p>
             ) : null}
             {terms?.status === "past_due" ? (
-              <p className="text-xs text-[var(--wh-foreground-muted)]">
-                The last payment didn&rsquo;t go through. Your plan stays while it is tried again.
-              </p>
+              <p className="text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.plan.pastDue")}</p>
             ) : null}
             {manages && paid && !terms?.cancelAtPeriodEnd ? (
-              <CancelPlanButton householdId={householdId} planName={current} endsOn={terms?.periodEnd ? formatDate(timezone, terms.periodEnd, "long") : null} />
+              <CancelPlanButton householdId={householdId} labels={cancelPlanLabels(t, current, endsOn)} />
             ) : null}
           </div>
         </Card>
 
         {metered.length > 0 || trialLines.length > 0 ? (
           <section>
-            <SectionHeader title="Usage this period" />
+            <SectionHeader title={t("settingsPage.plan.usage")} />
             <MetricGrid
               metrics={metered.map((feature) =>
                 feature.limit !== null
-                  ? { label: `${feature.label} this period`, value: `${feature.used} / ${feature.limit}` }
-                  : { label: `${feature.label} this period, fair use ${feature.fairUseLimit}`, value: `${feature.used}` },
+                  ? { label: t("settingsPage.plan.usageLimit", { feature: feature.label }), value: `${feature.used} / ${feature.limit}` }
+                  : { label: t("settingsPage.plan.usageFairUse", { feature: feature.label, limit: feature.fairUseLimit ?? "" }), value: `${feature.used}` },
               )}
             />
             {policyLines.length + trialLines.length > 0 ? (
@@ -147,14 +140,18 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
 
         {plans.length > 0 ? (
           <section className="space-y-3">
-            <SectionHeader title="Choose your plan" />
+            <SectionHeader title={t("settingsPage.plan.choose")} />
             {prices.length > 0 ? (
               <SegmentedControl
-                label="Billing period"
+                label={t("settingsPage.plan.period")}
                 active={interval}
                 segments={[
-                  { key: "month", label: "Monthly", href: "/settings/plan?interval=month" },
-                  { key: "year", label: saving ? `Yearly · save ${saving}%` : "Yearly", href: "/settings/plan?interval=year" },
+                  { key: "month", label: t("settingsPage.plan.monthly"), href: "/settings/plan?interval=month" },
+                  {
+                    key: "year",
+                    label: saving ? t("settingsPage.plan.yearlySave", { percent: saving }) : t("settingsPage.plan.yearly"),
+                    href: "/settings/plan?interval=year",
+                  },
                 ]}
               />
             ) : null}
@@ -169,36 +166,38 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
                       key,
                       name,
                       description,
-                      priceText: line ? priceText(line) : key === "free" ? formatPrice(0, DEFAULT_PRICE_CURRENCY) : null,
-                      priceNote: line ? priceNote(line) : null,
+                      priceText: line ? planPriceText(t, line) : key === "free" ? formatPrice(0, DEFAULT_PRICE_CURRENCY) : null,
+                      priceNote: line ? planPriceNote(t, line) : null,
                       earlyAccess: line?.earlyAccess ?? false,
                       priceId: line?.priceId ?? null,
                     };
                   })}
+                  labels={planFormLabels(t)}
                 />
               ) : (
-                <p className="text-sm text-[var(--wh-foreground-muted)]">This household is on the {current} plan. An Admin can change it.</p>
+                <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.plan.nonAdmin", { plan: current })}</p>
               )}
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                Changing plans never removes anything your household has. A smaller plan stops some things from growing; nothing already recorded is deleted.
-              </p>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.plan.neverRemoves")}</p>
             </Card>
           </section>
         ) : null}
 
         {manages ? (
           <section>
-            <SectionHeader title="Billing" />
+            <SectionHeader title={t("settingsPage.plan.billing")} />
             <Card className="p-2">
               <ul>
                 <NavRow
                   icon={Receipt}
                   tone="money"
-                  title="Billing history"
+                  title={t("settingsPage.plan.history")}
                   meta={
                     lastPayment?.amount !== null && lastPayment?.amount !== undefined && lastPayment.currency
-                      ? `Last payment ${formatPrice(lastPayment.amount, lastPayment.currency)} on ${formatDate(timezone, lastPayment.paidAt ?? lastPayment.createdAt)}`
-                      : "No payments yet"
+                      ? t("settingsPage.plan.lastPayment", {
+                          amount: formatPrice(lastPayment.amount, lastPayment.currency),
+                          date: formatDate(timezone, lastPayment.paidAt ?? lastPayment.createdAt),
+                        })
+                      : t("settingsPage.plan.noPayments")
                   }
                   href="/settings/plan/billing"
                 />
@@ -207,7 +206,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
           </section>
         ) : null}
 
-        <QuoteCard>Pay for what helps. Keep what&rsquo;s yours.</QuoteCard>
+        <QuoteCard>{t("settingsPage.plan.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

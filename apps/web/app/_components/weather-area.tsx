@@ -14,6 +14,31 @@ export type WeatherAreaProps = {
   householdId: string;
   /** The area in use, with what it last said, or none. */
   area: { label: string; checked: string | null; summary: string | null } | null;
+  labels: WeatherAreaLabels;
+};
+
+/**
+ * The section's words in the viewer's language, built on the server by
+ * `weatherAreaLabels` (story 22-004). `{when}` is filled in here. Place
+ * names are Open-Meteo's and stay as they are.
+ */
+export type WeatherAreaLabels = {
+  checked: string;
+  privacy: string;
+  change: string;
+  offQuestion: string;
+  switchingOff: string;
+  yesOff: string;
+  keep: string;
+  off: string;
+  town: string;
+  townPlaceholder: string;
+  finding: string;
+  find: string;
+  whichOne: string;
+  saving: string;
+  use: string;
+  cancel: string;
 };
 
 const INPUT =
@@ -27,7 +52,7 @@ const INPUT =
  * here beside it (rule 12). What leaves the household is said in plain words
  * before anything is saved.
  */
-export function WeatherArea({ householdId, area }: WeatherAreaProps) {
+export function WeatherArea({ householdId, area, labels }: WeatherAreaProps) {
   const [searching, setSearching] = useState(area === null);
   const [confirmOff, setConfirmOff] = useState(false);
   const [saveState, saveAction, saving] = useActionState<ActionState, FormData>(setWeatherAreaAction, {});
@@ -61,35 +86,33 @@ export function WeatherArea({ householdId, area }: WeatherAreaProps) {
             <span className="break-words">{area.label}</span>
           </p>
           {area.summary ? <p className="text-sm text-[var(--wh-foreground-muted)]">{area.summary}</p> : null}
-          {area.checked ? <p className="text-xs text-[var(--wh-foreground-subtle)]">Forecast checked {area.checked}</p> : null}
+          {area.checked ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.checked.replace("{when}", () => area.checked ?? "")}</p> : null}
         </div>
       ) : null}
 
-      <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        Only your area, rounded to about a kilometre, is sent to Open-Meteo for the forecast — never your address or anything about your family.
-      </p>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.privacy}</p>
 
       {searching ? (
-        <AreaSearch householdId={householdId} onCancel={area ? () => setSearching(false) : undefined} saveAction={saveAction} saving={saving} />
+        <AreaSearch householdId={householdId} onCancel={area ? () => setSearching(false) : undefined} saveAction={saveAction} saving={saving} labels={labels} />
       ) : (
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={() => setSearching(true)}>
-            Change area
+            {labels.change}
           </Button>
           {confirmOff ? (
             <form action={offAction} className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="householdId" value={householdId} />
-              <span className="text-sm">Switch weather off?</span>
+              <span className="text-sm">{labels.offQuestion}</span>
               <Button type="submit" variant="secondary" disabled={switchingOff}>
-                {switchingOff ? "Switching off…" : "Yes, switch off"}
+                {switchingOff ? labels.switchingOff : labels.yesOff}
               </Button>
               <Button type="button" variant="quiet" onClick={() => setConfirmOff(false)}>
-                Keep it
+                {labels.keep}
               </Button>
             </form>
           ) : (
             <Button type="button" variant="quiet" onClick={() => setConfirmOff(true)}>
-              Switch weather off
+              {labels.off}
             </Button>
           )}
         </div>
@@ -103,11 +126,13 @@ function AreaSearch({
   onCancel,
   saveAction,
   saving,
+  labels,
 }: {
   householdId: string;
   onCancel?: () => void;
   saveAction: (formData: FormData) => void;
   saving: boolean;
+  labels: WeatherAreaLabels;
 }) {
   const id = useId();
   const [query, setQuery] = useState("");
@@ -131,7 +156,7 @@ function AreaSearch({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <label htmlFor={`${id}-query`} className="block text-sm font-medium">
-          Your town or city
+          {labels.town}
         </label>
         <div className="flex gap-2">
           <input
@@ -145,12 +170,12 @@ function AreaSearch({
               }
             }}
             autoComplete="address-level2"
-            placeholder="e.g. Pune"
+            placeholder={labels.townPlaceholder}
             className={`${INPUT} min-w-0 flex-1`}
           />
           <Button type="button" variant="secondary" onClick={find} disabled={finding || query.trim().length < 2} className="shrink-0">
             <Search aria-hidden className="size-4" />
-            {finding ? "Finding…" : "Find"}
+            {finding ? labels.finding : labels.find}
           </Button>
         </div>
       </div>
@@ -160,7 +185,7 @@ function AreaSearch({
       {places && places.length > 0 ? (
         <form action={saveAction} className="space-y-3">
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Which one is yours?</legend>
+            <legend className="text-sm font-medium">{labels.whichOne}</legend>
             {places.map((place, index) => (
               <label
                 key={`${place.label}-${place.latitude}-${place.longitude}`}
@@ -178,18 +203,18 @@ function AreaSearch({
           <input type="hidden" name="timezone" value={choice?.timezone ?? ""} />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={saving || !choice}>
-              {saving ? "Saving…" : "Use this area"}
+              {saving ? labels.saving : labels.use}
             </Button>
             {onCancel ? (
               <Button type="button" variant="quiet" onClick={onCancel}>
-                Cancel
+                {labels.cancel}
               </Button>
             ) : null}
           </div>
         </form>
       ) : onCancel ? (
         <Button type="button" variant="quiet" onClick={onCancel}>
-          Cancel
+          {labels.cancel}
         </Button>
       ) : null}
     </div>

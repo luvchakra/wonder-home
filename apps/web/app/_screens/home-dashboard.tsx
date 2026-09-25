@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 
 import { listEvents } from "@wonderhome/core/family/repository";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { describeAction, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
 import { loadOnboarding, loadOnboardingSnapshot } from "@wonderhome/core/household/onboarding-repository";
@@ -35,7 +36,7 @@ import {
 } from "@wonderhome/core/ui/expandable-metric-card";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { AI_MODE_LABEL, HandledList } from "@wonderhome/core/ui/outcome-card";
+import { HandledList } from "@wonderhome/core/ui/outcome-card";
 import { Badge, PillLink, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -55,29 +56,39 @@ import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
 import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
+import { localizeSetup, onboardingCardLabels, setupProgressLabels } from "../_lib/setup-labels";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
 import { iconForOutcome } from "../_lib/outcome-icons";
 
 /** Which domain a Today's-focus row belongs to, for its colour badge — the
  * same domain colours the icon tiles already use, never an invented one. */
-const DOMAIN_BADGE: Partial<Record<DomainSummary["key"], { tone: BadgeTone; label: string }>> = {
-  school: { tone: "school", label: "School" },
-  shopping: { tone: "meals", label: "Grocery" },
-  meals: { tone: "meals", label: "Meals" },
-  bills: { tone: "money", label: "Bills" },
-  family: { tone: "people", label: "Family" },
-  home: { tone: "home", label: "Home" },
+const DOMAIN_BADGE: Record<DomainSummary["key"], BadgeTone> = {
+  school: "school",
+  shopping: "meals",
+  meals: "meals",
+  bills: "money",
+  family: "people",
+  home: "home",
 };
 
-function focusBadge(riskLevel: HomeAssessmentRisk, domainKey: DomainSummary["key"] | undefined) {
-  if (riskLevel === "high") return { tone: "risk" as const, label: "Needs attention" };
-  if (riskLevel === "medium") return { tone: "attention" as const, label: "Needs attention" };
-  return (domainKey && DOMAIN_BADGE[domainKey]) || { tone: "neutral" as const, label: "Notable" };
+function focusBadge(riskLevel: HomeAssessmentRisk, domainKey: DomainSummary["key"] | undefined, t: Translate) {
+  if (riskLevel === "high") return { tone: "risk" as const, label: t("homeScreen.badge.needsAttention") };
+  if (riskLevel === "medium") return { tone: "attention" as const, label: t("homeScreen.badge.needsAttention") };
+  if (domainKey) return { tone: DOMAIN_BADGE[domainKey], label: t(`homeScreen.badge.${domainKey}`) };
+  return { tone: "neutral" as const, label: t("homeScreen.badge.notable") };
 }
 
 type HomeAssessmentRisk = "high" | "medium" | "low" | "none";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** Sunday to Saturday, short, in the reader's language (4 January 2026 was a Sunday). */
+function weekdayNames(locale: string, language: string): string[] {
+  const format = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  return Array.from({ length: 7 }, (_, index) => {
+    const name = format.format(new Date(Date.UTC(2026, 0, 4 + index)));
+    // English keeps its familiar two letters; other languages keep the whole word.
+    return language === "en" ? name.slice(0, 2) : name;
+  });
+}
 
 type ResponsibilityJoinRow = {
   outcome_key: string;
@@ -91,19 +102,13 @@ type HelperProfileRow = { member_id: string; engagement: "regular" | "occasional
 type AvailabilityWindowRow = { member_id: string; day_of_week: number };
 type AvailabilityExceptionRow = { member_id: string; on_date: string; available: boolean; reason: string | null };
 
-const ENGAGEMENT_LABEL: Record<HelperProfileRow["engagement"], string> = {
-  regular: "Regular help",
-  occasional: "Occasional help",
-  service: "Service",
-};
-
 function outcomeTitle(row: ResponsibilityJoinRow): string {
   const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
   return item?.name ?? row.outcome_key.replace(/[._]/g, " ");
 }
 
-function memberStatusLabel(status: HouseholdMember["status"]): string {
-  return status === "invited" ? "Invited, hasn't joined yet" : "Inactive";
+function memberStatusLabel(status: HouseholdMember["status"], t: Translate): string {
+  return status === "invited" ? t("family.status.invitedLong") : t("family.status.inactive");
 }
 
 function responsibilitiesFor(memberId: string, rows: readonly ResponsibilityJoinRow[]) {
@@ -114,9 +119,9 @@ function responsibilitiesFor(memberId: string, rows: readonly ResponsibilityJoin
 }
 
 /** What a family member's row opens onto: what they own, and what they back up. */
-function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoinRow[]; backup: readonly ResponsibilityJoinRow[] }) {
+function MemberActivities({ owned, backup, t }: { owned: readonly ResponsibilityJoinRow[]; backup: readonly ResponsibilityJoinRow[]; t: Translate }) {
   if (owned.length === 0 && backup.length === 0) {
-    return <p className="text-xs text-[var(--wh-foreground-muted)]">No responsibilities assigned yet.</p>;
+    return <p className="text-xs text-[var(--wh-foreground-muted)]">{t("homeScreen.noResponsibilities")}</p>;
   }
 
   return (
@@ -140,7 +145,7 @@ function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoi
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-medium">{outcomeTitle(row)}</span>
                     <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                      {AI_MODE_LABEL[row.ai_mode]}
+                      {t(`manage.aiModeShort.${row.ai_mode}`)}
                       {frequency ? ` · ${frequency}` : ""}
                     </span>
                   </span>
@@ -153,7 +158,7 @@ function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoi
       ) : null}
       {backup.length > 0 ? (
         <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-          Backs up:{" "}
+          {t("homeScreen.backsUp")}{" "}
           {backup.map((row, index) => (
             <span key={row.outcome_key}>
               {index > 0 ? ", " : ""}
@@ -176,7 +181,7 @@ function MemberActivities({ owned, backup }: { owned: readonly ResponsibilityJoi
  * whatever it is actually asking of the household — `describeAction` is the
  * one place that sentence is written, so this row never invents its own.
  */
-function TodayEventRow({ event, timezone }: { event: FamilyEvent; timezone: string }) {
+function TodayEventRow({ event, timezone, t }: { event: FamilyEvent; timezone: string; t: Translate }) {
   return (
     <ExpandableRow
       summary={
@@ -196,18 +201,18 @@ function TodayEventRow({ event, timezone }: { event: FamilyEvent; timezone: stri
         <p className="text-sm text-[var(--wh-foreground-muted)]">
           {formatDate(timezone, event.startsAt, "long")} · {formatTime(timezone, event.startsAt)} –{" "}
           {formatTime(timezone, event.endsAt)}
-          {event.protected ? " · Protected time" : ""}
+          {event.protected ? ` · ${t("homeScreen.protectedTime")}` : ""}
         </p>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
           <div>
-            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Kind</dt>
-            <dd className="text-sm capitalize">{event.kind.replace(/_/g, " ")}</dd>
+            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("eventForm.kind")}</dt>
+            <dd className="text-sm">{t(`eventForm.kind.${event.kind}`) || event.kind.replace(/_/g, " ")}</dd>
           </div>
           <div>
             <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-              Expected action
+              {t("homeScreen.expectedAction")}
             </dt>
-            <dd className="text-sm">{event.actionState ? describeAction(event.actionState) : "None — just a reminder."}</dd>
+            <dd className="text-sm">{event.actionState ? describeAction(event.actionState) : t("homeScreen.noAction")}</dd>
           </div>
         </dl>
       </div>
@@ -258,9 +263,9 @@ export function HomeDashboard({ session }: { session: Session }) {
               overlapping it — the illustration itself is mostly cropped
               out of frame there too, so there is no clear region left. */}
           <ScriptAccent size="sm" heart className="absolute start-[40%] top-5 hidden max-w-[10rem] leading-[1.15] sm:block">
-            Happier Homes
+            {t("homeScreen.script.line1")}
             <br />
-            Happier Humans!
+            {t("homeScreen.script.line2")}
           </ScriptAccent>
 
           <Link
@@ -284,7 +289,7 @@ export function HomeDashboard({ session }: { session: Session }) {
           </div>
         </header>
 
-        <Suspense fallback={<LoadingState rows={4} label="Checking on the household" />}>
+        <Suspense fallback={<LoadingState rows={4} label={t("homeScreen.loading")} />}>
           <DashboardBody session={session} now={now} />
         </Suspense>
       </div>
@@ -326,8 +331,17 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     })(),
   ]);
 
-  const setup = setupFacts ? assessSetup(setupFacts) : null;
+  const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
   const responsibilities = responsibilityRows;
+  const days = weekdayNames(session.locale.format.locale, session.locale.preferences.language);
+  // The domains' own names and their quiet counts, in the reader's words
+  // (the agenda's English `label`/`meta` stay the record).
+  const domainName = (key: DomainSummary["key"]) => t(`homeScreen.domain.${key}`);
+  const handled = agenda.handled.map((entry) => {
+    const domain = agenda.domains.find((candidate) => candidate.key === entry.key);
+    if (!domain) return entry;
+    return { ...entry, title: domainName(domain.key), meta: t("homeScreen.handledMeta", { quiet: domain.checked - domain.needs.length, checked: domain.checked }) };
+  });
 
   const handledCount = Math.max(0, agenda.checked - agenda.needsYou.length);
 
@@ -412,7 +426,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       icon: <IconTile icon={AlertTriangle} tone="attention" size="sm" />,
       details:
         agenda.needsYou.length === 0 ? (
-          <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
+          <MetricDetailEmpty>{t("homeScreen.metric.nothingNeedsYou")}</MetricDetailEmpty>
         ) : (
           <div className="space-y-2.5">
             <MetricDetailList>
@@ -429,7 +443,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               })}
             </MetricDetailList>
             <PillLink href="/notifications" tone="quiet">
-              {agenda.needsYou.length > 4 ? `View all ${agenda.needsYou.length}` : "Open"}
+              {agenda.needsYou.length > 4 ? t("homeScreen.metric.viewAll", { count: agenda.needsYou.length }) : t("homeScreen.metric.open")}
             </PillLink>
           </div>
         ),
@@ -439,11 +453,11 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       value: handledCount,
       icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
       details:
-        agenda.handled.length === 0 ? (
-          <MetricDetailEmpty>Nothing checked yet today.</MetricDetailEmpty>
+        handled.length === 0 ? (
+          <MetricDetailEmpty>{t("homeScreen.metric.nothingChecked")}</MetricDetailEmpty>
         ) : (
           <MetricDetailList>
-            {agenda.handled.map((entry) => {
+            {handled.map((entry) => {
               const presentation = iconForOutcome(entry.key);
               return (
                 <MetricDetailRow
@@ -463,7 +477,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       icon: <IconTile icon={CalendarHeart} tone="people" size="sm" />,
       details:
         upcoming.length === 0 ? (
-          <MetricDetailEmpty>Nothing on the calendar yet.</MetricDetailEmpty>
+          <MetricDetailEmpty>{t("homeScreen.metric.nothingCalendar")}</MetricDetailEmpty>
         ) : (
           <div className="space-y-2.5">
             <MetricDetailList>
@@ -477,7 +491,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               ))}
             </MetricDetailList>
             <PillLink href="/family" tone="quiet">
-              {upcoming.length > 4 ? `View all ${upcoming.length}` : "Open"}
+              {upcoming.length > 4 ? t("homeScreen.metric.viewAll", { count: upcoming.length }) : t("homeScreen.metric.open")}
             </PillLink>
           </div>
         ),
@@ -488,7 +502,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       icon: <IconTile icon={Sparkles} tone="ai" size="sm" />,
       details:
         agenda.domains.length === 0 ? (
-          <MetricDetailEmpty>Nothing evaluated yet.</MetricDetailEmpty>
+          <MetricDetailEmpty>{t("homeScreen.metric.nothingEvaluated")}</MetricDetailEmpty>
         ) : (
           <MetricDetailList>
             {agenda.domains.map((domain) => {
@@ -497,8 +511,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                 <MetricDetailRow
                   key={domain.key}
                   icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
-                  title={domain.label}
-                  meta={domain.failed ? "Couldn't check right now" : `${domain.checked} checked`}
+                  title={domainName(domain.key)}
+                  meta={domain.failed ? t("homeScreen.metric.couldNotCheck") : t("homeScreen.metric.checkedCount", { count: domain.checked })}
                 />
               );
             })}
@@ -512,7 +526,11 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       {/* One row with a chevron, whether it is somebody's first week or not:
           Home is where the household looks for what needs them today, and
           setup is a thing to go and finish rather than a block to read. */}
-      {onboarding ? <OnboardingResumeCard summary={onboarding} /> : setup && !setup.complete ? <SetupProgressCard assessment={setup} variant="compact" /> : null}
+      {onboarding ? (
+        <OnboardingResumeCard summary={onboarding} labels={onboardingCardLabels(onboarding, t)} />
+      ) : setup && !setup.complete ? (
+        <SetupProgressCard assessment={setup} variant="compact" labels={setupProgressLabels(setup, t)} />
+      ) : null}
       {/* Language, region and currency (story 22-003): offered once, quietly,
           until it is done or put away — never while family setup still is. */}
       {!onboarding && shouldOfferLocaleSetup(membership.locale?.setup) ? (
@@ -528,7 +546,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
             <h2 className="text-base font-semibold tracking-tight">{t("home.familyStatus")}</h2>
             <PillLink href="/family" tone="quiet">
-              See all
+              {t("homeScreen.seeAll")}
             </PillLink>
           </div>
           {/* A row each, opening in place onto what that person owns and
@@ -548,16 +566,14 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                         <span className="block text-sm font-medium">{member.displayName}</span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                           {describeRoles(member.roles, member.isOwner)}
-                          {member.status !== "active" ? ` · ${memberStatusLabel(member.status)}` : ""}
-                          {owned.length > 0
-                            ? ` · ${owned.length} ${owned.length === 1 ? "responsibility" : "responsibilities"}`
-                            : ""}
+                          {member.status !== "active" ? ` · ${memberStatusLabel(member.status, t)}` : ""}
+                          {owned.length > 0 ? ` · ${t("homeScreen.responsibilities", { count: owned.length })}` : ""}
                         </span>
                       </span>
                     </>
                   }
                 >
-                  <MemberActivities owned={owned} backup={backup} />
+                  <MemberActivities owned={owned} backup={backup} t={t} />
                 </ExpandableRow>
               );
             })}
@@ -573,7 +589,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
             <h2 className="text-base font-semibold tracking-tight">{t("home.househelp")}</h2>
             <PillLink href="/househelper" tone="quiet">
-              Manage
+              {t("family.manage")}
             </PillLink>
           </div>
           <ul className="divide-y divide-[var(--wh-border)]">
@@ -597,12 +613,12 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium">{helper.displayName}</span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                          {profile ? ENGAGEMENT_LABEL[profile.engagement] : "Househelp"}
-                          {profile?.started_on ? ` · since ${formatDate(timezone, new Date(profile.started_on))}` : ""}
+                          {profile ? t(`homeScreen.engagement.${profile.engagement}`) : t("home.househelp")}
+                          {profile?.started_on ? ` · ${t("homeScreen.helperSince", { date: formatDate(timezone, new Date(profile.started_on)) })}` : ""}
                         </span>
                       </span>
                       <Badge tone={expected ? "handled" : "neutral"}>
-                        {expected ? "Expected today" : todayException ? "Away today" : "Not today"}
+                        {expected ? t("homeScreen.helper.expected") : todayException ? t("homeScreen.helper.away") : t("homeScreen.helper.notToday")}
                       </Badge>
                     </>
                   }
@@ -610,22 +626,22 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   <div className="space-y-2.5">
                     <div>
                       <p className="mb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                        Usual days
+                        {t("homeScreen.helper.usualDays")}
                       </p>
-                      <ul className="flex gap-1">
-                        {DAYS.map((day, index) => {
+                      <ul className="flex flex-wrap gap-1">
+                        {days.map((day, index) => {
                           const on = windows.some((row) => row.day_of_week === index);
                           return (
                             <li
-                              key={day}
+                              key={index}
                               className={cn(
-                                "grid size-7 place-items-center rounded-full text-[0.625rem] font-semibold",
+                                "grid h-7 min-w-7 place-items-center rounded-full px-1 text-[0.625rem] font-semibold",
                                 on
                                   ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]"
                                   : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-subtle)]",
                               )}
                             >
-                              {day.slice(0, 2)}
+                              {day}
                             </li>
                           );
                         })}
@@ -633,10 +649,10 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                     </div>
                     <div>
                       <p className="mb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                        Looks after
+                        {t("homeScreen.helper.looksAfter")}
                       </p>
                       {owned.length === 0 ? (
-                        <p className="text-xs text-[var(--wh-foreground-muted)]">No responsibilities assigned yet.</p>
+                        <p className="text-xs text-[var(--wh-foreground-muted)]">{t("homeScreen.noResponsibilities")}</p>
                       ) : (
                         <ul className="flex flex-wrap gap-1.5">
                           {owned.map((row) => (
@@ -653,7 +669,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                     {nextAbsence ? (
                       <p className="flex items-center gap-1.5 text-xs text-[var(--wh-foreground-muted)]">
                         <CalendarOff aria-hidden className="size-3.5 shrink-0" />
-                        Away {formatDate(timezone, new Date(nextAbsence.on_date), "long")}
+                        {t("homeScreen.helper.awayOn", { date: formatDate(timezone, new Date(nextAbsence.on_date), "long") })}
                         {nextAbsence.reason ? ` — ${nextAbsence.reason}` : ""}
                       </p>
                     ) : null}
@@ -665,7 +681,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         </Card>
       ) : null}
 
-      {agenda.handled.length > 0 ? (
+      {handled.length > 0 ? (
         <Card
           className="wh-rise border-[var(--wh-handled)]/40 bg-[var(--wh-handled-soft)]/70 p-4"
           style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}
@@ -679,10 +695,10 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               </div>
             </div>
             <PillLink href="/today" tone="quiet">
-              View all
+              {t("homeScreen.viewAll")}
             </PillLink>
           </div>
-          <HandledList items={agenda.handled.slice(0, 4)} />
+          <HandledList items={handled.slice(0, 4)} />
         </Card>
       ) : null}
 
@@ -698,21 +714,21 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               <h2 className="text-base font-semibold tracking-tight">{t("home.todaysFocus")}</h2>
             </div>
             <PillLink href="/today" tone="quiet">
-              See all
+              {t("homeScreen.seeAll")}
             </PillLink>
           </div>
           {todayFocus.length === 0 && agenda.needsYou.length === 0 ? (
             <EmptyState
               icon={CircleCheck}
               tone="handled"
-              title="A clear day"
-              description="Nothing is waiting on you, and nothing important is left on the calendar today."
+              title={t("homeScreen.clearDay")}
+              description={t("homeScreen.clearDayLede")}
               className="py-6"
             />
           ) : (
             <ul className="space-y-1">
               {agenda.needsYou.slice(0, 2).map((item) => {
-                const badge = focusBadge(item.riskLevel, domainBySubject.get(item.subjectKey));
+                const badge = focusBadge(item.riskLevel, domainBySubject.get(item.subjectKey), t);
                 return (
                   <AgendaExpandableRow
                     key={item.subjectKey}
@@ -723,7 +739,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                 );
               })}
               {todayFocus.map((event) => (
-                <TodayEventRow key={event.id} event={event} timezone={timezone} />
+                <TodayEventRow key={event.id} event={event} timezone={timezone} t={t} />
               ))}
             </ul>
           )}
@@ -746,7 +762,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   when={`${formatDate(timezone, nextMoment.startsAt, "long")} · ${formatTime(timezone, nextMoment.startsAt)}`}
                   action={
                     <PillLink href="/family" tone="soft">
-                      Plan together
+                      {t("homeScreen.planTogether")}
                     </PillLink>
                   }
                 />
@@ -756,23 +772,23 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   <AvatarGroup names={family.map((member) => member.displayName)} />
                   <Link
                     href="/family"
-                    aria-label="Add a family member"
+                    aria-label={t("homeScreen.addFamilyMember")}
                     className="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-[var(--wh-border-strong)] text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)]"
                   >
                     <UserRoundPlus aria-hidden className="size-4" />
                   </Link>
                 </div>
                 <ScriptAccent size="sm" tilt={false} heart>
-                  More family time!
+                  {t("homeScreen.moreFamilyTime")}
                 </ScriptAccent>
               </div>
             </>
           ) : (
             <div className="flex flex-1 flex-col">
               <HomeIllustration className="mx-auto w-full max-w-[13rem]" />
-              <ScriptAccent className="mt-2 text-center text-lg">More moments like this.</ScriptAccent>
+              <ScriptAccent className="mt-2 text-center text-lg">{t("homeScreen.moreMoments")}</ScriptAccent>
               <p className="mt-1 text-center text-xs text-[var(--wh-foreground-muted)]">
-                Protect a slot for the family and WonderHome keeps everything else out of it.
+                {t("homeScreen.protectSlot")}
               </p>
               {/* The real form, here. This used to link to the Family
                   screen, which is not planning anything — it is moving the
@@ -788,10 +804,10 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       {domainTiles.length > 0 ? (
         <section className="wh-rise" style={{ "--wh-rise-delay": "180ms" } as React.CSSProperties}>
           <SectionHeader
-            title="Your household"
+            title={t("homeScreen.yourHousehold")}
             action={
               <PillLink href="/more" tone="quiet">
-                Customise
+                {t("homeScreen.customise")}
               </PillLink>
             }
           />
@@ -808,7 +824,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   tone={item.tone}
                   title={item.label}
                   description={item.purpose}
-                  meta={domain ? (domain.needs.length > 0 ? `${domain.needs.length} need you` : domain.checked > 0 ? "All on track" : undefined) : undefined}
+                  meta={domain ? (domain.needs.length > 0 ? t("homeScreen.domainNeedYou", { count: domain.needs.length }) : domain.checked > 0 ? t("homeScreen.allOnTrack") : undefined) : undefined}
                 />
               );
             })}
@@ -816,7 +832,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         </section>
       ) : null}
 
-      <QuoteCard>Small steps today, happier tomorrows.</QuoteCard>
+      <QuoteCard>{t("homeScreen.quote")}</QuoteCard>
     </>
   );
 }

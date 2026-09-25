@@ -1,6 +1,7 @@
 import { BookOpen, CalendarHeart, PartyPopper, Sparkles, Star, Target } from "lucide-react";
 
 import { listEvents } from "@wonderhome/core/family/repository";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { childSchoolView } from "@wonderhome/core/school/repository";
 import type { SchoolItem } from "@wonderhome/core/school/items";
 import { schoolDayZone } from "@wonderhome/core/school/times";
@@ -25,6 +26,7 @@ import { formatDate, formatTime, type Session } from "../_lib/session";
  */
 export async function ChildHome({ session, tab = "today" }: { session: Session; tab?: string }) {
   const { supabase, membership, view, viewer, secondary } = session;
+  const { t } = session.locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const now = new Date();
@@ -43,40 +45,40 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
       <div className="space-y-5">
         <header className="wh-rise space-y-1">
           <h1 className="text-[1.75rem] font-bold tracking-tight">
-            Hi {firstName}! <span aria-hidden>👋</span>
+            {t("hometalk.ui.greeting", { name: firstName })} <span aria-hidden>👋</span>
           </h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{school.encouragement || "You're doing great."}</p>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{school.encouragement || t("homeScreen.child.encouragement")}</p>
         </header>
 
         <SegmentedControl
-          label="What to look at"
+          label={t("homeScreen.child.view")}
           active={active}
           segments={[
-            { key: "today", label: "Today", href: "/?tab=today", count: school.today.length },
-            { key: "homework", label: "Homework", href: "/?tab=homework", count: school.soon.length },
-            { key: "goals", label: "Goals", href: "/?tab=goals" },
-            { key: "fun", label: "Fun", href: "/?tab=fun", count: fun.length },
+            { key: "today", label: t("homeScreen.child.tab.today"), href: "/?tab=today", count: school.today.length },
+            { key: "homework", label: t("homeScreen.child.tab.homework"), href: "/?tab=homework", count: school.soon.length },
+            { key: "goals", label: t("homeScreen.child.tab.goals"), href: "/?tab=goals" },
+            { key: "fun", label: t("homeScreen.child.tab.fun"), href: "/?tab=fun", count: fun.length },
           ]}
         />
 
         {active === "today" ? (
           <section>
-            <SectionHeader title="Today's homework" count={school.today.length} />
+            <SectionHeader title={t("homeScreen.child.todaysHomework")} count={school.today.length} />
             {school.today.length === 0 ? (
-              <EmptyState icon={Star} tone="school" title="Nothing due today" description="Nice. Enjoy the free time — or get ahead on what's coming." />
+              <EmptyState icon={Star} tone="school" title={t("homeScreen.child.nothingDue")} description={t("homeScreen.child.nothingDueLede")} />
             ) : (
-              <SchoolList items={school.today} timezone={timezone} />
+              <SchoolList items={school.today} timezone={timezone} t={t} />
             )}
           </section>
         ) : null}
 
         {active === "homework" ? (
           <section>
-            <SectionHeader title="Coming up" count={school.soon.length} />
+            <SectionHeader title={t("homeScreen.child.comingUp")} count={school.soon.length} />
             {school.soon.length === 0 ? (
-              <EmptyState icon={BookOpen} tone="school" title="All caught up" description="When school sets something new, it appears here." />
+              <EmptyState icon={BookOpen} tone="school" title={t("homeScreen.child.caughtUp")} description={t("homeScreen.child.caughtUpLede")} />
             ) : (
-              <SchoolList items={school.soon} timezone={timezone} />
+              <SchoolList items={school.soon} timezone={timezone} t={t} />
             )}
           </section>
         ) : null}
@@ -85,16 +87,16 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
           <EmptyState
             icon={Target}
             tone="care"
-            title="Goals are coming"
-            description="Reading streaks and small goals you set with your parents will live here."
+            title={t("homeScreen.child.goalsComing")}
+            description={t("homeScreen.child.goalsComingLede")}
           />
         ) : null}
 
         {active === "fun" ? (
           <section>
-            <SectionHeader title="Fun coming up" count={fun.length} />
+            <SectionHeader title={t("homeScreen.child.funComingUp")} count={fun.length} />
             {fun.length === 0 ? (
-              <EmptyState icon={PartyPopper} tone="people" title="Nothing planned yet" description="Ask the family to plan something — WonderHome can help find a time everyone is free." />
+              <EmptyState icon={PartyPopper} tone="people" title={t("homeScreen.child.nothingPlanned")} description={t("homeScreen.child.nothingPlannedLede")} />
             ) : (
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
@@ -117,18 +119,18 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         <Card className="flex items-center gap-3 bg-[var(--wh-tone-school-soft)]/60 p-4">
           <Sparkles aria-hidden className="size-6 shrink-0 text-[var(--wh-tone-school)]" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Stuck on something?</p>
-            <p className="text-xs text-[var(--wh-foreground-muted)]">Ask WonderHome to help plan your study time.</p>
+            <p className="text-sm font-semibold">{t("homeScreen.child.stuck")}</p>
+            <p className="text-xs text-[var(--wh-foreground-muted)]">{t("homeScreen.child.stuckLede")}</p>
           </div>
         </Card>
 
-        <QuoteCard>You can do it. I&apos;m here to help anytime.</QuoteCard>
+        <QuoteCard>{t("homeScreen.child.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
 }
 
-function SchoolList({ items, timezone }: { items: SchoolItem[]; timezone: string }) {
+function SchoolList({ items, timezone, t }: { items: SchoolItem[]; timezone: string; t: Translate }) {
   return (
     <Card className="p-2">
       <ul className="divide-y divide-[var(--wh-border)]">
@@ -138,10 +140,10 @@ function SchoolList({ items, timezone }: { items: SchoolItem[]; timezone: string
             icon={item.kind === "event" ? CalendarHeart : BookOpen}
             tone="school"
             title={item.title}
-            meta={[item.subject, item.dueAt ? `due ${formatDate(schoolDayZone(item, timezone), item.dueAt, "long")}` : null, item.estimatedMinutes ? `about ${item.estimatedMinutes} min` : null].filter(Boolean).join(" · ")}
+            meta={[item.subject, item.dueAt ? t("homeScreen.child.due", { date: formatDate(schoolDayZone(item, timezone), item.dueAt, "long") }) : null, item.estimatedMinutes ? t("homeScreen.child.aboutMinutes", { count: item.estimatedMinutes }) : null].filter(Boolean).join(" · ")}
             action={
               <PillLink href="/school" tone={item.status === "in_progress" ? "primary" : "soft"}>
-                {item.status === "in_progress" ? "Continue" : "Start"}
+                {item.status === "in_progress" ? t("homeScreen.child.continue") : t("homeScreen.child.start")}
               </PillLink>
             }
           />

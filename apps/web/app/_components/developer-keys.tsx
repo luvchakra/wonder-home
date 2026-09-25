@@ -27,6 +27,43 @@ export type DeveloperKeyRow = {
 
 export type ScopeChoice = { value: string; label: string };
 
+/**
+ * The section's words in the viewer's language, built on the server by
+ * `developerKeyLabels` (story 22-004). `{name}` is filled in here with the
+ * key's own name, which is never translated.
+ */
+export type DeveloperKeyLabels = {
+  intro: string;
+  newKey: string;
+  none: string;
+  revoked: string;
+  live: string;
+  sandbox: string;
+  sheetTitle: string;
+  sheetLede: string;
+  copied: string;
+  copy: string;
+  name: string;
+  namePlaceholder: string;
+  kind: string;
+  sandboxLede: string;
+  liveLede: string;
+  mayDo: string;
+  expiresAfter: string;
+  days30: string;
+  days90: string;
+  year: string;
+  never: string;
+  create: string;
+  creating: string;
+  revoke: string;
+  revokeTitle: string;
+  revokeLede: string;
+  revokeConfirm: string;
+};
+
+const withName = (template: string, name: string) => template.replace(/\{name\}/g, () => name);
+
 const SELECT =
   "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
 
@@ -44,7 +81,7 @@ function Submit({ label, pending: pendingLabel }: { label: string; pending: stri
  * button — and revoke one. What a key may do is picked from a fixed list
  * (rule 20), and a sandbox key is the default, because it touches nothing.
  */
-export function DeveloperKeys({ householdId, keys, scopes }: { householdId: string; keys: DeveloperKeyRow[]; scopes: ScopeChoice[] }) {
+export function DeveloperKeys({ householdId, keys, scopes, labels }: { householdId: string; keys: DeveloperKeyRow[]; scopes: ScopeChoice[]; labels: DeveloperKeyLabels }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState<DeveloperKeyState, FormData>(createDeveloperKeyAction, {});
   const [copied, setCopied] = useState(false);
@@ -55,16 +92,14 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-sm text-[var(--wh-foreground-muted)]">
-          Let an app you trust read or add to this household through WonderHome&rsquo;s API. Each key does only what you tick, and you can revoke it any time.
-        </p>
+        <p className="min-w-0 flex-1 text-sm text-[var(--wh-foreground-muted)]">{labels.intro}</p>
         <Pill type="button" tone="soft" className="gap-1.5" onClick={() => setOpen(true)}>
-          <Plus aria-hidden className="size-3.5" /> New key
+          <Plus aria-hidden className="size-3.5" /> {labels.newKey}
         </Pill>
       </div>
 
       {keys.length === 0 ? (
-        <p className="text-sm text-[var(--wh-foreground-subtle)]">No keys yet.</p>
+        <p className="text-sm text-[var(--wh-foreground-subtle)]">{labels.none}</p>
       ) : (
         <ul className="divide-y divide-[var(--wh-border)]">
           {keys.map((key) => (
@@ -74,7 +109,7 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
                 <p className="text-sm font-medium break-words">
                   {key.name}{" "}
                   <Badge tone={key.revoked ? "neutral" : key.environment === "live" ? "attention" : "handled"}>
-                    {key.revoked ? "Revoked" : key.environment === "live" ? "Live" : "Sandbox"}
+                    {key.revoked ? labels.revoked : key.environment === "live" ? labels.live : labels.sandbox}
                   </Badge>
                 </p>
                 <p className="font-mono text-xs break-all text-[var(--wh-foreground-muted)]">{key.prefix}…</p>
@@ -84,7 +119,7 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
                   {key.expires ? ` · ${key.expires}` : ""}
                 </p>
               </div>
-              {key.revoked ? null : <RevokeKey householdId={householdId} keyId={key.id} name={key.name} />}
+              {key.revoked ? null : <RevokeKey householdId={householdId} keyId={key.id} name={key.name} labels={labels} />}
             </li>
           ))}
         </ul>
@@ -97,8 +132,8 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
           setCopied(false);
           if (!next && state.key) setDismissed(state.key);
         }}
-        title="New partner key"
-        description="The key is shown once. Keep it somewhere safe, like a password."
+        title={labels.sheetTitle}
+        description={labels.sheetLede}
       >
         {revealed ? (
           <div className="space-y-3">
@@ -111,27 +146,27 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
                 void navigator.clipboard?.writeText(revealed).then(() => setCopied(true));
               }}
             >
-              <Copy aria-hidden className="size-4" /> {copied ? "Copied" : "Copy key"}
+              <Copy aria-hidden className="size-4" /> {copied ? labels.copied : labels.copy}
             </Button>
           </div>
         ) : (
           <form action={action} className="space-y-3">
             {state.error ? <Alert>{state.error}</Alert> : null}
             <input type="hidden" name="householdId" value={householdId} />
-            <Field label="Name" name="name" required placeholder="Shopping app" autoComplete="off" />
+            <Field label={labels.name} name="name" required placeholder={labels.namePlaceholder} autoComplete="off" />
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Kind of key</legend>
+              <legend className="text-sm font-medium">{labels.kind}</legend>
               <label className="flex min-h-11 items-start gap-3 text-sm">
                 <input type="radio" name="environment" value="sandbox" defaultChecked className="mt-0.5 size-5 accent-[var(--wh-primary)]" />
-                <span>Sandbox: sample data only, and nothing it sends is saved. Best for building and testing.</span>
+                <span>{labels.sandboxLede}</span>
               </label>
               <label className="flex min-h-11 items-start gap-3 text-sm">
                 <input type="radio" name="environment" value="live" className="mt-0.5 size-5 accent-[var(--wh-primary)]" />
-                <span>Live: reads and changes this household&rsquo;s real records, within what you tick below.</span>
+                <span>{labels.liveLede}</span>
               </label>
             </fieldset>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">What it may do</legend>
+              <legend className="text-sm font-medium">{labels.mayDo}</legend>
               {scopes.map((scope) => (
                 <label key={scope.value} className="flex min-h-11 items-start gap-3 text-sm">
                   <input type="checkbox" name="scopes" value={scope.value} defaultChecked={scope.value !== "groceries.write"} className="mt-0.5 size-5 accent-[var(--wh-primary)]" />
@@ -141,16 +176,16 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
             </fieldset>
             <div className="space-y-1.5">
               <label htmlFor="expiresInDays" className="block text-sm font-medium">
-                Stops working after
+                {labels.expiresAfter}
               </label>
               <select id="expiresInDays" name="expiresInDays" defaultValue="90" className={SELECT}>
-                <option value="30">30 days</option>
-                <option value="90">90 days</option>
-                <option value="365">A year</option>
-                <option value="never">Never (until revoked)</option>
+                <option value="30">{labels.days30}</option>
+                <option value="90">{labels.days90}</option>
+                <option value="365">{labels.year}</option>
+                <option value="never">{labels.never}</option>
               </select>
             </div>
-            <Submit label="Create key" pending="Creating…" />
+            <Submit label={labels.create} pending={labels.creating} />
           </form>
         )}
       </Sheet>
@@ -158,20 +193,20 @@ export function DeveloperKeys({ householdId, keys, scopes }: { householdId: stri
   );
 }
 
-function RevokeKey({ householdId, keyId, name }: { householdId: string; keyId: string; name: string }) {
+function RevokeKey({ householdId, keyId, name, labels }: { householdId: string; keyId: string; name: string; labels: DeveloperKeyLabels }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<DeveloperKeyState, FormData>(revokeDeveloperKeyAction, {});
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Revoke ${name}`} title={`Revoke ${name}`}>
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(labels.revoke, name)} title={withName(labels.revoke, name)}>
         <Trash2 aria-hidden className="size-3.5" />
       </Pill>
       <ConfirmationSheet
         open={open}
         onOpenChange={setOpen}
-        title={`Revoke ${name}?`}
-        description="Anything using this key stops working straight away. What it already added stays."
-        confirmLabel="Revoke"
+        title={withName(labels.revokeTitle, name)}
+        description={labels.revokeLede}
+        confirmLabel={labels.revokeConfirm}
         destructive
         pending={pending}
         onConfirm={() => {

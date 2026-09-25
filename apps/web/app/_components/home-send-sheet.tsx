@@ -4,6 +4,8 @@ import { Camera, ClipboardPaste } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
+import { en } from "@wonderhome/core/i18n/messages/en";
+import { translator } from "@wonderhome/core/i18n/translate";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -18,7 +20,11 @@ import {
   type RouteHomeItemState,
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
+import { homesendReviewLabels, type HomeSendReviewLabels } from "../_lib/homesend-labels";
 import { HomeSendConfirmStep, TranscriptCheck } from "./home-send-intake";
+
+/** English, for a caller that passes no labels. */
+const ENGLISH_LABELS = homesendReviewLabels(translator("en", en), "en");
 
 /**
  * HomeSend v1: the "send something to WonderHome" step of the pipeline the
@@ -37,6 +43,7 @@ export function HomeSendSheet({
   onOpenChange,
   canAddChild = false,
   onDocumentApplied,
+  labels: given,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
@@ -46,7 +53,11 @@ export function HomeSendSheet({
   onOpenChange: (open: boolean) => void;
   /** Told once a document's plan was applied here, so HomeTalk can say what it did (DDU 2.0 §32). */
   onDocumentApplied?: (itemId: string) => void;
+  /** The sheet's words in the viewer's language (`homesendReviewLabels`); English when not given. */
+  labels?: HomeSendReviewLabels;
 }) {
+  const labels = given ?? ENGLISH_LABELS;
+  const words = labels.sheet;
   const [mode, setMode] = useState<"choose" | "upload" | "paste">("choose");
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});
   const [pasteState, pasteAction, pasting] = useActionState<SendHomeItemState, FormData>(pasteHomeSendItemAction, {});
@@ -113,26 +124,26 @@ export function HomeSendSheet({
     <Sheet
       open={open}
       onOpenChange={handleOpenChange}
-      title="Send something to WonderHome"
-      description="A photo, a PDF, a voice note, a link or a message you've been forwarded — WonderHome reads it and asks you to confirm before anything is added."
+      title={words.title}
+      description={words.description}
     >
       <div className="space-y-4">
         {!item ? (
           mode === "choose" ? (
             <div className="grid grid-cols-2 gap-3">
               <Pill type="button" tone="quiet" onClick={() => setMode("upload")} className="w-full justify-center py-3">
-                <Camera aria-hidden className="size-4" /> Send a file
+                <Camera aria-hidden className="size-4" /> {words.sendFile}
               </Pill>
               <Pill type="button" tone="quiet" onClick={() => setMode("paste")} className="w-full justify-center py-3">
-                <ClipboardPaste aria-hidden className="size-4" /> Paste text
+                <ClipboardPaste aria-hidden className="size-4" /> {words.pasteText}
               </Pill>
             </div>
           ) : mode === "upload" ? (
             <form ref={uploadFormRef} action={uploadAction} className="space-y-3">
               <input type="hidden" name="householdId" value={householdId} />
               {uploadState.error ? <Alert>{uploadState.error}</Alert> : null}
-              {failedNotice ? <Alert>{failedNotice} It&apos;s kept in HomeSend under &ldquo;Failed safely&rdquo;.</Alert> : null}
-              {appliedNotice ? <Alert tone="info">{appliedNotice} It&apos;s under &ldquo;Recently handled&rdquo; in HomeSend.</Alert> : null}
+              {failedNotice ? <Alert>{failedNotice} {words.keptFailed}</Alert> : null}
+              {appliedNotice ? <Alert tone="info">{appliedNotice} {words.keptHandled}</Alert> : null}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -142,34 +153,34 @@ export function HomeSendSheet({
                 onChange={() => uploadFormRef.current?.requestSubmit()}
               />
               <Pill type="button" tone="quiet" onClick={() => fileInputRef.current?.click()} disabled={busy} className="w-full justify-center py-3">
-                {uploading ? "Reading…" : "Choose a photo, PDF or voice note"}
+                {uploading ? labels.reading : words.choose}
               </Pill>
               <Pill type="button" tone="quiet" onClick={() => setMode("choose")} disabled={busy} className="w-full justify-center">
-                Back
+                {labels.back}
               </Pill>
             </form>
           ) : (
             <form action={pasteAction} className="space-y-3">
               <input type="hidden" name="householdId" value={householdId} />
               {pasteState.error ? <Alert>{pasteState.error}</Alert> : null}
-              {failedNotice ? <Alert>{failedNotice} It&apos;s kept in HomeSend under &ldquo;Failed safely&rdquo;.</Alert> : null}
-              {appliedNotice ? <Alert tone="info">{appliedNotice} It&apos;s under &ldquo;Recently handled&rdquo; in HomeSend.</Alert> : null}
+              {failedNotice ? <Alert>{failedNotice} {words.keptFailed}</Alert> : null}
+              {appliedNotice ? <Alert tone="info">{appliedNotice} {words.keptHandled}</Alert> : null}
               <label htmlFor="home-send-text" className="block text-sm font-medium">
-                Paste a forwarded message, or a link
+                {words.pasteLabel}
               </label>
               <textarea
                 id="home-send-text"
                 name="text"
                 rows={6}
                 required
-                placeholder="Paste a bill reminder, a school notice, or a grocery ask…"
+                placeholder={words.pastePlaceholder}
                 className="block w-full resize-none rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
               />
               <Button type="submit" disabled={busy} className="w-full">
-                {pasting ? "Reading…" : "Read this"}
+                {pasting ? labels.reading : labels.readThis}
               </Button>
               <Pill type="button" tone="quiet" onClick={() => setMode("choose")} disabled={busy} className="w-full justify-center">
-                Back
+                {labels.back}
               </Pill>
             </form>
           )
@@ -182,6 +193,7 @@ export function HomeSendSheet({
             action={transcriptAction}
             error={transcriptState.error}
             busy={confirmingTranscript}
+            labels={labels}
           />
         ) : (
           <HomeSendConfirmStep
@@ -202,6 +214,7 @@ export function HomeSendSheet({
             subject={item.subject ?? null}
             confirmation={item.confirmation ?? null}
             plan={item.plan ?? null}
+            labels={labels}
             onApplied={() => {
               setPlanApplied(true);
               onDocumentApplied?.(item.id);
@@ -220,7 +233,7 @@ export function HomeSendSheet({
             <input type="hidden" name="householdId" value={householdId} />
             <input type="hidden" name="itemId" value={item.id} />
             <Pill type="submit" tone="quiet" disabled={routing || dismissing} className="w-full justify-center">
-              {dismissing ? "Dismissing…" : "Not worth adding"}
+              {dismissing ? labels.dismissing : labels.notWorthAdding}
             </Pill>
           </form>
         ) : null}

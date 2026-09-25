@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listBudgets } from "@wonderhome/core/finance/budget-repository";
 import { budgetSpend, type BudgetPayment } from "@wonderhome/core/finance/budgets";
 import { describeEmailHealth } from "@wonderhome/core/finance/email-connector";
@@ -52,8 +53,9 @@ import {
   EditTransactionControl,
   ObligationRowControls,
   RemoveTransactionControl,
+  type BillFormLabels,
 } from "../_components/finance-forms";
-import { billKindLabel } from "../_lib/bill-kinds";
+import { billFormLabels, billKindName } from "../_lib/bill-form-labels";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Bills & Finance" };
@@ -85,7 +87,8 @@ export default async function BillsPage({
     searchParams,
     requireSession("/bills"),
   ]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const shell = {
@@ -93,8 +96,8 @@ export default async function BillsPage({
     viewer,
     secondary,
     pathname: "/bills",
-    back: { href: "/more", label: "Back" },
-    title: "Bills & Finance",
+    back: { href: "/more", label: t("common.back") },
+    title: t("nav.item.bills"),
   };
 
   if (!view.permissions.includes("finance.view")) {
@@ -102,8 +105,8 @@ export default async function BillsPage({
       <AppShell {...shell}>
         <EmptyState
           icon={ShieldCheck}
-          title="Not available to you"
-          description="The household's money is visible to adults and administrators only."
+          title={t("bills.notAvailable.title")}
+          description={t("bills.notAvailable.lede")}
         />
       </AppShell>
     );
@@ -116,7 +119,7 @@ export default async function BillsPage({
         <EmptyState
           icon={Wallet}
           tone="money"
-          title="Bills are not part of this plan"
+          title={t("bills.notInPlan")}
           description={entitlement.reason}
         />
       </AppShell>
@@ -145,15 +148,17 @@ export default async function BillsPage({
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
   // a connected mailbox is not working, the screen says so before the totals.
+  // The tone is the domain's decision; the words are the reader's (story 22-004).
   const mailHealth =
     integrations
       .filter((integration) => integration.kind === "email")
-      .map((integration) =>
-        describeEmailHealth({
+      .map((integration) => {
+        const health = describeEmailHealth({
           status: integration.status,
           lastSuccessAt: integration.lastSuccessAt,
-        }),
-      )
+        });
+        return { ...health, message: mailHealthWords(t, integration.status, integration.lastSuccessAt) ?? health.message };
+      })
       .find((health) => health.tone !== "silent") ?? null;
 
   const history = (historyRows.data as HistoryRow[] | null) ?? [];
@@ -170,6 +175,10 @@ export default async function BillsPage({
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const admin = isHouseholdAdmin(membership);
+  const formLabels = billFormLabels(t);
+  // "2 payments in USD, 1 payment in EUR" — counted, never converted (story 22-007).
+  const paymentsIn = (counts: { currency: string; count: number }[]) =>
+    counts.map(({ currency: other, count }) => t("bills.paymentsIn", { count, currency: other })).join(", ");
   // Totals are shown in the currency the household's bills are actually in;
   // the household's own currency only when nothing is on record yet. No
   // amount is ever converted (story 22-007).
@@ -236,12 +245,12 @@ export default async function BillsPage({
   // the rest.
   const metrics: ExpandableMetric[] = [
     {
-      label: "Need you",
+      label: t("bills.metric.needYou"),
       value: needs.length,
       icon: <IconTile icon={Wallet} tone="attention" size="sm" />,
       details:
         needs.length === 0 ? (
-          <MetricDetailEmpty>Nothing needs you right now.</MetricDetailEmpty>
+          <MetricDetailEmpty>{t("bills.metric.needYou.empty")}</MetricDetailEmpty>
         ) : (
           <div className="space-y-2.5">
             <ul className="space-y-1">
@@ -251,19 +260,19 @@ export default async function BillsPage({
             </ul>
             {needs.length > 4 ? (
               <PillLink href="/notifications" tone="quiet">
-                View all {needs.length}
+                {t("bills.viewAll", { count: needs.length })}
               </PillLink>
             ) : null}
           </div>
         ),
     },
     {
-      label: "Upcoming",
+      label: t("bills.metric.upcoming"),
       value: upcoming.length,
       icon: <IconTile icon={CalendarDays} tone="money" size="sm" />,
       details:
         upcoming.length === 0 ? (
-          <MetricDetailEmpty>Nothing due.</MetricDetailEmpty>
+          <MetricDetailEmpty>{t("bills.metric.upcoming.empty")}</MetricDetailEmpty>
         ) : (
           <div className="space-y-2.5">
             <ul className="space-y-1">
@@ -277,24 +286,26 @@ export default async function BillsPage({
                   history={history.filter((h) => h.obligation_id === bill.id)}
                   admin={admin}
                   householdId={householdId}
+                  t={t}
+                  labels={formLabels}
                 />
               ))}
             </ul>
             {upcoming.length > 4 ? (
               <PillLink href="/bills" tone="quiet">
-                View all {upcoming.length}
+                {t("bills.viewAll", { count: upcoming.length })}
               </PillLink>
             ) : null}
           </div>
         ),
     },
     {
-      label: "Settled",
+      label: t("bills.metric.settled"),
       value: settled.length,
       icon: <IconTile icon={CircleCheck} tone="handled" size="sm" />,
       details:
         settled.length === 0 ? (
-          <MetricDetailEmpty>Nothing settled yet.</MetricDetailEmpty>
+          <MetricDetailEmpty>{t("bills.metric.settled.empty")}</MetricDetailEmpty>
         ) : (
           <div className="space-y-2.5">
             <ul className="space-y-1">
@@ -308,12 +319,14 @@ export default async function BillsPage({
                   history={history.filter((h) => h.obligation_id === bill.id)}
                   admin={admin}
                   householdId={householdId}
+                  t={t}
+                  labels={formLabels}
                 />
               ))}
             </ul>
             {settled.length > 4 ? (
               <PillLink href="/bills?tab=transactions" tone="quiet">
-                View all {settled.length}
+                {t("bills.viewAll", { count: settled.length })}
               </PillLink>
             ) : null}
           </div>
@@ -327,10 +340,10 @@ export default async function BillsPage({
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">
-              Bills &amp; Finance
+              {t("nav.item.bills")}
             </h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">
-              Stay on top. Stress less.
+              {t("bills.lede")}
             </p>
           </div>
           {admin ? (
@@ -340,10 +353,11 @@ export default async function BillsPage({
                   householdId={householdId}
                   bills={trackedBills}
                   defaultCurrency={householdCurrency}
+                  labels={formLabels}
                   {...transactionChoices}
                 />
               ) : (
-                <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} />
+                <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} />
               )}
             </div>
           ) : null}
@@ -360,7 +374,7 @@ export default async function BillsPage({
               {mailHealth.tone === "needs_action" && admin ? (
                 <div className="mt-2">
                   <PillLink href="/household/integrations" tone="primary">
-                    Fix the connection
+                    {t("bills.mail.fix")}
                   </PillLink>
                 </div>
               ) : null}
@@ -369,18 +383,18 @@ export default async function BillsPage({
         ) : null}
 
         <SegmentedControl
-          label="Finance view"
+          label={t("bills.view")}
           active={active}
           segments={[
             {
               key: "overview",
-              label: "Overview",
+              label: t("bills.tab.overview"),
               href: "/bills",
               count: needs.length,
             },
             {
               key: "transactions",
-              label: "Transactions",
+              label: t("bills.tab.transactions"),
               href: "/bills?tab=transactions",
             },
           ]}
@@ -391,14 +405,14 @@ export default async function BillsPage({
             <ExpandableMetricGrid metrics={metrics} />
 
             <section>
-              <SectionHeader title="Upcoming bills" count={upcoming.length} />
+              <SectionHeader title={t("bills.upcoming")} count={upcoming.length} />
               {upcoming.length === 0 ? (
                 <EmptyState
                   icon={Receipt}
                   tone="money"
-                  title="Nothing due"
-                  description="Add the bills the household pays — electricity, internet, school fees — and WonderHome raises each one with the right amount of notice."
-                  action={<AddBillButton householdId={householdId} defaultCurrency={householdCurrency} />}
+                  title={t("bills.upcoming.emptyTitle")}
+                  description={t("bills.upcoming.emptyLede")}
+                  action={<AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} />}
                 />
               ) : (
                 <Card className="p-2">
@@ -417,6 +431,8 @@ export default async function BillsPage({
                         )}
                         admin={admin}
                         householdId={householdId}
+                        t={t}
+                        labels={formLabels}
                       />
                     ))}
                   </ul>
@@ -427,7 +443,7 @@ export default async function BillsPage({
             {agenda && agenda.anomalies.length > 0 ? (
               <section>
                 <SectionHeader
-                  title="Worth a look"
+                  title={t("bills.worthALook")}
                   count={agenda.anomalies.length}
                 />
                 <Card className="p-2">
@@ -448,12 +464,11 @@ export default async function BillsPage({
             <section className="grid gap-4 sm:grid-cols-2">
               <Card>
                 <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                  Monthly spend
+                  {t("bills.spend")}
                 </p>
                 {periods.length === 0 ? (
                   <p className="mt-2 text-sm text-[var(--wh-foreground-muted)]">
-                    A trend appears once a couple of months of bills are
-                    recorded.
+                    {t("bills.spend.empty")}
                   </p>
                 ) : (
                   <>
@@ -472,13 +487,13 @@ export default async function BillsPage({
                         ) : (
                           <TrendingUp aria-hidden className="size-3.5" />
                         )}
-                        {Math.abs(change)}% vs last period
+                        {t("bills.spend.change", { percent: Math.abs(change) })}
                       </p>
                     ) : null}
                     <div
                       className="mt-3 flex h-16 items-end gap-1.5"
                       role="img"
-                      aria-label={`Spend over the last ${periods.length} periods`}
+                      aria-label={t("bills.spend.chart", { count: periods.length })}
                     >
                       {periods.map(([label, value]) => (
                         <span
@@ -495,27 +510,27 @@ export default async function BillsPage({
                 )}
                 {otherCurrencyCounts.size > 0 ? (
                   <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">
-                    In {currency} only. Not added in:{" "}
-                    {[...otherCurrencyCounts.entries()]
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([other, count]) => `${count} ${count === 1 ? "payment" : "payments"} in ${other}`)
-                      .join(", ")}
-                    , since nothing is converted.
+                    {t("bills.spend.otherCurrencies", {
+                      currency,
+                      list: paymentsIn(
+                        [...otherCurrencyCounts.entries()]
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([other, count]) => ({ currency: other, count })),
+                      ),
+                    })}
                   </p>
                 ) : null}
               </Card>
               <Card>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                    Budgets
+                    {t("bills.budgets")}
                   </p>
-                  {admin ? <AddBudgetButton householdId={householdId} defaultCurrency={householdCurrency} /> : null}
+                  {admin ? <AddBudgetButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} /> : null}
                 </div>
                 {budgets.length === 0 ? (
                   <p className="mt-2 text-sm text-[var(--wh-foreground-muted)]">
-                    {admin
-                      ? "Set a budget for a kind of bill to see what is left. A budget never blocks a bill — the rent is due regardless."
-                      : "No budgets are set. An Admin can set one for a kind of bill."}
+                    {admin ? t("bills.budgets.emptyAdmin") : t("bills.budgets.emptyMember")}
                   </p>
                 ) : (
                   <ul className="mt-3 space-y-3">
@@ -527,28 +542,34 @@ export default async function BillsPage({
                         spentMinor: budget.spentMinor,
                       });
                       const pct = Math.min(100, Math.round((budget.spentMinor / Math.max(1, budget.limitMinor)) * 100));
-                      const periodWord = budget.period === "month" ? "this month" : budget.period === "quarter" ? "this quarter" : "this year";
+                      const used = t(`bills.budget.used.${budget.period}`, {
+                        spent: formatMoney(budget.spentMinor, budget.currency),
+                        limit: formatMoney(budget.limitMinor, budget.currency),
+                      });
                       return (
                         <li key={budget.id}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">{billKindLabel(budget.category)}</p>
+                              <p className="text-sm font-medium">{billKindName(t, budget.category)}</p>
                               <p className="text-xs text-[var(--wh-foreground-muted)]">
-                                {formatMoney(budget.spentMinor, budget.currency)} of {formatMoney(budget.limitMinor, budget.currency)} {periodWord} ·{" "}
-                                {v.overBy ? `over by ${formatMoney(v.overBy, budget.currency)}` : `${formatMoney(v.remainingMinor, budget.currency)} left`}
+                                {used} ·{" "}
+                                {v.overBy
+                                  ? t("bills.budget.overBy", { amount: formatMoney(v.overBy, budget.currency) })
+                                  : t("bills.budget.left", { amount: formatMoney(v.remainingMinor, budget.currency) })}
                               </p>
                             </div>
                             {admin ? (
                               <BudgetRowControls
                                 householdId={householdId}
                                 budget={{ id: budget.id, category: budget.category, period: budget.period, limitMinor: budget.limitMinor, currency: budget.currency }}
+                                labels={formLabels}
                               />
                             ) : null}
                           </div>
                           <div
                             className="mt-1.5 h-1.5 rounded-full bg-[var(--wh-surface-muted)]"
                             role="img"
-                            aria-label={`${pct}% of the budget used`}
+                            aria-label={t("bills.budget.usedAria", { percent: pct })}
                           >
                             <div
                               className={`h-full rounded-full ${v.overBy ? "bg-[var(--wh-attention)]" : "bg-[var(--wh-primary)]"}`}
@@ -557,11 +578,7 @@ export default async function BillsPage({
                           </div>
                           {budget.otherCurrencies.length > 0 ? (
                             <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">
-                              Not counted:{" "}
-                              {budget.otherCurrencies
-                                .map((other) => `${other.count} ${other.count === 1 ? "payment" : "payments"} in ${other.currency}`)
-                                .join(", ")}
-                              , since nothing is converted.
+                              {t("bills.budget.notCounted", { list: paymentsIn(budget.otherCurrencies) })}
                             </p>
                           ) : null}
                         </li>
@@ -578,9 +595,7 @@ export default async function BillsPage({
                 className="mt-0.5 size-5 shrink-0 text-[var(--wh-primary)]"
               />
               <p className="text-sm text-[var(--wh-foreground-muted)]">
-                Every payment needs your approval and a fresh confirmation. No
-                payment provider is connected yet, so &ldquo;Pay&rdquo; prepares
-                the payment for approval and never moves money.
+                {t("bills.payNote")}
               </p>
             </Card>
           </>
@@ -591,8 +606,8 @@ export default async function BillsPage({
             <EmptyState
               icon={Receipt}
               tone="money"
-              title="No transactions yet"
-              description="Paid bills and recorded amounts appear here, period by period."
+              title={t("bills.transactions.emptyTitle")}
+              description={t("bills.transactions.emptyLede")}
             />
           ) : (
             <Card className="p-2">
@@ -611,6 +626,8 @@ export default async function BillsPage({
                       admin={admin}
                       householdId={householdId}
                       timezone={timezone}
+                      t={t}
+                      labels={formLabels}
                     />
                   );
                 })}
@@ -619,7 +636,7 @@ export default async function BillsPage({
           )
         ) : null}
 
-        <QuoteCard>On top of it, without thinking about it.</QuoteCard>
+        <QuoteCard>{t("bills.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
@@ -633,6 +650,8 @@ function BillRow({
   history,
   admin,
   householdId,
+  t,
+  labels,
 }: {
   bill: Obligation;
   owner: string | null;
@@ -641,28 +660,30 @@ function BillRow({
   history: HistoryRow[];
   admin: boolean;
   householdId: string;
+  t: Translate;
+  labels: BillFormLabels;
 }) {
   const amount =
     bill.amountMinor !== null && bill.currency
       ? formatMoney(bill.amountMinor, bill.currency)
-      : "amount not in yet";
+      : t("bills.amountNotIn");
   const due = bill.dueOn
-    ? `due ${formatDate(timezone, new Date(bill.dueOn), "long")}`
-    : "no due date";
-  const kindLabel = bill.kind.replace(/_/g, " ");
+    ? t("bills.due", { date: formatDate(timezone, new Date(bill.dueOn), "long") })
+    : t("bills.noDueDate");
+  const kindLabel = billKindName(t, bill.kind);
   const action =
     bill.status === "scheduled" ? (
-      <Badge tone="handled">arranged</Badge>
+      <Badge tone="handled">{t("bills.arranged")}</Badge>
     ) : needsYou ? (
       <PillLink
         href={`/ai?q=${encodeURIComponent(`Pay the ${bill.name.toLowerCase()}.`)}`}
         tone="primary"
       >
-        Pay
+        {t("bills.pay")}
       </PillLink>
     ) : (
       <PillLink href="/bills?tab=transactions" tone="quiet">
-        View
+        {t("bills.open")}
       </PillLink>
     );
 
@@ -684,12 +705,12 @@ function BillRow({
     >
       <div className="space-y-4">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-          <Fact label="Kind" value={kindLabel} />
-          <Fact label="Status" value={bill.status.replace(/_/g, " ")} />
-          <Fact label="Payee" value={bill.payee} />
-          <Fact label="Owner" value={owner} />
+          <Fact label={t("bills.fact.kind")} value={kindLabel} />
+          <Fact label={t("bills.fact.status")} value={statusWord(t, bill.status)} />
+          <Fact label={t("bills.fact.payee")} value={bill.payee} />
+          <Fact label={t("bills.fact.owner")} value={owner} />
           <Fact
-            label="Due"
+            label={t("bills.fact.due")}
             value={
               bill.dueOn
                 ? formatDate(timezone, new Date(bill.dueOn), "long")
@@ -697,7 +718,7 @@ function BillRow({
             }
           />
           <Fact
-            label="Amount"
+            label={t("bills.fact.amount")}
             value={
               bill.amountMinor !== null && bill.currency
                 ? formatMoney(bill.amountMinor, bill.currency)
@@ -708,7 +729,7 @@ function BillRow({
         {history.length > 0 ? (
           <div>
             <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-              Recorded periods
+              {t("bills.recordedPeriods")}
             </p>
             <ul className="space-y-1">
               {history
@@ -742,6 +763,7 @@ function BillRow({
               currency: bill.currency,
               dueOn: bill.dueOn,
             }}
+            labels={labels}
           />
         ) : null}
       </div>
@@ -757,6 +779,8 @@ function TransactionRow({
   admin,
   householdId,
   timezone,
+  t,
+  labels,
 }: {
   row: HistoryRow;
   bill: Obligation | undefined;
@@ -765,11 +789,14 @@ function TransactionRow({
   admin: boolean;
   householdId: string;
   timezone: string;
+  t: Translate;
+  labels: BillFormLabels;
 }) {
   const amount = formatMoney(Number(row.amount_minor), row.currency);
-  // A transaction's own payee and kind when it says, otherwise its bill's.
+  // A transaction's own payee and kind when it says (the household's own
+  // words, shown as saved), otherwise its bill's kind in the reader's words.
   const payee = row.payee ?? bill?.payee ?? null;
-  const kind = row.kind ?? (bill?.kind ? bill.kind.replace(/_/g, " ") : null);
+  const kind = row.kind ?? (bill?.kind ? billKindName(t, bill.kind) : null);
   const transaction = {
     obligationId: row.obligation_id,
     periodLabel: row.period_label,
@@ -787,7 +814,7 @@ function TransactionRow({
         <>
           <IconTile icon={Receipt} tone="money" />
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium">{bill?.name ?? "Bill"}</span>
+            <span className="block text-sm font-medium">{bill?.name ?? t("bills.bill")}</span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {row.period_label}
               {payee ? ` · ${payee}` : ""}
@@ -801,12 +828,12 @@ function TransactionRow({
     >
       <div className="space-y-4">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-          <Fact label="Period" value={row.period_label} />
-          <Fact label="Amount" value={amount} />
-          <Fact label="Kind" value={kind} />
-          <Fact label="Payee" value={payee} />
-          <Fact label="Owner" value={owner} />
-          <Fact label="Paid on" value={row.paid_on ? formatDate(timezone, new Date(`${row.paid_on}T00:00:00.000Z`), "long") : null} />
+          <Fact label={t("bills.fact.period")} value={row.period_label} />
+          <Fact label={t("bills.fact.amount")} value={amount} />
+          <Fact label={t("bills.fact.kind")} value={kind} />
+          <Fact label={t("bills.fact.payee")} value={payee} />
+          <Fact label={t("bills.fact.owner")} value={owner} />
+          <Fact label={t("bills.fact.paidOn")} value={row.paid_on ? formatDate(timezone, new Date(`${row.paid_on}T00:00:00.000Z`), "long") : null} />
         </dl>
         {admin && bill ? (
           <div className="flex flex-wrap gap-2">
@@ -821,18 +848,46 @@ function TransactionRow({
                 responsibleMemberId: bill.responsibleMemberId,
               }}
               transaction={transaction}
+              labels={labels}
               {...choices}
             />
             <RemoveTransactionControl
               householdId={householdId}
               transaction={transaction}
               label={bill.name}
+              labels={labels}
             />
           </div>
         ) : null}
       </div>
     </ExpandableRow>
   );
+}
+
+/** A bill's status as a word in the reader's language; the stored value never changes. */
+function statusWord(t: Translate, status: Obligation["status"]): string {
+  return t(`bills.status.${status}`);
+}
+
+/**
+ * What a mailbox that is not working says, in the reader's words — the same
+ * cases, and the same hours, as the domain's own English (`describeEmailHealth`).
+ * An unknown status keeps the domain's English.
+ */
+function mailHealthWords(t: Translate, status: string, lastSuccessAt: Date | null, now = new Date()): string | null {
+  switch (status) {
+    case "degraded": {
+      if (!lastSuccessAt) return t("bills.mail.trouble");
+      const hours = Math.floor((now.getTime() - lastSuccessAt.getTime()) / 3_600_000);
+      return t("bills.mail.lastWorked", { count: hours });
+    }
+    case "error":
+      return t("bills.mail.error");
+    case "revoked":
+      return t("bills.mail.revoked");
+    default:
+      return null;
+  }
 }
 
 /** Each non-empty value once, in a stable order, for a picker's options. */

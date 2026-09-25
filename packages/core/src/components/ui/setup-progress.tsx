@@ -34,6 +34,24 @@ import { ProgressRing } from "./progress-ring";
  * achievement it should feel like, and the compact row disappears.
  */
 
+/**
+ * The card's own words, in the reader's language (story 22-004), built by
+ * the page with this assessment's counts already in them. Each falls back
+ * to the English below. The steps' titles and reasons, and the milestone,
+ * come on the assessment itself.
+ */
+export type SetupProgressLabels = {
+  title: string;
+  setUp: string;
+  compactTitle: string;
+  compactMeta: string;
+  completeTitle: string;
+  completeLede: string;
+  progress: string;
+  firstWeek: string | null;
+  seeAll: string;
+};
+
 const ICONS: Record<SetupStepKey, LucideIcon> = {
   basics: Home,
   people: Users,
@@ -56,6 +74,7 @@ export function SetupProgressCard({
   daysLeft,
   manageHref = "/household/setup",
   className,
+  labels,
 }: {
   assessment: SetupAssessment;
   variant: "prominent" | "compact" | "full";
@@ -63,7 +82,20 @@ export function SetupProgressCard({
   daysLeft?: number;
   manageHref?: string;
   className?: string;
+  labels?: SetupProgressLabels;
 }) {
+  const words: SetupProgressLabels = labels ?? {
+    title: "Household setup",
+    setUp: "Set up your household",
+    compactTitle: `Household setup · ${assessment.milestone}`,
+    compactMeta: assessment.next[0] ? `Next: ${assessment.next[0].title}` : `${assessment.done} of ${assessment.total} done`,
+    completeTitle: "Your household is fully set up",
+    completeLede: `All ${assessment.total} steps done. WonderHome now knows enough to keep quiet watch over every part of the home.`,
+    progress: `${assessment.done} of ${assessment.total} done. Each step you fill in is something WonderHome can start looking after for you.`,
+    firstWeek: daysLeft !== undefined && daysLeft > 0 ? `Your first week: ${daysLeft === 1 ? "1 day" : `${daysLeft} days`} of guided setup left.` : null,
+    seeAll: `See all ${assessment.total} steps`,
+  };
+
   if (variant === "compact") {
     return (
       <Link
@@ -73,12 +105,10 @@ export function SetupProgressCard({
           className,
         )}
       >
-        <ProgressRing value={assessment.percent} label="Household setup" size={44} stroke={5} className="[&>span]:text-[0.625rem]" />
+        <ProgressRing value={assessment.percent} label={words.title} size={44} stroke={5} className="[&>span]:text-[0.625rem]" />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">Household setup · {assessment.milestone}</span>
-          <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-            {assessment.next[0] ? `Next: ${assessment.next[0].title}` : `${assessment.done} of ${assessment.total} done`}
-          </span>
+          <span className="block text-sm font-medium">{words.compactTitle}</span>
+          <span className="block text-xs text-[var(--wh-foreground-subtle)]">{words.compactMeta}</span>
         </span>
         <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
       </Link>
@@ -92,10 +122,8 @@ export function SetupProgressCard({
           <PartyPopper aria-hidden className="size-7" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold tracking-tight">Your household is fully set up</p>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">
-            All {assessment.total} steps done. WonderHome now knows enough to keep quiet watch over every part of the home.
-          </p>
+          <p className="text-base font-semibold tracking-tight">{words.completeTitle}</p>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{words.completeLede}</p>
         </div>
       </Card>
     );
@@ -106,23 +134,21 @@ export function SetupProgressCard({
   return (
     <Card className={cn("wh-rise p-4 sm:p-5", className)}>
       <div className="flex items-start gap-4">
-        <ProgressRing value={assessment.percent} label="Household setup" size={variant === "full" ? 96 : 84} stroke={8} />
+        <ProgressRing value={assessment.percent} label={words.title} size={variant === "full" ? 96 : 84} stroke={8} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-              {variant === "full" ? "Household setup" : "Set up your household"}
+              {variant === "full" ? words.title : words.setUp}
             </h2>
             <span className="rounded-full bg-[var(--wh-primary-soft)] px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--wh-primary)]">
               {assessment.milestone}
             </span>
           </div>
-          <p className="mt-1 text-sm text-[var(--wh-foreground-muted)]">
-            {assessment.done} of {assessment.total} done. Each step you fill in is something WonderHome can start looking after for you.
-          </p>
-          {variant === "prominent" && daysLeft !== undefined && daysLeft > 0 ? (
+          <p className="mt-1 text-sm text-[var(--wh-foreground-muted)]">{words.progress}</p>
+          {variant === "prominent" && words.firstWeek ? (
             <p className="mt-1 flex items-center gap-1 text-xs text-[var(--wh-foreground-subtle)]">
               <Sparkles aria-hidden className="size-3.5" />
-              Your first week: {daysLeft === 1 ? "1 day" : `${daysLeft} days`} of guided setup left.
+              {words.firstWeek}
             </p>
           ) : null}
         </div>
@@ -137,7 +163,7 @@ export function SetupProgressCard({
       {variant === "prominent" && assessment.total > assessment.next.length + assessment.done ? (
         <div className="mt-3 flex justify-end">
           <PillLink href={manageHref} tone="quiet">
-            See all {assessment.total} steps
+            {words.seeAll}
           </PillLink>
         </div>
       ) : null}

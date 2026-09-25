@@ -19,6 +19,18 @@ import type { ActionState } from "../(auth)/actions";
  * then chooses — with the choice still in front of them and still refusable.
  */
 
+/** The Privacy Centre forms' words in the viewer's language, built on the server (story 22-004). */
+export type ConfirmItIsYouLabels = {
+  password: string;
+  /** Names what is being confirmed, so nobody confirms an unnamed thing. */
+  hint: string;
+  submit: string;
+  checking: string;
+};
+export type ExportFormLabels = { error: string; preparing: string; download: string; confirmFirst: string };
+export type DeletionFormLabels = { understand: string; submit: string; recording: string; confirmFirst: string };
+export type CancelDeletionLabels = { callOff: string; callingOff: string };
+
 function Submit({ label, busy, variant }: { label: string; busy: string; variant?: "secondary" | "danger" }) {
   const { pending } = useFormStatus();
   return (
@@ -37,13 +49,12 @@ export function ConfirmItIsYouForm({
   action,
   householdId,
   purpose,
-  what,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   purpose: "export" | "deletion";
-  /** What they are confirming, so nobody confirms an unnamed thing. */
-  what: string;
+  labels: ConfirmItIsYouLabels;
 }) {
   const [state, formAction] = useActionState(action, {});
 
@@ -54,18 +65,18 @@ export function ConfirmItIsYouForm({
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="purpose" value={purpose} />
       <PasswordField
-        label="Your password"
+        label={labels.password}
         name="password"
         autoComplete="current-password"
         required
-        hint={`We ask again ${what}. Being signed in says who you are; this says it is you, now.`}
+        hint={labels.hint}
       />
-      <Submit label="Confirm it is me" busy="Checking…" variant="secondary" />
+      <Submit label={labels.submit} busy={labels.checking} variant="secondary" />
     </form>
   );
 }
 
-export function ExportForm({ householdId, confirmed }: { householdId: string; confirmed: boolean }) {
+export function ExportForm({ householdId, confirmed, labels }: { householdId: string; confirmed: boolean; labels: ExportFormLabels }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +88,7 @@ export function ExportForm({ householdId, confirmed }: { householdId: string; co
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error?.message ?? "We could not prepare your copy just now.");
+        throw new Error(payload?.error?.message ?? labels.error);
       }
 
       // The file only ever exists in this reply. Nothing is stored, so there is
@@ -91,7 +102,7 @@ export function ExportForm({ householdId, confirmed }: { householdId: string; co
       link.click();
       URL.revokeObjectURL(url);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "We could not prepare your copy just now.");
+      setError(caught instanceof Error ? caught.message : labels.error);
     } finally {
       setBusy(false);
     }
@@ -101,11 +112,9 @@ export function ExportForm({ householdId, confirmed }: { householdId: string; co
     <div className="space-y-3">
       {error ? <Alert>{error}</Alert> : null}
       <Button type="button" onClick={() => void download()} disabled={!confirmed || busy} className="w-full">
-        {busy ? "Preparing your copy…" : "Download my copy"}
+        {busy ? labels.preparing : labels.download}
       </Button>
-      {!confirmed ? (
-        <p className="text-xs text-[var(--wh-foreground-subtle)]">Confirm it is you above first.</p>
-      ) : null}
+      {!confirmed ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.confirmFirst}</p> : null}
     </div>
   );
 }
@@ -114,10 +123,12 @@ export function DeletionForm({
   action,
   householdId,
   confirmed,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   confirmed: boolean;
+  labels: DeletionFormLabels;
 }) {
   const [state, formAction] = useActionState(action, {});
   const [sure, setSure] = useState(false);
@@ -135,17 +146,13 @@ export function DeletionForm({
           onChange={(event) => setSure(event.currentTarget.checked)}
           className="mt-0.5 size-5 shrink-0 accent-[var(--wh-risk)]"
         />
-        <span className="text-sm">
-          I understand this starts a countdown, and that when it runs out my data is gone.
-        </span>
+        <span className="text-sm">{labels.understand}</span>
       </label>
 
       <fieldset disabled={!confirmed || !sure}>
-        <Submit label="Ask for my data to be deleted" busy="Recording…" variant="danger" />
+        <Submit label={labels.submit} busy={labels.recording} variant="danger" />
       </fieldset>
-      {!confirmed ? (
-        <p className="text-xs text-[var(--wh-foreground-subtle)]">Confirm it is you above first.</p>
-      ) : null}
+      {!confirmed ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.confirmFirst}</p> : null}
     </form>
   );
 }
@@ -154,10 +161,12 @@ export function CancelDeletionForm({
   action,
   householdId,
   requestId,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   requestId: string;
+  labels: CancelDeletionLabels;
 }) {
   const [state, formAction] = useActionState(action, {});
 
@@ -167,17 +176,17 @@ export function CancelDeletionForm({
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="requestId" value={requestId} />
-      <CallItOff />
+      <CallItOff labels={labels} />
     </form>
   );
 }
 
 /** Its own component, because useFormStatus only reads the form above it. */
-function CallItOff() {
+function CallItOff({ labels }: { labels: CancelDeletionLabels }) {
   const { pending } = useFormStatus();
   return (
     <Pill type="submit" tone="primary" disabled={pending}>
-      {pending ? "Calling it off…" : "Call it off"}
+      {pending ? labels.callingOff : labels.callOff}
     </Pill>
   );
 }

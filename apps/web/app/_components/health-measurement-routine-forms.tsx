@@ -3,7 +3,6 @@
 import { Ban, CircleCheck, Pencil, Plus, RotateCcw } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
-import { VITAL_TYPE_LABEL } from "@wonderhome/core/health/agenda";
 import type { VitalType } from "@wonderhome/core/health/vitals";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -21,32 +20,27 @@ import {
   reactivateRoutineAction,
   updateRoutineAction,
 } from "../(auth)/health-measurement-routine-actions";
+import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
 
-const TYPE_OPTIONS: { value: VitalType; label: string }[] = (Object.keys(VITAL_TYPE_LABEL) as VitalType[]).map((value) => ({ value, label: VITAL_TYPE_LABEL[value] }));
+/** Days between measurements, stored as they are; their words come from `labels` (story 22-004). */
+const CADENCES = ["1", "7", "14", "30"] as const;
 
-const CADENCE_OPTIONS = [
-  { value: "1", label: "Every day" },
-  { value: "7", label: "Every week" },
-  { value: "14", label: "Every 2 weeks" },
-  { value: "30", label: "Every month" },
-] as const;
-
-const SCOPE_OPTIONS = [
-  { value: "private", label: "Only me" },
-  { value: "selected_family", label: "People I choose" },
-  { value: "household_operational", label: "The whole household" },
-] as const;
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Configuring a recurring measurement — the household's own commitment, never one WonderHome invents (story 21-007). */
 export function AddRoutineButton({
   householdId,
   members,
   defaultPrivacyScope,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  labels: HealthFormLabels;
 }) {
+  const words = labels.routine;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [vitalType, setVitalType] = useState<VitalType>("blood_pressure");
   const [reminderEnabled, setReminderEnabled] = useState(true);
@@ -65,10 +59,10 @@ export function AddRoutineButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Set up a routine
+        <Plus aria-hidden className="size-3.5" /> {words.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Set up a measurement routine" description="A recurring commitment your household set, not one WonderHome invents.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.title} description={common.householdCommitment}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -79,45 +73,45 @@ export function AddRoutineButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label="Who is this for?" name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Select label="Measurement" name="vitalType" value={vitalType} onChange={(event) => setVitalType(event.target.value as VitalType)}>
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Select label={common.measurement} name="vitalType" value={vitalType} onChange={(event) => setVitalType(event.target.value as VitalType)}>
+            {(Object.keys(labels.vitalTypes) as VitalType[]).map((type) => (
+              <option key={type} value={type}>
+                {labels.vitalTypes[type]}
               </option>
             ))}
           </Select>
-          {vitalType === "custom" ? <Field label="What is it called" name="customLabel" placeholder="Blood sugar" required autoComplete="off" /> : null}
-          <Select label="Repeats" name="cadenceDays" defaultValue="7">
-            {CADENCE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          {vitalType === "custom" ? <Field label={common.whatCalled} name="customLabel" placeholder={common.measurementPlaceholder} required autoComplete="off" /> : null}
+          <Select label={common.repeats} name="cadenceDays" defaultValue="7">
+            {CADENCES.map((cadence) => (
+              <option key={cadence} value={cadence}>
+                {words.cadence[cadence]}
               </option>
             ))}
           </Select>
-          <Field label="Preferred time (optional)" name="preferredTime" type="time" />
-          <Field label="First due" name="nextDueOn" type="date" required />
+          <Field label={common.preferredTime} name="preferredTime" type="time" />
+          <Field label={words.firstDue} name="nextDueOn" type="date" required />
           <input type="hidden" name="reminderEnabled" value={reminderEnabled ? "true" : "false"} />
           <div className="flex items-center justify-between gap-3 py-1">
-            <span className="text-sm font-medium">Remind us when it&apos;s due</span>
-            <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} label="Remind us when it's due" />
+            <span className="text-sm font-medium">{words.remind}</span>
+            <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} label={words.remind} />
           </div>
-          <Field label="Notes (optional)" name="notes" placeholder="Anything worth remembering" autoComplete="off" />
-          <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+            {SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {labels.scopes[scope]}
               </option>
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Adding…" : "Add routine"}
+            {pending ? common.adding : words.submit}
           </Button>
         </form>
       </Sheet>
@@ -132,6 +126,7 @@ export function EditRoutineButton({
   cadenceDays,
   nextDueOn,
   notes,
+  labels,
 }: {
   householdId: string;
   routineId: string;
@@ -139,7 +134,10 @@ export function EditRoutineButton({
   cadenceDays: number;
   nextDueOn: string;
   notes: string | null;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.routine;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateRoutineAction, {});
   const submitted = useRef(false);
@@ -153,11 +151,11 @@ export function EditRoutineButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} title="Edit">
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(common.editNamed, label)} title={common.edit}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Edit routine" description="Update how often this repeats, or move its next due date.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.editTitle} description={words.editDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -169,17 +167,17 @@ export function EditRoutineButton({
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="routineId" value={routineId} />
-          <Select label="Repeats" name="cadenceDays" defaultValue={String(cadenceDays)}>
-            {CADENCE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Select label={common.repeats} name="cadenceDays" defaultValue={String(cadenceDays)}>
+            {CADENCES.map((cadence) => (
+              <option key={cadence} value={cadence}>
+                {words.cadence[cadence]}
               </option>
             ))}
           </Select>
-          <Field label="Next due" name="nextDueOn" type="date" defaultValue={nextDueOn} required />
-          <Field label="Notes (optional)" name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={nextDueOn} required />
+          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+            {pending ? common.saving : common.save}
           </Button>
         </form>
       </Sheet>
@@ -188,7 +186,21 @@ export function EditRoutineButton({
 }
 
 /** Completing a routine — records the real reading it represents and advances the schedule, both in one step. */
-function CompleteRoutineButton({ householdId, routineId, vitalType, label }: { householdId: string; routineId: string; vitalType: VitalType; label: string }) {
+function CompleteRoutineButton({
+  householdId,
+  routineId,
+  vitalType,
+  label,
+  labels,
+}: {
+  householdId: string;
+  routineId: string;
+  vitalType: VitalType;
+  label: string;
+  labels: HealthFormLabels;
+}) {
+  const words = labels.routine;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(completeRoutineAction, {});
   const submitted = useRef(false);
@@ -202,11 +214,12 @@ function CompleteRoutineButton({ householdId, routineId, vitalType, label }: { h
 
   return (
     <>
-      <Pill type="button" tone="soft" onClick={() => setOpen(true)} aria-label={`Mark ${label} done`} title="Mark done">
+      <Pill type="button" tone="soft" onClick={() => setOpen(true)} aria-label={withName(words.markNamed, label)} title={common.markDone}>
         <CircleCheck aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title={`Record ${label.toLowerCase()}`} description="This records the reading and moves the routine to its next due date.">
+      <Sheet open={open} onOpenChange={setOpen} title={withName(words.recordTitle, words.lowercaseName ? label.toLowerCase() : label)}
+        description={words.recordDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -219,16 +232,16 @@ function CompleteRoutineButton({ householdId, routineId, vitalType, label }: { h
           <input type="hidden" name="routineId" value={routineId} />
           {vitalType === "blood_pressure" ? (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Systolic" name="value" type="number" step="any" required autoComplete="off" />
-              <Field label="Diastolic" name="secondaryValue" type="number" step="any" autoComplete="off" />
+              <Field label={common.systolic} name="value" type="number" step="any" required autoComplete="off" />
+              <Field label={common.diastolic} name="secondaryValue" type="number" step="any" autoComplete="off" />
             </div>
           ) : (
-            <Field label="Value" name="value" type="number" step="any" required autoComplete="off" />
+            <Field label={common.value} name="value" type="number" step="any" required autoComplete="off" />
           )}
-          <Field label="Unit" name="unit" placeholder={vitalType === "blood_pressure" ? "mmHg" : "kg, lb, bpm…"} required autoComplete="off" />
-          <Field label="Notes (optional)" name="notes" autoComplete="off" />
+          <Field label={common.unit} name="unit" placeholder={vitalType === "blood_pressure" ? "mmHg" : common.unitPlaceholder} required autoComplete="off" />
+          <Field label={common.notes} name="notes" autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Recording…" : "Record"}
+            {pending ? common.recording : common.record}
           </Button>
         </form>
       </Sheet>
@@ -240,10 +253,13 @@ function CompleteRoutineButton({ householdId, routineId, vitalType, label }: { h
 export function RoutineActions({
   householdId,
   routine,
+  labels,
 }: {
   householdId: string;
   routine: { id: string; vitalType: VitalType; customLabel: string | null; label: string; cadenceDays: number; nextDueOn: string; notes: string | null; status: "active" | "dismissed" };
+  labels: HealthFormLabels;
 }) {
+  const common = labels.common;
   const [, dismissAction, dismissPending] = useActionState<ActionState, FormData>(dismissRoutineAction, {});
   const [, reactivateAction, reactivatePending] = useActionState<ActionState, FormData>(reactivateRoutineAction, {});
 
@@ -256,7 +272,7 @@ export function RoutineActions({
 
   if (routine.status === "dismissed") {
     return (
-      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label="Bring back" title="Bring back">
+      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label={common.bringBack} title={common.bringBack}>
         <RotateCcw aria-hidden className="size-3.5" />
       </Pill>
     );
@@ -264,9 +280,17 @@ export function RoutineActions({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <CompleteRoutineButton householdId={householdId} routineId={routine.id} vitalType={routine.vitalType} label={routine.label} />
-      <EditRoutineButton householdId={householdId} routineId={routine.id} label={routine.label} cadenceDays={routine.cadenceDays} nextDueOn={routine.nextDueOn} notes={routine.notes} />
-      <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label="Remove" title="Remove">
+      <CompleteRoutineButton householdId={householdId} routineId={routine.id} vitalType={routine.vitalType} label={routine.label} labels={labels} />
+      <EditRoutineButton
+        householdId={householdId}
+        routineId={routine.id}
+        label={routine.label}
+        cadenceDays={routine.cadenceDays}
+        nextDueOn={routine.nextDueOn}
+        notes={routine.notes}
+        labels={labels}
+      />
+      <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label={common.remove} title={common.remove}>
         <Ban aria-hidden className="size-3.5" />
       </Pill>
     </div>

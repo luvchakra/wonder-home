@@ -19,11 +19,79 @@ import type { TeachState } from "../(auth)/configuration-actions";
  * being told it worked.
  */
 
-function Submit({ label }: { label: string }) {
+/**
+ * The forms' words in the viewer's language, built on the server by
+ * `configFormLabels` (story 22-004). What the household types — outcome
+ * names, member names — is never translated; the stored values behind a
+ * choice (an autonomy mode, a category) never change.
+ */
+export type ConfigFormLabels = {
+  saving: string;
+  nobodyYet: string;
+  outcome: string;
+  owner: string;
+  backup: string;
+  backupHint: string;
+  aiMode: string;
+  aiModes: Record<ResponsibilityInitial["aiMode"], string>;
+  aiModeHint: string;
+  priority: string;
+  priority1: string;
+  priority3: string;
+  priority5: string;
+  priorityHint: string;
+  saveChanges: string;
+  saveResponsibility: string;
+  name: string;
+  playbookNamePlaceholder: string;
+  playbookNameHint: string;
+  definition: string;
+  definitionPlaceholder: string;
+  definitionHint: string;
+  moreDetail: string;
+  fromHour: string;
+  toHour: string;
+  escalate: string;
+  escalateHint: string;
+  dependsOn: string;
+  dependsOnNothing: string;
+  dependsOnHint: string;
+  savePlaybook: string;
+  nextVersion: string;
+  governs: string;
+  /** Policy categories by their stored value. */
+  categories: Record<string, string>;
+  policyNamePlaceholder: string;
+  limit: string;
+  limitHint: string;
+  note: string;
+  notePlaceholder: string;
+  narrow: string;
+  appliesTo: string;
+  everyone: string;
+  adults: string;
+  children: string;
+  helpers: string;
+  appliesToHint: string;
+  saveNewVersion: string;
+  savePolicy: string;
+  teach: string;
+  teachPlaceholder: string;
+  teachHint: string;
+  teachSee: string;
+  whatYouCanSay: string;
+  saved: string;
+  yesDoThat: string;
+};
+
+/** The policy categories the form offers, in order, by their stored value. */
+const POLICY_CATEGORIES = ["spending", "privacy", "family_time", "notifications", "ai_autonomy", "safety"] as const;
+
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? "Saving…" : label}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }
@@ -82,17 +150,19 @@ export function ResponsibilityForm({
   members,
   outcomes = [],
   initial,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   members: MemberOption[];
+  labels: ConfigFormLabels;
   /** Outcomes offered when creating a new responsibility. Unused once `initial` is set. */
   outcomes?: { key: string; label: string }[];
   /** Editing an existing responsibility rather than creating one — the outcome is fixed. */
   initial?: ResponsibilityInitial;
 }) {
   const [state, formAction] = useActionState(action, {});
-  const people = [{ value: "", label: "Nobody yet" }, ...members.map((m) => ({ value: m.id, label: m.displayName }))];
+  const people = [{ value: "", label: labels.nobodyYet }, ...members.map((m) => ({ value: m.id, label: m.displayName }))];
 
   return (
     <form action={formAction} className="space-y-3">
@@ -102,47 +172,42 @@ export function ResponsibilityForm({
         <>
           <input type="hidden" name="outcomeKey" value={initial.outcomeKey} />
           <div className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Outcome</p>
+            <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{labels.outcome}</p>
             <p className="text-sm font-medium">{initial.outcomeLabel}</p>
           </div>
         </>
       ) : (
-        <Select label="Outcome" name="outcomeKey" options={outcomes.map((o) => ({ value: o.key, label: o.label }))} />
+        <Select label={labels.outcome} name="outcomeKey" options={outcomes.map((o) => ({ value: o.key, label: o.label }))} />
       )}
-      <Select label="Who owns it" name="primaryMemberId" options={people} defaultValue={initial?.primaryMemberId ?? undefined} />
+      <Select label={labels.owner} name="primaryMemberId" options={people} defaultValue={initial?.primaryMemberId ?? undefined} />
       <Select
-        label="Who covers for them"
+        label={labels.backup}
         name="backupMemberId"
         options={people}
         defaultValue={initial?.backupMemberId ?? undefined}
-        hint="Somebody other than the owner, or nobody."
+        hint={labels.backupHint}
       />
       <Select
-        label="How far WonderHome may go"
+        label={labels.aiMode}
         name="aiMode"
         defaultValue={initial?.aiMode ?? "prepare"}
-        options={[
-          { value: "observe", label: "Watch only" },
-          { value: "prepare", label: "Prepare, and leave it to me" },
-          { value: "approve", label: "Ask me before acting" },
-          { value: "execute", label: "Act, and tell me afterwards" },
-        ]}
-        hint="Autonomy never overrides a policy, whichever level you choose."
+        options={(["observe", "prepare", "approve", "execute"] as const).map((mode) => ({ value: mode, label: labels.aiModes[mode] }))}
+        hint={labels.aiModeHint}
       />
       <Select
-        label="Priority"
+        label={labels.priority}
         name="priority"
         defaultValue={String(initial?.priority ?? 3)}
         options={[
-          { value: "1", label: "1 — Most important" },
+          { value: "1", label: labels.priority1 },
           { value: "2", label: "2" },
-          { value: "3", label: "3 — Typical" },
+          { value: "3", label: labels.priority3 },
           { value: "4", label: "4" },
-          { value: "5", label: "5 — Least important" },
+          { value: "5", label: labels.priority5 },
         ]}
-        hint="Where this outcome sits against the household's others when more than one needs attention at once."
+        hint={labels.priorityHint}
       />
-      <Submit label={initial ? "Save changes" : "Save responsibility"} />
+      <Submit label={initial ? labels.saveChanges : labels.saveResponsibility} pendingLabel={labels.saving} />
     </form>
   );
 }
@@ -161,9 +226,11 @@ export function PlaybookForm({
   householdId,
   existing,
   initial,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
+  labels: ConfigFormLabels;
   /** Outcomes already in this household's playbook, offered as dependencies. */
   existing: { key: string; label: string }[];
   /** Editing an existing entry: its key stays put even if the name is reworded. */
@@ -177,50 +244,50 @@ export function PlaybookForm({
       <Outcome state={state} />
       <input type="hidden" name="householdId" value={householdId} />
       {initial ? <input type="hidden" name="outcomeKey" value={initial.outcomeKey} /> : null}
-      <Field label="Name" name="name" required maxLength={120} placeholder="Laundry ready" hint="What your family would call it." defaultValue={initial?.name} />
+      <Field label={labels.name} name="name" required maxLength={120} placeholder={labels.playbookNamePlaceholder} hint={labels.playbookNameHint} defaultValue={initial?.name} />
       <Field
-        label="What good looks like"
+        label={labels.definition}
         name="outcomeDefinition"
         required
         maxLength={500}
-        placeholder="Clean uniforms ready by Sunday evening."
-        hint="The state you want, in your own words — not the steps."
+        placeholder={labels.definitionPlaceholder}
+        hint={labels.definitionHint}
         defaultValue={initial?.outcomeDefinition}
       />
 
       <details open={Boolean(initial && (initial.startHour !== null || initial.escalateAfterHours !== null))} className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
         <summary className="cursor-pointer text-sm font-medium">
-          More detail, if it matters here (optional)
+          {labels.moreDetail}
         </summary>
         <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="From (hour)" name="startHour" type="number" min={0} max={23} placeholder="8" defaultValue={initial?.startHour ?? undefined} />
-            <Field label="To (hour)" name="endHour" type="number" min={0} max={23} placeholder="20" defaultValue={initial?.endHour ?? undefined} />
+            <Field label={labels.fromHour} name="startHour" type="number" min={0} max={23} placeholder="8" defaultValue={initial?.startHour ?? undefined} />
+            <Field label={labels.toHour} name="endHour" type="number" min={0} max={23} placeholder="20" defaultValue={initial?.endHour ?? undefined} />
           </div>
           <Field
-            label="Escalate after (hours)"
+            label={labels.escalate}
             name="escalateAfterHours"
             type="number"
             min={1}
             placeholder="12"
-            hint="How long it may be at risk before somebody is told. Leave empty for never."
+            hint={labels.escalateHint}
             defaultValue={initial?.escalateAfterHours ?? undefined}
           />
           {dependencies.length > 0 ? (
             <Select
-              label="What has to happen first"
+              label={labels.dependsOn}
               name="dependsOnKey"
               options={[
-                { value: "", label: "Nothing — it stands alone" },
+                { value: "", label: labels.dependsOnNothing },
                 ...dependencies.map((outcome) => ({ value: outcome.key, label: outcome.label })),
               ]}
-              hint="Planning waits for this one. A loop between two outcomes is refused."
+              hint={labels.dependsOnHint}
             />
           ) : null}
         </div>
       </details>
 
-      <Submit label={initial ? "Save changes" : "Save playbook entry"} />
+      <Submit label={initial ? labels.saveChanges : labels.savePlaybook} pendingLabel={labels.saving} />
     </form>
   );
 }
@@ -239,9 +306,11 @@ export function PolicyForm({
   action,
   householdId,
   initial,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
+  labels: ConfigFormLabels;
   /** Editing: a policy is never edited in place, so this saves the next version under the same name and category. */
   initial?: PolicyInitial;
 }) {
@@ -257,63 +326,56 @@ export function PolicyForm({
           <input type="hidden" name="category" value={initial.category} />
           <input type="hidden" name="name" value={initial.name} />
           <div className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{initial.category.replace(/_/g, " ")}</p>
+            <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{labels.categories[initial.category] ?? initial.category.replace(/_/g, " ")}</p>
             <p className="text-sm font-medium">{initial.name}</p>
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">Saving writes the next version; the one in force now stays on record.</p>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.nextVersion}</p>
           </div>
         </>
       ) : (
         <>
           <Select
-            label="What it governs"
+            label={labels.governs}
             name="category"
             defaultValue="spending"
-            options={[
-              { value: "spending", label: "Spending" },
-              { value: "privacy", label: "Privacy" },
-              { value: "family_time", label: "Family time" },
-              { value: "notifications", label: "Notifications" },
-              { value: "ai_autonomy", label: "AI autonomy" },
-              { value: "safety", label: "Safety" },
-            ]}
+            options={POLICY_CATEGORIES.map((category) => ({ value: category, label: labels.categories[category] ?? category }))}
           />
-          <Field label="Name" name="name" required maxLength={120} placeholder="Everyday spending" />
+          <Field label={labels.name} name="name" required maxLength={120} placeholder={labels.policyNamePlaceholder} />
         </>
       )}
       <Field
-        label="Limit (in paise, optional)"
+        label={labels.limit}
         name="limitMinor"
         type="number"
         min={0}
         placeholder="200000"
-        hint="₹2,000 is 200000. Above this, WonderHome asks."
+        hint={labels.limitHint}
         defaultValue={initial?.limitMinor ?? undefined}
       />
-      <Field label="Note" name="note" maxLength={300} placeholder="Why this rule exists." defaultValue={initial?.note ?? undefined} />
+      <Field label={labels.note} name="note" maxLength={300} placeholder={labels.notePlaceholder} defaultValue={initial?.note ?? undefined} />
 
       <details open={hasCondition} className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
-        <summary className="cursor-pointer text-sm font-medium">Narrow this to a specific case (optional)</summary>
+        <summary className="cursor-pointer text-sm font-medium">{labels.narrow}</summary>
         <div className="mt-3 space-y-3">
           <Select
-            label="Applies only to"
+            label={labels.appliesTo}
             name="conditionMemberType"
             defaultValue={initial?.conditionMemberType ?? ""}
             options={[
-              { value: "", label: "Everyone" },
-              { value: "adult", label: "Adults" },
-              { value: "child", label: "Children" },
-              { value: "helper", label: "Househelpers" },
+              { value: "", label: labels.everyone },
+              { value: "adult", label: labels.adults },
+              { value: "child", label: labels.children },
+              { value: "helper", label: labels.helpers },
             ]}
-            hint="A stricter version of the policy above, for one kind of person. Pick this or a time, not both."
+            hint={labels.appliesToHint}
           />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="From (hour)" name="conditionStartHour" type="number" min={0} max={23} placeholder="21" defaultValue={initial?.conditionStartHour ?? undefined} />
-            <Field label="To (hour)" name="conditionEndHour" type="number" min={0} max={23} placeholder="7" defaultValue={initial?.conditionEndHour ?? undefined} />
+            <Field label={labels.fromHour} name="conditionStartHour" type="number" min={0} max={23} placeholder="21" defaultValue={initial?.conditionStartHour ?? undefined} />
+            <Field label={labels.toHour} name="conditionEndHour" type="number" min={0} max={23} placeholder="7" defaultValue={initial?.conditionEndHour ?? undefined} />
           </div>
         </div>
       </details>
 
-      <Submit label={initial ? "Save new version" : "Save policy"} />
+      <Submit label={initial ? labels.saveNewVersion : labels.savePolicy} pendingLabel={labels.saving} />
     </form>
   );
 }
@@ -336,11 +398,13 @@ export function TeachForm({
   apply,
   householdId,
   shapes,
+  labels,
 }: {
   preview: (state: TeachState, formData: FormData) => Promise<TeachState>;
   apply: (state: TeachState, formData: FormData) => Promise<TeachState>;
   householdId: string;
   shapes: { example: string; does: string }[];
+  labels: ConfigFormLabels;
 }) {
   const [state, formAction] = useActionState(preview, {});
 
@@ -351,14 +415,14 @@ export function TeachForm({
         {state.notice && !state.proposal ? <Alert tone="info">{state.notice}</Alert> : null}
         <input type="hidden" name="householdId" value={householdId} />
         <Field
-          label="Tell WonderHome how the home runs"
+          label={labels.teach}
           name="utterance"
           required
           maxLength={300}
-          placeholder="Priya handles the school run from now on."
-          hint="Nothing changes until you have seen what it would do."
+          placeholder={labels.teachPlaceholder}
+          hint={labels.teachHint}
         />
-        <Submit label="See what that would do" />
+        <Submit label={labels.teachSee} pendingLabel={labels.saving} />
       </form>
 
       {state.question ? (
@@ -373,11 +437,11 @@ export function TeachForm({
       ) : null}
 
       {state.proposal ? (
-        <ApplyPanel apply={apply} householdId={householdId} proposal={state.proposal} notice={state.notice} />
+        <ApplyPanel apply={apply} householdId={householdId} proposal={state.proposal} notice={state.notice} labels={labels} />
       ) : null}
 
       <details className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-4">
-        <summary className="cursor-pointer text-sm font-medium">What you can say</summary>
+        <summary className="cursor-pointer text-sm font-medium">{labels.whatYouCanSay}</summary>
         <ul className="mt-2 space-y-2">
           {shapes.map((shape) => (
             <li key={shape.example} className="text-sm">
@@ -396,11 +460,13 @@ function ApplyPanel({
   householdId,
   proposal,
   notice,
+  labels,
 }: {
   apply: (state: TeachState, formData: FormData) => Promise<TeachState>;
   householdId: string;
   proposal: { utterance: string; summary: string; downstream: string[] };
   notice?: string;
+  labels: ConfigFormLabels;
 }) {
   const [state, formAction] = useActionState(apply, {});
   const shown = state.proposal ?? proposal;
@@ -412,7 +478,7 @@ function ApplyPanel({
       {notice && !state.notice ? <Alert tone="info">{notice}</Alert> : null}
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
 
-      <p className="text-sm font-semibold">{applied ? "Saved." : shown.summary}</p>
+      <p className="text-sm font-semibold">{applied ? labels.saved : shown.summary}</p>
       <ul className="space-y-1.5">
         {(applied ? (state.downstream ?? []) : shown.downstream).map((line) => (
           <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
@@ -424,7 +490,7 @@ function ApplyPanel({
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="utterance" value={shown.utterance} />
           <input type="hidden" name="agreedTo" value={shown.summary} />
-          <Submit label="Yes, do that" />
+          <Submit label={labels.yesDoThat} pendingLabel={labels.saving} />
         </>
       )}
     </form>

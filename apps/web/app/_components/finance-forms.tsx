@@ -22,10 +22,87 @@ import {
   saveBudgetAction,
   updateObligationAction,
 } from "../(auth)/finance-actions";
-import { BILL_KINDS, billKindLabel } from "../_lib/bill-kinds";
-import { CurrencyField } from "./currency-field";
+import { BILL_KINDS } from "../_lib/bill-kinds";
+import { CurrencyField, type CurrencyFieldLabels } from "./currency-field";
 
 const KINDS = BILL_KINDS;
+
+/**
+ * Every bill, transaction and budget sheet's words in the viewer's language,
+ * built on the server by `billFormLabels` (story 22-004). `{name}`,
+ * `{period}` and `{kind}` stay placeholders and are filled in here with the
+ * household's own bill names and periods, which are never translated.
+ */
+export type BillFormLabels = {
+  /** A bill kind's words by its stored value (`utility`, `school_fee`…). */
+  kinds: Record<string, string>;
+  /** The same, as it reads inside a sentence ("Remove the utility budget?"). */
+  kindsInSentence: Record<string, string>;
+  recurrence: { monthly: string; quarterly: string; yearly: string; one_off: string };
+  budgetPeriods: Record<BudgetInitial["period"], string>;
+  add: string;
+  addDescription: string;
+  addSubmit: string;
+  adding: string;
+  name: string;
+  namePlaceholder: string;
+  kind: string;
+  recurs: string;
+  payee: string;
+  payeePlaceholder: string;
+  amountOptional: string;
+  dueOptional: string;
+  edit: string;
+  editDescription: string;
+  saveChanges: string;
+  saving: string;
+  cancel: string;
+  payeeChoose: string;
+  notRecorded: string;
+  addPayee: string;
+  kindOptional: string;
+  kindChoose: string;
+  addKind: string;
+  kindNewPlaceholder: string;
+  owner: string;
+  noOne: string;
+  chooseExisting: string;
+  addTransaction: string;
+  addTransactionDescription: string;
+  whichBill: string;
+  period: string;
+  periodHint: string;
+  amount: string;
+  paidOn: string;
+  paidOnHint: string;
+  record: string;
+  recording: string;
+  editButton: string;
+  editTransaction: string;
+  transactionFor: string;
+  remove: string;
+  removeNamed: string;
+  removeTransaction: string;
+  removeTransactionDescription: string;
+  budgetSet: string;
+  budgetSetDescription: string;
+  budgetSave: string;
+  budgetFor: string;
+  budgetHowOften: string;
+  budgetUpTo: string;
+  budgetCurrencyNote: string;
+  /** A budget's name ("Utility budget"), only ever read inside `edit`/`removeNamed`. */
+  budgetName: string;
+  budgetEditDescription: string;
+  budgetRemoveTitle: string;
+  budgetRemoveDescription: string;
+  currency: CurrencyFieldLabels;
+};
+
+/** Fills `{name}`-style placeholders with the household's own words, which are never translated. */
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
+}
 
 export type ObligationInitial = {
   id: string;
@@ -48,12 +125,14 @@ function ObligationFields({
   initial,
   state,
   defaultCurrency = "INR",
+  labels,
 }: {
   householdId: string;
   initial?: ObligationInitial;
   state: ActionState;
   /** The household's currency, for a new bill (story 22-007). A bill already on record keeps its own. */
   defaultCurrency?: string;
+  labels: BillFormLabels;
 }) {
   return (
     <>
@@ -62,17 +141,17 @@ function ObligationFields({
       <input type="hidden" name="householdId" value={householdId} />
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
       <Field
-        label="What's the bill?"
+        label={labels.name}
         name="name"
         required
-        placeholder="Electricity"
+        placeholder={labels.namePlaceholder}
         autoComplete="off"
         defaultValue={initial?.name}
       />
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label htmlFor="kind" className="block text-sm font-medium">
-            Kind
+            {labels.kind}
           </label>
           <select
             id="kind"
@@ -82,7 +161,7 @@ function ObligationFields({
           >
             {KINDS.map((k) => (
               <option key={k.value} value={k.value}>
-                {k.label}
+                {labels.kinds[k.value] ?? k.label}
               </option>
             ))}
           </select>
@@ -90,7 +169,7 @@ function ObligationFields({
         {initial ? null : (
           <div className="space-y-1.5">
             <label htmlFor="recurrence" className="block text-sm font-medium">
-              Recurs
+              {labels.recurs}
             </label>
             <select
               id="recurrence"
@@ -98,24 +177,24 @@ function ObligationFields({
               defaultValue="monthly"
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
-              <option value="monthly">Monthly</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="yearly">Yearly</option>
-              <option value="one_off">One-off</option>
+              <option value="monthly">{labels.recurrence.monthly}</option>
+              <option value="quarterly">{labels.recurrence.quarterly}</option>
+              <option value="yearly">{labels.recurrence.yearly}</option>
+              <option value="one_off">{labels.recurrence.one_off}</option>
             </select>
           </div>
         )}
       </div>
       <Field
-        label="Payee (optional)"
+        label={labels.payee}
         name="payee"
-        placeholder="State Electricity Board"
+        placeholder={labels.payeePlaceholder}
         autoComplete="off"
         defaultValue={initial?.payee ?? undefined}
       />
       <div className="grid grid-cols-2 gap-3">
         <Field
-          label="Amount (optional)"
+          label={labels.amountOptional}
           name="amount"
           type="number"
           min={0}
@@ -125,10 +204,10 @@ function ObligationFields({
             initial?.amountMinor != null ? initial.amountMinor / 100 : undefined
           }
         />
-        <CurrencyField value={initial?.currency ?? defaultCurrency} />
+        <CurrencyField value={initial?.currency ?? defaultCurrency} labels={labels.currency} />
       </div>
       <Field
-        label="Due (optional)"
+        label={labels.dueOptional}
         name="dueOn"
         type="date"
         defaultValue={initial?.dueOn ?? undefined}
@@ -153,7 +232,15 @@ function Submit({
 }
 
 /** "Add a bill" as a sheet — there was no way onto this page's data without a live connector or the AI chat link. */
-export function AddBillButton({ householdId, defaultCurrency }: { householdId: string; defaultCurrency?: string }) {
+export function AddBillButton({
+  householdId,
+  defaultCurrency,
+  labels,
+}: {
+  householdId: string;
+  defaultCurrency?: string;
+  labels: BillFormLabels;
+}) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
     createObligationAction,
@@ -168,18 +255,18 @@ export function AddBillButton({ householdId, defaultCurrency }: { householdId: s
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Plus aria-hidden className="size-3.5" /> Add a bill
+        <Plus aria-hidden className="size-3.5" /> {labels.add}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Add a bill"
-        description="WonderHome tracks it from here — no connector needed."
+        title={labels.add}
+        description={labels.addDescription}
       >
         <form action={formAction} className="space-y-3">
-          <ObligationFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} />
-          <Submit label="Add bill" pendingLabel="Adding…" />
+          <ObligationFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} labels={labels} />
+          <Submit label={labels.addSubmit} pendingLabel={labels.adding} />
         </form>
       </Sheet>
     </>
@@ -190,9 +277,11 @@ export function AddBillButton({ householdId, defaultCurrency }: { householdId: s
 export function ObligationRowControls({
   householdId,
   bill,
+  labels,
 }: {
   householdId: string;
   bill: ObligationInitial;
+  labels: BillFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [editState, editAction] = useActionState<ActionState, FormData>(
@@ -203,6 +292,7 @@ export function ObligationRowControls({
     cancelObligationAction,
     {},
   );
+  const editLabel = fill(labels.edit, { name: bill.name });
 
   return (
     <div className="flex items-center gap-1.5">
@@ -210,15 +300,15 @@ export function ObligationRowControls({
         type="button"
         tone="quiet"
         onClick={() => setOpen(true)}
-        aria-label={`Edit ${bill.name}`}
-        title={`Edit ${bill.name}`}
+        aria-label={editLabel}
+        title={editLabel}
       >
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
       <form action={cancelAction}>
         <input type="hidden" name="id" value={bill.id} />
         <input type="hidden" name="householdId" value={householdId} />
-        <CancelSubmit name={bill.name} />
+        <CancelSubmit label={fill(labels.cancel, { name: bill.name })} />
       </form>
       {cancelState.error ? (
         <p className="text-xs text-[var(--wh-risk)]">{cancelState.error}</p>
@@ -227,25 +317,25 @@ export function ObligationRowControls({
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title={`Edit ${bill.name}`}
-        description="Change what WonderHome knows about this bill."
+        title={editLabel}
+        description={labels.editDescription}
       >
         <form action={editAction} className="space-y-3">
           <ObligationFields
             householdId={householdId}
             initial={bill}
             state={editState}
+            labels={labels}
           />
-          <Submit label="Save changes" pendingLabel="Saving…" />
+          <Submit label={labels.saveChanges} pendingLabel={labels.saving} />
         </form>
       </Sheet>
     </div>
   );
 }
 
-function CancelSubmit({ name }: { name: string }) {
+function CancelSubmit({ label }: { label: string }) {
   const { pending } = useFormStatus();
-  const label = `Cancel ${name}`;
   return (
     <Pill
       type="submit"
@@ -287,7 +377,13 @@ type TransactionChoices = {
   kindOptions: string[];
 };
 
-/** The words a bill's own kind is shown in, so a transaction defaults to the same ones. */
+/**
+ * The words a bill's own kind is written in on a transaction, so a
+ * transaction defaults to the same ones. A transaction's kind is free text
+ * the household keeps (rule 20), so these stay the stored English words in
+ * every language — like a grocery category, the list shows exactly what is
+ * saved, and translating it would change what gets written.
+ */
 function kindLabel(kind: string): string {
   return KINDS.find((k) => k.value === kind)?.label ?? kind.replace(/_/g, " ");
 }
@@ -303,9 +399,11 @@ function TransactionDetailFields({
   members,
   payeeOptions,
   kindOptions,
+  labels,
 }: TransactionChoices & {
   bill: TransactionBill | undefined;
   initial?: TransactionInitial;
+  labels: BillFormLabels;
 }) {
   const payee = initial ? (initial.payee ?? bill?.payee ?? undefined) : (bill?.payee ?? undefined);
   const kind = initial?.kind ?? (bill ? kindLabel(bill.kind) : undefined);
@@ -318,28 +416,30 @@ function TransactionDetailFields({
   return (
     <>
       <ComboboxField
-        label="Payee (optional)"
+        label={labels.payee}
         name="payee"
         options={withCurrent(payeeOptions, payee)}
         defaultValue={payee}
-        placeholder="Choose who was paid"
-        emptyLabel="Not recorded"
-        addNewLabel="Add a new payee…"
-        newValuePlaceholder="State Electricity Board"
+        placeholder={labels.payeeChoose}
+        emptyLabel={labels.notRecorded}
+        addNewLabel={labels.addPayee}
+        chooseExistingLabel={labels.chooseExisting}
+        newValuePlaceholder={labels.payeePlaceholder}
       />
       <div className="grid gap-3 sm:grid-cols-2">
         <ComboboxField
-          label="Kind (optional)"
+          label={labels.kindOptional}
           name="kind"
           options={withCurrent(kinds, kind)}
           defaultValue={kind}
-          placeholder="Choose a kind"
-          emptyLabel="Not recorded"
-          addNewLabel="Add a new kind…"
-          newValuePlaceholder="e.g. Maintenance"
+          placeholder={labels.kindChoose}
+          emptyLabel={labels.notRecorded}
+          addNewLabel={labels.addKind}
+          chooseExistingLabel={labels.chooseExisting}
+          newValuePlaceholder={labels.kindNewPlaceholder}
         />
-        <Select label="Owner (optional)" name="ownerMemberId" defaultValue={owner}>
-          <option value="">No one in particular</option>
+        <Select label={labels.owner} name="ownerMemberId" defaultValue={owner}>
+          <option value="">{labels.noOne}</option>
           {members.map((member) => (
             <option key={member.id} value={member.id}>
               {member.displayName}
@@ -360,12 +460,14 @@ export function AddTransactionButton({
   householdId,
   bills,
   defaultCurrency = "INR",
+  labels,
   ...choices
 }: TransactionChoices & {
   householdId: string;
   bills: TransactionBill[];
   /** For a bill with no currency of its own yet (story 22-007). */
   defaultCurrency?: string;
+  labels: BillFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -385,21 +487,21 @@ export function AddTransactionButton({
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Plus aria-hidden className="size-3.5" /> Add transaction
+        <Plus aria-hidden className="size-3.5" /> {labels.addTransaction}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Add transaction"
-        description="Record what a bill actually came to for a period."
+        title={labels.addTransaction}
+        description={labels.addTransactionDescription}
       >
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <Select
-            label="Which bill?"
+            label={labels.whichBill}
             name="obligationId"
             value={bill?.id}
             onChange={(event) => setBillId(event.target.value)}
@@ -411,17 +513,17 @@ export function AddTransactionButton({
             ))}
           </Select>
           <Field
-            label="Period"
+            label={labels.period}
             name="periodLabel"
             required
             placeholder="2026-09"
             defaultValue={currentPeriodLabel()}
             autoComplete="off"
-            hint="Whatever the bill's own cycle is — a month, a quarter, a term."
+            hint={labels.periodHint}
           />
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="Amount"
+              label={labels.amount}
               name="amount"
               type="number"
               min={0}
@@ -429,17 +531,17 @@ export function AddTransactionButton({
               required
               placeholder="2500"
             />
-            <CurrencyField key={`currency-${bill?.id}`} value={bill?.currency ?? defaultCurrency} required />
+            <CurrencyField key={`currency-${bill?.id}`} value={bill?.currency ?? defaultCurrency} required labels={labels.currency} />
           </div>
           {/* Keyed by bill, so choosing another bill brings in that bill's own payee, kind and owner. */}
-          <TransactionDetailFields key={bill?.id} bill={bill} {...choices} />
+          <TransactionDetailFields key={bill?.id} bill={bill} labels={labels} {...choices} />
           <Field
-            label="Paid on (optional)"
+            label={labels.paidOn}
             name="paidOn"
             type="date"
-            hint="When the household actually paid — separate from the period it covers."
+            hint={labels.paidOnHint}
           />
-          <Submit label="Record" pendingLabel="Recording…" />
+          <Submit label={labels.record} pendingLabel={labels.recording} />
         </form>
       </Sheet>
     </>
@@ -456,11 +558,13 @@ export function EditTransactionControl({
   householdId,
   bill,
   transaction,
+  labels,
   ...choices
 }: TransactionChoices & {
   householdId: string;
   bill: TransactionBill;
   transaction: TransactionInitial;
+  labels: BillFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -476,14 +580,14 @@ export function EditTransactionControl({
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Pencil aria-hidden className="size-3.5" /> Edit
+        <Pencil aria-hidden className="size-3.5" /> {labels.editButton}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Edit transaction"
-        description={`${bill.name} for ${transaction.periodLabel}.`}
+        title={labels.editTransaction}
+        description={fill(labels.transactionFor, { name: bill.name, period: transaction.periodLabel })}
       >
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
@@ -493,7 +597,7 @@ export function EditTransactionControl({
           <input type="hidden" name="periodLabel" value={transaction.periodLabel} />
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="Amount"
+              label={labels.amount}
               name="amount"
               type="number"
               min={0}
@@ -501,17 +605,17 @@ export function EditTransactionControl({
               required
               defaultValue={transaction.amountMinor / 100}
             />
-            <CurrencyField value={transaction.currency} required />
+            <CurrencyField value={transaction.currency} required labels={labels.currency} />
           </div>
-          <TransactionDetailFields bill={bill} initial={transaction} {...choices} />
+          <TransactionDetailFields bill={bill} initial={transaction} labels={labels} {...choices} />
           <Field
-            label="Paid on (optional)"
+            label={labels.paidOn}
             name="paidOn"
             type="date"
             defaultValue={transaction.paidOn ?? undefined}
-            hint="When the household actually paid — separate from the period it covers."
+            hint={labels.paidOnHint}
           />
-          <Submit label="Save changes" pendingLabel="Saving…" />
+          <Submit label={labels.saveChanges} pendingLabel={labels.saving} />
         </form>
       </Sheet>
     </>
@@ -526,10 +630,12 @@ export function RemoveTransactionControl({
   householdId,
   transaction,
   label,
+  labels,
 }: {
   householdId: string;
   transaction: TransactionInitial;
   label: string;
+  labels: BillFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
@@ -545,15 +651,15 @@ export function RemoveTransactionControl({
         onClick={() => setOpen(true)}
         className="gap-1.5 text-[var(--wh-risk)]"
       >
-        <Trash2 aria-hidden className="size-3.5" /> Remove
+        <Trash2 aria-hidden className="size-3.5" /> {labels.remove}
       </Pill>
 
       <ConfirmationSheet
         open={open}
         onOpenChange={setOpen}
-        title={`Remove this transaction?`}
-        description={`${label} for ${transaction.periodLabel} will no longer be recorded. This can't be undone, but you can always add it again.`}
-        confirmLabel="Remove"
+        title={labels.removeTransaction}
+        description={fill(labels.removeTransactionDescription, { name: label, period: transaction.periodLabel })}
+        confirmLabel={labels.remove}
         destructive
         pending={pending}
         onConfirm={() => {
@@ -578,22 +684,20 @@ export type BudgetInitial = {
   currency: string;
 };
 
-const BUDGET_PERIOD_OPTIONS = [
-  { value: "month", label: "Each month" },
-  { value: "quarter", label: "Each quarter" },
-  { value: "year", label: "Each year" },
-];
+const BUDGET_PERIODS: BudgetInitial["period"][] = ["month", "quarter", "year"];
 
 function BudgetFields({
   householdId,
   initial,
   state,
   defaultCurrency = "INR",
+  labels,
 }: {
   householdId: string;
   initial?: BudgetInitial;
   state: ActionState;
   defaultCurrency?: string;
+  labels: BillFormLabels;
 }) {
   const selectClass =
     "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
@@ -606,24 +710,24 @@ function BudgetFields({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label htmlFor="budget-category" className="block text-sm font-medium">
-            For
+            {labels.budgetFor}
           </label>
           <select id="budget-category" name="category" defaultValue={initial?.category ?? "utility"} className={selectClass}>
             {KINDS.map((k) => (
               <option key={k.value} value={k.value}>
-                {k.label}
+                {labels.kinds[k.value] ?? k.label}
               </option>
             ))}
           </select>
         </div>
         <div className="space-y-1.5">
           <label htmlFor="budget-period" className="block text-sm font-medium">
-            How often
+            {labels.budgetHowOften}
           </label>
           <select id="budget-period" name="period" defaultValue={initial?.period ?? "month"} className={selectClass}>
-            {BUDGET_PERIOD_OPTIONS.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
+            {BUDGET_PERIODS.map((period) => (
+              <option key={period} value={period}>
+                {labels.budgetPeriods[period]}
               </option>
             ))}
           </select>
@@ -631,7 +735,7 @@ function BudgetFields({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field
-          label="Up to"
+          label={labels.budgetUpTo}
           name="amount"
           type="number"
           min={0.01}
@@ -640,28 +744,34 @@ function BudgetFields({
           placeholder="5000"
           defaultValue={initial ? initial.limitMinor / 100 : undefined}
         />
-        <CurrencyField value={initial?.currency ?? defaultCurrency} />
+        <CurrencyField value={initial?.currency ?? defaultCurrency} labels={labels.currency} />
       </div>
-      <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        Only payments in this currency count towards it. Nothing is converted.
-      </p>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.budgetCurrencyNote}</p>
     </>
   );
 }
 
 /** "Set a budget" — planning only; a budget never blocks a bill. */
-export function AddBudgetButton({ householdId, defaultCurrency }: { householdId: string; defaultCurrency?: string }) {
+export function AddBudgetButton({
+  householdId,
+  defaultCurrency,
+  labels,
+}: {
+  householdId: string;
+  defaultCurrency?: string;
+  labels: BillFormLabels;
+}) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(saveBudgetAction, {});
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Set a budget
+        <Plus aria-hidden className="size-3.5" /> {labels.budgetSet}
       </Pill>
-      <Sheet open={open} onOpenChange={setOpen} title="Set a budget" description="What the household means to spend on one kind of bill. It never stops a bill being paid.">
+      <Sheet open={open} onOpenChange={setOpen} title={labels.budgetSet} description={labels.budgetSetDescription}>
         <form action={formAction} className="space-y-3">
-          <BudgetFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} />
-          <Submit label="Save budget" pendingLabel="Saving…" />
+          <BudgetFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} labels={labels} />
+          <Submit label={labels.budgetSave} pendingLabel={labels.saving} />
         </form>
       </Sheet>
     </>
@@ -669,32 +779,44 @@ export function AddBudgetButton({ householdId, defaultCurrency }: { householdId:
 }
 
 /** Changing or removing a budget already set — the other two thirds of "Set a budget". */
-export function BudgetRowControls({ householdId, budget }: { householdId: string; budget: BudgetInitial }) {
+export function BudgetRowControls({
+  householdId,
+  budget,
+  labels,
+}: {
+  householdId: string;
+  budget: BudgetInitial;
+  labels: BillFormLabels;
+}) {
   const [editOpen, setEditOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [editState, editAction] = useActionState<ActionState, FormData>(saveBudgetAction, {});
   const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(retireBudgetAction, {});
-  const name = `${billKindLabel(budget.category)} budget`;
+  // A stored kind this screen does not know is shown as it was saved, never translated.
+  const kind = labels.kinds[budget.category] ?? budget.category;
+  const name = fill(labels.budgetName, { kind });
+  const editLabel = fill(labels.edit, { name });
+  const removeLabel = fill(labels.removeNamed, { name });
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      <Pill type="button" tone="quiet" onClick={() => setEditOpen(true)} aria-label={`Edit ${name}`} title={`Edit ${name}`}>
+      <Pill type="button" tone="quiet" onClick={() => setEditOpen(true)} aria-label={editLabel} title={editLabel}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
-      <Pill type="button" tone="quiet" onClick={() => setRemoveOpen(true)} aria-label={`Remove ${name}`} title={`Remove ${name}`}>
+      <Pill type="button" tone="quiet" onClick={() => setRemoveOpen(true)} aria-label={removeLabel} title={removeLabel}>
         <Trash2 aria-hidden className="size-3.5" />
       </Pill>
-      <Sheet open={editOpen} onOpenChange={setEditOpen} title={`Edit ${name}`} description="Change the kind of bill, how often, or the amount.">
+      <Sheet open={editOpen} onOpenChange={setEditOpen} title={editLabel} description={labels.budgetEditDescription}>
         <form action={editAction} className="space-y-3">
-          <BudgetFields householdId={householdId} initial={budget} state={editState} />
-          <Submit label="Save changes" pendingLabel="Saving…" />
+          <BudgetFields householdId={householdId} initial={budget} state={editState} labels={labels} />
+          <Submit label={labels.saveChanges} pendingLabel={labels.saving} />
         </form>
       </Sheet>
       <ConfirmationSheet
         open={removeOpen}
         onOpenChange={setRemoveOpen}
-        title={`Remove the ${name.toLowerCase()}?`}
-        description="Bills and payments stay exactly as they are. You can set it again any time."
-        confirmLabel="Remove"
+        title={fill(labels.budgetRemoveTitle, { kind: labels.kindsInSentence[budget.category] ?? budget.category })}
+        description={labels.budgetRemoveDescription}
+        confirmLabel={labels.remove}
         destructive
         pending={removing}
         onConfirm={() => {

@@ -2,7 +2,8 @@ import { ListChecks, Scale } from "lucide-react";
 import Link from "next/link";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
-import { findImbalances, formatPerWeek, memberLoads, suggestRebalance } from "@wonderhome/core/household/workload";
+import { findImbalances, memberLoads, suggestRebalance } from "@wonderhome/core/household/workload";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
@@ -15,7 +16,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AcceptRebalanceButton, AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
 import { cadenceLabel } from "../../_lib/cadence";
-import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
+import { perWeekWords, responsibilityLabels, starterOutcomes } from "../../_lib/manage-labels";
 import { requireSession, type Session } from "../../_lib/session";
 
 export const metadata = { title: "Responsibilities" };
@@ -41,6 +42,7 @@ type Row = {
 function groupByOwner(
   rows: Row[],
   members: { id: string; displayName: string }[],
+  nobodyYet: string,
 ): { ownerId: string | null; ownerName: string; rows: Row[] }[] {
   const byOwner = new Map<string | null, Row[]>();
   for (const row of rows) {
@@ -55,7 +57,7 @@ function groupByOwner(
     .filter((group) => group.rows.length > 0);
 
   const unowned = byOwner.get(null) ?? [];
-  if (unowned.length > 0) groups.push({ ownerId: null, ownerName: "Nobody yet", rows: unowned });
+  if (unowned.length > 0) groups.push({ ownerId: null, ownerName: nobodyYet, rows: unowned });
 
   return groups;
 }
@@ -67,18 +69,19 @@ function groupByOwner(
  */
 export default async function ResponsibilitiesPage({ searchParams }: { searchParams: Promise<{ tab?: string; outcome?: string }> }) {
   const [{ tab, outcome }, session] = await Promise.all([searchParams, requireSession("/household/responsibilities")]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   // A responsibility opened from elsewhere (Family status) always lands on
   // "all", whatever tab param it might otherwise carry — the outcome could
   // belong to any member, not just this viewer.
   const active = outcome ? "all" : tab === "mine" || tab === "family" ? tab : "all";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/responsibilities", back: { href: "/more", label: "Back" }, title: "Responsibilities" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/responsibilities", back: { href: "/more", label: t("common.back") }, title: t("nav.item.responsibilities") };
 
   if (view.tone === "child") {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ListChecks} title="Not available to you" description="Responsibilities are set by the adults in the household." />
+        <EmptyState icon={ListChecks} title={t("manage.resp.notForYou")} description={t("manage.resp.notForYouLede")} />
       </AppShell>
     );
   }
@@ -104,7 +107,7 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
   if (responsibilityRows.failed) {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ListChecks} title="Responsibilities could not be loaded" description="Nothing has changed. Try again in a moment." />
+        <EmptyState icon={ListChecks} title={t("manage.resp.loadFailed")} description={t("manage.nothingChangedTryAgain")} />
       </AppShell>
     );
   }
@@ -117,12 +120,12 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
   // the platform's own bare error page (requirements §49: error is always
   // one of the three states a screen shows, never a raw crash).
   try {
-    return renderResponsibilities({ shell, membership, active, responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId, openOutcomeKey: outcome ?? null });
+    return renderResponsibilities({ shell, membership, active, responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId, openOutcomeKey: outcome ?? null, t });
   } catch (thrown) {
     console.error("Responsibilities page failed to render", thrown);
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ListChecks} title="Responsibilities could not be loaded" description="Nothing has changed. Try again in a moment." />
+        <EmptyState icon={ListChecks} title={t("manage.resp.loadFailed")} description={t("manage.nothingChangedTryAgain")} />
       </AppShell>
     );
   }
@@ -139,7 +142,9 @@ function renderResponsibilities({
   admin,
   householdId,
   openOutcomeKey,
+  t,
 }: {
+  t: Translate;
   shell: { active: "more"; viewer: Session["viewer"]; secondary: Session["secondary"]; pathname: string; back: { href: string; label: string }; title: string };
   membership: Session["membership"];
   active: "all" | "mine" | "family";
@@ -164,7 +169,7 @@ function renderResponsibilities({
   const alreadyAssigned = new Set(rows.map((row) => row.outcome_key));
   const addable = [
     ...playbook.map((outcome) => ({ key: outcome.key, label: outcome.name })),
-    ...STARTER_OUTCOMES.filter((starter) => !playbook.some((outcome) => outcome.key === starter.key)),
+    ...starterOutcomes(t).filter((starter) => !playbook.some((outcome) => outcome.key === starter.key)),
   ].filter((outcome) => !alreadyAssigned.has(outcome.key));
   const memberOptions = members.map((member) => ({ id: member.id, displayName: member.displayName }));
 
@@ -186,41 +191,43 @@ function renderResponsibilities({
   const suggestions = suggestRebalance(workloadMembers, workloadOutcomes);
   const imbalances = findImbalances(memberLoads(workloadMembers, workloadOutcomes));
   const titleOf = (key: string) => workloadOutcomes.find((outcome) => outcome.outcomeKey === key)?.name ?? key;
+  const labels = responsibilityLabels(t);
+  const nobodyYet = t("manage.resp.nobodyYet");
+  const theBackup = t("manage.resp.theBackup");
+  const perWeek = (value: number) => perWeekWords(value, t);
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Responsibilities</h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">Clear roles, less chaos. Outcomes, not checklists.</p>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.responsibilities")}</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.resp.lede")}</p>
           </div>
           {admin ? (
             <div className="flex flex-wrap gap-2">
               {addable.length > 0 ? (
-                <AddResponsibilityButton householdId={householdId} members={memberOptions} outcomes={addable} />
+                <AddResponsibilityButton householdId={householdId} members={memberOptions} outcomes={addable} labels={labels} />
               ) : null}
             </div>
           ) : null}
         </header>
 
         <SegmentedControl
-          label="Whose responsibilities"
+          label={t("manage.resp.whose")}
           active={active}
           segments={[
-            { key: "all", label: "All", href: "/household/responsibilities", count: rows.length },
-            { key: "mine", label: "Mine", href: "/household/responsibilities?tab=mine", count: rows.filter(isMine).length },
-            { key: "family", label: "Family", href: "/household/responsibilities?tab=family" },
+            { key: "all", label: t("manage.resp.tab.all"), href: "/household/responsibilities", count: rows.length },
+            { key: "mine", label: t("manage.resp.tab.mine"), href: "/household/responsibilities?tab=mine", count: rows.filter(isMine).length },
+            { key: "family", label: t("manage.resp.tab.family"), href: "/household/responsibilities?tab=family" },
           ]}
         />
 
         {conflicts.length > 0 && active === "all" ? (
           <Card className="space-y-2 bg-[var(--wh-attention-soft)]/60 p-4">
             <div className="flex items-center gap-3">
-              <Badge tone="attention">{conflicts.length} to fix</Badge>
-              <p className="text-sm text-[var(--wh-foreground-muted)]">
-                The household has changed since these were set. Each needs one decision.
-              </p>
+              <Badge tone="attention">{t("manage.resp.toFix", { count: conflicts.length })}</Badge>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.resp.conflictsLede")}</p>
             </div>
             <ul className="divide-y divide-[var(--wh-border-strong)]/40">
               {conflicts.map((conflict) => (
@@ -251,14 +258,14 @@ function renderResponsibilities({
 
         {gaps.length > 0 && active === "all" ? (
           <Card className="flex items-center gap-3 bg-[var(--wh-attention-soft)]/60 p-4">
-            <Badge tone="attention">{gaps.length} unowned</Badge>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">Some outcomes have nobody responsible. Assign them so WonderHome knows who to ask.</p>
+            <Badge tone="attention">{t("manage.resp.unownedCount", { count: gaps.length })}</Badge>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.resp.unownedLede")}</p>
           </Card>
         ) : null}
 
         {active === "all" && (imbalances.length > 0 || suggestions.length > 0) ? (
           <section>
-            <SectionHeader title="Share the load" />
+            <SectionHeader title={t("manage.resp.shareLoad")} />
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {suggestions.map((suggestion) => (
@@ -266,8 +273,15 @@ function renderResponsibilities({
                     key={suggestion.outcomeKey}
                     icon={Scale}
                     tone="people"
-                    title={`${titleOf(suggestion.outcomeKey)}: ${nameOf(suggestion.toMemberId) ?? "the backup"} could take it`}
-                    meta={suggestion.reason}
+                    title={t("manage.resp.couldTake", { outcome: titleOf(suggestion.outcomeKey), name: nameOf(suggestion.toMemberId) ?? theBackup })}
+                    meta={t("manage.resp.swapReason", {
+                      from: nameOf(suggestion.fromMemberId) ?? "",
+                      to: nameOf(suggestion.toMemberId) ?? theBackup,
+                      fromLoad: perWeek(suggestion.before.from),
+                      toLoad: perWeek(suggestion.before.to),
+                      fromAfter: perWeek(suggestion.after.from),
+                      toAfter: perWeek(suggestion.after.to),
+                    })}
                     action={
                       admin ? (
                         <AcceptRebalanceButton
@@ -275,7 +289,8 @@ function renderResponsibilities({
                           outcomeKey={suggestion.outcomeKey}
                           fromMemberId={suggestion.fromMemberId}
                           toMemberId={suggestion.toMemberId}
-                          toName={nameOf(suggestion.toMemberId) ?? "the backup"}
+                          toName={nameOf(suggestion.toMemberId) ?? theBackup}
+                          labels={labels}
                         />
                       ) : undefined
                     }
@@ -288,8 +303,15 @@ function renderResponsibilities({
                       key={imbalance.group}
                       icon={Scale}
                       tone="people"
-                      title={`${imbalance.heaviest.displayName} carries the most`}
-                      meta={`${capitalise(formatPerWeek(imbalance.heaviest.perWeek))} a week across ${imbalance.heaviest.outcomes} ${imbalance.heaviest.outcomes === 1 ? "outcome" : "outcomes"}, against ${formatPerWeek(imbalance.lightest.perWeek)} for ${imbalance.lightest.displayName}. Give some of them a backup, and WonderHome can suggest a fair swap.`}
+                      title={t("manage.resp.carriesMost", { name: imbalance.heaviest.displayName })}
+                      meta={capitalise(
+                        t("manage.resp.imbalance", {
+                          count: imbalance.heaviest.outcomes,
+                          load: perWeek(imbalance.heaviest.perWeek),
+                          lightLoad: perWeek(imbalance.lightest.perWeek),
+                          lightName: imbalance.lightest.displayName,
+                        }),
+                      )}
                     />
                   ))}
               </ul>
@@ -298,10 +320,10 @@ function renderResponsibilities({
         ) : null}
 
         {shown.length === 0 ? (
-          <EmptyState icon={ListChecks} title={rows.length === 0 ? "No responsibilities defined yet" : "Nothing here"} description={rows.length === 0 ? "Start from the playbook: each outcome gets an owner, a backup and how much WonderHome may do on its own." : "Nothing matches this view."} action={admin && rows.length === 0 ? <PillLink href="/household">Set up the playbook</PillLink> : null} />
+          <EmptyState icon={ListChecks} title={rows.length === 0 ? t("manage.resp.emptyTitle") : t("manage.resp.nothingHere")} description={rows.length === 0 ? t("manage.resp.emptyLede") : t("manage.resp.nothingMatches")} action={admin && rows.length === 0 ? <PillLink href="/household">{t("manage.resp.setUpPlaybook")}</PillLink> : null} />
         ) : (
           <div className="space-y-4">
-            {groupByOwner(shown, members).map((group) => (
+            {groupByOwner(shown, members, nobodyYet).map((group) => (
               <div key={group.ownerId ?? "unowned"} className="space-y-2">
                 <p className="px-1 text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
                   {group.ownerName} · {group.rows.length}
@@ -316,13 +338,16 @@ function renderResponsibilities({
                           key={row.id}
                           outcomeKey={row.outcome_key}
                           autoOpen={row.outcome_key === openOutcomeKey}
+                          labels={labels}
                           card={{
                             title,
-                            owner: nameOf(row.primary_member_id) ?? "Nobody yet",
+                            owner: nameOf(row.primary_member_id) ?? nobodyYet,
                             backup: nameOf(row.backup_member_id),
+                            backupLabel: nameOf(row.backup_member_id) ? t("manage.resp.backupOf", { name: nameOf(row.backup_member_id)! }) : undefined,
                             frequency: cadenceLabel(item?.cadence),
                             aiMode: row.ai_mode,
-                            action: !row.primary_member_id ? <Badge tone="attention">Unowned</Badge> : undefined,
+                            aiModeLabel: t(`manage.aiModeShort.${row.ai_mode}`),
+                            action: !row.primary_member_id ? <Badge tone="attention">{t("manage.resp.unowned")}</Badge> : undefined,
                           }}
                           definition={item?.outcome_definition}
                           editable={admin}
@@ -347,47 +372,21 @@ function renderResponsibilities({
         )}
 
         <section>
-          <SectionHeader title="How much WonderHome does on its own" />
+          <SectionHeader title={t("manage.resp.howMuch")} />
           <Card className="space-y-3 text-sm text-[var(--wh-foreground-muted)]">
-            <p>For each outcome above, you choose how far WonderHome may go without asking:</p>
+            <p>{t("manage.resp.howMuchLede")}</p>
             <div className="space-y-2.5">
-              <p>
-                <span className="font-semibold text-[var(--wh-foreground)]">Watch only</span> — it notices a
-                problem and tells you. It does nothing else.
-                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
-                  e.g. Bills paid on time: it notices a bill is overdue and tells you — it never calls the
-                  provider or pays anything itself.
-                </span>
-              </p>
-              <p>
-                <span className="font-semibold text-[var(--wh-foreground)]">Prepare, and leave it to me</span> —
-                it gets everything ready (an order, a plan) and waits for you to send it.
-                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
-                  e.g. Groceries stocked: it drafts the shopping list from what is running low and waits for you
-                  to send it.
-                </span>
-              </p>
-              <p>
-                <span className="font-semibold text-[var(--wh-foreground)]">Ask me before acting</span> — it does
-                the work the moment you say yes.
-                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
-                  e.g. Home maintenance: it finds an available plumber slot and books it the moment you approve.
-                </span>
-              </p>
-              <p>
-                <span className="font-semibold text-[var(--wh-foreground)]">Act, and tell me afterwards</span> —
-                it goes ahead on its own and reports back. Payments and access changes always ask first, however
-                you set this.
-                <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">
-                  e.g. Dinner ready: it swaps tonight&rsquo;s meal when an ingredient runs out, and tells you
-                  what changed afterwards.
-                </span>
-              </p>
+              {(["observe", "prepare", "approve", "execute"] as const).map((mode) => (
+                <p key={mode}>
+                  <span className="font-semibold text-[var(--wh-foreground)]">{t(`manage.aiMode.${mode}`)}</span> — {t(`manage.resp.how.${mode}`)}
+                  <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">{t(`manage.resp.example.${mode}`)}</span>
+                </p>
+              ))}
             </div>
           </Card>
         </section>
 
-        <QuoteCard>Clear roles. A smoother home.</QuoteCard>
+        <QuoteCard>{t("manage.resp.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

@@ -19,10 +19,9 @@ import {
   healthRecordsAgenda,
   healthRoutinesAgenda,
   healthVitalsAgenda,
-  VITAL_TYPE_LABEL,
 } from "@wonderhome/core/health/agenda";
 import { listCheckups } from "@wonderhome/core/health/checkups";
-import { FITNESS_ACTIVITY_LABEL, listFitnessGoals, listFitnessSessions } from "@wonderhome/core/health/fitness";
+import { listFitnessGoals, listFitnessSessions } from "@wonderhome/core/health/fitness";
 import { listIssues } from "@wonderhome/core/health/issues";
 import { listRoutines } from "@wonderhome/core/health/measurement-routines";
 import { listRecords } from "@wonderhome/core/health/records";
@@ -50,6 +49,7 @@ import { AddIssueButton, EditIssueButton, IssueStatusActions } from "../_compone
 import { AddRoutineButton, RoutineActions } from "../_components/health-measurement-routine-forms";
 import { AddRecordButton, RecordActions } from "../_components/health-record-forms";
 import { AddVitalButton, VitalActions } from "../_components/health-vital-forms";
+import { healthFormLabels } from "../_lib/health-form-labels";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "Health & Fitness" };
@@ -69,21 +69,22 @@ export default async function HealthPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const [{ tab }, session] = await Promise.all([searchParams, requireSession("/health")]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const shell = {
     active: "more" as const,
     viewer,
     secondary,
     pathname: "/health",
-    back: { href: "/more", label: "Back" },
-    title: "Health & Fitness",
+    back: { href: "/more", label: t("common.back") },
+    title: t("nav.item.health"),
   };
 
   if (view.tone === "child") {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={HeartPulse} tone="health" title="Not available to you" description="Health & Fitness is for the adults in the household." />
+        <EmptyState icon={HeartPulse} tone="health" title={t("health.notAvailable")} description={t("health.notAvailableLede")} />
       </AppShell>
     );
   }
@@ -92,7 +93,7 @@ export default async function HealthPage({
   if (!entitlement.allowed) {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={HeartPulse} tone="health" title="Health & Fitness is not part of this plan" description={entitlement.reason} />
+        <EmptyState icon={HeartPulse} tone="health" title={t("health.notInPlan")} description={entitlement.reason} />
       </AppShell>
     );
   }
@@ -117,7 +118,14 @@ export default async function HealthPage({
     listFitnessSessions(supabase, householdId, { statuses: ["active", "archived"] }).catch(() => []),
   ]);
 
-  const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? "Someone";
+  // The sheets' words in the viewer's language; the vital and activity names
+  // below are the same ones the sheets show, so a row and its sheet agree.
+  const formLabels = healthFormLabels(t, locale.preferences.language);
+  const nameOf = (id: string) => members.find((member) => member.id === id)?.displayName ?? t("health.someone");
+  const vitalLabel = (item: { vitalType: keyof typeof formLabels.vitalTypes; customLabel: string | null }) =>
+    item.vitalType === "custom" ? (item.customLabel ?? formLabels.vitalTypes.custom) : formLabels.vitalTypes[item.vitalType];
+  const activityLabel = (item: { activityType: keyof typeof formLabels.activityTypes; customLabel: string | null }) =>
+    item.activityType === "other" ? (item.customLabel ?? formLabels.activityTypes.other) : formLabels.activityTypes[item.activityType];
   const candidates = members
     .filter((member) => member.id !== memberId)
     .map((member) => ({ id: member.id, displayName: member.displayName }));
@@ -142,40 +150,40 @@ export default async function HealthPage({
   const fitnessSessionById = new Map(fitnessSessions.map((session) => [session.id, session]));
   const activeFitnessGoals = fitnessGoals
     .filter((goal) => goal.status === "active")
-    .map((goal) => ({ id: goal.id, label: goal.activityType === "other" ? (goal.customLabel ?? "Activity") : FITNESS_ACTIVITY_LABEL[goal.activityType] }));
+    .map((goal) => ({ id: goal.id, label: activityLabel(goal) }));
   const memberList = members.map((m) => ({ id: m.id, displayName: m.displayName }));
 
   const sections = [
     {
       key: "attention",
-      title: "Needs attention",
+      title: t("health.section.attention"),
       icon: HeartPulse,
       tone: "attention" as const,
-      description: "An overdue checkup, an unconfirmed appointment, something worth a look — none yet.",
+      description: t("health.section.attentionLede"),
       items: [...appointmentAgenda.needsAttention, ...issueAgenda.needsAttention, ...checkupAgenda.needsAttention, ...routineAgenda.needsAttention],
     },
     {
       key: "coming_up",
-      title: "Coming up",
+      title: t("health.section.comingUp"),
       icon: CalendarClock,
       tone: "health" as const,
-      description: "Appointments and preventive care land here once you add them.",
+      description: t("health.section.comingUpLede"),
       items: [...appointmentAgenda.comingUp, ...checkupAgenda.comingUp, ...routineAgenda.comingUp],
     },
     {
       key: "monitoring",
-      title: "Monitoring",
+      title: t("health.section.monitoring"),
       icon: Clock,
       tone: "care" as const,
-      description: "A health issue you're keeping an eye on shows up here.",
+      description: t("health.section.monitoringLede"),
       items: issueAgenda.monitoring,
     },
     {
       key: "recent",
-      title: "Recent",
+      title: t("health.section.recent"),
       icon: CircleCheck,
       tone: "handled" as const,
-      description: "Nothing recorded yet.",
+      description: t("health.section.recentLede"),
       items: [...appointmentAgenda.recent, ...issueAgenda.recent, ...checkupAgenda.recent, ...recordAgenda, ...vitalAgenda, ...routineAgenda.recent, ...fitnessGoalAgenda, ...fitnessSessionAgenda],
     },
   ];
@@ -185,29 +193,29 @@ export default async function HealthPage({
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Health &amp; Fitness</h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">Stay on top, without having to keep track of everything yourself.</p>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.health")}</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("health.lede")}</p>
           </div>
           {active === "overview" ? (
             <div className="flex flex-wrap gap-2">
-              <AddIssueButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
-              <AddCheckupButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
-              <AddVitalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
-              <AddRoutineButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
-              <AddFitnessGoalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
-              <LogFitnessSessionButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} goals={activeFitnessGoals} />
-              <AddRecordButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
-              <BookAppointmentButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} />
+              <AddIssueButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
+              <AddCheckupButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
+              <AddVitalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
+              <AddRoutineButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
+              <AddFitnessGoalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
+              <LogFitnessSessionButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} goals={activeFitnessGoals} labels={formLabels} />
+              <AddRecordButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
+              <BookAppointmentButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
             </div>
           ) : null}
         </header>
 
         <SegmentedControl
-          label="Health view"
+          label={t("health.view")}
           active={active}
           segments={[
-            { key: "overview", label: "Overview", href: "/health" },
-            { key: "privacy", label: "Privacy", href: "/health?tab=privacy" },
+            { key: "overview", label: t("health.tab.overview"), href: "/health" },
+            { key: "privacy", label: t("health.tab.privacy"), href: "/health?tab=privacy" },
           ]}
         />
 
@@ -217,7 +225,7 @@ export default async function HealthPage({
               <section key={section.key}>
                 <SectionHeader title={section.title} count={section.items.length || undefined} />
                 {section.items.length === 0 ? (
-                  <EmptyState icon={section.icon} tone={section.tone} title="Nothing here yet" description={section.description} />
+                  <EmptyState icon={section.icon} tone={section.tone} title={t("health.emptyTitle")} description={section.description} />
                 ) : (
                   <Card className="p-2">
                     <ul className="divide-y divide-[var(--wh-border)]">
@@ -233,7 +241,7 @@ export default async function HealthPage({
                               meta={item.reason}
                               action={
                                 checkup && section.key !== "recent" ? (
-                                  <CheckupActions householdId={householdId} checkup={checkup} members={memberList} defaultPrivacyScope={currentScope} />
+                                  <CheckupActions householdId={householdId} checkup={checkup} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
                                 ) : null
                               }
                             />
@@ -252,8 +260,15 @@ export default async function HealthPage({
                               action={
                                 issue && section.key !== "recent" ? (
                                   <div className="flex items-center gap-1.5">
-                                    <IssueStatusActions householdId={householdId} issueId={issue.id} status={issue.status} />
-                                    <EditIssueButton householdId={householdId} issueId={issue.id} label={issue.label} description={issue.description} notes={issue.notes} />
+                                    <IssueStatusActions householdId={householdId} issueId={issue.id} status={issue.status} labels={formLabels} />
+                                    <EditIssueButton
+                                      householdId={householdId}
+                                      issueId={issue.id}
+                                      label={issue.label}
+                                      description={issue.description}
+                                      notes={issue.notes}
+                                      labels={formLabels}
+                                    />
                                   </div>
                                 ) : null
                               }
@@ -276,10 +291,7 @@ export default async function HealthPage({
                                 // no completion has no other home, so its
                                 // "Bring back" stays reachable here too.
                                 routine && (section.key !== "recent" || routine.status === "dismissed") ? (
-                                  <RoutineActions
-                                    householdId={householdId}
-                                    routine={{ ...routine, label: routine.vitalType === "custom" ? (routine.customLabel ?? "Measurement") : VITAL_TYPE_LABEL[routine.vitalType] }}
-                                  />
+                                  <RoutineActions householdId={householdId} routine={{ ...routine, label: vitalLabel(routine) }} labels={formLabels} />
                                 ) : null
                               }
                             />
@@ -302,10 +314,7 @@ export default async function HealthPage({
                               meta={item.reason}
                               action={
                                 vital ? (
-                                  <VitalActions
-                                    householdId={householdId}
-                                    vital={{ ...vital, label: vital.vitalType === "custom" ? (vital.customLabel ?? "Measurement") : VITAL_TYPE_LABEL[vital.vitalType] }}
-                                  />
+                                  <VitalActions householdId={householdId} vital={{ ...vital, label: vitalLabel(vital) }} labels={formLabels} />
                                 ) : null
                               }
                             />
@@ -331,12 +340,13 @@ export default async function HealthPage({
                                     householdId={householdId}
                                     goal={{
                                       id: goal.id,
-                                      label: goal.activityType === "other" ? (goal.customLabel ?? "Activity") : FITNESS_ACTIVITY_LABEL[goal.activityType],
+                                      label: activityLabel(goal),
                                       targetCount: goal.targetCount,
                                       frequencyPeriod: goal.frequencyPeriod,
                                       notes: goal.notes,
                                       status: goal.status,
                                     }}
+                                    labels={formLabels}
                                   />
                                 ) : null
                               }
@@ -362,16 +372,14 @@ export default async function HealthPage({
                                     householdId={householdId}
                                     session={{
                                       id: fitnessSession.id,
-                                      label:
-                                        fitnessSession.activityType === "other"
-                                          ? (fitnessSession.customLabel ?? "Activity")
-                                          : FITNESS_ACTIVITY_LABEL[fitnessSession.activityType],
+                                      label: activityLabel(fitnessSession),
                                       durationMinutes: fitnessSession.durationMinutes,
                                       distanceValue: fitnessSession.distanceValue,
                                       distanceUnit: fitnessSession.distanceUnit,
                                       notes: fitnessSession.notes,
                                       status: fitnessSession.status,
                                     }}
+                                    labels={formLabels}
                                   />
                                 ) : null
                               }
@@ -394,7 +402,7 @@ export default async function HealthPage({
                               tone={section.tone}
                               title={item.title}
                               meta={item.reason}
-                              action={record ? <RecordActions householdId={householdId} record={record} /> : null}
+                              action={record ? <RecordActions householdId={householdId} record={record} labels={formLabels} /> : null}
                             />
                           );
                         }
@@ -409,7 +417,7 @@ export default async function HealthPage({
                             meta={item.reason}
                             action={
                               appointment && section.key !== "recent" ? (
-                                <AppointmentStatusActions householdId={householdId} appointmentId={appointment.id} status={appointment.status} />
+                                <AppointmentStatusActions householdId={householdId} appointmentId={appointment.id} status={appointment.status} labels={formLabels} />
                               ) : null
                             }
                           />
@@ -420,7 +428,7 @@ export default async function HealthPage({
                 )}
               </section>
             ))}
-            <QuoteCard>Less to remember. More time for what matters.</QuoteCard>
+            <QuoteCard>{t("health.quote")}</QuoteCard>
           </>
         ) : (
           <>
@@ -428,32 +436,30 @@ export default async function HealthPage({
               <div className="flex items-start gap-3">
                 <Sparkles aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-foreground-muted)]" />
                 <div>
-                  <p className="text-sm font-medium">Your health privacy</p>
-                  <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                    Household membership alone never gives anyone access to your health data — you decide who can see it.
-                  </p>
+                  <p className="text-sm font-medium">{t("health.privacy.title")}</p>
+                  <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("health.privacy.lede")}</p>
                 </div>
               </div>
-              <PrivacyScopeForm householdId={householdId} memberId={memberId} currentScope={currentScope} />
+              <PrivacyScopeForm householdId={householdId} memberId={memberId} currentScope={currentScope} labels={formLabels} />
             </Card>
 
             <Card className="p-4">
-              <HealthAiAssistanceToggle householdId={householdId} memberId={memberId} enabled={aiAssistanceEnabled} />
+              <HealthAiAssistanceToggle householdId={householdId} memberId={memberId} enabled={aiAssistanceEnabled} labels={formLabels} />
             </Card>
 
             {currentScope === "selected_family" ? (
               <section>
                 <SectionHeader
-                  title="Shared with"
+                  title={t("health.sharedWith")}
                   count={consents.length}
-                  action={<GrantHealthConsentButton householdId={householdId} subjectMemberId={memberId} candidates={candidates} />}
+                  action={<GrantHealthConsentButton householdId={householdId} subjectMemberId={memberId} candidates={candidates} labels={formLabels} />}
                 />
                 {consents.length === 0 ? (
                   <EmptyState
                     icon={ShieldCheck}
                     tone="health"
-                    title="Not shared with anyone yet"
-                    description={'Choose "People I choose" and share it with whoever should see it.'}
+                    title={t("health.sharedEmptyTitle")}
+                    description={t("health.sharedEmptyLede")}
                   />
                 ) : (
                   <Card className="p-2">
@@ -464,8 +470,8 @@ export default async function HealthPage({
                           icon={ShieldCheck}
                           tone="health"
                           title={nameOf(consent.viewerMemberId)}
-                          meta="Can see your health data"
-                          action={<RevokeHealthConsentButton householdId={householdId} consent={consent} viewerName={nameOf(consent.viewerMemberId)} />}
+                          meta={t("health.canSee")}
+                          action={<RevokeHealthConsentButton householdId={householdId} consent={consent} viewerName={nameOf(consent.viewerMemberId)} labels={formLabels} />}
                         />
                       ))}
                     </ul>
@@ -476,9 +482,7 @@ export default async function HealthPage({
 
             <Card className="flex items-start gap-3 p-4">
               <Wallet aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-foreground-muted)]" />
-              <p className="text-sm text-[var(--wh-foreground-muted)]">
-                A guardian can always see and manage a child they guard&apos;s health data, whatever privacy setting is chosen for it.
-              </p>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{t("health.guardianNote")}</p>
             </Card>
           </>
         )}

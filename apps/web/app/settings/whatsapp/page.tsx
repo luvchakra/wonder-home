@@ -12,6 +12,7 @@ import { MessageCircle, ShieldCheck } from "lucide-react";
 
 import { WhatsAppConnect, WhatsAppDisconnect, WhatsAppLinkedNotice } from "../../_components/whatsapp-connect";
 import { formatDate, requireSession } from "../../_lib/session";
+import { whatsappConnectLabels, whatsappDisconnectLabels, whatsappLinkedLabels } from "../../_lib/settings-labels";
 
 export const metadata = { title: "WhatsApp" };
 export const dynamic = "force-dynamic";
@@ -41,52 +42,50 @@ export default async function WhatsAppSettingsPage({ searchParams }: { searchPar
   const mine = links?.find((link) => link.memberId === membership.memberId) ?? null;
   const others = (links ?? []).filter((link) => link.memberId !== membership.memberId);
   const adult = membership.memberType === "adult";
+  const { t } = session.locale;
+  const connectedLine = (connectedAt: Date, lastMessageAt: Date | null) =>
+    lastMessageAt
+      ? t("settingsPage.whatsapp.connectedLast", { date: formatDate(household.timezone, connectedAt), last: formatDate(household.timezone, lastMessageAt) })
+      : t("settingsPage.whatsapp.connectedNothing", { date: formatDate(household.timezone, connectedAt) });
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/whatsapp" back={{ href: "/settings", label: "Back to settings" }} title="WhatsApp">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/whatsapp" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title="WhatsApp">
       <div className="space-y-6">
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">WhatsApp</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            Forward things to WonderHome from WhatsApp, and they land in {household.name}&rsquo;s HomeSend for you to check.
-          </p>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.whatsapp.lede", { household: household.name })}</p>
         </header>
 
         {links === null ? (
-          <Card><p className="text-sm text-[var(--wh-risk)]">Your WhatsApp link couldn&apos;t be read just now. Nothing was changed — try again in a moment.</p></Card>
+          <Card><p className="text-sm text-[var(--wh-risk)]">{t("settingsPage.whatsapp.readError")}</p></Card>
         ) : mine ? (
           <section className="space-y-3">
-            {connected ? <WhatsAppLinkedNotice phone={formatWhatsAppNumber(mine.phone)} /> : null}
-            <SectionHeader title="Your WhatsApp" />
+            {connected ? <WhatsAppLinkedNotice phone={formatWhatsAppNumber(mine.phone)} labels={whatsappLinkedLabels(t)} /> : null}
+            <SectionHeader title={t("settingsPage.whatsapp.yours")} />
             <Card className="flex items-start gap-3">
               <IconTile icon={MessageCircle} tone="handled" />
               <div className="min-w-0 flex-1 text-sm">
                 <p className="font-semibold tabular-nums">{formatWhatsAppNumber(mine.phone)}</p>
-                <p className="mt-0.5 text-[var(--wh-foreground-muted)]">
-                  Connected {formatDate(household.timezone, mine.connectedAt)}
-                  {mine.lastMessageAt ? ` · last message ${formatDate(household.timezone, mine.lastMessageAt)}` : " · nothing sent yet"}
-                </p>
-                <div className="mt-2"><Badge tone="handled">Connected</Badge></div>
+                <p className="mt-0.5 text-[var(--wh-foreground-muted)]">{connectedLine(mine.connectedAt, mine.lastMessageAt)}</p>
+                <div className="mt-2"><Badge tone="handled">{t("settingsPage.whatsapp.connected")}</Badge></div>
               </div>
-              <WhatsAppDisconnect householdId={household.id} identityId={mine.id} whose="your number" />
+              <WhatsAppDisconnect householdId={household.id} identityId={mine.id} labels={whatsappDisconnectLabels(t, null)} />
             </Card>
           </section>
         ) : !businessNumber ? (
           <Card className="flex items-start gap-3">
             <IconTile icon={MessageCircle} tone="neutral" />
             <div className="min-w-0 flex-1 text-sm">
-              <p className="font-semibold">Not available yet</p>
-              <p className="mt-0.5 text-[var(--wh-foreground-muted)]">
-                WhatsApp isn&rsquo;t set up for this WonderHome yet. Once it is, you&rsquo;ll connect your number here in a minute. Until then, HomeSend takes photos, files and forwarded email.
-              </p>
+              <p className="font-semibold">{t("settingsPage.whatsapp.unavailable")}</p>
+              <p className="mt-0.5 text-[var(--wh-foreground-muted)]">{t("settingsPage.whatsapp.unavailableBody")}</p>
             </div>
           </Card>
         ) : !adult ? (
           <Card className="flex items-start gap-3">
             <IconTile icon={MessageCircle} tone="neutral" />
             <div className="min-w-0 flex-1 text-sm">
-              <p className="font-semibold">For the adults in the household</p>
-              <p className="mt-0.5 text-[var(--wh-foreground-muted)]">Only adults can connect a WhatsApp number. You can still send things in from HomeSend in the app.</p>
+              <p className="font-semibold">{t("settingsPage.whatsapp.adults")}</p>
+              <p className="mt-0.5 text-[var(--wh-foreground-muted)]">{t("settingsPage.whatsapp.adultsBody")}</p>
             </div>
           </Card>
         ) : (
@@ -95,15 +94,16 @@ export default async function WhatsAppSettingsPage({ searchParams }: { searchPar
             businessNumber={businessNumber}
             businessNumberDisplay={formatWhatsAppNumber(businessNumber)}
             someoneElseConnected={others.length > 0}
+            labels={whatsappConnectLabels(t)}
           />
         )}
 
         {admin && others.length > 0 ? (
           <section className="space-y-3">
-            <SectionHeader title="Others in the household" />
+            <SectionHeader title={t("settingsPage.whatsapp.others")} />
             <ul className="space-y-3">
               {others.map((link) => {
-                const name = names.get(link.memberId) ?? "A member";
+                const name = names.get(link.memberId) ?? t("settingsPage.aMember");
                 return (
                   <li key={link.id}>
                     <Card className="flex items-start gap-3">
@@ -111,12 +111,9 @@ export default async function WhatsAppSettingsPage({ searchParams }: { searchPar
                       <div className="min-w-0 flex-1 text-sm">
                         <p className="font-semibold">{name}</p>
                         <p className="mt-0.5 tabular-nums text-[var(--wh-foreground-muted)]">{formatWhatsAppNumber(link.phone)}</p>
-                        <p className="mt-0.5 text-[var(--wh-foreground-muted)]">
-                          Connected {formatDate(household.timezone, link.connectedAt)}
-                          {link.lastMessageAt ? ` · last message ${formatDate(household.timezone, link.lastMessageAt)}` : " · nothing sent yet"}
-                        </p>
+                        <p className="mt-0.5 text-[var(--wh-foreground-muted)]">{connectedLine(link.connectedAt, link.lastMessageAt)}</p>
                       </div>
-                      <WhatsAppDisconnect householdId={household.id} identityId={link.id} whose={name} />
+                      <WhatsAppDisconnect householdId={household.id} identityId={link.id} labels={whatsappDisconnectLabels(t, name)} />
                     </Card>
                   </li>
                 );
@@ -128,17 +125,17 @@ export default async function WhatsAppSettingsPage({ searchParams }: { searchPar
         <Card className="flex items-start gap-3">
           <IconTile icon={ShieldCheck} tone="primary" />
           <div className="min-w-0 flex-1 text-sm">
-            <p className="font-semibold">What WhatsApp can and can&rsquo;t do</p>
-            <ul className="mt-1 list-disc space-y-1 pl-4 text-[var(--wh-foreground-muted)]">
-              <li>Anything you send becomes a HomeSend item from you, and you decide what happens to it in the app.</li>
-              <li>Nothing is paid, ordered, booked or approved from WhatsApp, whatever a message says.</li>
-              <li>Each adult links their own number. A number belongs to one person, in one household.</li>
-              <li>Disconnecting stops new messages at once. What was already sent stays in HomeSend.</li>
+            <p className="font-semibold">{t("settingsPage.whatsapp.rules")}</p>
+            <ul className="mt-1 list-disc space-y-1 ps-4 text-[var(--wh-foreground-muted)]">
+              <li>{t("settingsPage.whatsapp.rule.item")}</li>
+              <li>{t("settingsPage.whatsapp.rule.nothingPaid")}</li>
+              <li>{t("settingsPage.whatsapp.rule.ownNumber")}</li>
+              <li>{t("settingsPage.whatsapp.rule.disconnect")}</li>
             </ul>
           </div>
         </Card>
 
-        <QuoteCard>Send it once. Home takes it from there.</QuoteCard>
+        <QuoteCard>{t("settingsPage.whatsapp.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

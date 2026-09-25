@@ -3,7 +3,7 @@
 import { Ban, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
-import { FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "@wonderhome/core/health/fitness";
+import type { FitnessActivityType, FitnessFrequencyPeriod } from "@wonderhome/core/health/fitness";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
@@ -22,23 +22,14 @@ import {
   updateFitnessGoalAction,
   updateFitnessSessionAction,
 } from "../(auth)/health-fitness-actions";
+import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
 
-const ACTIVITY_OPTIONS: { value: FitnessActivityType; label: string }[] = (Object.keys(FITNESS_ACTIVITY_LABEL) as FitnessActivityType[]).map((value) => ({
-  value,
-  label: FITNESS_ACTIVITY_LABEL[value],
-}));
-
-const FREQUENCY_OPTIONS: { value: FitnessFrequencyPeriod; label: string }[] = [
-  { value: "day", label: "day" },
-  { value: "week", label: "week" },
-  { value: "month", label: "month" },
-];
-
-const SCOPE_OPTIONS = [
-  { value: "private", label: "Only me" },
-  { value: "selected_family", label: "People I choose" },
-  { value: "household_operational", label: "The whole household" },
-] as const;
+/**
+ * Stored values are offered in the domain's own order — the order the
+ * server-built `labels` carries them in — and their words come from those
+ * labels (story 22-004). The stored value itself never changes.
+ */
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 // ---------------------------------------------------------------------------
 // Goals
@@ -49,11 +40,15 @@ export function AddFitnessGoalButton({
   householdId,
   members,
   defaultPrivacyScope,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  labels: HealthFormLabels;
 }) {
+  const words = labels.goal;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [activityType, setActivityType] = useState<FitnessActivityType>("walk");
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createFitnessGoalAction, {});
@@ -71,10 +66,10 @@ export function AddFitnessGoalButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Set a goal
+        <Plus aria-hidden className="size-3.5" /> {words.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Set a fitness goal" description="How often you'd like to keep it up — never scored, just yours to see.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.title} description={words.description}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -85,42 +80,42 @@ export function AddFitnessGoalButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label="Who is this for?" name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Select label="Activity" name="activityType" value={activityType} onChange={(event) => setActivityType(event.target.value as FitnessActivityType)}>
-            {ACTIVITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Select label={common.activity} name="activityType" value={activityType} onChange={(event) => setActivityType(event.target.value as FitnessActivityType)}>
+            {(Object.keys(labels.activityTypes) as FitnessActivityType[]).map((type) => (
+              <option key={type} value={type}>
+                {labels.activityTypes[type]}
               </option>
             ))}
           </Select>
-          {activityType === "other" ? <Field label="What is it called" name="customLabel" placeholder="Pilates" required autoComplete="off" /> : null}
+          {activityType === "other" ? <Field label={common.whatCalled} name="customLabel" placeholder={labels.goal.customPlaceholder} required autoComplete="off" /> : null}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="How many times" name="targetCount" type="number" min={1} step={1} defaultValue={3} required autoComplete="off" />
-            <Select label="Per" name="frequencyPeriod" defaultValue="week">
-              {FREQUENCY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+            <Field label={words.howMany} name="targetCount" type="number" min={1} step={1} defaultValue={3} required autoComplete="off" />
+            <Select label={words.per} name="frequencyPeriod" defaultValue="week">
+              {(Object.keys(labels.periods) as FitnessFrequencyPeriod[]).map((period) => (
+                <option key={period} value={period}>
+                  {labels.periods[period]}
                 </option>
               ))}
             </Select>
           </div>
-          <Field label="Preferred time (optional)" name="preferredTime" type="time" />
-          <Field label="Notes (optional)" name="notes" placeholder="Anything worth remembering" autoComplete="off" />
-          <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={common.preferredTime} name="preferredTime" type="time" />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+            {SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {labels.scopes[scope]}
               </option>
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Set goal"}
+            {pending ? common.saving : words.submit}
           </Button>
         </form>
       </Sheet>
@@ -135,6 +130,7 @@ function EditFitnessGoalButton({
   targetCount,
   frequencyPeriod,
   notes,
+  labels,
 }: {
   householdId: string;
   goalId: string;
@@ -142,7 +138,10 @@ function EditFitnessGoalButton({
   targetCount: number;
   frequencyPeriod: FitnessFrequencyPeriod;
   notes: string | null;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.goal;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateFitnessGoalAction, {});
   const submitted = useRef(false);
@@ -156,11 +155,11 @@ function EditFitnessGoalButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} title="Edit">
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(common.editNamed, label)} title={common.edit}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Edit goal" description="Change how often you'd like to keep this up.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.editTitle} description={words.editDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -173,18 +172,18 @@ function EditFitnessGoalButton({
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="goalId" value={goalId} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="How many times" name="targetCount" type="number" min={1} step={1} defaultValue={targetCount} required autoComplete="off" />
-            <Select label="Per" name="frequencyPeriod" defaultValue={frequencyPeriod}>
-              {FREQUENCY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+            <Field label={words.howMany} name="targetCount" type="number" min={1} step={1} defaultValue={targetCount} required autoComplete="off" />
+            <Select label={words.per} name="frequencyPeriod" defaultValue={frequencyPeriod}>
+              {(Object.keys(labels.periods) as FitnessFrequencyPeriod[]).map((period) => (
+                <option key={period} value={period}>
+                  {labels.periods[period]}
                 </option>
               ))}
             </Select>
           </div>
-          <Field label="Notes (optional)" name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+            {pending ? common.saving : common.save}
           </Button>
         </form>
       </Sheet>
@@ -196,10 +195,13 @@ function EditFitnessGoalButton({
 export function GoalActions({
   householdId,
   goal,
+  labels,
 }: {
   householdId: string;
   goal: { id: string; label: string; targetCount: number; frequencyPeriod: FitnessFrequencyPeriod; notes: string | null; status: "active" | "dismissed" };
+  labels: HealthFormLabels;
 }) {
+  const common = labels.common;
   const [, dismissAction, dismissPending] = useActionState<ActionState, FormData>(dismissFitnessGoalAction, {});
   const [, reactivateAction, reactivatePending] = useActionState<ActionState, FormData>(reactivateFitnessGoalAction, {});
 
@@ -212,7 +214,7 @@ export function GoalActions({
 
   if (goal.status === "dismissed") {
     return (
-      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label="Bring back" title="Bring back">
+      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label={common.bringBack} title={common.bringBack}>
         <RotateCcw aria-hidden className="size-3.5" />
       </Pill>
     );
@@ -227,8 +229,9 @@ export function GoalActions({
         targetCount={goal.targetCount}
         frequencyPeriod={goal.frequencyPeriod}
         notes={goal.notes}
+        labels={labels}
       />
-      <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label="Remove" title="Remove">
+      <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label={common.remove} title={common.remove}>
         <Ban aria-hidden className="size-3.5" />
       </Pill>
     </div>
@@ -245,12 +248,16 @@ export function LogFitnessSessionButton({
   members,
   defaultPrivacyScope,
   goals,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
   goals: { id: string; label: string }[];
+  labels: HealthFormLabels;
 }) {
+  const words = labels.session;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [activityType, setActivityType] = useState<FitnessActivityType>("walk");
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createFitnessSessionAction, {});
@@ -268,10 +275,10 @@ export function LogFitnessSessionButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Log a session
+        <Plus aria-hidden className="size-3.5" /> {words.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Log a session" description="What you actually did.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.add} description={words.description}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -282,24 +289,24 @@ export function LogFitnessSessionButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label="Who is this for?" name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Select label="Activity" name="activityType" value={activityType} onChange={(event) => setActivityType(event.target.value as FitnessActivityType)}>
-            {ACTIVITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Select label={common.activity} name="activityType" value={activityType} onChange={(event) => setActivityType(event.target.value as FitnessActivityType)}>
+            {(Object.keys(labels.activityTypes) as FitnessActivityType[]).map((type) => (
+              <option key={type} value={type}>
+                {labels.activityTypes[type]}
               </option>
             ))}
           </Select>
-          {activityType === "other" ? <Field label="What is it called" name="customLabel" placeholder="Pilates" required autoComplete="off" /> : null}
+          {activityType === "other" ? <Field label={common.whatCalled} name="customLabel" placeholder={labels.goal.customPlaceholder} required autoComplete="off" /> : null}
           {goals.length > 0 ? (
-            <Select label="Counts toward (optional)" name="goalId" defaultValue="">
-              <option value="">Not tied to a goal</option>
+            <Select label={words.countsToward} name="goalId" defaultValue="">
+              <option value="">{words.noGoal}</option>
               {goals.map((goal) => (
                 <option key={goal.id} value={goal.id}>
                   {goal.label}
@@ -308,21 +315,21 @@ export function LogFitnessSessionButton({
             </Select>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Duration (minutes)" name="durationMinutes" type="number" min={1} step={1} required autoComplete="off" />
-            <Field label="Distance (optional)" name="distanceValue" type="number" step="any" autoComplete="off" />
+            <Field label={words.duration} name="durationMinutes" type="number" min={1} step={1} required autoComplete="off" />
+            <Field label={words.distance} name="distanceValue" type="number" step="any" autoComplete="off" />
           </div>
-          <Field label="Distance unit (required if a distance was given)" name="distanceUnit" placeholder="km, mi…" autoComplete="off" />
-          <Field label="When (optional — defaults to now)" name="startedAt" type="datetime-local" />
-          <Field label="Notes (optional)" name="notes" placeholder="Anything worth remembering" autoComplete="off" />
-          <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={words.distanceUnitRequired} name="distanceUnit" placeholder={words.distanceUnitPlaceholder} autoComplete="off" />
+          <Field label={common.whenDefaultNow} name="startedAt" type="datetime-local" />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+            {SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {labels.scopes[scope]}
               </option>
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Logging…" : "Log session"}
+            {pending ? words.logging : words.submit}
           </Button>
         </form>
       </Sheet>
@@ -338,6 +345,7 @@ function EditFitnessSessionButton({
   distanceValue,
   distanceUnit,
   notes,
+  labels,
 }: {
   householdId: string;
   sessionId: string;
@@ -346,7 +354,10 @@ function EditFitnessSessionButton({
   distanceValue: number | null;
   distanceUnit: string | null;
   notes: string | null;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.session;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateFitnessSessionAction, {});
   const submitted = useRef(false);
@@ -360,11 +371,11 @@ function EditFitnessSessionButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} title="Edit">
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(common.editNamed, label)} title={common.edit}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Edit session" description="Correct what this says.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.editTitle} description={common.correctDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -377,13 +388,13 @@ function EditFitnessSessionButton({
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="sessionId" value={sessionId} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Duration (minutes)" name="durationMinutes" type="number" min={1} step={1} defaultValue={durationMinutes} required autoComplete="off" />
-            <Field label="Distance (optional)" name="distanceValue" type="number" step="any" defaultValue={distanceValue ?? ""} autoComplete="off" />
+            <Field label={words.duration} name="durationMinutes" type="number" min={1} step={1} defaultValue={durationMinutes} required autoComplete="off" />
+            <Field label={words.distance} name="distanceValue" type="number" step="any" defaultValue={distanceValue ?? ""} autoComplete="off" />
           </div>
-          <Field label="Distance unit" name="distanceUnit" defaultValue={distanceUnit ?? ""} autoComplete="off" />
-          <Field label="Notes (optional)" name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <Field label={words.distanceUnit} name="distanceUnit" defaultValue={distanceUnit ?? ""} autoComplete="off" />
+          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+            {pending ? common.saving : common.save}
           </Button>
         </form>
       </Sheet>
@@ -395,10 +406,13 @@ function EditFitnessSessionButton({
 export function SessionActions({
   householdId,
   session,
+  labels,
 }: {
   householdId: string;
   session: { id: string; label: string; durationMinutes: number; distanceValue: number | null; distanceUnit: string | null; notes: string | null; status: "active" | "archived" };
+  labels: HealthFormLabels;
 }) {
+  const common = labels.common;
   const [, archiveAction, archivePending] = useActionState<ActionState, FormData>(archiveFitnessSessionAction, {});
   const [, reactivateAction, reactivatePending] = useActionState<ActionState, FormData>(reactivateFitnessSessionAction, {});
 
@@ -411,7 +425,7 @@ export function SessionActions({
 
   if (session.status === "archived") {
     return (
-      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label="Bring back" title="Bring back">
+      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label={common.bringBack} title={common.bringBack}>
         <RotateCcw aria-hidden className="size-3.5" />
       </Pill>
     );
@@ -427,8 +441,9 @@ export function SessionActions({
         distanceValue={session.distanceValue}
         distanceUnit={session.distanceUnit}
         notes={session.notes}
+        labels={labels}
       />
-      <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label="Remove" title="Remove">
+      <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>
         <Trash2 aria-hidden className="size-3.5" />
       </Pill>
     </div>

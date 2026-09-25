@@ -26,15 +26,40 @@ import {
  * person's own phone does that, and "I've sent the message" just looks again.
  */
 
-const WHAT_YOU_CAN_SEND = [
-  "School messages and homework",
-  "Bills, invoices and receipts",
-  "Grocery lists and shopping needs",
-  "Appointments and reminders",
-  "Anything else the household needs to know",
-];
+/** The connect card's words in the viewer's language, built on the server (story 22-004). */
+export type WhatsAppConnectLabels = {
+  whatYouCanSend: string[];
+  number: string;
+  copyAria: string;
+  copyTitle: string;
+  copied: string;
+  connectToo: string;
+  connectTitle: string;
+  connectTooBody: string;
+  connectBody: string;
+  gettingCode: string;
+  letsConnect: string;
+  linkTitle: string;
+  linkBody: string;
+  step1: string;
+  step2: string;
+  step2Hint: string;
+  step3: string;
+  open: string;
+  waiting: string;
+  checking: string;
+  sent: string;
+  newCode: string;
+  gettingNewCode: string;
+};
 
-function CopyNumber({ number, display }: { number: string; display: string }) {
+/** The confirmation's words. `phone` carries a `{phone}` placeholder, filled in here. */
+export type WhatsAppLinkedLabels = { title: string; phone: string; number: string; lines: string[]; goHomeSend: string };
+
+/** Ending a link, in full sentences with the person's name already in them. */
+export type WhatsAppDisconnectLabels = { aria: string; title: string; description: string; confirm: string; cancel: string };
+
+function CopyNumber({ number, display, labels }: { number: string; display: string; labels: WhatsAppConnectLabels }) {
   const [copied, setCopied] = useState(false);
   async function copy(): Promise<void> {
     try {
@@ -49,7 +74,7 @@ function CopyNumber({ number, display }: { number: string; display: string }) {
     <Card className="flex items-center gap-3 p-4">
       <IconTile icon={MessageCircle} tone="handled" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">WonderHome on WhatsApp</p>
+        <p className="text-sm font-semibold">{labels.number}</p>
         <p className="mt-0.5 text-base font-medium whitespace-nowrap tabular-nums select-all">
           {display}
         </p>
@@ -58,8 +83,8 @@ function CopyNumber({ number, display }: { number: string; display: string }) {
         type="button"
         tone="quiet"
         onClick={copy}
-        aria-label="Copy WonderHome's WhatsApp number"
-        title="Copy the number"
+        aria-label={labels.copyAria}
+        title={labels.copyTitle}
       >
         {copied ? (
           <Check aria-hidden className="size-3.5" />
@@ -68,7 +93,7 @@ function CopyNumber({ number, display }: { number: string; display: string }) {
         )}
       </Pill>
       <span className="sr-only" aria-live="polite">
-        {copied ? "Number copied" : ""}
+        {copied ? labels.copied : ""}
       </span>
     </Card>
   );
@@ -79,12 +104,14 @@ export function WhatsAppConnect({
   businessNumber,
   businessNumberDisplay,
   someoneElseConnected,
+  labels,
 }: {
   householdId: string;
   businessNumber: string;
   businessNumberDisplay: string;
   /** Another adult already linked: the intro speaks to the second adult (screen 4). */
   someoneElseConnected: boolean;
+  labels: WhatsAppConnectLabels;
 }) {
   const [started, start, starting] = useActionState<
     WhatsAppConnectState,
@@ -103,19 +130,15 @@ export function WhatsAppConnect({
           <IconTile icon={MessageCircle} tone="handled" />
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold">
-              {someoneElseConnected
-                ? "Connect your WhatsApp too"
-                : "Connect WhatsApp to WonderHome"}
+              {someoneElseConnected ? labels.connectToo : labels.connectTitle}
             </h2>
             <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-              {someoneElseConnected
-                ? "Link your own number so what you forward reaches this household as coming from you."
-                : "Forward messages, photos and documents to WonderHome. It works out what they are, and you decide what happens next."}
+              {someoneElseConnected ? labels.connectTooBody : labels.connectBody}
             </p>
           </div>
         </div>
         <ul className="space-y-2 text-sm">
-          {WHAT_YOU_CAN_SEND.map((line) => (
+          {labels.whatYouCanSend.map((line) => (
             <li key={line} className="flex gap-2">
               <Check
                 aria-hidden
@@ -129,7 +152,7 @@ export function WhatsAppConnect({
         <form action={start}>
           <input type="hidden" name="householdId" value={householdId} />
           <Button type="submit" className="w-full" disabled={starting}>
-            {starting ? "Getting your code…" : "Let's connect"}
+            {starting ? labels.gettingCode : labels.letsConnect}
           </Button>
         </form>
       </Card>
@@ -145,12 +168,10 @@ export function WhatsAppConnect({
   return (
     <Card className="space-y-4 p-5">
       <div>
-        <h2 className="text-base font-semibold">Link your WhatsApp</h2>
-        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-          Send one message from your phone and WonderHome knows it&rsquo;s you.
-        </p>
+        <h2 className="text-base font-semibold">{labels.linkTitle}</h2>
+        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.linkBody}</p>
       </div>
-      <CopyNumber number={businessNumber} display={businessNumberDisplay} />
+      <CopyNumber number={businessNumber} display={businessNumberDisplay} labels={labels} />
       <ol className="space-y-3 text-sm">
         <li className="flex gap-3">
           <span
@@ -159,9 +180,7 @@ export function WhatsAppConnect({
           >
             1
           </span>
-          <span>
-            Save this number in your contacts as &ldquo;WonderHome&rdquo;.
-          </span>
+          <span>{labels.step1}</span>
         </li>
         <li className="flex gap-3">
           <span
@@ -171,13 +190,11 @@ export function WhatsAppConnect({
             2
           </span>
           <span>
-            Send it this message from WhatsApp:
+            {labels.step2}
             <span className="mt-1 block rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 font-mono text-base tracking-wider break-all select-all">
               {started.message}
             </span>
-            <span className="mt-1 block text-xs text-[var(--wh-foreground-muted)]">
-              Works once, for the next 15 minutes.
-            </span>
+            <span className="mt-1 block text-xs text-[var(--wh-foreground-muted)]">{labels.step2Hint}</span>
           </span>
         </li>
         <li className="flex gap-3">
@@ -187,7 +204,7 @@ export function WhatsAppConnect({
           >
             3
           </span>
-          <span>WonderHome replies on WhatsApp once it&rsquo;s linked.</span>
+          <span>{labels.step3}</span>
         </li>
       </ol>
       {started.chatLink ? (
@@ -198,14 +215,11 @@ export function WhatsAppConnect({
           className="w-full"
         >
           <MessageCircle aria-hidden className="size-4" />
-          Open WhatsApp
+          {labels.open}
         </ButtonLink>
       ) : null}
       {checked.status === "waiting" ? (
-        <Alert tone="attention">
-          Not linked yet. WhatsApp can take a moment — check again once
-          you&rsquo;ve sent the message.
-        </Alert>
+        <Alert tone="attention">{labels.waiting}</Alert>
       ) : null}
       {checked.error ? <Alert>{checked.error}</Alert> : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
@@ -217,7 +231,7 @@ export function WhatsAppConnect({
             className="w-full sm:w-auto"
             disabled={checking}
           >
-            {checking ? "Checking…" : "I've sent the message"}
+            {checking ? labels.checking : labels.sent}
           </Button>
         </form>
         <Button
@@ -226,7 +240,7 @@ export function WhatsAppConnect({
           onClick={again}
           disabled={starting}
         >
-          {starting ? "Getting a new code…" : "Get a new code"}
+          {starting ? labels.gettingNewCode : labels.newCode}
         </Button>
       </div>
     </Card>
@@ -237,7 +251,9 @@ export function WhatsAppConnect({
  * The confirmation after a link (brief screen 3). Shown once, from the
  * server's own record of the link — never from anything the browser said.
  */
-export function WhatsAppLinkedNotice({ phone }: { phone: string | null }) {
+export function WhatsAppLinkedNotice({ phone, labels }: { phone: string | null; labels: WhatsAppLinkedLabels }) {
+    // The number keeps its own emphasis wherever the sentence puts it.
+    const [before, after] = labels.phone.split("{phone}");
     return (
       <Card className="space-y-4 p-5 text-center">
         <div role="status" className="space-y-4">
@@ -246,27 +262,24 @@ export function WhatsAppLinkedNotice({ phone }: { phone: string | null }) {
             className="mx-auto size-12 text-[var(--wh-handled)]"
           />
           <div>
-            <h2 className="text-lg font-semibold">WhatsApp connected</h2>
+            <h2 className="text-lg font-semibold">{labels.title}</h2>
             <p className="mt-1 text-sm text-[var(--wh-foreground-muted)]">
               {phone ? (
                 <>
+                  {before}
                   <span className="font-medium tabular-nums text-[var(--wh-foreground)]">
                     {phone}
-                  </span>{" "}
-                  is now linked to you in WonderHome.
+                  </span>
+                  {after}
                 </>
               ) : (
-                "Your number is now linked to you in WonderHome."
+                labels.number
               )}
             </p>
           </div>
         </div>
         <ul className="space-y-2 text-left text-sm">
-          {[
-            "Forward any message, photo or document to WonderHome",
-            "It shows up in HomeSend for you to check",
-            "Nothing is paid, booked or sent from WhatsApp — you decide in the app",
-          ].map((line) => (
+          {labels.lines.map((line) => (
             <li key={line} className="flex gap-2">
               <Check
                 aria-hidden
@@ -277,7 +290,7 @@ export function WhatsAppLinkedNotice({ phone }: { phone: string | null }) {
           ))}
         </ul>
         <ButtonLink href="/home-send" className="w-full">
-          Go to HomeSend
+          {labels.goHomeSend}
         </ButtonLink>
       </Card>
     );
@@ -287,11 +300,11 @@ export function WhatsAppLinkedNotice({ phone }: { phone: string | null }) {
 export function WhatsAppDisconnect({
   householdId,
   identityId,
-  whose,
+  labels,
 }: {
   householdId: string;
   identityId: string;
-  whose: string;
+  labels: WhatsAppDisconnectLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<
@@ -310,7 +323,7 @@ export function WhatsAppDisconnect({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Disconnect WhatsApp for ${whose}`}
+        aria-label={labels.aria}
         className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-risk)]"
       >
         <Unlink className="size-5" aria-hidden />
@@ -318,9 +331,10 @@ export function WhatsAppDisconnect({
       <ConfirmationSheet
         open={open}
         onOpenChange={setOpen}
-        title={`Disconnect WhatsApp for ${whose}?`}
-        description="Messages from this number stop reaching WonderHome straight away. Everything already sent stays in HomeSend, and the number can be linked again later."
-        confirmLabel="Disconnect"
+        title={labels.title}
+        description={labels.description}
+        confirmLabel={labels.confirm}
+        cancelLabel={labels.cancel}
         destructive
         pending={pending}
         onConfirm={disconnect}

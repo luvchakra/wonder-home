@@ -20,20 +20,11 @@ import {
   reactivateCheckupAction,
   updateCheckupAction,
 } from "../(auth)/health-checkup-actions";
+import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
 import { BookAppointmentButton } from "./health-appointment-forms";
 
-const TYPE_OPTIONS: { value: CheckupType; label: string }[] = [
-  { value: "doctor", label: "Doctor" },
-  { value: "dentist", label: "Dentist" },
-  { value: "eye_care", label: "Eye care" },
-  { value: "physiotherapy", label: "Physiotherapy" },
-  { value: "dermatology", label: "Dermatology" },
-  { value: "specialist", label: "Specialist" },
-  { value: "diagnostic", label: "Diagnostic" },
-  { value: "vaccination", label: "Vaccination" },
-  { value: "screening", label: "Screening" },
-  { value: "other", label: "Other" },
-];
+/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
+const TYPES: CheckupType[] = ["doctor", "dentist", "eye_care", "physiotherapy", "dermatology", "specialist", "diagnostic", "vaccination", "screening", "other"];
 
 /** Checkups and appointments carry slightly different type lists (screening has no appointment equivalent) — this bridges the one gap. */
 const CHECKUP_TYPE_TO_APPOINTMENT_TYPE: Record<CheckupType, AppointmentType> = {
@@ -49,30 +40,25 @@ const CHECKUP_TYPE_TO_APPOINTMENT_TYPE: Record<CheckupType, AppointmentType> = {
   other: "other",
 };
 
-const CADENCE_OPTIONS = [
-  { value: "", label: "One-off — no repeat" },
-  { value: "90", label: "Every 3 months" },
-  { value: "180", label: "Every 6 months" },
-  { value: "365", label: "Every year" },
-  { value: "730", label: "Every 2 years" },
-] as const;
+/** Days between checkups, stored as they are; "" is a one-off. */
+const CADENCES = ["", "90", "180", "365", "730"] as const;
 
-const SCOPE_OPTIONS = [
-  { value: "private", label: "Only me" },
-  { value: "selected_family", label: "People I choose" },
-  { value: "household_operational", label: "The whole household" },
-] as const;
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Adding a checkup — a household-configured recurring commitment, never one WonderHome invents (story 21-004). */
 export function AddCheckupButton({
   householdId,
   members,
   defaultPrivacyScope,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  labels: HealthFormLabels;
 }) {
+  const words = labels.checkup;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createCheckupAction, {});
   const submitted = useRef(false);
@@ -89,10 +75,10 @@ export function AddCheckupButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Add a checkup
+        <Plus aria-hidden className="size-3.5" /> {words.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Add a checkup" description="A recurring commitment your household set, not one WonderHome invents.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.add} description={common.householdCommitment}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -103,39 +89,39 @@ export function AddCheckupButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label="Who is this for?" name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Field label="What's due" name="label" placeholder="Dental cleaning" required autoComplete="off" />
-          <Select label="Type" name="checkupType" defaultValue="dentist">
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={words.whatsDue} name="label" placeholder={words.whatsDuePlaceholder} required autoComplete="off" />
+          <Select label={words.type} name="checkupType" defaultValue="dentist">
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {labels.careTypes[type]}
               </option>
             ))}
           </Select>
-          <Select label="Repeats" name="cadenceDays" defaultValue="">
-            {CADENCE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Select label={common.repeats} name="cadenceDays" defaultValue="">
+            {CADENCES.map((cadence) => (
+              <option key={cadence} value={cadence}>
+                {words.cadence[cadence]}
               </option>
             ))}
           </Select>
-          <Field label="Next due" name="nextDueOn" type="date" required />
-          <Field label="Notes (optional)" name="notes" placeholder="Anything worth remembering" autoComplete="off" />
-          <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={common.nextDue} name="nextDueOn" type="date" required />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+            {SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {labels.scopes[scope]}
               </option>
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Adding…" : "Add checkup"}
+            {pending ? common.adding : words.submit}
           </Button>
         </form>
       </Sheet>
@@ -150,13 +136,17 @@ export function EditCheckupButton({
   label,
   notes,
   nextDueOn,
+  labels,
 }: {
   householdId: string;
   checkupId: string;
   label: string;
   notes: string | null;
   nextDueOn: string;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.checkup;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateCheckupAction, {});
   const submitted = useRef(false);
@@ -170,11 +160,11 @@ export function EditCheckupButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} title="Edit">
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(common.editNamed, label)} title={common.edit}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Edit checkup" description="Update what this says, or move its next due date.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.editTitle} description={words.editDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -186,11 +176,11 @@ export function EditCheckupButton({
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="checkupId" value={checkupId} />
-          <Field label="What's due" name="label" defaultValue={label} required autoComplete="off" />
-          <Field label="Next due" name="nextDueOn" type="date" defaultValue={nextDueOn} required />
-          <Field label="Notes (optional)" name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <Field label={words.whatsDue} name="label" defaultValue={label} required autoComplete="off" />
+          <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={nextDueOn} required />
+          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+            {pending ? common.saving : common.save}
           </Button>
         </form>
       </Sheet>
@@ -211,6 +201,7 @@ export function CheckupActions({
   checkup,
   members,
   defaultPrivacyScope,
+  labels,
 }: {
   householdId: string;
   checkup: {
@@ -225,7 +216,9 @@ export function CheckupActions({
   };
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  labels: HealthFormLabels;
 }) {
+  const common = labels.common;
   const [, completeAction, completePending] = useActionState<ActionState, FormData>(completeCheckupAction, {});
   const [, dismissAction, dismissPending] = useActionState<ActionState, FormData>(dismissCheckupAction, {});
   const [, reactivateAction, reactivatePending] = useActionState<ActionState, FormData>(reactivateCheckupAction, {});
@@ -239,7 +232,7 @@ export function CheckupActions({
 
   if (checkup.status === "dismissed") {
     return (
-      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label="Bring back" title="Bring back">
+      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label={common.bringBack} title={common.bringBack}>
         <RotateCcw aria-hidden className="size-3.5" />
       </Pill>
     );
@@ -247,7 +240,7 @@ export function CheckupActions({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Pill type="button" tone="soft" disabled={completePending} onClick={() => submit(completeAction)} aria-label="Mark done" title="Mark done">
+      <Pill type="button" tone="soft" disabled={completePending} onClick={() => submit(completeAction)} aria-label={common.markDone} title={common.markDone}>
         <CircleCheck aria-hidden className="size-3.5" />
       </Pill>
       {!checkup.linkedAppointmentId ? (
@@ -258,15 +251,16 @@ export function CheckupActions({
           checkupId={checkup.id}
           defaultMemberId={checkup.memberId}
           defaultAppointmentType={CHECKUP_TYPE_TO_APPOINTMENT_TYPE[checkup.checkupType]}
+          labels={labels}
           trigger={
-            <Pill type="button" tone="quiet" aria-label="Book an appointment for this" title="Book">
+            <Pill type="button" tone="quiet" aria-label={labels.checkup.bookLabel} title={labels.checkup.book}>
               <CalendarPlus aria-hidden className="size-3.5" />
             </Pill>
           }
         />
       ) : null}
-      <EditCheckupButton householdId={householdId} checkupId={checkup.id} label={checkup.label} notes={checkup.notes} nextDueOn={checkup.nextDueOn} />
-      <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label="Remove" title="Remove">
+      <EditCheckupButton householdId={householdId} checkupId={checkup.id} label={checkup.label} notes={checkup.notes} nextDueOn={checkup.nextDueOn} labels={labels} />
+      <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label={common.remove} title={common.remove}>
         <Ban aria-hidden className="size-3.5" />
       </Pill>
     </div>

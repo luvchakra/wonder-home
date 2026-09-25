@@ -12,6 +12,7 @@ import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 import { Switch } from "@wonderhome/core/ui/switch";
 
 import type { ActionState } from "../(auth)/actions";
+import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
 import {
   grantHealthConsentAction,
   revokeHealthConsentAction,
@@ -19,21 +20,20 @@ import {
   setHealthPrivacyScopeAction,
 } from "../(auth)/health-actions";
 
-const SCOPES = [
-  { value: "private", label: "Only me", hint: "Nobody else in the household can see it." },
-  { value: "selected_family", label: "People I choose", hint: "Only the people you specifically share it with, below." },
-  { value: "household_operational", label: "The whole household", hint: "Anyone in the household — for things like \"unavailable 5–6pm\", not the details." },
-] as const;
+/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** The privacy-scope choice itself — submits the moment a new option is picked. */
 export function PrivacyScopeForm({
   householdId,
   memberId,
   currentScope,
+  labels,
 }: {
   householdId: string;
   memberId: string;
-  currentScope: (typeof SCOPES)[number]["value"];
+  currentScope: (typeof SCOPES)[number];
+  labels: HealthFormLabels;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(setHealthPrivacyScopeAction, {});
   const formRef = useRef<HTMLFormElement>(null);
@@ -49,15 +49,15 @@ export function PrivacyScopeForm({
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="memberId" value={memberId} />
-      <Select label="Who can see your health data" name="privacyScope" defaultValue={currentScope}>
+      <Select label={labels.privacy.label} name="privacyScope" defaultValue={currentScope}>
         {SCOPES.map((scope) => (
-          <option key={scope.value} value={scope.value}>
-            {scope.label}
+          <option key={scope} value={scope}>
+            {labels.scopes[scope]}
           </option>
         ))}
       </Select>
       <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        {SCOPES.find((scope) => scope.value === currentScope)?.hint}
+        {labels.privacy.hints[currentScope]}
       </p>
     </form>
   );
@@ -68,10 +68,12 @@ export function HealthAiAssistanceToggle({
   householdId,
   memberId,
   enabled,
+  labels,
 }: {
   householdId: string;
   memberId: string;
   enabled: boolean;
+  labels: HealthFormLabels;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(setHealthAiAssistanceAction, {});
   const [checked, setChecked] = useState(enabled);
@@ -89,10 +91,8 @@ export function HealthAiAssistanceToggle({
         <input type="hidden" name="memberId" value={memberId} />
         <input type="hidden" name="aiAssistanceEnabled" value={checked ? "true" : "false"} />
         <div className="min-w-0">
-          <p className="text-sm font-medium">Let HomeBrain use this</p>
-          <p className="text-xs text-[var(--wh-foreground-subtle)]">
-            When on, WonderHome can consider your health data — appointments, reminders — while it reasons about the household. It is never shown to anyone your privacy setting above excludes.
-          </p>
+          <p className="text-sm font-medium">{labels.privacy.aiTitle}</p>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.privacy.aiBody}</p>
         </div>
         <Switch
           checked={checked}
@@ -101,7 +101,7 @@ export function HealthAiAssistanceToggle({
             setChecked(next);
             requestAnimationFrame(() => formRef.current?.requestSubmit());
           }}
-          label="Let HomeBrain use this member's health data"
+          label={labels.privacy.aiSwitch}
         />
       </form>
     </div>
@@ -113,10 +113,12 @@ export function GrantHealthConsentButton({
   householdId,
   subjectMemberId,
   candidates,
+  labels,
 }: {
   householdId: string;
   subjectMemberId: string;
   candidates: { id: string; displayName: string }[];
+  labels: HealthFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(grantHealthConsentAction, {});
@@ -131,10 +133,10 @@ export function GrantHealthConsentButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Share with someone
+        <Plus aria-hidden className="size-3.5" /> {labels.privacy.shareAdd}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Share your health data" description="They will be able to see it in their own view, until you remove it again.">
+      <Sheet open={open} onOpenChange={setOpen} title={labels.privacy.shareTitle} description={labels.privacy.shareDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -145,9 +147,9 @@ export function GrantHealthConsentButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="subjectMemberId" value={subjectMemberId} />
-          <Select label="Share with" name="viewerMemberId" required defaultValue="">
+          <Select label={labels.privacy.shareWith} name="viewerMemberId" required defaultValue="">
             <option value="" disabled>
-              Choose someone
+              {labels.privacy.shareChoose}
             </option>
             {candidates.map((candidate) => (
               <option key={candidate.id} value={candidate.id}>
@@ -156,7 +158,7 @@ export function GrantHealthConsentButton({
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Sharing…" : "Share"}
+            {pending ? labels.privacy.shareSharing : labels.privacy.shareSubmit}
           </Button>
         </form>
       </Sheet>
@@ -169,10 +171,12 @@ export function RevokeHealthConsentButton({
   householdId,
   consent,
   viewerName,
+  labels,
 }: {
   householdId: string;
   consent: HealthConsent;
   viewerName: string;
+  labels: HealthFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(revokeHealthConsentAction, {});
@@ -188,8 +192,8 @@ export function RevokeHealthConsentButton({
         type="button"
         tone="quiet"
         onClick={() => setOpen(true)}
-        aria-label={`Stop sharing with ${viewerName}`}
-        title={`Stop sharing with ${viewerName}`}
+        aria-label={withName(labels.privacy.revokeLabel, viewerName)}
+        title={withName(labels.privacy.revokeLabel, viewerName)}
       >
         <UserX aria-hidden className="size-3.5" />
       </Pill>
@@ -197,9 +201,9 @@ export function RevokeHealthConsentButton({
       <ConfirmationSheet
         open={open}
         onOpenChange={setOpen}
-        title={`Stop sharing with ${viewerName}?`}
-        description={`${viewerName} will no longer be able to see this health data.`}
-        confirmLabel="Stop sharing"
+        title={withName(labels.privacy.revokeTitle, viewerName)}
+        description={withName(labels.privacy.revokeDescription, viewerName)}
+        confirmLabel={labels.privacy.revokeConfirm}
         destructive
         pending={pending}
         onConfirm={() => {

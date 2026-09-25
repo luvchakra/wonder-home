@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import type { HomeSendAddress } from "@wonderhome/core/homesend/items";
-import { installInstructions, useInstallPrompt } from "@wonderhome/core/pwa/use-install-prompt";
+import { useInstallPrompt } from "@wonderhome/core/pwa/use-install-prompt";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -20,6 +20,9 @@ import {
   rotateHomeSendAddressAction,
   type HomeSendAddressState,
 } from "../(auth)/homesend-address-actions";
+import type { HomeSendPageLabels } from "../_lib/homesend-labels";
+
+type ChannelLabels = HomeSendPageLabels["channels"];
 
 /**
  * Other ways to send things in (Phase 5): forward email to the household's
@@ -34,7 +37,10 @@ export function HomeSendChannels({
   emailConfigured,
   address,
   whatsapp = null,
+  labels,
 }: {
+  /** The section's words in the viewer's language (`homesendPageLabels`). */
+  labels: ChannelLabels;
   householdId: string;
   isAdmin: boolean;
   emailConfigured: boolean;
@@ -48,13 +54,13 @@ export function HomeSendChannels({
 
   return (
     <section>
-      <SectionHeader title="Other ways to send things in" />
+      <SectionHeader title={labels.title} />
       <div className="space-y-3">
-        {whatsapp ? <WhatsAppChannel number={whatsapp.number} connected={whatsapp.connected} /> : null}
+        {whatsapp ? <WhatsAppChannel number={whatsapp.number} connected={whatsapp.connected} labels={labels} /> : null}
         {emailConfigured ? (
-          <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} />
+          <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} labels={labels} />
         ) : null}
-        {!install.installed ? <InstallChannel /> : null}
+        {!install.installed ? <InstallChannel labels={labels} /> : null}
       </div>
     </section>
   );
@@ -65,18 +71,26 @@ export function HomeSendChannels({
  * is connected or managed — connecting needs the one-time code, so it never
  * happens from here.
  */
-function WhatsAppChannel({ number, connected }: { number: string; connected: boolean }) {
+function WhatsAppChannel({ number, connected, labels }: { number: string; connected: boolean; labels: ChannelLabels }) {
+  // The number keeps its own figures, set apart from the words around it.
+  const [before, after = ""] = labels.whatsappConnected.split("{number}");
   return (
     <Link href="/settings/whatsapp" className="block rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]">
       <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--wh-surface-muted)]">
         <IconTile icon={MessageCircle} tone="handled" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Forward it on WhatsApp</p>
+          <p className="text-sm font-semibold">{labels.whatsappTitle}</p>
           <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">
             {connected ? (
-              <>Send to <span className="tabular-nums">{number}</span> — it arrives here as from you.</>
+              <>
+                {before}
+                <span className="tabular-nums" dir="ltr">
+                  {number}
+                </span>
+                {after}
+              </>
             ) : (
-              "Connect your number, then forward messages, photos and documents here."
+              labels.whatsappConnect
             )}
           </p>
         </div>
@@ -90,10 +104,12 @@ function EmailChannel({
   householdId,
   isAdmin,
   address,
+  labels,
 }: {
   householdId: string;
   isAdmin: boolean;
   address: HomeSendAddress | null;
+  labels: ChannelLabels;
 }) {
   const [createState, createAction, creating] = useActionState<HomeSendAddressState, FormData>(createHomeSendAddressAction, {});
   const [rotateState, rotateAction, rotating] = useActionState<HomeSendAddressState, FormData>(rotateHomeSendAddressAction, {});
@@ -117,15 +133,15 @@ function EmailChannel({
       <div className="flex items-start gap-3">
         <IconTile icon={Mail} tone="primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Forward it by email</p>
+          <p className="text-sm font-semibold">{labels.emailTitle}</p>
           <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">
             {address?.status === "active"
-              ? "Anything forwarded here lands in your review queue."
+              ? labels.emailActive
               : address?.status === "revoked"
-                ? "Turned off — forwarded mail no longer reaches this household."
+                ? labels.emailRevoked
                 : isAdmin
-                  ? "Get an address that forwards straight into HomeSend."
-                  : "Ask an admin to set this up."}
+                  ? labels.emailAdmin
+                  : labels.emailAskAdmin}
           </p>
         </div>
       </div>
@@ -133,9 +149,9 @@ function EmailChannel({
       {address?.status === "active" ? (
         <div className="flex items-center gap-2">
           <input readOnly value={address.address} className="min-w-0 flex-1 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-3 py-2 text-sm" />
-          <Pill type="button" tone="quiet" onClick={() => copyAddress(address.address)} aria-label="Copy the address">
+          <Pill type="button" tone="quiet" onClick={() => copyAddress(address.address)} aria-label={labels.copyAria}>
             {copied ? <Check aria-hidden className="size-3.5" /> : <Copy aria-hidden className="size-3.5" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? labels.copied : labels.copy}
           </Pill>
         </div>
       ) : null}
@@ -146,7 +162,7 @@ function EmailChannel({
             <form action={address ? rotateAction : createAction}>
               <input type="hidden" name="householdId" value={householdId} />
               <Pill type="submit" tone="primary" disabled={busy}>
-                {busy ? "Working…" : address ? "Turn back on" : "Set up email forwarding"}
+                {busy ? labels.working : address ? labels.turnBackOn : labels.setUp}
               </Pill>
             </form>
           ) : (
@@ -154,13 +170,13 @@ function EmailChannel({
               <form action={rotateAction}>
                 <input type="hidden" name="householdId" value={householdId} />
                 <Pill type="submit" tone="quiet" disabled={busy}>
-                  {rotating ? "Rotating…" : "Get a new address"}
+                  {rotating ? labels.rotating : labels.newAddress}
                 </Pill>
               </form>
               <form action={revokeAction}>
                 <input type="hidden" name="householdId" value={householdId} />
                 <Pill type="submit" tone="quiet" disabled={busy}>
-                  {revoking ? "Turning off…" : "Turn off"}
+                  {revoking ? labels.turningOff : labels.turnOff}
                 </Pill>
               </form>
             </>
@@ -173,7 +189,7 @@ function EmailChannel({
   );
 }
 
-function InstallChannel() {
+function InstallChannel({ labels }: { labels: ChannelLabels }) {
   const install = useInstallPrompt();
   const [guide, setGuide] = useState(false);
 
@@ -182,10 +198,8 @@ function InstallChannel() {
       <Card className="flex items-center gap-3 p-4">
         <IconTile icon={Download} tone="primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Install WonderHome</p>
-          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">
-            Installed, your phone&rsquo;s own share button can send a photo or message here directly.
-          </p>
+          <p className="text-sm font-semibold">{labels.installTitle}</p>
+          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{labels.installBody}</p>
         </div>
         <Pill
           type="button"
@@ -195,23 +209,23 @@ function InstallChannel() {
             else setGuide(true);
           }}
         >
-          Install
+          {labels.install}
         </Pill>
       </Card>
 
       <Sheet
         open={guide}
         onOpenChange={setGuide}
-        title="Install WonderHome"
-        description="Put it on your home screen and it opens like an app — full screen, no address bar."
+        title={labels.installTitle}
+        description={labels.installDescription}
       >
         <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--wh-foreground-muted)]">
-          {installInstructions(install.platform).map((step) => (
+          {(labels.installSteps[install.platform] ?? labels.installSteps.unknown).map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
         <Button type="button" className="mt-5 w-full" onClick={() => setGuide(false)}>
-          Got it
+          {labels.gotIt}
         </Button>
       </Sheet>
     </>

@@ -3,8 +3,8 @@
 import { Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
 import { useActionState, useRef, useState, type ReactNode } from "react";
 
-import { gateTranscript, uncertainTranscriptPrompt } from "@wonderhome/core/homesend/audio";
-import { FAILURE_REASON_COPY, type HomeSendChange } from "@wonderhome/core/homesend/items";
+import { gateTranscript } from "@wonderhome/core/homesend/audio";
+import type { HomeSendChange } from "@wonderhome/core/homesend/items";
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
@@ -27,22 +27,25 @@ import {
   type RouteHomeItemState,
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
+import { fillIn, type HomeSendPageLabels, type HomeSendSourceLabels } from "../_lib/homesend-labels";
 import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
 export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null; confirmation?: ReviewConfirmation | null; plan?: DocumentPlan | null };
 
-const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone; label: string }> = {
-  bill: { icon: Wallet, tone: "money", label: "Bill" },
-  school_item: { icon: GraduationCap, tone: "school", label: "School" },
-  grocery_item: { icon: ShoppingBasket, tone: "care", label: "Grocery" },
-  health_document: { icon: HeartPulse, tone: "health", label: "Health" },
-  receipt: { icon: Receipt, tone: "care", label: "Receipt" },
-  unknown: { icon: HelpCircle, tone: "neutral", label: "Not sure yet" },
+const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone }> = {
+  bill: { icon: Wallet, tone: "money" },
+  school_item: { icon: GraduationCap, tone: "school" },
+  grocery_item: { icon: ShoppingBasket, tone: "care" },
+  health_document: { icon: HeartPulse, tone: "health" },
+  receipt: { icon: Receipt, tone: "care" },
+  unknown: { icon: HelpCircle, tone: "neutral" },
 };
 
-function presentationFor(kind: string | null): { icon: typeof Wallet; tone: IconTone; label: string } {
-  return KIND_PRESENTATION[kind ?? "unknown"] ?? KIND_PRESENTATION.unknown!;
+/** A kind's tile and its word, in the viewer's language (`labels.kind`, by the same closed value). */
+function presentationFor(kind: string | null, words: Record<string, string>): { icon: typeof Wallet; tone: IconTone; label: string } {
+  const key = kind && KIND_PRESENTATION[kind] ? kind : "unknown";
+  return { ...KIND_PRESENTATION[key]!, label: words[key] ?? words.unknown ?? "" };
 }
 
 /**
@@ -59,20 +62,23 @@ function firstSentence(text: string): string {
 }
 
 /** A row's name: what was read, else what it is — never an empty line. */
-function titleFor(item: HomeSendItem): string {
+function titleFor(item: HomeSendItem, words: HomeSendSourceLabels): string {
   if (item.extracted?.title) return item.extracted.title;
   if (item.understanding?.contentSummary) return item.understanding.contentSummary;
   if (item.subject) return item.subject;
   if (item.sourceUrl) return item.sourceUrl;
   if (item.rawText) return firstSentence(item.rawText);
-  return describeSource(item.understanding ?? { provenance: { channel: item.source, transcriptConfidence: null, url: null, subject: null, sender: null, filename: null } }, { contentType: item.contentType });
+  return describeSource(item.understanding ?? { provenance: { channel: item.source, transcriptConfidence: null, url: null, subject: null, sender: null, filename: null } }, { contentType: item.contentType }, words);
 }
 
-/** A voice note still waiting for the household to check what was heard (§17). */
+/**
+ * A voice note still waiting for the household to check what was heard (§17).
+ * Its prompt is written by `TranscriptCheck`, in the viewer's language.
+ */
 function uncheckedTranscript(item: HomeSendItem): { text: string; prompt: string } | null {
   if (item.source !== "audio_note" || item.classifiedKind !== "unknown" || !item.rawText || item.transcriptConfidence === null) return null;
   const gate = gateTranscript({ text: item.rawText, confidence: item.transcriptConfidence });
-  return gate.outcome === "uncertain" ? { text: gate.text, prompt: uncertainTranscriptPrompt(gate) } : null;
+  return gate.outcome === "uncertain" ? { text: gate.text, prompt: "" } : null;
 }
 
 type OpenItem = {
@@ -130,7 +136,10 @@ export function HomeSendInbox({
   senders = {},
   filterLabel = null,
   filter = null,
+  labels,
 }: {
+  /** The screen's words in the viewer's language (`homesendPageLabels`). */
+  labels: HomeSendPageLabels;
   householdId: string;
   kids: { id: string; displayName: string }[];
   /** Whether the viewer may add a child from a school notice (story 08-009). */
@@ -170,6 +179,8 @@ export function HomeSendInbox({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadFormRef = useRef<HTMLFormElement>(null);
   const busy = uploading || pasting;
+  const words = labels.inbox;
+  const review = labels.review;
 
   // Each action's state object is a stable reference until its next submit,
   // so comparing against the last one this render loop saw catches exactly
@@ -214,7 +225,7 @@ export function HomeSendInbox({
     uploadFormRef.current.requestSubmit();
   }
 
-  function review(item: HomeSendItem, handFill = false) {
+  function openReview(item: HomeSendItem, handFill = false) {
     const heard = handFill ? null : uncheckedTranscript(item);
     setFailedNotice(null);
     setOpenItem({
@@ -262,14 +273,14 @@ export function HomeSendInbox({
               )}
             >
               <UploadCloud aria-hidden className="mx-auto mb-2 size-8 text-[var(--wh-foreground-subtle)]" />
-              <p className="text-sm font-medium">Drag a photo, PDF, text file or voice note here</p>
-              <p className="mt-0.5 text-xs text-[var(--wh-foreground-subtle)]">A bill, a school notice, a grocery ask — whatever you were sent, up to 4MB</p>
+              <p className="text-sm font-medium">{words.dropTitle}</p>
+              <p className="mt-0.5 text-xs text-[var(--wh-foreground-subtle)]">{words.dropHint}</p>
               <div className="mt-3 flex flex-wrap justify-center gap-2">
                 <Pill type="button" tone="soft" onClick={() => fileInputRef.current?.click()} disabled={busy}>
-                  <Camera aria-hidden className="size-3.5" /> {uploading ? "Reading…" : "Choose a file"}
+                  <Camera aria-hidden className="size-3.5" /> {uploading ? review.reading : words.chooseFile}
                 </Pill>
                 <Pill type="button" tone="quiet" onClick={() => setMode(mode === "paste" ? "drop" : "paste")} disabled={busy}>
-                  <ClipboardPaste aria-hidden className="size-3.5" /> Paste a message or link
+                  <ClipboardPaste aria-hidden className="size-3.5" /> {words.paste}
                 </Pill>
               </div>
             </div>
@@ -285,7 +296,7 @@ export function HomeSendInbox({
               />
             </form>
             {uploadState.error ? <Alert>{uploadState.error}</Alert> : null}
-            {failedNotice ? <Alert>{failedNotice} It&apos;s kept below under &ldquo;Failed safely&rdquo;.</Alert> : null}
+            {failedNotice ? <Alert>{failedNotice} {words.keptBelow}</Alert> : null}
             {autoApplied ? (
               <Alert tone="info">
                 <span className="flex flex-wrap items-center gap-2">
@@ -293,8 +304,8 @@ export function HomeSendInbox({
                   <form action={undoAction}>
                     <input type="hidden" name="householdId" value={householdId} />
                     <input type="hidden" name="changeId" value={autoApplied.changeId} />
-                    <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo adding ${autoApplied.title}`}>
-                      {undoing ? "Undoing…" : "Undo"}
+                    <Pill type="submit" tone="quiet" disabled={undoing} aria-label={fillIn(words.undoAdding, { title: autoApplied.title })}>
+                      {undoing ? review.undoing : words.undo}
                     </Pill>
                   </form>
                 </span>
@@ -305,17 +316,17 @@ export function HomeSendInbox({
               <form action={pasteAction} className="space-y-3">
                 <input type="hidden" name="householdId" value={householdId} />
                 {pasteState.error ? <Alert>{pasteState.error}</Alert> : null}
-                <label htmlFor="home-send-text" className="block text-sm font-medium">Paste a forwarded message, or a link to a web page</label>
+                <label htmlFor="home-send-text" className="block text-sm font-medium">{words.pasteLabel}</label>
                 <textarea
                   id="home-send-text"
                   name="text"
                   rows={5}
                   required
-                  placeholder="Paste a bill reminder, a school notice, a grocery ask — or a link…"
+                  placeholder={words.pastePlaceholder}
                   className="block w-full resize-none rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
                 />
                 <Pill type="submit" tone="primary" disabled={busy} className="w-full justify-center">
-                  {pasting ? "Reading…" : "Read this"}
+                  {pasting ? review.reading : review.readThis}
                 </Pill>
               </form>
             ) : null}
@@ -330,12 +341,13 @@ export function HomeSendInbox({
               action={transcriptAction}
               error={transcriptState.error}
               busy={confirmingTranscript}
+              labels={review}
             />
             <form action={dismissAction}>
               <input type="hidden" name="householdId" value={householdId} />
               <input type="hidden" name="itemId" value={openItem.id} />
               <Pill type="submit" tone="quiet" disabled={confirmingTranscript || dismissing} className="w-full justify-center">
-                {dismissing ? "Dismissing…" : "Not worth adding"}
+                {dismissing ? review.dismissing : review.notWorthAdding}
               </Pill>
             </form>
           </div>
@@ -360,6 +372,7 @@ export function HomeSendInbox({
               subject={openItem.subject ?? null}
               confirmation={openItem.confirmation ?? null}
               plan={openItem.plan ?? null}
+              labels={review}
               onApplied={() => setPlanApplied(true)}
               onDone={() => {
                 setPlanApplied(false);
@@ -371,7 +384,7 @@ export function HomeSendInbox({
               <input type="hidden" name="householdId" value={householdId} />
               <input type="hidden" name="itemId" value={openItem.id} />
               <Pill type="submit" tone="quiet" disabled={routing || dismissing} className="w-full justify-center">
-                {dismissing ? "Dismissing…" : "Not worth adding"}
+                {dismissing ? review.dismissing : review.notWorthAdding}
               </Pill>
             </form>
             )}
@@ -384,14 +397,16 @@ export function HomeSendInbox({
 
       {pendingOthers.length > 0 ? (
         <section>
-          <SectionHeader title="Needs your review" count={pendingOthers.length} />
+          <SectionHeader title={words.needsReview} count={pendingOthers.length} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {pendingOthers.map((item) => {
                 const heard = uncheckedTranscript(item);
-                const presentation = item.source === "audio_note" && heard ? { icon: Mic, tone: "neutral" as IconTone, label: "Voice note" } : presentationFor(item.classifiedKind);
-                const reason = heard ? "Check what WonderHome heard" : describeSource(item.understanding, { contentType: item.contentType, receivedAt: item.createdAt, from: item.createdByMemberId ? senders[item.createdByMemberId] : null });
-                const title = titleFor(item);
+                const presentation = item.source === "audio_note" && heard ? { icon: Mic, tone: "neutral" as IconTone, label: words.voiceNote } : presentationFor(item.classifiedKind, words.kind);
+                const reason = heard
+                  ? words.checkHeard
+                  : describeSource(item.understanding, { contentType: item.contentType, receivedAt: item.createdAt, from: item.createdByMemberId ? senders[item.createdByMemberId] : null }, review.source);
+                const title = titleFor(item, review.source);
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
                     <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
@@ -399,8 +414,8 @@ export function HomeSendInbox({
                       <span className="block text-sm font-medium break-words">{title}</span>
                       <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label} · {reason}</span>
                     </span>
-                    <Pill type="button" tone="soft" onClick={() => review(item)} aria-label={`Review ${title}`}>
-                      Review
+                    <Pill type="button" tone="soft" onClick={() => openReview(item)} aria-label={fillIn(words.reviewAria, { title })}>
+                      {words.review}
                     </Pill>
                   </li>
                 );
@@ -412,25 +427,25 @@ export function HomeSendInbox({
 
       {failedOthers.length > 0 ? (
         <section>
-          <SectionHeader title="Failed safely" count={failedOthers.length} />
+          <SectionHeader title={words.failedSafely} count={failedOthers.length} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {failedOthers.map((item) => {
-                const title = titleFor(item);
+                const title = titleFor(item, review.source);
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
                     <IconTile icon={item.source === "link" ? Link2 : ShieldAlert} tone="neutral" size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium break-words">{title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{item.failureReason ? FAILURE_REASON_COPY[item.failureReason] : "Couldn't be read."}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{item.failureReason ? (words.failure[item.failureReason] ?? words.couldNotRead) : words.couldNotRead}</span>
                     </span>
-                    <Pill type="button" tone="quiet" onClick={() => review(item, true)} aria-label={`Fill in ${title} by hand`} title="Fill in by hand">
+                    <Pill type="button" tone="quiet" onClick={() => openReview(item, true)} aria-label={fillIn(words.fillByHandAria, { title })} title={words.fillByHand}>
                       <PenLine aria-hidden className="size-3.5" />
                     </Pill>
                     <form action={dismissAction}>
                       <input type="hidden" name="householdId" value={householdId} />
                       <input type="hidden" name="itemId" value={item.id} />
-                      <Pill type="submit" tone="quiet" disabled={dismissing} aria-label={`Dismiss ${title}`} title="Dismiss">
+                      <Pill type="submit" tone="quiet" disabled={dismissing} aria-label={fillIn(words.dismissAria, { title })} title={words.dismiss}>
                         <X aria-hidden className="size-3.5" />
                       </Pill>
                     </form>
@@ -444,11 +459,11 @@ export function HomeSendInbox({
 
       {history.length > 0 ? (
         <section>
-          <SectionHeader title="Recently handled" count={history.length} />
+          <SectionHeader title={words.recentlyHandled} count={history.length} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {history.map((item) => {
-                const title = titleFor(item);
+                const title = titleFor(item, review.source);
                 const itemChanges = changesByIntakeId.get(item.id) ?? [];
                 // A receipt has no one "primary" record: each line it recorded
                 // (and each item it started tracking) is its own row with its
@@ -461,24 +476,28 @@ export function HomeSendInbox({
                 // (or no AI provider ever having classified it at all) can
                 // leave classified_kind unknown while the real change row
                 // still says exactly what was written.
-                const presentation = presentationFor(isReceipt ? "receipt" : (primaryChange?.domain ?? item.classifiedKind));
+                const presentation = presentationFor(isReceipt ? "receipt" : (primaryChange?.domain ?? item.classifiedKind), words.kind);
                 const canUndoPrimary = Boolean(primaryChange && !primaryChange.undoneAt);
-                const statusLabel =
+                // A closed status, shown in the viewer's language; the stored values never change.
+                const status: keyof typeof words.status =
                   item.status === "dismissed"
                     ? item.reviewDecision === "kept_existing"
-                      ? "Kept existing"
-                      : "Dismissed"
+                      ? "keptExisting"
+                      : "dismissed"
                     : isReceipt
                       ? itemChanges.length > 0 && itemChanges.every((change) => change.undoneAt)
-                        ? "Undone"
-                        : "Recorded"
+                        ? "undone"
+                        : "recorded"
                       : primaryChange?.undoneAt
-                        ? "Undone"
+                        ? "undone"
                       : primaryChange?.changeType === "updated"
-                        ? "Updated"
+                        ? "updated"
                         : primaryChange?.changeType === "cancelled"
-                          ? "Cancelled"
-                          : "Added";
+                          ? "cancelled"
+                          : "added";
+                const statusLabel = words.status[status];
+                const onRecord =
+                  status === "updated" ? words.updatedOnRecord : status === "cancelled" ? words.cancelledOnRecord : statusLabel;
                 return (
                   <li key={item.id} className="space-y-1.5 py-2.5">
                     <div className="flex items-center gap-3">
@@ -487,20 +506,25 @@ export function HomeSendInbox({
                         <span className="block text-sm font-medium break-words">{title}</span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                           {presentation.label}
-                          {primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? ` · ${statusLabel} the one on record` : ""}
-                          {item.reviewDecision === "auto_added" && !primaryChange?.undoneAt ? " · Added on its own" : ""}
+                          {primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? ` · ${onRecord}` : ""}
+                          {item.reviewDecision === "auto_added" && !primaryChange?.undoneAt ? ` · ${words.addedOnItsOwn}` : ""}
                         </span>
                       </span>
                       {canUndoPrimary ? (
                         <form action={undoAction}>
                           <input type="hidden" name="householdId" value={householdId} />
                           <input type="hidden" name="changeId" value={primaryChange!.id} />
-                          <Pill type="submit" tone="quiet" disabled={undoing} aria-label={`Undo ${statusLabel === "Added" ? "adding" : statusLabel === "Updated" ? "updating" : "cancelling"} ${title}`}>
-                            {undoing ? "Undoing…" : "Undo"}
+                          <Pill
+                            type="submit"
+                            tone="quiet"
+                            disabled={undoing}
+                            aria-label={fillIn(status === "added" ? words.undoAdding : status === "updated" ? words.undoUpdating : words.undoCancelling, { title })}
+                          >
+                            {undoing ? review.undoing : words.undo}
                           </Pill>
                         </form>
                       ) : (
-                        <Badge tone={statusLabel === "Added" || statusLabel === "Recorded" ? "handled" : "neutral"}>{statusLabel}</Badge>
+                        <Badge tone={status === "added" || status === "recorded" ? "handled" : "neutral"}>{statusLabel}</Badge>
                       )}
                     </div>
                     {secondaryChanges.map((change) => {
@@ -509,12 +533,31 @@ export function HomeSendInbox({
                       const planned = item.receipt?.changes.find((entry) => entry.changeId === change.id);
                       const name = planned?.title ?? (bought ? purchaseNames[change.entityId] : groceryNames[change.entityId]);
                       const said = planned
-                        ? `${planned.action === "updated" ? "Updated" : planned.action === "cancelled" ? "Cancelled" : "Added"}: ${planned.title} · ${planned.reason}`
+                        ? fillIn(words.planned, {
+                            action: planned.action === "updated" ? words.status.updated : planned.action === "cancelled" ? words.status.cancelled : words.status.added,
+                            title: planned.title,
+                            reason: planned.reason,
+                          })
                         : bought
-                          ? `Bought: ${name ?? "a line from this receipt"}`
+                          ? name
+                            ? fillIn(words.bought, { name })
+                            : words.boughtLine
                           : isReceipt
-                            ? `Now tracking${name ? `: ${name}` : " a new item"}`
-                            : `Also added to Groceries${name ? `: ${name}` : ""}`;
+                            ? name
+                              ? fillIn(words.tracking, { name })
+                              : words.trackingNew
+                            : name
+                              ? fillIn(words.alsoGroceries, { name })
+                              : words.alsoGroceriesPlain;
+                      const undoLabel = bought
+                        ? name
+                          ? fillIn(words.undoRecording, { title: name })
+                          : words.undoRecordingLine
+                        : name
+                          ? fillIn(planned?.action === "updated" ? words.undoUpdating : words.undoAdding, { title: name })
+                          : planned?.action === "updated"
+                            ? words.undoUpdatingGrocery
+                            : words.undoAddingGrocery;
                       return (
                       <div key={change.id} className="ml-11 flex items-center gap-2 text-xs text-[var(--wh-foreground-subtle)]">
                         {bought ? <Receipt aria-hidden className="size-3.5 shrink-0" /> : change.domain === "school_item" ? <GraduationCap aria-hidden className="size-3.5 shrink-0" /> : change.domain === "bill" ? <Wallet aria-hidden className="size-3.5 shrink-0" /> : <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />}
@@ -523,12 +566,12 @@ export function HomeSendInbox({
                           <form action={undoAction}>
                             <input type="hidden" name="householdId" value={householdId} />
                             <input type="hidden" name="changeId" value={change.id} />
-                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={bought ? `Undo recording ${name ?? "this line"}` : `Undo ${planned?.action === "updated" ? "updating" : "adding"} ${name ?? "the grocery item"}`}>
-                              {undoing ? "Undoing…" : "Undo"}
+                            <Pill type="submit" tone="quiet" disabled={undoing} aria-label={undoLabel}>
+                              {undoing ? review.undoing : words.undo}
                             </Pill>
                           </form>
                         ) : (
-                          <Badge tone="neutral">Undone</Badge>
+                          <Badge tone="neutral">{words.status.undone}</Badge>
                         )}
                       </div>
                       );
@@ -544,9 +587,9 @@ export function HomeSendInbox({
 
       {pending.length === 0 && failed.length === 0 && history.length === 0 ? (
         filterLabel ? (
-          <EmptyState icon={UploadCloud} tone="ai" title={`Nothing from ${filterLabel} yet`} description="Anything sent this way shows up here. Everything else is under All." />
+          <EmptyState icon={UploadCloud} tone="ai" title={fillIn(words.emptyChannelTitle, { channel: filterLabel })} description={words.emptyChannelDescription} />
         ) : (
-          <EmptyState icon={UploadCloud} tone="ai" title="Nothing sent yet" description="Drag a photo, PDF or voice note above, or paste something you were forwarded, and WonderHome reads it for you." />
+          <EmptyState icon={UploadCloud} tone="ai" title={words.emptyTitle} description={words.emptyDescription} />
         )
       ) : null}
     </div>

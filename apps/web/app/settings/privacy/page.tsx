@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { Clock, Download, ShieldCheck, Trash2 } from "lucide-react";
 
-import { describeDataUse } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { buildPersonalView } from "@wonderhome/core/identity/views";
-import { describeExport } from "@wonderhome/core/privacy/export";
 import { listPrivacyRequests } from "@wonderhome/core/privacy/repository";
-import { DELETION_GRACE_DAYS, describeDays, retentionSchedule } from "@wonderhome/core/privacy/retention";
+import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
 import { latestVerification } from "@wonderhome/core/security/step-up-repository";
 import { checkStepUp } from "@wonderhome/core/security/step-up";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -28,6 +26,15 @@ import {
   ExportForm,
 } from "../../_components/privacy-forms";
 import { formatDate, requireSession } from "../../_lib/session";
+import {
+  cancelDeletionLabels,
+  confirmItIsYouLabels,
+  dataUseLines,
+  deletionFormLabels,
+  exportFormLabels,
+  exportLines,
+  retentionRows,
+} from "../../_lib/settings-labels";
 
 export const metadata = { title: "Privacy" };
 export const dynamic = "force-dynamic";
@@ -65,6 +72,9 @@ export default async function PrivacyCentrePage() {
     (request) => request.kind === "deletion" && (request.status === "pending" || request.status === "ready"),
   );
   const isOwner = membership.roles.includes("head");
+  const { t, format, preferences } = session.locale;
+  // The link keeps its own styling wherever the sentence puts it.
+  const [changeBefore, changeAfter] = t("settingsPage.privacy.changeIn", { link: "{link}" }).split("{link}");
 
   return (
     <AppShell
@@ -72,51 +82,48 @@ export default async function PrivacyCentrePage() {
       viewer={viewer}
       secondary={secondary}
       pathname="/settings/privacy"
-      back={{ href: "/settings", label: "Back to settings" }}
-      title="Privacy"
+      back={{ href: "/settings", label: t("settingsPage.backToSettings") }}
+      title={t("settingsPage.privacy.title")}
     >
       <div className="space-y-6">
         <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Your privacy</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            What leaves this house, how long we keep things, and how to take your data with you or have it
-            removed.
-          </p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.privacy.heading")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.privacy.lede")}</p>
         </header>
 
         <section>
-          <SectionHeader title="What the assistant may share" />
+          <SectionHeader title={t("settingsPage.ai.section.share")} />
           <Card className="space-y-3">
             <div className="flex items-start gap-3">
               <IconTile icon={ShieldCheck} tone="primary" />
               <ul className="min-w-0 flex-1 space-y-1.5">
-                {describeDataUse(dataUse).map((line) => (
+                {dataUseLines(t, dataUse).map((line) => (
                   <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
                 ))}
               </ul>
             </div>
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              An Admin changes this in{" "}
+              {changeBefore}
               <Link href="/settings/ai" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-                Settings → AI Assistant
+                {t("settingsPage.privacy.changeInLink")}
               </Link>
-              .
+              {changeAfter}
             </p>
           </Card>
         </section>
 
         <section>
-          <SectionHeader title="How long we keep things" />
+          <SectionHeader title={t("settingsPage.privacy.section.retention")} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
-              {retentionSchedule().map(({ key, rule }) => (
-                <li key={key} className="flex items-start gap-3 px-2 py-3">
+              {retentionRows(t, format).map((row) => (
+                <li key={row.key} className="flex items-start gap-3 px-2 py-3">
                   <IconTile icon={Clock} tone="neutral" size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{rule.label}</p>
-                    <p className="text-xs text-[var(--wh-foreground-muted)]">{rule.because}</p>
+                    <p className="text-sm font-medium">{row.label}</p>
+                    <p className="text-xs text-[var(--wh-foreground-muted)]">{row.because}</p>
                   </div>
-                  <Badge tone={rule.days === null ? "handled" : "neutral"}>{describeDays(rule.days)}</Badge>
+                  <Badge tone={row.kept ? "handled" : "neutral"}>{row.days}</Badge>
                 </li>
               ))}
             </ul>
@@ -124,12 +131,12 @@ export default async function PrivacyCentrePage() {
         </section>
 
         <section>
-          <SectionHeader title="Take a copy with you" />
+          <SectionHeader title={t("settingsPage.privacy.section.export")} />
           <Card className="space-y-4">
             <div className="flex items-start gap-3">
               <IconTile icon={Download} tone="care" />
               <ul className="min-w-0 flex-1 space-y-1.5">
-                {describeExport(view.permissions).map((line) => (
+                {exportLines(t, view.permissions, preferences.language).map((line) => (
                   <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
                 ))}
               </ul>
@@ -140,49 +147,42 @@ export default async function PrivacyCentrePage() {
                 action={confirmItIsYouAction}
                 householdId={householdId}
                 purpose="export"
-                what="before sending you a copy of your data"
+                labels={confirmItIsYouLabels(t, "export")}
               />
             )}
-            <ExportForm householdId={householdId} confirmed={mayExport} />
+            <ExportForm householdId={householdId} confirmed={mayExport} labels={exportFormLabels(t)} />
           </Card>
         </section>
 
         <section>
-          <SectionHeader title="Have your data deleted" />
+          <SectionHeader title={t("settingsPage.privacy.section.delete")} />
           <Card className="space-y-4">
             <div className="flex items-start gap-3">
               <IconTile icon={Trash2} tone="risk" />
               <div className="min-w-0 flex-1 space-y-1.5 text-sm text-[var(--wh-foreground-muted)]">
-                <p>
-                  Nothing is deleted the moment you ask. You get {DELETION_GRACE_DAYS} days to change your
-                  mind, and you can call it off at any point in them.
-                </p>
-                <p>
-                  What the household agreed together — the playbook, the rules, what was paid — stays, because
-                  it belongs to everyone who lives here. What is yours goes.
-                </p>
+                <p>{t("settingsPage.privacy.delete.grace", { count: DELETION_GRACE_DAYS })}</p>
+                <p>{t("settingsPage.privacy.delete.shared")}</p>
               </div>
             </div>
 
             {pendingDeletion ? (
               <div className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)]/60 p-4">
                 <p className="text-sm font-medium">
-                  Your data is due to be deleted
-                  {pendingDeletion.actsAt ? ` on ${formatDate(timezone, pendingDeletion.actsAt, "long")}` : ""}.
+                  {pendingDeletion.actsAt
+                    ? t("settingsPage.privacy.delete.dueOn", { date: formatDate(timezone, pendingDeletion.actsAt, "long") })
+                    : t("settingsPage.privacy.delete.due")}
                 </p>
-                <p className="text-sm text-[var(--wh-foreground-muted)]">
-                  You can stop this until then, and nothing will have been removed.
-                </p>
+                <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.privacy.delete.canStop")}</p>
                 <CancelDeletionForm
                   action={cancelDeletionAction}
                   householdId={householdId}
                   requestId={pendingDeletion.id}
+                  labels={cancelDeletionLabels(t)}
                 />
               </div>
             ) : isOwner ? (
               <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-sm text-[var(--wh-foreground-muted)]">
-                You are this household&rsquo;s owner. Deleting your data would leave the household without anyone to
-                run it, so hand that role to another adult first — then this will be here.
+                {t("settingsPage.privacy.delete.owner")}
               </p>
             ) : (
               <>
@@ -191,13 +191,14 @@ export default async function PrivacyCentrePage() {
                     action={confirmItIsYouAction}
                     householdId={householdId}
                     purpose="deletion"
-                    what="before starting anything this serious"
+                    labels={confirmItIsYouLabels(t, "deletion")}
                   />
                 )}
                 <DeletionForm
                   action={requestDeletionAction}
                   householdId={householdId}
                   confirmed={mayDelete}
+                  labels={deletionFormLabels(t)}
                 />
               </>
             )}
@@ -206,7 +207,7 @@ export default async function PrivacyCentrePage() {
 
         {requests.length > 0 ? (
           <section>
-            <SectionHeader title="What you have asked for" />
+            <SectionHeader title={t("settingsPage.privacy.section.requests")} />
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {requests.map((request) => (
@@ -218,14 +219,14 @@ export default async function PrivacyCentrePage() {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">
-                        {request.kind === "export" ? "A copy of your data" : "Deletion of your data"}
+                        {request.kind === "export" ? t("settingsPage.privacy.request.export") : t("settingsPage.privacy.request.deletion")}
                       </p>
                       <p className="text-xs text-[var(--wh-foreground-muted)]">
                         {formatDate(timezone, request.createdAt, "long")}
                         {request.refusalReason ? ` · ${request.refusalReason}` : ""}
                       </p>
                     </div>
-                    <Badge tone={request.status === "cancelled" ? "neutral" : "handled"}>{request.status}</Badge>
+                    <Badge tone={request.status === "cancelled" ? "neutral" : "handled"}>{t(`settingsPage.privacy.request.status.${request.status}`)}</Badge>
                   </li>
                 ))}
               </ul>
@@ -233,7 +234,7 @@ export default async function PrivacyCentrePage() {
           </section>
         ) : null}
 
-        <QuoteCard>Your home. Your data. Your call.</QuoteCard>
+        <QuoteCard>{t("settingsPage.privacy.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

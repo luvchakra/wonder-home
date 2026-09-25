@@ -1,4 +1,11 @@
 import type { Catalog } from "./en";
+import { billsEs } from "./areas/bills/es";
+import { schoolEs } from "./areas/school/es";
+import { healthEs } from "./areas/health/es";
+import { helpersEs } from "./areas/helpers/es";
+import { homesendEs } from "./areas/homesend/es";
+import { settingsEs } from "./areas/settings/es";
+import { householdEs } from "./areas/household/es";
 
 export const es: Catalog = {
   "common.next": "Siguiente",
@@ -705,4 +712,11 @@ export const es: Catalog = {
   "mealForm.stillNeeds": "Aún falta: {items}",
   "mealForm.runningLow": "Se está acabando: {items}; conviene reponerlo pronto.",
   "mealForm.addToPlan": "Añadir al plan",
+  ...billsEs,
+  ...schoolEs,
+  ...healthEs,
+  ...helpersEs,
+  ...homesendEs,
+  ...settingsEs,
+  ...householdEs,
 };
