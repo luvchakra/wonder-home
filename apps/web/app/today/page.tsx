@@ -19,6 +19,7 @@ import { listMeals } from "@wonderhome/core/meals/repository";
 import { isoDateIn } from "@wonderhome/core/context/format";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { schoolDateValue, schoolTimeWords } from "@wonderhome/core/school/times";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
@@ -32,6 +33,7 @@ import { Timeline, type TimelineItem } from "@wonderhome/core/ui/timeline";
 
 import { AgendaRow } from "../_components/agenda-row";
 import { NewEventForm } from "../_components/new-event-form";
+import { eventFormLabels } from "../_lib/event-form-labels";
 import { householdAgenda } from "../_lib/agenda";
 import { formatTime, formatToday, requireSession, type Session } from "../_lib/session";
 
@@ -47,7 +49,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const [{ view: requested }, session] = await Promise.all([searchParams, requireSession("/today")]);
-  const { membership, view, viewer, secondary } = session;
+  const { membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const timezone = membership.household.timezone;
   const now = new Date();
   const active = requested === "family" || requested === "household" ? requested : "mine";
@@ -58,25 +61,25 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <div className="space-y-5">
         <header className="wh-rise flex items-end justify-between gap-3">
           <div>
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Today</h1>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("today.title")}</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{formatToday(timezone, now)}</p>
           </div>
           <PillLink href="/family" tone="quiet">
-            <CalendarHeart aria-hidden className="size-3.5" /> Calendar
+            <CalendarHeart aria-hidden className="size-3.5" /> {t("today.calendar")}
           </PillLink>
         </header>
 
         <SegmentedControl
-          label="Whose day"
+          label={t("today.whoseDay")}
           active={active}
           segments={[
-            { key: "mine", label: "My day", href: "/today" },
-            { key: "family", label: "Family", href: "/today?view=family" },
-            ...(isChild ? [] : [{ key: "household", label: "Household", href: "/today?view=household" }]),
+            { key: "mine", label: t("today.view.mine"), href: "/today" },
+            { key: "family", label: t("today.view.family"), href: "/today?view=family" },
+            ...(isChild ? [] : [{ key: "household", label: t("today.view.household"), href: "/today?view=household" }]),
           ]}
         />
 
-        <Suspense fallback={<LoadingState rows={4} label="Laying out the day" />}>
+        <Suspense fallback={<LoadingState rows={4} label={t("today.loading")} />}>
           <TodayBody session={session} active={active} now={now} />
         </Suspense>
 
@@ -84,19 +87,20 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           <Card className="flex items-center gap-3 p-4">
             <ListChecks aria-hidden className="size-5 shrink-0 text-[var(--wh-primary)]" />
             <p className="min-w-0 flex-1 text-sm text-[var(--wh-foreground-muted)]">
-              Normal routines stay silent. Only what needs you appears here.
+              {t("today.routinesSilent")}
             </p>
           </Card>
         ) : null}
 
-        <QuoteCard>Small steps today. Happier tomorrows.</QuoteCard>
+        <QuoteCard>{t("today.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
 }
 
 async function TodayBody({ session, active, now }: { session: Session; active: "mine" | "family" | "household"; now: Date }) {
-  const { supabase, membership, view } = session;
+  const { supabase, membership, view, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const dayStart = new Date(now);
@@ -146,7 +150,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       mine: participates || event.participants.length === 0,
       family: true,
       household: false,
-      action: event.actionState && event.actionState !== "ready" ? <PillLink href="/family">Reply</PillLink> : undefined,
+      action: event.actionState && event.actionState !== "ready" ? <PillLink href="/family">{t("today.action.reply")}</PillLink> : undefined,
     });
   }
 
@@ -156,15 +160,19 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       key: `meal.${meal.id}`,
       at: meal.readyBy,
       time: formatTime(timezone, meal.readyBy),
-      title: `${slotLabel(meal.slot)} — ${meal.name}`,
-      meta: meal.cookMemberId ? `${nameOf(meal.cookMemberId) ?? "Someone"} cooking` : "Nobody assigned yet",
+      title: `${slotLabel(meal.slot, t)} — ${meal.name}`,
+      meta: meal.cookMemberId
+        ? nameOf(meal.cookMemberId)
+          ? t("today.meal.cooking", { name: nameOf(meal.cookMemberId)! })
+          : t("today.meal.someoneCooking")
+        : t("today.meal.nobodyAssigned"),
       icon: Utensils,
       tone: "meals",
       state: meal.status === "eaten" || meal.status === "ready" ? "done" : meal.status === "at_risk" ? "needs_you" : stateFor(meal.readyBy, meal.readyBy, now, false, null),
       mine: meal.cookMemberId === membership.memberId || meal.cookMemberId === null,
       family: true,
       household: true,
-      action: meal.status === "at_risk" ? <PillLink href="/meals">Fix</PillLink> : undefined,
+      action: meal.status === "at_risk" ? <PillLink href="/meals">{t("today.action.fix")}</PillLink> : undefined,
     });
   }
 
@@ -174,16 +182,16 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
     items.push({
       key: `bill.${obligation.id}`,
       at,
-      time: "Today",
-      title: `${obligation.name} due`,
-      meta: obligation.amountMinor !== null && obligation.currency ? formatMoney(obligation.amountMinor, obligation.currency) : "Amount not in yet",
+      time: t("today.today"),
+      title: t("today.bill.due", { name: obligation.name }),
+      meta: obligation.amountMinor !== null && obligation.currency ? formatMoney(obligation.amountMinor, obligation.currency) : t("today.bill.amountPending"),
       icon: Wallet,
       tone: "money",
       state: obligation.status === "scheduled" ? "done" : "needs_you",
       mine: obligation.responsibleMemberId === membership.memberId || obligation.responsibleMemberId === null,
       family: false,
       household: true,
-      action: obligation.status === "scheduled" ? undefined : <PillLink href="/bills" tone="primary">Pay</PillLink>,
+      action: obligation.status === "scheduled" ? undefined : <PillLink href="/bills" tone="primary">{t("today.action.pay")}</PillLink>,
     });
   }
 
@@ -196,16 +204,16 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
     items.push({
       key: `school.${item.id}`,
       at: item.dueTimeKnown ? item.dueAt : new Date(dayEnd),
-      time: schoolTimeWords(item, timezone) ?? "Today",
+      time: schoolTimeWords(item, timezone) ?? t("today.today"),
       title: item.title,
-      meta: `${nameOf(item.childMemberId) ?? "School"}${item.subject ? ` · ${item.subject}` : ""}`,
+      meta: `${nameOf(item.childMemberId) ?? t("today.school")}${item.subject ? ` · ${item.subject}` : ""}`,
       icon: GraduationCap,
       tone: "school",
       state: "needs_you",
       mine: item.childMemberId === membership.memberId || !isChild,
       family: true,
       household: false,
-      action: <PillLink href="/school">Review</PillLink>,
+      action: <PillLink href="/school">{t("today.action.review")}</PillLink>,
     });
   }
 
@@ -232,7 +240,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
         <Card className="flex items-center gap-3 bg-[var(--wh-attention-soft)]/60 p-3">
           <AlertTriangle aria-hidden className="size-5 shrink-0 text-[var(--wh-attention)]" />
           <p className="text-sm text-[var(--wh-foreground-muted)]">
-            WonderHome couldn’t reach part of today’s information just now. What’s shown below may be incomplete — try refreshing in a moment.
+            {t("today.partMissing")}
           </p>
         </Card>
       ) : null}
@@ -240,9 +248,9 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       {shown.length === 0 ? (
         <EmptyState
           icon={Clock3}
-          title={someDataMissing ? "Couldn't confirm your day is clear" : active === "mine" ? "Your day is clear" : active === "family" ? "Nothing on the family calendar today" : "The house is running itself today"}
-          description={someDataMissing ? "Some information didn’t load, so this may not be the whole picture." : "Meaningful commitments show up here as they are planned. Routine household work never needs ticking off."}
-          action={<NewEventForm householdId={householdId} label="Plan something" />}
+          title={t(someDataMissing ? "today.empty.unconfirmed" : active === "mine" ? "today.empty.mine" : active === "family" ? "today.empty.family" : "today.empty.household")}
+          description={t(someDataMissing ? "today.empty.unconfirmedLede" : "today.empty.lede")}
+          action={<NewEventForm householdId={householdId} label={t("today.planSomething")} labels={eventFormLabels(t)} />}
         />
       ) : (
         <Timeline items={shown} />
@@ -250,7 +258,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
 
       {householdNeeds.length > 0 ? (
         <section>
-          <SectionHeader title="Needs a person" count={householdNeeds.length} />
+          <SectionHeader title={t("today.needsPerson")} count={householdNeeds.length} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {householdNeeds.slice(0, 6).map((item) => (
@@ -263,7 +271,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
 
       {predictions.length > 0 ? (
         <section>
-          <SectionHeader title="Looking ahead" />
+          <SectionHeader title={t("today.lookingAhead")} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {predictions.map((prediction) => (
@@ -275,7 +283,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
                   meta={`${prediction.reason} ${describePredictionBasis(prediction.basis)}.`}
                   action={
                     <PillLink href={prediction.href} tone="soft">
-                      {prediction.domain === "groceries" ? "Groceries" : prediction.domain === "bills" ? "Bills" : "School"}
+                      {t(prediction.domain === "groceries" ? "today.domain.groceries" : prediction.domain === "bills" ? "today.domain.bills" : "today.domain.school")}
                     </PillLink>
                   }
                 />
@@ -307,6 +315,9 @@ function stateFor(start: Date, end: Date, now: Date, happened: boolean, actionSt
   return "upcoming";
 }
 
-function slotLabel(slot: string): string {
-  return slot.charAt(0).toUpperCase() + slot.slice(1);
+const SLOTS = ["breakfast", "lunch", "snack", "dinner"] as const;
+
+function slotLabel(slot: string, t: Translate): string {
+  const known = SLOTS.find((name) => name === slot);
+  return known ? t(`reminder.meal.slot.${known}`) : slot.charAt(0).toUpperCase() + slot.slice(1);
 }

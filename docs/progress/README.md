@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-25 | [Today screen in each person's language: views, timeline rows, empty states and the shared "Add to the family calendar" sheet that Today and Home open (story 22-004, one screen)](2026-09-25-today-screen-localized.md) |
 | 2026-09-25 | [HomeTalk screen in each person's language: greeting, suggestions, confirm/change/cancel, the composer and its voice states, the action preview's frame, message times and the conversation search, in seven languages (story 22-004, one screen)](2026-09-25-hometalk-screen-localized.md) |
 | 2026-09-24 | [Notifications screen in each person's language (22-004, one screen)](2026-09-24-notifications-screen-localized.md) |
 | 2026-09-24 | [Localized reminders (story 22-006)](2026-09-24-localized-reminders.md) |

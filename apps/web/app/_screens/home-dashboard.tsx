@@ -50,6 +50,7 @@ import { Suspense } from "react";
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { NewEventForm } from "../_components/new-event-form";
+import { eventFormLabels } from "../_lib/event-form-labels";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
@@ -777,7 +778,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   screen, which is not planning anything — it is moving the
                   person somewhere they then have to find it. */}
               <div className="mt-3 flex justify-center">
-                <NewEventForm householdId={householdId} label="Plan something" />
+                <NewEventForm householdId={householdId} label={t("today.planSomething")} labels={eventFormLabels(t)} />
               </div>
             </div>
           )}
