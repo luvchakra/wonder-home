@@ -11,8 +11,8 @@
 | Not Started | 2 |
 | Completion | 97.3% |
 | Current module | 22 Internationalization and Localization |
-| Current story | 22-004 HomeTalk, Today, More, Family, Groceries and Meals screens localized; next: 22-004 catalog coverage on the remaining screens; 20-011 payment operations and 18-008 developer platform done; 22-008 RTL deferred by the owner; 22-007 multi-currency audit done |
-| Last updated | 2026-09-24 |
+| Current story | 22-004 every signed-in screen localized (Bills, School, Health, Househelper, Upkeep, HomeSend, Manage Household, HomeBrain Review, Home, Settings); next: 22-004 Help, sign-in/sign-up, setup wizard and voice-link consent; 20-011 payment operations and 18-008 developer platform done; 22-008 RTL deferred by the owner; 22-007 multi-currency audit done |
+| Last updated | 2026-09-25 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
 table had drifted from several sessions' worth of story completions that
