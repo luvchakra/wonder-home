@@ -18,35 +18,37 @@ import {
   reactivateRecordAction,
   updateRecordAction,
 } from "../(auth)/health-record-actions";
+import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
 
-const TYPE_OPTIONS: { value: RecordType; label: string }[] = [
-  { value: "lab_result", label: "Lab result" },
-  { value: "prescription", label: "Prescription" },
-  { value: "imaging_report", label: "Imaging report" },
-  { value: "vaccination_certificate", label: "Vaccination certificate" },
-  { value: "discharge_summary", label: "Discharge summary" },
-  { value: "referral", label: "Referral" },
-  { value: "insurance_document", label: "Insurance document" },
-  { value: "visit_summary", label: "Visit summary" },
-  { value: "other", label: "Other" },
+/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
+const TYPES: RecordType[] = [
+  "lab_result",
+  "prescription",
+  "imaging_report",
+  "vaccination_certificate",
+  "discharge_summary",
+  "referral",
+  "insurance_document",
+  "visit_summary",
+  "other",
 ];
 
-const SCOPE_OPTIONS = [
-  { value: "private", label: "Only me" },
-  { value: "selected_family", label: "People I choose" },
-  { value: "household_operational", label: "The whole household" },
-] as const;
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Filing a health document by hand — HomeSend's own confirm writes through routeHomeSendItemAction instead (story 21-005). */
 export function AddRecordButton({
   householdId,
   members,
   defaultPrivacyScope,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  labels: HealthFormLabels;
 }) {
+  const words = labels.healthRecord;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createRecordAction, {});
   const submitted = useRef(false);
@@ -63,10 +65,10 @@ export function AddRecordButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Add a record
+        <Plus aria-hidden className="size-3.5" /> {words.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Add a health record" description="A lab result, prescription or similar — filed for yourself, or a child you guard.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.title} description={words.description}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -77,32 +79,32 @@ export function AddRecordButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label="Whose record?" name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={words.whose} name="memberId" defaultValue={members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Field label="What is it" name="label" placeholder="Blood test results" required autoComplete="off" />
-          <Select label="Kind of document" name="recordType" defaultValue="other">
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={words.what} name="label" placeholder={words.whatPlaceholder} required autoComplete="off" />
+          <Select label={words.kind} name="recordType" defaultValue="other">
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {labels.recordTypes[type]}
               </option>
             ))}
           </Select>
-          <Field label="Document date (optional)" name="documentDate" type="date" />
-          <Field label="Notes (optional)" name="notes" placeholder="Anything worth remembering" autoComplete="off" />
-          <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={words.date} name="documentDate" type="date" />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+            {SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {labels.scopes[scope]}
               </option>
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Filing…" : "File record"}
+            {pending ? words.filing : words.submit}
           </Button>
         </form>
       </Sheet>
@@ -118,6 +120,7 @@ export function EditRecordButton({
   recordType,
   documentDate,
   notes,
+  labels,
 }: {
   householdId: string;
   recordId: string;
@@ -125,7 +128,10 @@ export function EditRecordButton({
   recordType: RecordType;
   documentDate: string | null;
   notes: string | null;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.healthRecord;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateRecordAction, {});
   const submitted = useRef(false);
@@ -139,11 +145,11 @@ export function EditRecordButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} title="Edit">
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(common.editNamed, label)} title={common.edit}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Edit record" description="Update what this document is or when it's dated.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.editTitle} description={words.editDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -155,18 +161,18 @@ export function EditRecordButton({
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="recordId" value={recordId} />
-          <Field label="What is it" name="label" defaultValue={label} required autoComplete="off" />
-          <Select label="Kind of document" name="recordType" defaultValue={recordType}>
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Field label={words.what} name="label" defaultValue={label} required autoComplete="off" />
+          <Select label={words.kind} name="recordType" defaultValue={recordType}>
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {labels.recordTypes[type]}
               </option>
             ))}
           </Select>
-          <Field label="Document date (optional)" name="documentDate" type="date" defaultValue={documentDate ?? ""} />
-          <Field label="Notes (optional)" name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <Field label={words.date} name="documentDate" type="date" defaultValue={documentDate ?? ""} />
+          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+            {pending ? common.saving : common.save}
           </Button>
         </form>
       </Sheet>
@@ -181,6 +187,7 @@ export function EditRecordButton({
 export function RecordActions({
   householdId,
   record,
+  labels,
 }: {
   householdId: string;
   record: {
@@ -191,7 +198,9 @@ export function RecordActions({
     notes: string | null;
     status: "active" | "archived";
   };
+  labels: HealthFormLabels;
 }) {
+  const common = labels.common;
   const [, archiveAction, archivePending] = useActionState<ActionState, FormData>(archiveRecordAction, {});
   const [, reactivateAction, reactivatePending] = useActionState<ActionState, FormData>(reactivateRecordAction, {});
 
@@ -204,7 +213,7 @@ export function RecordActions({
 
   if (record.status === "archived") {
     return (
-      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label="Bring back" title="Bring back">
+      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label={common.bringBack} title={common.bringBack}>
         <RotateCcw aria-hidden className="size-3.5" />
       </Pill>
     );
@@ -219,8 +228,9 @@ export function RecordActions({
         recordType={record.recordType}
         documentDate={record.documentDate}
         notes={record.notes}
+        labels={labels}
       />
-      <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label="Remove" title="Remove">
+      <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>
         <Ban aria-hidden className="size-3.5" />
       </Pill>
     </div>

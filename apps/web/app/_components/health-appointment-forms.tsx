@@ -15,28 +15,15 @@ import { Switch } from "@wonderhome/core/ui/switch";
 
 import type { ActionState } from "../(auth)/actions";
 import { createAppointmentAction, setAppointmentStatusAction } from "../(auth)/health-appointment-actions";
+import type { HealthFormLabels } from "../_lib/health-form-labels";
 
-const TYPE_OPTIONS: { value: AppointmentType; label: string }[] = [
-  { value: "doctor", label: "Doctor" },
-  { value: "dentist", label: "Dentist" },
-  { value: "eye_care", label: "Eye care" },
-  { value: "physiotherapy", label: "Physiotherapy" },
-  { value: "dermatology", label: "Dermatology" },
-  { value: "specialist", label: "Specialist" },
-  { value: "diagnostic", label: "Diagnostic" },
-  { value: "vaccination", label: "Vaccination" },
-  { value: "mental_wellness", label: "Mental wellness" },
-  { value: "other", label: "Other" },
-];
+/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
+const TYPES: AppointmentType[] = ["doctor", "dentist", "eye_care", "physiotherapy", "dermatology", "specialist", "diagnostic", "vaccination", "mental_wellness", "other"];
 
-const SCOPE_OPTIONS = [
-  { value: "private", label: "Only me" },
-  { value: "selected_family", label: "People I choose" },
-  { value: "household_operational", label: "The whole household" },
-] as const;
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
-const STEP_LABEL = ["Who", "What", "When", "Where", "Notes", "Reminders"] as const;
+const STEP_COUNT = 6;
 
 /**
  * Booking an appointment — progressive entry (who → what → when → where →
@@ -53,6 +40,7 @@ export function BookAppointmentButton({
   defaultMemberId,
   defaultAppointmentType = "doctor",
   trigger,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
@@ -63,7 +51,10 @@ export function BookAppointmentButton({
   defaultAppointmentType?: AppointmentType;
   /** A custom trigger, for a checkup row's own contextual "Book" action instead of the generic header pill. */
   trigger?: ReactNode;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.appointment;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(0);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createAppointmentAction, {});
@@ -86,11 +77,12 @@ export function BookAppointmentButton({
         <span onClick={() => setOpen(true)}>{trigger}</span>
       ) : (
         <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-          <Plus aria-hidden className="size-3.5" /> Book an appointment
+          <Plus aria-hidden className="size-3.5" /> {words.add}
         </Pill>
       )}
 
-      <Sheet open={open} onOpenChange={close} title="Book an appointment" description={`Step ${step + 1} of 6 — ${STEP_LABEL[step]}`}>
+      <Sheet open={open} onOpenChange={close} title={words.add}
+        description={words.step.replace("{current}", String(step + 1)).replace("{total}", String(STEP_COUNT)).replace("{label}", () => words.steps[step])}>
         <form action={formAction} className="space-y-4">
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
@@ -99,7 +91,7 @@ export function BookAppointmentButton({
           {checkupId ? <input type="hidden" name="checkupId" value={checkupId} /> : null}
 
           <div className={step === 0 ? "space-y-3" : "hidden"}>
-            <Select label="Who is this for?" name="memberId" value={memberId} onChange={(event) => setMemberId(event.target.value)}>
+            <Select label={common.whoFor} name="memberId" value={memberId} onChange={(event) => setMemberId(event.target.value)}>
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.displayName}
@@ -109,10 +101,10 @@ export function BookAppointmentButton({
           </div>
 
           <div className={step === 1 ? "space-y-3" : "hidden"}>
-            <Select label="What kind of appointment?" name="appointmentType" defaultValue={defaultAppointmentType}>
-              {TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+            <Select label={words.kind} name="appointmentType" defaultValue={defaultAppointmentType}>
+              {TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {labels.careTypes[type]}
                 </option>
               ))}
             </Select>
@@ -120,46 +112,46 @@ export function BookAppointmentButton({
 
           <div className={step === 2 ? "space-y-3" : "hidden"}>
             <Field
-              label="Starts"
+              label={words.starts}
               name="startsAt"
               type="datetime-local"
               required
               value={startsAt}
               onChange={(event) => setStartsAt(event.target.value)}
-              error={step === 2 && state.error && !startsAt ? "Choose when this starts." : undefined}
+              error={step === 2 && state.error && !startsAt ? words.startsMissing : undefined}
             />
-            <Field label="Ends (optional)" name="endsAt" type="datetime-local" hint="Used to check for a clash with anything else already booked." />
+            <Field label={words.ends} name="endsAt" type="datetime-local" hint={words.endsHint} />
           </div>
 
           <div className={step === 3 ? "space-y-3" : "hidden"}>
-            <Field label="Provider (optional)" name="provider" placeholder="Dr. Mehta" autoComplete="off" />
-            <Field label="Facility (optional)" name="facility" placeholder="City Clinic" autoComplete="off" />
-            <Field label="Location (optional)" name="location" placeholder="MG Road" autoComplete="off" />
+            <Field label={words.provider} name="provider" placeholder={words.providerPlaceholder} autoComplete="off" />
+            <Field label={words.facility} name="facility" placeholder={words.facilityPlaceholder} autoComplete="off" />
+            <Field label={words.location} name="location" placeholder={words.locationPlaceholder} autoComplete="off" />
           </div>
 
           <div className={step === 4 ? "space-y-3" : "hidden"}>
-            <Field label="To prepare (optional)" name="preparationNotes" placeholder="Fast for 8 hours" autoComplete="off" />
-            <Field label="Notes (optional)" name="notes" placeholder="Anything else worth remembering" autoComplete="off" />
-            <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-              {SCOPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+            <Field label={words.prepare} name="preparationNotes" placeholder={words.preparePlaceholder} autoComplete="off" />
+            <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} autoComplete="off" />
+            <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+              {SCOPES.map((scope) => (
+                <option key={scope} value={scope}>
+                  {labels.scopes[scope]}
                 </option>
               ))}
             </Select>
           </div>
 
           <div className={step === 5 ? "space-y-3" : "hidden"}>
-            <ReminderToggle name="remindAdvance" label="Remind me a few days before" defaultChecked />
-            <ReminderToggle name="remindPreparation" label="Remind me to prepare" />
-            <ReminderToggle name="remindDayOf" label="Remind me on the day" defaultChecked />
-            <ReminderToggle name="calendarSync" label="Show on the household calendar" hint="Only when this is visible to the whole household." />
+            <ReminderToggle name="remindAdvance" label={words.remindAdvance} defaultChecked />
+            <ReminderToggle name="remindPreparation" label={words.remindPreparation} />
+            <ReminderToggle name="remindDayOf" label={words.remindDayOf} defaultChecked />
+            <ReminderToggle name="calendarSync" label={words.calendarSync} hint={words.calendarSyncHint} />
           </div>
 
           <div className="flex items-center justify-between gap-2 pt-2">
             {step > 0 ? (
               <Button type="button" variant="secondary" onClick={() => setStep((s) => (s - 1) as Step)} className="gap-1">
-                <ChevronLeft aria-hidden className="size-4" /> Back
+                <ChevronLeft aria-hidden className="size-4" /> {common.back}
               </Button>
             ) : (
               <span />
@@ -172,11 +164,11 @@ export function BookAppointmentButton({
                 disabled={step === 2 && !startsAt}
                 className="gap-1"
               >
-                Next <ChevronRight aria-hidden className="size-4" />
+                {common.next} <ChevronRight aria-hidden className="size-4" />
               </Button>
             ) : (
               <Button key="submit" type="submit" disabled={pending || !startsAt}>
-                {pending ? "Booking…" : "Book appointment"}
+                {pending ? words.booking : words.submit}
               </Button>
             )}
           </div>
@@ -205,11 +197,14 @@ export function AppointmentStatusActions({
   householdId,
   appointmentId,
   status,
+  labels,
 }: {
   householdId: string;
   appointmentId: string;
   status: "proposed" | "confirmed" | "completed" | "cancelled" | "rescheduled";
+  labels: HealthFormLabels;
 }) {
+  const words = labels.appointment;
   const [, formAction, pending] = useActionState<ActionState, FormData>(setAppointmentStatusAction, {});
 
   const submit = (next: string) => {
@@ -223,10 +218,10 @@ export function AppointmentStatusActions({
   if (status === "proposed") {
     return (
       <div className="flex gap-1.5">
-        <Pill type="button" tone="soft" disabled={pending} onClick={() => submit("confirmed")} aria-label="Confirm appointment" title="Confirm">
+        <Pill type="button" tone="soft" disabled={pending} onClick={() => submit("confirmed")} aria-label={words.confirmLabel} title={words.confirm}>
           <CircleCheck aria-hidden className="size-3.5" />
         </Pill>
-        <Pill type="button" tone="quiet" disabled={pending} onClick={() => submit("cancelled")} aria-label="Cancel appointment" title="Cancel">
+        <Pill type="button" tone="quiet" disabled={pending} onClick={() => submit("cancelled")} aria-label={words.cancelLabel} title={words.cancel}>
           <Ban aria-hidden className="size-3.5" />
         </Pill>
       </div>
@@ -236,10 +231,10 @@ export function AppointmentStatusActions({
   if (status === "confirmed") {
     return (
       <div className="flex gap-1.5">
-        <Pill type="button" tone="soft" disabled={pending} onClick={() => submit("completed")} aria-label="Mark appointment complete" title="Complete">
+        <Pill type="button" tone="soft" disabled={pending} onClick={() => submit("completed")} aria-label={words.completeLabel} title={words.complete}>
           <CircleCheck aria-hidden className="size-3.5" />
         </Pill>
-        <Pill type="button" tone="quiet" disabled={pending} onClick={() => submit("cancelled")} aria-label="Cancel appointment" title="Cancel">
+        <Pill type="button" tone="quiet" disabled={pending} onClick={() => submit("cancelled")} aria-label={words.cancelLabel} title={words.cancel}>
           <Ban aria-hidden className="size-3.5" />
         </Pill>
       </div>

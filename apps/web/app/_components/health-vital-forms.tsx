@@ -3,7 +3,6 @@
 import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
-import { VITAL_TYPE_LABEL } from "@wonderhome/core/health/agenda";
 import type { VitalType } from "@wonderhome/core/health/vitals";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -14,26 +13,22 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import { archiveVitalAction, createVitalAction, reactivateVitalAction, updateVitalAction } from "../(auth)/health-vital-actions";
+import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
 
-const TYPE_OPTIONS: { value: VitalType; label: string }[] = (Object.keys(VITAL_TYPE_LABEL) as VitalType[]).map((value) => ({ value, label: VITAL_TYPE_LABEL[value] }));
-
-const SCOPE_OPTIONS = [
-  { value: "private", label: "Only me" },
-  { value: "selected_family", label: "People I choose" },
-  { value: "household_operational", label: "The whole household" },
-] as const;
+/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
+const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Blood pressure is the one vital type with a paired reading — everything else takes one value and one unit, exactly what the household typed. */
-function VitalValueFields({ vitalType, secondaryValue }: { vitalType: VitalType; secondaryValue?: number | null }) {
+function VitalValueFields({ vitalType, secondaryValue, labels }: { vitalType: VitalType; secondaryValue?: number | null; labels: HealthFormLabels }) {
   if (vitalType === "blood_pressure") {
     return (
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Systolic" name="value" type="number" step="any" required autoComplete="off" />
-        <Field label="Diastolic" name="secondaryValue" type="number" step="any" defaultValue={secondaryValue ?? ""} autoComplete="off" />
+        <Field label={labels.common.systolic} name="value" type="number" step="any" required autoComplete="off" />
+        <Field label={labels.common.diastolic} name="secondaryValue" type="number" step="any" defaultValue={secondaryValue ?? ""} autoComplete="off" />
       </div>
     );
   }
-  return <Field label="Value" name="value" type="number" step="any" required autoComplete="off" />;
+  return <Field label={labels.common.value} name="value" type="number" step="any" required autoComplete="off" />;
 }
 
 /** Recording a reading — always what the household typed, never a value WonderHome fills in (story 21-007). */
@@ -41,11 +36,15 @@ export function AddVitalButton({
   householdId,
   members,
   defaultPrivacyScope,
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
+  labels: HealthFormLabels;
 }) {
+  const words = labels.vital;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [vitalType, setVitalType] = useState<VitalType>("weight");
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createVitalAction, {});
@@ -63,10 +62,10 @@ export function AddVitalButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Record a reading
+        <Plus aria-hidden className="size-3.5" /> {words.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Record a reading" description="A single measurement — always what you actually recorded.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.add} description={words.description}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -77,34 +76,34 @@ export function AddVitalButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label="Who is this for?" name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Select label="Measurement" name="vitalType" value={vitalType} onChange={(event) => setVitalType(event.target.value as VitalType)}>
-            {TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          <Select label={common.measurement} name="vitalType" value={vitalType} onChange={(event) => setVitalType(event.target.value as VitalType)}>
+            {(Object.keys(labels.vitalTypes) as VitalType[]).map((type) => (
+              <option key={type} value={type}>
+                {labels.vitalTypes[type]}
               </option>
             ))}
           </Select>
-          {vitalType === "custom" ? <Field label="What is it called" name="customLabel" placeholder="Blood sugar" required autoComplete="off" /> : null}
-          <VitalValueFields vitalType={vitalType} />
-          <Field label="Unit" name="unit" placeholder={vitalType === "blood_pressure" ? "mmHg" : "kg, lb, bpm…"} required autoComplete="off" />
-          <Field label="When (optional — defaults to now)" name="measuredAt" type="datetime-local" />
-          <Field label="Notes (optional)" name="notes" placeholder="Anything worth remembering" autoComplete="off" />
-          <Select label="Who can see this" name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+          {vitalType === "custom" ? <Field label={common.whatCalled} name="customLabel" placeholder={common.measurementPlaceholder} required autoComplete="off" /> : null}
+          <VitalValueFields vitalType={vitalType} labels={labels} />
+          <Field label={common.unit} name="unit" placeholder={vitalType === "blood_pressure" ? "mmHg" : common.unitPlaceholder} required autoComplete="off" />
+          <Field label={common.whenDefaultNow} name="measuredAt" type="datetime-local" />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
+            {SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {labels.scopes[scope]}
               </option>
             ))}
           </Select>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Recording…" : "Record"}
+            {pending ? common.recording : common.record}
           </Button>
         </form>
       </Sheet>
@@ -121,6 +120,7 @@ export function EditVitalButton({
   secondaryValue,
   unit,
   notes,
+  labels,
 }: {
   householdId: string;
   vitalId: string;
@@ -130,7 +130,10 @@ export function EditVitalButton({
   secondaryValue: number | null;
   unit: string;
   notes: string | null;
+  labels: HealthFormLabels;
 }) {
+  const words = labels.vital;
+  const common = labels.common;
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateVitalAction, {});
   const submitted = useRef(false);
@@ -144,11 +147,11 @@ export function EditVitalButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} title="Edit">
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(common.editNamed, label)} title={common.edit}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Edit reading" description="Correct what this says.">
+      <Sheet open={open} onOpenChange={setOpen} title={words.editTitle} description={common.correctDescription}>
         <form
           action={(formData) => {
             submitted.current = true;
@@ -162,16 +165,16 @@ export function EditVitalButton({
           <input type="hidden" name="vitalId" value={vitalId} />
           {vitalType === "blood_pressure" ? (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Systolic" name="value" type="number" step="any" defaultValue={value} required autoComplete="off" />
-              <Field label="Diastolic" name="secondaryValue" type="number" step="any" defaultValue={secondaryValue ?? ""} autoComplete="off" />
+              <Field label={common.systolic} name="value" type="number" step="any" defaultValue={value} required autoComplete="off" />
+              <Field label={common.diastolic} name="secondaryValue" type="number" step="any" defaultValue={secondaryValue ?? ""} autoComplete="off" />
             </div>
           ) : (
-            <Field label="Value" name="value" type="number" step="any" defaultValue={value} required autoComplete="off" />
+            <Field label={common.value} name="value" type="number" step="any" defaultValue={value} required autoComplete="off" />
           )}
-          <Field label="Unit" name="unit" defaultValue={unit} required autoComplete="off" />
-          <Field label="Notes (optional)" name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <Field label={common.unit} name="unit" defaultValue={unit} required autoComplete="off" />
+          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Save"}
+            {pending ? common.saving : common.save}
           </Button>
         </form>
       </Sheet>
@@ -183,10 +186,13 @@ export function EditVitalButton({
 export function VitalActions({
   householdId,
   vital,
+  labels,
 }: {
   householdId: string;
   vital: { id: string; vitalType: VitalType; label: string; value: number; secondaryValue: number | null; unit: string; notes: string | null; status: "active" | "archived" };
+  labels: HealthFormLabels;
 }) {
+  const common = labels.common;
   const [, archiveAction, archivePending] = useActionState<ActionState, FormData>(archiveVitalAction, {});
   const [, reactivateAction, reactivatePending] = useActionState<ActionState, FormData>(reactivateVitalAction, {});
 
@@ -199,7 +205,7 @@ export function VitalActions({
 
   if (vital.status === "archived") {
     return (
-      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label="Bring back" title="Bring back">
+      <Pill type="button" tone="soft" disabled={reactivatePending} onClick={() => submit(reactivateAction)} aria-label={common.bringBack} title={common.bringBack}>
         <RotateCcw aria-hidden className="size-3.5" />
       </Pill>
     );
@@ -216,8 +222,9 @@ export function VitalActions({
         secondaryValue={vital.secondaryValue}
         unit={vital.unit}
         notes={vital.notes}
+        labels={labels}
       />
-      <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label="Remove" title="Remove">
+      <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>
         <Trash2 aria-hidden className="size-3.5" />
       </Pill>
     </div>
