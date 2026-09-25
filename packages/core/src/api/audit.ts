@@ -51,6 +51,8 @@ export const AUDIT_EVENTS = [
   "privacy.request_refused",
   "subscription.changed",
   "payment.refund_requested",
+  "developer_key.created",
+  "developer_key.revoked",
   "support.access_granted",
   "feature_flag.changed",
   "homesend.intake_received",

@@ -101,6 +101,12 @@ export function buildOpenApiDocument(): Json {
           name: "sb-access-token",
           description: "Supabase session cookie, set by sign-in and refreshed by middleware.",
         },
+        partnerKey: {
+          type: "http",
+          scheme: "bearer",
+          description:
+            "A household's partner key (story 18-008): `whk_live_…` or `whk_test_…`, created by an Admin under Integrations → Developer access and shown once. Only its SHA-256 hash is stored. A sandbox (`whk_test_`) key reads fixtures and writes nothing. Every failure — missing, wrong, revoked or expired — is the same 401.",
+        },
       },
       parameters: {
         idempotencyKey: {
@@ -865,6 +871,48 @@ export function buildOpenApiDocument(): Json {
             "200": { description: "One summary per provider" },
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/partner/household": {
+        get: {
+          summary: "The household a partner key belongs to",
+          description:
+            "Its name, time zone and how many people are in it — never who. Needs the `household.read` scope. The partner API is off unless the deployment sets `WONDERHOME_DEVELOPER_API=on`; off, every request is the same 401 as a bad key; requests are rate-limited per key.",
+          security: [{ partnerKey: [] }],
+          responses: {
+            "200": { description: "The household" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "429": { description: "Too many requests with this key; nothing was lost" },
+          },
+        },
+      },
+      "/partner/groceries": {
+        get: {
+          summary: "What is on the grocery list",
+          description: "Needs `groceries.read`. A sandbox key gets the fixed sample list.",
+          security: [{ partnerKey: [] }],
+          responses: {
+            "200": { description: "The list" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "429": { description: "Too many requests with this key; nothing was lost" },
+          },
+        },
+        post: {
+          summary: "Add things to the grocery list",
+          description:
+            "Needs `groceries.write`. Adds through the same service the Groceries screen uses; a name already on the list is reported as `already_on_list`, never added twice. A sandbox key answers `would_add` and saves nothing. Honours an Idempotency-Key, scoped to the key's household.",
+          security: [{ partnerKey: [] }],
+          parameters: [{ $ref: "#/components/parameters/idempotencyKey" }],
+          requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["items"], properties: { items: { type: "array", minItems: 1, maxItems: 25, items: { type: "string", minLength: 1, maxLength: 80 } } } } } } },
+          responses: {
+            "200": { description: "One result per name: added, already_on_list or would_add" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "429": { description: "Too many requests with this key; nothing was lost" },
           },
         },
       },

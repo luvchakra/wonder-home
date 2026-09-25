@@ -169,6 +169,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/billing/repository.ts",
   },
   {
+    event: "developer_key.created",
+    because: "An app outside WonderHome was given a way in. The household can see who made the key and what it may do.",
+    recordedIn: "packages/core/src/developer/keys.ts",
+  },
+  {
+    event: "developer_key.revoked",
+    because: "A way in was closed. Somebody will ask when an app stopped working, and who stopped it.",
+    recordedIn: "packages/core/src/developer/keys.ts",
+  },
+  {
     event: "payment.refund_requested",
     because: "Platform staff sent money back to the household. The family can see who asked, why and how much.",
     recordedIn: "packages/core/src/platform/payments.ts",
@@ -549,6 +559,13 @@ export function describeAuditEvent(
       return { title: "A deletion request was fulfilled", detail: "The member's personal details were removed." };
     case "privacy.request_refused":
       return { title: "A privacy request was refused", detail: null };
+    case "developer_key.created":
+      return {
+        title: "A partner key was created",
+        detail: Array.isArray(metadata.scopes) ? [stringOr(metadata.environment, null), (metadata.scopes as unknown[]).map(String).join(", ")].filter(Boolean).join(" · ") : null,
+      };
+    case "developer_key.revoked":
+      return { title: "A partner key was revoked", detail: null };
     case "payment.refund_requested":
       return {
         title: "WonderHome support started a refund",

@@ -47,6 +47,8 @@ export const RATE_LIMITS = {
   "voice.tool": { max: 120, windowSeconds: 900 },
   /** Area searches for weather, per member (story 17-007): each is an outbound geocoding call. */
   "weather.search": { max: 30, windowSeconds: 600 },
+  /** Partner API requests, per key (story 18-008): an integration syncing, not a scraper. */
+  "partner.request": { max: 120, windowSeconds: 60 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

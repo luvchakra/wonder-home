@@ -114,6 +114,7 @@ const SHIPPED_TABLES = [
   "whatsapp_events",
   "billing_reconciliation_runs",
   "billing_reconciliation_findings",
+  "developer_api_keys",
 ];
 
 /**

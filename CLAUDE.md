@@ -676,6 +676,15 @@ It all stays inert until a deployment sets `WHATSAPP_ACCESS_TOKEN`,
 connecting only once `WHATSAPP_BUSINESS_NUMBER` is set too. Scheduled
 (future-dated) notifications are not yet sent beyond the app.
 
+Partner keys (story 18-008, `packages/core/src/developer/`) let an app a
+household trusts use a narrow API (`/api/v1/partner/*`). An Admin creates a
+key under Integrations and sees it once; only its hash is kept. Scopes only
+narrow, a sandbox key (`whk_test_`) reads fixtures and writes nothing, and
+writes go through the same domain service a screen uses. A partner has no
+session, so every partner query names the key's own household explicitly. It
+is all off unless a deployment sets `WONDERHOME_DEVELOPER_API=on`. A new
+partner capability is a new scope plus its endpoint, never a wider key.
+
 Smart notifications (module 23, `packages/core/src/notifications/`) are
 reminders about real records, never lines of text fired and forgotten.
 - **Sources.** `sources.ts` derives each reminder from a record a domain

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**221 of 225 stories done — 98.2%**
+**222 of 225 stories done — 98.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 221 |
+| Done | 222 |
 | In Progress | 2 |
 | Blocked | 0 |
-| Not Started | 1 |
+| Not Started | 0 |
 | Deferred | 1 |
 
 ## By module
@@ -43,7 +43,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
-| 18 API & Developer Platform | `████████░░` | 7 | 8 | 1 not started |
+| 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
@@ -55,7 +55,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `18-008` Developer platform | 18 API & Developer Platform | P2 | Not Started |
 | `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 
@@ -359,7 +358,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 18 — API & Developer Platform
 
-7 of 8 done `████████░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -370,7 +369,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `18-005` OpenAPI | P0 | Done | Generated from the route schemas, served at /api/v1/openapi; E2E derives the endpoint list from disk so it cannot go stale |
 | `18-006` Audit hooks | P0 | Done | recordAuditEvent with redaction; never fails the request |
 | `18-007` Webhooks/events | P1 | Done | `household_webhooks`/`webhook_deliveries`: a household subscribes an HTTPS URL to 5 real events (member.added/removed, subscription.changed, privacy.deletion_fulfilled, homesend.applied), gets a Svix-style-signed (`t=<ts>,v1=<sig>`) versioned payload with retry/backoff over ~1 day; both tables unreachable from any client session, admin included, since every write already goes through the admin client and a WHERE-conditioned write on a no-SELECT-policy table silently no-ops for every session (found empirically while building this); `deliver.ts` drains the queue via a new `CRON_SECRET`-gated route/cron; live-verified end to end against webhook.site with an independently-recomputed HMAC match |
-| `18-008` Developer platform | P2 | Not Started | — |
+| `18-008` Developer platform | P2 | Done | Partner keys (`developer/keys.ts`): an Admin creates one under Integrations → Developer access, shown once; only its SHA-256 hash and a short prefix are kept (`developer_api_keys`, server-only via a deny-all policy). Scopes only narrow (`household.read`, `groceries.read`, `groceries.write`); keys expire (30/90/365 days or never) and are revoked, never deleted; both are audited. Sandbox keys (`whk_test_`) read fixtures and write nothing (`would_add`). Endpoints `GET /partner/household`, `GET`/`POST /partner/groceries` (the same grocery service the screen uses, never a duplicate, Idempotency-Key honoured), each declared in OpenAPI with a `partnerKey` bearer scheme; every key failure is the same 401; rate-limited per key (`partner.request`). Off (every key refused with the same 401, section hidden) unless `WONDERHOME_DEVELOPER_API=on` |
 
 ### 19 — Testing, Observability & Production
 
