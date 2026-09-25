@@ -12,6 +12,7 @@ import {
   listMembers,
 } from "@wonderhome/core/identity/households";
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listMeals, listRecipeChoices, mealAgenda } from "@wonderhome/core/meals/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
@@ -27,9 +28,11 @@ import {
   AddPreferenceButton,
   AddRecipeButton,
   AttachRecipeControl,
+  type MealFormLabels,
   PlanMealButton,
   SuggestMealButton,
 } from "../_components/meal-forms";
+import { mealFormLabels } from "../_lib/meal-form-labels";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Meals & Cooking" };
@@ -71,7 +74,8 @@ export default async function MealsPage({
     searchParams,
     requireSession("/meals"),
   ]);
-  const { supabase, membership, viewer, secondary } = session;
+  const { supabase, membership, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const now = new Date();
@@ -87,8 +91,8 @@ export default async function MealsPage({
     viewer,
     secondary,
     pathname: "/meals",
-    back: { href: "/more", label: "Back" },
-    title: "Meals & Cooking",
+    back: { href: "/more", label: t("common.back") },
+    title: t("meals.title"),
     wide: active === "plan",
   };
 
@@ -98,7 +102,7 @@ export default async function MealsPage({
         <EmptyState
           icon={Utensils}
           tone="meals"
-          title="Meal planning is not part of this plan"
+          title={t("meals.notInPlan")}
           description={entitlement.reason}
         />
       </AppShell>
@@ -147,6 +151,7 @@ export default async function MealsPage({
     id: recipe.id,
     name: recipe.name,
   }));
+  const formLabels = mealFormLabels(t);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now.getTime() + index * 86_400_000);
@@ -155,9 +160,9 @@ export default async function MealsPage({
       key,
       label:
         index === 0
-          ? "Today"
+          ? t("meals.today")
           : index === 1
-            ? "Tomorrow"
+            ? t("meals.tomorrow")
             : formatDate(timezone, date, "long"),
       meals: meals
         .filter((meal) => meal.onDate === key)
@@ -173,29 +178,31 @@ export default async function MealsPage({
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">
-              Meals &amp; Cooking
+              {t("meals.title")}
             </h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">
-              Healthy meals. Happier moods.
+              {t("meals.lede")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {active === "recipes" ? (
-              <AddRecipeButton householdId={householdId} />
+              <AddRecipeButton householdId={householdId} labels={formLabels} />
             ) : active === "preferences" ? (
               <AddPreferenceButton
                 householdId={householdId}
                 currentMemberId={membership.memberId}
                 admin={admin}
                 members={memberOptions}
+                labels={formLabels}
               />
             ) : (
               <>
-                <SuggestMealButton householdId={householdId} />
+                <SuggestMealButton householdId={householdId} labels={formLabels} />
                 <PlanMealButton
                   householdId={householdId}
                   members={memberOptions}
                   recipes={recipeChoices}
+                  labels={formLabels}
                 />
               </>
             )}
@@ -203,24 +210,24 @@ export default async function MealsPage({
         </header>
 
         <SegmentedControl
-          label="Meals view"
+          label={t("meals.view")}
           active={active}
           segments={[
             {
               key: "plan",
-              label: "Plan",
+              label: t("meals.tab.plan"),
               href: "/meals",
               count: agenda?.meals.length,
             },
             {
               key: "recipes",
-              label: "Recipes",
+              label: t("meals.tab.recipes"),
               href: "/meals?tab=recipes",
               count: recipes.length,
             },
             {
               key: "preferences",
-              label: "Preferences",
+              label: t("meals.tab.preferences"),
               href: "/meals?tab=preferences",
               count: preferences.length,
             },
@@ -232,7 +239,7 @@ export default async function MealsPage({
             {agenda && agenda.meals.length > 0 ? (
               <section>
                 <SectionHeader
-                  title="About to go wrong"
+                  title={t("meals.aboutToGoWrong")}
                   count={agenda.meals.length}
                 />
                 <Card className="p-2">
@@ -253,13 +260,14 @@ export default async function MealsPage({
               <EmptyState
                 icon={Utensils}
                 tone="meals"
-                title="Nothing planned this week"
-                description="Plan a meal and WonderHome checks the ingredients, the cook's time and everyone's preferences — then tells you what's missing."
+                title={t("meals.empty.title")}
+                description={t("meals.empty.lede")}
                 action={
                   <PlanMealButton
                     householdId={householdId}
                     members={memberOptions}
                     recipes={recipeChoices}
+                    labels={formLabels}
                   />
                 }
               />
@@ -272,7 +280,7 @@ export default async function MealsPage({
                       <SectionHeader title={day.label} />
                       {day.meals.length === 0 ? (
                         <Card className="p-4 text-sm text-[var(--wh-foreground-muted)]">
-                          Nothing planned yet.
+                          {t("meals.nothingPlannedYet")}
                         </Card>
                       ) : (
                         <div className="space-y-2">
@@ -284,6 +292,8 @@ export default async function MealsPage({
                               timezone={timezone}
                               householdId={householdId}
                               recipes={recipeOptions}
+                              t={t}
+                              labels={formLabels}
                             />
                           ))}
                         </div>
@@ -300,9 +310,9 @@ export default async function MealsPage({
             <EmptyState
               icon={ChefHat}
               tone="meals"
-              title="No recipes yet"
-              description="Recipes hold ingredients and timing, so a planned meal knows what it needs and when to start."
-              action={<AddRecipeButton householdId={householdId} />}
+              title={t("meals.recipes.emptyTitle")}
+              description={t("meals.recipes.emptyLede")}
+              action={<AddRecipeButton householdId={householdId} labels={formLabels} />}
             />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -316,25 +326,16 @@ export default async function MealsPage({
                   </div>
                   <p className="mt-2 text-sm font-semibold">{recipe.name}</p>
                   <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                    {recipe.total_minutes} min · serves {recipe.serves}
+                    {t("meals.recipe.timeServes", { minutes: recipe.total_minutes, serves: recipe.serves })}
                   </p>
                   {recipe.calories_per_serving !== null ? (
                     <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                      {recipe.calories_per_serving} kcal
-                      {[
-                        recipe.protein_grams !== null
-                          ? `${recipe.protein_grams}g protein`
-                          : null,
-                        recipe.carbs_grams !== null
-                          ? `${recipe.carbs_grams}g carbs`
-                          : null,
-                        recipe.fat_grams !== null
-                          ? `${recipe.fat_grams}g fat`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .map((part) => ` · ${part}`)
-                        .join("")}
+                      {nutrientLine(t, {
+                        kcal: recipe.calories_per_serving,
+                        protein: recipe.protein_grams,
+                        carbs: recipe.carbs_grams,
+                        fat: recipe.fat_grams,
+                      })}
                     </p>
                   ) : null}
                 </Card>
@@ -348,14 +349,15 @@ export default async function MealsPage({
             <EmptyState
               icon={Heart}
               tone="people"
-              title="No preferences recorded"
-              description="Allergies, dislikes and how the family likes to eat — allergies always win over everything else."
+              title={t("meals.prefs.emptyTitle")}
+              description={t("meals.prefs.emptyLede")}
               action={
                 <AddPreferenceButton
                   householdId={householdId}
                   currentMemberId={membership.memberId}
                   admin={admin}
                   members={memberOptions}
+                  labels={formLabels}
                 />
               }
             />
@@ -373,7 +375,7 @@ export default async function MealsPage({
                         : "people"
                     }
                     title={preference.subject}
-                    meta={nameOf(preference.member_id) ?? "Whole household"}
+                    meta={nameOf(preference.member_id) ?? t("meals.wholeHousehold")}
                     action={
                       <Badge
                         tone={
@@ -383,7 +385,7 @@ export default async function MealsPage({
                             : "neutral"
                         }
                       >
-                        {preference.kind}
+                        {preferenceKindWords(t, preference.kind)}
                       </Badge>
                     }
                   />
@@ -393,10 +395,39 @@ export default async function MealsPage({
           )
         ) : null}
 
-        <QuoteCard>Good food, happier moods.</QuoteCard>
+        <QuoteCard>{t("meals.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
+}
+
+const PREFERENCE_KIND_KEYS = {
+  allergy: "meals.prefKind.allergy",
+  medical: "meals.prefKind.medical",
+  ethical: "meals.prefKind.ethical",
+  dislike: "meals.prefKind.dislike",
+  preference: "meals.prefKind.preference",
+} as const;
+
+/** A preference's kind in the reader's words; a kind the catalog does not know is shown as stored. */
+function preferenceKindWords(t: Translate, kind: string): string {
+  const key = PREFERENCE_KIND_KEYS[kind as keyof typeof PREFERENCE_KIND_KEYS];
+  return key ? t(key) : kind;
+}
+
+/** "450 kcal · 18g protein · 55g carbs · 12g fat" in the reader's words; a nutrient not recorded is left out. */
+function nutrientLine(
+  t: Translate,
+  values: { kcal: number; protein: number | null; carbs: number | null; fat: number | null },
+): string {
+  return [
+    t("meals.nutrient.kcal", { kcal: values.kcal }),
+    values.protein !== null ? t("meals.nutrient.protein", { grams: values.protein }) : null,
+    values.carbs !== null ? t("meals.nutrient.carbs", { grams: values.carbs }) : null,
+    values.fat !== null ? t("meals.nutrient.fat", { grams: values.fat }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function MealCard({
@@ -405,12 +436,16 @@ function MealCard({
   timezone,
   householdId,
   recipes,
+  t,
+  labels,
 }: {
   meal: Meal;
   cook: string | null;
   timezone: string;
   householdId: string;
   recipes: { id: string; name: string }[];
+  t: Translate;
+  labels: MealFormLabels;
 }) {
   const missing = meal.ingredients.filter(
     (need) =>
@@ -425,14 +460,14 @@ function MealCard({
         : "neutral";
   const nutrients =
     meal.recipe?.caloriesPerServing != null
-      ? `${meal.recipe.caloriesPerServing} kcal${[
-          meal.recipe.proteinGrams != null ? `${meal.recipe.proteinGrams}g protein` : null,
-          meal.recipe.carbsGrams != null ? `${meal.recipe.carbsGrams}g carbs` : null,
-          meal.recipe.fatGrams != null ? `${meal.recipe.fatGrams}g fat` : null,
-        ]
-          .filter(Boolean)
-          .map((part) => ` · ${part}`)
-          .join("")} per serving`
+      ? t("meals.nutrient.perServing", {
+          nutrients: nutrientLine(t, {
+            kcal: meal.recipe.caloriesPerServing,
+            protein: meal.recipe.proteinGrams ?? null,
+            carbs: meal.recipe.carbsGrams ?? null,
+            fat: meal.recipe.fatGrams ?? null,
+          }),
+        })
       : null;
 
   return (
@@ -446,25 +481,29 @@ function MealCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-            {meal.slot}
+            {labels.slots[meal.slot]}
           </p>
           <p className="text-sm font-semibold">{meal.name}</p>
           <p className="text-xs text-[var(--wh-foreground-muted)]">
-            Ready by {formatTime(timezone, meal.readyBy)}
-            {begin ? ` · start ${formatTime(timezone, begin)}` : ""}
-            {cook ? ` · ${cook}` : " · nobody assigned"}
+            {[
+              t("meals.card.readyBy", { time: formatTime(timezone, meal.readyBy) }),
+              begin ? t("meals.card.start", { time: formatTime(timezone, begin) }) : null,
+              cook ?? t("meals.card.nobodyAssigned"),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
-        <Badge tone={tone}>{meal.status.replace(/_/g, " ")}</Badge>
+        <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
       </div>
       {missing.length > 0 ? (
         <p className="mt-2 flex items-center gap-1.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-2.5 py-1.5 text-xs text-[var(--wh-attention)]">
-          <ShoppingBasket aria-hidden className="size-3.5" /> Missing:{" "}
-          {missing.map((need) => need.name).join(", ")} — on the shopping list
+          <ShoppingBasket aria-hidden className="size-3.5" />{" "}
+          {t("meals.card.missing", { items: missing.map((need) => need.name).join(", ") })}
         </p>
       ) : meal.ingredients.length > 0 ? (
         <p className="mt-2 text-xs text-[var(--wh-handled)]">
-          All {meal.ingredients.length} ingredients in.
+          {t("meals.card.allIn", { count: meal.ingredients.length })}
         </p>
       ) : null}
       {nutrients ? (
@@ -475,23 +514,24 @@ function MealCard({
       <div className="mt-3 flex flex-wrap gap-1.5">
         {meal.recipe ? (
           <PillLink href="/meals?tab=recipes" tone="quiet">
-            View recipe
+            {t("meals.card.viewRecipe")}
           </PillLink>
         ) : (
           <AttachRecipeControl
             householdId={householdId}
             mealId={meal.id}
             recipes={recipes}
+            labels={labels}
           />
         )}
         <PillLink href="/groceries?tab=list" tone="quiet">
-          Ingredients
+          {t("meals.card.ingredients")}
         </PillLink>
         <PillLink
           href={`/ai?q=${encodeURIComponent(`Change ${meal.slot} on ${meal.onDate}`)}`}
           tone="quiet"
         >
-          Change meal
+          {t("meals.card.changeMeal")}
         </PillLink>
       </div>
     </Card>
