@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-25 | [Chinese (Mandarin, Simplified) as the eighth language with Singapore formats; 22-008 right-to-left deferred](2026-09-25-chinese-language.md) |
 | 2026-09-25 | [Landing page brought up to date: eight current "ready today" features, a 16-card features grid, and claims about ordering and paying corrected to what is live](2026-09-25-landing-latest-features.md) |
 | 2026-09-25 | [Family screen in each person's language; the event sheet's kinds now match what the server accepts; event and health times read in the household's zone, not the server's (story 22-004 slice + two bug fixes)](2026-09-25-family-screen-localized.md) |
 | 2026-09-25 | [Get Help brought up to date: 25 sections covering HomeSend, voice, language, reminders, health, upkeep, family, household help, plans, privacy export and deletion, and connections, with no platform-level detail](2026-09-25-help-guide-refresh.md) |

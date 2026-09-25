@@ -15,7 +15,7 @@
  * language, a message catalog) — no application logic changes.
  */
 
-export const LANGUAGE_CODES = ["en", "hi", "mr", "es", "fr", "de", "ar"] as const;
+export const LANGUAGE_CODES = ["en", "hi", "mr", "es", "fr", "de", "ar", "zh"] as const;
 export type LanguageCode = (typeof LANGUAGE_CODES)[number];
 export const DEFAULT_LANGUAGE: LanguageCode = "en";
 
@@ -37,6 +37,8 @@ export const LANGUAGES: readonly LanguageInfo[] = [
   { code: "fr", nativeName: "Français", englishName: "French", greeting: "Bonjour, bienvenue", dir: "ltr" },
   { code: "de", nativeName: "Deutsch", englishName: "German", greeting: "Hallo, willkommen", dir: "ltr" },
   { code: "ar", nativeName: "العربية", englishName: "Arabic", greeting: "مرحبا، أهلا بك", dir: "rtl" },
+  // Mandarin in Simplified characters, as written in mainland China and Singapore.
+  { code: "zh", nativeName: "中文（简体）", englishName: "Simplified Chinese (Mandarin)", greeting: "你好，欢迎", dir: "ltr" },
 ];
 
 export function isLanguage(value: unknown): value is LanguageCode {

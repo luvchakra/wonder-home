@@ -81,9 +81,9 @@ export const GUIDE: GuideSection[] = [
     title: "Language, region and formats",
     summary: "Each person picks their language; the household sets its region, currency and time zone.",
     group: "Getting started",
-    keywords: ["language", "hindi", "marathi", "arabic", "spanish", "french", "german", "translate", "region", "currency", "time zone", "date format", "units"],
+    keywords: ["language", "hindi", "marathi", "arabic", "chinese", "mandarin", "中文", "singapore", "spanish", "french", "german", "translate", "region", "currency", "time zone", "date format", "units"],
     body: [
-      "WonderHome speaks English, Hindi, Marathi, Spanish, French, German and Arabic. Each person chooses their own language in Settings → Language & Region, so one household can use several at once. Arabic reads right to left.",
+      "WonderHome speaks English, Hindi, Marathi, Spanish, French, German, Arabic and Chinese (Simplified, Mandarin). Each person chooses their own language in Settings → Language & Region, so one household can use several at once. Arabic reads right to left.",
       "The household's region, currency and time zone are set by an Admin, and each person can choose their own date format, 12- or 24-hour clock, and metric or imperial units.",
       "HomeTalk understands you in your language and replies in it. Names, items, dates and amounts are never translated or changed on the way. When a reply cannot be translated safely, you see it in English with a line saying why.",
       "Reminders arrive in each person's own language. Screens are moving to every language one at a time; where a screen is still in English, the Language & Region page says so.",

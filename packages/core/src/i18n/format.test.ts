@@ -29,6 +29,16 @@ describe("whose choice wins", () => {
     expect(DEFAULT_PREFERENCES).toMatchObject({ language: "en", region: "IN", currency: "INR", measurement: "metric", dir: "ltr" });
   });
 
+  it("Chinese in Singapore: Simplified characters, Singapore dollars, the household's clock", () => {
+    const singapore = { region: "SG" as const, currency: null, timezone: "Asia/Singapore", measurement: null, language: null };
+    const prefs = resolvePreferences({ ...NO_MEMBER_CHOICES, language: "zh" }, singapore);
+    expect(prefs).toMatchObject({ language: "zh", currency: "SGD", timezone: "Asia/Singapore", dir: "ltr" });
+    expect(intlLocale(prefs)).toBe("zh-Hans-SG");
+    const format = formatterFor(prefs);
+    expect(format.money(12.5)).toContain("12.50");
+    expect(format.date("2026-09-25")).toMatch(/9月25日/);
+  });
+
   it("Arabic reads right to left", () => {
     expect(resolvePreferences({ ...NO_MEMBER_CHOICES, language: "ar" }, INDIA).dir).toBe("rtl");
   });

@@ -47,7 +47,7 @@ const READY: Item[] = [
     icon: Languages,
     tone: "ai",
     title: "Your home, in your language",
-    copy: "HomeTalk, reminders and screens in English, हिन्दी, मराठी, Español, Français, Deutsch and العربية. Names, dates and amounts are never changed on the way.",
+    copy: "HomeTalk, reminders and screens in English, हिन्दी, मराठी, Español, Français, Deutsch, العربية and 中文. Names, dates and amounts are never changed on the way.",
   },
   {
     icon: FileText,

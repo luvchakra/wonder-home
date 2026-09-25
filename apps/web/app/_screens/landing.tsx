@@ -282,7 +282,7 @@ export async function Landing() {
               { icon: Wrench, tone: "home", title: "Home & Upkeep", description: "Repairs, laundry and pets, remembered." },
               { icon: BellRing, tone: "attention", title: "Reminders", description: "One nudge, at the right time." },
               { icon: Sparkles, tone: "ai", title: "HomeTalk", description: "Talk or type. It asks before it acts." },
-              { icon: Languages, tone: "ai", title: "Your language", description: "Seven languages, one home." },
+              { icon: Languages, tone: "ai", title: "Your language", description: "Eight languages, one home." },
             ].map((item, index) => (
               <div key={item.title} className="wh-reveal" style={{ "--wh-reveal-delay": `${index * 50}ms` } as React.CSSProperties}>
                 <DomainCard icon={item.icon} tone={item.tone as IconTone} title={item.title} description={item.description} className="h-full" />

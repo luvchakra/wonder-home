@@ -25,7 +25,7 @@ const BACKLOGS = join(ROOT, "backlogs");
 const OUTPUT = join(ROOT, "docs", "PROGRESS.md");
 
 /** The statuses a backlog row may carry, in the order they are reported. */
-export const STATUSES = ["Done", "In Progress", "Blocked", "Not Started"];
+export const STATUSES = ["Done", "In Progress", "Blocked", "Not Started", "Deferred"];
 
 /**
  * Reads one backlog file's module heading and its story table.

@@ -27,6 +27,7 @@ const LOADERS: Record<LanguageCode, () => Promise<Catalog>> = {
   fr: async () => (await import("./messages/fr")).fr,
   de: async () => (await import("./messages/de")).de,
   ar: async () => (await import("./messages/ar")).ar,
+  zh: async () => (await import("./messages/zh")).zh,
 };
 
 const loaded = new Map<LanguageCode, Catalog>([["en", en]]);

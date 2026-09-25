@@ -193,6 +193,8 @@ const AFFIRM_ELSEWHERE: ReadonlySet<string> = new Set([
   "ja", "jawohl", "mach das", "in ordnung",
   // Arabic
   "نعم", "أجل", "حسنا", "حسناً", "موافق",
+  // Chinese (Mandarin)
+  "是", "是的", "好", "好的", "可以", "行", "对", "嗯", "确认", "没问题", "就这样",
 ]);
 
 const DECLINE_ELSEWHERE: ReadonlySet<string> = new Set([
@@ -208,10 +210,12 @@ const DECLINE_ELSEWHERE: ReadonlySet<string> = new Set([
   "nein", "abbrechen", "lass es",
   // Arabic
   "لا", "كلا", "ألغ", "إلغاء",
+  // Chinese (Mandarin)
+  "不", "不要", "不用", "不是", "不行", "取消", "算了", "别", "先不要",
 ]);
 
 export function classifyShortReply(utterance: string): ShortReply {
-  const normalized = utterance.trim().toLowerCase().replace(/[.!।؟?]+$/u, "").trim();
+  const normalized = utterance.trim().toLowerCase().replace(/[.!।؟?。！？]+$/u, "").trim();
 
   if (/^(yes|yep|yeah|sure|ok|okay|do it|go ahead|please do|confirm)$/.test(normalized) || AFFIRM_ELSEWHERE.has(normalized)) {
     return "affirm";
