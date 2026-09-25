@@ -21,20 +21,89 @@ import {
   type SuggestMealState,
 } from "../(auth)/meal-actions";
 
-const SLOTS = [
-  { value: "breakfast", label: "Breakfast" },
-  { value: "lunch", label: "Lunch" },
-  { value: "snack", label: "Snack" },
-  { value: "dinner", label: "Dinner" },
-];
+const SLOTS = ["breakfast", "lunch", "snack", "dinner"] as const;
 
-const PREFERENCE_KINDS = [
-  { value: "preference", label: "Preference (timing, style)" },
-  { value: "dislike", label: "Dislike" },
-  { value: "allergy", label: "Allergy" },
-  { value: "medical", label: "Medical" },
-  { value: "ethical", label: "Ethical (won't eat)" },
-];
+const PREFERENCE_KINDS = ["preference", "dislike", "allergy", "medical", "ethical"] as const;
+
+/**
+ * Every meal sheet's words in the viewer's language, built on the server by
+ * `mealFormLabels` (story 22-004). `{name}`, `{minutes}`, `{serves}` and
+ * `{items}` stay placeholders and are filled in here; a recipe's name and an
+ * ingredient's name are the household's own words and never translated.
+ */
+export type MealFormLabels = {
+  slots: Record<(typeof SLOTS)[number], string>;
+  preferenceKinds: Record<(typeof PREFERENCE_KINDS)[number], string>;
+  plan: string;
+  planDescription: string;
+  mealName: string;
+  mealPlaceholder: string;
+  essential: string;
+  essentialPlaceholder: string;
+  fillLater: string;
+  backToPicking: string;
+  addMeal: string;
+  adding: string;
+  fromRecipe: string;
+  oneOff: string;
+  readyToCook: string;
+  missingIngredient: string;
+  recipeOption: string;
+  addNewMeal: string;
+  slot: string;
+  date: string;
+  readyBy: string;
+  cook: string;
+  nobodyYet: string;
+  planSubmit: string;
+  planning: string;
+  attach: string;
+  attachTitle: string;
+  attachDescription: string;
+  whichRecipe: string;
+  attachSubmit: string;
+  attaching: string;
+  addRecipe: string;
+  recipeTitle: string;
+  recipeDescription: string;
+  recipeName: string;
+  cuisine: string;
+  cuisinePlaceholder: string;
+  activeMinutes: string;
+  totalMinutes: string;
+  serves: string;
+  optional: string;
+  optionalPlaceholder: string;
+  nutrients: string;
+  calories: string;
+  protein: string;
+  carbs: string;
+  fat: string;
+  method: string;
+  methodPlaceholder: string;
+  addPreference: string;
+  preferenceTitle: string;
+  preferenceDescription: string;
+  who: string;
+  wholeHousehold: string;
+  kind: string;
+  subject: string;
+  subjectPlaceholder: string;
+  suggest: string;
+  suggestTitle: string;
+  suggestDescription: string;
+  forDay: string;
+  check: string;
+  checking: string;
+  stillNeeds: string;
+  runningLow: string;
+  addToPlan: string;
+};
+
+/** Fills a label's `{placeholders}`; a value is inserted as it is, never read as a pattern. */
+function fill(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+}
 
 function Submit({
   label,
@@ -70,9 +139,11 @@ export function PlanMealButton({
   householdId,
   members,
   recipes = [],
+  labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
+  labels: MealFormLabels;
   recipes?: {
     id: string;
     name: string;
@@ -119,14 +190,14 @@ export function PlanMealButton({
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Plus aria-hidden className="size-3.5" /> Plan a meal
+        <Plus aria-hidden className="size-3.5" /> {labels.plan}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Plan a meal"
-        description="WonderHome checks the ingredients and everyone's preferences against it from here."
+        title={labels.plan}
+        description={labels.planDescription}
       >
         {addingMeal ? (
           <form action={recipeFormAction} className="space-y-3">
@@ -136,10 +207,10 @@ export function PlanMealButton({
             <input type="hidden" name="totalMinutes" value={40} />
             <input type="hidden" name="serves" value={4} />
             <Field
-              label="What's the meal?"
+              label={labels.mealName}
               name="name"
               required
-              placeholder="Rajma chawal"
+              placeholder={labels.mealPlaceholder}
               autoComplete="off"
             />
             <div className="space-y-1.5">
@@ -147,19 +218,18 @@ export function PlanMealButton({
                 htmlFor="essentialIngredients"
                 className="block text-sm font-medium"
               >
-                Essential ingredients (one per line)
+                {labels.essential}
               </label>
               <textarea
                 id="essentialIngredients"
                 name="essentialIngredients"
                 rows={3}
-                placeholder={"Rajma\nOnion\nTomato"}
+                placeholder={labels.essentialPlaceholder}
                 className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
               />
             </div>
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              Timing, servings and nutrients can be filled in later from the
-              Recipes tab.
+              {labels.fillLater}
             </p>
             <div className="flex gap-2">
               <Button
@@ -168,9 +238,9 @@ export function PlanMealButton({
                 className="flex-1"
                 onClick={() => setAddingMeal(false)}
               >
-                Back to picking
+                {labels.backToPicking}
               </Button>
-              <Submit label="Add meal" pendingLabel="Adding…" />
+              <Submit label={labels.addMeal} pendingLabel={labels.adding} />
             </div>
           </form>
         ) : (
@@ -179,15 +249,15 @@ export function PlanMealButton({
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <Field
-            label="What's the meal?"
+            label={labels.mealName}
             name="name"
             required
-            placeholder="Rajma chawal"
+            placeholder={labels.mealPlaceholder}
             autoComplete="off"
           />
           <div className="space-y-1.5">
             <label htmlFor="recipeId" className="block text-sm font-medium">
-              From a recipe (optional)
+              {labels.fromRecipe}
             </label>
             <select
               id="recipeId"
@@ -198,33 +268,31 @@ export function PlanMealButton({
               }}
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
-              <option value="">None — a one-off dish</option>
+              <option value="">{labels.oneOff}</option>
               {ready.length > 0 ? (
-                <optgroup label="Ready to cook">
+                <optgroup label={labels.readyToCook}>
                   {ready.map((recipe) => (
                     <option key={recipe.id} value={recipe.id}>
-                      {recipe.name} · {recipe.totalMinutes} min · serves{" "}
-                      {recipe.serves}
+                      {fill(labels.recipeOption, { name: recipe.name, minutes: recipe.totalMinutes, serves: recipe.serves })}
                     </option>
                   ))}
                 </optgroup>
               ) : null}
               {missingSomething.length > 0 ? (
-                <optgroup label="Missing an ingredient">
+                <optgroup label={labels.missingIngredient}>
                   {missingSomething.map((recipe) => (
                     <option key={recipe.id} value={recipe.id}>
-                      {recipe.name} · {recipe.totalMinutes} min · serves{" "}
-                      {recipe.serves}
+                      {fill(labels.recipeOption, { name: recipe.name, minutes: recipe.totalMinutes, serves: recipe.serves })}
                     </option>
                   ))}
                 </optgroup>
               ) : null}
-              <option value="__new__">+ Add a new meal…</option>
+              <option value="__new__">{labels.addNewMeal}</option>
             </select>
           </div>
           <div className="space-y-1.5">
             <label htmlFor="slot" className="block text-sm font-medium">
-              Slot
+              {labels.slot}
             </label>
             <select
               id="slot"
@@ -233,22 +301,22 @@ export function PlanMealButton({
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
               {SLOTS.map((slot) => (
-                <option key={slot.value} value={slot.value}>
-                  {slot.label}
+                <option key={slot} value={slot}>
+                  {labels.slots[slot]}
                 </option>
               ))}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="Date"
+              label={labels.date}
               name="onDate"
               type="date"
               required
               defaultValue={today}
             />
             <Field
-              label="Ready by"
+              label={labels.readyBy}
               name="readyByTime"
               type="time"
               required
@@ -257,7 +325,7 @@ export function PlanMealButton({
           </div>
           <div className="space-y-1.5">
             <label htmlFor="cookMemberId" className="block text-sm font-medium">
-              Who’s cooking (optional)
+              {labels.cook}
             </label>
             <select
               id="cookMemberId"
@@ -265,7 +333,7 @@ export function PlanMealButton({
               defaultValue=""
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
-              <option value="">Nobody yet</option>
+              <option value="">{labels.nobodyYet}</option>
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.displayName}
@@ -273,7 +341,7 @@ export function PlanMealButton({
               ))}
             </select>
           </div>
-          <Submit label="Plan meal" pendingLabel="Planning…" />
+          <Submit label={labels.planSubmit} pendingLabel={labels.planning} />
         </form>
         )}
       </Sheet>
@@ -286,10 +354,12 @@ export function AttachRecipeControl({
   householdId,
   mealId,
   recipes,
+  labels,
 }: {
   householdId: string;
   mealId: string;
   recipes: { id: string; name: string }[];
+  labels: MealFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -307,14 +377,14 @@ export function AttachRecipeControl({
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <ChefHat aria-hidden className="size-3.5" /> Add a recipe
+        <ChefHat aria-hidden className="size-3.5" /> {labels.attach}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Add a recipe to this meal"
-        description="Copies the recipe's ingredients and timing onto it."
+        title={labels.attachTitle}
+        description={labels.attachDescription}
       >
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
@@ -325,7 +395,7 @@ export function AttachRecipeControl({
               htmlFor={`recipe-${mealId}`}
               className="block text-sm font-medium"
             >
-              Which recipe?
+              {labels.whichRecipe}
             </label>
             <select
               id={`recipe-${mealId}`}
@@ -340,7 +410,7 @@ export function AttachRecipeControl({
               ))}
             </select>
           </div>
-          <Submit label="Attach" pendingLabel="Attaching…" />
+          <Submit label={labels.attachSubmit} pendingLabel={labels.attaching} />
         </form>
       </Sheet>
     </>
@@ -348,7 +418,7 @@ export function AttachRecipeControl({
 }
 
 /** "Add recipe" — the Recipes tab's own add form. Ingredients are kept to a name-per-line list; a household can refine quantities later. */
-export function AddRecipeButton({ householdId }: { householdId: string }) {
+export function AddRecipeButton({ householdId, labels }: { householdId: string; labels: MealFormLabels }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
     createRecipeAction,
@@ -363,35 +433,35 @@ export function AddRecipeButton({ householdId }: { householdId: string }) {
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Plus aria-hidden className="size-3.5" /> Add recipe
+        <Plus aria-hidden className="size-3.5" /> {labels.addRecipe}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Add a recipe"
-        description="Once added, it's there to pick next time you plan a meal."
+        title={labels.recipeTitle}
+        description={labels.recipeDescription}
       >
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <Field
-            label="What's it called?"
+            label={labels.recipeName}
             name="name"
             required
-            placeholder="Rajma chawal"
+            placeholder={labels.mealPlaceholder}
             autoComplete="off"
           />
           <Field
-            label="Cuisine (optional)"
+            label={labels.cuisine}
             name="cuisine"
-            placeholder="North Indian"
+            placeholder={labels.cuisinePlaceholder}
             autoComplete="off"
           />
           <div className="grid grid-cols-3 gap-3">
             <Field
-              label="Active min"
+              label={labels.activeMinutes}
               name="activeMinutes"
               type="number"
               min={1}
@@ -399,7 +469,7 @@ export function AddRecipeButton({ householdId }: { householdId: string }) {
               defaultValue={20}
             />
             <Field
-              label="Total min"
+              label={labels.totalMinutes}
               name="totalMinutes"
               type="number"
               min={1}
@@ -407,7 +477,7 @@ export function AddRecipeButton({ householdId }: { householdId: string }) {
               defaultValue={40}
             />
             <Field
-              label="Serves"
+              label={labels.serves}
               name="serves"
               type="number"
               min={1}
@@ -420,13 +490,13 @@ export function AddRecipeButton({ householdId }: { householdId: string }) {
               htmlFor="essentialIngredients"
               className="block text-sm font-medium"
             >
-              Essential ingredients (one per line)
+              {labels.essential}
             </label>
             <textarea
               id="essentialIngredients"
               name="essentialIngredients"
               rows={3}
-              placeholder={"Rajma\nOnion\nTomato"}
+              placeholder={labels.essentialPlaceholder}
               className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
             />
           </div>
@@ -435,43 +505,43 @@ export function AddRecipeButton({ householdId }: { householdId: string }) {
               htmlFor="optionalIngredients"
               className="block text-sm font-medium"
             >
-              Nice to have (optional, one per line)
+              {labels.optional}
             </label>
             <textarea
               id="optionalIngredients"
               name="optionalIngredients"
               rows={2}
-              placeholder={"Coriander"}
+              placeholder={labels.optionalPlaceholder}
               className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
             />
           </div>
           <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-            Rough nutrients per serving (optional)
+            {labels.nutrients}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="Calories"
+              label={labels.calories}
               name="caloriesPerServing"
               type="number"
               min={0}
               placeholder="450"
             />
             <Field
-              label="Protein (g)"
+              label={labels.protein}
               name="proteinGrams"
               type="number"
               min={0}
               placeholder="18"
             />
             <Field
-              label="Carbs (g)"
+              label={labels.carbs}
               name="carbsGrams"
               type="number"
               min={0}
               placeholder="55"
             />
             <Field
-              label="Fat (g)"
+              label={labels.fat}
               name="fatGrams"
               type="number"
               min={0}
@@ -479,12 +549,12 @@ export function AddRecipeButton({ householdId }: { householdId: string }) {
             />
           </div>
           <Field
-            label="How to cook it (optional)"
+            label={labels.method}
             name="method"
-            placeholder="Soak, pressure-cook, temper…"
+            placeholder={labels.methodPlaceholder}
             autoComplete="off"
           />
-          <Submit label="Add recipe" pendingLabel="Adding…" />
+          <Submit label={labels.addRecipe} pendingLabel={labels.adding} />
         </form>
       </Sheet>
     </>
@@ -497,11 +567,13 @@ export function AddPreferenceButton({
   currentMemberId,
   admin,
   members,
+  labels,
 }: {
   householdId: string;
   currentMemberId: string;
   admin: boolean;
   members: { id: string; displayName: string }[];
+  labels: MealFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -520,14 +592,14 @@ export function AddPreferenceButton({
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Plus aria-hidden className="size-3.5" /> Add preference
+        <Plus aria-hidden className="size-3.5" /> {labels.addPreference}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Add a preference"
-        description="A member's own like or dislike, a timing preference, or a household rule — allergies always win over everything else."
+        title={labels.preferenceTitle}
+        description={labels.preferenceDescription}
       >
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
@@ -535,7 +607,7 @@ export function AddPreferenceButton({
           <input type="hidden" name="householdId" value={householdId} />
           <div className="space-y-1.5">
             <label htmlFor="memberId" className="block text-sm font-medium">
-              Who&apos;s this about?
+              {labels.who}
             </label>
             <select
               id="memberId"
@@ -543,7 +615,7 @@ export function AddPreferenceButton({
               defaultValue=""
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
-              <option value="">Whole household</option>
+              <option value="">{labels.wholeHousehold}</option>
               {options.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.displayName}
@@ -553,7 +625,7 @@ export function AddPreferenceButton({
           </div>
           <div className="space-y-1.5">
             <label htmlFor="kind" className="block text-sm font-medium">
-              Kind
+              {labels.kind}
             </label>
             <select
               id="kind"
@@ -562,20 +634,20 @@ export function AddPreferenceButton({
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
               {PREFERENCE_KINDS.map((kind) => (
-                <option key={kind.value} value={kind.value}>
-                  {kind.label}
+                <option key={kind} value={kind}>
+                  {labels.preferenceKinds[kind]}
                 </option>
               ))}
             </select>
           </div>
           <Field
-            label="What is it?"
+            label={labels.subject}
             name="subject"
             required
-            placeholder="Dinner at 8pm, mushrooms, peanuts…"
+            placeholder={labels.subjectPlaceholder}
             autoComplete="off"
           />
-          <Submit label="Add preference" pendingLabel="Adding…" />
+          <Submit label={labels.addPreference} pendingLabel={labels.adding} />
         </form>
       </Sheet>
     </>
@@ -586,7 +658,7 @@ export function AddPreferenceButton({
  * "Suggest" — checks what the household has and everyone's preferences, and
  * offers one thing to cook with a single click to add it.
  */
-export function SuggestMealButton({ householdId }: { householdId: string }) {
+export function SuggestMealButton({ householdId, labels }: { householdId: string; labels: MealFormLabels }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<SuggestMealState, FormData>(
     suggestMealAction,
@@ -606,27 +678,27 @@ export function SuggestMealButton({ householdId }: { householdId: string }) {
         onClick={() => setOpen(true)}
         className="gap-1.5"
       >
-        <Lightbulb aria-hidden className="size-3.5" /> Suggest
+        <Lightbulb aria-hidden className="size-3.5" /> {labels.suggest}
       </Pill>
 
       <Sheet
         open={open}
         onOpenChange={setOpen}
-        title="Suggest a meal"
-        description="Checked against what the household has and everyone's preferences."
+        title={labels.suggestTitle}
+        description={labels.suggestDescription}
       >
         <div className="space-y-4">
           <form action={formAction} className="space-y-3">
             {state.error ? <Alert>{state.error}</Alert> : null}
             <input type="hidden" name="householdId" value={householdId} />
             <Field
-              label="For which day?"
+              label={labels.forDay}
               name="onDate"
               type="date"
               required
               defaultValue={today}
             />
-            <Submit label="Check" pendingLabel="Checking…" />
+            <Submit label={labels.check} pendingLabel={labels.checking} />
           </form>
 
           {state.choice ? (
@@ -647,13 +719,12 @@ export function SuggestMealButton({ householdId }: { householdId: string }) {
                   "missing" in state.choice &&
                   state.choice.missing.length > 0 ? (
                     <p className="mt-2 text-xs text-[var(--wh-attention)]">
-                      Still needs: {state.choice.missing.join(", ")}
+                      {fill(labels.stillNeeds, { items: state.choice.missing.join(", ") })}
                     </p>
                   ) : null}
                   {state.lowStock && state.lowStock.length > 0 ? (
                     <p className="mt-2 text-xs text-[var(--wh-attention)]">
-                      Running low: {state.lowStock.join(", ")} — worth
-                      restocking soon.
+                      {fill(labels.runningLow, { items: state.lowStock.join(", ") })}
                     </p>
                   ) : null}
                   {addState.notice ? (
@@ -689,7 +760,7 @@ export function SuggestMealButton({ householdId }: { householdId: string }) {
                             htmlFor="suggest-slot"
                             className="block text-xs font-medium"
                           >
-                            Slot
+                            {labels.slot}
                           </label>
                           <select
                             id="suggest-slot"
@@ -698,8 +769,8 @@ export function SuggestMealButton({ householdId }: { householdId: string }) {
                             className="block min-h-10 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2 text-sm"
                           >
                             {SLOTS.map((slot) => (
-                              <option key={slot.value} value={slot.value}>
-                                {slot.label}
+                              <option key={slot} value={slot}>
+                                {labels.slots[slot]}
                               </option>
                             ))}
                           </select>
@@ -709,7 +780,7 @@ export function SuggestMealButton({ householdId }: { householdId: string }) {
                             htmlFor="suggest-time"
                             className="block text-xs font-medium"
                           >
-                            Ready by
+                            {labels.readyBy}
                           </label>
                           <input
                             id="suggest-time"
@@ -720,7 +791,7 @@ export function SuggestMealButton({ householdId }: { householdId: string }) {
                           />
                         </div>
                       </div>
-                      <Submit label="Add to the plan" pendingLabel="Adding…" />
+                      <Submit label={labels.addToPlan} pendingLabel={labels.adding} />
                     </form>
                   )}
                 </>

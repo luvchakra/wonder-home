@@ -22,6 +22,40 @@ const CATEGORIES = ["grocery", "household", "pet", "personal", "medical"];
 /** Common units households actually use — suggestions, never the only valid answer (the field stays free text). */
 const UNITS = ["piece", "kg", "g", "litre", "ml", "pack", "bottle", "box", "dozen"];
 
+/**
+ * The add/edit sheet's words in the viewer's language, built on the server
+ * by `groceryFormLabels` (story 22-004). `{name}` stays a placeholder and is
+ * filled in here with the item's own name, which is never translated.
+ */
+export type ConsumableFormLabels = {
+  add: string;
+  title: string;
+  description: string;
+  name: string;
+  namePlaceholder: string;
+  nameNew: string;
+  category: string;
+  categoryPlaceholder: string;
+  categoryNew: string;
+  usualAmount: string;
+  unit: string;
+  unitPlaceholder: string;
+  unitNew: string;
+  lasts: string;
+  lastsHint: string;
+  addNew: string;
+  chooseExisting: string;
+  submit: string;
+  adding: string;
+  edit: string;
+  editDescription: string;
+  save: string;
+  saving: string;
+  stop: string;
+};
+
+const withName = (template: string, name: string) => template.replace("{name}", () => name);
+
 export type ConsumableInitial = {
   id: string;
   name: string;
@@ -51,6 +85,7 @@ function ConsumableFields({
   state,
   existingNames = [],
   existingCategories = [],
+  labels,
 }: {
   householdId: string;
   initial?: ConsumableInitial;
@@ -59,9 +94,11 @@ function ConsumableFields({
   existingNames?: string[];
   /** Every distinct category this household has already used, for the Category options. */
   existingCategories?: string[];
+  labels: ConsumableFormLabels;
 }) {
   const categoryOptions = Array.from(new Set([...existingCategories, ...CATEGORIES])).sort((a, b) => a.localeCompare(b));
   const unitOptions = Array.from(new Set([initial?.unit, ...UNITS].filter((value): value is string => Boolean(value))));
+  const picker = { addNewLabel: labels.addNew, chooseExistingLabel: labels.chooseExisting };
 
   return (
     <>
@@ -69,20 +106,20 @@ function ConsumableFields({
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
-      <ComboboxField label="What is it?" name="name" required options={existingNames} defaultValue={initial?.name} placeholder="Choose what it is" newValuePlaceholder="Milk" />
-      <ComboboxField label="Category" name="category" required options={categoryOptions} defaultValue={initial?.category ?? "grocery"} placeholder="Choose a category" newValuePlaceholder="A new category" />
+      <ComboboxField label={labels.name} name="name" required options={existingNames} defaultValue={initial?.name} placeholder={labels.namePlaceholder} newValuePlaceholder={labels.nameNew} {...picker} />
+      <ComboboxField label={labels.category} name="category" required options={categoryOptions} defaultValue={initial?.category ?? "grocery"} placeholder={labels.categoryPlaceholder} newValuePlaceholder={labels.categoryNew} {...picker} />
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Usual amount" name="typicalQuantity" type="number" min={0} step="0.1" required placeholder="2" defaultValue={initial?.typicalQuantity} />
-        <ComboboxField label="Counted in" name="unit" required options={unitOptions} defaultValue={initial?.unit} placeholder="Choose a unit" newValuePlaceholder="e.g. crate, sachet" />
+        <Field label={labels.usualAmount} name="typicalQuantity" type="number" min={0} step="0.1" required placeholder="2" defaultValue={initial?.typicalQuantity} />
+        <ComboboxField label={labels.unit} name="unit" required options={unitOptions} defaultValue={initial?.unit} placeholder={labels.unitPlaceholder} newValuePlaceholder={labels.unitNew} {...picker} />
       </div>
       <Field
-        label="Lasts about (days, optional)"
+        label={labels.lasts}
         name="daysPerUnit"
         type="number"
         min={1}
         placeholder="7"
         defaultValue={initial?.daysPerUnit ?? undefined}
-        hint="Leave empty and WonderHome will work it out after a few purchases."
+        hint={labels.lastsHint}
       />
     </>
   );
@@ -102,10 +139,12 @@ export function AddConsumableButton({
   householdId,
   existingNames = [],
   existingCategories = [],
+  labels,
 }: {
   householdId: string;
   existingNames?: string[];
   existingCategories?: string[];
+  labels: ConsumableFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(createConsumableAction, {});
@@ -113,13 +152,13 @@ export function AddConsumableButton({
   return (
     <>
       <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> Add something
+        <Plus aria-hidden className="size-3.5" /> {labels.add}
       </Pill>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Add something to track" description="What it is and how much you typically go through — WonderHome watches it from here.">
+      <Sheet open={open} onOpenChange={setOpen} title={labels.title} description={labels.description}>
         <form action={formAction} className="space-y-3">
-          <ConsumableFields householdId={householdId} state={state} existingNames={existingNames} existingCategories={existingCategories} />
-          <Submit label="Add" pendingLabel="Adding…" />
+          <ConsumableFields householdId={householdId} state={state} existingNames={existingNames} existingCategories={existingCategories} labels={labels} />
+          <Submit label={labels.submit} pendingLabel={labels.adding} />
         </form>
       </Sheet>
     </>
@@ -135,41 +174,43 @@ export function ConsumableRowControls({
   item,
   existingNames = [],
   existingCategories = [],
+  labels,
 }: {
   householdId: string;
   item: ConsumableInitial;
   existingNames?: string[];
   existingCategories?: string[];
+  labels: ConsumableFormLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [editState, editAction] = useActionState<ActionState, FormData>(updateConsumableAction, {});
   const [retireState, retireAction] = useActionState<ActionState, FormData>(retireConsumableAction, {});
+  const editLabel = withName(labels.edit, item.name);
 
   return (
     <div className="flex items-center gap-1.5">
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={editLabel} title={editLabel}>
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
       <form action={retireAction}>
         <input type="hidden" name="id" value={item.id} />
         <input type="hidden" name="householdId" value={householdId} />
-        <RetireSubmit name={item.name} />
+        <RetireSubmit label={withName(labels.stop, item.name)} />
       </form>
       {retireState.error ? <p className="text-xs text-[var(--wh-risk)]">{retireState.error}</p> : null}
 
-      <Sheet open={open} onOpenChange={setOpen} title={`Edit ${item.name}`} description="Change what WonderHome knows about it, or how it counts it.">
+      <Sheet open={open} onOpenChange={setOpen} title={editLabel} description={labels.editDescription}>
         <form action={editAction} className="space-y-3">
-          <ConsumableFields householdId={householdId} initial={item} state={editState} existingNames={existingNames} existingCategories={existingCategories} />
-          <Submit label="Save changes" pendingLabel="Saving…" />
+          <ConsumableFields householdId={householdId} initial={item} state={editState} existingNames={existingNames} existingCategories={existingCategories} labels={labels} />
+          <Submit label={labels.save} pendingLabel={labels.saving} />
         </form>
       </Sheet>
     </div>
   );
 }
 
-function RetireSubmit({ name }: { name: string }) {
+function RetireSubmit({ label }: { label: string }) {
   const { pending } = useFormStatus();
-  const label = `Stop tracking ${name}`;
   return (
     <Pill type="submit" tone="quiet" disabled={pending} aria-label={label} title={label}>
       {pending ? "…" : <Archive aria-hidden className="size-3.5" />}

@@ -31,6 +31,7 @@ export function ComboboxField({
   required,
   placeholder = "Choose one",
   addNewLabel = "Add new…",
+  chooseExistingLabel = "Choose existing",
   newValuePlaceholder,
   hint,
   emptyLabel,
@@ -43,6 +44,8 @@ export function ComboboxField({
   required?: boolean;
   placeholder?: string;
   addNewLabel?: string;
+  /** The button that goes back from typing a new value to the list — a screen in another language passes its own words. */
+  chooseExistingLabel?: string;
   newValuePlaceholder?: string;
   hint?: string;
   /** For an optional field: a choosable first option meaning "no answer", submitted as an empty value. */
@@ -82,7 +85,7 @@ export function ComboboxField({
               }}
               className="shrink-0 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] px-3 text-xs font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
             >
-              Choose existing
+              {chooseExistingLabel}
             </button>
           ) : null}
         </div>

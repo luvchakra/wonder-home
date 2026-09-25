@@ -1,7 +1,7 @@
 import { Lightbulb, PackageCheck, ShoppingBasket, Sparkles, Truck } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
-import { describeBasis, expectedDepletion } from "@wonderhome/core/commerce/consumables";
+import { expectedDepletion } from "@wonderhome/core/commerce/consumables";
 import { listConsumables, listOrders, listPurchases, shoppingAgenda } from "@wonderhome/core/commerce/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
 import { totalsByCurrency } from "@wonderhome/core/finance/totals";
@@ -19,6 +19,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { AddConsumableButton, ConsumableRowControls } from "../_components/commerce-forms";
+import { groceryFormLabels } from "../_lib/grocery-form-labels";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Groceries" };
@@ -46,19 +47,20 @@ type SuggestionRow = {
  */
 export default async function GroceriesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [{ tab }, session] = await Promise.all([searchParams, requireSession("/groceries")]);
-  const { supabase, membership, viewer, secondary } = session;
+  const { supabase, membership, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const now = new Date();
 
   const entitlement = await may(supabase, householdId, "commerce.orders");
   const active = tab === "list" || tab === "orders" ? tab : "overview";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/groceries", back: { href: "/more", label: "Back" }, title: "Groceries" };
+  const shell = { active: "more" as const, viewer, secondary, pathname: "/groceries", back: { href: "/more", label: t("common.back") }, title: t("nav.item.groceries") };
 
   if (!entitlement.allowed) {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ShoppingBasket} tone="care" title="Groceries are not part of this plan" description={entitlement.reason} />
+        <EmptyState icon={ShoppingBasket} tone="care" title={t("groceries.notInPlan")} description={entitlement.reason} />
       </AppShell>
     );
   }
@@ -83,7 +85,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
 
   const suggestions = ((suggestionRows.data as SuggestionRow[] | null) ?? []).map((row) => {
     const embedded = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
-    return { ...row, name: embedded?.name ?? "Item", unit: embedded?.unit ?? "" };
+    return { ...row, name: embedded?.name ?? t("groceries.item"), unit: embedded?.unit ?? "" };
   });
   // One estimate per currency, never one number mixing them (story 22-007).
   const estimates = totalsByCurrency(suggestions.map((row) => ({ minor: row.estimated_cost_minor, currency: row.currency })));
@@ -92,36 +94,45 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
   const needs = agenda ? [...agenda.needed, ...agenda.lateOrders] : [];
   const existingNames = Array.from(new Set(consumables.map((item) => item.name))).sort((a, b) => a.localeCompare(b));
   const existingCategories = Array.from(new Set(consumables.map((item) => item.category))).sort((a, b) => a.localeCompare(b));
+  const formLabels = groceryFormLabels(t);
+  // Where a line's evidence came from, in the reader's words (the domain's own `describeBasis` is the English record).
+  const basis = (value: SuggestionRow["evidence_basis"]) => t(`groceries.basis.${value}`);
+  const suggestionSummary = [
+    t("groceries.suggested.items", { count: suggestions.length }),
+    priced > 0 ? `${t("groceries.suggested.estimate", { amount: estimateText })}${priced < suggestions.length ? ` ${t("groceries.suggested.partlyPriced")}` : ""}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Groceries</h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">Never run out again.</p>
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.groceries")}</h1>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("groceries.lede")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <AddConsumableButton householdId={householdId} existingNames={existingNames} existingCategories={existingCategories} />
+            <AddConsumableButton householdId={householdId} existingNames={existingNames} existingCategories={existingCategories} labels={formLabels} />
           </div>
         </header>
 
         <SegmentedControl
-          label="Groceries view"
+          label={t("groceries.view")}
           active={active}
           segments={[
-            { key: "overview", label: "Overview", href: "/groceries", count: needs.length },
-            { key: "list", label: "List", href: "/groceries?tab=list", count: suggestions.length },
-            { key: "orders", label: "Orders", href: "/groceries?tab=orders" },
+            { key: "overview", label: t("groceries.tab.overview"), href: "/groceries", count: needs.length },
+            { key: "list", label: t("groceries.tab.list"), href: "/groceries?tab=list", count: suggestions.length },
+            { key: "orders", label: t("groceries.tab.orders"), href: "/groceries?tab=orders" },
           ]}
         />
 
         {active === "overview" ? (
           <>
             <section>
-              <SectionHeader title="Suggested order" count={suggestions.length} />
+              <SectionHeader title={t("groceries.suggested")} count={suggestions.length} />
               {suggestions.length === 0 ? (
-                <EmptyState icon={ShoppingBasket} tone="care" title="Nothing to order yet" description="WonderHome suggests an order once it can see what you use and how fast — from purchases, your pantry, or what you tell it." action={<AddConsumableButton householdId={householdId} />} />
+                <EmptyState icon={ShoppingBasket} tone="care" title={t("groceries.suggested.emptyTitle")} description={t("groceries.suggested.emptyLede")} action={<AddConsumableButton householdId={householdId} labels={formLabels} />} />
               ) : (
                 <Card className="space-y-3">
                   <ul className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none]">
@@ -134,22 +145,20 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                     ))}
                   </ul>
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-[var(--wh-foreground-muted)]">
-                      {suggestions.length} items{priced > 0 ? ` · est. ${estimateText}${priced < suggestions.length ? " (partly priced)" : ""}` : ""}
-                    </p>
-                    <PillLink href="/groceries?tab=list" tone="primary">Review order</PillLink>
+                    <p className="text-sm text-[var(--wh-foreground-muted)]">{suggestionSummary}</p>
+                    <PillLink href="/groceries?tab=list" tone="primary">{t("groceries.reviewOrder")}</PillLink>
                   </div>
                 </Card>
               )}
             </section>
 
             <section>
-              <SectionHeader title="Smart insights" />
+              <SectionHeader title={t("groceries.insights")} />
               {needs.length === 0 ? (
                 <Card className="flex items-center gap-3 p-4">
                   <Sparkles aria-hidden className="size-5 shrink-0 text-[var(--wh-primary)]" />
                   <p className="text-sm text-[var(--wh-foreground-muted)]">
-                    {agenda && agenda.checked > 0 ? `${agenda.checked} things watched, nothing running out. WonderHome will say when that changes.` : "Once WonderHome knows a few purchases it will tell you what's running low before it does."}
+                    {agenda && agenda.checked > 0 ? t("groceries.insights.watched", { count: agenda.checked }) : t("groceries.insights.learning")}
                   </p>
                 </Card>
               ) : (
@@ -161,9 +170,9 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
 
         {active === "list" ? (
           <>
-            <MetricGrid metrics={[{ label: "Items", value: suggestions.length, icon: ShoppingBasket, tone: "care" }, { label: "Estimated", value: priced > 0 ? estimateText : "—", icon: Lightbulb, tone: "money" }, { label: "Tracked", value: consumables.length, icon: PackageCheck, tone: "handled" }]} />
+            <MetricGrid metrics={[{ label: t("groceries.metric.items"), value: suggestions.length, icon: ShoppingBasket, tone: "care" }, { label: t("groceries.metric.estimated"), value: priced > 0 ? estimateText : "—", icon: Lightbulb, tone: "money" }, { label: t("groceries.metric.tracked"), value: consumables.length, icon: PackageCheck, tone: "handled" }]} />
             {suggestions.length === 0 ? (
-              <EmptyState icon={ShoppingBasket} tone="care" title="The list is empty" description="Suggestions arrive as WonderHome learns what you use. You can always ask it to add something." />
+              <EmptyState icon={ShoppingBasket} tone="care" title={t("groceries.list.emptyTitle")} description={t("groceries.list.emptyLede")} />
             ) : (
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
@@ -178,29 +187,29 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                             <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{row.reason}</span>
                           </span>
                           <span className="shrink-0">
-                            {row.estimated_cost_minor !== null && row.currency ? <Badge>{formatMoney(row.estimated_cost_minor, row.currency)}</Badge> : <Badge tone="neutral">unpriced</Badge>}
+                            {row.estimated_cost_minor !== null && row.currency ? <Badge>{formatMoney(row.estimated_cost_minor, row.currency)}</Badge> : <Badge tone="neutral">{t("groceries.unpriced")}</Badge>}
                           </span>
                         </>
                       }
                     >
                       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
                         <div>
-                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Why</dt>
+                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.why")}</dt>
                           <dd>{row.reason}</dd>
                         </div>
                         <div>
-                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Based on</dt>
-                          <dd>{describeBasis(row.evidence_basis)}</dd>
+                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.basedOn")}</dt>
+                          <dd>{basis(row.evidence_basis)}</dd>
                         </div>
                         {row.needed_by ? (
                           <div>
-                            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Needed by</dt>
+                            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.neededBy")}</dt>
                             <dd>{formatDate(timezone, new Date(row.needed_by), "long")}</dd>
                           </div>
                         ) : null}
                         <div>
-                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Estimated cost</dt>
-                          <dd>{row.estimated_cost_minor !== null && row.currency ? formatMoney(row.estimated_cost_minor, row.currency) : "Not priced yet"}</dd>
+                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.estimatedCost")}</dt>
+                          <dd>{row.estimated_cost_minor !== null && row.currency ? formatMoney(row.estimated_cost_minor, row.currency) : t("groceries.fact.notPriced")}</dd>
                         </div>
                       </dl>
                     </ExpandableRow>
@@ -211,11 +220,11 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
             <Card className="flex items-start gap-3 bg-[var(--wh-attention-soft)]/50 p-4">
               <Truck aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-attention)]" />
               <p className="text-sm text-[var(--wh-foreground-muted)]">
-                Placing the order needs a connected grocery provider. None is live yet, so WonderHome prepares and prices the basket and stops there — it never pretends an order went through.
+                {t("groceries.noProvider")}
               </p>
             </Card>
             <section>
-              <SectionHeader title="What WonderHome tracks" count={consumables.length} />
+              <SectionHeader title={t("groceries.tracks")} count={consumables.length} />
               {consumables.length === 0 ? null : (
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
@@ -230,7 +239,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                               <span className="min-w-0 flex-1">
                                 <span className="block text-sm font-medium">{item.name}</span>
                                 <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                                  {runsOut ? `Likely to run out ${formatDate(timezone, runsOut, "long")}` : "Not enough history to predict yet"}
+                                  {runsOut ? t("groceries.runsOut", { date: formatDate(timezone, runsOut, "long") }) : t("groceries.notEnoughHistory")}
                                 </span>
                               </span>
                             </>
@@ -239,28 +248,28 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                           <div className="space-y-3">
                             <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
                               <div>
-                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Category</dt>
+                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.category")}</dt>
                                 <dd>{item.category}</dd>
                               </div>
                               <div>
-                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Usual amount</dt>
+                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.usualAmount")}</dt>
                                 <dd>{item.typicalQuantity} {item.unit}</dd>
                               </div>
                               {item.daysPerUnit ? (
                                 <div>
-                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Lasts about</dt>
-                                  <dd>{item.daysPerUnit} days</dd>
+                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.lastsAbout")}</dt>
+                                  <dd>{t("groceries.fact.days", { count: item.daysPerUnit })}</dd>
                                 </div>
                               ) : null}
                               {item.evidenceBasis ? (
                                 <div>
-                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Based on</dt>
-                                  <dd>{describeBasis(item.evidenceBasis)}</dd>
+                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.basedOn")}</dt>
+                                  <dd>{basis(item.evidenceBasis)}</dd>
                                 </div>
                               ) : null}
                               {item.lastPurchasedOn ? (
                                 <div>
-                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Last purchased</dt>
+                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.lastPurchased")}</dt>
                                   <dd>
                                     {day(item.lastPurchasedOn)}
                                     {item.lastPurchasedQuantity ? ` · ${item.lastPurchasedQuantity} ${item.unit}` : ""}
@@ -270,7 +279,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                             </dl>
                             {purchasesByItem.get(item.id)?.length ? (
                               <div className="space-y-1.5">
-                                <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Recent purchases</p>
+                                <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.recentPurchases")}</p>
                                 <ul className="space-y-1 text-sm">
                                   {purchasesByItem.get(item.id)!.slice(0, 5).map((purchase) => (
                                     <li key={purchase.id} className="break-words">
@@ -278,7 +287,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                                         day(purchase.purchasedOn),
                                         `${purchase.quantity} ${item.unit}`,
                                         purchase.merchant,
-                                        purchase.unitCostMinor !== null && purchase.currency ? `${(purchase.unitCostMinor / 100).toFixed(2)} ${purchase.currency} each` : null,
+                                        purchase.unitCostMinor !== null && purchase.currency ? t("groceries.purchase.each", { amount: formatMoney(purchase.unitCostMinor, purchase.currency) }) : null,
                                       ]
                                         .filter(Boolean)
                                         .join(" · ")}
@@ -299,6 +308,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                               }}
                               existingNames={existingNames}
                               existingCategories={existingCategories}
+                              labels={formLabels}
                             />
                           </div>
                         </ExpandableRow>
@@ -313,7 +323,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
 
         {active === "orders" ? (
           orders.length === 0 ? (
-            <EmptyState icon={Truck} tone="care" title="No orders yet" description="Orders you approve appear here with their expected arrival. WonderHome chases anything that runs late." />
+            <EmptyState icon={Truck} tone="care" title={t("groceries.orders.emptyTitle")} description={t("groceries.orders.emptyLede")} />
           ) : (
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
@@ -322,9 +332,9 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
                     key={order.id}
                     icon={Truck}
                     tone="care"
-                    title={`Order from ${order.provider}`}
-                    meta={`${formatMoney(order.totalMinor, order.currency)}${order.expectedAt ? ` · expected ${formatDate(timezone, order.expectedAt, "long")}` : ""}`}
-                    action={<Badge tone={order.status === "delivered" ? "handled" : order.status === "failed" || order.status === "cancelled" ? "risk" : "attention"}>{order.status.replace(/_/g, " ")}</Badge>}
+                    title={t("groceries.order.from", { provider: order.provider })}
+                    meta={`${formatMoney(order.totalMinor, order.currency)}${order.expectedAt ? ` · ${t("groceries.order.expected", { date: formatDate(timezone, order.expectedAt, "long") })}` : ""}`}
+                    action={<Badge tone={order.status === "delivered" ? "handled" : order.status === "failed" || order.status === "cancelled" ? "risk" : "attention"}>{t(`groceries.orderStatus.${order.status}`)}</Badge>}
                   />
                 ))}
               </ul>
@@ -332,7 +342,7 @@ export default async function GroceriesPage({ searchParams }: { searchParams: Pr
           )
         ) : null}
 
-        <QuoteCard>Stocked up, stress down.</QuoteCard>
+        <QuoteCard>{t("groceries.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

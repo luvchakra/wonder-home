@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-25 | [Groceries and Meals screens, and every sheet they open, in each person's language (story 22-004 slice)](2026-09-25-groceries-meals-localized.md) |
 | 2026-09-25 | [Developer platform (18-008): hashed, scoped, revocable partner keys, a no-write sandbox, and a small partner API; off unless switched on](2026-09-25-developer-platform.md) |
 | 2026-09-25 | [Payment operations (20-011): Admin notices from the ledger, staff payment monitoring and refunds, nightly provider reconciliation](2026-09-25-payment-operations.md) |
 | 2026-09-25 | [Multi-currency audit done (22-007): per-currency totals, a single-currency spending trend, working budgets with add/edit/remove, and HomeBrain catching invented amounts in any currency](2026-09-25-multi-currency-audit.md) |
