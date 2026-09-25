@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-09-25 | [Landing page brought up to date: eight current "ready today" features, a 16-card features grid, and claims about ordering and paying corrected to what is live](2026-09-25-landing-latest-features.md) |
 | 2026-09-25 | [Family screen in each person's language; the event sheet's kinds now match what the server accepts; event and health times read in the household's zone, not the server's (story 22-004 slice + two bug fixes)](2026-09-25-family-screen-localized.md) |
 | 2026-09-25 | [Get Help brought up to date: 25 sections covering HomeSend, voice, language, reminders, health, upkeep, family, household help, plans, privacy export and deletion, and connections, with no platform-level detail](2026-09-25-help-guide-refresh.md) |
 | 2026-09-25 | [More screen in each person's language: section names, each area's purpose, the viewer's role (also in the account menu and Settings), Help and Sign out (story 22-004, one screen)](2026-09-25-more-screen-localized.md) |
