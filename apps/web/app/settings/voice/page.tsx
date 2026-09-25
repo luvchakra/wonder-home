@@ -6,15 +6,15 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
-import { describeSpeechSource, platformSpeechKey, resolveSpeechKey } from "@wonderhome/core/voice/platform-key";
+import { platformSpeechKey, resolveSpeechKey } from "@wonderhome/core/voice/platform-key";
 import { loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
-import { describeVoice } from "@wonderhome/core/voice/settings";
 import { MicVocal, Sparkles } from "lucide-react";
 
 import { removeVoiceKeyAction, saveVoice, saveVoiceKeyAction } from "../../(auth)/voice-actions";
 import { VoiceSettingsForm } from "../../_components/voice-forms";
 import { geminiLiveGate } from "../../_lib/gemini-live";
 import { formatDate, requireSession } from "../../_lib/session";
+import { speechSourceWords, voiceFormLabels, voiceSummary } from "../../_lib/settings-labels";
 
 export const metadata = { title: "Voice" };
 export const dynamic = "force-dynamic";
@@ -51,7 +51,8 @@ export default async function VoiceSettingsPage() {
   // household's own if they set one, otherwise the deployment's.
   const keySource = resolveSpeechKey(credential.configured ? "configured" : null, platformSpeechKey()).source;
   const speechAvailable = keySource !== "none";
-  const source = describeSpeechSource(keySource);
+  const { t, preferences } = session.locale;
+  const source = speechSourceWords(t, keySource);
 
   const isAdmin = membership.roles.includes("head") || membership.roles.includes("administrator");
   const liveConversation = flags().voice_conversation;
@@ -62,22 +63,20 @@ export default async function VoiceSettingsPage() {
       viewer={viewer}
       secondary={secondary}
       pathname="/settings/voice"
-      back={{ href: "/settings", label: "Back to settings" }}
-      title="Voice"
+      back={{ href: "/settings", label: t("settingsPage.backToSettings") }}
+      title={t("settingsPage.voice.title")}
     >
       <div className="space-y-6">
         <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">How WonderHome sounds</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            The voice that answers you, and how carefully it listens back.
-          </p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.voice.heading")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voice.lede")}</p>
         </header>
 
         {!entitlement.allowed ? (
           <EmptyState
             icon={Sparkles}
             tone="ai"
-            title="Voice is not part of this plan"
+            title={t("settingsPage.voice.notInPlan")}
             description={entitlement.reason}
           />
         ) : (
@@ -85,16 +84,16 @@ export default async function VoiceSettingsPage() {
             <Card className="flex items-start gap-3">
               <IconTile icon={MicVocal} tone="ai" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">Right now</p>
-                <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{describeVoice(settings)}</p>
-                {!liveConversation ? (
-                  <p className="mt-2 text-xs text-[var(--wh-attention)]">
-                    Live conversation is switched off for this deployment, so these settings apply to nothing yet.
-                  </p>
-                ) : null}
+                <p className="text-sm font-semibold">{t("settingsPage.voice.rightNow")}</p>
+                <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{voiceSummary(t, settings, preferences.language)}</p>
+                {!liveConversation ? <p className="mt-2 text-xs text-[var(--wh-attention)]">{t("settingsPage.voice.liveOff")}</p> : null}
               </div>
             <Badge tone={settings.provider === "google" && speechAvailable ? "handled" : "neutral"}>
-              {settings.provider === "google" && speechAvailable ? (keySource === "household" ? "Your key" : "Included") : "Browser"}
+              {settings.provider === "google" && speechAvailable
+                ? keySource === "household"
+                  ? t("settingsPage.badge.yourKey")
+                  : t("settingsPage.badge.included")
+                : t("settingsPage.voice.badge.browser")}
             </Badge>
             </Card>
 
@@ -111,16 +110,15 @@ export default async function VoiceSettingsPage() {
                 sourceTitle={source.title}
                 sourceDetail={source.detail}
                 geminiLive={{ available: gemini.availability.available, reason: gemini.availability.available ? null : gemini.availability.reason }}
+                labels={voiceFormLabels(t, preferences.language)}
               />
             ) : (
               <Card>
-                <p className="text-sm text-[var(--wh-foreground-muted)]">
-                  An Admin sets the voice for everybody, so the whole household hears the same one.
-                </p>
+                <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voice.adminSets")}</p>
               </Card>
             )}
 
-            <QuoteCard>A home that listens properly.</QuoteCard>
+            <QuoteCard>{t("settingsPage.voice.quote")}</QuoteCard>
           </>
         )}
       </div>

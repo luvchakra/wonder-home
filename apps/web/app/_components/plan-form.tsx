@@ -44,14 +44,36 @@ type Preview = PlanChangeAssessment & {
   unavailable?: boolean;
 };
 
+/** The form's words in the viewer's language, built on the server (story 22-004). */
+export type PlanFormLabels = {
+  earlyAccess: string;
+  current: string;
+  checking: string;
+  seeChanges: string;
+  changed: string;
+  /** "Moving to {plan}" — `{plan}` is filled in here with the chosen plan's name. */
+  movingTo: string;
+  cantBuy: string;
+  openingPayment: string;
+  changing: string;
+  continueToPayment: string;
+  understandChange: string;
+  change: string;
+  leave: string;
+  workOutFailed: string;
+  changeFailed: string;
+};
+
 export function PlanForm({
   householdId,
   currentPlanKey,
   plans,
+  labels,
 }: {
   householdId: string;
   currentPlanKey: string | null;
   plans: PlanOption[];
+  labels: PlanFormLabels;
 }) {
   const router = useRouter();
   const [chosen, setChosen] = useState<string | null>(null);
@@ -70,10 +92,10 @@ export function PlanForm({
     try {
       const response = await fetch(`/api/v1/households/${householdId}/plan?to=${encodeURIComponent(planKey)}`);
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "We could not work that out just now.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? labels.workOutFailed);
       setPreview(payload.preview as Preview);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "We could not work that out just now.");
+      setError(caught instanceof Error ? caught.message : labels.workOutFailed);
     } finally {
       setBusy(false);
     }
@@ -104,7 +126,7 @@ export function PlanForm({
       });
 
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "We could not change the plan just now.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? labels.changeFailed);
 
       // A paid plan: the provider's page takes it from here, and the plan
       // changes when the payment is confirmed — not on this click.
@@ -118,7 +140,7 @@ export function PlanForm({
       setPreview(null);
       setChosen(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "We could not change the plan just now.");
+      setError(caught instanceof Error ? caught.message : labels.changeFailed);
     } finally {
       setBusy(false);
     }
@@ -129,7 +151,7 @@ export function PlanForm({
       {error ? <Alert>{error}</Alert> : null}
       {done ? (
         <Alert tone="info">
-          <span className="block font-semibold">Plan changed.</span>
+          <span className="block font-semibold">{labels.changed}</span>
           {done.map((line) => (
             <span key={line} className="mt-1 block">{line}</span>
           ))}
@@ -146,7 +168,7 @@ export function PlanForm({
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
                   {plan.name}
-                  {plan.earlyAccess && plan.priceText ? <Badge tone="handled" className="whitespace-nowrap">Free during early access</Badge> : null}
+                  {plan.earlyAccess && plan.priceText ? <Badge tone="handled" className="whitespace-nowrap">{labels.earlyAccess}</Badge> : null}
                 </p>
                 {plan.priceText ? (
                   <p className="mt-0.5 text-sm">
@@ -159,10 +181,10 @@ export function PlanForm({
                 ) : null}
               </div>
               {current ? (
-                <Badge tone="handled" className="w-fit">Current</Badge>
+                <Badge tone="handled" className="w-fit">{labels.current}</Badge>
               ) : (
                 <Button type="button" variant="secondary" className="w-full sm:w-auto" disabled={busy} onClick={() => void ask(plan.key)}>
-                  {busy && chosen === plan.key ? "Checking…" : "See what changes"}
+                  {busy && chosen === plan.key ? labels.checking : labels.seeChanges}
                 </Button>
               )}
             </li>
@@ -179,7 +201,7 @@ export function PlanForm({
           }
         >
           <p className="text-sm font-semibold">
-            Moving to {plans.find((plan) => plan.key === chosen)?.name ?? chosen}
+            {labels.movingTo.replace("{plan}", plans.find((plan) => plan.key === chosen)?.name ?? chosen ?? "")}
           </p>
           <ul className="space-y-1.5">
             {preview.lines.map((line) => (
@@ -187,24 +209,24 @@ export function PlanForm({
             ))}
           </ul>
           {preview.unavailable ? (
-            <p className="text-sm">This plan can&rsquo;t be bought here yet, so there is nothing to confirm. Nothing has changed.</p>
+            <p className="text-sm">{labels.cantBuy}</p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             {preview.unavailable ? null : (
               <Button type="button" onClick={() => void apply()} disabled={busy}>
                 {busy
                   ? preview.checkout
-                    ? "Opening payment…"
-                    : "Changing…"
+                    ? labels.openingPayment
+                    : labels.changing
                   : preview.checkout
-                    ? "Continue to payment"
+                    ? labels.continueToPayment
                     : preview.needsConfirmation
-                      ? "I understand — change the plan"
-                      : "Change the plan"}
+                      ? labels.understandChange
+                      : labels.change}
               </Button>
             )}
             <Button type="button" variant="secondary" onClick={() => { setPreview(null); setChosen(null); }}>
-              Leave it as it is
+              {labels.leave}
             </Button>
           </div>
         </div>

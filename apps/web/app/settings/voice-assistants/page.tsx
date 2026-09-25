@@ -5,14 +5,15 @@ import { Badge } from "@wonderhome/core/ui/pill";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { channelSummary, type Capability, type CapabilityChannel } from "@wonderhome/core/voicelink/capabilities";
 import { voiceOAuthClients } from "@wonderhome/core/voicelink/oauth";
 import { listVoiceLinks, type VoiceLink } from "@wonderhome/core/voicelink/repository";
-import { SCOPE_LABELS } from "@wonderhome/core/voicelink/scopes";
 import { AudioLines, Speaker, Unlink } from "lucide-react";
 
 import { revokeVoiceLinkAction } from "../../(auth)/voice-link-actions";
 import { formatDate, requireSession } from "../../_lib/session";
+import { capabilityLabel, scopeLabel } from "../../_lib/settings-labels";
 
 export const metadata = { title: "Voice assistants" };
 export const dynamic = "force-dynamic";
@@ -20,28 +21,33 @@ export const dynamic = "force-dynamic";
 const PROVIDER_NAMES: Record<VoiceLink["provider"], string> = { amazon_alexa: "Alexa", gemini: "Gemini Voice" };
 
 /** Why a capability depends on something, in the household's words (voice phase 5). */
-const CONDITION: Record<string, string> = {
-  consent: "if your data-use settings let it reach Google",
-  opt_in: "if you turn it on when you link it",
-};
+function conditionFor(t: Translate, policy: string): string | null {
+  if (policy === "consent") return t("settingsPage.voiceAssistants.condition.consent");
+  if (policy === "opt_in") return t("settingsPage.voiceAssistants.condition.opt_in");
+  return null;
+}
 
-const VOICE_CHANNELS: { channel: CapabilityChannel; name: string; where: string }[] = [
-  { channel: "gemini_voice", name: "Gemini Voice", where: "Inside the WonderHome app, when Voice settings uses Gemini Live" },
-  { channel: "alexa", name: "Alexa", where: "A linked Alexa speaker" },
+// The channels' names are product names and stay as they are.
+const VOICE_CHANNELS: { channel: "gemini_voice" | "alexa"; name: string }[] = [
+  { channel: "gemini_voice", name: "Gemini Voice" },
+  { channel: "alexa", name: "Alexa" },
 ];
 
-function CapabilityList({ title, items, channel }: { title: string; items: Capability[]; channel: CapabilityChannel }) {
+function CapabilityList({ title, items, channel, t }: { title: string; items: Capability[]; channel: CapabilityChannel; t: Translate }) {
   if (items.length === 0) return null;
   return (
     <div>
       <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{title}</p>
       <ul className="mt-1 space-y-1">
-        {items.map((capability) => (
-          <li key={capability.id} className="text-sm">
-            {capability.label}
-            {CONDITION[capability.policy[channel]] ? <span className="text-[var(--wh-foreground-muted)]"> — {CONDITION[capability.policy[channel]]}</span> : null}
-          </li>
-        ))}
+        {items.map((capability) => {
+          const condition = conditionFor(t, capability.policy[channel]);
+          return (
+            <li key={capability.id} className="text-sm">
+              {capabilityLabel(t, capability)}
+              {condition ? <span className="text-[var(--wh-foreground-muted)]"> — {condition}</span> : null}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -67,33 +73,37 @@ export default async function VoiceAssistantsPage() {
   const configured = voiceOAuthClients().map((client) => PROVIDER_NAMES[client.provider]);
   const active = (links ?? []).filter((link) => link.status === "active");
   const past = (links ?? []).filter((link) => link.status === "revoked");
+  const { t, preferences } = session.locale;
+  const aMember = t("settingsPage.aMember");
+  let apps = configured.join(" / ");
+  try {
+    apps = new Intl.ListFormat(preferences.language, { type: "disjunction" }).format(configured);
+  } catch {
+    // The names still read, joined plainly.
+  }
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/voice-assistants" back={{ href: "/settings", label: "Back to settings" }} title="Voice assistants">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/voice-assistants" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("settingsPage.voiceAssistants.title")}>
       <div className="space-y-6">
         <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Voice assistants</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            Speakers that talk to WonderHome for someone in {household.name} — and exactly what each may do.
-          </p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.voiceAssistants.title")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.lede", { household: household.name })}</p>
         </header>
 
         <Card className="flex items-start gap-3">
           <IconTile icon={Speaker} tone="ai" />
           <div className="min-w-0 flex-1 text-sm">
-            <p className="font-semibold">Linking one</p>
+            <p className="font-semibold">{t("settingsPage.voiceAssistants.linking")}</p>
             <p className="mt-0.5 text-[var(--wh-foreground-muted)]">
-              {configured.length > 0
-                ? `Open the ${configured.join(" or ")} app, find WonderHome, and sign in when it asks. You choose what it may do before anything is linked.`
-                : "Voice assistants aren't set up for this WonderHome yet. Once they are, you'll link one from the assistant's own app."}
+              {configured.length > 0 ? t("settingsPage.voiceAssistants.linkingHow", { apps }) : t("settingsPage.voiceAssistants.linkingNone")}
             </p>
           </div>
         </Card>
 
         {links === null ? (
-          <Card><p className="text-sm text-[var(--wh-risk)]">The linked assistants couldn&apos;t be read just now. Nothing was changed — try again in a moment.</p></Card>
+          <Card><p className="text-sm text-[var(--wh-risk)]">{t("settingsPage.voiceAssistants.readError")}</p></Card>
         ) : active.length === 0 ? (
-          <EmptyState icon={Speaker} tone="ai" title="Nothing linked" description="No voice assistant speaks for anyone here yet." />
+          <EmptyState icon={Speaker} tone="ai" title={t("settingsPage.voiceAssistants.empty")} description={t("settingsPage.voiceAssistants.emptyBody")} />
         ) : (
           <ul className="space-y-3">
             {active.map((link) => (
@@ -101,14 +111,18 @@ export default async function VoiceAssistantsPage() {
                 <Card className="flex items-start gap-3">
                   <IconTile icon={Speaker} tone="ai" />
                   <div className="min-w-0 flex-1 text-sm">
-                    <p className="font-semibold">{PROVIDER_NAMES[link.provider]} · {names.get(link.memberId) ?? "A member"}</p>
+                    <p className="font-semibold">{PROVIDER_NAMES[link.provider]} · {names.get(link.memberId) ?? aMember}</p>
                     <p className="mt-0.5 text-[var(--wh-foreground-muted)]">
-                      Linked {formatDate(household.timezone, link.linkedAt)}
-                      {link.lastUsedAt ? ` · last used ${formatDate(household.timezone, link.lastUsedAt)}` : " · not used yet"}
+                      {link.lastUsedAt
+                        ? t("settingsPage.voiceAssistants.linkedUsed", {
+                            date: formatDate(household.timezone, link.linkedAt),
+                            lastUsed: formatDate(household.timezone, link.lastUsedAt),
+                          })
+                        : t("settingsPage.voiceAssistants.linkedUnused", { date: formatDate(household.timezone, link.linkedAt) })}
                     </p>
                     <ul className="mt-2 flex flex-wrap gap-1.5">
                       {link.scopes.map((scope) => (
-                        <li key={scope}><Badge tone="neutral">{SCOPE_LABELS[scope]}</Badge></li>
+                        <li key={scope}><Badge tone="neutral">{scopeLabel(t, scope)}</Badge></li>
                       ))}
                     </ul>
                   </div>
@@ -116,7 +130,10 @@ export default async function VoiceAssistantsPage() {
                     <input type="hidden" name="identityId" value={link.id} />
                     <button
                       type="submit"
-                      aria-label={`Unlink ${PROVIDER_NAMES[link.provider]} for ${names.get(link.memberId) ?? "this member"}`}
+                      aria-label={t("settingsPage.voiceAssistants.unlink", {
+                        provider: PROVIDER_NAMES[link.provider],
+                        name: names.get(link.memberId) ?? t("settingsPage.voiceAssistants.thisMember"),
+                      })}
                       className="grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-risk)]"
                     >
                       <Unlink className="size-5" aria-hidden />
@@ -130,11 +147,15 @@ export default async function VoiceAssistantsPage() {
 
         {past.length > 0 ? (
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-[var(--wh-foreground-muted)]">Unlinked</h2>
+            <h2 className="text-sm font-semibold text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.unlinked")}</h2>
             <ul className="space-y-2 text-sm text-[var(--wh-foreground-muted)]">
               {past.map((link) => (
                 <li key={link.id}>
-                  {PROVIDER_NAMES[link.provider]} · {names.get(link.memberId) ?? "A member"} — unlinked {link.revokedAt ? formatDate(household.timezone, link.revokedAt) : ""}
+                  {t("settingsPage.voiceAssistants.unlinkedRow", {
+                    provider: PROVIDER_NAMES[link.provider],
+                    name: names.get(link.memberId) ?? aMember,
+                    date: link.revokedAt ? formatDate(household.timezone, link.revokedAt) : "",
+                  })}
                 </li>
               ))}
             </ul>
@@ -142,12 +163,10 @@ export default async function VoiceAssistantsPage() {
         ) : null}
 
         <section className="space-y-3">
-          <SectionHeader title="What a voice assistant can do" />
-          <p className="text-sm text-[var(--wh-foreground-muted)]">
-            Every door reaches the same WonderHome — the same answers, the same checks. Paying, ordering and changing plans stay in the app, where they ask for your OK.
-          </p>
+          <SectionHeader title={t("settingsPage.voiceAssistants.can")} />
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.canBody")}</p>
           <ul className="space-y-3">
-            {VOICE_CHANNELS.map(({ channel, name, where }) => {
+            {VOICE_CHANNELS.map(({ channel, name }) => {
               const summary = channelSummary(channel);
               return (
                 <li key={channel}>
@@ -156,11 +175,11 @@ export default async function VoiceAssistantsPage() {
                     <div className="min-w-0 flex-1 space-y-3">
                       <div>
                         <p className="text-sm font-semibold">{name}</p>
-                        <p className="text-xs text-[var(--wh-foreground-muted)]">{where}</p>
+                        <p className="text-xs text-[var(--wh-foreground-muted)]">{t(`settingsPage.voiceAssistants.where.${channel}`)}</p>
                       </div>
-                      <CapabilityList title="Can do" items={summary.available} channel={channel} />
-                      <CapabilityList title="Can do, when you allow it" items={summary.conditional} channel={channel} />
-                      <CapabilityList title="Only in the app" items={summary.appOnly} channel={channel} />
+                      <CapabilityList title={t("settingsPage.voiceAssistants.list.available")} items={summary.available} channel={channel} t={t} />
+                      <CapabilityList title={t("settingsPage.voiceAssistants.list.conditional")} items={summary.conditional} channel={channel} t={t} />
+                      <CapabilityList title={t("settingsPage.voiceAssistants.list.appOnly")} items={summary.appOnly} channel={channel} t={t} />
                     </div>
                   </Card>
                 </li>
@@ -169,7 +188,7 @@ export default async function VoiceAssistantsPage() {
           </ul>
         </section>
 
-        <QuoteCard>Your home, on your terms.</QuoteCard>
+        <QuoteCard>{t("settingsPage.voiceAssistants.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

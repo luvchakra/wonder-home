@@ -9,6 +9,17 @@ import { PasswordField } from "@wonderhome/core/ui/password-field";
 
 import type { ActionState } from "../(auth)/actions";
 
+/** The key form's words in the viewer's language, built on the server (story 22-004). */
+export type AiKeyFormLabels = {
+  provider: string;
+  apiKey: string;
+  hint: string;
+  replace: string;
+  useOwn: string;
+  saving: string;
+  remove: string;
+};
+
 function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
@@ -31,11 +42,13 @@ export function AiKeyForm({
   save,
   remove,
   configured,
+  labels,
 }: {
   householdId: string;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
   remove: (state: ActionState, formData: FormData) => Promise<ActionState>;
   configured: boolean;
+  labels: AiKeyFormLabels;
 }) {
   const [saveState, saveAction] = useActionState(save, {});
   const [removeState, removeAction] = useActionState(remove, {});
@@ -49,7 +62,7 @@ export function AiKeyForm({
       <form action={saveAction} className="space-y-3">
         <input type="hidden" name="householdId" value={householdId} />
         <div className="space-y-1.5">
-          <label htmlFor="provider" className="block text-sm font-medium">Provider</label>
+          <label htmlFor="provider" className="block text-sm font-medium">{labels.provider}</label>
           <select
             id="provider"
             name="provider"
@@ -62,17 +75,17 @@ export function AiKeyForm({
           </select>
         </div>
         <PasswordField
-          label="API key"
+          label={labels.apiKey}
           name="apiKey"
           required
           minLength={20}
           autoComplete="off"
           placeholder="sk-…"
-          hint="Stored for this household only. It can never be read back out — you can replace it, but not view it."
+          hint={labels.hint}
         />
         <Submit
-          label={configured ? "Replace key" : "Use our own key"}
-          pendingLabel="Saving…"
+          label={configured ? labels.replace : labels.useOwn}
+          pendingLabel={labels.saving}
         />
       </form>
 
@@ -80,7 +93,7 @@ export function AiKeyForm({
         <form action={removeAction}>
           <input type="hidden" name="householdId" value={householdId} />
           <Button type="submit" variant="secondary" className="w-full">
-            Remove and go back to WonderHome&apos;s key
+            {labels.remove}
           </Button>
         </form>
       ) : null}

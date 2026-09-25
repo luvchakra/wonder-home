@@ -27,6 +27,7 @@ export default async function PaymentConfirmedPage({ searchParams }: { searchPar
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
+  const { t } = session.locale;
 
   const [plans, terms, { data: intentRow }] = await Promise.all([
     listPlans(supabase).catch(() => []),
@@ -34,30 +35,30 @@ export default async function PaymentConfirmedPage({ searchParams }: { searchPar
     supabase.from("billing_intents").select("plan_key, status").eq("household_id", householdId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const intent = intentRow as { plan_key: string; status: string } | null;
-  const wanted = plans.find((plan) => plan.key === intent?.plan_key)?.name ?? "your new plan";
+  const wanted = plans.find((plan) => plan.key === intent?.plan_key)?.name ?? t("settingsPage.confirmed.yourNewPlan");
   const done = Boolean(intent && (intent.status === "completed" || (terms?.planKey === intent.plan_key && terms?.provider)));
   const cancelled = checkout === "cancelled";
 
   const state = cancelled
-    ? { icon: CircleX, tone: "neutral" as const, title: "No payment was taken", body: "You left the payment page before paying. Your plan is as it was." }
+    ? { icon: CircleX, tone: "neutral" as const, title: t("settingsPage.confirmed.cancelled"), body: t("settingsPage.confirmed.cancelledBody") }
     : done
       ? {
           icon: CircleCheck,
           tone: "handled" as const,
-          title: `You're on ${wanted}`,
+          title: t("settingsPage.confirmed.done", { plan: wanted }),
           body: terms?.periodEnd
-            ? `The payment is confirmed. ${wanted} renews on ${formatDate(timezone, terms.periodEnd, "long")}.`
-            : "The payment is confirmed, and everything in the plan is ready to use.",
+            ? t("settingsPage.confirmed.doneRenews", { plan: wanted, date: formatDate(timezone, terms.periodEnd, "long") })
+            : t("settingsPage.confirmed.doneBody"),
         }
       : {
           icon: Clock3,
           tone: "attention" as const,
-          title: "Confirming your payment…",
-          body: `We're waiting for the payment provider to confirm it — usually under a minute. You can leave this page: ${wanted} starts on its own once it's confirmed, and nothing is charged twice.`,
+          title: t("settingsPage.confirmed.waiting"),
+          body: t("settingsPage.confirmed.waitingBody", { plan: wanted }),
         };
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/plan" back={{ href: "/settings/plan", label: "Back to your plan" }} title="Payment">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/plan" back={{ href: "/settings/plan", label: t("settingsPage.plan.back") }} title={t("settingsPage.confirmed.title")}>
       <div className="space-y-6">
         {!cancelled && !done ? <RefreshWhileWaiting /> : null}
         <Card className="flex flex-col items-center gap-3 p-8 text-center" >
@@ -65,11 +66,11 @@ export default async function PaymentConfirmedPage({ searchParams }: { searchPar
           <h1 className="text-2xl font-bold tracking-tight" role="status">{state.title}</h1>
           <p className="max-w-md text-sm text-[var(--wh-foreground-muted)]">{state.body}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
-            <ButtonLink href="/settings/plan">Back to your plan</ButtonLink>
-            {done ? <ButtonLink href="/settings/plan/billing" variant="secondary">See the receipt</ButtonLink> : null}
+            <ButtonLink href="/settings/plan">{t("settingsPage.plan.back")}</ButtonLink>
+            {done ? <ButtonLink href="/settings/plan/billing" variant="secondary">{t("settingsPage.confirmed.receipt")}</ButtonLink> : null}
           </div>
         </Card>
-        <QuoteCard>Less mental load. More family time.</QuoteCard>
+        <QuoteCard>{t("settingsPage.confirmed.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

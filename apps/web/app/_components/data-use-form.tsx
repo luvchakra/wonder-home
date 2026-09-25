@@ -20,19 +20,30 @@ import type { ActionState } from "../(auth)/actions";
  * note at the bottom says so rather than leaving their absence to be noticed.
  */
 
-const OPTIONAL_CLASSES: { value: Exclude<ContentClass, "general" | "credential">; label: string; detail: string }[] = [
-  { value: "child", label: "Anything about your children", detail: "School, activities, how they are getting on." },
-  { value: "health", label: "Health", detail: "Appointments, medication, conditions." },
-  { value: "financial", label: "Amounts and bills", detail: "What things cost and what is owed." },
-  { value: "location", label: "Where people are", detail: "Who is where, and when they will be back." },
-  { value: "private_message", label: "What people wrote to each other", detail: "Messages between members of the household." },
-];
+/** The classes a household may choose to send, in the order they are offered. */
+const OPTIONAL_CLASSES: readonly OptionalClass[] = ["child", "health", "financial", "location", "private_message"];
 
-function Submit() {
+type OptionalClass = Exclude<ContentClass, "general" | "credential">;
+
+/** The form's words in the viewer's language, built on the server (story 22-004). */
+export type DataUseFormLabels = {
+  allow: string;
+  allowDetail: string;
+  include: string;
+  includeDetail: string;
+  classes: Record<OptionalClass, { label: string; detail: string }>;
+  retention: string;
+  retentionDetail: string;
+  footer: string;
+  submit: string;
+  saving: string;
+};
+
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? "Saving…" : "Save what you agree to"}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }
@@ -41,10 +52,12 @@ export function DataUseForm({
   action,
   householdId,
   policy,
+  labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   policy: DataUsePolicy;
+  labels: DataUseFormLabels;
 }) {
   const [state, formAction] = useActionState(action, {});
   const [sending, setSending] = useState(policy.allowProviderContent);
@@ -65,32 +78,27 @@ export function DataUseForm({
           className="mt-0.5 size-5 shrink-0 accent-[var(--wh-primary)]"
         />
         <span className="min-w-0">
-          <span className="block text-sm font-medium">Let the assistant ask a model provider</span>
-          <span className="block text-xs text-[var(--wh-foreground-muted)]">
-            Turn this off and nothing about your home leaves. The assistant still works from its own rules.
-          </span>
+          <span className="block text-sm font-medium">{labels.allow}</span>
+          <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.allowDetail}</span>
         </span>
       </label>
 
       <fieldset disabled={!sending} className="space-y-3 disabled:opacity-50">
-        <legend className="text-sm font-medium">What it may include</legend>
-        <p className="text-xs text-[var(--wh-foreground-muted)]">
-          Ordinary household matters — what is on today, who does what, the lists — are always included when
-          the assistant asks. These are the ones it only sends if you say so.
-        </p>
+        <legend className="text-sm font-medium">{labels.include}</legend>
+        <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.includeDetail}</p>
 
-        {OPTIONAL_CLASSES.map((entry) => (
-          <label key={entry.value} className="flex items-start gap-3">
+        {OPTIONAL_CLASSES.map((value) => (
+          <label key={value} className="flex items-start gap-3">
             <input
               type="checkbox"
               name="allowedClasses"
-              value={entry.value}
-              defaultChecked={policy.allowedClasses.includes(entry.value)}
+              value={value}
+              defaultChecked={policy.allowedClasses.includes(value)}
               className="mt-0.5 size-5 shrink-0 accent-[var(--wh-primary)]"
             />
             <span className="min-w-0">
-              <span className="block text-sm">{entry.label}</span>
-              <span className="block text-xs text-[var(--wh-foreground-muted)]">{entry.detail}</span>
+              <span className="block text-sm">{labels.classes[value].label}</span>
+              <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.classes[value].detail}</span>
             </span>
           </label>
         ))}
@@ -109,20 +117,15 @@ export function DataUseForm({
             className="mt-0.5 size-5 shrink-0 accent-[var(--wh-primary)]"
           />
           <span className="min-w-0">
-            <span className="block text-sm">The provider may keep what is sent</span>
-            <span className="block text-xs text-[var(--wh-foreground-muted)]">
-              Off by default. On, it is kept under their terms rather than ours.
-            </span>
+            <span className="block text-sm">{labels.retention}</span>
+            <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.retentionDetail}</span>
           </span>
         </label>
       </fieldset>
 
-      <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        Keys and tokens are never sent, and that is not a setting. Names are replaced with roles before
-        anything leaves, so a provider sees “Child A”, never your child.
-      </p>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.footer}</p>
 
-      <Submit />
+      <Submit label={labels.submit} pendingLabel={labels.saving} />
     </form>
   );
 }

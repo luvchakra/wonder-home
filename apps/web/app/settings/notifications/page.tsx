@@ -17,10 +17,11 @@ import {
   saveReminderPreferencesAction,
   saveSmartRemindersAction,
 } from "../../(auth)/notification-preferences-actions";
-import { CHANNEL_DESCRIPTIONS, ChannelPreferenceCard } from "../../_components/notification-preferences-form";
+import { ChannelPreferenceCard } from "../../_components/notification-preferences-form";
 import { QuietHoursCard, ReminderPreferencesCard, SmartRemindersCard } from "../../_components/reminder-settings-form";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
+import { channelPreferenceLabels, reminderPresetLabel, reminderSettingsLabels } from "../../_lib/settings-labels";
 
 export const metadata = { title: "Notifications" };
 export const dynamic = "force-dynamic";
@@ -59,7 +60,8 @@ export default async function NotificationSettingsPage() {
     })
     .sort((a, b) => Number(b.primary) - Number(a.primary) || a.name.localeCompare(b.name));
   const timeZone = membership.household.timezone;
-  const format = session.locale.format;
+  const { t, format } = session.locale;
+  const reminderLabels = reminderSettingsLabels(t);
 
   // Quiet hours are the in-app channel's own window, to the minute.
   const inApp = preferences.find((preference) => preference.channel === "in_app");
@@ -83,30 +85,29 @@ export default async function NotificationSettingsPage() {
       viewer={viewer}
       secondary={secondary}
       pathname="/settings/notifications"
-      back={{ href: "/settings", label: "Back to settings" }}
-      title="Notifications"
+      back={{ href: "/settings", label: t("settingsPage.backToSettings") }}
+      title={t("settingsPage.notifications.title")}
     >
       <div className="space-y-6">
         <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">How you hear from WonderHome</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            Your own preferences — nobody else&rsquo;s notifications change when you set yours.
-          </p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.notifications.heading")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.lede")}</p>
         </header>
 
         {/* Keyed on what is saved, so a saved change redraws the form with it. */}
         <QuietHoursCard
           key={quiet ? `${quiet.from}-${quiet.until}` : "off"}
-          householdId={membership.household.id} quiet={quiet} times={times} timeZone={timeZone} save={saveQuietHoursAction} />
+          householdId={membership.household.id} quiet={quiet} times={times} timeZone={timeZone} save={saveQuietHoursAction} labels={reminderLabels} />
 
         <ReminderPreferencesCard
           key={reminderPreferences.map((preference) => `${preference.preset}:${preference.enabled}`).join(",")}
           householdId={membership.household.id}
           rows={reminderPreferences.map((preference) => ({
             ...preference,
-            options: REMINDER_POLICIES[preference.category].presets.map((preset) => ({ value: preset.key, label: preset.label })),
+            options: REMINDER_POLICIES[preference.category].presets.map((preset) => ({ value: preset.key, label: reminderPresetLabel(t, preset.key, preset.label) })),
           }))}
           save={saveReminderPreferencesAction}
+          labels={reminderLabels}
         />
 
         <SmartRemindersCard
@@ -115,17 +116,16 @@ export default async function NotificationSettingsPage() {
           dailyDigest={smart.dailyDigest}
           learnTiming={smart.learnTiming}
           save={saveSmartRemindersAction}
+          labels={reminderLabels}
         />
 
         <Card className="space-y-3">
           <div className="flex items-start gap-3">
             <IconTile icon={ListChecks} tone="primary" />
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold">What comes to you</h2>
+              <h2 className="text-sm font-semibold">{t("settingsPage.notifications.routing.title")}</h2>
               <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-                {routing.length > 0
-                  ? "Reminders about these come to you, because they are yours. Everything else goes to whoever owns it — never to everyone."
-                  : "No responsibility is yours yet, so only reminders about things you own yourself come to you."}
+                {routing.length > 0 ? t("settingsPage.notifications.routing.some") : t("settingsPage.notifications.routing.none")}
               </p>
             </div>
           </div>
@@ -135,18 +135,18 @@ export default async function NotificationSettingsPage() {
                 <li key={row.key} className="py-2.5 text-sm">
                   <span className="font-medium">{row.name}</span>
                   <span className="block text-[var(--wh-foreground-muted)]">
-                    {row.primary ? "Yours — the reminders come to you first." : "You are the backup — you hear only if the first reminder goes unanswered."}
+                    {row.primary ? t("settingsPage.notifications.routing.primary") : t("settingsPage.notifications.routing.backup")}
                   </span>
                 </li>
               ))}
             </ul>
           ) : null}
           <Link href="/household/responsibilities?tab=mine" className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--wh-primary)] underline-offset-4 hover:underline">
-            Change who owns what in Responsibilities
+            {t("settingsPage.notifications.routing.change")}
           </Link>
         </Card>
 
-        <h2 className="pt-2 text-base font-semibold">Where reminders reach you</h2>
+        <h2 className="pt-2 text-base font-semibold">{t("settingsPage.notifications.channels")}</h2>
         <div className="space-y-4">
           {preferences.map((preference) => (
             <ChannelPreferenceCard
@@ -155,13 +155,13 @@ export default async function NotificationSettingsPage() {
               tone="attention"
               preference={preference}
               live={adapters[preference.channel].live}
-              description={CHANNEL_DESCRIPTIONS[preference.channel]}
+              labels={channelPreferenceLabels(t, preference.channel)}
               save={saveChannelPreferenceAction}
             />
           ))}
         </div>
 
-        <QuoteCard>Told once, told well.</QuoteCard>
+        <QuoteCard>{t("settingsPage.notifications.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

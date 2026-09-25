@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { channelLabel, type ChannelPreference, type DeliveryChannel } from "@wonderhome/core/notifications/channels";
+import type { ChannelPreference, DeliveryChannel } from "@wonderhome/core/notifications/channels";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { Field } from "@wonderhome/core/ui/field";
@@ -27,11 +27,27 @@ const CHANNEL_ICONS: Record<DeliveryChannel, typeof Bell> = {
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
-function Submit() {
+/** One channel card's words in the viewer's language, built on the server (story 22-004). */
+export type ChannelPreferenceLabels = {
+  /** The channel's own name: "In-app", "Email", "WhatsApp". */
+  name: string;
+  description: string;
+  notConnected: string;
+  sendHere: string;
+  whatsappNumber: string;
+  whatsappHint: string;
+  quietFrom: string;
+  quietUntil: string;
+  off: string;
+  save: string;
+  saving: string;
+};
+
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="secondary" disabled={pending}>
-      {pending ? "Saving…" : "Save"}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }
@@ -52,14 +68,14 @@ export function ChannelPreferenceCard({
   tone,
   preference,
   live,
-  description,
+  labels,
   save,
 }: {
   householdId: string;
   tone: IconTone;
   preference: ChannelPreference;
   live: boolean;
-  description: string;
+  labels: ChannelPreferenceLabels;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
 }) {
   const [state, action] = useActionState(save, {});
@@ -69,13 +85,9 @@ export function ChannelPreferenceCard({
       <div className="flex items-start gap-3">
         <IconTile icon={CHANNEL_ICONS[preference.channel]} tone={tone} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{channelLabel(preference.channel)}</p>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{description}</p>
-          {!live ? (
-            <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">
-              Not connected for this deployment yet — your preference is saved for when it is.
-            </p>
-          ) : null}
+          <p className="text-sm font-semibold">{labels.name}</p>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.description}</p>
+          {!live ? <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">{labels.notConnected}</p> : null}
         </div>
       </div>
 
@@ -90,17 +102,17 @@ export function ChannelPreferenceCard({
             defaultChecked={preference.enabled}
             className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
           />
-          <span>Send here</span>
+          <span>{labels.sendHere}</span>
         </label>
 
         {preference.channel === "whatsapp" ? (
           <Field
-            label="WhatsApp number"
+            label={labels.whatsappNumber}
             name="target"
             type="tel"
             placeholder="+15551234567"
             defaultValue={preference.target ?? ""}
-            hint="Where reminders are sent, with the country code, e.g. +15551234567. Sending things to WonderHome from WhatsApp is set up under Settings → WhatsApp."
+            hint={labels.whatsappHint}
           />
         ) : null}
 
@@ -114,16 +126,16 @@ export function ChannelPreferenceCard({
           </>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Quiet from" name="quietFrom" defaultValue={preference.quietFrom ?? ""}>
-              <option value="">Off</option>
+            <Select label={labels.quietFrom} name="quietFrom" defaultValue={preference.quietFrom ?? ""}>
+              <option value="">{labels.off}</option>
               {HOURS.map((hour) => (
                 <option key={hour} value={hour}>
                   {String(hour).padStart(2, "0")}:00
                 </option>
               ))}
             </Select>
-            <Select label="Quiet until" name="quietUntil" defaultValue={preference.quietUntil ?? ""}>
-              <option value="">Off</option>
+            <Select label={labels.quietUntil} name="quietUntil" defaultValue={preference.quietUntil ?? ""}>
+              <option value="">{labels.off}</option>
               {HOURS.map((hour) => (
                 <option key={hour} value={hour}>
                   {String(hour).padStart(2, "0")}:00
@@ -136,15 +148,8 @@ export function ChannelPreferenceCard({
         {state.error ? <Alert>{state.error}</Alert> : null}
         {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
 
-        <Submit />
+        <Submit label={labels.save} pendingLabel={labels.saving} />
       </form>
     </Card>
   );
 }
-
-export const CHANNEL_DESCRIPTIONS: Record<DeliveryChannel, string> = {
-  in_app: "The bell in WonderHome — always the record of what was said.",
-  push: "A notification on your phone, if you install WonderHome as an app.",
-  email: "Sent to the address on your account.",
-  whatsapp: "A message to the number below.",
-};

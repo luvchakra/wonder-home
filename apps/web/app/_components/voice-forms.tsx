@@ -21,16 +21,16 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { Select } from "@wonderhome/core/ui/select";
 import { Slider } from "@wonderhome/core/ui/slider";
 import {
-  DEVICE_LABELS,
   LISTENING_DEVICES,
   RECOGNITION_MODELS,
-  RECOGNITION_MODEL_LABELS,
-  TIER_LABELS,
   VOICE_GENDERS,
-  LIVE_ENGINE_LABELS,
-  VOICE_LANGUAGES,
   VOICE_TIERS,
+  type ListeningDevice,
+  type LiveEngine,
+  type RecognitionModel,
+  type VoiceGender,
   type VoiceSettings,
+  type VoiceTier,
 } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "../(auth)/actions";
@@ -42,11 +42,96 @@ type VoiceOption = {
   tier: string;
 };
 
-function Submit({ label }: { label: string }) {
+/** The voice screen's words in the viewer's language, built on the server (story 22-004). */
+export type VoiceFormLabels = {
+  saving: string;
+  previewError: string;
+  who: string;
+  /** "Set on {date}." — `{date}` is filled in here. */
+  setOn: string;
+  service: string;
+  serviceHint: string;
+  serviceHintNone: string;
+  optionBrowser: string;
+  optionGoogle: string;
+  live: string;
+  liveEngine: string;
+  engines: Record<LiveEngine, { name: string; detail: string }>;
+  geminiHears: string;
+  /** "Gemini Live is not available: {reason}" — `{reason}` is the server's own. */
+  geminiUnavailable: string;
+  notAvailable: string;
+  sounds: string;
+  soundsGoogle: string;
+  soundsBrowser: string;
+  language: string;
+  /** The languages offered, each named in the viewer's language. */
+  languages: { code: string; label: string }[];
+  tier: string;
+  tierHint: string;
+  tiers: Record<VoiceTier, { name: string; detail: string }>;
+  gender: string;
+  genderHint: string;
+  genders: Record<VoiceGender, string>;
+  specific: string;
+  specificHintGoogle: string;
+  specificHintBrowser: string;
+  chooseForMe: string;
+  rate: string;
+  slower: string;
+  faster: string;
+  pitch: string;
+  /** "{value} semitones" — `{value}` is filled in here. */
+  semitones: string;
+  deeper: string;
+  higher: string;
+  pitchHint: string;
+  volume: string;
+  quieter: string;
+  louder: string;
+  volumeHint: string;
+  device: string;
+  deviceHint: string;
+  devices: Record<ListeningDevice, string>;
+  speakReplies: string;
+  speakRepliesHint: string;
+  playing: string;
+  hear: string;
+  listens: string;
+  listensBody: string;
+  spokenLanguage: string;
+  spokenLanguageHint: string;
+  sameAsAbove: string;
+  alternatives: string;
+  alternativesHint: string;
+  models: Record<RecognitionModel, { name: string; detail: string }>;
+  phrases: string;
+  phrasesHint: string;
+  punctuation: string;
+  profanity: string;
+  profanityHint: string;
+  enhanced: string;
+  enhancedHint: string;
+  applyNext: string;
+  save: string;
+  ownKey: {
+    title: string;
+    bring: string;
+    bringBody: string;
+    switch: string;
+    apiKey: string;
+    hint: string;
+    replace: string;
+    use: string;
+    remove: string;
+  };
+};
+
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? "Saving…" : label}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }
@@ -72,6 +157,7 @@ export function VoiceSettingsForm({
   sourceTitle,
   sourceDetail,
   geminiLive,
+  labels,
 }: {
   householdId: string;
   settings: VoiceSettings;
@@ -87,6 +173,7 @@ export function VoiceSettingsForm({
   sourceDetail: string;
   /** Whether Gemini Live may run for this household, and why not when it may not — the server's own check. */
   geminiLive: { available: boolean; reason: string | null };
+  labels: VoiceFormLabels;
 }) {
   const [state, action] = useActionState(save, {});
   const [provider, setProvider] = useState(settings.provider);
@@ -150,7 +237,7 @@ export function VoiceSettingsForm({
       const payload = await response.json();
       if (!response.ok)
         throw new Error(
-          payload?.error?.message ?? "That voice could not be played.",
+          payload?.error?.message ?? labels.previewError,
         );
 
       audioRef.current?.pause();
@@ -163,12 +250,12 @@ export function VoiceSettingsForm({
       setPreviewError(
         caught instanceof Error
           ? caught.message
-          : "That voice could not be played.",
+          : labels.previewError,
       );
     } finally {
       setPreviewing(false);
     }
-  }, [householdId, previewing, settings]);
+  }, [householdId, previewing, settings, labels.previewError]);
 
   return (
     <div className="space-y-6">
@@ -180,7 +267,7 @@ export function VoiceSettingsForm({
         {previewError ? <Alert>{previewError}</Alert> : null}
 
         <section className="space-y-4">
-          <SectionHeader title="Who does the speaking" />
+          <SectionHeader title={labels.who} />
 
           <Card className="space-y-1 bg-[var(--wh-surface-muted)]/60 p-3">
             <p className="text-sm font-semibold">{sourceTitle}</p>
@@ -189,13 +276,13 @@ export function VoiceSettingsForm({
             </p>
             {ownKey && ownKeySetOn ? (
               <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                Set on {ownKeySetOn}.
+                {labels.setOn.replace("{date}", ownKeySetOn)}
               </p>
             ) : null}
           </Card>
 
           <Select
-            label="Speech service"
+            label={labels.service}
             name="provider"
             defaultValue={settings.provider}
             disabled={!speechAvailable}
@@ -203,53 +290,49 @@ export function VoiceSettingsForm({
               setProvider(event.target.value as VoiceSettings["provider"])
             }
             hint={
-              speechAvailable
-                ? "Google understands far more of what is said and sounds the same on every device. Your browser's own voice sends nothing out of it."
-                : "No speech key is configured anywhere yet, so WonderHome uses whatever voice your browser provides."
+              speechAvailable ? labels.serviceHint : labels.serviceHintNone
             }
           >
-            <option value="browser">My browser (free, varies by device)</option>
+            <option value="browser">{labels.optionBrowser}</option>
             {speechAvailable ? (
-              <option value="google">Google Cloud Speech (recommended)</option>
+              <option value="google">{labels.optionGoogle}</option>
             ) : null}
           </Select>
         </section>
 
         <section className="space-y-4">
-          <SectionHeader title="Live conversation" />
+          <SectionHeader title={labels.live} />
           <Select
-            label="Who runs a live conversation"
+            label={labels.liveEngine}
             name="liveEngine"
             defaultValue={settings.liveEngine}
             hint={
               geminiLive.available
-                ? `${LIVE_ENGINE_LABELS.gemini_live.detail} Google hears what you say and what WonderHome answers, and only what your data-use settings let it.`
-                : `${LIVE_ENGINE_LABELS.wonderhome.detail}${geminiLive.reason ? ` Gemini Live is not available: ${geminiLive.reason}` : ""}`
+                ? `${labels.engines.gemini_live.detail} ${labels.geminiHears}`
+                : `${labels.engines.wonderhome.detail}${geminiLive.reason ? ` ${labels.geminiUnavailable.replace("{reason}", geminiLive.reason)}` : ""}`
             }
           >
-            <option value="wonderhome">{LIVE_ENGINE_LABELS.wonderhome.name}</option>
+            <option value="wonderhome">{labels.engines.wonderhome.name}</option>
             <option value="gemini_live" disabled={!geminiLive.available}>
-              {LIVE_ENGINE_LABELS.gemini_live.name}
-              {geminiLive.available ? "" : " (not available)"}
+              {labels.engines.gemini_live.name}
+              {geminiLive.available ? "" : ` ${labels.notAvailable}`}
             </option>
           </Select>
         </section>
 
         <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>
-          <SectionHeader title="How it sounds" />
+          <SectionHeader title={labels.sounds} />
           <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
-            {usingGoogle
-              ? "The voice that reads replies aloud."
-              : "These apply once a speech service is doing the speaking. Your browser picks its own voice."}
+            {usingGoogle ? labels.soundsGoogle : labels.soundsBrowser}
           </p>
 
           <Select
-            label="Language and accent"
+            label={labels.language}
             name="language"
             defaultValue={settings.language}
             onChange={(event) => setLanguage(event.target.value)}
           >
-            {VOICE_LANGUAGES.map((option) => (
+            {labels.languages.map((option) => (
               <option key={option.code} value={option.code}>
                 {option.label}
               </option>
@@ -257,46 +340,40 @@ export function VoiceSettingsForm({
           </Select>
 
           <Select
-            label="Voice family"
+            label={labels.tier}
             name="tier"
             defaultValue={settings.tier}
-            hint="Later families sound more human and cost more. Each has its own free monthly allowance from Google."
+            hint={labels.tierHint}
           >
             {VOICE_TIERS.map((tier) => (
               <option key={tier} value={tier}>
-                {TIER_LABELS[tier].name} — {TIER_LABELS[tier].detail}
+                {labels.tiers[tier].name} — {labels.tiers[tier].detail}
               </option>
             ))}
           </Select>
 
           <Select
-            label="Voice"
+            label={labels.gender}
             name="gender"
             defaultValue={settings.gender}
-            hint="Used when no specific voice is chosen below."
+            hint={labels.genderHint}
           >
             {VOICE_GENDERS.map((gender) => (
               <option key={gender} value={gender}>
-                {gender === "any"
-                  ? "Either"
-                  : gender === "male"
-                    ? "Male"
-                    : "Female"}
+                {labels.genders[gender]}
               </option>
             ))}
           </Select>
 
           <Select
-            label="A specific voice"
+            label={labels.specific}
             name="voiceName"
             defaultValue={settings.voiceName ?? ""}
             hint={
-              usingGoogle
-                ? "Google's own names. Leaving this on “Choose for me” follows the family and voice above."
-                : "Choose Google above to see the voices your household can pick from."
+              usingGoogle ? labels.specificHintGoogle : labels.specificHintBrowser
             }
           >
-            <option value="">Choose for me</option>
+            <option value="">{labels.chooseForMe}</option>
             {voices.map((voice) => (
               <option key={voice.name} value={voice.name}>
                 {voice.name} ({voice.gender})
@@ -305,52 +382,52 @@ export function VoiceSettingsForm({
           </Select>
 
           <Slider
-            label="How fast it talks"
+            label={labels.rate}
             name="speakingRate"
             value={settings.speakingRate}
             min={0.25}
             max={4}
             step={0.05}
             format={(value) => `${value.toFixed(2)}×`}
-            lowLabel="Slower"
-            highLabel="Faster"
+            lowLabel={labels.slower}
+            highLabel={labels.faster}
           />
 
           <Slider
-            label="Pitch"
+            label={labels.pitch}
             name="pitch"
             value={settings.pitch}
             min={-20}
             max={20}
             step={0.5}
-            format={(value) => `${value > 0 ? "+" : ""}${value} semitones`}
-            lowLabel="Deeper"
-            highLabel="Higher"
-            hint="Google's newest voices set their own pitch and ignore this."
+            format={(value) => labels.semitones.replace("{value}", `${value > 0 ? "+" : ""}${value}`)}
+            lowLabel={labels.deeper}
+            highLabel={labels.higher}
+            hint={labels.pitchHint}
           />
 
           <Slider
-            label="Volume"
+            label={labels.volume}
             name="volumeGainDb"
             value={settings.volumeGainDb}
             min={-16}
             max={16}
             step={1}
             format={(value) => `${value > 0 ? "+" : ""}${value} dB`}
-            lowLabel="Quieter"
-            highLabel="Louder"
-            hint="Above about +10 it starts to distort."
+            lowLabel={labels.quieter}
+            highLabel={labels.louder}
+            hint={labels.volumeHint}
           />
 
           <Select
-            label="Where you usually listen"
+            label={labels.device}
             name="listeningDevice"
             defaultValue={settings.listeningDevice}
-            hint="Google masters the audio differently for each of these."
+            hint={labels.deviceHint}
           >
             {LISTENING_DEVICES.map((device) => (
               <option key={device} value={device}>
-                {DEVICE_LABELS[device]}
+                {labels.devices[device]}
               </option>
             ))}
           </Select>
@@ -363,10 +440,9 @@ export function VoiceSettingsForm({
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
             <span>
-              Read replies aloud
+              {labels.speakReplies}
               <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                Turn this off to keep live conversation listening, but answer in
-                text only.
+                {labels.speakRepliesHint}
               </span>
             </span>
           </label>
@@ -383,25 +459,25 @@ export function VoiceSettingsForm({
               ) : (
                 <Play aria-hidden className="size-4" />
               )}
-              {previewing ? "Playing…" : "Hear it"}
+              {previewing ? labels.playing : labels.hear}
             </Pill>
           ) : null}
         </section>
 
         <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>
-          <SectionHeader title="How it listens" />
+          <SectionHeader title={labels.listens} />
           <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
-            What WonderHome does with what you say.
+            {labels.listensBody}
           </p>
 
           <Select
-            label="Language you speak"
+            label={labels.spokenLanguage}
             name="recognitionLanguage"
             defaultValue={settings.recognitionLanguage ?? ""}
-            hint="Leave this following the speaking language unless you answer in a different one."
+            hint={labels.spokenLanguageHint}
           >
-            <option value="">The same as above</option>
-            {VOICE_LANGUAGES.map((option) => (
+            <option value="">{labels.sameAsAbove}</option>
+            {labels.languages.map((option) => (
               <option key={option.code} value={option.code}>
                 {option.label}
               </option>
@@ -410,14 +486,13 @@ export function VoiceSettingsForm({
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">
-              Other languages you might switch to
+              {labels.alternatives}
             </legend>
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              Up to three. Useful when a sentence starts in one language and
-              finishes in another.
+              {labels.alternativesHint}
             </p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {VOICE_LANGUAGES.slice(0, 14).map((option) => (
+              {labels.languages.slice(0, 14).map((option) => (
                 <label
                   key={option.code}
                   className="flex min-h-11 items-center gap-2 text-sm"
@@ -438,21 +513,20 @@ export function VoiceSettingsForm({
           </fieldset>
 
           <Select
-            label="How it listens"
+            label={labels.listens}
             name="recognitionModel"
             defaultValue={settings.recognitionModel}
           >
             {RECOGNITION_MODELS.map((model) => (
               <option key={model} value={model}>
-                {RECOGNITION_MODEL_LABELS[model].name} —{" "}
-                {RECOGNITION_MODEL_LABELS[model].detail}
+                {labels.models[model].name} — {labels.models[model].detail}
               </option>
             ))}
           </Select>
 
           <div className="space-y-1.5">
             <label htmlFor="phraseHints" className="block text-sm font-medium">
-              Words to expect
+              {labels.phrases}
             </label>
             <textarea
               id="phraseHints"
@@ -463,9 +537,7 @@ export function VoiceSettingsForm({
               className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
             />
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              One per line. Names, dishes, a school, the dog. Everyone in your
-              household is already included — these are the extras. This is the
-              single biggest thing that stops WonderHome mishearing.
+              {labels.phrasesHint}
             </p>
           </div>
 
@@ -476,7 +548,7 @@ export function VoiceSettingsForm({
               defaultChecked={settings.automaticPunctuation}
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
-            <span>Add punctuation to what it hears</span>
+            <span>{labels.punctuation}</span>
           </label>
 
           <label className="flex min-h-11 items-center gap-3 text-sm">
@@ -487,9 +559,9 @@ export function VoiceSettingsForm({
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
             <span>
-              Mask swearing
+              {labels.profanity}
               <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                Worth turning on where children use the assistant.
+                {labels.profanityHint}
               </span>
             </span>
           </label>
@@ -502,9 +574,9 @@ export function VoiceSettingsForm({
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
             <span>
-              Use Google&apos;s enhanced models
+              {labels.enhanced}
               <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                More accurate, and priced higher than the basic ones.
+                {labels.enhancedHint}
               </span>
             </span>
           </label>
@@ -512,9 +584,9 @@ export function VoiceSettingsForm({
 
         <Card className="flex flex-wrap items-center justify-between gap-3">
           <p className="min-w-0 text-sm text-[var(--wh-foreground-muted)]">
-            Changes apply to the next thing WonderHome says.
+            {labels.applyNext}
           </p>
-          <Submit label="Save voice settings" />
+          <Submit label={labels.save} pendingLabel={labels.saving} />
         </Card>
       </form>
 
@@ -523,6 +595,7 @@ export function VoiceSettingsForm({
         save={saveKey}
         remove={removeKey}
         configured={ownKey}
+        labels={labels}
       />
     </div>
   );
@@ -545,12 +618,15 @@ function OwnKeyForm({
   save,
   remove,
   configured,
+  labels,
 }: {
   householdId: string;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
   remove: (state: ActionState, formData: FormData) => Promise<ActionState>;
   configured: boolean;
+  labels: VoiceFormLabels;
 }) {
+  const words = labels.ownKey;
   const [open, setOpen] = useState(configured);
   const [saveState, saveAction] = useActionState(save, {});
   const [removeState, removeAction] = useActionState(remove, {});
@@ -558,23 +634,18 @@ function OwnKeyForm({
 
   return (
     <section className="space-y-3">
-      <SectionHeader title="Use our own Google key" />
+      <SectionHeader title={words.title} />
 
       <Card className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-medium">
-              Bring your own Google Cloud project
-            </p>
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              Optional. Speech is billed to your account and uses your own
-              quotas instead of the ones included with your plan.
-            </p>
+            <p className="text-sm font-medium">{words.bring}</p>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{words.bringBody}</p>
           </div>
           <Switch
             checked={open}
             onCheckedChange={setOpen}
-            label="Use our own Google Cloud key"
+            label={words.switch}
             disabled={configured}
           />
         </div>
@@ -587,22 +658,22 @@ function OwnKeyForm({
             <form action={saveAction} className="space-y-3">
               <input type="hidden" name="householdId" value={householdId} />
               <PasswordField
-                label="Google Cloud API key"
+                label={words.apiKey}
                 name="apiKey"
                 required
                 minLength={20}
                 autoComplete="off"
                 placeholder="AIza…"
-                hint="From a Google Cloud project with Text-to-Speech and Speech-to-Text switched on. Stored for this household only, and never readable again."
+                hint={words.hint}
               />
-              <Submit label={configured ? "Replace key" : "Use this key"} />
+              <Submit label={configured ? words.replace : words.use} pendingLabel={labels.saving} />
             </form>
 
             {configured ? (
               <form action={removeAction}>
                 <input type="hidden" name="householdId" value={householdId} />
                 <Button type="submit" variant="secondary">
-                  Remove it and go back to WonderHome&apos;s speech service
+                  {words.remove}
                 </Button>
               </form>
             ) : null}

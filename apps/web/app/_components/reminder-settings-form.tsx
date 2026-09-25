@@ -23,11 +23,28 @@ import type { ActionState } from "../(auth)/actions";
 
 type Save = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
-function Submit({ label }: { label: string }) {
+/** These cards' words in the viewer's language, built on the server (story 22-004). */
+export type ReminderSettingsLabels = {
+  saving: string;
+  save: string;
+  quiet: { title: string; body: string; keep: string; from: string; until: string; clock: string; save: string };
+  prefs: {
+    title: string;
+    body: string;
+    on: string;
+    /** "{category} timing" — `{category}` is filled in here with the category's name. */
+    timing: string;
+    save: string;
+    categories: Record<TunableCategory, string>;
+  };
+  smart: { title: string; body: string; digest: string; digestBody: string; learn: string; learnBody: string };
+};
+
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="secondary" disabled={pending}>
-      {pending ? "Saving…" : label}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }
@@ -44,6 +61,7 @@ export function QuietHoursCard({
   times,
   timeZone,
   save,
+  labels,
 }: {
   householdId: string;
   /** "HH:MM" on the household's clock, or null when there are none. */
@@ -52,6 +70,7 @@ export function QuietHoursCard({
   times: readonly { value: string; label: string }[];
   timeZone: string;
   save: Save;
+  labels: ReminderSettingsLabels;
 }) {
   const [state, action] = useActionState(save, {});
   return (
@@ -59,27 +78,25 @@ export function QuietHoursCard({
       <div className="flex items-start gap-3">
         <IconTile icon={Moon} tone="primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Quiet hours</p>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            Reminders wait until they end. Only something that genuinely cannot wait breaks them.
-          </p>
+          <p className="text-sm font-semibold">{labels.quiet.title}</p>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.quiet.body}</p>
         </div>
       </div>
       <form action={action} className="space-y-3">
         <input type="hidden" name="householdId" value={householdId} />
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <input type="checkbox" name="quietOn" defaultChecked={quiet !== null} className="size-5 rounded accent-[var(--wh-primary)]" />
-          <span>Keep quiet hours</span>
+          <span>{labels.quiet.keep}</span>
         </label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Select label="From" name="quietFrom" defaultValue={quiet?.from ?? "22:00"}>
+          <Select label={labels.quiet.from} name="quietFrom" defaultValue={quiet?.from ?? "22:00"}>
             {times.map((time) => (
               <option key={time.value} value={time.value}>
                 {time.label}
               </option>
             ))}
           </Select>
-          <Select label="Until" name="quietUntil" defaultValue={quiet?.until ?? "07:00"}>
+          <Select label={labels.quiet.until} name="quietUntil" defaultValue={quiet?.until ?? "07:00"}>
             {times.map((time) => (
               <option key={time.value} value={time.value}>
                 {time.label}
@@ -87,27 +104,28 @@ export function QuietHoursCard({
             ))}
           </Select>
         </div>
-        <p className="text-xs text-[var(--wh-foreground-subtle)]">On your household&rsquo;s clock ({timeZone}).</p>
+        <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.quiet.clock.replace("{timeZone}", timeZone)}</p>
         <Feedback state={state} />
-        <Submit label="Save quiet hours" />
+        <Submit label={labels.quiet.save} pendingLabel={labels.saving} />
       </form>
     </Card>
   );
 }
 
-const CATEGORY: Record<TunableCategory, { icon: typeof Bell; tone: IconTone; label: string }> = {
-  meals: { icon: Utensils, tone: "meals", label: "Meals & Recipes" },
-  school: { icon: GraduationCap, tone: "school", label: "Kids & School" },
-  groceries: { icon: ShoppingBasket, tone: "home", label: "Groceries" },
-  bills: { icon: Wallet, tone: "money", label: "Bills & Finance" },
-  pets: { icon: PawPrint, tone: "care", label: "Pets" },
-  family: { icon: HeartHandshake, tone: "people", label: "Family" },
+const CATEGORY: Record<TunableCategory, { icon: typeof Bell; tone: IconTone }> = {
+  meals: { icon: Utensils, tone: "meals" },
+  school: { icon: GraduationCap, tone: "school" },
+  groceries: { icon: ShoppingBasket, tone: "home" },
+  bills: { icon: Wallet, tone: "money" },
+  pets: { icon: PawPrint, tone: "care" },
+  family: { icon: HeartHandshake, tone: "people" },
 };
 
 export function ReminderPreferencesCard({
   householdId,
   rows,
   save,
+  labels,
 }: {
   householdId: string;
   rows: readonly {
@@ -117,25 +135,25 @@ export function ReminderPreferencesCard({
     options: readonly { value: string; label: string }[];
   }[];
   save: Save;
+  labels: ReminderSettingsLabels;
 }) {
   const [state, action] = useActionState(save, {});
   return (
     <Card className="space-y-3">
       <div>
-        <p className="text-sm font-semibold">Reminder preferences</p>
-        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-          How early each kind of reminder comes to you. Only yours — nobody else&rsquo;s change.
-        </p>
+        <p className="text-sm font-semibold">{labels.prefs.title}</p>
+        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.prefs.body}</p>
       </div>
       <form action={action} className="space-y-1">
         <input type="hidden" name="householdId" value={householdId} />
         <ul className="divide-y divide-[var(--wh-border)]">
           {rows.map((row) => {
             const category = CATEGORY[row.category];
+            const name = labels.prefs.categories[row.category];
             return (
               <li key={row.category} className="flex flex-wrap items-center gap-3 py-3">
                 <IconTile icon={category.icon} tone={category.tone} />
-                <span className="min-w-0 flex-1 text-sm font-medium">{category.label}</span>
+                <span className="min-w-0 flex-1 text-sm font-medium">{name}</span>
                 <label className="flex min-h-11 items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -143,10 +161,10 @@ export function ReminderPreferencesCard({
                     defaultChecked={row.enabled}
                     className="size-5 rounded accent-[var(--wh-primary)]"
                   />
-                  <span>On</span>
+                  <span>{labels.prefs.on}</span>
                 </label>
                 <div className="w-full sm:w-72 [&_label]:sr-only">
-                  <Select label={`${category.label} timing`} name={`preset_${row.category}`} defaultValue={row.preset}>
+                  <Select label={labels.prefs.timing.replace("{category}", name)} name={`preset_${row.category}`} defaultValue={row.preset}>
                     {row.options.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -160,7 +178,7 @@ export function ReminderPreferencesCard({
         </ul>
         <div className="space-y-2 pt-2">
           <Feedback state={state} />
-          <Submit label="Save reminder preferences" />
+          <Submit label={labels.prefs.save} pendingLabel={labels.saving} />
         </div>
       </form>
     </Card>
@@ -179,11 +197,13 @@ export function SmartRemindersCard({
   dailyDigest,
   learnTiming,
   save,
+  labels,
 }: {
   householdId: string;
   dailyDigest: boolean;
   learnTiming: boolean;
   save: Save;
+  labels: ReminderSettingsLabels;
 }) {
   const [state, action] = useActionState(save, {});
   return (
@@ -191,10 +211,8 @@ export function SmartRemindersCard({
       <div className="flex items-start gap-3">
         <IconTile icon={Sparkles} tone="primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Smarter reminders</p>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-            Both only change how your own reminders reach you. Nothing is decided for you.
-          </p>
+          <p className="text-sm font-semibold">{labels.smart.title}</p>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.smart.body}</p>
         </div>
       </div>
       <form action={action} className="space-y-3">
@@ -202,24 +220,19 @@ export function SmartRemindersCard({
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" name="dailyDigest" defaultChecked={dailyDigest} className="mt-0.5 size-5 shrink-0 rounded accent-[var(--wh-primary)]" />
           <span>
-            <span className="font-medium">Today&rsquo;s summary</span>
-            <span className="block text-[var(--wh-foreground-muted)]">
-              A short list of what is waiting on you today, above your notifications.
-            </span>
+            <span className="font-medium">{labels.smart.digest}</span>
+            <span className="block text-[var(--wh-foreground-muted)]">{labels.smart.digestBody}</span>
           </span>
         </label>
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" name="learnTiming" defaultChecked={learnTiming} className="mt-0.5 size-5 shrink-0 rounded accent-[var(--wh-primary)]" />
           <span>
-            <span className="font-medium">Learn when I usually act</span>
-            <span className="block text-[var(--wh-foreground-muted)]">
-              Once you have dealt with a kind of reminder at much the same time at least five times, the first reminder of that
-              kind moves to around then. A timing you chose above always wins, and quiet hours still apply.
-            </span>
+            <span className="font-medium">{labels.smart.learn}</span>
+            <span className="block text-[var(--wh-foreground-muted)]">{labels.smart.learnBody}</span>
           </span>
         </label>
         <Feedback state={state} />
-        <Submit label="Save" />
+        <Submit label={labels.save} pendingLabel={labels.saving} />
       </form>
     </Card>
   );
