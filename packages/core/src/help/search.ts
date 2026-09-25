@@ -170,6 +170,7 @@ export const SUGGESTED_QUESTIONS = [
   "Can WonderHome spend money without asking?",
   "Why is my home screen so quiet?",
   "Who can see my children's school work?",
-  "How do I connect my calendar?",
-  "Can I use my own AI key?",
+  "How do I send WonderHome a school notice?",
+  "Can I use WonderHome in Hindi?",
+  "How do I download or delete my data?",
 ];
