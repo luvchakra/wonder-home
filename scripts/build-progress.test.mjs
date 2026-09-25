@@ -44,7 +44,7 @@ test("does not double-count the prose that repeats each story below the table", 
 
 test("counts by status", () => {
   const { stories } = parseBacklog("17-External-Integrations.md", BACKLOG);
-  assert.deepEqual(tally(stories), { Done: 2, "In Progress": 0, Blocked: 0, "Not Started": 1 });
+  assert.deepEqual(tally(stories), { Done: 2, "In Progress": 0, Blocked: 0, "Not Started": 1, Deferred: 0 });
 });
 
 test("the bar is only full when every story is done", () => {

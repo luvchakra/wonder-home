@@ -86,6 +86,8 @@ export function resolvePreferences(member: MemberLocaleChoices, household: House
 
 /** The BCP 47 tag the platform's Intl formatting runs on: the person's language, the household's region. */
 export function intlLocale(preferences: Pick<LocalePreferences, "language" | "region">): string {
+  // Chinese names its script, so a household in India or the US still reads Simplified characters.
+  if (preferences.language === "zh") return `zh-Hans-${preferences.region}`;
   return `${preferences.language}-${preferences.region}`;
 }
 

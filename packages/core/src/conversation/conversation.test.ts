@@ -99,6 +99,11 @@ describe("short replies only mean something in context", () => {
   it("reads a bare yes or no in the other languages WonderHome speaks, never inside a sentence (story 22-005)", () => {
     for (const yes of ["हाँ", "हां जी।", "haan", "होय", "sí", "Oui", "ja", "نعم"]) expect(classifyShortReply(yes), yes).toBe("affirm");
     for (const no of ["नहीं", "nahi", "नाही", "non", "Nein", "لا"]) expect(classifyShortReply(no), no).toBe("decline");
+    // Chinese (Mandarin), with full-width punctuation.
+    for (const yes of ["好的", "是的。", "可以！", "确认"]) expect(classifyShortReply(yes), yes).toBe("affirm");
+    for (const no of ["不要", "取消。", "算了"]) expect(classifyShortReply(no), no).toBe("decline");
+    // A yes inside a longer Chinese sentence approves nothing.
+    expect(classifyShortReply("好的，但是改成周五")).toBe("unclear");
     // A yes that approves something is a whole reply, in any language.
     expect(classifyShortReply("हाँ, पर पहले दूध जोड़ो")).toBe("unclear");
     expect(classifyShortReply("oui mais attends")).toBe("unclear");
