@@ -259,3 +259,34 @@ test("the new event types and the 'recorded' outcome are the only new words bill
     psql(`insert into public.billing_events (provider, provider_event_id, household_id, event_type, occurred_at, outcome) values ('razorpay', 'e7', '${household}', 'refund.failed', now(), 'guessed');`, options),
   );
 });
+
+test("reconciliation is the server's alone, in closed words, and a payment notice names its ledger row (story 20-011)", () => {
+  const run = psql(`insert into public.billing_reconciliation_runs (provider) values ('razorpay') returning id;`, options);
+  psql(
+    `insert into public.billing_reconciliation_findings (run_id, payment_id, household_id, provider, kind, ledger_status, provider_status)
+     values ('${run}', '${payment}', '${household}', 'razorpay', 'status_mismatch', 'succeeded', 'refunded');`,
+    options,
+  );
+  for (const profile of [HEAD, ADULT, OUTSIDER]) {
+    assert.ok(deniedForProfile(profile, `select count(*) from public.billing_reconciliation_findings;`, options), "a household read reconciliation findings");
+    assert.ok(deniedForProfile(profile, `select count(*) from public.billing_reconciliation_runs;`, options), "a household read reconciliation runs");
+  }
+  assert.ok(
+    deniedForProfile(HEAD, `insert into public.billing_reconciliation_runs (provider) values ('stripe');`, options),
+    "a household wrote a reconciliation run",
+  );
+  assert.throws(() =>
+    psql(
+      `insert into public.billing_reconciliation_findings (run_id, payment_id, household_id, provider, kind, ledger_status) values ('${run}', '${payment}', '${household}', 'razorpay', 'looks_odd', 'succeeded');`,
+      options,
+    ),
+  );
+  // The notice's source is the payment itself.
+  psql(
+    `insert into public.notifications (household_id, recipient_member_id, type, thread_key, title, body, scheduled_for, category, source_type, source_id)
+     values ('${household}', '${headMember}', 'completion', 'billing:payment:${payment}', 'Payment received', 'Your payment went through.', now(), 'bills', 'payment', '${payment}');`,
+    options,
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.notifications where source_type = 'payment';`, options), "1");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.notifications where source_type = 'payment';`, options), "0");
+});

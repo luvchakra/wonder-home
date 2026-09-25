@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import { paymentNoticeFor, sendPaymentNotices, type PaymentNotice } from "./notices";
 import { findPlanPrice, providerPlansFor, type PlanPrice } from "./prices";
 import { applyBillingEvent, type BillingEvent, type BillingProvider, type PaymentProviderName, type PaymentStatus, type SubscriptionState } from "./provider";
 import { billingProvidersFromEnv, routingConfigFromEnv, selectPaymentProvider } from "./router";
@@ -285,7 +286,7 @@ export async function recordBillingEvent(
 
   // What the provider reported goes to the ledger whatever it does to the
   // subscription: a failed renewal is still a line in the billing history.
-  await recordLedger(admin, provider, event, state?.planKey ?? null);
+  const notices = await recordLedger(admin, provider, event, state?.planKey ?? null);
 
   const decision = applyBillingEvent(state, event);
   let outcome: string;
@@ -342,6 +343,13 @@ export async function recordBillingEvent(
   }
 
   await admin.from("billing_events").update({ applied: outcome === "applied", outcome }).eq("id", eventRowId);
+  // The household hears what the ledger now says (story 20-011). A failed
+  // notice never fails the event: the provider would only redeliver it.
+  try {
+    await sendPaymentNotices(admin, { householdId: event.householdId, intentId: event.intentId, notices, now: event.occurredAt });
+  } catch {
+    /* the ledger is the record; the notice is a courtesy */
+  }
   return { recorded: true, applied: outcome === "applied", outcome };
 }
 
@@ -349,8 +357,9 @@ export async function recordBillingEvent(
  * The ledger side of an event: a payment, its invoice, a refund — each once
  * per provider id, a payment's status only ever moving forward.
  */
-async function recordLedger(admin: SupabaseClient, provider: string, event: BillingEvent, currentPlanKey: string | null): Promise<void> {
+async function recordLedger(admin: SupabaseClient, provider: string, event: BillingEvent, currentPlanKey: string | null): Promise<PaymentNotice[]> {
   let paymentRowId: string | null = null;
+  const notices: PaymentNotice[] = [];
 
   if (event.payment) {
     const payment = event.payment;
@@ -385,6 +394,10 @@ async function recordLedger(admin: SupabaseClient, provider: string, event: Bill
       .maybeSingle();
     if (error) throw new Error(`recordLedger payment failed: ${error.code ?? "unknown"}`);
     paymentRowId = ((written as Row | null)?.id as string | undefined) ?? null;
+    const notice = paymentRowId
+      ? paymentNoticeFor(was ?? null, status, { id: paymentRowId, amount: payment.amount, currency: payment.currency, planKey: values.plan_key })
+      : null;
+    if (notice) notices.push(notice);
   }
 
   if (event.invoice) {
@@ -420,16 +433,19 @@ async function recordLedger(admin: SupabaseClient, provider: string, event: Bill
       .eq("provider_payment_id", refund.providerPaymentId)
       .maybeSingle();
     const paymentRow = paid as Row | null;
-    if (!paymentRow) return;
+    if (!paymentRow) return notices;
     const completedAt = refund.status === "succeeded" ? event.occurredAt.toISOString() : null;
     const { data: known } = await admin
       .from("payment_refunds")
-      .select("id")
+      .select("id, status")
       .eq("provider", provider)
       .eq("provider_refund_id", refund.providerRefundId)
       .maybeSingle();
+    let refundRowId: string | null = null;
+    const refundWas = ((known as Row | null)?.status as string | undefined) ?? null;
     if (known) {
-      await admin.from("payment_refunds").update({ status: refund.status, completed_at: completedAt }).eq("id", (known as Row).id as string);
+      refundRowId = (known as Row).id as string;
+      await admin.from("payment_refunds").update({ status: refund.status, completed_at: completedAt }).eq("id", refundRowId);
     } else {
       // A refund made at the provider's own dashboard: recorded all the same.
       await admin.from("payment_refunds").insert({
@@ -443,6 +459,16 @@ async function recordLedger(admin: SupabaseClient, provider: string, event: Bill
         reason: "other",
         completed_at: completedAt,
       });
+      const { data: insertedRefund } = await admin
+        .from("payment_refunds")
+        .select("id")
+        .eq("provider", provider)
+        .eq("provider_refund_id", refund.providerRefundId)
+        .maybeSingle();
+      refundRowId = ((insertedRefund as Row | null)?.id as string | undefined) ?? null;
+    }
+    if (refund.status === "succeeded" && refundWas !== "succeeded" && refundRowId) {
+      notices.push({ kind: "refund_succeeded", refundId: refundRowId, paymentId: paymentRow.id as string, amount: refund.amount, currency: refund.currency });
     }
     if (refund.status === "succeeded") {
       const { data: refunds } = await admin.from("payment_refunds").select("amount").eq("payment_id", paymentRow.id).eq("status", "succeeded");
@@ -452,4 +478,5 @@ async function recordLedger(admin: SupabaseClient, provider: string, event: Bill
       await admin.from("payments").update({ status }).eq("id", paymentRow.id as string);
     }
   }
+  return notices;
 }

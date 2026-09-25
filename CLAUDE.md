@@ -599,6 +599,11 @@ everywhere else. The provider is never the source of truth:
   holds no card number, no secret and no provider prose.
 - **Nothing is taken away early.** A cancellation or downgrade waits for the
   end of the paid period (`cancel_at_period_end`, `scheduled_plan_key`).
+- **Operations** (story 20-011). A payment's outcome reaches one Admin as a
+  notification sourced from its ledger row (`billing/notices.ts`). Staff see
+  payments and start refunds through `platform/payments.ts` (a reason code,
+  pending until the provider confirms). Reconciliation (`billing/reconcile.ts`)
+  records differences in closed words and never corrects the ledger itself.
 - **The prices, and early access.** The catalogue holds the decided prices:
   Pro ₹299 and Max ₹599 a month, or a year at 20% off (₹2,870 and ₹5,750).
   No plan is marked `requires_payment` yet, so switching stays free and every

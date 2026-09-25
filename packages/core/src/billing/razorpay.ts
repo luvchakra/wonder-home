@@ -8,6 +8,7 @@ import type {
   LedgerPayment,
   PaymentMethodKind,
   PaymentStatus,
+  RemotePayment,
 } from "./provider";
 import { constantTimeEqual, hmacHex, WebhookSignatureError } from "./signature";
 
@@ -121,7 +122,39 @@ export function createRazorpayProvider(config: RazorpayConfig): BillingProvider 
       if (typeof body.id !== "string") throw new Error("Razorpay sent a refund we could not read.");
       return { providerRefundId: body.id };
     },
+
+    async fetchPayment(providerPaymentId) {
+      const response = await doFetch(`${API}/payments/${encodeURIComponent(providerPaymentId)}`, {
+        headers: { authorization: auth },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (response.status === 404 || response.status === 400) return null;
+      if (!response.ok) throw new Error(`Razorpay refused the request (${response.status}).`);
+      return razorpayRemotePayment((await response.json()) as RzObject);
+    },
   };
+}
+
+/** Razorpay's payment entity as a status we compare with the ledger. */
+export function razorpayRemotePayment(entity: RzObject): RemotePayment | null {
+  const currency = typeof entity.currency === "string" ? entity.currency.toUpperCase() : null;
+  const minor = typeof entity.amount === "number" ? entity.amount : null;
+  if (!currency || minor === null) return null;
+  const refunded = typeof entity.amount_refunded === "number" ? entity.amount_refunded : 0;
+  const raw = entity.status;
+  const status: PaymentStatus =
+    raw === "captured" || raw === "refunded"
+      ? refunded >= minor && minor > 0
+        ? "refunded"
+        : refunded > 0
+          ? "partially_refunded"
+          : "succeeded"
+      : raw === "failed"
+        ? "failed"
+        : raw === "authorized"
+          ? "processing"
+          : "created";
+  return { status, amount: fromMinorUnits(minor, currency), currency };
 }
 
 /** `X-Razorpay-Signature`: hex HMAC-SHA256 of the raw body with the webhook secret. */

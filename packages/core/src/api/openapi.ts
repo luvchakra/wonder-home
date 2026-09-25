@@ -828,6 +828,46 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/payments": {
+        get: {
+          summary: "Payments across every household",
+          description:
+            "Counts first — payments by status, provider and currency (amounts are never added across currencies) and refunds by state — then recent failures, recent refunds, each provider's last reconciliation run and the open differences it found. No card number, secret or provider prose is ever returned; the ledger never holds them. Requires `payments.read` (`operator`/`owner`).",
+          parameters: [{ name: "days", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 365 } }],
+          responses: {
+            "200": { description: "The overview" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/platform-admin/payments/{paymentId}/refund": {
+        parameters: [{ name: "paymentId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        post: {
+          summary: "Start a refund",
+          description:
+            "Refunds a payment that went through, in its own currency and in major units (omit `amount` to refund whatever is left). The refund is `processing` until the provider's own refund event confirms it; the refund row's id is the provider's idempotency key, so a retried request is never a second refund. Requires `payments.refund` and a reason code; audited as `payment.refund_requested`.",
+          responses: {
+            "200": { description: "Refund sent to the provider, pending its confirmation" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { description: "Staff boundary not met, or no such payment" },
+            "409": { description: "Not refundable, nothing left to refund, or the provider is not configured or refused it" },
+          },
+        },
+      },
+      "/platform-admin/payments/reconcile": {
+        post: {
+          summary: "Reconcile the ledger with each provider now",
+          description:
+            "Reads recent payments back from each configured provider and records any difference in closed words (`missing_at_provider`, `status_mismatch`, `amount_mismatch`, `currency_mismatch`). It never corrects the ledger. A provider that is not configured is reported as `skipped_not_configured`. The same pass runs nightly. Requires `payments.read`.",
+          responses: {
+            "200": { description: "One summary per provider" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/openapi": {
         get: {
           summary: "This document",

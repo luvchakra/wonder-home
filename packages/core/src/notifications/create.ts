@@ -29,7 +29,7 @@ export type NotifyInput = {
   body: string;
   /** What it is about (module 23), so the feed can file and filter it. */
   category?: NotificationCategory;
-  source?: { type: "health_appointment" | "health_routine" | "health_checkup" | "approval"; id: string | null };
+  source?: { type: "health_appointment" | "health_routine" | "health_checkup" | "approval" | "payment" | "payment_refund"; id: string | null };
 };
 
 export async function createNotification(
