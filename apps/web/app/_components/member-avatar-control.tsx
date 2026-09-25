@@ -18,16 +18,23 @@ import { removeMemberAvatarAction, updateMemberAvatarAction } from "../(auth)/ho
  * as one action ("change the photo") rather than a two-step file-picker-then-
  * save some other button already covers.
  */
+export type AvatarLabels = { add: string; change: string; uploading: string; remove: string; removing: string };
+
+const AVATAR_ENGLISH: AvatarLabels = { add: "Add photo", change: "Change photo", uploading: "Uploading…", remove: "Remove photo", removing: "Removing…" };
+
 export function MemberAvatarControl({
   householdId,
   memberId,
   displayName,
   avatarUrl,
+  labels = AVATAR_ENGLISH,
 }: {
   householdId: string;
   memberId: string;
   displayName: string;
   avatarUrl: string | null;
+  /** Server-built words; English when a caller has not localized yet. */
+  labels?: AvatarLabels;
 }) {
   const [uploadState, uploadAction, uploading] = useActionState<ActionState, FormData>(updateMemberAvatarAction, {});
   const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(removeMemberAvatarAction, {});
@@ -51,7 +58,7 @@ export function MemberAvatarControl({
               onChange={() => uploadFormRef.current?.requestSubmit()}
             />
             <Pill type="button" tone="quiet" onClick={() => inputRef.current?.click()} disabled={uploading}>
-              <Camera aria-hidden className="size-3.5" /> {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Add photo"}
+              <Camera aria-hidden className="size-3.5" /> {uploading ? labels.uploading : avatarUrl ? labels.change : labels.add}
             </Pill>
           </form>
           {avatarUrl ? (
@@ -59,7 +66,7 @@ export function MemberAvatarControl({
               <input type="hidden" name="householdId" value={householdId} />
               <input type="hidden" name="memberId" value={memberId} />
               <Pill type="submit" tone="quiet" disabled={removing} className="text-[var(--wh-risk)]">
-                <Trash2 aria-hidden className="size-3.5" /> {removing ? "Removing…" : "Remove photo"}
+                <Trash2 aria-hidden className="size-3.5" /> {removing ? labels.removing : labels.remove}
               </Pill>
             </form>
           ) : null}

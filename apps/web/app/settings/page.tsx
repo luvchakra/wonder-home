@@ -107,34 +107,37 @@ export default async function SettingsPage() {
     {
       icon: Bell,
       tone: "attention",
-      title: "Notifications",
-      meta: inApp?.quiet_from !== null && inApp?.quiet_from !== undefined ? `Your reminders and channels · quiet ${inApp.quiet_from}:00 – ${inApp.quiet_until}:00` : "Your reminders and channels",
+      title: t("settingsPage.notifications.title"),
+      meta:
+        inApp?.quiet_from !== null && inApp?.quiet_from !== undefined
+          ? t("settingsHome.notifications.quiet", { from: inApp.quiet_from, until: inApp.quiet_until ?? "" })
+          : t("settingsHome.notifications.meta"),
       href: "/settings/notifications",
     },
-    { icon: MicVocal, tone: "ai", title: "Voice", meta: describeVoice(voiceSettings), href: "/settings/voice" },
-    { icon: Speaker, tone: "ai", title: "Voice assistants", meta: "Alexa and Gemini Voice, and what each may do", href: "/settings/voice-assistants" },
+    { icon: MicVocal, tone: "ai", title: t("settingsPage.voice.title"), meta: describeVoice(voiceSettings), href: "/settings/voice" },
+    { icon: Speaker, tone: "ai", title: t("settingsHome.voiceAssistants.title"), meta: t("settingsHome.voiceAssistants.meta"), href: "/settings/voice-assistants" },
   ];
   const aiAndPrivacy: Row[] = [
-    { icon: Bot, tone: "ai", title: "AI Assistant", meta: `${keyNote.title} · household key and data use`, href: "/settings/ai" },
-    { icon: ShieldCheck, tone: "primary", title: "Privacy & security", meta: "Data use, export and deletion", href: "/settings/privacy" },
+    { icon: Bot, tone: "ai", title: t("settingsPage.ai.title"), meta: t("settingsHome.ai.meta", { source: keyNote.title }), href: "/settings/ai" },
+    { icon: ShieldCheck, tone: "primary", title: t("settingsHome.privacy.title"), meta: t("settingsHome.privacy.meta"), href: "/settings/privacy" },
   ];
   const connected: Row[] = [
     // WhatsApp only once the deployment has a number to connect to.
     ...(whatsappReady
-      ? [{ icon: MessageCircle, tone: "handled" as IconTone, title: "WhatsApp", meta: myWhatsApp ? "Connected · forward things into HomeSend" : "Forward messages, photos and documents into HomeSend", href: "/settings/whatsapp" }]
+      ? [{ icon: MessageCircle, tone: "handled" as IconTone, title: "WhatsApp", meta: myWhatsApp ? t("settingsHome.whatsapp.connected") : t("settingsHome.whatsapp.meta"), href: "/settings/whatsapp" }]
       : []),
     ...(view.permissions.includes("integrations.manage")
-      ? [{ icon: Link2, tone: "care" as IconTone, title: "Connected accounts", meta: "School, calendar, shopping, weather and devices", href: "/household/integrations" }]
+      ? [{ icon: Link2, tone: "care" as IconTone, title: t("settingsHome.connected.title"), meta: t("settingsHome.connected.meta"), href: "/household/integrations" }]
       : []),
   ];
-  const plan: Row[] = [{ icon: CreditCard, tone: "money", title: "Your plan", meta: `${planName} · plan and usage`, href: "/settings/plan" }];
+  const plan: Row[] = [{ icon: CreditCard, tone: "money", title: t("settingsPage.plan.title"), meta: t("settingsHome.plan.meta", { plan: planName }), href: "/settings/plan" }];
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: "Back" }} title="Settings & Profile">
+    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: t("common.back") }} title={t("nav.item.settings")}>
       <div className="space-y-6">
         <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">Settings & Profile</h1>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">How WonderHome works for you and {membership.household.name}.</p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.settings")}</h1>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsHome.lede", { household: membership.household.name })}</p>
         </header>
 
         <Card className="space-y-4 p-5">
@@ -166,27 +169,39 @@ export default async function SettingsPage() {
             )}
           </div>
           {me ? (
-            <MemberAvatarControl householdId={householdId} memberId={me.id} displayName={me.displayName} avatarUrl={me.avatarUrl} />
+            <MemberAvatarControl
+              householdId={householdId}
+              memberId={me.id}
+              displayName={me.displayName}
+              avatarUrl={me.avatarUrl}
+              labels={{
+                add: t("settingsHome.avatar.add"),
+                change: t("settingsHome.avatar.change"),
+                uploading: t("settingsHome.avatar.uploading"),
+                remove: t("settingsHome.avatar.remove"),
+                removing: t("settingsHome.avatar.removing"),
+              }}
+            />
           ) : (
             <Avatar name={view.displayName} size="xl" />
           )}
         </Card>
 
-        <SettingsGroup title="Personal" rows={personal} />
-        <SettingsGroup title="AI & privacy" rows={aiAndPrivacy} />
-        <SettingsGroup title="Connected services" rows={connected} />
-        <SettingsGroup title="Plan & usage" rows={plan} />
+        <SettingsGroup title={t("settingsHome.group.personal")} rows={personal} />
+        <SettingsGroup title={t("settingsHome.group.aiPrivacy")} rows={aiAndPrivacy} />
+        <SettingsGroup title={t("settingsHome.group.connected")} rows={connected} />
+        <SettingsGroup title={t("settingsHome.group.plan")} rows={plan} />
 
         <section>
-          <SectionHeader title="Account" />
+          <SectionHeader title={t("settingsHome.group.account")} />
           <form action={signOut}>
             <Button type="submit" variant="secondary" className="w-full gap-2">
-              <LogOut aria-hidden className="size-4" /> Log out
+              <LogOut aria-hidden className="size-4" /> {t("nav.logout")}
             </Button>
           </form>
         </section>
 
-        <QuoteCard>Your home. Your rules.</QuoteCard>
+        <QuoteCard>{t("settingsHome.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
