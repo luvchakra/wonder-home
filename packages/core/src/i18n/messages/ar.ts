@@ -6,6 +6,7 @@ import { helpersAr } from "./areas/helpers/ar";
 import { homesendAr } from "./areas/homesend/ar";
 import { settingsAr } from "./areas/settings/ar";
 import { householdAr } from "./areas/household/ar";
+import { entryAr } from "./areas/entry/ar";
 
 export const ar: Catalog = {
   "common.next": "التالي",
@@ -743,4 +744,5 @@ export const ar: Catalog = {
   ...homesendAr,
   ...settingsAr,
   ...householdAr,
+  ...entryAr,
 };

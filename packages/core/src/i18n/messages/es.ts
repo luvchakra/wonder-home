@@ -6,6 +6,7 @@ import { helpersEs } from "./areas/helpers/es";
 import { homesendEs } from "./areas/homesend/es";
 import { settingsEs } from "./areas/settings/es";
 import { householdEs } from "./areas/household/es";
+import { entryEs } from "./areas/entry/es";
 
 export const es: Catalog = {
   "common.next": "Siguiente",
@@ -719,4 +720,5 @@ export const es: Catalog = {
   ...homesendEs,
   ...settingsEs,
   ...householdEs,
+  ...entryEs,
 };

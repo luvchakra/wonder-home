@@ -7,6 +7,7 @@ import { Field } from "@wonderhome/core/ui/field";
 import { createHouseholdAction } from "../(auth)/actions";
 import { AuthForm } from "../_components/auth-form";
 import { AuthLayout } from "../_components/auth-layout";
+import { visitorLocale } from "../_lib/entry-locale";
 
 export const metadata = { title: "Set up your household" };
 export const dynamic = "force-dynamic";
@@ -30,6 +31,9 @@ const COMMON_ZONES = [
  * The architecture stays locale-neutral: the time zone is the one household
  * setting that changes behaviour (routines, reminders, quiet hours), so it is
  * the one asked for. Currency and location live with the domains that use them.
+ *
+ * Nobody here has a household yet, so there is no member row to hold a
+ * language: the screen is in the one their browser asks for.
  */
 export default async function WelcomePage() {
   const [supabase, verified] = await Promise.all([createClient(), getVerifiedUser()]);
@@ -40,25 +44,34 @@ export default async function WelcomePage() {
   const [memberships, { data: userData }] = await Promise.all([listMemberships(supabase), supabase.auth.getUser()]);
   if (memberships.length > 0) redirect("/");
 
+  const locale = await visitorLocale();
+  const { t } = locale;
   const suggestedName =
     typeof userData.user?.user_metadata?.display_name === "string" ? userData.user.user_metadata.display_name : "";
 
   return (
     <AuthLayout
-      title="Set up your household"
-      lede="Create a space for the people, pets and plans you care about."
+      locale={locale}
+      title={t("entry.welcome.title")}
+      lede={t("entry.welcome.lede")}
       step={{ current: 2, total: 3 }}
-      accent="Let's build a happier home together."
+      accent={t("entry.welcome.accent")}
       promise={{
-        headline: "Let's build a happier home together.",
-        points: ["You become the household's Admin", "Invite everyone next", "WonderHome starts learning your rhythm"],
+        headline: t("entry.welcome.accent"),
+        points: [t("entry.welcome.point1"), t("entry.welcome.point2"), t("entry.welcome.point3")],
       }}
     >
-      <AuthForm action={createHouseholdAction} submitLabel="Create household" pendingLabel="Creating household…">
-        <Field label="Household name" name="householdName" required placeholder="Chakraborty Family" hint="What your family calls home." />
-        <Field label="Your name" name="displayName" required defaultValue={suggestedName} hint="You will be the household's Admin." />
+      <AuthForm action={createHouseholdAction} submitLabel={t("entry.welcome.submit")} pendingLabel={t("entry.welcome.pending")}>
+        <Field
+          label={t("entry.welcome.householdName")}
+          name="householdName"
+          required
+          placeholder={t("entry.welcome.householdPlaceholder")}
+          hint={t("entry.welcome.householdHint")}
+        />
+        <Field label={t("entry.welcome.yourName")} name="displayName" required defaultValue={suggestedName} hint={t("entry.welcome.yourNameHint")} />
         <div className="space-y-1.5">
-          <label htmlFor="timezone" className="block text-sm font-medium">Time zone</label>
+          <label htmlFor="timezone" className="block text-sm font-medium">{t("entry.welcome.timezone")}</label>
           <input
             id="timezone"
             name="timezone"
@@ -71,7 +84,7 @@ export default async function WelcomePage() {
               <option key={zone} value={zone} />
             ))}
           </datalist>
-          <p className="text-xs text-[var(--wh-foreground-subtle)]">Used for routines, reminders and quiet hours.</p>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("entry.welcome.timezoneHint")}</p>
         </div>
       </AuthForm>
     </AuthLayout>

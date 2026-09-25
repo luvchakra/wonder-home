@@ -6,6 +6,7 @@ import { helpersHi } from "./areas/helpers/hi";
 import { homesendHi } from "./areas/homesend/hi";
 import { settingsHi } from "./areas/settings/hi";
 import { householdHi } from "./areas/household/hi";
+import { entryHi } from "./areas/entry/hi";
 
 export const hi: Catalog = {
   "common.next": "आगे",
@@ -719,4 +720,5 @@ export const hi: Catalog = {
   ...homesendHi,
   ...settingsHi,
   ...householdHi,
+  ...entryHi,
 };

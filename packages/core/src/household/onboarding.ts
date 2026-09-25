@@ -638,19 +638,21 @@ export function questionToken(question: GuidedQuestion): string {
 // The final checklist
 // ---------------------------------------------------------------------------
 
-export type ChecklistItem = { label: string; done: boolean };
+export type ChecklistKey = "family" | "responsibilities" | "groceries" | "school" | "pets" | "help";
+/** `key` names the line, so a screen can say it in the reader's language; `label` is the English. */
+export type ChecklistItem = { key: ChecklistKey; label: string; done: boolean };
 
 /** Only what is really set up is ticked — a suggestion nobody accepted is not "added". */
 export function completionChecklist(summary: OnboardingSummary): ChecklistItem[] {
   const row = (area: ReadinessArea) => summary.rows.find((entry) => entry.area === area);
   const items: ChecklistItem[] = [];
-  const add = (area: ReadinessArea, label: string, doneWhen: (entry: ReadinessRow) => boolean) => {
+  const add = (area: ReadinessArea & ChecklistKey, label: string, doneWhen: (entry: ReadinessRow) => boolean) => {
     const entry = row(area);
-    if (entry) items.push({ label, done: doneWhen(entry) });
+    if (entry) items.push({ key: area, label, done: doneWhen(entry) });
   };
   add("family", "Family set up", (entry) => entry.state === "ready");
   const anyAccepted = summary.rows.some((entry) => ["home", "kids", "finance"].includes(entry.area) && entry.done > 0);
-  items.push({ label: "Responsibilities added", done: anyAccepted });
+  items.push({ key: "responsibilities", label: "Responsibilities added", done: anyAccepted });
   add("groceries", "Grocery routine ready", (entry) => entry.done > 0);
   add("school", "Kids and school set up", (entry) => entry.state === "ready");
   add("pets", "Pet care added", (entry) => entry.state === "ready");

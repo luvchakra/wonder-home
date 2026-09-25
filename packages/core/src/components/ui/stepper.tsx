@@ -22,6 +22,8 @@ export function Stepper({
   defaultValue = 0,
   icon,
   noun,
+  fewerLabel,
+  moreLabel,
   className,
 }: {
   label: string;
@@ -33,6 +35,9 @@ export function Stepper({
   icon?: ReactNode;
   /** The plural for the button labels: "children" → "Fewer children". Defaults to the label, lowercased. */
   noun?: string;
+  /** The buttons' own words in the reader's language (story 22-004) — a noun cannot be slotted into every language's sentence. */
+  fewerLabel?: string;
+  moreLabel?: string;
   className?: string;
 }) {
   const id = useId();
@@ -48,7 +53,7 @@ export function Stepper({
       <div role="group" aria-labelledby={id} className="flex shrink-0 items-center gap-2">
         <button
           type="button"
-          aria-label={`Fewer ${things}`}
+          aria-label={fewerLabel ?? `Fewer ${things}`}
           disabled={value <= min}
           onClick={() => setValue((current) => Math.max(min, current - 1))}
           className="grid size-10 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)] transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-40"
@@ -60,7 +65,7 @@ export function Stepper({
         </output>
         <button
           type="button"
-          aria-label={`More ${things}`}
+          aria-label={moreLabel ?? `More ${things}`}
           disabled={value >= max}
           onClick={() => setValue((current) => Math.min(max, current + 1))}
           className="grid size-10 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-primary)] transition-colors hover:bg-[var(--wh-primary-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-40"

@@ -3,6 +3,7 @@ import { PasswordField } from "@wonderhome/core/ui/password-field";
 import { resetPassword } from "../(auth)/actions";
 import { AuthForm } from "../_components/auth-form";
 import { AuthLayout } from "../_components/auth-layout";
+import { visitorLocale } from "../_lib/entry-locale";
 
 export const metadata = { title: "Choose a new password" };
 export const dynamic = "force-dynamic";
@@ -16,34 +17,44 @@ export const dynamic = "force-dynamic";
  * the proof. Without that session Supabase refuses the change, so an expired
  * or already-used link cannot set anything — and the form says so plainly
  * rather than failing silently.
+ *
+ * The recovery session has no household behind it yet, so the language is
+ * the browser's, as on every signed-out screen.
  */
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const locale = await visitorLocale();
+  const { t } = locale;
+  const toggle = { showLabel: t("entry.field.showPassword"), hideLabel: t("entry.field.hidePassword") };
+
   return (
     <AuthLayout
-      title="Choose a new password"
-      lede="Make it something you'll remember. At least 8 characters."
-      footer={{ prompt: "Link expired or already used?", href: "/forgot-password", label: "Request a new one" }}
-      accent="Almost there."
+      locale={locale}
+      title={t("entry.reset.title")}
+      lede={t("entry.reset.lede")}
+      footer={{ prompt: t("entry.reset.footerPrompt"), href: "/forgot-password", label: t("entry.reset.footerLink") }}
+      accent={t("entry.reset.accent")}
       promise={{
-        headline: "One last step.",
-        points: ["Only this link could get here", "It works once", "Then you're straight back in"],
+        headline: t("entry.reset.headline"),
+        points: [t("entry.reset.point1"), t("entry.reset.point2"), t("entry.reset.point3")],
       }}
     >
-      <AuthForm action={resetPassword} submitLabel="Save new password" pendingLabel="Saving…">
+      <AuthForm action={resetPassword} submitLabel={t("entry.reset.submit")} pendingLabel={t("common.saving")}>
         <PasswordField
-          label="New password"
+          label={t("entry.reset.newPassword")}
           name="password"
           autoComplete="new-password"
           required
           minLength={8}
-          hint="At least 8 characters."
+          hint={t("entry.field.passwordHint")}
+          {...toggle}
         />
         <PasswordField
-          label="Confirm new password"
+          label={t("entry.reset.confirm")}
           name="confirm"
           autoComplete="new-password"
           required
           minLength={8}
+          {...toggle}
         />
       </AuthForm>
     </AuthLayout>

@@ -35,6 +35,7 @@ export function ComboboxField({
   newValuePlaceholder,
   hint,
   emptyLabel,
+  optionLabels,
   className,
 }: {
   label: string;
@@ -50,6 +51,12 @@ export function ComboboxField({
   hint?: string;
   /** For an optional field: a choosable first option meaning "no answer", submitted as an empty value. */
   emptyLabel?: string;
+  /**
+   * The words shown for an option, when they differ from the value submitted
+   * (story 22-004): "Dad" is stored as "Dad" whatever language picked it. An
+   * option with no entry here is shown as itself.
+   */
+  optionLabels?: Readonly<Record<string, string>>;
   className?: string;
 }) {
   const selectId = useId();
@@ -114,7 +121,7 @@ export function ComboboxField({
           ) : null}
           {options.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {optionLabels?.[option] ?? option}
             </option>
           ))}
           <option value={ADD_NEW}>+ {addNewLabel}</option>

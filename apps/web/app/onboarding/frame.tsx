@@ -3,10 +3,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { OnboardingStep } from "@wonderhome/core/household/onboarding";
+import { DocumentLocale } from "@wonderhome/core/shell/document-locale";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 
 import { deferAction } from "../(auth)/onboarding-actions";
+import type { EntryLocale } from "../_lib/entry-locale";
 import { OnboardingForm } from "./onboarding-form";
 
 /**
@@ -21,6 +23,9 @@ export function OnboardingFrame({
   total = 4,
   stepLabel,
   backLabel = "Back",
+  closeLabel = "Finish setup later",
+  progressLabel = "Setup progress",
+  locale,
   back,
   close = false,
   title,
@@ -36,6 +41,11 @@ export function OnboardingFrame({
   /** "Step 2 of 6" in the reader's language; English when not given. */
   stepLabel?: string;
   backLabel?: string;
+  /** The close button's and the progress bar's names, in the reader's language; English when not given. */
+  closeLabel?: string;
+  progressLabel?: string;
+  /** Keeps `<html lang dir>` true to the reader — setup has no app shell to do it. */
+  locale?: { language: string; dir: "ltr" | "rtl" };
   back?: string | null;
   close?: boolean;
   title?: ReactNode;
@@ -46,6 +56,7 @@ export function OnboardingFrame({
 }) {
   return (
     <main className="relative min-h-dvh overflow-x-clip bg-[var(--wh-background)]">
+      {locale ? <DocumentLocale language={locale.language} dir={locale.dir} /> : null}
       <LeafDecor corner="top-right" size={180} opacity={0.2} />
       <LeafDecor corner="bottom-left" size={160} opacity={0.16} />
       <div className="relative mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-4 pb-10 sm:pt-8">
@@ -66,7 +77,7 @@ export function OnboardingFrame({
               <p className="text-xs font-medium text-[var(--wh-foreground-muted)]">{stepLabel ?? `Step ${progress} of ${total}`}</p>
               <div
                 role="progressbar"
-                aria-label="Setup progress"
+                aria-label={progressLabel}
                 aria-valuemin={0}
                 aria-valuemax={total}
                 aria-valuenow={progress}
@@ -83,7 +94,7 @@ export function OnboardingFrame({
               <input type="hidden" name="step" value={step} />
               <button
                 type="submit"
-                aria-label="Finish setup later"
+                aria-label={closeLabel}
                 className="grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
               >
                 <X className="size-5" aria-hidden />
@@ -111,6 +122,21 @@ export function OnboardingFrame({
       </div>
     </main>
   );
+}
+
+/** The reader's language for the setup screens (story 22-004), from their session. */
+export type SetupWords = EntryLocale;
+
+/** The frame's own words for one screen of family setup — its four steps, or none. */
+export function setupChrome(words: SetupWords, progress?: number) {
+  const { t } = words;
+  return {
+    locale: words,
+    backLabel: t("common.back"),
+    closeLabel: t("setupWizard.close"),
+    progressLabel: t("setupWizard.progress"),
+    stepLabel: progress ? t("l10n.step", { current: progress, total: 4 }) : undefined,
+  };
 }
 
 /** The quiet secondary action under a screen's main button. */

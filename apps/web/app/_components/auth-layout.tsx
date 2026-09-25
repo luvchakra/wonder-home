@@ -2,11 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Wordmark } from "@wonderhome/core/ui/brand";
+import { DocumentLocale } from "@wonderhome/core/shell/document-locale";
 import { Card } from "@wonderhome/core/ui/card";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
+
+import type { EntryLocale } from "../_lib/entry-locale";
 
 export type AuthLayoutProps = {
   title: string;
@@ -19,6 +22,8 @@ export type AuthLayoutProps = {
   promise?: { headline: string; points: string[] };
   /** The handwritten line under the form. One per screen, decoration only. */
   accent?: string;
+  /** The reader's language (story 22-004): the frame's own words, and `<html lang dir>`. English when not given. */
+  locale?: EntryLocale;
 };
 
 /**
@@ -26,14 +31,18 @@ export type AuthLayoutProps = {
  * illustrated promise beside it (mockup sheet F, screen 1). Calm, warm, and
  * the same design language as the product behind it.
  */
-export function AuthLayout({ title, lede, children, footer, step, promise, accent }: AuthLayoutProps) {
+export function AuthLayout({ title, lede, children, footer, step, promise, accent, locale }: AuthLayoutProps) {
+  const t = locale?.t;
   const pitch = promise ?? {
-    headline: "A calmer home is possible.",
-    points: ["Less mental load", "More family time", "A brighter tomorrow"],
+    headline: t ? t("entry.layout.pitch.headline") : "A calmer home is possible.",
+    points: t
+      ? [t("entry.layout.pitch.point1"), t("entry.layout.pitch.point2"), t("entry.layout.pitch.point3")]
+      : ["Less mental load", "More family time", "A brighter tomorrow"],
   };
 
   return (
     <main className="relative min-h-dvh overflow-x-clip lg:grid lg:grid-cols-[1.1fr_1fr]">
+      {locale ? <DocumentLocale language={locale.language} dir={locale.dir} /> : null}
       <aside
         aria-hidden
         className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12"
@@ -55,7 +64,7 @@ export function AuthLayout({ title, lede, children, footer, step, promise, accen
         <LeafDecor corner="bottom-left" size={200} opacity={0.3} />
         <HomeIllustration className="pointer-events-none absolute -right-16 -bottom-10 w-[34rem] opacity-95" />
         <ScriptAccent tone="people" size="md" heart className="relative z-10">
-          Home runs smoother. Together.
+          {t ? t("entry.script.together") : "Home runs smoother. Together."}
         </ScriptAccent>
       </aside>
 
@@ -65,7 +74,7 @@ export function AuthLayout({ title, lede, children, footer, step, promise, accen
         <LeafDecor corner="top-right" size={170} opacity={0.24} className="lg:hidden" />
 
         <div className="lg:hidden">
-          <Link href="/" aria-label="WonderHome home" className="inline-block">
+          <Link href="/" aria-label={t ? t("entry.layout.homeLink") : "WonderHome home"} className="inline-block">
             <Wordmark tagline size={32} />
           </Link>
         </div>
@@ -73,7 +82,9 @@ export function AuthLayout({ title, lede, children, footer, step, promise, accen
         <header className="space-y-1.5">
           {step ? (
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold text-[var(--wh-primary)]">Step {step.current} of {step.total}</p>
+              <p className="text-xs font-semibold text-[var(--wh-primary)]">
+                {t ? t("l10n.step", { current: step.current, total: step.total }) : `Step ${step.current} of ${step.total}`}
+              </p>
               <div className="flex gap-1.5" aria-hidden>
                 {Array.from({ length: step.total }, (_, index) => (
                   <span key={index} className={`h-1.5 flex-1 rounded-full ${index < step.current ? "bg-[var(--wh-primary)]" : "bg-[var(--wh-border)]"}`} />

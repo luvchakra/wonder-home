@@ -6,6 +6,7 @@ import { helpersMr } from "./areas/helpers/mr";
 import { homesendMr } from "./areas/homesend/mr";
 import { settingsMr } from "./areas/settings/mr";
 import { householdMr } from "./areas/household/mr";
+import { entryMr } from "./areas/entry/mr";
 
 export const mr: Catalog = {
   "common.next": "पुढे",
@@ -719,4 +720,5 @@ export const mr: Catalog = {
   ...homesendMr,
   ...settingsMr,
   ...householdMr,
+  ...entryMr,
 };

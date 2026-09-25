@@ -12,6 +12,9 @@ export type PasswordFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "ty
   error?: string;
   /** The link that sits beside the label, for "Forgot password?". */
   action?: ReactNode;
+  /** The toggle's two states in the reader's language (story 22-004); English when not given. */
+  showLabel?: string;
+  hideLabel?: string;
 };
 
 /**
@@ -33,6 +36,8 @@ export function PasswordField({
   error,
   action,
   className,
+  showLabel = "Show password",
+  hideLabel = "Hide password",
   ...props
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
@@ -72,7 +77,7 @@ export function PasswordField({
           aria-controls={name}
           // The icon alone would leave a screen reader guessing, and "show"
           // and "hide" are the two things worth announcing here.
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={visible ? hideLabel : showLabel}
           className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-[var(--wh-radius-sm)] text-[var(--wh-foreground-subtle)] transition-colors hover:text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--wh-primary)]"
         >
           {visible ? <EyeOff aria-hidden className="size-5" /> : <Eye aria-hidden className="size-5" />}

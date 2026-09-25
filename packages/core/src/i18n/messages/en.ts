@@ -15,6 +15,7 @@ import { helpersEn } from "./areas/helpers/en";
 import { homesendEn } from "./areas/homesend/en";
 import { settingsEn } from "./areas/settings/en";
 import { householdEn } from "./areas/household/en";
+import { entryEn } from "./areas/entry/en";
 
 // Each area's words are spread in at the end (story 22-004).
 export const en = {
@@ -729,6 +730,7 @@ export const en = {
   ...homesendEn,
   ...settingsEn,
   ...householdEn,
+  ...entryEn,
 } as const;
 
 export type MessageKey = keyof typeof en;

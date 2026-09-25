@@ -53,37 +53,39 @@ export default async function OnboardingPage({
   const snapshot = await loadOnboardingSnapshot(supabase, membership.household, state);
   const composition = snapshot.state.composition;
   const firstName = membership.displayName.split(/\s+/)[0] ?? membership.displayName;
+  // Every word on these screens is in the Admin's own language (story 22-004).
+  const words = { language: session.locale.preferences.language, dir: session.locale.preferences.dir, t: session.locale.t };
 
   switch (step) {
     case "welcome":
-      return <WelcomeScreen firstName={firstName} />;
+      return <WelcomeScreen firstName={firstName} words={words} />;
     case "basics":
-      return <BasicsScreen snapshot={snapshot} />;
+      return <BasicsScreen snapshot={snapshot} words={words} />;
     case "overview":
-      return <OverviewScreen snapshot={snapshot} />;
+      return <OverviewScreen snapshot={snapshot} words={words} />;
     case "adults":
-      return <AdultsScreen snapshot={snapshot} selfId={membership.memberId} backTo={previousStep("adults", composition)} />;
+      return <AdultsScreen snapshot={snapshot} selfId={membership.memberId} backTo={previousStep("adults", composition)} words={words} />;
     case "children":
-      return <ChildrenScreen snapshot={snapshot} />;
+      return <ChildrenScreen snapshot={snapshot} words={words} />;
     case "pets":
-      return <PetsAndHelpScreen snapshot={snapshot} backTo={previousStep("pets", composition)} />;
+      return <PetsAndHelpScreen snapshot={snapshot} backTo={previousStep("pets", composition)} words={words} />;
     case "suggestions":
-      return <SuggestionsScreen snapshot={snapshot} />;
+      return <SuggestionsScreen snapshot={snapshot} words={words} />;
     case "review": {
       const category = (SUGGESTION_CATEGORIES as readonly string[]).includes(params.category ?? "")
         ? (params.category as SuggestionCategory)
         : (snapshot.facts.pending[0]?.category ?? "home");
-      return <ReviewScreen snapshot={snapshot} category={category} />;
+      return <ReviewScreen snapshot={snapshot} category={category} words={words} />;
     }
     case "summary":
-      return <SummaryScreen snapshot={snapshot} hasQuestions={guidedQuestions(snapshot.facts).length > 0} />;
+      return <SummaryScreen snapshot={snapshot} hasQuestions={guidedQuestions(snapshot.facts).length > 0} words={words} />;
     case "guided": {
       // Set aside for this visit only: "Maybe later" never becomes "never".
       const skipped = (params.skip ?? "").split(",").filter((token) => /^[a-z_]{1,40}$/.test(token));
       const question = guidedQuestions(snapshot.facts, skipped)[0] ?? null;
-      return <GuidedScreen snapshot={snapshot} question={question} skipped={skipped} skipToken={question ? questionToken(question) : null} />;
+      return <GuidedScreen snapshot={snapshot} question={question} skipped={skipped} skipToken={question ? questionToken(question) : null} words={words} />;
     }
     case "done":
-      return <DoneScreen snapshot={snapshot} />;
+      return <DoneScreen snapshot={snapshot} words={words} />;
   }
 }

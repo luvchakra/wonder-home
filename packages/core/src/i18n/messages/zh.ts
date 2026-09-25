@@ -6,6 +6,7 @@ import { helpersZh } from "./areas/helpers/zh";
 import { homesendZh } from "./areas/homesend/zh";
 import { settingsZh } from "./areas/settings/zh";
 import { householdZh } from "./areas/household/zh";
+import { entryZh } from "./areas/entry/zh";
 
 export const zh: Catalog = {
   "common.next": "下一步",
@@ -719,4 +720,5 @@ export const zh: Catalog = {
   ...homesendZh,
   ...settingsZh,
   ...householdZh,
+  ...entryZh,
 };

@@ -6,6 +6,7 @@ import { helpersFr } from "./areas/helpers/fr";
 import { homesendFr } from "./areas/homesend/fr";
 import { settingsFr } from "./areas/settings/fr";
 import { householdFr } from "./areas/household/fr";
+import { entryFr } from "./areas/entry/fr";
 
 export const fr: Catalog = {
   "common.next": "Suivant",
@@ -719,4 +720,5 @@ export const fr: Catalog = {
   ...homesendFr,
   ...settingsFr,
   ...householdFr,
+  ...entryFr,
 };
