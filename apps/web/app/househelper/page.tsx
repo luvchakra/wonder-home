@@ -42,6 +42,7 @@ import {
   BackupServiceRowControls,
 } from "../_components/backup-service-forms";
 import { MemberDetail } from "../_components/member-detail";
+import { backupServiceFormLabels, helperFormLabels } from "../_lib/helper-form-labels";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Househelper" };
@@ -74,8 +75,6 @@ type ResponsibilityRow = {
   playbook_items: { name: string } | { name: string }[] | null;
 };
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 /**
  * Househelper (requirements §17): coordinate service without surveillance.
  *
@@ -93,7 +92,8 @@ export default async function HousehelperPage({
     searchParams,
     requireSession("/househelper"),
   ]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const now = new Date();
@@ -104,8 +104,8 @@ export default async function HousehelperPage({
     viewer,
     secondary,
     pathname: "/househelper",
-    back: { href: "/more", label: "Back" },
-    title: "Househelper",
+    back: { href: "/more", label: t("common.back") },
+    title: t("nav.item.househelper"),
   };
 
   if (view.tone === "child") {
@@ -113,8 +113,8 @@ export default async function HousehelperPage({
       <AppShell {...shell}>
         <EmptyState
           icon={ShieldOff}
-          title="Not available to you"
-          description="Househelper arrangements are for the adults in the household."
+          title={t("helpers.notAvailable.title")}
+          description={t("helpers.notAvailable.body")}
         />
       </AppShell>
     );
@@ -231,16 +231,46 @@ export default async function HousehelperPage({
     );
   };
 
+  // Words in the viewer's language (story 22-004). Names, notes and reasons
+  // are the household's own and are shown exactly as they were typed.
+  const formLabels = helperFormLabels(t);
+  const serviceLabels = backupServiceFormLabels(t);
+  // Sunday-first: the index is the stored day of the week.
+  const dayInitials = [
+    t("helpers.day.initial.0"),
+    t("helpers.day.initial.1"),
+    t("helpers.day.initial.2"),
+    t("helpers.day.initial.3"),
+    t("helpers.day.initial.4"),
+    t("helpers.day.initial.5"),
+    t("helpers.day.initial.6"),
+  ];
+  const dayShort = [
+    t("helpers.day.short.0"),
+    t("helpers.day.short.1"),
+    t("helpers.day.short.2"),
+    t("helpers.day.short.3"),
+    t("helpers.day.short.4"),
+    t("helpers.day.short.5"),
+    t("helpers.day.short.6"),
+  ];
+  const engagementLabel = (engagement: ProfileRow["engagement"]) =>
+    engagement === "occasional"
+      ? t("helpers.engagement.occasional")
+      : engagement === "service"
+        ? t("helpers.engagement.service")
+        : t("helpers.engagement.regular");
+
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
           <div className="hidden lg:block">
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">
-              Househelper
+              {t("nav.item.househelper")}
             </h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">
-              Support that keeps home running — coordinated, never surveilled.
+              {t("helpers.lede")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -249,32 +279,33 @@ export default async function HousehelperPage({
                 second, different person (a cook alongside a cleaner). */}
             {view.permissions.includes("members.manage") ? (
               <PillLink href="/household/members" tone="quiet">
-                <UserPlus aria-hidden className="size-3.5" /> Add helper
+                <UserPlus aria-hidden className="size-3.5" /> {t("helpers.addHelper")}
               </PillLink>
             ) : null}
             {helpers.length > 0 ? (
               <RecordLeaveButton
                 householdId={householdId}
                 helpers={helperOptions}
+                labels={formLabels}
               />
             ) : null}
           </div>
         </header>
 
         <SegmentedControl
-          label="Househelper view"
+          label={t("helpers.view")}
           active={active}
           segments={[
-            { key: "overview", label: "Overview", href: "/househelper" },
+            { key: "overview", label: t("helpers.tab.overview"), href: "/househelper" },
             {
               key: "schedule",
-              label: "Schedule",
+              label: t("helpers.tab.schedule"),
               href: "/househelper?tab=schedule",
               count: exceptions.length,
             },
             {
               key: "tasks",
-              label: "Tasks",
+              label: t("helpers.tab.tasks"),
               href: "/househelper?tab=tasks",
               count: responsibilities.filter(
                 (r) =>
@@ -286,8 +317,8 @@ export default async function HousehelperPage({
 
         {membersFailed ? (
           <ErrorState
-            title="Couldn't load your househelp"
-            description="Nothing has been changed. Try again in a moment."
+            title={t("helpers.error.title")}
+            description={t("helpers.error.body")}
             retryHref="/househelper"
           />
         ) : active === "overview" && helpers.length === 0 ? (
@@ -297,14 +328,14 @@ export default async function HousehelperPage({
           <EmptyState
             icon={HandHeart}
             tone="people"
-            title="No househelper yet"
-            description="Add the people who help at home. WonderHome tracks their days and who covers when they are away — nothing more."
+            title={t("helpers.empty.title")}
+            description={t("helpers.empty.body")}
           />
         ) : null}
 
         {active === "overview" && coverage.length > 0 ? (
           <section>
-            <SectionHeader title="While they're away" count={coverage.filter((item) => item.state !== "arranged").length} />
+            <SectionHeader title={t("helpers.away.title")} count={coverage.filter((item) => item.state !== "arranged").length} />
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {coverage.map((item) => (
@@ -313,16 +344,20 @@ export default async function HousehelperPage({
                     icon={LifeBuoy}
                     tone="people"
                     title={item.outcomeName}
-                    meta={`${nameOf(item.helperMemberId) ?? "Your helper"} is away ${formatDate(timezone, new Date(`${item.date}T12:00:00Z`))} — ${
+                    meta={t(
                       item.state === "arranged"
-                        ? "cover is arranged"
+                        ? "helpers.away.arranged"
                         : item.state === "service_available"
-                          ? "nobody at home covers it"
-                          : "nobody covers it yet"
-                    }`}
+                          ? "helpers.away.serviceAvailable"
+                          : "helpers.away.uncovered",
+                      {
+                        helper: nameOf(item.helperMemberId) ?? t("helpers.yourHelper"),
+                        date: formatDate(timezone, new Date(`${item.date}T12:00:00Z`)),
+                      },
+                    )}
                     action={
                       item.state === "arranged" ? (
-                        <Badge tone="handled">Arranged</Badge>
+                        <Badge tone="handled">{t("helpers.arranged")}</Badge>
                       ) : item.state === "service_available" ? (
                         <ArrangeCoverButton
                           householdId={householdId}
@@ -333,10 +368,11 @@ export default async function HousehelperPage({
                             id: service.id,
                             name: service.name,
                           }))}
+                          labels={serviceLabels}
                         />
                       ) : (
                         <PillLink href="/househelper?tab=tasks" tone="soft">
-                          Find cover
+                          {t("helpers.findCover")}
                         </PillLink>
                       )
                     }
@@ -383,21 +419,21 @@ export default async function HousehelperPage({
                           </span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                             {engagements.length === 0
-                              ? "Househelper"
+                              ? t("role.househelper")
                               : engagements.length === 1
-                                ? `${profile!.engagement} help`
-                                : `${engagements.length} engagements`}
+                                ? engagementLabel(profile!.engagement)
+                                : t("helpers.engagements.count", { count: engagements.length })}
                             {engagements.length === 1 && profile?.started_on
-                              ? ` · since ${formatDate(timezone, new Date(profile.started_on))}`
+                              ? ` · ${t("helpers.sinceInline", { date: formatDate(timezone, new Date(profile.started_on)) })}`
                               : ""}
                           </span>
                         </span>
                         <Badge tone={expected ? "handled" : "neutral"}>
                           {expected
-                            ? "Expected today"
+                            ? t("helpers.expectedToday")
                             : todayException
-                              ? "Away today"
-                              : "Not today"}
+                              ? t("helpers.awayToday")
+                              : t("helpers.notToday")}
                         </Badge>
                       </>
                     }
@@ -418,20 +454,20 @@ export default async function HousehelperPage({
                         currentMemberId={membership.memberId}
                         statusLabel={
                           helper.status === "invited"
-                            ? "Invited, hasn't joined yet"
+                            ? t("family.status.invitedLong")
                             : helper.status === "inactive"
-                              ? "Inactive"
+                              ? t("family.status.inactive")
                               : null
                         }
                       />
 
                       <div>
                         <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                          Engagements
+                          {t("helpers.section.engagements")}
                         </p>
                         {engagements.length === 0 ? (
                           <p className="text-sm text-[var(--wh-foreground-muted)]">
-                            No arrangement recorded yet.
+                            {t("helpers.noArrangement")}
                           </p>
                         ) : (
                           <ul className="space-y-2">
@@ -441,13 +477,13 @@ export default async function HousehelperPage({
                                 className="flex items-start justify-between gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2"
                               >
                                 <span className="min-w-0 flex-1">
-                                  <span className="block text-sm font-medium capitalize">
-                                    {engagement.engagement} help
+                                  <span className="block text-sm font-medium">
+                                    {engagementLabel(engagement.engagement)}
                                   </span>
                                   <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                                     {engagement.started_on
-                                      ? `Since ${formatDate(timezone, new Date(engagement.started_on))}`
-                                      : "No start date recorded"}
+                                      ? t("helpers.since", { date: formatDate(timezone, new Date(engagement.started_on)) })
+                                      : t("helpers.noStartDate")}
                                     {engagement.notes ? ` · ${engagement.notes}` : ""}
                                   </span>
                                 </span>
@@ -461,6 +497,7 @@ export default async function HousehelperPage({
                                       startedOn: engagement.started_on,
                                       notes: engagement.notes,
                                     }}
+                                    labels={formLabels}
                                   />
                                 ) : null}
                               </li>
@@ -472,16 +509,17 @@ export default async function HousehelperPage({
                             <AddHelperEngagementButton
                               householdId={householdId}
                               helper={{ id: helper.id, displayName: helper.displayName }}
+                              labels={formLabels}
                             />
                           </div>
                         ) : null}
                       </div>
                       <div>
                         <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                          Usual days
+                          {t("helpers.section.usualDays")}
                         </p>
                         <ul className="flex gap-1.5">
-                          {DAYS.map((day, index) => {
+                          {dayInitials.map((day, index) => {
                             const on = windows.some(
                               (w) =>
                                 w.member_id === helper.id &&
@@ -489,10 +527,10 @@ export default async function HousehelperPage({
                             );
                             return (
                               <li
-                                key={day}
+                                key={index}
                                 className={`grid size-9 place-items-center rounded-full text-[0.6875rem] font-semibold ${on ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]" : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-subtle)]"}`}
                               >
-                                {day.slice(0, 2)}
+                                {day}
                               </li>
                             );
                           })}
@@ -500,11 +538,11 @@ export default async function HousehelperPage({
                       </div>
                       <div>
                         <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                          Looks after
+                          {t("helpers.section.looksAfter")}
                         </p>
                         {owned.length === 0 ? (
                           <p className="text-sm text-[var(--wh-foreground-muted)]">
-                            No responsibilities assigned yet.
+                            {t("helpers.noResponsibilities")}
                           </p>
                         ) : (
                           <ul className="flex flex-wrap gap-1.5">
@@ -521,12 +559,14 @@ export default async function HousehelperPage({
                       </div>
                       {nextAbsence ? (
                         <p className="flex items-center gap-2 text-xs text-[var(--wh-foreground-muted)]">
-                          <CalendarOff aria-hidden className="size-3.5" /> Away{" "}
-                          {formatDate(
-                            timezone,
-                            new Date(nextAbsence.on_date),
-                            "long",
-                          )}
+                          <CalendarOff aria-hidden className="size-3.5" />{" "}
+                          {t("helpers.awayOn", {
+                            date: formatDate(
+                              timezone,
+                              new Date(nextAbsence.on_date),
+                              "long",
+                            ),
+                          })}
                           {nextAbsence.reason ? ` — ${nextAbsence.reason}` : ""}
                         </p>
                       ) : null}
@@ -545,6 +585,7 @@ export default async function HousehelperPage({
                                 startTime: w.start_time,
                                 endTime: w.end_time,
                               }))}
+                            labels={formLabels}
                           />
                         </div>
                       ) : null}
@@ -560,21 +601,22 @@ export default async function HousehelperPage({
           <>
             <section>
               <SectionHeader
-                title="Leave and changes"
+                title={t("helpers.leave.title")}
                 count={exceptions.length}
               />
               {exceptions.length === 0 ? (
                 <EmptyState
                   icon={CalendarDays}
                   tone="people"
-                  title="No changes coming up"
-                  description="Days off and extra days go here. Record one and WonderHome re-checks what they normally handle that day."
+                  title={t("helpers.leave.empty.title")}
+                  description={t("helpers.leave.empty.body")}
                   action={
                     helpers.length > 0 ? (
                       <RecordLeaveButton
                         householdId={householdId}
                         helpers={helperOptions}
                         tone="primary"
+                        labels={formLabels}
                       />
                     ) : null
                   }
@@ -587,16 +629,16 @@ export default async function HousehelperPage({
                         key={`${exception.member_id}-${exception.on_date}`}
                         icon={exception.available ? CalendarDays : CalendarOff}
                         tone="people"
-                        title={`${nameOf(exception.member_id) ?? "Helper"} · ${formatDate(timezone, new Date(exception.on_date), "long")}`}
+                        title={`${nameOf(exception.member_id) ?? t("helpers.helper")} · ${formatDate(timezone, new Date(exception.on_date), "long")}`}
                         meta={
                           exception.reason ??
-                          (exception.available ? "Extra day" : "Away")
+                          (exception.available ? t("helpers.extraDay") : t("helpers.away"))
                         }
                         action={
                           <Badge
                             tone={exception.available ? "handled" : "attention"}
                           >
-                            {exception.available ? "Extra" : "Away"}
+                            {exception.available ? t("helpers.extra") : t("helpers.away")}
                           </Badge>
                         }
                       />
@@ -606,7 +648,7 @@ export default async function HousehelperPage({
               )}
             </section>
             <section>
-              <SectionHeader title="Weekly pattern" />
+              <SectionHeader title={t("helpers.pattern.title")} />
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {helpers.map((helper) => {
@@ -621,11 +663,11 @@ export default async function HousehelperPage({
                         title={helper.displayName}
                         meta={
                           own.length === 0
-                            ? "No pattern recorded yet"
+                            ? t("helpers.pattern.none")
                             : own
                                 .map(
                                   (w) =>
-                                    `${DAYS[w.day_of_week]} ${w.start_time.slice(0, 5)}–${w.end_time.slice(0, 5)}`,
+                                    `${dayShort[w.day_of_week]} ${w.start_time.slice(0, 5)}–${w.end_time.slice(0, 5)}`,
                                 )
                                 .join(" · ")
                         }
@@ -642,6 +684,7 @@ export default async function HousehelperPage({
                                 startTime: w.start_time,
                                 endTime: w.end_time,
                               }))}
+                              labels={formLabels}
                             />
                           ) : undefined
                         }
@@ -662,9 +705,7 @@ export default async function HousehelperPage({
                 className="mt-0.5 size-5 shrink-0 text-[var(--wh-primary)]"
               />
               <p className="text-sm text-[var(--wh-foreground-muted)]">
-                These are outcomes, not chores to tick. Normal work needs no
-                update from anyone; only a change — leave, something broken, an
-                exception — needs a word.
+                {t("helpers.tasks.note")}
               </p>
             </Card>
             {responsibilities.filter(
@@ -672,11 +713,11 @@ export default async function HousehelperPage({
             ).length === 0 ? (
               <EmptyState
                 icon={ListChecks}
-                title="Nothing assigned yet"
-                description="Assign outcomes to your helper under Responsibilities, with a backup for the days they are away."
+                title={t("helpers.tasks.empty.title")}
+                description={t("helpers.tasks.empty.body")}
                 action={
                   <PillLink href="/household/responsibilities">
-                    Responsibilities
+                    {t("nav.item.responsibilities")}
                   </PillLink>
                 }
               />
@@ -695,14 +736,23 @@ export default async function HousehelperPage({
                         icon={ListChecks}
                         tone="primary"
                         title={nameOfOutcome(r)}
-                        meta={`${nameOf(r.primary_member_id) ?? "Helper"}${r.backup_member_id ? ` · backup ${nameOf(r.backup_member_id)}` : " · no backup yet"}`}
+                        meta={
+                          r.backup_member_id
+                            ? t("helpers.tasks.withBackup", {
+                                helper: nameOf(r.primary_member_id) ?? t("helpers.helper"),
+                                backup: nameOf(r.backup_member_id) ?? "",
+                              })
+                            : t("helpers.tasks.noBackup", {
+                                helper: nameOf(r.primary_member_id) ?? t("helpers.helper"),
+                              })
+                        }
                         action={
                           r.backup_member_id ? undefined : (
                             <PillLink
                               href="/household/responsibilities"
                               tone="soft"
                             >
-                              Add backup
+                              {t("helpers.tasks.addBackup")}
                             </PillLink>
                           )
                         }
@@ -715,20 +765,18 @@ export default async function HousehelperPage({
             {admin ? (
               <section>
                 <SectionHeader
-                  title="Backup services"
+                  title={t("helpers.backup.title")}
                   action={
                     <AddBackupServiceButton
                       householdId={householdId}
                       outcomes={helperOutcomes}
+                      labels={serviceLabels}
                     />
                   }
                 />
                 {backupServices.length === 0 ? (
                   <p className="text-sm text-[var(--wh-foreground-muted)]">
-                    Someone outside the household you can call when your
-                    helper is away and nobody at home covers it — a cleaning
-                    service, a cook who fills in. WonderHome suggests them for
-                    exactly the days they&apos;re needed.
+                    {t("helpers.backup.empty")}
                   </p>
                 ) : (
                   <Card className="p-2">
@@ -740,17 +788,19 @@ export default async function HousehelperPage({
                           tone={service.active ? "people" : "neutral"}
                           title={service.name}
                           meta={[
-                            service.active ? null : "Retired",
+                            service.active ? null : t("helpers.backup.retired"),
                             service.contact,
                             service.covers.length === 0
-                              ? "covers nothing yet"
-                              : `covers ${service.covers
-                                  .map(
-                                    (key) =>
-                                      helperOutcomes.find((o) => o.key === key)
-                                        ?.name ?? key.replace(/[._]/g, " "),
-                                  )
-                                  .join(", ")}`,
+                              ? t("helpers.backup.coversNothing")
+                              : t("helpers.backup.covers", {
+                                  outcomes: service.covers
+                                    .map(
+                                      (key) =>
+                                        helperOutcomes.find((o) => o.key === key)
+                                          ?.name ?? key.replace(/[._]/g, " "),
+                                    )
+                                    .join(", "),
+                                }),
                           ]
                             .filter(Boolean)
                             .join(" · ")}
@@ -759,6 +809,7 @@ export default async function HousehelperPage({
                               householdId={householdId}
                               service={service}
                               outcomes={helperOutcomes}
+                              labels={serviceLabels}
                             />
                           }
                         />
@@ -771,7 +822,7 @@ export default async function HousehelperPage({
           </>
         ) : null}
 
-        <QuoteCard>Support that keeps home running.</QuoteCard>
+        <QuoteCard>{t("helpers.quote")}</QuoteCard>
       </div>
     </AppShell>
   );
