@@ -28,6 +28,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
 import { HomeSendSheet } from "../_components/home-send-sheet";
+import type { HomeSendReviewLabels } from "../_lib/homesend-labels";
 
 /**
  * The conversation itself.
@@ -84,6 +85,7 @@ export function Assistant({
   canAddChild = false,
   timeZone = "Asia/Kolkata",
   labels = ENGLISH_LABELS,
+  homeSendLabels,
 }: {
   householdId: string;
   memberName: string;
@@ -107,6 +109,8 @@ export function Assistant({
   timeZone?: string;
   /** The screen's own words in the viewer's language (story 22-004). */
   labels?: AssistantLabels;
+  /** The paperclip's HomeSend sheet in the viewer's language; English when not given. */
+  homeSendLabels?: HomeSendReviewLabels;
 }) {
   const errorWords = labels.error;
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
@@ -573,7 +577,7 @@ export function Assistant({
         </p>
       </div>
 
-      <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} onDocumentApplied={postDocumentReceipt} />
+      <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} onDocumentApplied={postDocumentReceipt} labels={homeSendLabels} />
     </div>
   );
 }

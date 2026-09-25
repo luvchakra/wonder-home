@@ -8,6 +8,9 @@ import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
 
 import { trackedItemsAction } from "../(auth)/home-send-actions";
+import { fillIn, type HomeSendReviewLabels } from "../_lib/homesend-labels";
+
+type ReceiptLabels = HomeSendReviewLabels["receipt"];
 
 const UNITS = ["piece", "kg", "g", "litre", "ml", "pack", "bottle", "box", "dozen"];
 const CURRENCIES = ["INR", "USD", "GBP", "EUR", "AED", "SGD"];
@@ -32,7 +35,7 @@ type Line = { key: number; name: string; quantity: string; unit: string; lineTot
  * tracked item, or left out. Lines can be corrected, added and removed
  * (rule 12) before anything is recorded; nothing here writes.
  */
-export function HomeSendReceiptFields({ householdId, prefill }: { householdId: string; prefill: ReceiptPrefill }) {
+export function HomeSendReceiptFields({ householdId, prefill, labels }: { householdId: string; prefill: ReceiptPrefill; labels: ReceiptLabels }) {
   const [tracked, setTracked] = useState<{ id: string; name: string }[] | null>(null);
   const [lines, setLines] = useState<Line[]>(() =>
     (prefill?.lines?.length ? prefill.lines : [{ name: "", quantity: null, unit: null, lineTotal: null }]).map((line, index) => ({
@@ -69,32 +72,35 @@ export function HomeSendReceiptFields({ householdId, prefill }: { householdId: s
 
   return (
     <>
-      <Field label="Shop (optional)" name="merchant" defaultValue={prefill?.merchant ?? ""} autoComplete="off" />
+      <Field label={labels.shop} name="merchant" defaultValue={prefill?.merchant ?? ""} autoComplete="off" />
       {/* A date and a currency need more than half a phone's width (rule 19): stacked until there is room. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Bought on" name="purchasedOn" type="date" required defaultValue={prefill?.documentDate ?? ""} />
+        <Field label={labels.boughtOn} name="purchasedOn" type="date" required defaultValue={prefill?.documentDate ?? ""} />
         <ComboboxField
-          label="Currency"
+          label={labels.currency}
           name="currency"
           options={Array.from(new Set([currency, ...CURRENCIES].filter((value): value is string => Boolean(value))))}
           defaultValue={currency ?? "INR"}
-          newValuePlaceholder="e.g. JPY"
+          newValuePlaceholder={labels.currencyPlaceholder}
+          addNewLabel={labels.addNew}
+          chooseExistingLabel={labels.chooseExisting}
         />
       </div>
-      {total ? <p className="text-sm text-[var(--wh-foreground-muted)]">Total on the receipt: {total}</p> : null}
+      {total ? <p className="text-sm text-[var(--wh-foreground-muted)]">{fillIn(labels.total, { total })}</p> : null}
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">What was bought</legend>
+        <legend className="text-sm font-medium">{labels.whatBought}</legend>
         <p className="text-xs text-[var(--wh-foreground-subtle)]">
-          Each line you keep is recorded as a purchase, so Groceries learns how long things last. Nothing is paid or ordered.
+          {labels.explain}
         </p>
-        {tracked === null ? <p className="text-sm text-[var(--wh-foreground-muted)]">Checking what you already track…</p> : null}
+        {tracked === null ? <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.checking}</p> : null}
         {lines.map((line, index) => (
           <ReceiptLineRow
             key={line.key}
             line={line}
             number={index + 1}
             tracked={tracked ?? []}
+            labels={labels}
             onChange={(patch) => update(line.key, patch)}
             onRemove={lines.length > 1 ? () => setLines((current) => current.filter((entry) => entry.key !== line.key)) : undefined}
           />
@@ -107,9 +113,10 @@ export function HomeSendReceiptFields({ householdId, prefill }: { householdId: s
           }}
           className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-[var(--wh-primary)]"
         >
-          <Plus aria-hidden className="size-4" /> Add a line
+          <Plus aria-hidden className="size-4" /> {labels.addLine}
         </button>
       </fieldset>
+      {/* The item's stored title, not words on the screen: it stays as the record keeps it. */}
       <input type="hidden" name="title" value={prefill?.merchant ? `Receipt from ${prefill.merchant}` : "Receipt"} />
     </>
   );
@@ -121,10 +128,12 @@ function ReceiptLineRow({
   tracked,
   onChange,
   onRemove,
+  labels,
 }: {
   line: Line;
   number: number;
   tracked: { id: string; name: string }[];
+  labels: ReceiptLabels;
   onChange: (patch: Partial<Line>) => void;
   onRemove?: () => void;
 }) {
@@ -134,14 +143,14 @@ function ReceiptLineRow({
     <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
       <div className="flex items-end gap-2">
         <div className="min-w-0 flex-1 space-y-1.5">
-          <label htmlFor={`${id}-name`} className="block text-sm font-medium">Line {number}</label>
+          <label htmlFor={`${id}-name`} className="block text-sm font-medium">{fillIn(labels.line, { number })}</label>
           <input id={`${id}-name`} name="lineName" required value={line.name} onChange={(event) => onChange({ name: event.target.value })} autoComplete="off" className={INPUT} />
         </div>
         {onRemove ? (
           <button
             type="button"
             onClick={onRemove}
-            aria-label={`Remove ${line.name || `line ${number}`}`}
+            aria-label={line.name ? fillIn(labels.remove, { name: line.name }) : fillIn(labels.removeLine, { number })}
             className="grid size-11 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)]"
           >
             <Trash2 aria-hidden className="size-4" />
@@ -150,31 +159,40 @@ function ReceiptLineRow({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">
-          <label htmlFor={`${id}-qty`} className="block text-sm font-medium">How many</label>
+          <label htmlFor={`${id}-qty`} className="block text-sm font-medium">{labels.howMany}</label>
           <input id={`${id}-qty`} name="lineQuantity" type="number" min={0.01} step="0.01" placeholder="1" value={line.quantity} onChange={(event) => onChange({ quantity: event.target.value })} className={INPUT} />
         </div>
-        <ComboboxField label="Counted in" name="lineUnit" options={unitOptions} defaultValue={line.unit || undefined} emptyLabel="No unit" newValuePlaceholder="e.g. sachet" />
+        <ComboboxField
+          label={labels.countedIn}
+          name="lineUnit"
+          options={unitOptions}
+          defaultValue={line.unit || undefined}
+          emptyLabel={labels.noUnit}
+          newValuePlaceholder={labels.unitPlaceholder}
+          addNewLabel={labels.addNew}
+          chooseExistingLabel={labels.chooseExisting}
+        />
       </div>
       <div className="space-y-1.5">
-        <label htmlFor={`${id}-total`} className="block text-sm font-medium">Line total (optional)</label>
+        <label htmlFor={`${id}-total`} className="block text-sm font-medium">{labels.lineTotal}</label>
         <input id={`${id}-total`} name="lineTotal" type="number" min={0} step="0.01" value={line.lineTotal} onChange={(event) => onChange({ lineTotal: event.target.value })} className={INPUT} />
       </div>
       <div className="space-y-1.5">
-        <label htmlFor={`${id}-match`} className="block text-sm font-medium">This is</label>
+        <label htmlFor={`${id}-match`} className="block text-sm font-medium">{labels.thisIs}</label>
         <select id={`${id}-match`} name="lineMatch" value={line.match || "new"} onChange={(event) => onChange({ match: event.target.value })} className={INPUT}>
           {tracked.map((item) => (
-            <option key={item.id} value={item.id}>{item.name} (tracked)</option>
+            <option key={item.id} value={item.id}>{fillIn(labels.tracked, { name: item.name })}</option>
           ))}
-          <option value="new">New — start tracking it</option>
-          <option value="skip">Don&rsquo;t record this line</option>
+          <option value="new">{labels.new}</option>
+          <option value="skip">{labels.skip}</option>
         </select>
         {/* The whole name, wrapping, whatever a native select has room for (rule 11). */}
         <p className="text-xs break-words text-[var(--wh-foreground-subtle)]">
           {line.match === "skip"
-            ? "Left out — nothing is recorded for this line."
+            ? labels.skipped
             : line.match && line.match !== "new"
-              ? `Adds to ${tracked.find((item) => item.id === line.match)?.name ?? "this item"}'s purchase history.`
-              : `Starts tracking ${line.name.trim() || "this item"}, with this as its first purchase.`}
+              ? fillIn(labels.addsTo, { name: tracked.find((item) => item.id === line.match)?.name ?? labels.thisItem })
+              : fillIn(labels.startsTracking, { name: line.name.trim() || labels.thisItem })}
         </p>
       </div>
     </div>

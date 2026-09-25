@@ -23,16 +23,20 @@ import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 import { HomeSendChannels } from "../_components/home-send-channels";
 import { prepareReview } from "../(auth)/home-send-review";
 import { HomeSendInbox, type PreparedReview } from "../_components/home-send-inbox";
+import { homesendPageLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "HomeSend" };
 export const dynamic = "force-dynamic";
 
-const SHARE_ERROR_MESSAGES: Record<string, string> = {
-  size: "That shared file is too large — please use one under 4MB.",
-  upload: "That share couldn't be saved — please try sending it in again.",
-  rate_limited: "Too many shares from this connection recently — please wait a few minutes and try again.",
-};
+/** Why a share from the phone's share sheet did not arrive, by the `?shareError=` the share route sets. */
+const SHARE_ERROR_KEYS = {
+  size: "homesend.shareError.size",
+  upload: "homesend.shareError.upload",
+  rate_limited: "homesend.shareError.rateLimited",
+} as const;
+
+const isShareError = (value: string | undefined): value is keyof typeof SHARE_ERROR_KEYS => value !== undefined && Object.hasOwn(SHARE_ERROR_KEYS, value);
 
 /**
  * Resumes a share staged before sign-in (Phase 4's Web Share Target
@@ -81,7 +85,8 @@ export default async function HomeSendPage({
   searchParams: Promise<{ handoff?: string; shareError?: string; channel?: string }>;
 }) {
   const [{ handoff, shareError, channel: channelParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
-  const { supabase, membership, view, viewer, secondary } = session;
+  const { supabase, membership, view, viewer, secondary, locale } = session;
+  const { t } = locale;
   const householdId = membership.household.id;
 
   // A shared photo/text staged before sign-in — resume it once, then land
@@ -97,14 +102,14 @@ export default async function HomeSendPage({
     viewer,
     secondary,
     pathname: "/home-send",
-    back: { href: "/more", label: "Back" },
-    title: "HomeSend",
+    back: { href: "/more", label: t("common.back") },
+    title: t("nav.item.homesend"),
   };
 
   if (view.tone === "child") {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={Send} tone="ai" title="Not available to you" description="HomeSend is for the adults in the household." />
+        <EmptyState icon={Send} tone="ai" title={t("homesend.childView.title")} description={t("homesend.childView.description")} />
       </AppShell>
     );
   }
@@ -126,7 +131,7 @@ export default async function HomeSendPage({
   const segments = inboxSegments(
     allItems.map((item) => ({ source: item.source, waiting: item.status === "received" || item.status === "classified" })),
     { whatsapp: whatsappNumber !== null, email: emailConfigured },
-  );
+  ).map((segment) => ({ ...segment, label: t(`homesend.channel.${segment.key}`) }));
   // A tab that isn't offered (a hand-typed ?channel=email with no email) reads as All.
   const requested = readInboxChannel(channelParam);
   const channel = segments.some((segment) => segment.key === requested) ? requested : "all";
@@ -160,15 +165,17 @@ export default async function HomeSendPage({
   const purchaseIds = changes.filter((change) => change.domain === "purchase").map((change) => change.entityId);
   const purchaseNames = await purchaseLabels(supabase, householdId, purchaseIds).catch(() => ({}));
 
+  const labels = homesendPageLabels(t, locale.preferences.language);
+
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
         <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">HomeSend</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">A photo, a PDF, a voice note, a link or a forwarded message — drop it here and HomeBrain reads it.</p>
+          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.homesend")}</h1>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.lede")}</p>
         </header>
 
-        {shareError && SHARE_ERROR_MESSAGES[shareError] ? <Alert>{SHARE_ERROR_MESSAGES[shareError]}</Alert> : null}
+        {isShareError(shareError) ? <Alert>{t(SHARE_ERROR_KEYS[shareError])}</Alert> : null}
 
         <HomeSendInbox
           householdId={householdId}
@@ -183,7 +190,8 @@ export default async function HomeSendPage({
           purchaseNames={purchaseNames}
           senders={senders}
           filterLabel={channel === "all" ? null : (segments.find((segment) => segment.key === channel)?.label ?? null)}
-          filter={segments.length > 0 ? <SegmentedControl segments={segments} active={channel} label="Show items sent by" /> : null}
+          filter={segments.length > 0 ? <SegmentedControl segments={segments} active={channel} label={t("homesend.filter.label")} /> : null}
+          labels={labels}
         />
 
         <HomeSendChannels
@@ -196,9 +204,10 @@ export default async function HomeSendPage({
               ? { number: formatWhatsAppNumber(whatsappNumber), connected: myWhatsApp !== null }
               : null
           }
+          labels={labels.channels}
         />
 
-        <QuoteCard>Send it in. WonderHome takes it from here.</QuoteCard>
+        <QuoteCard>{t("homesend.quote")}</QuoteCard>
       </div>
     </AppShell>
   );

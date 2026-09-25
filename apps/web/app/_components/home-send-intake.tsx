@@ -3,6 +3,7 @@
 import { Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
+import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -10,48 +11,27 @@ import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
 
+import { countWords, fillIn, type HomeSendReviewLabels, type HomeSendSourceLabels } from "../_lib/homesend-labels";
 import { DocumentPlanReview } from "./home-send-plan";
 import { HomeSendReceiptFields } from "./home-send-receipt";
 
-export const OBLIGATION_KIND_OPTIONS = [
-  { value: "utility", label: "Utility" },
-  { value: "rent", label: "Rent" },
-  { value: "school_fee", label: "School fee" },
-  { value: "subscription", label: "Subscription" },
-  { value: "insurance", label: "Insurance" },
-  { value: "loan", label: "Loan" },
-  { value: "tax", label: "Tax" },
-  { value: "service", label: "Service" },
-  { value: "other", label: "Other" },
-];
+/** The stored values each picker offers; their words come from `labels.options`, by value. */
+const OBLIGATION_KIND_VALUES = ["utility", "rent", "school_fee", "subscription", "insurance", "loan", "tax", "service", "other"];
 
-export const SCHOOL_KIND_OPTIONS = [
-  { value: "homework", label: "Homework" },
-  { value: "worksheet", label: "Worksheet" },
-  { value: "exam", label: "Exam" },
-  { value: "project", label: "Project" },
-  { value: "event", label: "Event" },
-  { value: "notice", label: "Notice" },
-];
+const SCHOOL_KIND_VALUES = ["homework", "worksheet", "exam", "project", "event", "notice"];
 
-export const KIND_OPTIONS = [
-  { value: "bill", label: "A bill" },
-  { value: "school_item", label: "School work" },
-  { value: "grocery_item", label: "A grocery item" },
-  { value: "health_document", label: "A health document" },
-  { value: "receipt", label: "A receipt (already paid)" },
-];
+const KIND_VALUES = ["bill", "school_item", "grocery_item", "health_document", "receipt"];
 
-export const RECORD_TYPE_OPTIONS = [
-  { value: "lab_result", label: "Lab result" },
-  { value: "prescription", label: "Prescription" },
-  { value: "imaging_report", label: "Imaging report" },
-  { value: "vaccination_certificate", label: "Vaccination certificate" },
-  { value: "discharge_summary", label: "Discharge summary" },
-  { value: "referral", label: "Referral" },
-  { value: "insurance_document", label: "Insurance document" },
-  { value: "visit_summary", label: "Visit summary" },
-  { value: "other", label: "Other" },
+const RECORD_TYPE_VALUES = [
+  "lab_result",
+  "prescription",
+  "imaging_report",
+  "vaccination_certificate",
+  "discharge_summary",
+  "referral",
+  "insurance_document",
+  "visit_summary",
+  "other",
 ];
 
 /** What the review step shows of a reconciliation (`homesend/reconcile.ts`). */
@@ -106,63 +86,40 @@ export type HomeSendExtractionFields = {
   needs?: { reason: string; title: string }[];
 } | null;
 
-const CHANNEL_LABEL: Record<string, string> = {
-  manual_upload: "A file you sent",
-  pasted_text: "Something you pasted",
-  link: "A web page",
-  audio_note: "A voice note",
-  email: "A forwarded email",
-  email_attachment: "An email attachment",
-  whatsapp: "A WhatsApp message",
-  whatsapp_media: "A file sent on WhatsApp",
-};
-
 /** What a WhatsApp attachment was, from its bytes — "A photo sent on WhatsApp" (story 14-016). */
-function whatsappMediaLabel(contentType: string | null): string {
-  if (!contentType) return CHANNEL_LABEL.whatsapp_media!;
-  if (contentType.startsWith("image/")) return "A photo sent on WhatsApp";
-  if (contentType.startsWith("audio/")) return "A voice note sent on WhatsApp";
-  if (contentType === "application/pdf") return "A PDF sent on WhatsApp";
-  return CHANNEL_LABEL.whatsapp_media!;
+function whatsappMediaLabel(contentType: string | null, words: HomeSendSourceLabels): string {
+  if (!contentType) return words.channel.whatsapp_media!;
+  if (contentType.startsWith("image/")) return words.whatsappPhoto;
+  if (contentType.startsWith("audio/")) return words.whatsappVoice;
+  if (contentType === "application/pdf") return words.whatsappPdf;
+  return words.channel.whatsapp_media!;
 }
-
-const CONTENT_LABEL: Record<string, string> = {
-  "application/pdf": "A PDF you sent",
-  "text/plain": "A text file you sent",
-  "text/csv": "A spreadsheet (CSV) you sent",
-  "image/jpeg": "A photo you sent",
-  "image/png": "A photo you sent",
-  "image/webp": "A photo you sent",
-};
-
-const CONFIDENCE_LABEL: Record<IntakeUnderstanding["confidence"], string> = { high: "High", medium: "Medium", low: "Low" };
-
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "School email · 23 Sep" (§13): where it came from and when, in words. */
 export function describeSource(
   understanding: Pick<IntakeUnderstanding, "provenance"> | null | undefined,
-  options: { contentType?: string | null; receivedAt?: string | null; from?: string | null } = {},
+  options: { contentType?: string | null; receivedAt?: string | null; from?: string | null },
+  words: HomeSendSourceLabels,
 ): string {
   const provenance = understanding?.provenance;
-  let label = provenance ? (CHANNEL_LABEL[provenance.channel] ?? "Something you sent") : "Something you sent";
+  let label = provenance ? (words.channel[provenance.channel] ?? words.something) : words.something;
   const contentType = options.contentType ?? provenance?.contentType ?? null;
-  if (provenance?.channel === "manual_upload" && contentType && CONTENT_LABEL[contentType]) label = CONTENT_LABEL[contentType]!;
+  if (provenance?.channel === "manual_upload" && contentType && words.content[contentType]) label = words.content[contentType]!;
   if (provenance?.channel === "link" && provenance.url) {
     try {
-      label = `A web page on ${new URL(provenance.url).hostname}`;
+      label = fillIn(words.webPageOn, { host: new URL(provenance.url).hostname });
     } catch {
       // keep the plain label
     }
   }
-  if (provenance?.channel === "email" && provenance.subject) label = `A forwarded email: "${provenance.subject}"`;
-  if (provenance?.channel === "whatsapp_media") label = whatsappMediaLabel(contentType);
+  if (provenance?.channel === "email" && provenance.subject) label = fillIn(words.forwardedEmail, { subject: provenance.subject });
+  if (provenance?.channel === "whatsapp_media") label = whatsappMediaLabel(contentType, words);
   // WhatsApp items always come from one linked member; saying who is the provenance.
-  if ((provenance?.channel === "whatsapp" || provenance?.channel === "whatsapp_media") && options.from) label = `${label} from ${options.from}`;
+  if ((provenance?.channel === "whatsapp" || provenance?.channel === "whatsapp_media") && options.from) label = fillIn(words.from, { label, name: options.from });
   const when = options.receivedAt ? new Date(options.receivedAt) : null;
-  // One fixed format ("23 Sep", as §13 writes it), so the server's render and the browser's agree.
-  const day = when && !Number.isNaN(when.getTime()) ? `${when.getUTCDate()} ${SHORT_MONTHS[when.getUTCMonth()]}` : null;
-  return day ? `${label} · ${day}` : label;
+  // One fixed form ("23 Sep", as §13 writes it), on the UTC day, so the server's render and the browser's agree.
+  const day = when && !Number.isNaN(when.getTime()) ? fillIn(words.day, { day: when.getUTCDate(), month: words.months[when.getUTCMonth()] ?? "" }) : null;
+  return day ? fillIn(words.when, { label, day }) : label;
 }
 
 /**
@@ -174,42 +131,45 @@ export function HomeSendFindings({
   understanding,
   contentType,
   receivedAt,
+  labels,
 }: {
   understanding: IntakeUnderstanding | null | undefined;
   contentType?: string | null;
   receivedAt?: string | null;
+  labels: HomeSendReviewLabels;
 }) {
   if (!understanding) return null;
+  const words = labels.found;
   const needs = understanding.candidateActions.filter((action) => action.type === "add_household_need");
   return (
     <div className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3 text-sm">
-      <p className="font-medium">What I found</p>
-      {understanding.readable && understanding.contentSummary ? <p>{understanding.contentSummary}</p> : <p className="text-[var(--wh-foreground-muted)]">WonderHome couldn&apos;t read this on its own — fill in what it is below.</p>}
+      <p className="font-medium">{words.title}</p>
+      {understanding.readable && understanding.contentSummary ? <p>{understanding.contentSummary}</p> : <p className="text-[var(--wh-foreground-muted)]">{words.unreadable}</p>}
       {needs.length > 1 ? (
         <p className="text-xs text-[var(--wh-foreground-muted)]">
-          It also asks for {needs.map((need) => String(need.fields.title)).join(", ")}.
+          {fillIn(words.alsoAsks, { list: needs.map((need) => String(need.fields.title)).join(", ") })}
         </p>
       ) : null}
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-        <dt className="text-[var(--wh-foreground-subtle)]">Source</dt>
-        <dd>{describeSource(understanding, { contentType, receivedAt })}</dd>
+        <dt className="text-[var(--wh-foreground-subtle)]">{words.source}</dt>
+        <dd>{describeSource(understanding, { contentType, receivedAt }, labels.source)}</dd>
         {understanding.readable ? (
           <>
-            <dt className="text-[var(--wh-foreground-subtle)]">Confidence</dt>
-            <dd>{CONFIDENCE_LABEL[understanding.confidence]}</dd>
+            <dt className="text-[var(--wh-foreground-subtle)]">{words.confidenceLabel}</dt>
+            <dd>{words.confidence[understanding.confidence]}</dd>
           </>
         ) : null}
         {understanding.provenance.transcriptConfidence !== null && understanding.provenance.transcriptConfidence < 1 ? (
           <>
-            <dt className="text-[var(--wh-foreground-subtle)]">Heard</dt>
-            <dd>From a voice note — check names and dates</dd>
+            <dt className="text-[var(--wh-foreground-subtle)]">{words.heard}</dt>
+            <dd>{words.heardValue}</dd>
           </>
         ) : null}
       </dl>
       {understanding.safety.instructionsIgnored ? (
         <p className="flex items-start gap-1.5 text-xs text-[var(--wh-foreground-muted)]">
           <ShieldCheck aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-          <span>This contained instructions aimed at WonderHome. They were ignored — nothing you&apos;re sent can tell WonderHome what to do.</span>
+          <span>{words.instructionsIgnored}</span>
         </p>
       ) : null}
     </div>
@@ -228,6 +188,7 @@ export function TranscriptCheck({
   action,
   error,
   busy,
+  labels,
 }: {
   householdId: string;
   itemId: string;
@@ -235,7 +196,12 @@ export function TranscriptCheck({
   action: (formData: FormData) => void;
   error?: string;
   busy: boolean;
+  labels: HomeSendReviewLabels;
 }) {
+  const words = labels.transcript;
+  // The same line `uncertainTranscriptPrompt` writes, in the viewer's language:
+  // a transcript shown here is always uncertain, so only what it asks decides.
+  const prompt = isConsequentialInstruction(heard.text.trim()) ? words.promptConsequential : words.prompt;
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="householdId" value={householdId} />
@@ -243,9 +209,9 @@ export function TranscriptCheck({
       {error ? <Alert>{error}</Alert> : null}
       <p className="flex items-start gap-2 text-sm">
         <Mic aria-hidden className="mt-0.5 size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
-        <span>{heard.prompt}</span>
+        <span>{prompt}</span>
       </p>
-      <label htmlFor={`heard-${itemId}`} className="block text-sm font-medium">What I heard</label>
+      <label htmlFor={`heard-${itemId}`} className="block text-sm font-medium">{words.heard}</label>
       <textarea
         id={`heard-${itemId}`}
         name="text"
@@ -255,7 +221,7 @@ export function TranscriptCheck({
         className="block w-full resize-none rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
       />
       <Button type="submit" disabled={busy} className="w-full">
-        {busy ? "Reading…" : "That's what was said"}
+        {busy ? labels.reading : words.confirm}
       </Button>
     </form>
   );
@@ -288,7 +254,9 @@ export function HomeSendConfirmStep({
   plan = null,
   onDone,
   onApplied,
+  labels,
 }: {
+  labels: HomeSendReviewLabels;
   item: { id: string };
   defaultKind: string;
   prefill: HomeSendExtractionFields;
@@ -324,7 +292,8 @@ export function HomeSendConfirmStep({
     (need) => typeof need?.title === "string" && need.title.trim() !== "",
   );
   const proposal = reconciliation?.proposal?.type ?? (reconciliation ? "duplicate" : null);
-  const primaryLabel = prefill?.title ?? KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "This";
+  const words = labels.confirm;
+  const primaryLabel = prefill?.title ?? labels.options.kind[kind] ?? words.this;
 
   if (plan && !byHand) {
     return (
@@ -334,6 +303,7 @@ export function HomeSendConfirmStep({
           itemId={item.id}
           plan={plan}
           summary={understanding?.contentSummary ?? null}
+          labels={labels}
           onDone={onDone}
           onApplied={() => {
             setPlanApplied(true);
@@ -342,7 +312,7 @@ export function HomeSendConfirmStep({
         />
         {planApplied ? null : (
           <Pill type="button" tone="quiet" onClick={() => setByHand(true)} className="w-full justify-center">
-            Fill it in by hand instead
+            {words.byHand}
           </Pill>
         )}
       </div>
@@ -366,7 +336,7 @@ export function HomeSendConfirmStep({
         </Alert>
       ) : null}
 
-      <HomeSendFindings understanding={understanding} contentType={contentType} receivedAt={receivedAt} />
+      <HomeSendFindings understanding={understanding} contentType={contentType} receivedAt={receivedAt} labels={labels} />
 
       {/* §12: a low-confidence reading opens with its one question (who it
           is for is asked beside the picker instead); a bill or a health
@@ -379,7 +349,7 @@ export function HomeSendConfirmStep({
       {needs.length > 0 ? (
         // "I found 2 things" (§13): the main item plus what else the same
         // content asked for, each its own decision.
-        <p className="text-sm font-medium">I found {needs.length + 1} things: {[primaryLabel, ...needs.map((need) => need.title)].join(", ")}.</p>
+        <p className="text-sm font-medium">{countWords(words.foundThings, needs.length + 1, { list: [primaryLabel, ...needs.map((need) => need.title)].join(", ") })}</p>
       ) : null}
 
       {reconciliation ? (
@@ -387,12 +357,12 @@ export function HomeSendConfirmStep({
           <p className="text-sm">
             <span className="block font-medium">
               {proposal === "update"
-                ? "This looks like an update to something on record"
+                ? words.looksUpdate
                 : proposal === "cancellation"
-                  ? "This looks like a cancellation of something on record"
+                  ? words.looksCancellation
                   : proposal === "conflict"
-                    ? "This disagrees with something on record"
-                    : "This may already be on record"}
+                    ? words.looksConflict
+                    : words.looksDuplicate}
             </span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">{reconciliation.message}</span>
           </p>
@@ -400,19 +370,19 @@ export function HomeSendConfirmStep({
       ) : null}
 
       <div className="space-y-1.5">
-        <label htmlFor="kind" className="block text-sm font-medium">This is</label>
+        <label htmlFor="kind" className="block text-sm font-medium">{words.thisIs}</label>
         <select id="kind" name="kind" value={kind} onChange={(event) => setKind(event.target.value)} className={selectClass}>
-          {KIND_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+          {KIND_VALUES.map((value) => (
+            <option key={value} value={value}>{labels.options.kind[value]}</option>
           ))}
         </select>
       </div>
 
-      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} />
+      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} labels={labels} />
 
       {needs.length > 0 ? (
         <fieldset className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
-          <legend className="px-1 text-sm font-medium">Also add to Groceries</legend>
+          <legend className="px-1 text-sm font-medium">{words.alsoGroceries}</legend>
           {needs.map((need) => (
             <label key={need.title} className="flex items-start gap-2 text-sm">
               <input type="checkbox" name="need" value={need.title} className="mt-0.5" />
@@ -429,29 +399,29 @@ export function HomeSendConfirmStep({
       {proposal === "update" || proposal === "cancellation" ? (
         <div className="space-y-2">
           <Button type="submit" name="decision" value={proposal === "update" ? "update" : "cancel"} disabled={busy} className="w-full">
-            {proposal === "update" ? "Update existing" : "Cancel existing"}
+            {proposal === "update" ? words.updateExisting : words.cancelExisting}
           </Button>
           <div className="grid grid-cols-2 gap-2">
             <Button type="submit" name="decision" value="keep" variant="secondary" disabled={busy}>
-              Keep existing
+              {words.keepExisting}
             </Button>
             <Button type="submit" name="confirmDuplicate" value="on" variant="secondary" disabled={busy}>
-              Add as new
+              {words.addAsNew}
             </Button>
           </div>
         </div>
       ) : proposal ? (
         <div className="grid grid-cols-2 gap-2">
           <Button type="submit" name="decision" value="keep" variant="secondary" disabled={busy}>
-            Keep existing
+            {words.keepExisting}
           </Button>
           <Button type="submit" name="confirmDuplicate" value="on" disabled={busy}>
-            Add anyway
+            {words.addAnyway}
           </Button>
         </div>
       ) : (
         <Button type="submit" disabled={busy} className="w-full">
-          {kind === "receipt" ? "Record purchases" : "Add"}
+          {kind === "receipt" ? words.recordPurchases : words.add}
         </Button>
       )}
     </form>
@@ -474,11 +444,13 @@ function SchoolChildField({
   subject,
   defaultValue,
   canAddChild,
+  labels,
 }: {
   kids: { id: string; displayName: string }[];
   subject: ReviewSubject | null;
   defaultValue: string;
   canAddChild: boolean;
+  labels: HomeSendReviewLabels["child"];
 }) {
   // A notice that named somebody the household does not have starts on
   // "add them"; so does a household with no children at all.
@@ -488,27 +460,28 @@ function SchoolChildField({
   return (
     <div className="space-y-2">
       <div className="space-y-1.5">
-        <label htmlFor="childMemberId" className="block text-sm font-medium">For</label>
+        <label htmlFor="childMemberId" className="block text-sm font-medium">{labels.for}</label>
         {subject?.question && !adding ? <p className="text-sm text-[var(--wh-foreground-muted)]">{subject.question}</p> : null}
         <select id="childMemberId" name="childMemberId" className={selectClass} value={value} onChange={(event) => setValue(event.target.value)} required>
-          {kids.length === 0 && !canAddChild ? <option value="">No children on this household yet</option> : null}
-          {kids.length > 0 && !value ? <option value="">Choose who this is for</option> : null}
+          {kids.length === 0 && !canAddChild ? <option value="">{labels.noChildren}</option> : null}
+          {kids.length > 0 && !value ? <option value="">{labels.choose}</option> : null}
           {kids.map((kid) => (
             <option key={kid.id} value={kid.id}>{kid.displayName}</option>
           ))}
-          {canAddChild ? <option value={NEW_CHILD}>{subject?.said && namedSomeoneNew ? `Add ${subject.said} as a child` : "Add a child"}</option> : null}
+          {canAddChild ? <option value={NEW_CHILD}>{subject?.said && namedSomeoneNew ? fillIn(labels.addNamed, { name: subject.said }) : labels.add}</option> : null}
         </select>
         {!canAddChild && (kids.length === 0 || namedSomeoneNew) ? (
           <p className="text-xs text-[var(--wh-foreground-subtle)]">
-            {subject?.said ? `${subject.said} isn't on record yet. ` : ""}An Admin can add a child from Family; then this can be confirmed for them.
+            {subject?.said ? `${fillIn(labels.notOnRecord, { name: subject.said })} ` : ""}
+            {labels.adminCanAdd}
           </p>
         ) : null}
       </div>
       {adding ? (
         <div className="space-y-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
-          <Field label="Child's name" name="newChildName" required defaultValue={namedSomeoneNew || kids.length === 0 ? (subject?.said ?? "") : ""} autoComplete="off" />
-          <Field label="Date of birth (optional)" name="newChildDob" type="date" />
-          <p className="text-xs text-[var(--wh-foreground-subtle)]">They join the household as a child, with you as their guardian — the same as adding them from Family.</p>
+          <Field label={labels.name} name="newChildName" required defaultValue={namedSomeoneNew || kids.length === 0 ? (subject?.said ?? "") : ""} autoComplete="off" />
+          <Field label={labels.dob} name="newChildDob" type="date" />
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.joins}</p>
         </div>
       ) : null}
     </div>
@@ -529,6 +502,7 @@ export function HomeSendConfirmFields({
   subject = null,
   householdId,
   canAddChild = false,
+  labels,
 }: {
   kind: string;
   prefill: HomeSendExtractionFields;
@@ -538,8 +512,11 @@ export function HomeSendConfirmFields({
   householdId?: string;
   /** Offer adding the child the notice names when they are not on record yet (story 08-009). */
   canAddChild?: boolean;
+  labels: HomeSendReviewLabels;
 }) {
-  if (kind === "receipt" && householdId) return <HomeSendReceiptFields householdId={householdId} prefill={prefill} />;
+  if (kind === "receipt" && householdId) return <HomeSendReceiptFields householdId={householdId} prefill={prefill} labels={labels.receipt} />;
+  const words = labels.field;
+  const options = labels.options;
   // Who it is for: whoever the content named, resolved through the
   // household's own people — or, when that is not clear, nobody until the
   // person chooses (§9: never guess).
@@ -547,80 +524,80 @@ export function HomeSendConfirmFields({
   const healthDefault = subject?.selected && kids.some((kid) => kid.id === subject.selected?.memberId) ? subject.selected.memberId : "";
   return (
     <>
-      <Field label="What is it?" name="title" required defaultValue={prefill?.title ?? ""} autoComplete="off" />
+      <Field label={words.whatIsIt} name="title" required defaultValue={prefill?.title ?? ""} autoComplete="off" />
 
       {kind === "bill" ? (
         <>
           <div className="space-y-1.5">
-            <label htmlFor="billKind" className="block text-sm font-medium">Kind of bill</label>
+            <label htmlFor="billKind" className="block text-sm font-medium">{words.billKind}</label>
             <select id="billKind" name="billKind" defaultValue={prefill?.billKind ?? "other"} className={selectClass}>
-              {OBLIGATION_KIND_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+              {OBLIGATION_KIND_VALUES.map((value) => (
+                <option key={value} value={value}>{options.bill[value]}</option>
               ))}
             </select>
           </div>
-          <Field label="Payee (optional)" name="payee" defaultValue={prefill?.payee ?? ""} autoComplete="off" />
+          <Field label={words.payee} name="payee" defaultValue={prefill?.payee ?? ""} autoComplete="off" />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Amount (optional)" name="amount" type="number" min={0} step="0.01" defaultValue={prefill?.amount ?? ""} />
-            <Field label="Currency (optional)" name="currency" defaultValue={prefill?.currency ?? ""} placeholder="INR" autoComplete="off" />
+            <Field label={words.amount} name="amount" type="number" min={0} step="0.01" defaultValue={prefill?.amount ?? ""} />
+            <Field label={words.currency} name="currency" defaultValue={prefill?.currency ?? ""} placeholder="INR" autoComplete="off" />
           </div>
-          <Field label="Due (optional)" name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
+          <Field label={words.due} name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
         </>
       ) : kind === "school_item" ? (
         <>
-          <SchoolChildField kids={kids} subject={subject} defaultValue={schoolDefault} canAddChild={canAddChild} />
+          <SchoolChildField kids={kids} subject={subject} defaultValue={schoolDefault} canAddChild={canAddChild} labels={labels.child} />
           <div className="space-y-1.5">
-            <label htmlFor="schoolKind" className="block text-sm font-medium">Kind</label>
+            <label htmlFor="schoolKind" className="block text-sm font-medium">{words.schoolKind}</label>
             <select id="schoolKind" name="schoolKind" defaultValue={prefill?.schoolKind ?? "homework"} className={selectClass}>
-              {SCHOOL_KIND_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+              {SCHOOL_KIND_VALUES.map((value) => (
+                <option key={value} value={value}>{options.school[value]}</option>
               ))}
             </select>
           </div>
-          <Field label="Subject (optional)" name="subject" defaultValue={prefill?.subject ?? ""} autoComplete="off" />
-          <Field label="Due (optional)" name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
+          <Field label={words.subject} name="subject" defaultValue={prefill?.subject ?? ""} autoComplete="off" />
+          <Field label={words.due} name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Starts (optional)" name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint="Leave empty for all day." />
-            <Field label="Ends (optional)" name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />
+            <Field label={words.starts} name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint={words.startsHint} />
+            <Field label={words.ends} name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />
           </div>
         </>
       ) : kind === "health_document" ? (
         <>
           <div className="space-y-1.5">
-            <label htmlFor="subjectMemberId" className="block text-sm font-medium">Whose record is this?</label>
+            <label htmlFor="subjectMemberId" className="block text-sm font-medium">{words.whose}</label>
             {subject?.question ? <p className="text-sm text-[var(--wh-foreground-muted)]">{subject.question}</p> : null}
             <select id="subjectMemberId" name="subjectMemberId" className={selectClass} defaultValue={healthDefault}>
-              <option value="">Me</option>
+              <option value="">{words.me}</option>
               {kids.map((kid) => (
                 <option key={kid.id} value={kid.id}>{kid.displayName}</option>
               ))}
             </select>
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              {prefill?.subjectMemberName ? `WonderHome read the name "${prefill.subjectMemberName}" on this document. ` : ""}
-              Only you, or a child you look after, right now — anyone else needs to send it in themselves.
+              {prefill?.subjectMemberName ? `${fillIn(words.readName, { name: prefill.subjectMemberName })} ` : ""}
+              {words.whoseHint}
             </p>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="healthRecordType" className="block text-sm font-medium">Kind of document</label>
+            <label htmlFor="healthRecordType" className="block text-sm font-medium">{words.recordType}</label>
             <select id="healthRecordType" name="healthRecordType" defaultValue={prefill?.healthRecordType ?? "other"} className={selectClass}>
-              {RECORD_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+              {RECORD_TYPE_VALUES.map((value) => (
+                <option key={value} value={value}>{options.record[value]}</option>
               ))}
             </select>
           </div>
-          <Field label="Document date (optional)" name="documentDate" type="date" defaultValue={prefill?.documentDate ?? ""} />
+          <Field label={words.documentDate} name="documentDate" type="date" defaultValue={prefill?.documentDate ?? ""} />
         </>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Quantity (optional)" name="quantity" type="number" min={0.01} step="0.01" defaultValue={prefill?.quantity ?? ""} />
-          <Field label="Unit (optional)" name="unit" defaultValue={prefill?.unit ?? ""} placeholder="kg, pack, box" autoComplete="off" />
+          <Field label={words.quantity} name="quantity" type="number" min={0.01} step="0.01" defaultValue={prefill?.quantity ?? ""} />
+          <Field label={words.unit} name="unit" defaultValue={prefill?.unit ?? ""} placeholder={words.unitPlaceholder} autoComplete="off" />
           <div className="col-span-2">
-            <Field label="Category (optional)" name="category" defaultValue={prefill?.category ?? ""} placeholder="grocery" autoComplete="off" />
+            <Field label={words.category} name="category" defaultValue={prefill?.category ?? ""} placeholder={words.categoryPlaceholder} autoComplete="off" />
           </div>
         </div>
       )}
 
-      <Field label="Notes (optional)" name="notes" defaultValue={prefill?.notes ?? ""} autoComplete="off" />
+      <Field label={words.notes} name="notes" defaultValue={prefill?.notes ?? ""} autoComplete="off" />
     </>
   );
 }

@@ -10,6 +10,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { Sparkles } from "lucide-react";
 
 import { geminiLiveGate } from "../_lib/gemini-live";
+import { homesendReviewLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
 import { ConversationSearch } from "./conversation-search";
@@ -101,6 +102,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           canAddChild={isHouseholdAdmin(membership)}
           timeZone={membership.household.timezone}
           labels={labels}
+          homeSendLabels={homesendReviewLabels(locale.t, locale.preferences.language)}
         />
       ) : (
         <EmptyState

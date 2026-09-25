@@ -4,9 +4,9 @@ import { CheckCircle2, FileText, GraduationCap, ShoppingBasket, Sparkles, Wallet
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import type { IntakeChangeReceipt, ReceiptAction } from "@wonderhome/core/homesend/apply";
-import { RECEIPT_ACTIONS, receiptHeadline } from "@wonderhome/core/homesend/apply";
-import { pagesReadLine } from "@wonderhome/core/homesend/document";
-import { PLAN_GROUP_TITLES, PLAN_GROUPS, type DocumentPlan, type PlanEntry } from "@wonderhome/core/homesend/plan";
+import { RECEIPT_ACTIONS } from "@wonderhome/core/homesend/apply";
+import type { PageReport } from "@wonderhome/core/homesend/document";
+import { PLAN_GROUPS, type DocumentPlan, type PlanEntry } from "@wonderhome/core/homesend/plan";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
@@ -17,6 +17,10 @@ import { Switch } from "@wonderhome/core/ui/switch";
 
 import { undoHomeSendDocumentAction, type RouteHomeItemState } from "../(auth)/home-send-actions";
 import { applyDocumentPlanAction, type ApplyPlanState } from "../(auth)/home-send-plan-actions";
+import { countWords, fillIn, type HomeSendReviewLabels } from "../_lib/homesend-labels";
+
+type PlanLabels = HomeSendReviewLabels["plan"];
+type AppliedLabels = HomeSendReviewLabels["applied"];
 
 /**
  * The document change plan, reviewed (Deep Document Understanding 2.0
@@ -32,31 +36,74 @@ import { applyDocumentPlanAction, type ApplyPlanState } from "../(auth)/home-sen
  * plan before it writes anything.
  */
 
-const DOMAIN: Record<PlanEntry["domain"], { icon: typeof Wallet; tone: IconTone; noun: string }> = {
-  school_item: { icon: GraduationCap, tone: "school", noun: "School" },
-  bill: { icon: Wallet, tone: "money", noun: "Bill" },
-  grocery_item: { icon: ShoppingBasket, tone: "care", noun: "To buy" },
+const DOMAIN: Record<PlanEntry["domain"], { icon: typeof Wallet; tone: IconTone }> = {
+  school_item: { icon: GraduationCap, tone: "school" },
+  bill: { icon: Wallet, tone: "money" },
+  grocery_item: { icon: ShoppingBasket, tone: "care" },
 };
 
-const OUTCOME: Record<PlanEntry["action"], { label: string; tone: BadgeTone }> = {
-  create: { label: "New", tone: "handled" },
-  update: { label: "Update", tone: "school" },
-  cancel: { label: "Cancel", tone: "attention" },
-  no_change: { label: "On record", tone: "neutral" },
-  conflict: { label: "Your record is newer", tone: "attention" },
-  needs_answer: { label: "Needs your answer", tone: "attention" },
+/** Each outcome's tone; its words are `labels.outcome`, by the same closed value. */
+const OUTCOME_TONE: Record<PlanEntry["action"], BadgeTone> = {
+  create: "handled",
+  update: "school",
+  cancel: "attention",
+  no_change: "neutral",
+  conflict: "attention",
+  needs_answer: "attention",
 };
+
+/** A plan field's name in the viewer's language — the plan keeps its own English label as the fallback. */
+function fieldLabel(field: { field: string; label: string }, domain: PlanEntry["domain"], labels: PlanLabels): string {
+  if (field.field === "date") return domain === "bill" ? labels.due : labels.date;
+  if (field.field === "person") return domain === "school_item" ? labels.fieldChild : labels.field.person!;
+  return labels.field[field.field] ?? field.label;
+}
+
+/** What changes on an update: the date (a bill's due date) or the amount. */
+function changeLabel(change: { field: string; label: string }, domain: PlanEntry["domain"], labels: PlanLabels): string {
+  if (change.field === "date") return domain === "bill" ? labels.fieldDueDate : labels.date;
+  if (change.field === "amount") return labels.amount;
+  return change.label;
+}
+
+/** "All 3 pages read", or which pages could not be made out (`pagesReadLine`, in the viewer's language). */
+function pagesLine(pages: PageReport, labels: PlanLabels): string | null {
+  if (pages.total === null || pages.read === null || pages.total <= 1) return pages.total === 1 && pages.unreadable.length === 1 ? labels.pageUnreadable : null;
+  if (pages.read === pages.total) return fillIn(labels.allPagesRead, { total: pages.total });
+  const which = pages.unreadable.length === 1 ? fillIn(labels.page, { page: pages.unreadable[0]! }) : fillIn(labels.pages, { pages: pages.unreadable.join(", ") });
+  return fillIn(labels.somePagesRead, { read: pages.read, total: pages.total, which });
+}
+
+/** The receipt's headline (`receiptHeadline`, in the viewer's language). */
+function headline(receipt: IntakeChangeReceipt, labels: AppliedLabels): string {
+  const written = receipt.counts.created + receipt.counts.updated + receipt.counts.cancelled;
+  switch (receipt.status) {
+    case "no_change":
+      return labels.nothingNew;
+    case "failed":
+      return labels.nothingApplied;
+    case "partial":
+      return fillIn(labels.partialHeadline, { applied: written, failed: receipt.counts.failed });
+    case "needs_review":
+      return labels.waiting;
+    default: {
+      const applied = countWords(labels.changes, written);
+      // Done, but not everything: a question left unanswered is said, never folded into "all done".
+      return receipt.counts.needs_clarification > 0 ? fillIn(labels.withWaiting, { applied, waiting: receipt.counts.needs_clarification }) : applied;
+    }
+  }
+}
 
 const writes = (entry: PlanEntry) => entry.action === "create" || entry.action === "update" || entry.action === "cancel";
 
-function Source({ evidence }: { evidence: PlanEntry["evidence"] }) {
-  const where = [evidence.page ? `Page ${evidence.page}` : null, evidence.section].filter(Boolean).join(" · ");
+function Source({ evidence, labels }: { evidence: PlanEntry["evidence"]; labels: PlanLabels }) {
+  const where = [evidence.page ? fillIn(labels.sourcePage, { page: evidence.page }) : null, evidence.section].filter(Boolean).join(" · ");
   if (!where && !evidence.quote) return null;
   return (
     <div className="flex gap-2.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-2.5">
       <FileText aria-hidden className="mt-0.5 size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
       <div className="min-w-0 text-xs">
-        <p className="font-medium">Source{where ? ` — ${where}` : ""}</p>
+        <p className="font-medium">{where ? fillIn(labels.sourceWhere, { where }) : labels.source}</p>
         {evidence.quote ? <p className="mt-0.5 break-words text-[var(--wh-foreground-muted)]">&ldquo;{evidence.quote}&rdquo;</p> : null}
       </div>
     </div>
@@ -71,7 +118,9 @@ function EntryDetail({
   onAnswer,
   editing,
   onEdit,
+  labels,
 }: {
+  labels: PlanLabels;
   entry: PlanEntry;
   included: boolean;
   onInclude: (value: boolean) => void;
@@ -87,11 +136,11 @@ function EntryDetail({
         <dl className="space-y-1.5 text-sm">
           {entry.changes.map((change) => (
             <div key={change.field} className="flex flex-wrap items-baseline gap-x-2">
-              <dt className="w-20 shrink-0 text-[var(--wh-foreground-muted)]">{change.label}</dt>
+              <dt className="w-20 shrink-0 text-[var(--wh-foreground-muted)]">{changeLabel(change, entry.domain, labels)}</dt>
               <dd className="flex flex-wrap items-baseline gap-x-2">
                 <span className="text-[var(--wh-foreground-subtle)] line-through">{change.before ?? "—"}</span>
                 <span aria-hidden>→</span>
-                <span className="sr-only">changes to</span>
+                <span className="sr-only">{labels.changesTo}</span>
                 <span className="font-semibold">{change.after}</span>
               </dd>
             </div>
@@ -105,7 +154,7 @@ function EntryDetail({
           .filter((field) => field.source === "document" && !entry.changes.some((change) => change.field === field.field))
           .map((field) => (
             <div key={field.field} className="flex flex-wrap gap-x-2">
-              <dt className="w-20 shrink-0 text-[var(--wh-foreground-muted)]">{field.label}</dt>
+              <dt className="w-20 shrink-0 text-[var(--wh-foreground-muted)]">{fieldLabel(field, entry.domain, labels)}</dt>
               <dd className="min-w-0 flex-1 break-words">{field.value}</dd>
             </div>
           ))}
@@ -113,11 +162,11 @@ function EntryDetail({
 
       {household.length > 0 ? (
         <div className="text-sm">
-          <p className="text-xs font-medium text-[var(--wh-foreground-muted)]">From your household records</p>
+          <p className="text-xs font-medium text-[var(--wh-foreground-muted)]">{labels.fromHousehold}</p>
           <dl className="mt-1 space-y-1.5">
             {household.map((field) => (
               <div key={field.field} className="flex flex-wrap gap-x-2">
-                <dt className="w-20 shrink-0 text-[var(--wh-foreground-muted)]">{field.label}</dt>
+                <dt className="w-20 shrink-0 text-[var(--wh-foreground-muted)]">{fieldLabel(field, entry.domain, labels)}</dt>
                 <dd className="min-w-0 flex-1 break-words">{field.value}</dd>
               </div>
             ))}
@@ -126,10 +175,10 @@ function EntryDetail({
       ) : null}
 
       {entry.existing && entry.action !== "update" ? (
-        <p className="text-xs text-[var(--wh-foreground-muted)]">On record: {entry.existing.title}</p>
+        <p className="text-xs text-[var(--wh-foreground-muted)]">{fillIn(labels.onRecord, { title: entry.existing.title })}</p>
       ) : null}
 
-      <Source evidence={entry.evidence} />
+      <Source evidence={entry.evidence} labels={labels} />
 
       {entry.question ? (
         <fieldset className="space-y-2">
@@ -142,7 +191,7 @@ function EntryDetail({
           ))}
           <label className="flex min-h-11 items-center gap-2.5 text-sm">
             <input type="radio" name={`choice.${entry.key}`} value="" checked={!answer} onChange={() => onAnswer("")} className="size-4 accent-[var(--wh-primary)]" />
-            Not sure — leave it for now
+            {labels.notSure}
           </label>
         </fieldset>
       ) : null}
@@ -150,12 +199,12 @@ function EntryDetail({
       {writes(entry) ? (
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex min-h-11 items-center gap-2.5 text-sm">
-            <Switch checked={included} onCheckedChange={onInclude} label={`Include ${entry.title}`} />
-            {included ? "Included" : "Left out"}
+            <Switch checked={included} onCheckedChange={onInclude} label={fillIn(labels.include, { title: entry.title })} />
+            {included ? labels.included : labels.leftOut}
           </label>
           {entry.action === "create" ? (
             <Pill type="button" tone="quiet" onClick={onEdit} aria-expanded={editing}>
-              {editing ? "Done editing" : "Edit"}
+              {editing ? labels.doneEditing : labels.edit}
             </Pill>
           ) : null}
         </div>
@@ -167,16 +216,16 @@ function EntryDetail({
 type Edit = { title?: string; date?: string; amount?: string };
 
 /** A person's correction to one record (§37 "Edit"), kept in state so it survives the row closing. */
-function EditFields({ entry, edit, onChange }: { entry: PlanEntry; edit: Edit; onChange: (edit: Edit) => void }) {
+function EditFields({ entry, edit, onChange, labels }: { entry: PlanEntry; edit: Edit; onChange: (edit: Edit) => void; labels: PlanLabels }) {
   return (
     <div className="space-y-3 sm:pl-[3.25rem]">
-      <Field label="Name" name={`draft-${entry.key}-title`} value={edit.title ?? entry.record.title} onChange={(event) => onChange({ ...edit, title: event.target.value })} required maxLength={160} />
+      <Field label={labels.name} name={`draft-${entry.key}-title`} value={edit.title ?? entry.record.title} onChange={(event) => onChange({ ...edit, title: event.target.value })} required maxLength={160} />
       {entry.domain !== "grocery_item" ? (
-        <Field label={entry.domain === "bill" ? "Due" : "Date"} name={`draft-${entry.key}-date`} type="date" value={edit.date ?? entry.record.date ?? ""} onChange={(event) => onChange({ ...edit, date: event.target.value })} />
+        <Field label={entry.domain === "bill" ? labels.due : labels.date} name={`draft-${entry.key}-date`} type="date" value={edit.date ?? entry.record.date ?? ""} onChange={(event) => onChange({ ...edit, date: event.target.value })} />
       ) : null}
       {entry.domain === "bill" ? (
         <Field
-          label="Amount"
+          label={labels.amount}
           name={`draft-${entry.key}-amount`}
           type="number"
           inputMode="decimal"
@@ -190,18 +239,30 @@ function EditFields({ entry, edit, onChange }: { entry: PlanEntry; edit: Edit; o
   );
 }
 
-const RECEIPT_WORDS: Record<ReceiptAction, { label: string; tone: BadgeTone }> = {
-  updated: { label: "Updated", tone: "school" },
-  cancelled: { label: "Cancelled", tone: "attention" },
-  created: { label: "Created", tone: "handled" },
-  unchanged: { label: "No change", tone: "neutral" },
-  skipped: { label: "Left out", tone: "neutral" },
-  needs_clarification: { label: "Needs your answer", tone: "attention" },
-  failed: { label: "Could not complete", tone: "risk" },
+/** Each receipt outcome's tone; its words are `labels.action`, by the same closed value. */
+const RECEIPT_TONE: Record<ReceiptAction, BadgeTone> = {
+  updated: "school",
+  cancelled: "attention",
+  created: "handled",
+  unchanged: "neutral",
+  skipped: "neutral",
+  needs_clarification: "attention",
+  failed: "risk",
 };
 
 /** What applying did, record by record (§24, §43) — the "All done!" screen, or honestly less. */
-export function DocumentReceipt({ receipt, householdId, onDone }: { receipt: IntakeChangeReceipt; householdId: string; onDone?: () => void }) {
+export function DocumentReceipt({
+  receipt,
+  householdId,
+  onDone,
+  labels,
+}: {
+  receipt: IntakeChangeReceipt;
+  householdId: string;
+  onDone?: () => void;
+  labels: HomeSendReviewLabels;
+}) {
+  const words = labels.applied;
   const [undoState, undoAction, undoing] = useActionState<RouteHomeItemState, FormData>(undoHomeSendDocumentAction, {});
   const written = receipt.counts.created + receipt.counts.updated + receipt.counts.cancelled;
   const done = receipt.status === "completed" || receipt.status === "no_change";
@@ -210,17 +271,17 @@ export function DocumentReceipt({ receipt, householdId, onDone }: { receipt: Int
     <div className="space-y-4" role="status">
       <div className="flex flex-col items-center gap-2 pt-2 text-center">
         <CheckCircle2 aria-hidden className={done ? "size-12 text-[var(--wh-handled)]" : "size-12 text-[var(--wh-attention)]"} />
-        <h3 className="text-lg font-semibold">{receipt.status === "completed" && receipt.counts.needs_clarification === 0 ? "All done!" : receiptHeadline(receipt)}</h3>
+        <h3 className="text-lg font-semibold">{receipt.status === "completed" && receipt.counts.needs_clarification === 0 ? words.allDone : headline(receipt, words)}</h3>
         <p className="text-sm text-[var(--wh-foreground-muted)]">
           {receipt.status === "no_change"
-            ? "Nothing new found. No records changed."
+            ? words.noChange
             : receipt.status === "completed"
-              ? `${written === 1 ? "1 change" : `${written} changes`} applied. Nothing else was changed.`
+              ? countWords(words.completed, written)
               : receipt.status === "partial"
-                ? "Some changes were applied and some could not be — each is listed below."
+                ? words.partial
                 : receipt.status === "needs_review"
-                  ? "Nothing was changed yet — one or more things still need your answer."
-                  : "No changes were applied."}
+                  ? words.needsReview
+                  : words.none}
         </p>
       </div>
       {undoState.notice ? <Alert tone="info">{undoState.notice}</Alert> : null}
@@ -228,14 +289,14 @@ export function DocumentReceipt({ receipt, householdId, onDone }: { receipt: Int
       <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] border border-[var(--wh-border)]">
         {ordered.map((change) => {
           const domain = DOMAIN[change.domain];
-          const words = RECEIPT_WORDS[change.action];
+          const tone = RECEIPT_TONE[change.action];
           return (
             <li key={change.key} className="flex gap-3 p-3">
               <IconTile icon={domain.icon} tone={domain.tone} />
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                   <span className="break-words">{change.title}</span>
-                  <Badge tone={words.tone}>{words.label}</Badge>
+                  <Badge tone={tone}>{words.action[change.action]}</Badge>
                 </p>
                 <p className="mt-0.5 break-words text-xs text-[var(--wh-foreground-muted)]">{change.error ?? change.reason}</p>
               </div>
@@ -249,13 +310,13 @@ export function DocumentReceipt({ receipt, householdId, onDone }: { receipt: Int
             <input type="hidden" name="householdId" value={householdId} />
             <input type="hidden" name="itemId" value={receipt.intakeId} />
             <Button type="submit" variant="secondary" disabled={undoing} className="w-full">
-              {undoing ? "Undoing…" : written === 1 ? "Undo this change" : `Undo all ${written} changes`}
+              {undoing ? labels.undoing : countWords(words.undo, written)}
             </Button>
           </form>
         ) : null}
         {onDone ? (
           <Button type="button" onClick={onDone} className="w-full sm:flex-1">
-            Done
+            {words.done}
           </Button>
         ) : null}
       </div>
@@ -270,7 +331,9 @@ export function DocumentPlanReview({
   summary,
   onDone,
   onApplied,
+  labels,
 }: {
+  labels: HomeSendReviewLabels;
   householdId: string;
   itemId: string;
   plan: DocumentPlan;
@@ -298,14 +361,15 @@ export function DocumentPlanReview({
     return (
       <div className="space-y-3">
         {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
-        <DocumentReceipt receipt={state.receipt} householdId={householdId} onDone={onDone} />
+        <DocumentReceipt receipt={state.receipt} householdId={householdId} onDone={onDone} labels={labels} />
       </div>
     );
   }
 
   const answered = plan.entries.filter((entry) => entry.action === "needs_answer" && answers[entry.key]);
   const count = plan.entries.filter((entry) => writes(entry) && included.has(entry.key)).length + answered.length;
-  const pages = pagesReadLine(plan.pages);
+  const words = labels.plan;
+  const pages = pagesLine(plan.pages, words);
   const toggle = (set: Set<string>, key: string, on: boolean) => {
     const next = new Set(set);
     if (on) next.add(key);
@@ -333,10 +397,11 @@ export function DocumentPlanReview({
       <div className="flex gap-3">
         <IconTile icon={Sparkles} tone="ai" size="lg" />
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold">
-            Found {plan.entries.length} {plan.entries.length === 1 ? "item" : "items"}
-          </h3>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{summary ? `${summary} ` : ""}Here&rsquo;s what I found — check it before anything changes.</p>
+          <h3 className="text-lg font-semibold">{countWords(words.found, plan.entries.length)}</h3>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">
+            {summary ? `${summary} ` : ""}
+            {words.lede}
+          </p>
           {pages ? <p className="mt-0.5 text-xs text-[var(--wh-foreground-subtle)]">{pages}</p> : null}
         </div>
       </div>
@@ -345,14 +410,14 @@ export function DocumentPlanReview({
         const entries = plan.entries.filter((entry) => entry.group === group);
         if (entries.length === 0) return null;
         return (
-          <section key={group} aria-label={PLAN_GROUP_TITLES[group]}>
+          <section key={group} aria-label={words.group[group]}>
             <h4 className="mb-1 flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--wh-foreground-muted)] uppercase">
-              {PLAN_GROUP_TITLES[group]} <span className="font-normal">{entries.length}</span>
+              {words.group[group]} <span className="font-normal">{entries.length}</span>
             </h4>
             <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
               {entries.map((entry) => {
                 const domain = DOMAIN[entry.domain];
-                const outcome = writes(entry) && !included.has(entry.key) ? { label: "Left out", tone: "neutral" as const } : OUTCOME[entry.action];
+                const outcome = writes(entry) && !included.has(entry.key) ? { label: words.leftOut, tone: "neutral" as const } : { label: words.outcome[entry.action], tone: OUTCOME_TONE[entry.action] };
                 return (
                   <ExpandableRow
                     key={entry.key}
@@ -370,6 +435,7 @@ export function DocumentPlanReview({
                     }
                   >
                     <EntryDetail
+                      labels={words}
                       entry={entry}
                       included={included.has(entry.key)}
                       onInclude={(on) => setIncluded((current) => toggle(current, entry.key, on))}
@@ -378,7 +444,7 @@ export function DocumentPlanReview({
                       editing={editing.has(entry.key)}
                       onEdit={() => setEditing((current) => toggle(current, entry.key, !current.has(entry.key)))}
                     />
-                    {editing.has(entry.key) ? <EditFields entry={entry} edit={edits[entry.key] ?? {}} onChange={(edit) => setEdits((current) => ({ ...current, [entry.key]: edit }))} /> : null}
+                    {editing.has(entry.key) ? <EditFields labels={words} entry={entry} edit={edits[entry.key] ?? {}} onChange={(edit) => setEdits((current) => ({ ...current, [entry.key]: edit }))} /> : null}
                   </ExpandableRow>
                 );
               })}
@@ -389,7 +455,7 @@ export function DocumentPlanReview({
 
       {state.error ? <Alert>{state.error}</Alert> : null}
       <Button type="submit" disabled={applying} className="w-full">
-        {applying ? "Applying…" : count > 0 ? `Review and apply (${count})` : "Nothing to change — mark as handled"}
+        {applying ? words.applying : count > 0 ? fillIn(words.apply, { count }) : words.nothingToChange}
       </Button>
     </form>
   );
