@@ -5,13 +5,14 @@
 | Metric | Value |
 |---|---:|
 | Total stories | 225 |
-| Done | 219 |
-| In Progress | 4 |
+| Done | 223 |
+| In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 2 |
-| Completion | 97.3% |
+| Not Started | 0 |
+| Deferred | 1 |
+| Completion | 99.1% |
 | Current module | 22 Internationalization and Localization |
-| Current story | 22-004 every signed-in screen localized (Bills, School, Health, Househelper, Upkeep, HomeSend, Manage Household, HomeBrain Review, Home, Settings); next: 22-004 Help, sign-in/sign-up, setup wizard and voice-link consent; 20-011 payment operations and 18-008 developer platform done; 22-008 RTL deferred by the owner; 22-007 multi-currency audit done |
+| Current story | 22-004 Done: every screen in each person's language (signed-out screens by the browser's language); 20-011 payment operations and 18-008 developer platform done; 22-008 RTL deferred by the owner; 04-017 waits on the owner |
 | Last updated | 2026-09-25 |
 
 (Reconciled against `docs/PROGRESS.md`, generated from the backlogs — this
@@ -46,7 +47,7 @@ disagree again.)
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 10 | In Progress |
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
-| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 5 | In Progress |
+| 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 
 ## Execution Log
@@ -253,3 +254,4 @@ disagree again.)
 | 2026-09-24 | 14 | 14-018 | Done | apply 8 unit (writes once and records each, skipped, never-written outcomes, partial failure, plain refusals, unrecorded write, no-op, receipt text) + plan 27; typecheck/lint; verify:live 218/218 (including the five new column probes); browser QA at 360px and 1280px on a seeded QA household (golden scenario 1 + an unassigned Maths assessment): plan grouped 1 / 2 / 3 / 1, answer "Manan", apply 4, receipt "All done!", database checked (Annual Day 12 → 15 Oct, three new school items, field history and page on each change), newer-record conflict after a later edit, Undo all 3 restored | Deep Document Understanding 2.0 phases D–E: grouped review, per-record include/edit/answer, server-rebuilt plan applied through the domain services with verification, field-level change history, the exact receipt with partial failure and no-op, Undo all. Migration `20261005090000_homesend_document_plan_receipt.sql` applied live |
 | 2026-09-24 | 14 | 14-019 | Done | talk 8 unit (golden scenario 4, receipt reply and its content classes, question reading, answers from stored changes incl. undone and no match), apply 9, metrics 8 (document counts); HomeSend 341 unit; eval 50/50 with 0/14 unsafe (new HS-16); browser QA at 360px and 1280px on the seeded QA household: plan applied in HomeSend, the receipt posted into HomeTalk, "What did the school notice change?" answered from the changes ("moved Annual Day from 12 Oct to 15 Oct, added … 3 things were already on record") | Deep Document Understanding 2.0 phases F–G: HomeTalk shows what a document did from its receipt and answers what it changed from stored changes; §50 document metrics; module 14 complete |
 | 2026-09-24 | 22 | 22-006 | Done | message 12 unit (English record equals the message read in English; Hindi, Arabic plural, Spanish time, French "your child", German list; grouped school day and its escalation; malformed or foreign keys refused; placeholder-looking names shown as written; key order ignored), smart notifications 119 unit, notification RLS 35 (a recipient cannot rewrite the message; the column holds only a versioned object), `verify:live` 219/219, browser QA as a Hindi-speaking member at 360px and desktop on the real project | Smart reminders are an event plus its parameters: `notifications.message` (migration `20261006090000`, applied live) holds a `reminder.*` key and typed values, and `/notifications` and channel delivery render it per recipient; `title`/`body` remain the English record rendered from the same message. Health, approval and HomeTalk personal reminders still store English only |
+| 2026-09-25 | 22 | 22-004 | Done | tsc core/web, eslint, import boundaries (956 files), core unit 204 files / 2998 tests (catalog completeness, placeholders, `negotiateLanguage`, localized Help guide and search per language); browser QA on the real project at 360px and 1280px: a Chinese-speaking member across 25 signed-in screens (every page 200, no horizontal scroll, no raw key or unfilled placeholder), signed-out sign-in/sign-up/forgot/reset in zh, hi and an unsupported pt-BR (falls back to English), Help signed out in the browser's language with a typed question answered in Chinese | Every screen reads its copy from the catalog in eight languages, area by area (`i18n/messages/areas/*`); signed-out screens by the browser's language, nothing stored. Household data, core-built shared sentences, static titles and the legal page stay English by decision |

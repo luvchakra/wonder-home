@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**222 of 225 stories done — 98.7%**
+**223 of 225 stories done — 99.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 222 |
-| In Progress | 2 |
+| Done | 223 |
+| In Progress | 1 |
 | Blocked | 0 |
 | Not Started | 0 |
 | Deferred | 1 |
@@ -47,7 +47,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
-| 22 Internationalization and Localization | `███████░░░` | 6 | 8 | 1 in progress, 1 deferred |
+| 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 
 ## What is left
@@ -55,7 +55,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `22-004` Translation catalog & core UI | 22 Internationalization and Localization | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 
 ## Every story
@@ -421,14 +420,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 22 — Internationalization and Localization
 
-6 of 8 done `███████░░░`
+7 of 8 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `22-001` Locale foundation & formatting | P0 | Done | `i18n/locales.ts` (languages, regions, currencies, IANA time zones), `i18n/preferences.ts` (precedence: person → household → region → app default), `i18n/format.ts` (Intl only, Latin digits, a calendar day never shifted by the zone, imperial for presentation only), `i18n/request.ts` sets the locale once per request so the existing date/time/money helpers follow it; 16 formatter tests |
 | `22-002` Preferences & Language & Region settings | P0 | Done | Migration `localization_preferences` (applied live): household `region`/`currency`/`measurement_system`/`default_language` (Admin only, existing `households_update_admin`), person `language`/`date_format`/`time_format`/`measurement_system` (self or Admin); `/settings/language-region` with language, region, currency, date & time and member-languages pages; audit `member.locale_updated`/`household.locale_updated`; 9 RLS tests |
 | `22-003` Optional localization setup | P0 | Done | `/onboarding/personalize` runs after family setup, never in place of it: six steps for an Admin, four for anyone else (they never set the household's region or currency); every step saved, "I'll do this later" resumable, a dismissible Home card for anyone who skipped; localization events recorded by the member themselves |
-| `22-004` Translation catalog & core UI | P0 | In Progress | Own catalog (`i18n/messages/*`, en/hi/mr/es/fr/de/ar/zh, about 500 keys; Chinese is Mandarin in Simplified characters, `zh-Hans-<region>` for dates and numbers) with plurals, interpolation and English fallback, never a raw key, completeness enforced by the compiler and tests. Localized so far: navigation, Home header and counts, setup, Language & Region settings, the personalize card, the whole Notifications screen (tabs, filters, empty states, confirmations, each row's details, reasons, snooze and dismiss, the daily summary), the Family screen (members, pets, household help, family moments, what needs a reply, upcoming events, each person's and pet's details, role names wherever they appear), the More screen (section names, each area's one line of purpose, the viewer's role, Help, Sign out), the Today screen (views, timeline rows, empty states, what needs a person, looking ahead) with the shared "Add to the family calendar" sheet it and Home open, and the HomeTalk screen's own words (greeting, suggestions, confirm/change/cancel, edit and retry, the composer and its voice states, the action preview's frame, errors, message times, and the conversation search), the Groceries and Meals screens with every sheet they open (add/edit an item, plan a meal, recipes, preferences, suggestions; stored categories and units stay as stored), and every other signed-in screen with the sheets it opens: Bills & Finance, Kids & School, Health & Fitness, Househelper, Home & Upkeep, HomeSend (and HomeTalk's paperclip sheet), Manage Household (members, responsibilities, activity, integrations, setup), HomeBrain Review, the rest of Home and the child's Home, Settings & Profile and every Settings page including the plan, checkout and billing screens. Each area's keys live in `i18n/messages/areas/<area>/`. A suggestion shows in the person's language but still sends its English sentence, which the rules read on every path. Still English: Help, the signed-out and sign-up screens, the guided setup wizard and the voice-link consent screen (in progress), the legal page (needs a person's review), and sentences built in core and shared across screens (agenda rows, activity event titles, server notices) |
+| `22-004` Translation catalog & core UI | P0 | Done | Own catalog (`i18n/messages/*`, en/hi/mr/es/fr/de/ar/zh; Chinese is Mandarin in Simplified characters, `zh-Hans-<region>` for dates and numbers) with plurals, interpolation and English fallback, never a raw key, completeness enforced by the compiler and tests. Each area's words live in `i18n/messages/areas/<area>/` (bills, school, health, helpers, homesend, household, settings, entry, help) spread into the top-level catalogs. Every screen reads its copy from the catalog: navigation and the shell, Home, Today, HomeTalk, Family, More, Notifications, Groceries, Meals, Bills & Finance, Kids & School, Health & Fitness, Househelper, Home & Upkeep, HomeSend, Manage Household, HomeBrain Review, Settings & Profile and every Settings page (including plan, checkout and billing), Help (guide, FAQ and its search, which answers in the reader's language), sign-in, sign-up, password reset, invitation, household creation, the guided setup wizard and the voice-link consent screen. Signed-out screens use the browser's language (`negotiateLanguage` on Accept-Language, nothing stored); signed-in ones the member's own. Client components take server-built labels; stored values never change, only the words shown for them. What stays English, by decision: household data; sentences built in core and shared across screens (agenda rows, Activity event titles, server-action notices and errors); static page titles; the legal page (needs a person's review before it is translated); suggestion templates that become the household's own records. The Language & Region page says so |
 | `22-005` Multilingual HomeTalk | P0 | Done | A person can type or speak in their own language and get the reply in it, and no gate decides anything differently. The model is told the person's language (`languageLine` in `systemFor`) and returns the same language-neutral intent, with days, times, numbers and fixed choices in English words and the household's own words kept as said. A bare yes or no is read in all eight languages, as a whole reply only. Each reply is composed and validated in English, then translated by `conversation/reply-language.ts`: names, bold values, dates, times, amounts, numbers, link targets and brand names become tokens, and the result must carry every token once, with no new digit and no new markup. Otherwise the checked English is shown with a line saying why. A reply is translated only when the household has agreed that every content class it carries (`REPLY_CLASSES`, the answer's facts) may reach its model provider. The English stays the message's content, and the shown text is kept in `metadata.localized` |
 | `22-006` Localized notifications | P0 | Done | Every smart reminder (bills, school items and school days, meals, groceries, pet care, family plans, and a backup's escalation) keeps `notifications.message`: a `reminder.*` catalog key plus typed values (name, day, time, amount in its currency, list). `/notifications` and delivery beyond the app render it in the recipient's language and formats; `title`/`body` stay the English record, rendered from the same message. Names and items are never translated; an unreadable message shows the stored English. Health, approval and HomeTalk personal reminders still store English only |
 | `22-007` Multi-currency household records | P1 | Done | The household currency is the default for new bills and transactions only (`CurrencyField` picker with "Another currency…"); every record keeps its own currency, nothing is converted; the money formatters use Intl. Audited every place amounts are added: a total is one sum per currency (`finance/totals.ts`'s `totalsByCurrency`, used by the grocery estimate), the Bills trend adds only the currency it shows and counts the rest, a budget counts only payments in its own currency and says how many it left out (`finance/budgets.ts`), the bill-bunch prediction only totals when every bill shares one currency, and a refund stays inside its payment's currency. HomeBrain's validator now recognises an invented amount in every supported currency (SGD, AED, CAD, AUD, EUR, GBP, USD, INR) |

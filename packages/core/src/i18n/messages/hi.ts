@@ -7,6 +7,7 @@ import { homesendHi } from "./areas/homesend/hi";
 import { settingsHi } from "./areas/settings/hi";
 import { householdHi } from "./areas/household/hi";
 import { entryHi } from "./areas/entry/hi";
+import { helpHi } from "./areas/help/hi";
 
 export const hi: Catalog = {
   "common.next": "आगे",
@@ -102,7 +103,7 @@ export const hi: Catalog = {
   "l10n.language.title": "अपनी भाषा चुनें",
   "l10n.language.lede": "ऐप के लिए, और अनुवाद होते-होते जवाबों और सूचनाओं के लिए भी।",
   "l10n.language.search": "भाषा खोजें…",
-  "l10n.language.coverage": "मेन्यू, होम और सेटिंग्स इस भाषा में हैं। कुछ स्क्रीन अभी अंग्रेज़ी में हैं, उनका अनुवाद चल रहा है।",
+  "l10n.language.coverage": "हर स्क्रीन इस भाषा में है। नाम और आपका परिवार जो लिखता है, वह वैसा ही रहता है, और WonderHome के कुछ छोटे संदेश अभी अंग्रेज़ी में हैं।",
   "l10n.region.title": "अपना क्षेत्र चुनें",
   "l10n.region.lede": "इससे हम तारीख़, समय, संख्या और सुझाई गई मुद्रा तय करते हैं।",
   "l10n.region.search": "देश या क्षेत्र खोजें…",
@@ -721,4 +722,5 @@ export const hi: Catalog = {
   ...settingsHi,
   ...householdHi,
   ...entryHi,
+  ...helpHi,
 };

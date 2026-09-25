@@ -7,6 +7,7 @@ import { homesendAr } from "./areas/homesend/ar";
 import { settingsAr } from "./areas/settings/ar";
 import { householdAr } from "./areas/household/ar";
 import { entryAr } from "./areas/entry/ar";
+import { helpAr } from "./areas/help/ar";
 
 export const ar: Catalog = {
   "common.next": "التالي",
@@ -102,7 +103,7 @@ export const ar: Catalog = {
   "l10n.language.title": "اختر لغتك",
   "l10n.language.lede": "للتطبيق، وللردود والإشعارات مع تقدّم الترجمة.",
   "l10n.language.search": "ابحث عن لغة…",
-  "l10n.language.coverage": "القوائم والرئيسية والإعدادات بهذه اللغة. بعض الشاشات ما زالت بالإنجليزية ريثما نترجمها.",
+  "l10n.language.coverage": "كل الشاشات بهذه اللغة. تبقى الأسماء وما تكتبه عائلتك كما كُتبت، وما زالت بعض رسائل WonderHome القصيرة بالإنجليزية.",
   "l10n.region.title": "اختر منطقتك",
   "l10n.region.lede": "يساعدنا ذلك في ضبط التاريخ والوقت والأرقام والعملة المقترحة.",
   "l10n.region.search": "ابحث عن دولة أو منطقة…",
@@ -745,4 +746,5 @@ export const ar: Catalog = {
   ...settingsAr,
   ...householdAr,
   ...entryAr,
+  ...helpAr,
 };

@@ -1,4 +1,6 @@
-import { FAQ, GUIDE, type FaqEntry, type GuideSection } from "./guide";
+import { helpEn } from "../i18n/messages/areas/help/en";
+import type { Translate } from "../i18n/translate";
+import { FAQ, GUIDE, localizedFaq, localizedGuide, type FaqEntry, type GuideSection } from "./guide";
 
 /**
  * Answering a question from the guide.
@@ -15,6 +17,15 @@ import { FAQ, GUIDE, type FaqEntry, type GuideSection } from "./guide";
  * answer wrong: rarer words count for more, the title and the curated
  * keywords count for more than the body, and an FAQ entry that matches wins
  * over a section, because somebody has already written the short answer.
+ *
+ * **In a person's own language** (story 22-004). `answerQuestionIn` searches
+ * the guide in the language the page is shown in, so a question typed in
+ * Hindi is matched against the Hindi guide and answered in its words, with
+ * the same section ids. It is the same retrieval — no translation, no model —
+ * with a tokenizer that reads any script: accented Latin, Devanagari, Arabic,
+ * and Chinese (written without spaces, so read in overlapping pairs of
+ * characters). The curated keywords stay English, so an English word still
+ * helps. English search is unchanged.
  */
 
 export type Answer = {
@@ -37,7 +48,53 @@ const STOP_WORDS = new Set([
   "which", "who", "why", "will", "with", "you", "your", "get", "got",
 ]);
 
-export function terms(text: string): string[] {
+/**
+ * The same, for each other language. English's are kept alongside, because
+ * the curated keywords are English and people mix the two.
+ */
+const STOP_WORDS_IN: Record<string, readonly string[]> = {
+  hi: [
+    "का", "की", "के", "है", "हैं", "में", "से", "को", "और", "या", "क्या", "कैसे", "मैं", "मेरा",
+    "मेरी", "मेरे", "आप", "अपना", "अपनी", "अपने", "यह", "वह", "पर", "तो", "भी", "हो", "कर",
+    "करूँ", "करें", "सकता", "सकती", "सकते", "सकूँ", "कौन", "क्यों", "कोई", "एक", "जो", "नहीं",
+    "था", "थी", "लिए", "इसे", "इस", "उस", "कि", "ने",
+  ],
+  mr: [
+    "आहे", "आहेत", "मध्ये", "आणि", "किंवा", "मी", "माझा", "माझी", "माझे", "माझ्या", "तुम्ही",
+    "तुमचा", "तुमची", "तुमचे", "तुमच्या", "हा", "ही", "हे", "तो", "ती", "ते", "कसे", "कसा", "कशी",
+    "काय", "कोण", "शकतो", "शकते", "शकता", "शकतात", "शकेन", "एक", "जे", "नाही", "पण", "तर",
+    "का", "ला", "साठी", "मला", "मग",
+  ],
+  es: [
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al", "en", "que", "qué",
+    "es", "son", "se", "mi", "mis", "tu", "tus", "su", "sus", "lo", "le", "les", "me", "te", "por",
+    "para", "con", "cómo", "como", "quién", "quiénes", "puede", "puedo", "hay", "esto", "este",
+    "esta", "eso", "si", "no", "más", "muy", "hago", "ya",
+  ],
+  fr: [
+    "le", "la", "les", "un", "une", "des", "de", "du", "au", "aux", "en", "et", "ou", "est", "sont",
+    "que", "qui", "quoi", "je", "tu", "il", "elle", "nous", "vous", "ils", "elles", "mon", "ma",
+    "mes", "ton", "ta", "tes", "son", "sa", "ses", "votre", "vos", "ce", "cet", "cette", "ces",
+    "pour", "par", "avec", "dans", "sur", "comment", "pourquoi", "peut", "peux", "ne", "pas", "se",
+    "si", "plus", "très", "qu", "est-ce", "ai", "fais",
+  ],
+  de: [
+    "der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem", "einer", "und",
+    "oder", "ist", "sind", "ich", "du", "er", "sie", "es", "wir", "ihr", "mein", "meine", "meinen",
+    "meiner", "dein", "deine", "deinen", "wie", "was", "wer", "warum", "wo", "kann", "kannst", "zu",
+    "zum", "zur", "mit", "für", "von", "vom", "im", "in", "an", "am", "auf", "bei", "nicht", "auch",
+    "so", "sehr", "mich", "mir", "dich", "dir",
+  ],
+  ar: [
+    "في", "من", "إلى", "على", "عن", "مع", "هل", "ما", "ماذا", "كيف", "لماذا", "أنا", "أنت", "هو",
+    "هي", "هذا", "هذه", "ذلك", "تلك", "أن", "أو", "لا", "لم", "لن", "يمكن", "يمكنني", "يمكنك", "يمكنه",
+    "كل", "قد", "ثم", "إذا", "التي", "الذي",
+  ],
+  zh: ["可以", "什么", "怎么", "如何", "我们", "我的", "你的", "是否", "这个", "那个", "哪些", "为什", "一个"],
+};
+
+export function terms(text: string, language = "en"): string[] {
+  if (language !== "en") return termsIn(text, language);
   return text
     .toLowerCase()
     .replace(/[^a-z0-9\s'-]/g, " ")
@@ -48,11 +105,53 @@ export function terms(text: string): string[] {
     .map((word) => (word.length > 4 && word.endsWith("s") ? word.slice(0, -1) : word));
 }
 
+const HAN = /\p{Script=Han}/u;
+const HAN_FUNCTION_CHARACTERS = /[的了吗呢吧啊我你是和与或也]/gu;
+
+/** The same idea as English, for any other script. */
+function termsIn(text: string, language: string): string[] {
+  const stop = new Set([...STOP_WORDS, ...(STOP_WORDS_IN[language] ?? [])]);
+  const out: string[] = [];
+  const words = text
+    .toLowerCase()
+    // Letters, their marks (Devanagari and Arabic vowel signs) and digits;
+    // everything else — the apostrophe in "l’argent" included — splits words.
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
+    .split(/\s+/);
+
+  for (const word of words) {
+    // Chinese is written without spaces: a run of characters is read as
+    // overlapping pairs, since most Chinese words are two characters long.
+    // Particles and pronouns ("的", "吗", "我") split a run first, so they
+    // never pair up with a real word.
+    const unspaced = word.replace(HAN_FUNCTION_CHARACTERS, " ").split(" ");
+    for (const run of unspaced.flatMap((part) => part.match(/\p{Script=Han}+|[^\p{Script=Han}]+/gu) ?? [])) {
+      if (HAN.test(run)) {
+        for (let i = 0; i + 1 < run.length; i += 1) out.push(run.slice(i, i + 2));
+      } else {
+        out.push(stem(run, language));
+      }
+    }
+  }
+
+  return out.filter((word) => word.length > 1 && !stop.has(word));
+}
+
+/** Just enough stemming that a plural or an attached article does not hide a word. */
+function stem(word: string, language: string): string {
+  if (language === "ar") {
+    // "الفواتير" and "فواتير", "والدفع" and "دفع", are the same word.
+    const bare = word.replace(/^(?:و|ف)?(?:بال|كال|لل|ال)/u, "");
+    return bare.length >= 2 ? bare : word;
+  }
+  return word.length > 4 && word.endsWith("s") ? word.slice(0, -1) : word;
+}
+
 /** How rare each term is across the guide, so common words weigh less. */
-function inverseFrequency(sections: readonly GuideSection[]): Map<string, number> {
+function inverseFrequency(sections: readonly GuideSection[], language: string): Map<string, number> {
   const seen = new Map<string, number>();
   for (const section of sections) {
-    for (const term of new Set(terms(sectionText(section)))) {
+    for (const term of new Set(terms(sectionText(section), language))) {
       seen.set(term, (seen.get(term) ?? 0) + 1);
     }
   }
@@ -72,14 +171,18 @@ export function scoreSection(
   question: string,
   section: GuideSection,
   weights: Map<string, number>,
+  language = "en",
 ): number {
-  const asked = new Set(terms(question));
+  const asked = new Set(terms(question, language));
   if (asked.size === 0) return 0;
 
   // A word in the title or the curated keywords is a much stronger signal
   // that this is the right section than the same word buried in a paragraph.
-  const strong = new Set([...terms(section.title), ...section.keywords.flatMap(terms)]);
-  const body = new Set(terms([section.summary, ...section.body].join(" ")));
+  const strong = new Set([
+    ...terms(section.title, language),
+    ...section.keywords.flatMap((keyword) => terms(keyword, language)),
+  ]);
+  const body = new Set(terms([section.summary, ...section.body].join(" "), language));
 
   let score = 0;
   for (const term of asked) {
@@ -91,12 +194,17 @@ export function scoreSection(
   return score / asked.size;
 }
 
-function scoreFaq(question: string, entry: FaqEntry, weights: Map<string, number>): number {
-  const asked = new Set(terms(question));
+function scoreFaq(
+  question: string,
+  entry: FaqEntry,
+  weights: Map<string, number>,
+  language: string,
+): number {
+  const asked = new Set(terms(question, language));
   if (asked.size === 0) return 0;
 
-  const inQuestion = new Set(terms(entry.question));
-  const inAnswer = new Set(terms(entry.answer));
+  const inQuestion = new Set(terms(entry.question, language));
+  const inAnswer = new Set(terms(entry.answer, language));
 
   let score = 0;
   for (const term of asked) {
@@ -112,18 +220,26 @@ export const CONFIDENCE_FLOOR = 0.55;
 
 export function answerQuestion(
   question: string,
-  options: { guide?: readonly GuideSection[]; faq?: readonly FaqEntry[] } = {},
+  options: {
+    guide?: readonly GuideSection[];
+    faq?: readonly FaqEntry[];
+    /** The language the guide and the question are in; English unless said. */
+    language?: string;
+    /** What to say when nothing matched, in that language. */
+    notFound?: string;
+  } = {},
 ): Answer {
   const guide = options.guide ?? GUIDE;
   const faq = options.faq ?? FAQ;
-  const weights = inverseFrequency(guide);
+  const language = options.language ?? "en";
+  const weights = inverseFrequency(guide, language);
 
   const ranked = guide
-    .map((section) => ({ section, score: scoreSection(question, section, weights) }))
+    .map((section) => ({ section, score: scoreSection(question, section, weights, language) }))
     .sort((a, b) => b.score - a.score);
 
   const bestFaq = faq
-    .map((entry) => ({ entry, score: scoreFaq(question, entry, weights) }))
+    .map((entry) => ({ entry, score: scoreFaq(question, entry, weights, language) }))
     .sort((a, b) => b.score - a.score)[0];
 
   const best = ranked[0];
@@ -146,11 +262,11 @@ export function answerQuestion(
   }
 
   if (!best || best.score <= CONFIDENCE_FLOOR) {
+    const start = guide.find((section) => section.id === "what-wonderhome-is");
     return {
-      reply:
-        "I could not find that in the guide. Try naming the part of the home you mean — bills, school, meals, notifications, privacy — or browse the sections below.",
+      reply: options.notFound ?? helpEn["help.ask.notFound"],
       sectionId: "what-wonderhome-is",
-      sectionTitle: "What WonderHome is",
+      sectionTitle: start?.title ?? helpEn["help.guide.what-wonderhome-is.title"],
       alsoSee: [],
       confident: false,
     };
@@ -165,12 +281,33 @@ export function answerQuestion(
   };
 }
 
+/**
+ * A question answered from the guide in one person's language: their guide,
+ * their FAQ, their words for "not found". The ids are the same as English, so
+ * every link still lands on its section.
+ */
+export function answerQuestionIn(question: string, t: Translate, language: string): Answer {
+  return answerQuestion(question, {
+    guide: localizedGuide(t),
+    faq: localizedFaq(t),
+    language,
+    notFound: t("help.ask.notFound"),
+  });
+}
+
+const SUGGESTED_KEYS = [
+  "help.suggested.spendMoney",
+  "help.suggested.quietHome",
+  "help.suggested.schoolWork",
+  "help.suggested.sendNotice",
+  "help.suggested.hindi",
+  "help.suggested.data",
+] as const satisfies readonly (keyof typeof helpEn)[];
+
 /** Questions offered as starting points, so the box is never a blank stare. */
-export const SUGGESTED_QUESTIONS = [
-  "Can WonderHome spend money without asking?",
-  "Why is my home screen so quiet?",
-  "Who can see my children's school work?",
-  "How do I send WonderHome a school notice?",
-  "Can I use WonderHome in Hindi?",
-  "How do I download or delete my data?",
-];
+export function suggestedQuestions(t?: Translate): string[] {
+  return SUGGESTED_KEYS.map((key) => (t ? t(key) : helpEn[key]));
+}
+
+/** The starting points in English. */
+export const SUGGESTED_QUESTIONS = suggestedQuestions();

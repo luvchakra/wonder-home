@@ -16,6 +16,7 @@ import { homesendEn } from "./areas/homesend/en";
 import { settingsEn } from "./areas/settings/en";
 import { householdEn } from "./areas/household/en";
 import { entryEn } from "./areas/entry/en";
+import { helpEn } from "./areas/help/en";
 
 // Each area's words are spread in at the end (story 22-004).
 export const en = {
@@ -112,7 +113,7 @@ export const en = {
   "l10n.language.title": "Choose your language",
   "l10n.language.lede": "Used for the app, and for replies and notifications as they are translated.",
   "l10n.language.search": "Search languages…",
-  "l10n.language.coverage": "Menus, Home and Settings are in this language. Some screens are still in English while we translate them.",
+  "l10n.language.coverage": "Every screen is in this language. Names and what your family types stay as written, and a few of WonderHome's short messages are still in English.",
   "l10n.region.title": "Select your region",
   "l10n.region.lede": "This helps us set date, time, number and recommended currency.",
   "l10n.region.search": "Search country or region…",
@@ -731,6 +732,7 @@ export const en = {
   ...settingsEn,
   ...householdEn,
   ...entryEn,
+  ...helpEn,
 } as const;
 
 export type MessageKey = keyof typeof en;

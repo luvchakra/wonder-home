@@ -9,6 +9,33 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 
 type Exchange = { question: string; answer: Answer };
 
+/** The box's own words, built on the server in the reader's language (story 22-004). */
+export type GuideAssistantLabels = {
+  title: string;
+  lede: string;
+  label: string;
+  placeholder: string;
+  submit: string;
+  searching: string;
+  ready: string;
+  /** Before the section a reply links to: "Read: {section}". */
+  read: string;
+  /** Before the further sections: "Also: …". */
+  also: string;
+};
+
+const ENGLISH: GuideAssistantLabels = {
+  title: "Ask the guide",
+  lede: "Searches this guide and answers with a link to the section it came from. Not a language model — so it will say when it does not know rather than invent an answer.",
+  label: "Ask a question about WonderHome",
+  placeholder: "Ask anything about WonderHome…",
+  submit: "Ask",
+  searching: "Searching the guide",
+  ready: "Answer ready",
+  read: "Read:",
+  also: "Also:",
+};
+
 /**
  * Ask the guide.
  *
@@ -22,9 +49,11 @@ type Exchange = { question: string; answer: Answer };
 export function GuideAssistant({
   ask,
   suggestions,
+  labels = ENGLISH,
 }: {
   ask: (question: string) => Promise<Answer>;
   suggestions: readonly string[];
+  labels?: GuideAssistantLabels;
 }) {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<Exchange[]>([]);
@@ -46,11 +75,8 @@ export function GuideAssistant({
       <div className="flex items-start gap-3">
         <IconTile icon={Sparkles} tone="ai" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold tracking-tight">Ask the guide</h2>
-          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">
-            Searches this guide and answers with a link to the section it came from. Not a language
-            model — so it will say when it does not know rather than invent an answer.
-          </p>
+          <h2 className="text-base font-semibold tracking-tight">{labels.title}</h2>
+          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{labels.lede}</p>
         </div>
       </div>
 
@@ -69,12 +95,12 @@ export function GuideAssistant({
                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline"
                   >
                     <BookOpen aria-hidden className="size-3.5" />
-                    Read: {exchange.answer.sectionTitle}
+                    {labels.read} {exchange.answer.sectionTitle}
                   </a>
                 ) : null}
                 {exchange.answer.alsoSee.length > 0 ? (
                   <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--wh-foreground-muted)]">
-                    <span>Also:</span>
+                    <span>{labels.also}</span>
                     {exchange.answer.alsoSee.map((also) => (
                       <a key={also.id} href={`#${also.id}`} className="underline-offset-2 hover:underline">
                         {also.title}
@@ -96,20 +122,20 @@ export function GuideAssistant({
         className="relative"
       >
         <label htmlFor="guide-question" className="sr-only">
-          Ask a question about WonderHome
+          {labels.label}
         </label>
         <Search aria-hidden className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--wh-foreground-subtle)]" />
         <input
           id="guide-question"
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="Ask anything about WonderHome…"
+          placeholder={labels.placeholder}
           className="block min-h-11 w-full rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-2 pr-12 pl-9 text-base focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
         />
         <button
           type="submit"
           disabled={pending || question.trim().length === 0}
-          aria-label="Ask"
+          aria-label={labels.submit}
           className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)] transition-opacity disabled:opacity-40"
         >
           <CornerDownLeft aria-hidden className="size-4" />
@@ -117,7 +143,7 @@ export function GuideAssistant({
       </form>
 
       <p aria-live="polite" className="sr-only">
-        {pending ? "Searching the guide" : history.length > 0 ? "Answer ready" : ""}
+        {pending ? labels.searching : history.length > 0 ? labels.ready : ""}
       </p>
 
       {history.length === 0 ? (

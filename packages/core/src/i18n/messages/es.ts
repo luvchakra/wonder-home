@@ -7,6 +7,7 @@ import { homesendEs } from "./areas/homesend/es";
 import { settingsEs } from "./areas/settings/es";
 import { householdEs } from "./areas/household/es";
 import { entryEs } from "./areas/entry/es";
+import { helpEs } from "./areas/help/es";
 
 export const es: Catalog = {
   "common.next": "Siguiente",
@@ -102,7 +103,7 @@ export const es: Catalog = {
   "l10n.language.title": "Elige tu idioma",
   "l10n.language.lede": "Para la aplicación y, a medida que se traducen, para respuestas y notificaciones.",
   "l10n.language.search": "Buscar idiomas…",
-  "l10n.language.coverage": "Los menús, el Inicio y los Ajustes están en este idioma. Algunas pantallas siguen en inglés mientras las traducimos.",
+  "l10n.language.coverage": "Todas las pantallas están en este idioma. Los nombres y lo que escribe tu familia se quedan tal cual, y algunos mensajes breves de WonderHome siguen en inglés.",
   "l10n.region.title": "Selecciona tu región",
   "l10n.region.lede": "Nos ayuda a fijar la fecha, la hora, los números y la moneda recomendada.",
   "l10n.region.search": "Buscar país o región…",
@@ -721,4 +722,5 @@ export const es: Catalog = {
   ...settingsEs,
   ...householdEs,
   ...entryEs,
+  ...helpEs,
 };
