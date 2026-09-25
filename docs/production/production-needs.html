@@ -1,0 +1,91 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>WonderHome — What I need from you for production</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+:root { --ink:#1F2937; --muted:#4B5563; --line:#E5E7EB; --primary:#4F46E5; --soft:#EEF2FF; --amber:#B45309; --ambersoft:#FEF3C7; --green:#047857; --greensoft:#ECFDF5; }
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", "Helvetica Neue", Arial, "Noto Sans CJK SC", "Noto Sans SC", sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.45; margin: 0; }
+header { border-bottom: 3px solid var(--primary); padding-bottom: 10px; margin-bottom: 16px; }
+h1 { font-size: 20pt; margin: 0 0 4px; letter-spacing: -0.01em; }
+.sub { color: var(--muted); font-size: 10pt; margin: 0; }
+h2 { font-size: 13pt; margin: 20px 0 8px; padding: 6px 10px; border-radius: 6px; page-break-after: avoid; }
+h2.first { background: #FEE2E2; color: #991B1B; }
+h2.pay { background: var(--soft); color: var(--primary); }
+h2.opt { background: var(--greensoft); color: var(--green); }
+h2.glance { background: var(--ambersoft); color: var(--amber); }
+.note { color: var(--muted); font-size: 9.5pt; margin: -2px 0 8px 2px; }
+table { width: 100%; border-collapse: collapse; margin: 0 0 6px; page-break-inside: auto; }
+tr { page-break-inside: avoid; }
+th, td { text-align: left; vertical-align: top; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+th { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); background: #F9FAFB; }
+td.n { width: 26px; font-weight: 700; color: var(--primary); }
+td.box { width: 22px; }
+.cb { display: inline-block; width: 13px; height: 13px; border: 1.5px solid #9CA3AF; border-radius: 3px; margin-top: 2px; }
+td.what { width: 30%; font-weight: 600; }
+code { font-family: "SF Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 9pt; background: #F3F4F6; border: 1px solid #E5E7EB; border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+ul { margin: 4px 0 0 0; padding-left: 16px; }
+li { margin: 2px 0; }
+footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 8.5pt; }
+</style></head><body>
+<header>
+  <h1>WonderHome — What I need from you for production</h1>
+  <p class="sub">Owner checklist · 25 September 2026 · Tick each item when done</p>
+</header>
+
+<h2 class="first">1. Do first</h2>
+<table>
+<tr><th></th><th>#</th><th>Task</th><th>How</th></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">1</td><td class="what">Rotate the Gemini key</td><td>Create a new key in Google AI Studio, update <code>WONDERHOME_AI_KEY</code> in Vercel, then revoke the old key. The old key was pasted into chat earlier.</td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">2</td><td class="what">Redeploy production once</td><td><code>CRON_SECRET</code> is now set in Vercel. A redeploy makes sure the nightly jobs (reminders, retention, payment reconciliation, webhooks) run with it.</td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">3</td><td class="what">Supabase Auth settings</td><td>
+  <ul>
+    <li>Set the Site URL and redirect URLs to your domain.</li>
+    <li>Add custom SMTP. The built-in email sender is rate-limited.</li>
+  </ul></td></tr>
+</table>
+
+<h2 class="pay">2. To take payments</h2>
+<table>
+<tr><th></th><th>#</th><th>Task</th><th>How</th></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">4</td><td class="what">Razorpay (India)</td><td>
+  <ul>
+    <li>Set <code>RAZORPAY_KEY_ID</code>, <code>RAZORPAY_KEY_SECRET</code> and <code>RAZORPAY_WEBHOOK_SECRET</code>.</li>
+    <li>Set <code>WONDERHOME_BILLING_PROVIDERS=razorpay</code>.</li>
+    <li>Point the webhook at <code>/api/v1/billing/webhook/razorpay</code>.</li>
+    <li>Create the Pro and Max plans in Razorpay and send me their plan IDs to map.</li>
+  </ul></td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">5</td><td class="what">Stripe (other countries)</td><td>The same steps, with <code>STRIPE_SECRET_KEY</code> and <code>STRIPE_WEBHOOK_SECRET</code>.</td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">6</td><td class="what">Decide when to go live</td><td>Tell me when, and I mark the plans as paid. Prices are already set: ₹299 / ₹599 a month.</td></tr>
+</table>
+
+<h2 class="opt">3. Optional channels</h2>
+<p class="note">Each stays off until you set it up. Nothing breaks if you skip one.</p>
+<table>
+<tr><th></th><th>#</th><th>Task</th><th>How</th></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">7</td><td class="what">Voice (story 04-017)</td><td>
+  <ul>
+    <li>Create the Alexa skill and set the <code>ALEXA_*</code> variables.</li>
+    <li>Test Gemini Live on a real device.</li>
+  </ul></td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">8</td><td class="what">WhatsApp</td><td>Create a Meta business app, then set:
+  <ul>
+    <li><code>WHATSAPP_ACCESS_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, <code>WHATSAPP_TEMPLATE_NAME</code></li>
+    <li><code>WHATSAPP_APP_SECRET</code>, <code>WHATSAPP_VERIFY_TOKEN</code>, <code>WHATSAPP_BUSINESS_NUMBER</code></li>
+  </ul></td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">9</td><td class="what">Email forwarding into HomeSend</td><td>Set up a Resend account with a verified receiving domain, then set <code>RESEND_API_KEY</code> and <code>RESEND_WEBHOOK_SECRET</code>.</td></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">10</td><td class="what">Switches, each only if you want it</td><td>
+  <ul>
+    <li><code>WONDERHOME_WEATHER_PROVIDER=open-meteo</code>: weather</li>
+    <li><code>WONDERHOME_MALWARE_SCAN_ENDPOINT</code>: virus scanning of uploads</li>
+    <li>Google sign-in: enable Google in Supabase, then set <code>NEXT_PUBLIC_GOOGLE_AUTH_ENABLED</code></li>
+    <li><code>WONDERHOME_DEVELOPER_API=on</code>: only when you have a partner to give a key to</li>
+  </ul></td></tr>
+</table>
+
+<h2 class="glance">4. Worth a glance</h2>
+<table>
+<tr><th></th><th>#</th><th>Task</th><th>How</th></tr>
+<tr><td class="box"><span class="cb"></span></td><td class="n">11</td><td class="what">Chinese word choices</td><td>Ask a native reader to check a few terms, such as 家政帮手 for "househelper".</td></tr>
+</table>
+
+<footer>All environment variables are set in Vercel → Project <b>wonderhome</b> → Settings → Environment Variables, for Production. Redeploy after changing any of them.</footer>
+</body></html>
