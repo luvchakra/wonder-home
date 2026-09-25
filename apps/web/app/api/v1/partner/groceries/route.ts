@@ -14,9 +14,8 @@ import { partnerAddGroceries, partnerGroceries } from "@wonderhome/core/develope
  * fixtures and writes nothing.
  */
 export async function GET(request: Request) {
-  const admin = createAdminClient();
-  return defineRoute({ authenticate: () => authenticatePartner(admin, request) }, async ({ actor }) => ({
-    items: await partnerGroceries(admin, actor),
+  return defineRoute({ authenticate: () => authenticatePartner(createAdminClient, request) }, async ({ actor }) => ({
+    items: await partnerGroceries(createAdminClient(), actor),
   }))(request);
 }
 
@@ -25,17 +24,16 @@ const addSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const admin = createAdminClient();
   let actor: Promise<PartnerActor> | null = null;
-  const authenticate = () => (actor ??= authenticatePartner(admin, request));
+  const authenticate = () => (actor ??= authenticatePartner(createAdminClient, request));
   return defineRoute(
     {
       input: addSchema,
       authenticate,
       // Scoped to the key's own household, which authentication has already settled.
-      idempotency: async () => supabaseIdempotencyStore(admin, (await authenticate()).householdId),
+      idempotency: async () => supabaseIdempotencyStore(createAdminClient(), (await authenticate()).householdId),
     },
-    async ({ actor: caller, body }) => ({ results: await partnerAddGroceries(admin, caller, body.items) }),
+    async ({ actor: caller, body }) => ({ results: await partnerAddGroceries(createAdminClient(), caller, body.items) }),
   )(request);
 }
 

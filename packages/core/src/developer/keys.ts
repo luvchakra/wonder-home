@@ -80,11 +80,17 @@ export function keyIsUsable(row: { revoked_at: string | null; expires_at: string
  * outside — no key, a wrong key, a revoked one and an expired one are all a
  * plain 401 — so nobody learns which keys exist.
  */
-export async function authenticatePartner(admin: SupabaseClient, request: Request, now: Date = new Date()): Promise<PartnerActor> {
+export async function authenticatePartner(
+  adminClient: SupabaseClient | (() => SupabaseClient),
+  request: Request,
+  now: Date = new Date(),
+): Promise<PartnerActor> {
   // Switched off, no key is valid: the same 401 as any bad key, so an
-  // anonymous caller learns nothing about whether the API is on.
+  // anonymous caller learns nothing about whether the API is on. The
+  // service-role client is only made once there is a key to look up.
   const key = keyFromHeader(request.headers.get("authorization"));
   if (!key || !developerApiEnabled()) throw ApiError.unauthenticated("A valid partner key is required.");
+  const admin = typeof adminClient === "function" ? adminClient() : adminClient;
   const { data, error } = await admin
     .from("developer_api_keys")
     .select("id, household_id, environment, scopes, revoked_at, expires_at, last_used_at")

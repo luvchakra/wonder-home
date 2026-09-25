@@ -9,9 +9,8 @@ import { partnerHousehold } from "@wonderhome/core/developer/partner";
  * key refused) unless the deployment sets `WONDERHOME_DEVELOPER_API=on`.
  */
 export async function GET(request: Request) {
-  const admin = createAdminClient();
-  return defineRoute({ authenticate: () => authenticatePartner(admin, request) }, async ({ actor }) => ({
-    household: await partnerHousehold(admin, actor),
+  return defineRoute({ authenticate: () => authenticatePartner(createAdminClient, request) }, async ({ actor }) => ({
+    household: await partnerHousehold(createAdminClient(), actor),
   }))(request);
 }
 
