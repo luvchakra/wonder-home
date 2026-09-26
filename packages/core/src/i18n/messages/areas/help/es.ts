@@ -90,6 +90,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Los recordatorios llegan en el idioma de cada persona, y todas las pantallas se muestran en él. Los nombres y lo que escribe tu familia se quedan tal cual; algunos mensajes breves de WonderHome siguen en inglés, y la página Idioma y región lo indica.",
   "help.guide.language.body.5":
     "Cambiar de idioma nunca cambia lo que está guardado. Un importe se queda en la moneda en la que se registró, y nada se convierte nunca.",
+  "help.guide.language.body.6": "Antes de iniciar sesión, las páginas de inicio de sesión, registro y Ayuda siguen el idioma de tu navegador; una vez dentro, manda tu propia elección. La búsqueda de Ayuda también entiende preguntas en tu idioma.",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Habla o escribe: una sola conversación, y nunca dice que ha actuado cuando no lo ha hecho.",
@@ -165,6 +166,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.bills.body.4":
     "Todavía no se puede pagar desde WonderHome. Pagar prepara un pago para tu aprobación en HomeTalk y se detiene ahí: no mueve dinero.",
   "help.guide.bills.body.5": "El dinero lo ven los adultos y los administradores. Los niños y la ayuda doméstica nunca lo ven.",
+  "help.guide.bills.body.6": "Presupuestos: un Admin puede fijar lo que el hogar piensa gastar en un tipo de factura —suministros, alquiler, cuotas escolares— por mes, trimestre o año, y Facturas muestra lo gastado y lo que queda. Un presupuesto nunca bloquea una factura. El gasto en otra moneda aparece al lado, nunca sumado, porque nada se convierte.",
 
   "help.guide.school.title": "Colegio y tareas de los niños",
   "help.guide.school.summary": "Deberes, exámenes y avisos, y plazos que no van a caber.",
@@ -205,6 +207,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.body.2": "Un Admin registra los electrodomésticos de la casa; cualquier adulto puede pedir un servicio.",
   "help.guide.home-upkeep.body.3":
     "El tiempo solo habla cuando cambia una decisión —la colada que hoy no se secará fuera, por ejemplo— y nunca como una lectura del pronóstico. Usa la zona que eligió un Admin, guardada solo con una precisión de un kilómetro, más o menos.",
+  "help.guide.home-upkeep.body.4": "El tiempo solo se usa donde está activado para tu WonderHome; Ajustes → Cuentas conectadas muestra si lo está.",
 
   "help.guide.household-and-roles.title": "Miembros, roles y lo que ve cada persona",
   "help.guide.household-and-roles.summary": "Un hogar, varias identidades y una vista distinta para cada una.",
@@ -241,6 +244,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Las responsabilidades dicen quién se ocupa de qué y quién cubre cuando no puede. Un resultado con responsable tiene a alguien a quien preguntar; uno sin responsable es un hueco, y WonderHome te muestra los huecos y dónde la carga está repartida de forma desigual.",
   "help.guide.outcomes.body.3":
     "Las políticas cubren los límites de gasto, quién aprueba qué, las horas de silencio y la privacidad. Hasta que las fijes, WonderHome pregunta antes de cualquier cosa importante: seguro, pero más lento.",
+  "help.guide.outcomes.body.4": "Repartir la carga, en Gestionar el hogar → Responsabilidades, muestra cuántas veces por semana le tocan a cada persona sus responsabilidades. Cuando alguien lleva mucho más que otra persona, puede sugerir que el suplente ya nombrado se encargue de una; nada cambia hasta que un Admin lo acepta.",
 
   "help.guide.plan.title": "Tu plan",
   "help.guide.plan.summary": "Free, Pro y Max, y cambiar es gratis durante el acceso anticipado.",
@@ -250,6 +254,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Durante el acceso anticipado, cambiar de plan es gratis y no se cobra nada. Los precios se muestran por mes o por año para que sepas qué esperar más adelante.",
   "help.guide.plan.body.3":
     "Algo que no forma parte de tu plan lo dice allí donde aparecería, en lugar de ofrecer un botón que no hace nada. Si una función forma parte de una prueba, Ajustes te lo indica.",
+  "help.guide.plan.body.4": "Cuando empiecen los planes de pago, pagarás en la propia página del proveedor de pagos —WonderHome nunca ve tu tarjeta— y Ajustes → Tu plan → Facturación guarda cada pago y cada factura. Una cancelación o el paso a un plan menor espera hasta el final del periodo que pagaste.",
 
   "help.guide.ai-autonomy.title": "Cuánto puede hacer WonderHome por su cuenta",
   "help.guide.ai-autonomy.summary": "Cuatro niveles, fijados por responsabilidad, y los eliges tú.",
@@ -294,6 +299,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "Donde WhatsApp está disponible, cada adulto puede conectar su propio número desde Ajustes → WhatsApp enviando un código de un solo uso. Lo que le envías llega a HomeSend como todo lo demás. Desde WhatsApp no se paga, pide, reserva ni aprueba nada, y los demás miembros solo ven “WhatsApp conectado” junto a tu nombre, nunca el número.",
   "help.guide.connections.body.4": "Un asistente de voz está vinculado a una persona y solo habla como ella. Los pagos y los pedidos nunca se hacen por voz.",
+  "help.guide.connections.body.5": "Donde tu WonderHome lo tenga activado, un Admin puede dejar que una app de confianza vea la lista de la compra o añada cosas a ella, con una clave creada en Ajustes → Cuentas conectadas. Cada clave hace solo lo que marcaste, se muestra una sola vez y se puede revocar en cualquier momento; una clave de pruebas usa datos de ejemplo y no cambia nada.",
 
   "help.faq.quiet-home.q": "¿Por qué mi pantalla de inicio está tan tranquila?",
   "help.faq.quiet-home.a":
@@ -345,4 +351,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.faq.full-setup.q": "¿Cómo llego al 100% de la configuración?",
   "help.faq.full-setup.a":
     "Gestionar el hogar enumera cada paso. Los pasos que no aplican a tu casa —sin niños, sin ayuda doméstica— quedan fuera del total, así que todos los hogares pueden llegar al 100%.",
+  "help.faq.budget.q": "¿Puedo fijar un presupuesto?",
+  "help.faq.budget.a": "Sí. En Facturas, un Admin puede fijar un presupuesto para un tipo de factura por mes, trimestre o año, y todos los que pueden ver el dinero ven lo que queda. Un presupuesto nunca impide pagar una factura.",
+  "help.faq.other-apps.q": "¿Pueden otras apps conectarse a WonderHome?",
+  "help.faq.other-apps.a": "Donde esté activado para tu WonderHome, un Admin puede crear una clave en Ajustes → Cuentas conectadas que permite a una app de confianza ver la lista de la compra o añadir cosas —solo lo que marcaste— y se puede revocar en cualquier momento.",
 };

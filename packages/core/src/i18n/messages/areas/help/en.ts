@@ -105,6 +105,7 @@ export const helpEn = {
     "Reminders arrive in each person's own language, and every screen is shown in it. Names and what your family types stay as written; a few of WonderHome's short messages are still in English, and the Language & Region page says so.",
   "help.guide.language.body.5":
     "Changing your language never changes what is stored. An amount stays in the currency it was recorded in, and nothing is ever converted.",
+  "help.guide.language.body.6": "Before you sign in, the sign-in, sign-up and Help pages follow your browser's language; once you are in, your own choice takes over. Help's search understands questions in your language too.",
 
   // HomeTalk
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
@@ -189,6 +190,7 @@ export const helpEn = {
     "Paying from inside WonderHome is not available yet. Pay prepares a payment for your approval in HomeTalk and stops there — it does not move money.",
   "help.guide.bills.body.5":
     "Money is visible to adults and administrators. Children and helpers never see it.",
+  "help.guide.bills.body.6": "Budgets: an Admin can set what the household means to spend on one kind of bill — utilities, rent, school fees — per month, quarter or year, and Bills shows what has been spent and what is left. A budget never blocks a bill. Spending in another currency is listed beside it, never added in, because nothing is converted.",
 
   // School and children's work
   "help.guide.school.title": "School and children's work",
@@ -235,6 +237,7 @@ export const helpEn = {
     "An Admin records the home's appliances; any adult can raise a service request.",
   "help.guide.home-upkeep.body.3":
     "Weather speaks only when it changes a decision — washing that will not dry outside today, for example — and never as a forecast readout. It uses the area an Admin chose, kept only to about a kilometre.",
+  "help.guide.home-upkeep.body.4": "Weather is used only where it is switched on for your WonderHome; Settings → Connected accounts shows whether it is.",
 
   // Members, roles and what each person sees
   "help.guide.household-and-roles.title": "Members, roles and what each person sees",
@@ -277,6 +280,7 @@ export const helpEn = {
     "Responsibilities say who looks after what, and who covers when they cannot. An outcome with an owner has somebody to ask; one without is a gap, and WonderHome shows you the gaps and where the load sits unevenly.",
   "help.guide.outcomes.body.3":
     "Policies cover spending limits, who approves what, quiet hours and privacy. Until you set them, WonderHome asks before anything consequential — safe, but slower.",
+  "help.guide.outcomes.body.4": "Share the load, on Manage household → Responsibilities, shows how many times a week each person's responsibilities come round. When one person carries far more than another, it can suggest that the backup already named takes one over; nothing changes until an Admin accepts.",
 
   // Your plan
   "help.guide.plan.title": "Your plan",
@@ -287,6 +291,7 @@ export const helpEn = {
     "During early access, switching plans is free and nothing is charged. Prices are shown monthly or yearly so you know what to expect later.",
   "help.guide.plan.body.3":
     "Something that is not part of your plan says so where it would appear, rather than offering a button that does nothing. If a feature is part of a trial, Settings tells you.",
+  "help.guide.plan.body.4": "When paid plans begin, you will pay on the payment provider's own page — WonderHome never sees your card — and Settings → Your plan → Billing keeps each payment and invoice. A cancellation or a move to a smaller plan waits until the end of the period you paid for.",
 
   // How much WonderHome may do on its own
   "help.guide.ai-autonomy.title": "How much WonderHome may do on its own",
@@ -339,6 +344,7 @@ export const helpEn = {
     "Where WhatsApp is available, each adult can connect their own number from Settings → WhatsApp by sending a one-time code. Things you send it land in HomeSend like anything else. Nothing is paid, ordered, booked or approved from WhatsApp, and other members only ever see \"WhatsApp connected\" beside your name, never the number.",
   "help.guide.connections.body.4":
     "A voice assistant is linked to one person and speaks only as them. Payments and orders are never done by voice.",
+  "help.guide.connections.body.5": "Where your WonderHome has it switched on, an Admin can let an app the household trusts see or add to the grocery list, with a key created in Settings → Connected accounts. Each key does only what you ticked, is shown once, and can be revoked at any time; a sandbox key uses sample data and changes nothing.",
 
   // Common questions.
   "help.faq.quiet-home.q": "Why is my Home screen so quiet?",
@@ -392,4 +398,8 @@ export const helpEn = {
   "help.faq.full-setup.q": "How do I get to 100% setup?",
   "help.faq.full-setup.a":
     "Manage household lists every step. Steps that do not apply to your home — no children, no helper — are left out of the total, so 100% is reachable for every household.",
+  "help.faq.budget.q": "Can I set a budget?",
+  "help.faq.budget.a": "Yes. On Bills, an Admin can set a budget for one kind of bill per month, quarter or year, and everyone who can see money sees what is left. A budget never stops a bill being paid.",
+  "help.faq.other-apps.q": "Can other apps connect to WonderHome?",
+  "help.faq.other-apps.a": "Where it is switched on for your WonderHome, an Admin can create a key in Settings → Connected accounts that lets an app you trust see or add to the grocery list — only what you ticked, and it can be revoked at any time.",
 } as const;

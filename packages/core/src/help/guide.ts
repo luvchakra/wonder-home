@@ -154,7 +154,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "outcomes",
     group: "Your household",
-    keywords: ["outcome", "responsibility", "playbook", "routine", "policy", "owner", "who does what", "backup", "workload"],
+    keywords: ["outcome", "responsibility", "playbook", "routine", "policy", "owner", "who does what", "backup", "workload", "share the load", "fair", "balance"],
   },
   {
     id: "plan",
@@ -184,7 +184,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "connections",
     group: "Privacy and trust",
-    keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather"],
+    keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather", "app", "apps", "api", "partner", "developer", "key"],
   },
 ];
 
@@ -240,6 +240,8 @@ const FAQ_SHAPE: readonly Pick<FaqEntry, "id" | "section">[] = [
   { id: "wrong-name", section: "talk-to-wonderhome" },
   { id: "pay-for-plan", section: "plan" },
   { id: "full-setup", section: "first-week" },
+  { id: "budget", section: "bills" },
+  { id: "other-apps", section: "connections" },
 ];
 
 /** The questions people ask first, in one person's language. */
