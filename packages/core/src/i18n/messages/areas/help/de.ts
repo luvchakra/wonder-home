@@ -90,6 +90,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Erinnerungen kommen in der eigenen Sprache jeder Person, und jeder Bildschirm wird darin angezeigt. Namen und was deine Familie eingibt, bleiben, wie sie geschrieben wurden; ein paar kurze Meldungen von WonderHome sind noch auf Englisch, und die Seite Sprache & Region sagt das.",
   "help.guide.language.body.5":
     "Ein Sprachwechsel ändert nie, was gespeichert ist. Ein Betrag bleibt in der Währung, in der er erfasst wurde, und nichts wird je umgerechnet.",
+  "help.guide.language.body.6": "Vor der Anmeldung folgen die Seiten zum Anmelden, Registrieren und die Hilfe der Sprache deines Browsers; sobald du angemeldet bist, gilt deine eigene Wahl. Die Suche in der Hilfe versteht auch Fragen in deiner Sprache.",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Sprich oder schreib – ein Gespräch, und es behauptet nie, gehandelt zu haben, wenn es das nicht hat.",
@@ -165,6 +166,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.bills.body.4":
     "Bezahlen direkt in WonderHome ist noch nicht verfügbar. „Bezahlen“ bereitet eine Zahlung zu deiner Freigabe in HomeTalk vor und hört dort auf – es bewegt kein Geld.",
   "help.guide.bills.body.5": "Geld sehen Erwachsene und Admins. Kinder und Haushaltshilfen sehen es nie.",
+  "help.guide.bills.body.6": "Budgets: Ein Admin kann festlegen, wie viel der Haushalt für eine Art von Rechnung ausgeben will – Nebenkosten, Miete, Schulgebühren – pro Monat, Quartal oder Jahr, und Rechnungen zeigt, was ausgegeben wurde und was übrig ist. Ein Budget blockiert nie eine Rechnung. Ausgaben in einer anderen Währung werden daneben aufgeführt, nie dazugerechnet, weil nichts umgerechnet wird.",
 
   "help.guide.school.title": "Schule und Aufgaben der Kinder",
   "help.guide.school.summary": "Hausaufgaben, Prüfungen und Elternbriefe, und Fristen, die nicht passen werden.",
@@ -205,6 +207,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.body.2": "Ein Admin erfasst die Haushaltsgeräte; jeder Erwachsene kann eine Serviceanfrage stellen.",
   "help.guide.home-upkeep.body.3":
     "Das Wetter meldet sich nur, wenn es eine Entscheidung ändert – zum Beispiel Wäsche, die heute draußen nicht trocknen wird –, und nie als Wetterbericht. Es nutzt den Bereich, den ein Admin gewählt hat, nur auf etwa einen Kilometer genau gespeichert.",
+  "help.guide.home-upkeep.body.4": "Das Wetter wird nur genutzt, wo es für dein WonderHome eingeschaltet ist; Einstellungen → Verbundene Konten zeigt, ob das so ist.",
 
   "help.guide.household-and-roles.title": "Mitglieder, Rollen und was jede Person sieht",
   "help.guide.household-and-roles.summary": "Ein Haushalt, mehrere Identitäten und für jede eine eigene Ansicht.",
@@ -241,6 +244,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Zuständigkeiten sagen, wer sich um was kümmert und wer einspringt, wenn diese Person nicht kann. Ein Ergebnis mit einer zuständigen Person hat jemanden, den man fragen kann; eins ohne ist eine Lücke, und WonderHome zeigt dir die Lücken und wo die Last ungleich verteilt ist.",
   "help.guide.outcomes.body.3":
     "Richtlinien regeln Ausgabegrenzen, wer was freigibt, Ruhezeiten und Datenschutz. Bis du sie festlegst, fragt WonderHome vor allem, was Folgen hat – sicher, aber langsamer.",
+  "help.guide.outcomes.body.4": "Last verteilen, unter Haushalt verwalten → Zuständigkeiten, zeigt, wie oft pro Woche die Zuständigkeiten jeder Person anfallen. Trägt eine Person weit mehr als eine andere, kann es vorschlagen, dass die bereits benannte Vertretung eine davon übernimmt; nichts ändert sich, bis ein Admin zustimmt.",
 
   "help.guide.plan.title": "Dein Tarif",
   "help.guide.plan.summary": "Free, Pro und Max – und während des Early Access ist Wechseln kostenlos.",
@@ -250,6 +254,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Während des Early Access ist ein Tarifwechsel kostenlos, und es wird nichts berechnet. Preise werden monatlich oder jährlich angezeigt, damit du weißt, was dich später erwartet.",
   "help.guide.plan.body.3":
     "Was nicht zu deinem Tarif gehört, sagt das dort, wo es erscheinen würde, statt eine Schaltfläche anzubieten, die nichts tut. Wenn eine Funktion Teil eines Tests ist, sagen dir das die Einstellungen.",
+  "help.guide.plan.body.4": "Wenn kostenpflichtige Tarife starten, bezahlst du auf der Seite des Zahlungsanbieters – WonderHome sieht deine Karte nie – und Einstellungen → Ihr Tarif → Abrechnung bewahrt jede Zahlung und jede Rechnung auf. Eine Kündigung oder der Wechsel zu einem kleineren Tarif gilt erst zum Ende des bezahlten Zeitraums.",
 
   "help.guide.ai-autonomy.title": "Wie viel WonderHome selbst tun darf",
   "help.guide.ai-autonomy.summary": "Vier Stufen, je Zuständigkeit festgelegt, und du wählst sie.",
@@ -294,6 +299,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "Wo WhatsApp verfügbar ist, kann jeder Erwachsene unter Einstellungen → WhatsApp seine eigene Nummer verbinden, indem er einen Einmalcode schickt. Was du dorthin schickst, landet wie alles andere in HomeSend. Über WhatsApp wird nichts bezahlt, bestellt, gebucht oder freigegeben, und andere Mitglieder sehen neben deinem Namen nur „WhatsApp verbunden“, nie die Nummer.",
   "help.guide.connections.body.4": "Ein Sprachassistent ist mit einer Person verknüpft und spricht nur als sie. Zahlungen und Bestellungen laufen nie per Sprache.",
+  "help.guide.connections.body.5": "Wo dein WonderHome es eingeschaltet hat, kann ein Admin einer vertrauenswürdigen App erlauben, die Einkaufsliste zu sehen oder etwas hinzuzufügen – mit einem Schlüssel, der unter Einstellungen → Verbundene Konten erstellt wird. Jeder Schlüssel kann nur, was du angehakt hast, wird einmal angezeigt und lässt sich jederzeit widerrufen; ein Sandbox-Schlüssel nutzt Beispieldaten und ändert nichts.",
 
   "help.faq.quiet-home.q": "Warum ist mein Startbildschirm so ruhig?",
   "help.faq.quiet-home.a":
@@ -345,4 +351,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.faq.full-setup.q": "Wie komme ich auf 100 % bei der Einrichtung?",
   "help.faq.full-setup.a":
     "„Haushalt verwalten“ listet jeden Schritt auf. Schritte, die auf dein Zuhause nicht zutreffen – keine Kinder, keine Haushaltshilfe –, zählen nicht mit, sodass jeder Haushalt 100 % erreichen kann.",
+  "help.faq.budget.q": "Kann ich ein Budget festlegen?",
+  "help.faq.budget.a": "Ja. Unter Rechnungen kann ein Admin ein Budget für eine Art von Rechnung pro Monat, Quartal oder Jahr festlegen, und alle, die Geldbeträge sehen dürfen, sehen, was übrig ist. Ein Budget verhindert nie, dass eine Rechnung bezahlt wird.",
+  "help.faq.other-apps.q": "Können sich andere Apps mit WonderHome verbinden?",
+  "help.faq.other-apps.a": "Wo es für dein WonderHome eingeschaltet ist, kann ein Admin unter Einstellungen → Verbundene Konten einen Schlüssel erstellen, mit dem eine vertrauenswürdige App die Einkaufsliste sehen oder etwas hinzufügen kann – nur das, was du angehakt hast – und er lässt sich jederzeit widerrufen.",
 };

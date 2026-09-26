@@ -90,6 +90,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Les rappels arrivent dans la langue de chacun, et tous les écrans s'affichent dans cette langue. Les noms et ce que votre famille écrit restent tels quels ; quelques courts messages de WonderHome sont encore en anglais, et la page Langue et région le signale.",
   "help.guide.language.body.5":
     "Changer de langue ne change jamais ce qui est enregistré. Un montant reste dans la devise dans laquelle il a été saisi, et rien n’est jamais converti.",
+  "help.guide.language.body.6": "Avant la connexion, les pages de connexion, d'inscription et d'Aide suivent la langue de votre navigateur ; une fois connecté, votre propre choix prend le relais. La recherche de l'Aide comprend aussi les questions dans votre langue.",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Parlez ou écrivez — une seule conversation, et il ne prétend jamais avoir agi s’il ne l’a pas fait.",
@@ -165,6 +166,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.bills.body.4":
     "Le paiement depuis WonderHome n’est pas encore disponible. Payer prépare un paiement soumis à votre accord dans HomeTalk et s’arrête là — cela ne déplace pas d’argent.",
   "help.guide.bills.body.5": "L’argent est visible par les adultes et les administrateurs. Les enfants et l’aide à domicile ne le voient jamais.",
+  "help.guide.bills.body.6": "Budgets : un Admin peut fixer ce que le foyer compte dépenser pour un type de facture — énergie, loyer, frais de scolarité — par mois, trimestre ou année, et Factures montre ce qui a été dépensé et ce qui reste. Un budget ne bloque jamais une facture. Les dépenses dans une autre devise sont affichées à côté, jamais additionnées, car rien n'est converti.",
 
   "help.guide.school.title": "École et travail des enfants",
   "help.guide.school.summary": "Devoirs, examens et notes d’information, et les échéances qui ne tiendront pas.",
@@ -205,6 +207,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.body.2": "Un Admin enregistre les appareils de la maison ; tout adulte peut faire une demande d’intervention.",
   "help.guide.home-upkeep.body.3":
     "La météo ne se manifeste que lorsqu’elle change une décision — du linge qui ne séchera pas dehors aujourd’hui, par exemple — et jamais sous forme de bulletin. Elle utilise la zone choisie par un Admin, conservée seulement à environ un kilomètre près.",
+  "help.guide.home-upkeep.body.4": "La météo n'est utilisée que là où elle est activée pour votre WonderHome ; Paramètres → Comptes connectés indique si c'est le cas.",
 
   "help.guide.household-and-roles.title": "Membres, rôles et ce que voit chacun",
   "help.guide.household-and-roles.summary": "Un foyer, plusieurs identités, et une vue différente pour chacune.",
@@ -241,6 +244,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Les responsabilités disent qui s’occupe de quoi, et qui prend le relais quand la personne ne peut pas. Un résultat qui a un responsable a quelqu’un à qui demander ; un résultat qui n’en a pas est un manque, et WonderHome vous montre les manques et les endroits où la charge est mal répartie.",
   "help.guide.outcomes.body.3":
     "Les règles couvrent les plafonds de dépense, qui approuve quoi, les heures calmes et la confidentialité. Tant que vous ne les avez pas définies, WonderHome demande avant toute chose importante — c’est sûr, mais plus lent.",
+  "help.guide.outcomes.body.4": "Répartir la charge, dans Gérer le foyer → Responsabilités, montre combien de fois par semaine reviennent les responsabilités de chacun. Quand une personne en porte bien plus qu'une autre, il peut proposer que le remplaçant déjà désigné en reprenne une ; rien ne change tant qu'un Admin n'a pas accepté.",
 
   "help.guide.plan.title": "Votre formule",
   "help.guide.plan.summary": "Free, Pro et Max — et changer est gratuit pendant l’accès anticipé.",
@@ -250,6 +254,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Pendant l’accès anticipé, changer de formule est gratuit et rien n’est facturé. Les prix sont affichés au mois ou à l’année pour que vous sachiez à quoi vous attendre plus tard.",
   "help.guide.plan.body.3":
     "Ce qui ne fait pas partie de votre formule le dit là où cela apparaîtrait, plutôt que de proposer un bouton qui ne fait rien. Si une fonctionnalité fait partie d’un essai, les Paramètres vous le disent.",
+  "help.guide.plan.body.4": "Quand les forfaits payants commenceront, vous paierez sur la page du prestataire de paiement — WonderHome ne voit jamais votre carte — et Paramètres → Votre formule → Facturation conserve chaque paiement et chaque facture. Une résiliation ou un passage à un forfait plus petit attend la fin de la période payée.",
 
   "help.guide.ai-autonomy.title": "Ce que WonderHome peut faire de lui-même",
   "help.guide.ai-autonomy.summary": "Quatre niveaux, fixés par responsabilité, et c’est vous qui les choisissez.",
@@ -294,6 +299,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "Là où WhatsApp est disponible, chaque adulte peut connecter son propre numéro depuis Paramètres → WhatsApp en envoyant un code à usage unique. Ce que vous y envoyez arrive dans HomeSend comme tout le reste. Rien n’est payé, commandé, réservé ou approuvé depuis WhatsApp, et les autres membres ne voient que « WhatsApp connecté » à côté de votre nom, jamais le numéro.",
   "help.guide.connections.body.4": "Un assistant vocal est lié à une personne et ne parle qu’en son nom. Les paiements et les commandes ne se font jamais à la voix.",
+  "help.guide.connections.body.5": "Là où votre WonderHome l'a activé, un Admin peut laisser une application de confiance consulter la liste de courses ou y ajouter des articles, grâce à une clé créée dans Paramètres → Comptes connectés. Chaque clé ne fait que ce que vous avez coché, n'est affichée qu'une fois et peut être révoquée à tout moment ; une clé de test utilise des données d'exemple et ne modifie rien.",
 
   "help.faq.quiet-home.q": "Pourquoi mon écran d’accueil est-il si calme ?",
   "help.faq.quiet-home.a":
@@ -345,4 +351,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.faq.full-setup.q": "Comment atteindre 100 % de la configuration ?",
   "help.faq.full-setup.a":
     "Gérer le foyer liste chaque étape. Les étapes qui ne concernent pas votre maison — pas d’enfants, pas d’aide à domicile — sont exclues du total, si bien que 100 % est atteignable pour chaque foyer.",
+  "help.faq.budget.q": "Puis-je fixer un budget ?",
+  "help.faq.budget.a": "Oui. Dans Factures, un Admin peut fixer un budget pour un type de facture par mois, trimestre ou année, et tous ceux qui voient l'argent voient ce qui reste. Un budget n'empêche jamais de payer une facture.",
+  "help.faq.other-apps.q": "D'autres applications peuvent-elles se connecter à WonderHome ?",
+  "help.faq.other-apps.a": "Là où c'est activé pour votre WonderHome, un Admin peut créer une clé dans Paramètres → Comptes connectés qui permet à une application de confiance de consulter la liste de courses ou d'y ajouter des articles — uniquement ce que vous avez coché — et elle peut être révoquée à tout moment.",
 };

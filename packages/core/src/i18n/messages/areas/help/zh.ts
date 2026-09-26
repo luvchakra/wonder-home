@@ -80,6 +80,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "HomeTalk 用你的语言理解你，也用你的语言回复。名字、物品、日期和金额在传递过程中绝不会被翻译或改动。当一条回复无法安全翻译时，你会看到英文原文，并附一行说明原因。",
   "help.guide.language.body.4": "提醒会以每个人自己的语言送达，所有页面也都以该语言显示。名字和家人输入的内容保持原样；WonderHome 的少数简短提示仍为英文，“语言与地区”页面会说明。",
   "help.guide.language.body.5": "更改语言绝不会改变已保存的内容。金额保持记录时的货币，任何东西都不会被换算。",
+  "help.guide.language.body.6": "登录之前，登录、注册和帮助页面会跟随你的浏览器语言；登录后，以你自己的选择为准。帮助里的搜索也能理解你用自己语言提出的问题。",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "说话或打字——同一段对话，没做的事它绝不会说做了。",
@@ -148,6 +149,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "异常的金额会被标出来提醒你看一看，并附上对比，让你可以核实，而不是只能相信。它绝不会自动拦截：一张确实是平时三倍的账单，恰恰是你最需要按时付清的那张。",
   "help.guide.bills.body.4": "目前还不能在 WonderHome 里付款。“付款”会在 HomeTalk 中准备一笔待你批准的付款，然后就停在那里——它不会动用任何钱。",
   "help.guide.bills.body.5": "钱只对成年人和管理员可见。孩子和家政帮手永远看不到。",
+  "help.guide.bills.body.6": "预算：管理员（Admin）可以为某一类账单——水电煤、房租、学费——设定每月、每季度或每年打算花多少钱，账单页面会显示已经花了多少、还剩多少。预算从不阻止任何账单。其他货币的支出会单独列在旁边，不会加进去，因为任何金额都不会被换算。",
 
   "help.guide.school.title": "学校和孩子的功课",
   "help.guide.school.summary": "作业、考试和通知，以及赶不上的截止时间。",
@@ -182,6 +184,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.body.1": "“家居维护”把维护、服务请求、洗衣和宠物照顾放在一起，只显示需要有人处理的事。没有需要处理的事时，它会直说。",
   "help.guide.home-upkeep.body.2": "家里的电器由管理员登记；任何成年人都可以提出服务请求。",
   "help.guide.home-upkeep.body.3": "天气只在会改变某个决定时才开口——比如今天晾在外面的衣服干不了——从不播报天气预报。它使用管理员选定的区域，位置只保留到大约一公里的精度。",
+  "help.guide.home-upkeep.body.4": "只有在你的 WonderHome 开启了天气功能时才会使用天气；“设置 → 已连接的账户”会显示是否已开启。",
 
   "help.guide.household-and-roles.title": "成员、角色以及每个人能看到什么",
   "help.guide.household-and-roles.summary": "一个家，多种身份，每个人一个不同的视图。",
@@ -211,6 +214,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.outcomes.body.2":
     "职责说明谁负责什么，以及他们做不了时由谁顶上。有负责人的结果就有人可以问；没有负责人的就是一个缺口，WonderHome 会给你看这些缺口，以及负担分配不均的地方。",
   "help.guide.outcomes.body.3": "规则涵盖支出上限、谁批准什么、免打扰时段和隐私。在你设定之前，WonderHome 在做任何有影响的事之前都会先问——安全，但慢一些。",
+  "help.guide.outcomes.body.4": "“家庭管理 → 职责分工”里的“分担负担”会显示每个人的职责每周轮到几次。当一个人承担的远多于另一个人时，它可以建议由已经指定的后备人接手其中一项；在管理员（Admin）同意之前，什么都不会改变。",
 
   "help.guide.plan.title": "你的套餐",
   "help.guide.plan.summary": "Free、Pro 和 Max——抢先体验期间切换免费。",
@@ -218,6 +222,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "“设置 → 你的套餐”显示各个套餐、每个套餐包含的内容，以及你家本周期的使用情况。Free 涵盖家庭的基本功能；Pro 增加学校、购物、餐食、账单和家庭时光；Max 增加更多自主操作和更深入的连接。",
   "help.guide.plan.body.2": "抢先体验期间，切换套餐免费，不收取任何费用。价格按月或按年显示，让你知道以后大概要付多少。",
   "help.guide.plan.body.3": "不在你套餐内的功能，会在它原本出现的地方直接说明，而不是给你一个没有作用的按钮。如果某个功能属于试用，设置里会告诉你。",
+  "help.guide.plan.body.4": "付费套餐开始后，你将在支付服务商自己的页面上付款——WonderHome 从不会看到你的卡——“设置 → 你的套餐 → 账单”会保存每一笔付款和发票。取消或换成更小的套餐，会等到你已付费周期结束时才生效。",
 
   "help.guide.ai-autonomy.title": "WonderHome 可以自己做多少",
   "help.guide.ai-autonomy.summary": "四个级别，按每项职责设定，由你来选。",
@@ -254,6 +259,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "在 WhatsApp 可用的地方，每位成年人都可以在“设置 → WhatsApp”中发送一次性验证码来连接自己的号码。你发给它的内容会像其他内容一样进入 HomeSend。通过 WhatsApp 不会付款、下单、预订或批准任何东西，其他成员在你名字旁边只会看到“已连接 WhatsApp”，永远看不到号码。",
   "help.guide.connections.body.4": "语音助手只关联一个人，并且只以那个人的身份说话。付款和下单绝不能通过语音完成。",
+  "help.guide.connections.body.5": "如果你的 WonderHome 开启了这项功能，管理员（Admin）可以在“设置 → 已连接的账户”中创建一个密钥，让家里信任的应用查看购物清单或往里添加东西。每个密钥只能做你勾选的事，只显示一次，并且随时可以撤销；沙盒密钥使用示例数据，不会改动任何内容。",
 
   "help.faq.quiet-home.q": "为什么我的首页这么安静？",
   "help.faq.quiet-home.a": "因为没有事需要你。运转正常的日常安排本来就是安静的——WonderHome 只在真正需要人处理时才开口，而不是为了证明自己在工作。",
@@ -290,4 +296,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.faq.pay-for-plan.a": "抢先体验期间不需要。切换套餐免费，不收取任何费用；“设置 → 你的套餐”会显示每个套餐以后的价格。",
   "help.faq.full-setup.q": "怎样把设置做到 100%？",
   "help.faq.full-setup.a": "“家庭管理”列出了每一步。不适用于你家的步骤——没有孩子、没有帮手——不计入总数，所以每个家庭都能达到 100%。",
+  "help.faq.budget.q": "我可以设定预算吗？",
+  "help.faq.budget.a": "可以。在账单页面，管理员（Admin）可以为某一类账单设定每月、每季度或每年的预算，所有能看到金额的人都能看到还剩多少。预算从不会阻止支付账单。",
+  "help.faq.other-apps.q": "其他应用可以连接 WonderHome 吗？",
+  "help.faq.other-apps.a": "如果你的 WonderHome 开启了这项功能，管理员（Admin）可以在“设置 → 已连接的账户”中创建一个密钥，让你信任的应用查看购物清单或往里添加东西——只限你勾选的内容，而且随时可以撤销。",
 };

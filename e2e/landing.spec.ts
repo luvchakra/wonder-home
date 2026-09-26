@@ -147,11 +147,20 @@ test("what's new says in words what is not switched on yet", async ({ page }) =>
   const whatsNew = page.locator("#new");
 
   await expect(whatsNew.getByRole("heading", { level: 2 })).toContainText("Growing up alongside your family");
-  // Built but waiting on an account a person has to open: never listed as ready.
-  for (const channel of ["WhatsApp", "Forwarded email", "Alexa & Gemini voice", "Pay your way"]) {
+  // Built but waiting on an account or a switch a person has to turn on: never listed as ready.
+  for (const channel of [
+    "WhatsApp",
+    "Forwarded email",
+    "Alexa & Gemini voice",
+    "Pay your way",
+    "Weather-aware plans",
+    "Calendar & school portal",
+    "Apps you trust",
+    "Smart-home devices",
+  ]) {
     await expect(whatsNew.locator("li", { hasText: channel }).getByText("Coming soon", { exact: true })).toBeVisible();
   }
-  await expect(whatsNew.locator("li").getByText("Coming soon", { exact: true })).toHaveCount(4);
+  await expect(whatsNew.locator("li").getByText("Coming soon", { exact: true })).toHaveCount(8);
 });
 
 test("the language strip greets in every language the product speaks, and stops under reduced motion", async ({ browser }) => {

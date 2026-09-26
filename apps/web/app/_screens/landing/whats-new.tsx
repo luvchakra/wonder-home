@@ -1,17 +1,25 @@
 import {
   AudioLines,
   BellRing,
+  CalendarClock,
+  CalendarSync,
   Camera,
+  CloudSun,
   FileText,
   HandHeart,
   Heart,
+  KeyRound,
   Languages,
   Link2,
   Mail,
   MessageCircle,
   Mic,
   Paperclip,
+  PiggyBank,
   Receipt,
+  Rocket,
+  Router,
+  Scale,
   ShieldCheck,
   Sparkles,
   Star,
@@ -31,7 +39,8 @@ import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
  *
  * Honest by construction. Everything in "Ready today" works in the product as
  * shipped. What is built but waits on an account a person has to open —
- * WhatsApp, forwarded email, Alexa and Gemini voice, paying for a plan — says
+ * WhatsApp, forwarded email, voice assistants, payments, weather, calendar
+ * and school sync, partner apps and smart-home devices — says
  * "Coming soon" in words, never as a promise dressed as a feature. The
  * languages come from the product's own list, not from a marketing one.
  *
@@ -47,7 +56,13 @@ const READY: Item[] = [
     icon: Languages,
     tone: "ai",
     title: "Your home, in your language",
-    copy: "HomeTalk, reminders and screens in English, हिन्दी, मराठी, Español, Français, Deutsch, العربية and 中文. Names, dates and amounts are never changed on the way.",
+    copy: "Every screen, HomeTalk, reminders and Help in English, हिन्दी, मराठी, Español, Français, Deutsch, العربية and 中文 — even sign-in follows your phone's language. Names, dates and amounts are never changed on the way.",
+  },
+  {
+    icon: Rocket,
+    tone: "primary",
+    title: "Ready in minutes",
+    copy: "Tell WonderHome who lives at home and it suggests who looks after what, asks a few questions, and your home is ready. Stop any time; it picks up where you left off.",
   },
   {
     icon: FileText,
@@ -60,6 +75,24 @@ const READY: Item[] = [
     tone: "primary",
     title: "Correct it like a person",
     copy: "“No, almond milk.” “Actually, make that Friday.” WonderHome swaps or undoes what it did, and keeps both steps on record.",
+  },
+  {
+    icon: CalendarClock,
+    tone: "attention",
+    title: "Sees what's coming",
+    copy: "The next two weeks, read from your own records: bills bunching up, and things likely to run out together — so one shop covers them.",
+  },
+  {
+    icon: Scale,
+    tone: "people",
+    title: "Share the load",
+    copy: "See how often each person's responsibilities come round. When one person carries far more, WonderHome suggests a fair swap — nothing changes until you agree.",
+  },
+  {
+    icon: PiggyBank,
+    tone: "money",
+    title: "Budgets that add up",
+    copy: "Set what you mean to spend on utilities, rent or school fees, and see what's left. Different currencies stay apart — never converted into one misleading total.",
   },
   {
     icon: AudioLines,
@@ -98,6 +131,10 @@ const SOON: Item[] = [
   { icon: Mail, tone: "primary", title: "Forwarded email", copy: "Your household's own address for school circulars and e-bills." },
   { icon: Mic, tone: "ai", title: "Alexa & Gemini voice", copy: "Ask from the kitchen, answered by the same WonderHome." },
   { icon: Wallet, tone: "money", title: "Pay your way", copy: "UPI, cards and netbanking in India; cards everywhere else." },
+  { icon: CloudSun, tone: "home", title: "Weather-aware plans", copy: "Washing and outings planned around the forecast — mentioned only when it changes a decision." },
+  { icon: CalendarSync, tone: "school", title: "Calendar & school portal", copy: "Your family calendar and the school's portal, kept in step without retyping." },
+  { icon: KeyRound, tone: "care", title: "Apps you trust", copy: "Let an app you choose see or add to the grocery list, with a key you can revoke." },
+  { icon: Router, tone: "home", title: "Smart-home devices", copy: "Readings from appliances you link, so upkeep is noticed before it's a problem." },
 ];
 
 /** Soft, slow layers behind a section — decoration that drifts at its own depth. */
@@ -169,7 +206,7 @@ export function WhatsNew() {
               className="wh-reveal wh-lift flex gap-3.5 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-4 shadow-[var(--wh-shadow-card)] sm:block sm:p-5"
               style={{ "--wh-reveal-delay": `${(index % 4) * 70}ms` } as CSSProperties}
             >
-              {/* Side by side on a phone, so eight cards read as a list, not a long scroll. */}
+              {/* Side by side on a phone, so twelve cards read as a list, not a long scroll. */}
               <IconTile icon={item.icon} tone={item.tone} size="lg" />
               <span className="block min-w-0">
                 <span className="block text-base font-semibold sm:mt-3">{item.title}</span>
