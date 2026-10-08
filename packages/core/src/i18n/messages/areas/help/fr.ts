@@ -81,7 +81,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.language.title": "Langue, région et formats",
   "help.guide.language.summary": "Chacun choisit sa langue ; le foyer définit sa région, sa devise et son fuseau horaire.",
   "help.guide.language.body.1":
-    "WonderHome parle anglais, hindi, marathi, espagnol, français, allemand, arabe et chinois (simplifié, mandarin). Chacun choisit sa propre langue dans Paramètres → Langue et région, si bien qu’un même foyer peut en utiliser plusieurs à la fois. L’arabe se lit de droite à gauche.",
+    "WonderHome parle anglais, hindi, marathi, espagnol, français, allemand, arabe et chinois (simplifié, mandarin). Chacun choisit sa propre langue dans Paramètres → Langue et région, si bien qu’un même foyer peut en utiliser plusieurs à la fois. L’arabe s’affiche de droite à gauche ; quelques écrans sont encore en cours d’ajustement.",
   "help.guide.language.body.2":
     "La région, la devise et le fuseau horaire du foyer sont définis par un Admin, et chacun peut choisir son propre format de date, l’horloge sur 12 ou 24 heures, et les unités métriques ou impériales.",
   "help.guide.language.body.3":
@@ -219,6 +219,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Les enfants ont un accès adapté à leur âge. L’aide à domicile n’a jamais à mettre à jour des tâches, et WonderHome ne conserve aucune donnée de productivité la concernant.",
   "help.guide.household-and-roles.body.4":
     "Les administrateurs invitent, modifient et retirent des membres depuis Gérer le foyer. Retirer quelqu’un n’efface jamais l’historique dont il a fait partie.",
+  "help.guide.household-and-roles.body.5": "Les administrateurs peuvent voir qui a changé quoi, et quand, dans Gérer le foyer → Activité : rôles, invitations, le guide du foyer, vos règles et les comptes connectés. C'est un registre qui n'est jamais modifié ; il ne contient rien de ce que quelqu'un a dit, écrit ou demandé, ni clés ni mots de passe.",
 
   "help.guide.family.title": "Famille, animaux et temps en famille",
   "help.guide.family.summary": "Tout le monde au même endroit, animaux compris, et du temps gardé libre les uns pour les autres.",
@@ -299,7 +300,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "Là où WhatsApp est disponible, chaque adulte peut connecter son propre numéro depuis Paramètres → WhatsApp en envoyant un code à usage unique. Ce que vous y envoyez arrive dans HomeSend comme tout le reste. Rien n’est payé, commandé, réservé ou approuvé depuis WhatsApp, et les autres membres ne voient que « WhatsApp connecté » à côté de votre nom, jamais le numéro.",
   "help.guide.connections.body.4": "Un assistant vocal est lié à une personne et ne parle qu’en son nom. Les paiements et les commandes ne se font jamais à la voix.",
-  "help.guide.connections.body.5": "Là où votre WonderHome l'a activé, un Admin peut laisser une application de confiance consulter la liste de courses ou y ajouter des articles, grâce à une clé créée dans Paramètres → Comptes connectés. Chaque clé ne fait que ce que vous avez coché, n'est affichée qu'une fois et peut être révoquée à tout moment ; une clé de test utilise des données d'exemple et ne modifie rien.",
+  "help.guide.connections.body.5": "Là où votre WonderHome l'a activé, un Admin peut laisser une application de confiance consulter la liste de courses ou y ajouter des articles, ou consulter le nom du foyer, son fuseau horaire et le nombre de personnes. La clé se crée dans Paramètres → Comptes connectés → Accès développeur : vous ne cochez que ce qu'elle peut faire et vous choisissez quand elle cesse de fonctionner (30 jours, 90 jours, un an ou jamais). Chaque clé n'est affichée qu'une fois et peut être révoquée à tout moment ; une clé de test utilise des données d'exemple et ne modifie rien.",
 
   "help.faq.quiet-home.q": "Pourquoi mon écran d’accueil est-il si calme ?",
   "help.faq.quiet-home.a":
@@ -355,4 +356,6 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.faq.budget.a": "Oui. Dans Factures, un Admin peut fixer un budget pour un type de facture par mois, trimestre ou année, et tous ceux qui voient l'argent voient ce qui reste. Un budget n'empêche jamais de payer une facture.",
   "help.faq.other-apps.q": "D'autres applications peuvent-elles se connecter à WonderHome ?",
   "help.faq.other-apps.a": "Là où c'est activé pour votre WonderHome, un Admin peut créer une clé dans Paramètres → Comptes connectés qui permet à une application de confiance de consulter la liste de courses ou d'y ajouter des articles — uniquement ce que vous avez coché — et elle peut être révoquée à tout moment.",
+  "help.faq.activity-trail.q": "Puis-je voir qui a modifié un réglage ?",
+  "help.faq.activity-trail.a": "Si vous êtes Admin, oui. Gérer le foyer → Activité indique qui a changé quoi et quand : rôles, invitations, le guide du foyer, vos règles et les comptes connectés. Ce que quelqu'un a dit ou demandé n'y figure jamais.",
 };

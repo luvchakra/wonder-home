@@ -139,7 +139,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "household-and-roles",
     group: "Your household",
-    keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "admin", "child", "helper", "guardian", "remove member"],
+    keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "admin", "child", "helper", "guardian", "remove member", "activity", "audit", "history", "who changed"],
   },
   {
     id: "family",
@@ -184,7 +184,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "connections",
     group: "Privacy and trust",
-    keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather", "app", "apps", "api", "partner", "developer", "key"],
+    keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather", "app", "apps", "api", "partner", "developer", "developer access", "key"],
   },
 ];
 
@@ -242,6 +242,7 @@ const FAQ_SHAPE: readonly Pick<FaqEntry, "id" | "section">[] = [
   { id: "full-setup", section: "first-week" },
   { id: "budget", section: "bills" },
   { id: "other-apps", section: "connections" },
+  { id: "activity-trail", section: "household-and-roles" },
 ];
 
 /** The questions people ask first, in one person's language. */

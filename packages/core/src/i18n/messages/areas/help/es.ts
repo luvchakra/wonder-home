@@ -81,7 +81,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.language.title": "Idioma, región y formatos",
   "help.guide.language.summary": "Cada persona elige su idioma; el hogar fija su región, moneda y zona horaria.",
   "help.guide.language.body.1":
-    "WonderHome habla inglés, hindi, maratí, español, francés, alemán, árabe y chino (simplificado, mandarín). Cada persona elige su propio idioma en Ajustes → Idioma y región, así que un hogar puede usar varios a la vez. El árabe se lee de derecha a izquierda.",
+    "WonderHome habla inglés, hindi, maratí, español, francés, alemán, árabe y chino (simplificado, mandarín). Cada persona elige su propio idioma en Ajustes → Idioma y región, así que un hogar puede usar varios a la vez. El árabe se muestra de derecha a izquierda; algunas pantallas aún se están ajustando.",
   "help.guide.language.body.2":
     "La región, la moneda y la zona horaria del hogar las fija un Admin, y cada persona puede elegir su propio formato de fecha, reloj de 12 o 24 horas y unidades métricas o imperiales.",
   "help.guide.language.body.3":
@@ -219,6 +219,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Los niños tienen un acceso adecuado a su edad. A la ayuda doméstica nunca se le pide que actualice tareas, y WonderHome no guarda datos de productividad sobre ella.",
   "help.guide.household-and-roles.body.4":
     "Los administradores invitan, cambian y eliminan miembros desde Gestionar el hogar. Eliminar a alguien nunca borra el historial del que formó parte.",
+  "help.guide.household-and-roles.body.5": "Los administradores pueden ver quién cambió qué y cuándo en Gestionar el hogar → Actividad: cambios en los roles, las invitaciones, el manual, tus normas y las cuentas conectadas. Es un registro que nunca se edita y no guarda nada de lo que alguien dijo, escribió o preguntó, ni claves ni contraseñas.",
 
   "help.guide.family.title": "Familia, mascotas y tiempo en familia",
   "help.guide.family.summary": "Todos en un mismo lugar, mascotas incluidas, y tiempo reservado para estar juntos.",
@@ -299,7 +300,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "Donde WhatsApp está disponible, cada adulto puede conectar su propio número desde Ajustes → WhatsApp enviando un código de un solo uso. Lo que le envías llega a HomeSend como todo lo demás. Desde WhatsApp no se paga, pide, reserva ni aprueba nada, y los demás miembros solo ven “WhatsApp conectado” junto a tu nombre, nunca el número.",
   "help.guide.connections.body.4": "Un asistente de voz está vinculado a una persona y solo habla como ella. Los pagos y los pedidos nunca se hacen por voz.",
-  "help.guide.connections.body.5": "Donde tu WonderHome lo tenga activado, un Admin puede dejar que una app de confianza vea la lista de la compra o añada cosas a ella, con una clave creada en Ajustes → Cuentas conectadas. Cada clave hace solo lo que marcaste, se muestra una sola vez y se puede revocar en cualquier momento; una clave de pruebas usa datos de ejemplo y no cambia nada.",
+  "help.guide.connections.body.5": "Donde tu WonderHome lo tenga activado, un Admin puede dejar que una app de confianza vea la lista de la compra o añada cosas a ella, o que vea el nombre del hogar, su zona horaria y cuántas personas hay. La clave se crea en Ajustes → Cuentas conectadas → Acceso para desarrolladores: marcas solo lo que puede hacer y eliges cuándo deja de funcionar (30 días, 90 días, un año o nunca). Cada clave se muestra una sola vez y se puede revocar en cualquier momento; una clave de pruebas usa datos de ejemplo y no cambia nada.",
 
   "help.faq.quiet-home.q": "¿Por qué mi pantalla de inicio está tan tranquila?",
   "help.faq.quiet-home.a":
@@ -355,4 +356,6 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.faq.budget.a": "Sí. En Facturas, un Admin puede fijar un presupuesto para un tipo de factura por mes, trimestre o año, y todos los que pueden ver el dinero ven lo que queda. Un presupuesto nunca impide pagar una factura.",
   "help.faq.other-apps.q": "¿Pueden otras apps conectarse a WonderHome?",
   "help.faq.other-apps.a": "Donde esté activado para tu WonderHome, un Admin puede crear una clave en Ajustes → Cuentas conectadas que permite a una app de confianza ver la lista de la compra o añadir cosas —solo lo que marcaste— y se puede revocar en cualquier momento.",
+  "help.faq.activity-trail.q": "¿Puedo ver quién cambió un ajuste?",
+  "help.faq.activity-trail.a": "Si eres Admin, sí. Gestionar el hogar → Actividad enumera quién cambió qué y cuándo: roles, invitaciones, el manual, tus normas y las cuentas conectadas. Nunca registra lo que alguien dijo o preguntó.",
 };

@@ -96,7 +96,7 @@ export const helpEn = {
   "help.guide.language.title": "Language, region and formats",
   "help.guide.language.summary": "Each person picks their language; the household sets its region, currency and time zone.",
   "help.guide.language.body.1":
-    "WonderHome speaks English, Hindi, Marathi, Spanish, French, German, Arabic and Chinese (Simplified, Mandarin). Each person chooses their own language in Settings → Language & Region, so one household can use several at once. Arabic reads right to left.",
+    "WonderHome speaks English, Hindi, Marathi, Spanish, French, German, Arabic and Chinese (Simplified, Mandarin). Each person chooses their own language in Settings → Language & Region, so one household can use several at once. Arabic is shown right to left; a few screens are still being adjusted for it.",
   "help.guide.language.body.2":
     "The household's region, currency and time zone are set by an Admin, and each person can choose their own date format, 12- or 24-hour clock, and metric or imperial units.",
   "help.guide.language.body.3":
@@ -250,6 +250,7 @@ export const helpEn = {
     "Children get age-appropriate access. Househelpers are never asked to update chores, and WonderHome holds no productivity data about them.",
   "help.guide.household-and-roles.body.4":
     "Admins invite, change and remove members from Manage household. Removing someone never deletes the history they were part of.",
+  "help.guide.household-and-roles.body.5": "Admins can see who changed what, and when, under Manage household → Activity: changes to roles, invitations, the playbook, your rules and connected accounts. It is kept as a record and never edited. It holds nothing anyone said, wrote or asked, and no keys or passwords.",
 
   // Family, pets and family time
   "help.guide.family.title": "Family, pets and family time",
@@ -344,7 +345,7 @@ export const helpEn = {
     "Where WhatsApp is available, each adult can connect their own number from Settings → WhatsApp by sending a one-time code. Things you send it land in HomeSend like anything else. Nothing is paid, ordered, booked or approved from WhatsApp, and other members only ever see \"WhatsApp connected\" beside your name, never the number.",
   "help.guide.connections.body.4":
     "A voice assistant is linked to one person and speaks only as them. Payments and orders are never done by voice.",
-  "help.guide.connections.body.5": "Where your WonderHome has it switched on, an Admin can let an app the household trusts see or add to the grocery list, with a key created in Settings → Connected accounts. Each key does only what you ticked, is shown once, and can be revoked at any time; a sandbox key uses sample data and changes nothing.",
+  "help.guide.connections.body.5": "Where your WonderHome has it switched on, an Admin can let an app the household trusts see or add to the grocery list, or see the household's name, time zone and how many people are in it. The key is created under Settings → Connected accounts → Developer access: tick only what it may do, and choose when it stops working (30 days, 90 days, a year or never). Each key is shown once and can be revoked at any time; a sandbox key uses sample data and changes nothing.",
 
   // Common questions.
   "help.faq.quiet-home.q": "Why is my Home screen so quiet?",
@@ -402,4 +403,6 @@ export const helpEn = {
   "help.faq.budget.a": "Yes. On Bills, an Admin can set a budget for one kind of bill per month, quarter or year, and everyone who can see money sees what is left. A budget never stops a bill being paid.",
   "help.faq.other-apps.q": "Can other apps connect to WonderHome?",
   "help.faq.other-apps.a": "Where it is switched on for your WonderHome, an Admin can create a key in Settings → Connected accounts that lets an app you trust see or add to the grocery list — only what you ticked, and it can be revoked at any time.",
+  "help.faq.activity-trail.q": "Can I see who changed a setting?",
+  "help.faq.activity-trail.a": "If you are an Admin, yes. Manage household → Activity lists who changed what and when — roles, invitations, the playbook, your rules and connected accounts. It never records what anyone said or asked.",
 } as const;
