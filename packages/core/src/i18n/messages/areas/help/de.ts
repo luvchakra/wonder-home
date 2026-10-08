@@ -81,7 +81,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.language.title": "Sprache, Region und Formate",
   "help.guide.language.summary": "Jede Person wählt ihre Sprache; der Haushalt legt Region, Währung und Zeitzone fest.",
   "help.guide.language.body.1":
-    "WonderHome spricht Englisch, Hindi, Marathi, Spanisch, Französisch, Deutsch, Arabisch und Chinesisch (vereinfacht, Mandarin). Jede Person wählt ihre eigene Sprache unter Einstellungen → Sprache & Region, sodass ein Haushalt mehrere gleichzeitig nutzen kann. Arabisch wird von rechts nach links gelesen.",
+    "WonderHome spricht Englisch, Hindi, Marathi, Spanisch, Französisch, Deutsch, Arabisch und Chinesisch (vereinfacht, Mandarin). Jede Person wählt ihre eigene Sprache unter Einstellungen → Sprache & Region, sodass ein Haushalt mehrere gleichzeitig nutzen kann. Arabisch wird von rechts nach links angezeigt; einige Bildschirme werden noch angepasst.",
   "help.guide.language.body.2":
     "Region, Währung und Zeitzone des Haushalts legt ein Admin fest, und jede Person kann ihr eigenes Datumsformat, die 12- oder 24-Stunden-Uhr und metrische oder imperiale Einheiten wählen.",
   "help.guide.language.body.3":
@@ -219,6 +219,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Kinder bekommen einen altersgerechten Zugang. Haushaltshilfen werden nie gebeten, Aufgaben zu aktualisieren, und WonderHome speichert keine Produktivitätsdaten über sie.",
   "help.guide.household-and-roles.body.4":
     "Admins laden Mitglieder unter „Haushalt verwalten“ ein, ändern und entfernen sie. Wer entfernt wird, dessen gemeinsame Geschichte wird nie gelöscht.",
+  "help.guide.household-and-roles.body.5": "Admins sehen unter Haushalt verwalten → Aktivität, wer wann was geändert hat: Rollen, Einladungen, das Playbook, deine Regeln und verbundene Konten. Es ist ein Protokoll, das nie bearbeitet wird, und es enthält nichts von dem, was jemand gesagt, geschrieben oder gefragt hat, und keine Schlüssel oder Passwörter.",
 
   "help.guide.family.title": "Familie, Haustiere und Familienzeit",
   "help.guide.family.summary": "Alle an einem Ort, Haustiere eingeschlossen, und Zeit, die für einander frei bleibt.",
@@ -299,7 +300,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "Wo WhatsApp verfügbar ist, kann jeder Erwachsene unter Einstellungen → WhatsApp seine eigene Nummer verbinden, indem er einen Einmalcode schickt. Was du dorthin schickst, landet wie alles andere in HomeSend. Über WhatsApp wird nichts bezahlt, bestellt, gebucht oder freigegeben, und andere Mitglieder sehen neben deinem Namen nur „WhatsApp verbunden“, nie die Nummer.",
   "help.guide.connections.body.4": "Ein Sprachassistent ist mit einer Person verknüpft und spricht nur als sie. Zahlungen und Bestellungen laufen nie per Sprache.",
-  "help.guide.connections.body.5": "Wo dein WonderHome es eingeschaltet hat, kann ein Admin einer vertrauenswürdigen App erlauben, die Einkaufsliste zu sehen oder etwas hinzuzufügen – mit einem Schlüssel, der unter Einstellungen → Verbundene Konten erstellt wird. Jeder Schlüssel kann nur, was du angehakt hast, wird einmal angezeigt und lässt sich jederzeit widerrufen; ein Sandbox-Schlüssel nutzt Beispieldaten und ändert nichts.",
+  "help.guide.connections.body.5": "Wo dein WonderHome es eingeschaltet hat, kann ein Admin einer vertrauenswürdigen App erlauben, die Einkaufsliste zu sehen oder etwas hinzuzufügen, oder Namen, Zeitzone und Personenzahl des Haushalts zu sehen. Der Schlüssel wird unter Einstellungen → Verbundene Konten → Entwicklerzugang erstellt: Du hakst nur an, was er darf, und wählst, wann er nicht mehr funktioniert (30 Tage, 90 Tage, ein Jahr oder nie). Jeder Schlüssel wird einmal angezeigt und lässt sich jederzeit widerrufen; ein Sandbox-Schlüssel nutzt Beispieldaten und ändert nichts.",
 
   "help.faq.quiet-home.q": "Warum ist mein Startbildschirm so ruhig?",
   "help.faq.quiet-home.a":
@@ -355,4 +356,6 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.faq.budget.a": "Ja. Unter Rechnungen kann ein Admin ein Budget für eine Art von Rechnung pro Monat, Quartal oder Jahr festlegen, und alle, die Geldbeträge sehen dürfen, sehen, was übrig ist. Ein Budget verhindert nie, dass eine Rechnung bezahlt wird.",
   "help.faq.other-apps.q": "Können sich andere Apps mit WonderHome verbinden?",
   "help.faq.other-apps.a": "Wo es für dein WonderHome eingeschaltet ist, kann ein Admin unter Einstellungen → Verbundene Konten einen Schlüssel erstellen, mit dem eine vertrauenswürdige App die Einkaufsliste sehen oder etwas hinzufügen kann – nur das, was du angehakt hast – und er lässt sich jederzeit widerrufen.",
+  "help.faq.activity-trail.q": "Kann ich sehen, wer eine Einstellung geändert hat?",
+  "help.faq.activity-trail.a": "Als Admin ja. Unter Haushalt verwalten → Aktivität steht, wer wann was geändert hat: Rollen, Einladungen, das Playbook, deine Regeln und verbundene Konten. Was jemand gesagt oder gefragt hat, wird nie festgehalten.",
 };

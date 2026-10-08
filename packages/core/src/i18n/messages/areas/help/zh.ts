@@ -74,7 +74,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.language.title": "语言、地区和格式",
   "help.guide.language.summary": "每个人选择自己的语言；家庭设定地区、货币和时区。",
   "help.guide.language.body.1":
-    "WonderHome 支持英语、印地语、马拉地语、西班牙语、法语、德语、阿拉伯语和中文（简体，普通话）。每个人在“设置 → 语言与地区”中选择自己的语言，所以一个家庭可以同时使用多种语言。阿拉伯语从右往左阅读。",
+    "WonderHome 支持英语、印地语、马拉地语、西班牙语、法语、德语、阿拉伯语和中文（简体，普通话）。每个人在“设置 → 语言与地区”中选择自己的语言，所以一个家庭可以同时使用多种语言。阿拉伯语从右往左显示；个别页面仍在调整中。",
   "help.guide.language.body.2": "家庭的地区、货币和时区由管理员设定，每个人可以自己选择日期格式、12 或 24 小时制，以及公制或英制单位。",
   "help.guide.language.body.3":
     "HomeTalk 用你的语言理解你，也用你的语言回复。名字、物品、日期和金额在传递过程中绝不会被翻译或改动。当一条回复无法安全翻译时，你会看到英文原文，并附一行说明原因。",
@@ -193,6 +193,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "成年人、孩子和家政帮手各有自己的视图。这不是屏幕上加的一层过滤：某人不能看的部分根本不会发送到他的设备上，而且 WonderHome 每次都会在后台再检查一遍。",
   "help.guide.household-and-roles.body.3": "孩子获得与年龄相适应的访问权限。家政帮手从不会被要求更新家务，WonderHome 也不保存关于他们的任何工作效率数据。",
   "help.guide.household-and-roles.body.4": "管理员在“家庭管理”中邀请、修改和移除成员。移除某人绝不会删除他曾参与的历史记录。",
+  "help.guide.household-and-roles.body.5": "管理员可以在“家庭管理 → 活动记录”中看到谁在什么时候改了什么：角色、邀请、家务手册、你的规则和已连接的账户。它是一份永不编辑的记录，里面没有任何人说过、写过或问过的内容，也没有密钥或密码。",
 
   "help.guide.family.title": "家人、宠物和家庭时光",
   "help.guide.family.summary": "所有人都在一处，宠物也算在内，还有为彼此留出的时间。",
@@ -259,7 +260,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.body.3":
     "在 WhatsApp 可用的地方，每位成年人都可以在“设置 → WhatsApp”中发送一次性验证码来连接自己的号码。你发给它的内容会像其他内容一样进入 HomeSend。通过 WhatsApp 不会付款、下单、预订或批准任何东西，其他成员在你名字旁边只会看到“已连接 WhatsApp”，永远看不到号码。",
   "help.guide.connections.body.4": "语音助手只关联一个人，并且只以那个人的身份说话。付款和下单绝不能通过语音完成。",
-  "help.guide.connections.body.5": "如果你的 WonderHome 开启了这项功能，管理员（Admin）可以在“设置 → 已连接的账户”中创建一个密钥，让家里信任的应用查看购物清单或往里添加东西。每个密钥只能做你勾选的事，只显示一次，并且随时可以撤销；沙盒密钥使用示例数据，不会改动任何内容。",
+  "help.guide.connections.body.5": "如果你的 WonderHome 开启了这项功能，管理员（Admin）可以让家里信任的应用查看购物清单或往里添加东西，或查看家庭名称、时区和人数。密钥在“设置 → 已连接的账户 → 开发者访问”中创建：你只勾选它能做的事，并选择它何时失效（30 天、90 天、一年或永不）。每个密钥只显示一次，并且随时可以撤销；沙盒密钥使用示例数据，不会改动任何内容。",
 
   "help.faq.quiet-home.q": "为什么我的首页这么安静？",
   "help.faq.quiet-home.a": "因为没有事需要你。运转正常的日常安排本来就是安静的——WonderHome 只在真正需要人处理时才开口，而不是为了证明自己在工作。",
@@ -300,4 +301,6 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.faq.budget.a": "可以。在账单页面，管理员（Admin）可以为某一类账单设定每月、每季度或每年的预算，所有能看到金额的人都能看到还剩多少。预算从不会阻止支付账单。",
   "help.faq.other-apps.q": "其他应用可以连接 WonderHome 吗？",
   "help.faq.other-apps.a": "如果你的 WonderHome 开启了这项功能，管理员（Admin）可以在“设置 → 已连接的账户”中创建一个密钥，让你信任的应用查看购物清单或往里添加东西——只限你勾选的内容，而且随时可以撤销。",
+  "help.faq.activity-trail.q": "我能看到是谁改了某项设置吗？",
+  "help.faq.activity-trail.a": "如果你是管理员（Admin），可以。“家庭管理 → 活动记录”列出了谁在什么时候改了什么：角色、邀请、家务手册、你的规则和已连接的账户。它从不记录任何人说过或问过的内容。",
 };
