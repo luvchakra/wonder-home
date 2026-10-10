@@ -742,6 +742,31 @@ All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_mi
 ## Opening and merging pull requests
 Always open a PR for finished work pushed to a story/feature branch — never ask first, and never leave pushed commits sitting on a branch with no PR against them. Once that PR (or any PR against this repo, whether opened this session or found already open) has CI green on its current head — every required check passing, no merge conflict — merge it, again without asking. Still hold off merging when there's an open review thread that hasn't been addressed, or when the PR is explicitly marked draft/WIP.
 
+## Build-slot budget (Vercel's daily deployment cap)
+The Vercel project is on a plan that allows 100 deployments a day. Every deployment Vercel *creates* counts, including one the ignore step (`scripts/vercel-should-build.sh`) then cancels. When the cap is reached, Vercel refuses new deployments, production included, and refused ones are not queued (this happened on PR #191). Treat deployments as a scarce budget, with production first:
+
+1. **Create no deployment you don't need.**
+   - `vercel.json`'s `git.deploymentEnabled` turns automatic deployments off for `claude/**` and `feature/**` branches. Keep it that way; the ignore script is not a substitute, because a cancelled build still uses a slot.
+   - Previews stay off unless someone will actually open one. Verify UI locally (see *Verifying UI changes in a browser*), not on a preview.
+   - Only one Vercel project may be linked to this repository.
+2. **One merge to `main` is one production deployment, so merge in bigger pieces.**
+   - Squash-merge.
+   - Docs, changelog, trackers (`npm run tracker`), progress notes and test updates go in the same PR as the code they describe.
+   - Never open a docs-only PR while a code PR is open or about to open.
+3. **Tests run on GitHub Actions or locally, never on Vercel.**
+   - E2E already runs on the CI runner (`build-and-e2e`). Don't add a check that deploys to run tests.
+   - Never re-run a failed run hoping it passes; find the cause first.
+   - A scheduled suite, if one is ever added, runs rarely, uses few shards, and skips when `main` hasn't changed since the last green run.
+4. **Verify before pushing, so there are no fix-up pushes.** Run typecheck, lint, the touched unit tests and a local production build (`npm run build -w apps/web`) when the change can affect the build. Push a branch once, when it's ready.
+5. **Watch the budget.**
+   - Before deployment-heavy work, count the last 24 hours. Vercel's API may refuse this session; `gh api "repos/luvchakra/wonder-home/deployments?per_page=100"` lists what Vercel reported, with `created_at`.
+   - Above about 70 of 100, stop docs-only merges and anything else that deploys. Keep the rest for production and hotfixes.
+6. **When the cap is hit:**
+   - Stop pushing to branches that deploy.
+   - Wait until the oldest counted deployment is 24 hours old.
+   - Redeploy only the latest `main`, once.
+   - A Vercel "rate limited" / `api-deployments-free-per-day` status is infrastructure, not a failing check on the PR. It is not a reason to push again.
+
 ## Cleaning up test data after the merge
 The work isn't finished until its test data is gone. Once the PR has merged into `main`, remove everything the session created to test it, in that same session and before reporting the work done:
 
