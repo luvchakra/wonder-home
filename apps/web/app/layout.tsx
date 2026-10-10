@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Caveat, Sora } from "next/font/google";
 
 import { TAGLINE } from "@wonderhome/core/brand/mark";
+import { InstallPromptCapture } from "@wonderhome/core/shell/install-prompt-capture";
 
 import "./globals.css";
 
@@ -93,6 +94,9 @@ export const metadata: Metadata = {
     images: ["/og.png"],
   },
   appleWebApp: { capable: true, title: "WonderHome", statusBarStyle: "default" },
+  // Next writes `mobile-web-app-capable` for `capable`; older iOS only reads
+  // Apple's own name, so it is written too (story 00-011).
+  other: { "apple-mobile-web-app-capable": "yes" },
   // Every file here is generated from the same geometry the header renders,
   // by `npm run brand`. The dark tile is offered to browsers that ask for it:
   // a white tile in a dark tab strip is a bright rectangle, not a brand.
@@ -118,7 +122,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sora.variable} ${caveat.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* Catches Chromium's one-time install event before any screen mounts (story 00-011). */}
+        <InstallPromptCapture />
+        {children}
+      </body>
     </html>
   );
 }

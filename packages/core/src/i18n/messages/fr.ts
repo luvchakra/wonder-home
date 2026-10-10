@@ -8,6 +8,7 @@ import { settingsFr } from "./areas/settings/fr";
 import { householdFr } from "./areas/household/fr";
 import { entryFr } from "./areas/entry/fr";
 import { helpFr } from "./areas/help/fr";
+import { installFr } from "./areas/install/fr";
 
 export const fr: Catalog = {
   "common.next": "Suivant",
@@ -723,4 +724,5 @@ export const fr: Catalog = {
   ...householdFr,
   ...entryFr,
   ...helpFr,
+  ...installFr,
 };

@@ -8,6 +8,7 @@ import { settingsMr } from "./areas/settings/mr";
 import { householdMr } from "./areas/household/mr";
 import { entryMr } from "./areas/entry/mr";
 import { helpMr } from "./areas/help/mr";
+import { installMr } from "./areas/install/mr";
 
 export const mr: Catalog = {
   "common.next": "पुढे",
@@ -723,4 +724,5 @@ export const mr: Catalog = {
   ...householdMr,
   ...entryMr,
   ...helpMr,
+  ...installMr,
 };

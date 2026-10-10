@@ -43,7 +43,7 @@ export default async function VoiceAuthorizePage({ searchParams }: { searchParam
     const locale = await visitorLocale();
     const { t } = locale;
     return (
-      <AuthLayout locale={locale} title={t("entry.voice.nothing.title")} lede={reading.message} accent={t("entry.voice.nothing.accent")}>
+      <AuthLayout offerInstall={false} locale={locale} title={t("entry.voice.nothing.title")} lede={reading.message} accent={t("entry.voice.nothing.accent")}>
         <Alert tone="attention">{t("entry.voice.nothing.body")}</Alert>
       </AuthLayout>
     );
@@ -60,6 +60,7 @@ export default async function VoiceAuthorizePage({ searchParams }: { searchParam
   if (membership.memberType !== "adult") {
     return (
       <AuthLayout
+        offerInstall={false}
         locale={locale}
         title={t("entry.voice.adultOnly.title", { provider })}
         lede={t("entry.voice.adultOnly.lede")}
@@ -77,6 +78,7 @@ export default async function VoiceAuthorizePage({ searchParams }: { searchParam
 
   return (
     <AuthLayout
+      offerInstall={false}
       locale={locale}
       title={t("entry.voice.title", { provider })}
       lede={t("entry.voice.lede", { provider, name: membership.displayName, household: membership.household.name })}

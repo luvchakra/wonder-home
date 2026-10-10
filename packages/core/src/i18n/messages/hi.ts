@@ -8,6 +8,7 @@ import { settingsHi } from "./areas/settings/hi";
 import { householdHi } from "./areas/household/hi";
 import { entryHi } from "./areas/entry/hi";
 import { helpHi } from "./areas/help/hi";
+import { installHi } from "./areas/install/hi";
 
 export const hi: Catalog = {
   "common.next": "आगे",
@@ -723,4 +724,5 @@ export const hi: Catalog = {
   ...householdHi,
   ...entryHi,
   ...helpHi,
+  ...installHi,
 };

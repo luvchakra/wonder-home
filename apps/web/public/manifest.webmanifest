@@ -1,8 +1,12 @@
 {
+  "id": "/",
   "name": "WonderHome",
   "short_name": "WonderHome",
   "description": "A happier home. Everyday.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fbf8f3",
   "theme_color": "#fbf8f3",
@@ -32,6 +36,13 @@
       "purpose": "maskable"
     }
   ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://home.wonderapps.biz/manifest.webmanifest"
+    }
+  ],
+  "prefer_related_applications": false,
   "share_target": {
     "action": "/api/v1/intake/share",
     "method": "POST",

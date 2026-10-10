@@ -287,6 +287,18 @@
   }
 }
 
+/* The install banner opening above the header: it grows to its own height, pushing the page down. */
+@keyframes wh-banner-in {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
 @keyframes wh-slide-in-left {
   from {
     transform: translate3d(-100%, 0, 0);
@@ -492,6 +504,15 @@
   animation: wh-cat-tail 3s ease-in-out 3s infinite;
 }
 
+/* The install banner (story 00-011): a one-row grid so its height can grow from nothing, once per page load. */
+.wh-install-banner {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.wh-install-banner-enter {
+  animation: wh-banner-in var(--wh-duration-slow) var(--wh-ease) both;
+}
+
 /* The nav drawer's own entrance — the sheet family's speed, not the slower content reveal. */
 .wh-slide-in-left {
   animation: wh-slide-in-left var(--wh-duration) var(--wh-ease) both;
@@ -538,6 +559,7 @@
   .wh-reveal.is-visible .wh-arrive,
   .wh-skeleton,
   .wh-slide-in-left,
+  .wh-install-banner-enter,
   .wh-hand-wave,
   .wh-cat-sneak,
   .wh-cat-blink,

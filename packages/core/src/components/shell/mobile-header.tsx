@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
+import type { InstallBannerLabels } from "../../pwa/install-labels";
 import type { PrimaryNavKey } from "../../navigation/primary-navigation";
 import type { SecondaryNavGroup } from "../../navigation/secondary-navigation";
 import { BrandMark, Wordmark } from "../ui/brand";
@@ -43,6 +44,8 @@ export type ShellLabels = {
   settings?: string;
   household?: string;
   logout?: string;
+  /** The install banner's words (story 00-011); English when absent. */
+  install?: InstallBannerLabels;
 };
 
 export function MobileHeader({
