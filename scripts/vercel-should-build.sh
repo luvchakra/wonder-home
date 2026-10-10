@@ -4,8 +4,10 @@
 #
 # A large share of this repository's commits touch only the backlog, the
 # trackers, the threat model or a README — none of which can change what the
-# deployed app does. Building for those spends a deployment from a finite daily
-# allowance and produces a byte-identical result.
+# deployed app does. Skipping them saves build minutes and avoids an identical
+# release. It does NOT save a slot of the plan's daily deployment allowance:
+# Vercel counts the deployment once it creates it, before this script runs.
+# Branch deployments are kept off in vercel.json's `git.deploymentEnabled`.
 #
 # The rule is deliberately conservative: anything it cannot confidently classify
 # as documentation-only causes a build. Skipping a build that was needed is a
