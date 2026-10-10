@@ -2,7 +2,7 @@
 
 | Module | File | Stories | P0 | P1 | P2 |
 |---|---|---:|---:|---:|---:|
-| 00. Project Bootstrap & Architecture | `backlogs/00-Project-Bootstrap-and-Architecture.md` | 10 | 8 | 2 | 0 |
+| 00. Project Bootstrap & Architecture | `backlogs/00-Project-Bootstrap-and-Architecture.md` | 11 | 8 | 3 | 0 |
 | 01. Identity & Family Accounts | `backlogs/01-Identity-and-Family-Accounts.md` | 8 | 5 | 2 | 1 |
 | 02. Household Configuration & Playbook | `backlogs/02-Household-Configuration-and-Playbook.md` | 8 | 6 | 1 | 1 |
 | 03. Outcome & Routine Engine | `backlogs/03-Outcome-and-Routine-Engine.md` | 8 | 5 | 2 | 1 |

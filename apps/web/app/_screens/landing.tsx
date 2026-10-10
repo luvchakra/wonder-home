@@ -41,6 +41,8 @@ import { FEATURES } from "@wonderhome/core/billing/entitlements";
 import { yearlySavingPercent } from "@wonderhome/core/billing/prices";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { cn } from "@wonderhome/core/lib/cn";
+import { englishInstallBannerLabels } from "@wonderhome/core/pwa/install-labels";
+import { InstallBanner } from "@wonderhome/core/shell/install-banner";
 import { Wordmark } from "@wonderhome/core/ui/brand";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
@@ -143,6 +145,8 @@ export async function Landing() {
         Skip to main content
       </a>
       <Reveal />
+      {/* The landing page is in English, so its install banner is too (story 00-011). */}
+      <InstallBanner labels={englishInstallBannerLabels()} />
       <LandingHeader />
 
       <main id="wh-main">

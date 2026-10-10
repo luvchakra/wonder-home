@@ -12,6 +12,7 @@ import { requestFormat, requestFormatIn, requestT, setRequestLocale } from "@won
 import { translatorFor, type Translate } from "@wonderhome/core/i18n/translate";
 import { PRIMARY_NAVIGATION } from "@wonderhome/core/navigation/primary-navigation";
 import { secondaryNavigationFor, SECONDARY_GROUP_ORDER, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
+import { installBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import type { ShellLabels, ShellViewer } from "@wonderhome/core/shell/mobile-header";
 
 import { reconcileRemindersSoon } from "./reminders";
@@ -96,6 +97,7 @@ export async function buildSession(
     settings: t("nav.settings"),
     household: t("settings.section.household"),
     logout: t("nav.logout"),
+    install: installBannerLabels(t, preferences.language),
   };
 
   return {

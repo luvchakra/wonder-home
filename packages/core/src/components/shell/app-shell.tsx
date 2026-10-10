@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
+import { englishInstallBannerLabels } from "../../pwa/install-labels";
 import { PRIMARY_NAVIGATION, type PrimaryNavKey } from "../../navigation/primary-navigation";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { DocumentLocale } from "./document-locale";
+import { InstallBanner } from "./install-banner";
 import { MobileHeader, type ShellViewer } from "./mobile-header";
 import { NavDrawerProvider } from "./nav-drawer";
 import { PrimaryNav } from "./primary-nav";
@@ -70,6 +72,9 @@ export function AppShell({
       >
         Skip to main content
       </a>
+
+      {/* Above the header, in the flow: it pushes the page down, never covers it. */}
+      <InstallBanner labels={viewer?.labels?.install ?? englishInstallBannerLabels()} />
 
       <NavDrawerProvider viewer={viewer} secondary={secondary} pathname={pathname}>
         <div className="lg:flex">

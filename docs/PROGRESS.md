@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**223 of 225 stories done — 99.1%**
+**224 of 226 stories done — 99.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 223 |
+| Done | 224 |
 | In Progress | 1 |
 | Blocked | 0 |
 | Not Started | 0 |
@@ -25,7 +25,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
-| 00 Project Bootstrap & Architecture | `██████████` | 10 | 10 | — |
+| 00 Project Bootstrap & Architecture | `██████████` | 11 | 11 | — |
 | 01 Identity & Family Accounts | `██████████` | 9 | 9 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
@@ -61,7 +61,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 00 — Project Bootstrap & Architecture
 
-10 of 10 done `██████████`
+11 of 11 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -75,6 +75,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `00-008` Create security foundation | P0 | Done | Headers, middleware, route policy, redaction |
 | `00-009` Create observability foundation | P1 | Done | Redacting structured logs; reporter seam |
 | `00-010` Create feature configuration | P1 | Done | Flags + fail-fast startup validation |
+| `00-011` Offer to install the app on phones and tablets | P1 | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
 
 ### 01 — Identity & Family Accounts
 
@@ -452,4 +453,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `23-011` HomeBrain smart digest | P1 | Done | "HomeBrain summary · Today" above the list: today's reminders, in the order they come, built from the same rows — a summary, never a second source. On unless the person turns it off (`notification_preferences.daily_digest`) |
 | `23-012` Timing learned from behaviour | P1 | Done | Off unless the person turns it on (`learn_timing`). Evidence is only them acting on a reminder itself (`acted` events, 60 days); five or more, with the middle half within two hours, moves the first reminder of that kind to their median time, on the quarter hour. Never over a timing they chose, never a "before" reminder, never past the next stage; quiet hours still apply, and the row says so only when a learned time actually moved it |
 
-_Generated 2026-09-25 from 24 backlog files._
+_Generated 2026-10-10 from 24 backlog files._

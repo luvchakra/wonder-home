@@ -14,12 +14,13 @@
 | 8 | P0 | 00-008 | Create security foundation | Done | Headers, middleware, route policy, redaction |
 | 9 | P1 | 00-009 | Create observability foundation | Done | Redacting structured logs; reporter seam |
 | 10 | P1 | 00-010 | Create feature configuration | Done | Flags + fail-fast startup validation |
+| 11 | P1 | 00-011 | Offer to install the app on phones and tablets | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
 
 ## Purpose
 This is the mandatory greenfield bootstrap for the WonderHome repository. The project is a new repository and will use the WonderArk/founder-collab technical stack as its baseline.
 
 ## Epics
-- **Epic 00-E01 — Greenfield Repository & Stack:** stories 00-001 through 00-003.
+- **Epic 00-E01 — Greenfield Repository & Stack:** stories 00-001 through 00-003, and 00-011 (installing the app).
 - **Epic 00-E02 — Data, API & Security Foundation:** stories 00-004 through 00-008.
 - **Epic 00-E03 — Quality, Observability & Configuration:** stories 00-009 through 00-010.
 
@@ -185,3 +186,21 @@ This is the mandatory greenfield bootstrap for the WonderHome repository. The pr
 **Definition of Done**
 - Code integrated; lint/typecheck/test/build pass; security baseline preserved; story marked Done with evidence.
 
+### Story 00-011 — Offer to install the app on phones and tablets
+**Epic:** Greenfield Repository & Stack
+**Priority:** P1
+
+**Goal:** Invite somebody on a phone or tablet to install WonderHome, in one tap where the browser allows it, only when the browser can really install it and it is not installed yet.
+
+**Acceptance criteria**
+- A banner at the very top of the page, above the header and in the flow (it pushes the page down), respecting the top safe area, on public pages and inside the signed-in app; never on desktop, never on the voice-assistant linking consent or the auth callback, never in print.
+- Chromium on a phone or tablet shows it only after `beforeinstallprompt`, which is captured before any screen mounts; Install opens the browser's own prompt and awaits the answer.
+- iOS and iPadOS (Safari, and the share-sheet iOS browsers from 16.4) get the two steps — Share, then "Add to Home Screen" — with the Share glyph drawn inline; "I've added it" is remembered because a Safari tab cannot detect an install.
+- Firefox on Android, in-app browsers and desktops get nothing; running installed (any standalone-like display mode or iOS `navigator.standalone`) or reported installed by `getInstalledRelatedApps` hides it.
+- Installed is remembered for good on that browser; "Not now" and a declined prompt snooze it for 14 days; blocked storage breaks nothing.
+- The manifest is complete for installation (`id`, `scope`, `related_applications` naming itself), the Apple web-app meta is present, and no service worker is added.
+- Every new string is in all eight catalogs; Arabic lays the banner out right to left; entrance motion is off under reduced motion; the region and every button have names and nothing takes focus.
+- Eligibility is a pure function with unit tests per platform; an E2E emulates a phone, dispatches a synthetic `beforeinstallprompt`, installs through a stubbed prompt and proves a desktop sees nothing.
+
+**Definition of Done**
+- Code integrated; lint/typecheck/test/build pass; security baseline preserved; story marked Done with evidence.

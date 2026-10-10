@@ -5,7 +5,9 @@ import { guideByGroup, localizedFaq } from "@wonderhome/core/help/guide";
 import { suggestedQuestions } from "@wonderhome/core/help/search";
 import { DEFAULT_LANGUAGE } from "@wonderhome/core/i18n/locales";
 import { translatorFor } from "@wonderhome/core/i18n/translate";
+import { installBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { InstallBanner } from "@wonderhome/core/shell/install-banner";
 import { Wordmark } from "@wonderhome/core/ui/brand";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { Card } from "@wonderhome/core/ui/card";
@@ -215,14 +217,17 @@ export default async function HelpPage() {
   }
 
   return (
-    <main className="relative min-h-dvh overflow-hidden px-4 py-10 lg:px-8">
-      <LeafDecor corner="top-right" size={280} opacity={0.22} />
-      <div className="relative mx-auto max-w-3xl space-y-6">
-        <Link href="/" aria-label={t("help.page.homeLink")} className="inline-block">
-          <Wordmark tagline size={32} />
-        </Link>
-        {body}
-      </div>
-    </main>
+    <>
+      <InstallBanner labels={installBannerLabels(t, language)} />
+      <main className="relative min-h-dvh overflow-hidden px-4 py-10 lg:px-8">
+        <LeafDecor corner="top-right" size={280} opacity={0.22} />
+        <div className="relative mx-auto max-w-3xl space-y-6">
+          <Link href="/" aria-label={t("help.page.homeLink")} className="inline-block">
+            <Wordmark tagline size={32} />
+          </Link>
+          {body}
+        </div>
+      </main>
+    </>
   );
 }
