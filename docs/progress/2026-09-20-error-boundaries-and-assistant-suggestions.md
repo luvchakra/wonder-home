@@ -93,6 +93,9 @@ findable from the Vercel dashboard directly if it recurs.
 - The AI Vercel account connected to this session should be pointed at
   `wonder-team4`, or that team's owner should share access, so future
   production issues can be diagnosed directly instead of by code audit.
+  *Superseded 2026-10-15:* the project moved to the Kunal account, which the
+  connector reaches, so runtime logs are readable now
+  ([vercel-account-move](2026-10-15-vercel-account-move.md)).
 
 ## Where the code lives
 

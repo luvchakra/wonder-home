@@ -96,7 +96,8 @@ through the existing reply text. The `.env.example` documents
 ## Still open / needs a person
 
 - **Set `WONDERHOME_AI_KEY` on the production deployment** (Vercel project
-  `wonderhome`, team `wonder-team4`) for model understanding beyond the
+  `wonderhome`, team `wonder-team4` — since 2026-10-15 the Kunal account,
+  `kunals-projects-9f64757f`) for model understanding beyond the
   rules; `WONDERHOME_AI_PROVIDER` defaults to `anthropic`. Settings → shows
   which key source is in use.
 - Execution for payments, orders, reassignment and rescheduling waits on

@@ -72,6 +72,8 @@ CI passes.
   visible only via the GitHub deployment status). This session cannot inspect
   the real production Vercel project directly; anything about the live
   deployment was confirmed by curling the public URL instead.
+  *Superseded 2026-10-15:* the project now lives in the Kunal account, which
+  the connector reaches ([vercel-account-move](2026-10-15-vercel-account-move.md)).
 - Production should now redeploy from `main` automatically (Vercel's GitHub
   integration); this note does not include a post-deploy live check, since
   that happens on Vercel's own schedule outside this session's control.

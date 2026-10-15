@@ -742,6 +742,16 @@ All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_mi
 ## Opening and merging pull requests
 Always open a PR for finished work pushed to a story/feature branch — never ask first, and never leave pushed commits sitting on a branch with no PR against them. Once that PR (or any PR against this repo, whether opened this session or found already open) has CI green on its current head — every required check passing, no merge conflict — merge it, again without asking. Still hold off merging when there's an open review thread that hasn't been addressed, or when the PR is explicitly marked draft/WIP.
 
+## Where it is hosted
+Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunals-projects-9f64757f`, `team_nGnxn1FrUI78kVpMm12R7FIF`, Hobby plan) — the account the Vercel connector is signed in to. The earlier teams (`wonder-team4`, `luvchakras-projects`) are history; older progress notes that name them are superseded.
+
+| Vercel project | Id | Serves |
+|---|---|---|
+| `wonderhome` | `prj_wmkKrjqrezwGc8av9LEdjbcU46cO` | `home.wonderapps.biz` (this app, production from `main`) |
+| `wonder-apps` | `prj_eAN93HE8LG4URCWU0JlhBQtokWuM` | `wonderapps.biz`, `www.wonderapps.biz` |
+
+Deployment URLs still end in `-wonder-team4.vercel.app`; that is the project's old URL slug, not a second team. Call the Vercel connector **without** a `teamId`/`slug` — it then works against this team, the account's default; naming the team explicitly is refused with 403 until the connector is re-authorized for that scope. The live database is Supabase project `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1).
+
 ## Build-slot budget (Vercel's daily deployment cap)
 The Vercel project is on a plan that allows 100 deployments a day. Every deployment Vercel *creates* counts, including one the ignore step (`scripts/vercel-should-build.sh`) then cancels. When the cap is reached, Vercel refuses new deployments, production included, and refused ones are not queued (this happened on PR #191). Treat deployments as a scarce budget, with production first:
 
