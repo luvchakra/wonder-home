@@ -740,7 +740,15 @@ Writing a migration file is not shipping it. This repo's live Supabase project o
 All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_migration`, and every other Supabase MCP tool — is pre-authorized. Run what the work needs (including destructive statements: dropping a constraint, deleting QA/test rows, correcting bad data) without pausing to ask first. This still means investigate before deleting real household data and keep QA cleanup scoped to what a session's own test account created, per the rest of this file — it removes the confirmation step, not the judgment.
 
 ## Opening and merging pull requests
-Always open a PR for finished work pushed to a story/feature branch — never ask first, and never leave pushed commits sitting on a branch with no PR against them. Once that PR (or any PR against this repo, whether opened this session or found already open) has CI green on its current head — every required check passing, no merge conflict — merge it, again without asking. Still hold off merging when there's an open review thread that hasn't been addressed, or when the PR is explicitly marked draft/WIP.
+Merging is automatic, and standing permission covers it: never ask before opening or merging.
+- **Open a PR for finished work** pushed to a story or feature branch. Never leave pushed commits on a branch with no PR against them.
+- **Turn on auto-merge as soon as the PR is open.** Use squash, per the build-slot budget below, so GitHub merges it once every required check passes.
+- **Where auto-merge can't be enabled, merge it yourself.** That covers a repo setting that rejects it and a PR with no required checks. Merge as soon as CI is green on the current head and there is no merge conflict.
+- **Every PR against this repo is merged this way,** whether this session opened it or found it already open.
+- **Only three things hold a merge back:**
+  - an open review thread that hasn't been addressed;
+  - a PR explicitly marked draft or WIP;
+  - red CI, which is work to fix, never a reason to wait.
 
 ## Where it is hosted
 Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunals-projects-9f64757f`, `team_nGnxn1FrUI78kVpMm12R7FIF`, Hobby plan) — the account the Vercel connector is signed in to. The earlier teams (`wonder-team4`, `luvchakras-projects`) are history; older progress notes that name them are superseded.

@@ -416,6 +416,82 @@ const EXTRACTION_JSON_SCHEMA = {
   ],
 } as const;
 
+/**
+ * Claude reads intake through a tool rather than `output_config.format`.
+ * Strict structured output compiles the schema into a grammar, and this one
+ * is past what Anthropic will compile: with every absent field nullable it
+ * is refused for having more than 16 union-typed parameters, and with those
+ * fields made optional instead it is refused as "too complex". A non-strict
+ * tool's schema is guidance, not a grammar, so it has no such limit. The
+ * schema is still the Zod one, and what comes back is held to it by the
+ * same `safeParse` and `sanitizeIntakeExtraction` every provider goes
+ * through — a reading that does not fit is no reading, never a guess.
+ */
+export const CLAUDE_INTAKE_TOOL = {
+  name: "record_intake",
+  description: "Record what this item is and what it actually shows. Call it exactly once.",
+  input_schema: zodOutputFormat(IntakeExtractionSchema).schema as Anthropic.Tool.InputSchema,
+} satisfies Anthropic.Tool;
+
+const CLAUDE_TOOL_INSTRUCTION = `Record your reading by calling ${CLAUDE_INTAKE_TOOL.name} once. Its arguments are the reading's fields themselves (readable, kind, title, …), not wrapped in another object. Use null for anything the content does not show, and an empty list where there is nothing to list.`;
+
+/**
+ * Now and then a non-strict tool call arrives with the whole reading nested
+ * under one made-up key — `{"data": {...}}`, `{"query": {...}}`,
+ * `{"input": {...}}` — seen in roughly one call in eight on the golden set.
+ * The reading inside is the real one, so it is unwrapped; but only when the
+ * outer object has none of the schema's own fields and its single value
+ * does, so a genuine reading is never reshaped.
+ */
+export function unwrapToolInput(input: unknown, schema: { properties?: unknown }): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return input;
+  const fields = Object.keys((schema.properties as Record<string, unknown> | undefined) ?? {});
+  const has = (value: object) => fields.some((field) => field in value);
+  const entries = Object.entries(input as Record<string, unknown>);
+  if (has(input) || entries.length !== 1) return input;
+  const inner = entries[0]![1];
+  return inner && typeof inner === "object" && !Array.isArray(inner) && has(inner) ? inner : input;
+}
+
+/**
+ * A non-strict tool may leave out a key it had nothing for. Absent means the
+ * same as null (or an empty list) — the schema's own reading of "not shown"
+ * — so it is filled in before validation rather than failing the whole
+ * reading. Nothing that was sent is changed.
+ */
+export function withAbsentAsNull(value: unknown, schema: unknown, defs: Record<string, unknown> = {}): unknown {
+  if (!schema || typeof schema !== "object") return value;
+  const node = schema as { $ref?: string; $defs?: Record<string, unknown>; type?: unknown; anyOf?: unknown[]; properties?: Record<string, unknown>; items?: unknown };
+  const scope = node.$defs ? { ...defs, ...node.$defs } : defs;
+  if (node.$ref?.startsWith("#/$defs/")) return withAbsentAsNull(value, scope[node.$ref.slice("#/$defs/".length)], scope);
+  if (node.anyOf) {
+    const present = node.anyOf.find((option) => (option as { type?: unknown }).type !== "null");
+    return value === null || value === undefined ? value : withAbsentAsNull(value, present, scope);
+  }
+  if (Array.isArray(value)) return value.map((item) => withAbsentAsNull(item, node.items, scope));
+  if (!node.properties || !value || typeof value !== "object") return value;
+  const filled: Record<string, unknown> = { ...(value as Record<string, unknown>) };
+  for (const [key, property] of Object.entries(node.properties)) {
+    if (filled[key] === undefined) {
+      const absent = absentValue(property, scope);
+      if (absent !== undefined) filled[key] = absent;
+    } else {
+      filled[key] = withAbsentAsNull(filled[key], property, scope);
+    }
+  }
+  return filled;
+}
+
+function absentValue(schema: unknown, defs: Record<string, unknown>): unknown {
+  const node = schema as { $ref?: string; type?: unknown; anyOf?: { type?: unknown }[] } | undefined;
+  if (!node) return undefined;
+  if (node.$ref?.startsWith("#/$defs/")) return absentValue(defs[node.$ref.slice("#/$defs/".length)], defs);
+  if (node.anyOf?.some((option) => option.type === "null")) return null;
+  if (Array.isArray(node.type) && node.type.includes("null")) return null;
+  if (node.type === "array") return [];
+  return undefined;
+}
+
 export const INTAKE_SYSTEM_PROMPT = `You read one thing a household sent to WonderHome — a photo, a PDF, a text file, a forwarded email, a web page someone shared, or a voice note's transcript — and work out which of these it is, then extract only what is actually shown or written.
 
 kind is exactly one of:
@@ -686,23 +762,30 @@ export async function classifyIntake(
           "image" in source
             ? [
                 { type: "image", source: { type: "base64", media_type: source.image.mediaType, data: source.image.base64 } },
-                { type: "text", text: attachmentPrompt(context) },
+                { type: "text", text: `${attachmentPrompt(context)}\n\n${CLAUDE_TOOL_INSTRUCTION}` },
               ]
             : "document" in source
               ? [
                   { type: "document", source: { type: "base64", media_type: "application/pdf", data: source.document.base64 } },
-                  { type: "text", text: attachmentPrompt(context) },
+                  { type: "text", text: `${attachmentPrompt(context)}\n\n${CLAUDE_TOOL_INSTRUCTION}` },
                 ]
-              : [{ type: "text", text: textPrompt(source, context) }];
-        const response = await client.messages.parse({
+              : [{ type: "text", text: `${textPrompt(source, context)}\n\n${CLAUDE_TOOL_INSTRUCTION}` }];
+        const response = await client.messages.create({
           model: CLAUDE_MODEL,
-          max_tokens: 2048,
+          max_tokens: 8192,
           system: INTAKE_SYSTEM_PROMPT,
+          tools: [CLAUDE_INTAKE_TOOL],
+          tool_choice: { type: "auto" },
           messages: [{ role: "user", content }],
-          output_config: { format: zodOutputFormat(IntakeExtractionSchema), effort: "low" },
+          output_config: { effort: "low" },
         });
-        if (response.stop_reason === "refusal" || !response.parsed_output) return null;
-        return groundIntakeDate(sanitizeIntakeExtraction(response.parsed_output), context);
+        if (response.stop_reason === "refusal") return null;
+        const call = response.content.find((block) => block.type === "tool_use" && block.name === CLAUDE_INTAKE_TOOL.name);
+        if (!call || call.type !== "tool_use") return null;
+        const parsed = IntakeExtractionSchema.safeParse(
+          withAbsentAsNull(unwrapToolInput(call.input, CLAUDE_INTAKE_TOOL.input_schema), CLAUDE_INTAKE_TOOL.input_schema),
+        );
+        return parsed.success ? groundIntakeDate(sanitizeIntakeExtraction(parsed.data), context) : null;
       }
       case "google": {
         const client = geminiClient(apiKey, "classify");
