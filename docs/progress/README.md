@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-15 | [Hosting moved to the Kunal Vercel account: `wonderhome` (home.wonderapps.biz) and `wonder-apps` (wonderapps.biz), and how sessions call the connector](2026-10-15-vercel-account-move.md) |
 | 2026-10-10 | [Install banner on phones and tablets (00-011): one tap on Chromium after the browser's install event, the two Share steps on iOS, nothing on desktop or when installed; manifest completed](2026-10-10-install-banner.md) |
 | 2026-10-08 | [Get Help checked against the product: the Activity trail, partner key details and the Arabic right-to-left statement corrected, in all eight languages](2026-10-08-help-refresh.md) |
 | 2026-10-10 | [Build-slot budget: deployments off for working branches, and standing rules for Vercel's 100-a-day cap](2026-10-10-build-slot-budget.md) |

@@ -40,6 +40,10 @@ the same way when that happens.
 - **Vercel dashboard.** Confirm only one Vercel project is linked to
   `luvchakra/wonder-home`. This session can't list the team's projects (403).
   A second linked project would double every deployment.
+  *Update 2026-10-15:* the projects are visible again after the move to the
+  Kunal account — `wonderhome` (this app) and `wonder-apps` (`wonderapps.biz`)
+  are the two correct projects; see
+  [vercel-account-move](2026-10-15-vercel-account-move.md).
 - **Preview on demand.** If a preview is ever wanted for a branch, deploy it
   once by hand from the Vercel dashboard rather than re-enabling branch
   deployments.

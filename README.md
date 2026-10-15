@@ -80,6 +80,12 @@ tracking/           live progress; PROGRESS.md is the source of truth
 
 ## Deploying
 
+Production runs on Vercel project `wonderhome` in the **Kunal** account (team
+`kunals-projects-9f64757f`), serving `home.wonderapps.biz`; every merge to `main`
+deploys it. The same account's `wonder-apps` project serves `wonderapps.biz`.
+The database is Supabase project `wonderhome` (`kqxndableyysxqhxiorz`,
+ap-south-1). See *Where it is hosted* in `CLAUDE.md`.
+
 The repository builds as a monorepo from its root (`vercel.json` pins the build
 rather than relying on a dashboard Root Directory setting), so a fresh project
 needs no extra configuration to build.
