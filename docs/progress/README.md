@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-16 | [Fast pull-request CI (typecheck, changed-file lint, related unit tests, security gates, build) and the full Playwright suite nightly, split by measured time, with budgets, flaky reporting and a production guard](2026-10-16-fast-pr-ci-nightly-e2e.md) |
 | 2026-10-15 | [Claude is the live AI provider; HomeSend reads through a non-strict tool on Claude because the intake schema is past what strict structured output compiles](2026-10-15-claude-primary-provider.md) |
 | 2026-10-15 | [Hosting moved to the Kunal Vercel account: `wonderhome` (home.wonderapps.biz) and `wonder-apps` (wonderapps.biz), and how sessions call the connector](2026-10-15-vercel-account-move.md) |
 | 2026-10-10 | [Install banner on phones and tablets (00-011): one tap on Chromium after the browser's install event, the two Share steps on iOS, nothing on desktop or when installed; manifest completed](2026-10-10-install-banner.md) |

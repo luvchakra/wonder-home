@@ -745,10 +745,19 @@ Merging is automatic, and standing permission covers it: never ask before openin
 - **Turn on auto-merge as soon as the PR is open.** Use squash, per the build-slot budget below, so GitHub merges it once every required check passes.
 - **Where auto-merge can't be enabled, merge it yourself.** That covers a repo setting that rejects it and a PR with no required checks. Merge as soon as CI is green on the current head and there is no merge conflict.
 - **Every PR against this repo is merged this way,** whether this session opened it or found it already open.
-- **Only three things hold a merge back:**
+- **Only four things hold a merge back:**
   - an open review thread that hasn't been addressed;
   - a PR explicitly marked draft or WIP;
-  - red CI, which is work to fix, never a reason to wait.
+  - red CI, which is work to fix, never a reason to wait;
+  - a red nightly E2E run on `main` (`e2e-nightly.yml`). It is fixed before other work merges, and its fix is the one PR that may merge meanwhile. Find the root cause; "flaky" is not one.
+
+## Where tests run
+[`docs/CI.md`](docs/CI.md) is the full account.
+- **Pull requests** run fast checks only: typecheck, ESLint on the changed files, the unit tests related to what changed, the security and evaluation gates, DB tests when migrations change, and a build.
+- **Pushes to `main`** run every unit test and the whole lint.
+- **The full Playwright suite** runs nightly against a fresh build, never on a pull request.
+- **Before merging something risky,** run the affected specs locally with `npm run test:e2e -- <spec files>`. Risky means sign-in, permissions, a migration, payments, or a new cross-feature flow. That command pins the app to a placeholder Supabase project, so it never reaches production data.
+- **Never skip, disable or delete a test** to make CI green.
 
 ## Where it is hosted
 Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunals-projects-9f64757f`, `team_nGnxn1FrUI78kVpMm12R7FIF`, Hobby plan) — the account the Vercel connector is signed in to. The earlier teams (`wonder-team4`, `luvchakras-projects`) are history; older progress notes that name them are superseded.
@@ -772,7 +781,7 @@ The Vercel project is on a plan that allows 100 deployments a day. Every deploym
    - Docs, changelog, trackers (`npm run tracker`), progress notes and test updates go in the same PR as the code they describe.
    - Never open a docs-only PR while a code PR is open or about to open.
 3. **Tests run on GitHub Actions or locally, never on Vercel.**
-   - E2E already runs on the CI runner (`build-and-e2e`). Don't add a check that deploys to run tests.
+   - E2E runs on the CI runner nightly (`e2e-nightly.yml`). Don't add a check that deploys to run tests.
    - Never re-run a failed run hoping it passes; find the cause first.
    - A scheduled suite, if one is ever added, runs rarely, uses few shards, and skips when `main` hasn't changed since the last green run.
 4. **Verify before pushing, so there are no fix-up pushes.** Run typecheck, lint, the touched unit tests and a local production build (`npm run build -w apps/web`) when the change can affect the build. Push a branch once, when it's ready.

@@ -1,5 +1,8 @@
 name: CI
 
+# Fast checks for every pull request and every push to main. The full
+# browser suite runs nightly instead (.github/workflows/e2e-nightly.yml);
+# docs/CI.md says what runs where, and why.
 on:
   push:
     branches: [main]
@@ -10,67 +13,95 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Placeholders, not secrets. The build and the E2E smoke run against no
-  # real project: with no session cookie, Supabase reports a missing session
-  # locally, so /api/v1/me answers 401 without ever reaching this host.
-  # Stories that need a live database bring their own service container.
+  # Placeholders, not secrets. The build runs against no real project.
   NEXT_PUBLIC_SUPABASE_URL: https://ci.placeholder.supabase.co
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder_key
 
 jobs:
-  # What this change touches, so each job below runs only when it can be
-  # affected. A push to main, or any change to CI itself, runs everything:
-  # skipping is a pull-request convenience, never how main is verified.
-  #
-  #   code  — anything outside the docs trees (docs/, backlogs/, tracking/,
-  #           design/, architecture/, database/ and *.md). Docs-only PRs run
-  #           just the tracker check.
-  #   unit  — apps/, packages/, scripts/ or the package/TS config.
-  #   db    — migrations, or the database test scripts themselves.
-  #   web   — code the browser run can see: apps/, packages/ (not *.test.*),
-  #           e2e/, and the package, TS, Playwright and Vercel config.
+  # What this change touches (scripts/ci-scope.mjs). A push to main, or a
+  # pull request touching dependencies, TypeScript, test, lint or build
+  # config, or CI itself, is `full`: every unit test and the whole lint.
+  # Otherwise a pull request lints only the app files it changed and runs
+  # only the unit tests related to the core files it changed.
   changes:
     runs-on: ubuntu-latest
     outputs:
-      code: ${{ steps.classify.outputs.code }}
-      unit: ${{ steps.classify.outputs.unit }}
-      db: ${{ steps.classify.outputs.db }}
-      web: ${{ steps.classify.outputs.web }}
+      full: ${{ steps.scope.outputs.full }}
+      code: ${{ steps.scope.outputs.code }}
+      unit: ${{ steps.scope.outputs.unit }}
+      db: ${{ steps.scope.outputs.db }}
+      web: ${{ steps.scope.outputs.web }}
+      lint_files: ${{ steps.scope.outputs.lint_files }}
+      test_files: ${{ steps.scope.outputs.test_files }}
+      script_tests: ${{ steps.scope.outputs.script_tests }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - id: classify
-        env:
-          EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha }}
-        run: |
-          all() { for k in code unit db web; do echo "$k=true" >> "$GITHUB_OUTPUT"; done; }
-          if [ "$EVENT" != "pull_request" ]; then all; exit 0; fi
+      - id: scope
+        run: node scripts/ci-scope.mjs "${{ github.event_name }}" "${{ github.event.pull_request.base.sha }}"
 
-          files=$(git diff --name-only "$BASE" HEAD)
-          echo "Changed files:"; echo "$files"
-          if echo "$files" | grep -qE '^\.github/'; then all; exit 0; fi
+  typecheck:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-          has() { echo "$files" | grep -E "$1" | grep -vqE "${2:-^$}" && echo true || echo false; }
-          docs='^(docs|backlogs|tracking|design|architecture|database)/|\.md$'
-          {
-            echo "code=$(has '.' "$docs")"
-            echo "unit=$(has '^(apps|packages|scripts)/|^package(-lock)?\.json$|^tsconfig')"
-            echo "db=$(has '^supabase/|^scripts/(test-.*-rls\.mjs|setup-test-db\.mjs|lib/)')"
-            echo "web=$(has '^(apps|packages|e2e)/|^package(-lock)?\.json$|^tsconfig|^playwright\.config|^vercel\.json' '\.test\.tsx?$|\.md$')"
-          } >> "$GITHUB_OUTPUT"
-          cat "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-  # Fast, no database needed: types and static analysis. Unit tests are a
-  # separate job (below) so a typo eslint would catch in seconds doesn't sit
-  # behind the ~1300-test unit suite before this job can report red.
+      # npm ci deletes node_modules before installing, so the cache only
+      # helps because the install is skipped outright on an exact
+      # lockfile-hash hit — which is what `npm ci` would produce anyway.
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # tsc's incremental build info: warm, a typecheck re-checks only what
+      # changed and what depends on it. Pull requests restore main's; only
+      # main saves.
+      - name: Restore typecheck cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/web/tsconfig.tsbuildinfo
+            packages/core/tsconfig.tsbuildinfo
+          key: tsc-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            tsc-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Save typecheck cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            apps/web/tsconfig.tsbuildinfo
+            packages/core/tsconfig.tsbuildinfo
+          key: tsc-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+
+  # ESLint on the changed app files (the whole app on a full run), plus the
+  # repository's own static lints, which are whole-repo by nature and take
+  # about a second together.
   lint:
     needs: changes
     runs-on: ubuntu-latest
     env:
       CODE: ${{ needs.changes.outputs.code }}
+      FULL: ${{ needs.changes.outputs.full }}
+      LINT_FILES: ${{ needs.changes.outputs.lint_files }}
     steps:
       - uses: actions/checkout@v4
 
@@ -85,50 +116,34 @@ jobs:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      # npm ci deletes node_modules before it installs, so caching it
-      # alongside an unconditional `npm ci` buys nothing — this only helps
-      # because the install is skipped outright on a cache hit. Safe exactly
-      # because npm ci's own guarantee is a reproducible install from the
-      # lockfile: an exact lockfile-hash match means the restored
-      # node_modules is what `npm ci` would have produced anyway.
       - name: Install dependencies
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      # tsc's incremental build info and ESLint's content-keyed cache: warm,
-      # typecheck and lint take seconds instead of most of a minute. Both
-      # re-check whatever changed (tsc follows dependencies; the lint rules
-      # use no type information, so a file's result depends on it alone).
-      # Pull requests restore main's; only main saves.
-      - name: Restore typecheck and lint caches
+      - name: Restore ESLint cache
         if: env.CODE == 'true'
         uses: actions/cache/restore@v4
         with:
-          path: |
-            apps/web/tsconfig.tsbuildinfo
-            packages/core/tsconfig.tsbuildinfo
-            apps/web/.eslintcache
-          key: lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          path: apps/web/.eslintcache
+          key: eslint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
           restore-keys: |
-            lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            eslint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
-      - name: Typecheck
-        if: env.CODE == 'true'
-        run: npm run typecheck
-
-      - name: Lint
-        if: env.CODE == 'true'
+      - name: ESLint (whole app)
+        if: env.CODE == 'true' && env.FULL == 'true'
         run: npm run lint
 
-      - name: Save typecheck and lint caches
+      - name: ESLint (changed files)
+        if: env.CODE == 'true' && env.FULL != 'true' && env.LINT_FILES != ''
+        working-directory: apps/web
+        run: npx eslint --cache --cache-strategy content --cache-location .eslintcache $LINT_FILES
+
+      - name: Save ESLint cache
         if: env.CODE == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
-          path: |
-            apps/web/tsconfig.tsbuildinfo
-            packages/core/tsconfig.tsbuildinfo
-            apps/web/.eslintcache
-          key: lint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          path: apps/web/.eslintcache
+          key: eslint-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
       - name: Migration schema lint
         if: env.CODE == 'true'
@@ -142,10 +157,6 @@ jobs:
         if: env.CODE == 'true'
         run: npm run lint:boundaries
 
-      - name: Secret lint
-        if: env.CODE == 'true'
-        run: npm run lint:secrets
-
       - name: Progress tracker is current
         run: npm run tracker -- --check
 
@@ -153,19 +164,56 @@ jobs:
         if: env.CODE == 'true'
         run: npm run brand -- --check
 
-      - name: P0 security suite
-        if: env.CODE == 'true'
-        run: npm run security
-
-      - name: AI evaluation — golden households, release gates
-        if: env.CODE == 'true'
-        run: npm run eval
-
-  # The ~1300-test unit suite, split out so it runs in parallel with lint
-  # and db-tests rather than behind lint's fast static checks.
+  # Unit tests related to what changed, or all of them on a full run.
   unit-tests:
     needs: changes
     if: needs.changes.outputs.unit == 'true'
+    runs-on: ubuntu-latest
+    env:
+      FULL: ${{ needs.changes.outputs.full }}
+      TEST_FILES: ${{ needs.changes.outputs.test_files }}
+      SCRIPT_TESTS: ${{ needs.changes.outputs.script_tests }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Unit tests (all)
+        if: env.FULL == 'true'
+        run: npm run test
+
+      # Every unit test lives in packages/core; apps/web has none, and core
+      # tests never import the app, so a change to apps/web alone relates to
+      # no unit test (typecheck and lint still cover it).
+      - name: Unit tests related to the changed core files
+        if: env.FULL != 'true' && env.TEST_FILES != ''
+        working-directory: packages/core
+        run: npx vitest related $TEST_FILES --run --passWithNoTests
+
+      - name: Script tests
+        if: env.FULL != 'true' && env.SCRIPT_TESTS == 'true'
+        run: npm run test:scripts
+
+  # The secret scan and the release gates that cost seconds: the P0
+  # security suite and the deterministic AI evaluation (an Unsafe Action
+  # Rate above zero fails here, per CLAUDE.md). The repo has no dependency
+  # audit; none is added here.
+  security:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -185,16 +233,22 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Unit tests
-        run: npm run test
+      - name: Secret scan
+        run: npm run lint:secrets
 
-  # The only job that needs a real database: schema and RLS authorization tests.
+      - name: P0 security suite
+        run: npm run security
+
+      - name: AI evaluation — golden households, release gates
+        run: npm run eval
+
+  # Schema and RLS authorization tests: P0 release blockers, so they stay on
+  # every pull request that touches migrations or the tests themselves.
   db-tests:
     needs: changes
     if: needs.changes.outputs.db == 'true'
     runs-on: ubuntu-latest
-    # Two shards, each with its own server and template, so the ~35 test
-    # files run on eight cores instead of four.
+    # Two shards, each with its own server and template.
     strategy:
       fail-fast: false
       matrix:
@@ -223,10 +277,8 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      # The runner image ships PostgreSQL 16, stopped. Starting it takes about
-      # two seconds; a postgres:16 service container took about twenty to
-      # pull and become healthy. The migrations need no extension beyond
-      # what the stock server has.
+      # The runner image ships PostgreSQL 16, stopped; starting it takes
+      # about two seconds.
       - name: Start PostgreSQL
         run: |
           sudo systemctl start postgresql.service
@@ -239,9 +291,9 @@ jobs:
           echo "$files"
           node --test --test-concurrency=4 $files
 
-  # Build and browser smoke tests run against the placeholder project, no
-  # database needed.
-  build-and-e2e:
+  # The production build Vercel will run, so a change that cannot build never
+  # merges and never spends a deployment slot failing. No browser tests.
+  build:
     needs: changes
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
@@ -263,10 +315,8 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      # Turbopack keeps its build cache in .next/cache: warm, a build takes
-      # seconds instead of most of a minute. Pull requests restore the one
-      # main last saved (a PR can read its base branch's caches); only main
-      # saves, so a PR never spends time uploading a cache nobody else reads.
+      # Turbopack's build cache: warm, a build takes seconds. Pull requests
+      # restore main's; only main saves.
       - name: Restore Next.js build cache
         uses: actions/cache/restore@v4
         with:
@@ -285,45 +335,11 @@ jobs:
           path: apps/web/.next/cache
           key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
-      # Playwright's own headless shell, not the runner's Chrome: full Chrome
-      # (channel: chrome) made the suite ~20 s slower than it saved. The
-      # shell is cached, and the system libraries it needs already come with
-      # the Chrome the runner image ships, so `--with-deps` (an apt install,
-      # most of the old ~18 s) runs only if the plain install fails.
-      - name: Playwright version
-        id: playwright-version
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-shell-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright browser
-        run: npx playwright install --only-shell chromium || npx playwright install --with-deps --only-shell chromium
-
-      - name: E2E smoke tests
-        # The Build step above already produced apps/web/.next — without this,
-        # playwright.config.ts's webServer command rebuilds the whole app a
-        # second time before starting the server.
-        run: npm run test:e2e
-        env:
-          E2E_SKIP_BUILD: "1"
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-
   # A single required check name for branch protection, whatever the jobs
   # above are split into.
   ci:
     if: always()
-    needs: [changes, lint, unit-tests, db-tests, build-and-e2e]
+    needs: [changes, typecheck, lint, unit-tests, security, db-tests, build]
     runs-on: ubuntu-latest
     steps:
       # A job skipped because its area did not change is a pass; one skipped
@@ -333,9 +349,11 @@ jobs:
           ok() { [ "$1" = "success" ] || [ "$1" = "skipped" ]; }
           if [ "${{ needs.changes.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
+             ! ok "${{ needs.typecheck.result }}" || \
              ! ok "${{ needs.unit-tests.result }}" || \
+             ! ok "${{ needs.security.result }}" || \
              ! ok "${{ needs.db-tests.result }}" || \
-             ! ok "${{ needs.build-and-e2e.result }}"; then
+             ! ok "${{ needs.build.result }}"; then
             echo "One or more required jobs did not succeed."
             exit 1
           fi

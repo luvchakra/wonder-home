@@ -35,6 +35,30 @@ const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || findPinnedChromiu
 const channel = process.env.PLAYWRIGHT_CHANNEL || undefined;
 const launch = channel ? { channel } : { launchOptions: { executablePath } };
 
+/**
+ * The project the app under test talks to. E2E never touches production
+ * data: by default it is a placeholder URL, against which every request
+ * without a session is answered locally, which is all today's specs need.
+ * A dedicated test project can be named with E2E_SUPABASE_URL and
+ * E2E_SUPABASE_PUBLISHABLE_KEY; the live project is refused outright.
+ *
+ * These are set on the server Playwright starts, so they win over whatever a
+ * developer's apps/web/.env.local holds (Next.js never overrides a variable
+ * that is already set). Server-side keys that could reach a real service are
+ * blanked for the same reason.
+ */
+const PRODUCTION_PROJECT_REFS = ["kqxndableyysxqhxiorz"];
+const supabaseUrl = process.env.E2E_SUPABASE_URL || "https://ci.placeholder.supabase.co";
+if (PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref))) {
+  throw new Error(`E2E refuses to run against the production Supabase project (${supabaseUrl}).`);
+}
+const serverEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.E2E_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_ci_placeholder_key",
+  SUPABASE_SERVICE_ROLE_KEY: "",
+  WONDERHOME_AI_KEY: "",
+};
+
 function findPinnedChromium(): string | undefined {
   const root = process.env.PLAYWRIGHT_BROWSERS_PATH;
   if (!root) return undefined;
@@ -78,12 +102,13 @@ export default defineConfig({
   ],
   webServer: {
     // E2E_SKIP_BUILD is set by callers that already ran `npm run build`
-    // themselves (CI's build-and-e2e job, and `npm run verify` locally) —
-    // without it, this command silently rebuilt the whole app a second
-    // time, every run, on top of the build that had just finished.
+    // themselves (the nightly workflow, and `npm run verify` locally) —
+    // without it, this command builds first, under serverEnv, which is what
+    // a local `npm run test:e2e -- <spec files>` wants (docs/CI.md).
     command: process.env.E2E_SKIP_BUILD
       ? `npm run start -w apps/web -- --port ${PORT}`
       : `npm run build -w apps/web && npm run start -w apps/web -- --port ${PORT}`,
+    env: serverEnv,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

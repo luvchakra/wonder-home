@@ -1,0 +1,11 @@
+{
+  "api-contract.spec.ts": 3.4,
+  "auth.spec.ts": 26.4,
+  "domains.spec.ts": 4.6,
+  "help.spec.ts": 9.8,
+  "identity.spec.ts": 9.3,
+  "install-banner.spec.ts": 15.4,
+  "landing.spec.ts": 33,
+  "session.spec.ts": 6.6,
+  "shell.spec.ts": 16.9
+}
