@@ -27,16 +27,27 @@ const AUTHENTICATED_PREFIXES = [
   // Accepting an invitation needs an account, so an invitee is sent to sign in
   // and returned to the link afterwards.
   "/invite",
+  // The user guide and its search are for members (see below for what a
+  // signed-out visitor can still read).
+  "/help",
 ] as const;
 
 /**
- * `/help` is deliberately absent from the list above.
+ * What stays public, and why — kept to the minimum somebody needs before they
+ * have an account or when they cannot get into one:
  *
- * Somebody deciding whether to trust a product with their home should be able
- * to read what it will and will not do first, and somebody who cannot get in
- * is exactly the person who needs the help page. Nothing in the guide is about
- * a particular household, so there is nothing there to protect — and a guide
- * behind a login answers neither of those people.
+ * - `/` — the landing page, including its contact section (`/#contact`):
+ *   what WonderHome is, and how to reach a person.
+ * - `/sign-in`, `/sign-up` — getting in. Their own screens carry the only
+ *   help that matters signed out: the Google option, the forgot-password link.
+ * - `/forgot-password`, `/reset-password`, `/auth/*` — recovering an account
+ *   and finishing an email link; by definition used without a session.
+ * - `/legal` — terms and privacy, which anybody must be able to read before
+ *   agreeing to them.
+ * - `/oauth/*` and the provider webhooks under `/api` — protocol endpoints
+ *   that authenticate their own callers.
+ *
+ * The user guide (`/help`) is not on this list: it is for members.
  */
 
 /** Surfaces only for a signed-out visitor; a signed-in member is sent home. */

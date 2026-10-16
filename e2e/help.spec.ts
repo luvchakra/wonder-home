@@ -1,73 +1,102 @@
-import { expect, test } from "@playwright/test";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { expect, test, type Page } from "@playwright/test";
 
 import { FAQ, GUIDE } from "../packages/core/src/help/guide";
 import { answerQuestion } from "../packages/core/src/help/search";
 
 /**
- * The help centre.
+ * The help centre is for signed-in members.
  *
- * Deliberately readable signed out: somebody who cannot get in is exactly the
- * person who needs it, and nothing in the guide is about a particular
- * household. That is asserted here rather than assumed, because "the help page
- * needs a login" is the kind of regression a route-policy edit makes quietly.
+ * Signed out, every way to its words is closed: the page redirects to
+ * sign-in (and back afterwards), its search action is refused, no client
+ * chunk a visitor can download carries the guide's text, and no public page
+ * links to it except through sign-in. What stays public — the landing page,
+ * sign-in and sign-up, password reset, terms and privacy — still loads.
  *
- * The rest is about the guide's own links being sound: every anchor an answer
- * or an FAQ entry can produce must land on a section that exists, because a
- * help page whose links go nowhere is worse than no help page.
+ * Signed in, it works: the page, its search, and headers that keep it out of
+ * shared caches and search engines. That half needs a real Supabase project
+ * (E2E_SUPABASE_URL, E2E_SUPABASE_PUBLISHABLE_KEY and
+ * E2E_SUPABASE_SERVICE_ROLE_KEY); without one it is skipped and says so.
  */
 
-test("an anonymous visitor can read the whole guide", async ({ page }) => {
-  await page.goto("/help");
+const SENTINELS = [
+  FAQ[0]!.answer.slice(0, 50),
+  GUIDE[0]!.summary.slice(0, 50),
+  GUIDE.find((section) => section.id === "privacy")!.body[0]!.slice(0, 50),
+];
 
-  await expect(page).toHaveURL(/\/help$/);
-  await expect(page.getByRole("heading", { name: "Get help", level: 1 })).toBeVisible();
-  // A section from the guide itself, so this fails if the page renders a
-  // frame with nothing in it.
-  await expect(page.getByText(FAQ[0]!.question).first()).toBeVisible();
+function hasGuideText(text: string): string | undefined {
+  return SENTINELS.find((sentinel) => text.includes(sentinel));
+}
+
+// --- Signed out ----------------------------------------------------------------
+
+test("a signed-out visitor asking for the guide is sent to sign-in, and the response carries none of it", async ({ request }) => {
+  for (const path of ["/help", "/help/anything"]) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(307);
+    expect(new URL(response.headers().location!, "http://x").pathname + new URL(response.headers().location!, "http://x").search, path).toBe(`/sign-in?next=${encodeURIComponent(path)}`);
+    expect(hasGuideText(await response.text()), path).toBeUndefined();
+  }
 });
 
-test("the landing page's Help link opens the guide, with no sign-in in between", async ({ page, isMobile }) => {
-  // The whole point of a public guide: a visitor who has not signed up can get
-  // to it in one click. A redirect through /sign-in here would defeat it even
-  // though the guide itself is reachable. Tracked via actual main-frame
-  // navigations rather than every network response, because Next prefetches
-  // other on-screen links (Sign In among them) regardless of what was clicked.
-  await page.goto("/");
+test("a signed-out browser lands on sign-in with the guide as where to return", async ({ page }) => {
+  await page.goto("/help");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fhelp$/);
+  expect(hasGuideText(await page.content())).toBeUndefined();
+});
 
-  if (isMobile) {
-    await page.getByRole("button", { name: "Open menu" }).click();
-  }
-
-  const navigations: string[] = [];
-  page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) navigations.push(new URL(frame.url()).pathname);
+test("the guide's search refuses a caller with no session", async ({ request }) => {
+  // A server action is a POST to the page with a Next-Action header; without a
+  // session it never reaches the action, and nothing of the guide comes back.
+  const response = await request.post("/help", {
+    maxRedirects: 0,
+    headers: { "Next-Action": "0".repeat(42), "Content-Type": "text/plain;charset=UTF-8" },
+    data: JSON.stringify(["en", "what does WonderHome do?"]),
   });
+  expect(response.status()).toBe(307);
+  expect(response.headers().location).toMatch(/\/sign-in\?next=%2Fhelp$/);
+  expect(hasGuideText(await response.text())).toBeUndefined();
+});
+
+const PUBLIC_PAGES = ["/", "/legal", "/sign-in", "/sign-up", "/forgot-password", "/reset-password"];
+
+test("what stays public still loads signed out, and none of it links straight to the guide", async ({ page }) => {
+  for (const path of PUBLIC_PAGES) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+    expect(new URL(page.url()).pathname, path).toBe(path);
+    await expect(page.locator('a[href="/help"], a[href^="/help#"]'), path).toHaveCount(0);
+  }
+});
+
+test("no client chunk a signed-out visitor downloads carries the guide's words", async ({ page, request }) => {
+  const scripts = new Set<string>();
+  page.on("response", (response) => {
+    if (response.url().includes("/_next/static/") && response.url().endsWith(".js")) scripts.add(response.url());
+  });
+  for (const path of PUBLIC_PAGES) await page.goto(path, { waitUntil: "networkidle" });
+
+  expect(scripts.size).toBeGreaterThan(0);
+  for (const url of scripts) {
+    const text = await (await request.get(url)).text();
+    expect(hasGuideText(text), url).toBeUndefined();
+  }
+});
+
+test("the landing page points a visitor at contact, and at the guide only through sign-in", async ({ page, isMobile }) => {
+  await page.goto("/");
+  if (isMobile) await page.getByRole("button", { name: "Open menu" }).click();
 
   const nav = page.getByRole("navigation", { name: "Landing" }).first();
-  await nav.getByRole("link", { name: "Help" }).click();
-  await page.waitForURL(/\/help$/);
-
-  await expect(page.getByRole("heading", { name: "Get help", level: 1 })).toBeVisible();
-  expect(navigations.filter((path) => path.startsWith("/sign-in")), "it navigated via sign-in").toEqual([]);
+  await expect(nav.getByRole("link", { name: "Contact" })).toHaveAttribute("href", "#contact");
+  await expect(page.getByRole("link", { name: "User guide (sign in)" })).toHaveAttribute("href", "/sign-in?next=%2Fhelp");
 });
 
-test("the landing footer's guide link opens it too", async ({ page }) => {
-  await page.goto("/");
-
-  await page.getByRole("link", { name: "User guide", exact: true }).click();
-  await expect(page).toHaveURL(/\/help$/);
-});
-
-test("a signed-out reader is offered the way in, not a link that bounces them", async ({ page }) => {
-  await page.goto("/help");
-
-  await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Talk to WonderHome" })).toHaveCount(0);
-});
+// --- The guide's own links -------------------------------------------------------
 
 test("every FAQ entry links to a section the guide actually has", () => {
   const ids = new Set(GUIDE.map((section) => section.id));
-
   for (const entry of FAQ) {
     expect(ids.has(entry.section), `"${entry.question}" points at #${entry.section}`).toBe(true);
   }
@@ -75,9 +104,6 @@ test("every FAQ entry links to a section the guide actually has", () => {
 
 test("every answer the assistant can give lands on a real section", () => {
   const ids = new Set(GUIDE.map((section) => section.id));
-
-  // Every section's own title, every FAQ question, and a few things somebody
-  // would plausibly type while stuck.
   const questions = [
     ...GUIDE.map((section) => section.title),
     ...FAQ.map((entry) => entry.question),
@@ -86,30 +112,92 @@ test("every answer the assistant can give lands on a real section", () => {
     "I am locked out",
     "",
   ];
-
   for (const question of questions) {
     const answer = answerQuestion(question);
     expect(ids.has(answer.sectionId), `"${question}" → #${answer.sectionId}`).toBe(true);
-    for (const also of answer.alsoSee) {
-      expect(ids.has(also.id), `"${question}" also → #${also.id}`).toBe(true);
-    }
+    for (const also of answer.alsoSee) expect(ids.has(also.id), `"${question}" also → #${also.id}`).toBe(true);
   }
 });
 
 test("the guide never promises something the product does not do", () => {
-  // These are the claims the codebase is careful never to make. If one shows
-  // up in the guide, the guide has drifted ahead of the product.
   const forbidden = [
     /we (?:can|will) pay your bills automatically/i,
     /connected to (?:google|gmail|outlook) (?:calendar|mail)/i,
     /your data (?:is|will be) used to train/i,
   ];
-
   const everything = GUIDE.flatMap((section) => [section.summary, ...section.body])
     .concat(FAQ.map((entry) => entry.answer))
     .join("\n");
+  for (const pattern of forbidden) expect(everything, `guide contains ${pattern}`).not.toMatch(pattern);
+});
 
-  for (const pattern of forbidden) {
-    expect(everything, `guide contains ${pattern}`).not.toMatch(pattern);
+// --- Signed in -------------------------------------------------------------------
+
+const url = process.env.E2E_SUPABASE_URL;
+const anonKey = process.env.E2E_SUPABASE_PUBLISHABLE_KEY;
+const serviceKey = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY;
+/** Every E2E account uses this domain, so scripts/e2e-cleanup.mjs can find what a killed run left. */
+const E2E_EMAIL_DOMAIN = "e2e.wonderhome-test.internal";
+
+test.describe("signed in", () => {
+  test.skip(!url || !anonKey || !serviceKey, "needs a real Supabase project: E2E_SUPABASE_URL, _PUBLISHABLE_KEY, _SERVICE_ROLE_KEY");
+  test.describe.configure({ mode: "serial" });
+
+  let admin: SupabaseClient;
+  let userId = "";
+  let householdId = "";
+  const email = `help-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@${E2E_EMAIL_DOMAIN}`;
+  const password = `E2e!${Math.random().toString(36).slice(2, 12)}`;
+
+  test.beforeAll(async () => {
+    admin = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    const created = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: "E2E Help" } });
+    if (created.error) throw created.error;
+    userId = created.data.user.id;
+
+    const asUser = createClient(url!, anonKey!, { auth: { persistSession: false } });
+    const signedIn = await asUser.auth.signInWithPassword({ email, password });
+    if (signedIn.error) throw signedIn.error;
+    const household = await asUser
+      .rpc("create_household", { p_household_name: "E2E Help household", p_display_name: "E2E Help", p_timezone: "Asia/Kolkata" })
+      .select()
+      .single();
+    if (household.error) throw household.error;
+    householdId = (household.data as { household_id: string }).household_id;
+  });
+
+  test.afterAll(async () => {
+    if (householdId) await admin.from("households").delete().eq("id", householdId);
+    if (userId) await admin.auth.admin.deleteUser(userId);
+  });
+
+  async function signIn(page: Page) {
+    await page.goto("/help");
+    await expect(page).toHaveURL(/\/sign-in\?next=%2Fhelp$/);
+    await page.locator('input[name="email"]').fill(email);
+    await page.locator('input[name="password"]').fill(password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
   }
+
+  test("after sign-in the visitor is returned to the guide, and its search answers", async ({ page }) => {
+    await signIn(page);
+    await expect(page).toHaveURL(/\/help$/);
+    await expect(page.getByRole("heading", { name: "Get help", level: 1 }).first()).toBeVisible();
+    await expect(page.getByText(FAQ[0]!.question).first()).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Ask a question about WonderHome" }).fill("who can see the bills");
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    await expect(page.getByText(/^Read:/).first()).toBeVisible();
+  });
+
+  test("the signed-in guide is never cached publicly or indexed", async ({ page }) => {
+    await signIn(page);
+    await expect(page).toHaveURL(/\/help$/);
+    const response = await page.request.get("/help", { maxRedirects: 0 });
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toMatch(/private/);
+    expect(response.headers()["cache-control"]).toMatch(/no-store/);
+    expect(response.headers()["x-robots-tag"]).toMatch(/noindex/);
+    expect(await response.text()).toMatch(/<meta name="robots" content="noindex, nofollow"/);
+  });
 });

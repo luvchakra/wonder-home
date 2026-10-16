@@ -18,7 +18,8 @@
  * gets its own rule here. Shared settings a spec changes temporarily are
  * reset here too, under the same guard. None exist yet.
  *
- * It refuses outright to touch the production project, whatever it is told.
+ * It refuses the production project unless E2E_ALLOW_LIVE_PROJECT=1 is set,
+ * which the owner allows only while WonderHome is pre-launch (CLAUDE.md).
  */
 export const E2E_EMAIL_DOMAIN = "e2e.wonderhome-test.internal";
 /** The live project (CLAUDE.md, "Where it is hosted"). E2E never runs against it. */
@@ -33,7 +34,7 @@ export function guard(url) {
     return { ok: false, reason: `E2E_SUPABASE_URL is not a URL: ${url}`, refuse: true };
   }
   const ref = host.split(".")[0];
-  if (PRODUCTION_PROJECT_REFS.includes(ref)) {
+  if (PRODUCTION_PROJECT_REFS.includes(ref) && process.env.E2E_ALLOW_LIVE_PROJECT !== "1") {
     return { ok: false, reason: `refusing: ${host} is the production project`, refuse: true };
   }
   return { ok: true, ref };

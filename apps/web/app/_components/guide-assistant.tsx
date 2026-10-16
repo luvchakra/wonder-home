@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, CornerDownLeft, Search, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import type { Answer } from "@wonderhome/core/help/search";
@@ -24,18 +25,6 @@ export type GuideAssistantLabels = {
   also: string;
 };
 
-const ENGLISH: GuideAssistantLabels = {
-  title: "Ask the guide",
-  lede: "Searches this guide and answers with a link to the section it came from. Not a language model — so it will say when it does not know rather than invent an answer.",
-  label: "Ask a question about WonderHome",
-  placeholder: "Ask anything about WonderHome…",
-  submit: "Ask",
-  searching: "Searching the guide",
-  ready: "Answer ready",
-  read: "Read:",
-  also: "Also:",
-};
-
 /**
  * Ask the guide.
  *
@@ -49,15 +38,16 @@ const ENGLISH: GuideAssistantLabels = {
 export function GuideAssistant({
   ask,
   suggestions,
-  labels = ENGLISH,
+  labels,
 }: {
   ask: (question: string) => Promise<Answer>;
   suggestions: readonly string[];
-  labels?: GuideAssistantLabels;
+  labels: GuideAssistantLabels;
 }) {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<Exchange[]>([]);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function submit(asked: string) {
     const trimmed = asked.trim();
@@ -65,8 +55,14 @@ export function GuideAssistant({
 
     setQuestion("");
     startTransition(async () => {
-      const answer = await ask(trimmed);
-      setHistory((previous) => [...previous, { question: trimmed, answer }]);
+      try {
+        const answer = await ask(trimmed);
+        setHistory((previous) => [...previous, { question: trimmed, answer }]);
+      } catch {
+        // The guide is for signed-in members; a session that ended while the
+        // page was open is refused on the server, so sign in and come back.
+        router.push(`/sign-in?next=${encodeURIComponent("/help")}`);
+      }
     });
   }
 

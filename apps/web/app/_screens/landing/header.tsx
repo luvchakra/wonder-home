@@ -19,15 +19,13 @@ const NAV = [
 ];
 
 /**
- * The guide, kept apart from the list above.
+ * Contact, kept apart from the list above and set in the brand colour.
  *
- * Every other item here is an anchor down this page; this one leaves it. It is
- * in the header at all because the guide is the honest answer to most of what
- * a landing page is being asked — what does it actually do, what will it never
- * do without asking — and somebody who wants that should not have to create an
- * account or scroll to the footer to find it. It needs no login.
+ * It used to be the user guide, which is now for signed-in members only, so a
+ * signed-out visitor would only have been bounced to sign-in. How to reach a
+ * person is the public answer to "what does it actually do, and can I ask".
  */
-const GUIDE = { href: "/help", label: "Help" };
+const GUIDE = { href: "#contact", label: "Contact" };
 
 /**
  * Translucent, blurred and sticky once the page scrolls (requirements §26).

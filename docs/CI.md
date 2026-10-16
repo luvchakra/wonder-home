@@ -6,9 +6,9 @@ A red nightly is fixed before other work merges.
 
 | Where | When | What | Workflow |
 |---|---|---|---|
-| Pull request | every push to a PR branch | typecheck; ESLint on the changed app files; unit tests related to the changed core files; secret scan, P0 security suite and the deterministic AI evaluation; repo lints (migrations, PostgREST embeds, import boundaries, tracker, brand); DB/RLS tests when migrations change; a production build when app code changes. **No E2E.** | `.github/workflows/ci.yml` |
+| Pull request | every push to a PR branch | typecheck; ESLint on the changed app files; unit tests related to the changed core files; secret scan, P0 security suite and the deterministic AI evaluation; repo lints (migrations, PostgREST embeds, import boundaries, help links, tracker, brand); DB/RLS tests when migrations change; a production build when app code changes, followed by a check that the user guide's words are not in any client chunk. **No E2E.** | `.github/workflows/ci.yml` |
 | Push to `main` | every merge | the same jobs, with **every** unit test and the **whole** lint; DB/RLS tests and the build always run. Saves the caches pull requests read. **No E2E.** | `.github/workflows/ci.yml` |
-| Nightly | 02:17 IST (20:47 UTC), and by hand | the **full** Playwright suite (mobile and desktop) against a fresh build of `main` | `.github/workflows/e2e-nightly.yml` |
+| Nightly | 03:00 IST (21:30 UTC), and by hand | the **full** Playwright suite (mobile and desktop) against a fresh build of `main` | `.github/workflows/e2e-nightly.yml` |
 | Your machine | before merging something risky | the spec files that cover it, against a local build | `npm run test:e2e -- <spec files>` |
 
 ## Pull request CI (`ci.yml`)
@@ -49,7 +49,7 @@ Deleting a `packages/core` file also forces a full unit run, because `vitest rel
 
 1. **Clean up** (`scripts/e2e-cleanup.mjs`). The script:
    - removes E2E accounts left by earlier runs: emails on `@e2e.wonderhome-test.internal`, older than two hours. This happens only when a dedicated test project is configured as the `E2E_SUPABASE_URL` / `E2E_SUPABASE_SERVICE_ROLE_KEY` repository secrets;
-   - refuses the production project outright.
+   - refuses the production project unless `E2E_ALLOW_LIVE_PROJECT=1` (pre-launch only).
 
    Today's suite needs none of this. It runs against a placeholder Supabase URL and creates nothing anywhere, so this step logs "nothing to clean". Any spec that starts creating real data must:
    - create its accounts on that email domain;
@@ -73,6 +73,19 @@ Deleting a `packages/core` file also forces a full unit run, because `vitest rel
    - the night's measured seconds per spec (`timings`). Copy them into `e2e/timings.json` when the suite's shape changes.
 6. **Alert.** The repository has no chat or paging integration. A failed scheduled run alerts the way GitHub does: an email to whoever last changed the workflow's schedule.
 
+**Signed-in specs.** `help.spec.ts` signs in as a throwaway member it creates and deletes itself. It runs only when the nightly has a real project, which you configure under GitHub → Settings → Secrets and variables → Actions:
+
+| Name | Kind | Value |
+|---|---|---|
+| `E2E_SUPABASE_URL` | secret | the test project's URL |
+| `E2E_SUPABASE_PUBLISHABLE_KEY` | secret | its publishable key |
+| `E2E_SUPABASE_SERVICE_ROLE_KEY` | secret | its service-role key |
+| `E2E_ALLOW_LIVE_PROJECT` | variable | `1`. Only while WonderHome is pre-launch, and only if the test project is the live one. |
+
+Without them those specs report themselves skipped.
+
+Signed-in specs need a build made for that project. `NEXT_PUBLIC_*` values are inlined at build time, server code included. The nightly builds with them, and so does `npm run test:e2e` without `E2E_SKIP_BUILD`. A placeholder build reused with `E2E_SKIP_BUILD=1` makes every sign-in fail.
+
 **Start it by hand:**
 - GitHub → Actions → **E2E nightly** → **Run workflow**. Optionally list spec files (`e2e/auth.spec.ts e2e/session.spec.ts`) or change the split target.
 - From a session: the GitHub `run_workflow` action on `e2e-nightly.yml` with `ref: main`.
@@ -87,6 +100,12 @@ Deleting a `packages/core` file also forces a full unit run, because `vitest rel
 ```bash
 npm run test:e2e -- e2e/auth.spec.ts e2e/session.spec.ts             # build, then run these specs, mobile and desktop
 npm run test:e2e -- e2e/auth.spec.ts --project=mobile               # one viewport
+
+# The signed-in specs too, against the live project (pre-launch only):
+set -a; . apps/web/.env.local; set +a
+E2E_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL E2E_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
+E2E_SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY E2E_ALLOW_LIVE_PROJECT=1 \
+npm run test:e2e -- e2e/help.spec.ts
 ```
 
 The command:
@@ -94,7 +113,7 @@ The command:
 - serves it on port 3100;
 - runs the named specs.
 
-`playwright.config.ts` pins that server to the placeholder Supabase project and blanks `SUPABASE_SERVICE_ROLE_KEY` and `WONDERHOME_AI_KEY`. So your `apps/web/.env.local`, which points at the live project, can never turn a local E2E run into requests against production data. It refuses the production project even if asked. If a server is already listening on 3100, Playwright reuses it, so stop your own server first.
+`playwright.config.ts` pins that server to the placeholder Supabase project and blanks `SUPABASE_SERVICE_ROLE_KEY` and `WONDERHOME_AI_KEY`. So your `apps/web/.env.local`, which points at the live project, can never turn a local E2E run into requests against production data. It refuses the production project unless `E2E_ALLOW_LIVE_PROJECT=1` is set, which the owner allows only while WonderHome is pre-launch (CLAUDE.md). If a server is already listening on 3100, Playwright reuses it, so stop your own server first.
 
 **Run the affected specs this way before merging:**
 - sign-in or session changes (`auth`, `session`, `identity`);

@@ -7,7 +7,6 @@ import { homesendZh } from "./areas/homesend/zh";
 import { settingsZh } from "./areas/settings/zh";
 import { householdZh } from "./areas/household/zh";
 import { entryZh } from "./areas/entry/zh";
-import { helpZh } from "./areas/help/zh";
 import { installZh } from "./areas/install/zh";
 
 export const zh: Catalog = {
@@ -723,6 +722,5 @@ export const zh: Catalog = {
   ...settingsZh,
   ...householdZh,
   ...entryZh,
-  ...helpZh,
   ...installZh,
 };

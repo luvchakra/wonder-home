@@ -1,5 +1,5 @@
 import { helpEn } from "../i18n/messages/areas/help/en";
-import type { Translate } from "../i18n/translate";
+import type { HelpWords } from "./words";
 import { FAQ, GUIDE, localizedFaq, localizedGuide, type FaqEntry, type GuideSection } from "./guide";
 
 /**
@@ -286,7 +286,7 @@ export function answerQuestion(
  * their FAQ, their words for "not found". The ids are the same as English, so
  * every link still lands on its section.
  */
-export function answerQuestionIn(question: string, t: Translate, language: string): Answer {
+export function answerQuestionIn(question: string, t: HelpWords, language: string): Answer {
   return answerQuestion(question, {
     guide: localizedGuide(t),
     faq: localizedFaq(t),
@@ -305,7 +305,7 @@ const SUGGESTED_KEYS = [
 ] as const satisfies readonly (keyof typeof helpEn)[];
 
 /** Questions offered as starting points, so the box is never a blank stare. */
-export function suggestedQuestions(t?: Translate): string[] {
+export function suggestedQuestions(t?: HelpWords): string[] {
   return SUGGESTED_KEYS.map((key) => (t ? t(key) : helpEn[key]));
 }
 
