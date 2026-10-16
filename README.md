@@ -42,10 +42,14 @@ npm run lint:secrets     # credentials in source, server-only values behind NEXT
 npm run test             # vitest unit tests + node --test for scripts
 npm run test:db          # schema and RLS authorization tests (needs PostgreSQL)
 npm run build            # next build
-npm run test:e2e         # Playwright smoke tests, mobile and desktop
+npm run test:e2e         # Playwright suite, mobile and desktop (builds first)
+npm run test:e2e -- e2e/auth.spec.ts   # just the specs a risky change touches
 ```
 
-CI runs all of the above on every pull request (`.github/workflows/ci.yml`).
+Pull requests run the fast checks only: typecheck, lint on changed files, the
+unit tests related to what changed, the security and evaluation gates, DB
+tests when migrations change, and a build. The full Playwright suite runs
+nightly instead. [`docs/CI.md`](docs/CI.md) says what runs where, and why.
 
 `npm run verify:live` checks a real Supabase project: that every migration
 landed, that the service-role path works, and that an anonymous caller is

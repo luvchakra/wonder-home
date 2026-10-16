@@ -1,0 +1,207 @@
+name: E2E nightly
+
+# The full Playwright suite, every night against a fresh build, and on
+# demand. Pull requests and pushes to main never run it (ci.yml); docs/CI.md
+# says why, and what to run locally before merging something risky.
+#
+# A red nightly is fixed before other work merges (CLAUDE.md). "Flaky" is not
+# a root cause: a test that passed only on retry is reported by name.
+on:
+  schedule:
+    # 02:17 IST (Asia/Kolkata), off the hour so it is not queued behind
+    # everyone else's midnight jobs.
+    - cron: "47 20 * * *"
+  workflow_dispatch:
+    inputs:
+      specs:
+        description: "Spec files to run, space-separated (e.g. e2e/auth.spec.ts e2e/session.spec.ts). Empty runs everything."
+        required: false
+        default: ""
+      target_minutes:
+        description: "Split into parts when the run would take longer than this many minutes."
+        required: false
+        default: "25"
+
+concurrency:
+  group: e2e-nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Placeholders, not secrets, exactly as in ci.yml: the suite runs against
+  # no real project, so it can never reach production data.
+  NEXT_PUBLIC_SUPABASE_URL: https://ci.placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder_key
+
+jobs:
+  # Clean up after earlier runs, then split the suite by measured time.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      parts: ${{ steps.plan.outputs.parts }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Removes E2E accounts older than two hours from a dedicated test
+      # project, when one is configured as the E2E_SUPABASE_* secrets; with
+      # none it says so and does nothing. It refuses the production project.
+      - name: Clean up after earlier runs
+        env:
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/e2e-cleanup.mjs
+
+      - id: plan
+        name: Split the suite by measured time
+        env:
+          SPECS: ${{ inputs.specs }}
+          TARGET: ${{ inputs.target_minutes || '25' }}
+        run: node scripts/e2e-plan.mjs --specs "$SPECS" --target-minutes "$TARGET"
+
+  e2e:
+    needs: plan
+    runs-on: ubuntu-latest
+    # The part's own budget (at most 60 minutes) ends the tests cleanly with a
+    # summary; this is only the backstop for a hang outside Playwright.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ${{ fromJSON(needs.plan.outputs.parts) }}
+    name: e2e (${{ matrix.part.name }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # A fresh build: no Next.js build cache is restored, so the nightly
+      # also proves a cold build of main still works.
+      - name: Build
+        run: npm run build
+
+      - name: Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-shell-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browser
+        run: npx playwright install --only-shell chromium || npx playwright install --with-deps --only-shell chromium
+
+      # --global-timeout is the part's time budget: when it runs out,
+      # Playwright stops starting tests, finishes the reports, and the
+      # summary below counts what never ran. One retry; a test that needed
+      # it is reported as flaky. Traces are kept for every failure.
+      - name: E2E (${{ matrix.part.name }}, budget ${{ matrix.part.budgetMinutes }} min)
+        env:
+          E2E_SKIP_BUILD: "1"
+          SPECS: ${{ matrix.part.specs }}
+          BUDGET_MINUTES: ${{ matrix.part.budgetMinutes }}
+          PLAYWRIGHT_JSON_OUTPUT_FILE: e2e-results/results.json
+          PLAYWRIGHT_HTML_OPEN: never
+        run: |
+          set +e
+          npx playwright test $SPECS \
+            --retries=1 \
+            --trace=retain-on-failure \
+            --global-timeout=$((BUDGET_MINUTES * 60 * 1000)) \
+            --reporter=github,html,json
+          echo "Playwright exited with $?; the summary below decides the result."
+
+      - name: Summary
+        run: node scripts/e2e-report.mjs summary e2e-results/results.json "E2E ${{ matrix.part.name }}"
+
+      - name: Upload report and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.part.name }}
+          path: |
+            playwright-report/
+            test-results/
+            e2e-results/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # One result for the whole night, and fresh per-spec timings to refresh
+  # e2e/timings.json with when the suite's shape changes.
+  result:
+    if: always()
+    needs: [plan, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download part reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-*
+          path: parts
+
+      - name: Measured timings
+        run: |
+          reports=$(find parts -name results.json)
+          if [ -n "$reports" ]; then
+            node scripts/e2e-report.mjs timings $reports > timings.json
+            echo '### Measured seconds per spec (for e2e/timings.json)' >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat timings.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload timings
+        if: hashFiles('timings.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: timings
+          path: timings.json
+          retention-days: 30
+
+      # The repository has no chat or paging integration, so a failed
+      # nightly alerts the way GitHub always does: a failed scheduled run
+      # emails whoever last changed this workflow's schedule.
+      - name: Nightly result
+        run: |
+          if [ "${{ needs.plan.result }}" != "success" ] || [ "${{ needs.e2e.result }}" != "success" ]; then
+            echo "The nightly E2E run failed. See each part's summary and the e2e-* artifacts (HTML report, traces)."
+            exit 1
+          fi
+          echo "The nightly E2E run passed."
