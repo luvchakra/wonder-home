@@ -49,8 +49,12 @@ const launch = channel ? { channel } : { launchOptions: { executablePath } };
  */
 const PRODUCTION_PROJECT_REFS = ["kqxndableyysxqhxiorz"];
 const supabaseUrl = process.env.E2E_SUPABASE_URL || "https://ci.placeholder.supabase.co";
-if (PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref))) {
-  throw new Error(`E2E refuses to run against the production Supabase project (${supabaseUrl}).`);
+// Pre-launch only (CLAUDE.md, "Where tests run"): with no real households yet,
+// the owner allows E2E accounts on the live project when this is set
+// explicitly. Once WonderHome launches, nothing sets it any more.
+const liveAllowed = process.env.E2E_ALLOW_LIVE_PROJECT === "1";
+if (!liveAllowed && PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref))) {
+  throw new Error(`E2E refuses to run against the production Supabase project (${supabaseUrl}) unless E2E_ALLOW_LIVE_PROJECT=1.`);
 }
 const serverEnv = {
   NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
