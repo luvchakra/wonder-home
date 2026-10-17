@@ -13,6 +13,10 @@
 | 7 | P1 | 09-007 | Pet supply prediction | Done | pet supplies use the same depletion model, scoped to the animal |
 | 8 | P2 | 09-008 | Merchant optimization | Done | cheapest that can actually deliver in time; stale prices are excluded |
 | 9 | P1 | 09-009 | A receipt becomes purchase history | Done | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
+| 10 | P0 | 09-010 | One Groceries list: what's at home and what to buy | Done | Groceries Phase 1 (design/GROCERIES-PANTRY-HOMETALK-PHASE0.md, approved 2026-10-17): stock and to-buy are separate amounts with unit-safe arithmetic, written only through three database functions; item page, add-item search, mark bought, use soon; groceries on every plan |
+| 11 | P0 | 09-011 | HomeTalk manages groceries | Not Started | Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens; dialogues A–H as evaluation cases |
+| 12 | P1 | 09-012 | Meals, receipts and use-soon reconcile with stock | Not Started | Phase 3: meal shortfalls by servings and units, receipts add to stock and close list entries, depletion wording never claims stock |
+| 13 | P1 | 09-013 | Send to Cook over WhatsApp | Not Started | Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -227,6 +231,33 @@ Implement Commerce, Groceries & Pet Supplies as a first-class WonderHome domain.
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 09-010 — One Groceries list: what's at home and what to buy
+**Epic:** Commerce
+**Priority:** P0
+**Goal:** A household sees, for every item it keeps, how much is at home and how much is to buy, side by side, and changes either on purpose.
+
+**Acceptance criteria**
+- In stock and to buy are separate amounts; the row's −/+ change only to buy, stock changes only on the item's page or by marking bought.
+- Amounts carry their unit, convert within mass, volume and count, and never go below zero; a retried change never counts twice and a stale one is refused.
+- An amount nobody gave is "not counted yet", never estimated.
+- Search, category filter, add-item that finds existing and stopped items first, mark bought with the actual amount, use soon from entered dates and low levels.
+- Adults change stock; the family changes the list; helpers read.
+
+### Story 09-011 — HomeTalk manages groceries
+**Epic:** Commerce
+**Priority:** P0
+**Goal:** Everything the Groceries list does can be said to HomeTalk, through the same service, with the conversation acceptance cases A–H passing.
+
+### Story 09-012 — Meals, receipts and use-soon reconcile with stock
+**Epic:** Commerce
+**Priority:** P1
+**Goal:** Meal shortfalls, receipts and use-soon work from real amounts at home rather than names and purchase dates.
+
+### Story 09-013 — Send to Cook over WhatsApp
+**Epic:** Commerce
+**Priority:** P1
+**Goal:** An approved meal plan reaches a consenting helper through WonderHome's official WhatsApp channel, with its real delivery state.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

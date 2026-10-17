@@ -209,13 +209,13 @@ export const helpEn = {
 
   // Meals, groceries and running out of things
   "help.guide.meals-and-shopping.title": "Meals, groceries and running out of things",
-  "help.guide.meals-and-shopping.summary": "A consumption rate with evidence, not a pantry count you maintain.",
+  "help.guide.meals-and-shopping.summary": "One list: what's at home and what to buy, side by side.",
   "help.guide.meals-and-shopping.body.1":
-    "WonderHome does not keep an inventory, because an inventory needs somebody to keep it accurate. It keeps a rate — how quickly something is used — and the evidence behind it, and predicts when it will run out.",
+    "Groceries shows every item you track in one list. Each row says how much is in stock and how much is to buy, and the two never overwrite each other. The + and − on a row only change how much to buy. What's at home changes only when you set it on the item's own page (Update stock) or mark something bought, and only adults in the household can change it. An amount nobody has given is shown as not counted yet; WonderHome never guesses it, and a date you last bought something is never taken to mean it has run out.",
   "help.guide.meals-and-shopping.body.2":
-    "Send a receipt through HomeSend and each line you keep becomes purchase history for that item, which sharpens the prediction. Lines it cannot match to something you track are yours to match, start tracking or skip; it never guesses.",
+    "To buy shows just what's on the list, by category. Mark as bought asks how much you actually bought of each: that amount is added to what's at home, and anything you bought less of stays on the list. Use soon shows use-by dates someone entered from the pack, and items at or below the low level you set on their page. Add item searches what you already have first, including things you stopped tracking, so the same thing isn't added twice.",
   "help.guide.meals-and-shopping.body.3":
-    "Every shopping suggestion can answer \"why do you think we need this?\". Ordering from a shop is not available yet, so nothing is ever bought on your behalf.",
+    "Send a receipt through HomeSend and each line you keep becomes purchase history for that item. Lines it cannot match to something you track are yours to match, start tracking or skip; it never guesses. Ordering from a shop is not available, so nothing is ever bought on your behalf.",
   "help.guide.meals-and-shopping.body.4":
     "Meals has a plan, your recipes, and preferences. A recipe can carry rough nutrients per serving. Suggest proposes a meal from what you have and what people like, and missing ingredients go on the shopping list.",
   "help.guide.meals-and-shopping.body.5":
@@ -292,7 +292,7 @@ export const helpEn = {
   "help.guide.plan.title": "Your plan",
   "help.guide.plan.summary": "Free, Pro and Max — and free to switch during early access.",
   "help.guide.plan.body.1":
-    "Settings → Your plan shows the plans, what each includes and its monthly limits, and your household's usage this period. Free covers the household basics: outcomes, reminders, upkeep and text conversation. Pro adds school, groceries, meals, bills, family time, health and fitness, voice and weather. Max adds acting without asking first, deeper connections, and no monthly limits.",
+    "Settings → Your plan shows the plans, what each includes and its monthly limits, and your household's usage this period. Free covers the household basics: outcomes, reminders, upkeep, groceries and text conversation. Pro adds school, meals, bills, family time, health and fitness, voice and weather. Max adds acting without asking first, deeper connections, and no monthly limits.",
   "help.guide.plan.body.2":
     "During early access, switching plans is free and nothing is charged. Prices are shown monthly or yearly so you know what to expect later.",
   "help.guide.plan.body.3":

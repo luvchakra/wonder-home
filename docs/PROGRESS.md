@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**224 of 226 stories done — 99.1%**
+**225 of 230 stories done — 97.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 224 |
+| Done | 225 |
 | In Progress | 1 |
 | Blocked | 0 |
-| Not Started | 0 |
+| Not Started | 3 |
 | Deferred | 1 |
 
 ## By module
@@ -34,7 +34,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
 | 08 Kids & School Intelligence | `██████████` | 9 | 9 | — |
-| 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
+| 09 Commerce, Groceries & Pet Supplies | `███████░░░` | 10 | 13 | 3 not started |
 | 10 Meals & Cooking | `██████████` | 8 | 8 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
@@ -55,6 +55,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
+| `09-011` HomeTalk manages groceries | 09 Commerce, Groceries & Pet Supplies | P0 | Not Started |
+| `09-012` Meals, receipts and use-soon reconcile with stock | 09 Commerce, Groceries & Pet Supplies | P1 | Not Started |
+| `09-013` Send to Cook over WhatsApp | 09 Commerce, Groceries & Pet Supplies | P1 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 
 ## Every story
@@ -211,7 +214,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
-9 of 9 done `██████████`
+10 of 13 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -224,6 +227,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `09-007` Pet supply prediction | P1 | Done | pet supplies use the same depletion model, scoped to the animal |
 | `09-008` Merchant optimization | P2 | Done | cheapest that can actually deliver in time; stale prices are excluded |
 | `09-009` A receipt becomes purchase history | P1 | Done | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
+| `09-010` One Groceries list: what's at home and what to buy | P0 | Done | Groceries Phase 1 (design/GROCERIES-PANTRY-HOMETALK-PHASE0.md, approved 2026-10-17): stock and to-buy are separate amounts with unit-safe arithmetic, written only through three database functions; item page, add-item search, mark bought, use soon; groceries on every plan |
+| `09-011` HomeTalk manages groceries | P0 | Not Started | Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens; dialogues A–H as evaluation cases |
+| `09-012` Meals, receipts and use-soon reconcile with stock | P1 | Not Started | Phase 3: meal shortfalls by servings and units, receipts add to stock and close list entries, depletion wording never claims stock |
+| `09-013` Send to Cook over WhatsApp | P1 | Not Started | Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
 
 ### 10 — Meals & Cooking
 
@@ -453,4 +460,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `23-011` HomeBrain smart digest | P1 | Done | "HomeBrain summary · Today" above the list: today's reminders, in the order they come, built from the same rows — a summary, never a second source. On unless the person turns it off (`notification_preferences.daily_digest`) |
 | `23-012` Timing learned from behaviour | P1 | Done | Off unless the person turns it on (`learn_timing`). Evidence is only them acting on a reminder itself (`acted` events, 60 days); five or more, with the middle half within two hours, moves the first reminder of that kind to their median time, on the quarter hour. Never over a timing they chose, never a "before" reminder, never past the next stage; quiet hours still apply, and the row says so only when a learned time actually moved it |
 
-_Generated 2026-10-10 from 24 backlog files._
+_Generated 2026-10-17 from 24 backlog files._

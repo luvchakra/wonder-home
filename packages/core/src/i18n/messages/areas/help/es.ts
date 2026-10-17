@@ -182,13 +182,13 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Las tareas del colegio de un niño las ven ese niño, sus tutores y los administradores; vivir en la misma casa no basta por sí solo.",
 
   "help.guide.meals-and-shopping.title": "Comidas, compra y cosas que se acaban",
-  "help.guide.meals-and-shopping.summary": "Un ritmo de consumo con pruebas, no un inventario de despensa que tengas que mantener.",
+  "help.guide.meals-and-shopping.summary": "Una sola lista: lo que hay en casa y lo que hay que comprar, lado a lado.",
   "help.guide.meals-and-shopping.body.1":
-    "WonderHome no lleva un inventario, porque un inventario necesita que alguien lo mantenga al día. Lleva un ritmo —lo rápido que se gasta algo— y las pruebas que lo respaldan, y predice cuándo se acabará.",
+    "Compras muestra en una sola lista cada artículo que sigues. Cada fila indica cuánto hay en casa y cuánto queda por comprar, y una cifra nunca sobrescribe a la otra. El + y el − de una fila solo cambian cuánto hay por comprar. Lo que hay en casa solo cambia cuando lo indicas en la página del propio artículo («Actualizar existencias») o marcas algo como comprado, y solo los adultos del hogar pueden cambiarlo. Una cantidad que nadie ha indicado aparece como «Aún sin contar»; WonderHome nunca la adivina, y la fecha en que compraste algo por última vez nunca se toma como señal de que se ha acabado.",
   "help.guide.meals-and-shopping.body.2":
-    "Envía un recibo por HomeSend y cada línea que conserves pasa a ser historial de compra de ese artículo, lo que afina la predicción. Las líneas que no puede emparejar con algo que sigues son tuyas para emparejar, empezar a seguir u omitir; nunca adivina.",
+    "«Por comprar» muestra solo lo que está en la lista, por categoría. «Marcar como comprado» pregunta cuánto compraste de verdad de cada cosa: esa cantidad se suma a lo que hay en casa, y si compraste menos de algo, lo que falta sigue en la lista. «Usar pronto» muestra las fechas de caducidad que alguien anotó del envase y los artículos que están en el nivel bajo que fijaste en su página o por debajo. «Añadir artículo» busca primero entre lo que ya tienes, incluidas las cosas que dejaste de seguir, para que no se añada lo mismo dos veces.",
   "help.guide.meals-and-shopping.body.3":
-    "Cada sugerencia de compra puede responder a “¿por qué crees que necesitamos esto?”. Todavía no se puede pedir a una tienda, así que nunca se compra nada en tu nombre.",
+    "Envía un recibo por HomeSend y cada línea que conserves pasa a ser historial de compra de ese artículo. Las líneas que no puede emparejar con algo que sigues son tuyas para emparejar, empezar a seguir u omitir; nunca adivina. No se puede pedir a una tienda, así que nunca se compra nada en tu nombre.",
   "help.guide.meals-and-shopping.body.4":
     "Comidas tiene un plan, tus recetas y preferencias. Una receta puede llevar los nutrientes aproximados por ración. Sugerir propone una comida con lo que tienes y lo que le gusta a la gente, y los ingredientes que faltan van a la lista de la compra.",
   "help.guide.meals-and-shopping.body.5":
@@ -255,7 +255,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "Tu plan",
   "help.guide.plan.summary": "Free, Pro y Max, y cambiar es gratis durante el acceso anticipado.",
   "help.guide.plan.body.1":
-    "Ajustes → Tu plan muestra los planes, qué incluye cada uno y sus límites mensuales, y el uso de tu hogar en este periodo. Free cubre lo básico del hogar: resultados, recordatorios, mantenimiento y conversación por texto. Pro añade colegio, compras del súper, comidas, facturas, tiempo en familia, salud y forma física, voz y el tiempo. Max añade actuar sin preguntar antes, conexiones más profundas y sin límites mensuales.",
+    "Ajustes → Tu plan muestra los planes, qué incluye cada uno y sus límites mensuales, y el uso de tu hogar en este periodo. Free cubre lo básico del hogar: resultados, recordatorios, mantenimiento, compras del súper y conversación por texto. Pro añade colegio, comidas, facturas, tiempo en familia, salud y forma física, voz y el tiempo. Max añade actuar sin preguntar antes, conexiones más profundas y sin límites mensuales.",
   "help.guide.plan.body.2":
     "Durante el acceso anticipado, cambiar de plan es gratis y no se cobra nada. Los precios se muestran por mes o por año para que sepas qué esperar más adelante.",
   "help.guide.plan.body.3":

@@ -3,10 +3,10 @@ import { addDays, daysBetween, isoDate, parseDate, silent, type HomeAssessment }
 /**
  * Consumables and depletion (stories 09-001, 09-002, 09-007).
  *
- * WonderHome does not keep a pantry inventory. Counting what is in the house
- * needs somebody to keep the count accurate, and that is the work this product
- * exists to remove. What it keeps is a rate — how long one of a thing lasts —
- * and the evidence behind that rate.
+ * This is the rate side: how long one of a thing lasts, and the evidence
+ * behind that rate. Since Groceries Phase 1 the household can also say how
+ * much is at home (`inventory.ts`), and the two are kept apart: a rate and a
+ * last purchase predict, they never stand in for an amount nobody confirmed.
  *
  * The evidence requirement is the load-bearing part. A suggestion that cannot
  * answer "why do you think we need this?" is how a household learns to stop

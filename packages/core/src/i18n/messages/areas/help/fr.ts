@@ -182,13 +182,13 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Le travail scolaire d’un enfant est visible par cet enfant, ses parents référents et les administrateurs — vivre sous le même toit ne suffit pas.",
 
   "help.guide.meals-and-shopping.title": "Repas, courses et produits qui s’épuisent",
-  "help.guide.meals-and-shopping.summary": "Un rythme de consommation étayé par des preuves, pas un inventaire du garde-manger à tenir à jour.",
+  "help.guide.meals-and-shopping.summary": "Une seule liste : ce qu’il y a à la maison et ce qu’il faut acheter, côte à côte.",
   "help.guide.meals-and-shopping.body.1":
-    "WonderHome ne tient pas d’inventaire, car un inventaire a besoin de quelqu’un pour rester exact. Il suit un rythme — la vitesse à laquelle quelque chose est utilisé — et les preuves qui le justifient, et prévoit quand ce sera épuisé.",
+    "Courses affiche dans une seule liste chaque article que vous suivez. Chaque ligne indique combien il y en a à la maison et combien il reste à acheter, et l’un n’écrase jamais l’autre. Le + et le − d’une ligne ne changent que la quantité à acheter. Ce qu’il y a à la maison ne change que lorsque vous l’indiquez sur la page de l’article (« Mettre à jour le stock ») ou que vous marquez quelque chose comme acheté, et seuls les adultes du foyer peuvent le modifier. Une quantité que personne n’a indiquée s’affiche comme « Pas encore compté » ; WonderHome ne la devine jamais, et la date de votre dernier achat n’est jamais prise comme le signe que l’article est épuisé.",
   "help.guide.meals-and-shopping.body.2":
-    "Envoyez un ticket de caisse via HomeSend et chaque ligne que vous gardez devient l’historique d’achat de cet article, ce qui affine la prévision. Les lignes qu’il ne peut pas rapprocher d’un article suivi, c’est à vous de les rapprocher, de commencer à les suivre ou de les ignorer ; il ne devine jamais.",
+    "« À acheter » n’affiche que ce qui est sur la liste, par catégorie. « Marquer comme acheté » demande combien vous avez réellement acheté de chaque article : cette quantité s’ajoute à ce qu’il y a à la maison, et si vous en avez acheté moins que prévu, le reste demeure sur la liste. « À utiliser vite » montre les dates limites que quelqu’un a relevées sur l’emballage, ainsi que les articles qui sont au niveau bas fixé sur leur page, ou en dessous. « Ajouter un article » cherche d’abord parmi ce que vous avez déjà, y compris ce que vous ne suivez plus, pour que la même chose ne soit pas ajoutée deux fois.",
   "help.guide.meals-and-shopping.body.3":
-    "Chaque suggestion d’achat peut répondre à « pourquoi penses-tu qu’on en a besoin ? ». Commander auprès d’un magasin n’est pas encore possible, donc rien n’est jamais acheté en votre nom.",
+    "Envoyez un ticket de caisse via HomeSend et chaque ligne que vous gardez devient l’historique d’achat de cet article. Les lignes qu’il ne peut pas rapprocher d’un article suivi, c’est à vous de les rapprocher, de commencer à les suivre ou de les ignorer ; il ne devine jamais. Commander auprès d’un magasin n’est pas possible, donc rien n’est jamais acheté en votre nom.",
   "help.guide.meals-and-shopping.body.4":
     "Repas comprend un planning, vos recettes et les préférences. Une recette peut indiquer des nutriments approximatifs par portion. Suggérer propose un repas à partir de ce que vous avez et de ce que les gens aiment, et les ingrédients manquants vont sur la liste de courses.",
   "help.guide.meals-and-shopping.body.5":
@@ -255,7 +255,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "Votre formule",
   "help.guide.plan.summary": "Free, Pro et Max — et changer est gratuit pendant l’accès anticipé.",
   "help.guide.plan.body.1":
-    "Paramètres → Votre formule montre les formules, ce que chacune comprend et ses limites mensuelles, et l’utilisation de votre foyer sur la période. Free couvre l’essentiel du foyer : objectifs, rappels, entretien et conversation écrite. Pro ajoute l’école, les courses, les repas, les factures, le temps en famille, la santé et la forme, la voix et la météo. Max ajoute l’action sans demander d’abord, des connexions plus poussées et aucune limite mensuelle.",
+    "Paramètres → Votre formule montre les formules, ce que chacune comprend et ses limites mensuelles, et l’utilisation de votre foyer sur la période. Free couvre l’essentiel du foyer : objectifs, rappels, entretien, courses et conversation écrite. Pro ajoute l’école, les repas, les factures, le temps en famille, la santé et la forme, la voix et la météo. Max ajoute l’action sans demander d’abord, des connexions plus poussées et aucune limite mensuelle.",
   "help.guide.plan.body.2":
     "Pendant l’accès anticipé, changer de formule est gratuit et rien n’est facturé. Les prix sont affichés au mois ou à l’année pour que vous sachiez à quoi vous attendre plus tard.",
   "help.guide.plan.body.3":

@@ -57,7 +57,7 @@ export async function householdAgenda(supabase: SupabaseClient, householdId: str
   }
 
   if (view.tone !== "child") {
-    readers.push(() => gated(supabase, householdId, "commerce.orders", () => summarize("shopping", "Groceries", "/groceries", async () => {
+    readers.push(() => gated(supabase, householdId, "groceries.core", () => summarize("shopping", "Groceries", "/groceries", async () => {
       const agenda = await shoppingAgenda(supabase, householdId);
       return { needs: [...agenda.needed, ...agenda.lateOrders], checked: agenda.checked };
     })));

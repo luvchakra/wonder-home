@@ -14,6 +14,7 @@ import { historyFrom } from "./receipts";
 import { evaluatePurchase, type PolicyDecision, type PurchasePolicy, type PurchaseRequest } from "./policy";
 import { idempotencyKeyFor, isLate, type Order, type OrderStatus } from "./orders";
 import { invalidatesContext } from "../context/invalidation";
+import { compatible, convert, normalizeUnit } from "./units";
 
 /**
  * Reading and writing the shopping domain (module 09).
@@ -73,7 +74,28 @@ export type CreateConsumableInput = {
   typicalQuantity: number;
   /** How often the household goes through one typical quantity — telling WonderHome this directly is "member_stated" evidence, same as any other basis. */
   daysPerUnit?: number | null;
+} & ItemDetails;
+
+/** What the Groceries list keeps about an item beyond its name (Groceries Phase 1). Absent: unchanged on an update, empty on a create. */
+export type ItemDetails = {
+  /** One stepper step, in the item's preferred unit; null: the unit's usual step. */
+  step?: number | null;
+  /** At or below this much at home (base units) the item reads as low; null: no level. */
+  lowLevel?: number | null;
+  storage?: "fridge" | "freezer" | "pantry" | "other" | null;
+  note?: string | null;
+  aliases?: string[];
 };
+
+function detailColumns(input: ItemDetails): Record<string, unknown> {
+  const columns: Record<string, unknown> = {};
+  if (input.step !== undefined) columns.step = input.step;
+  if (input.lowLevel !== undefined) columns.low_level = input.lowLevel;
+  if (input.storage !== undefined) columns.storage = input.storage;
+  if (input.note !== undefined) columns.note = input.note?.trim() || null;
+  if (input.aliases !== undefined) columns.aliases = [...new Set(input.aliases.map((alias) => alias.trim()).filter(Boolean))].slice(0, 10);
+  return columns;
+}
 
 async function createConsumableImpl(
   supabase: SupabaseClient,
@@ -85,11 +107,12 @@ async function createConsumableImpl(
       household_id: input.householdId,
       name: input.name,
       category: input.category,
-      unit: input.unit,
+      unit: normalizeUnit(input.unit) ?? "pcs",
       typical_quantity: input.typicalQuantity,
       days_per_unit: input.daysPerUnit ?? null,
       evidence_basis: input.daysPerUnit ? "member_stated" : null,
       active: true,
+      ...detailColumns(input),
     })
     .select("id")
     .single();
@@ -114,22 +137,37 @@ export type UpdateConsumableInput = {
   unit: string;
   typicalQuantity: number;
   daysPerUnit?: number | null;
-};
+} & ItemDetails;
 
 /** Changing what was told about something already tracked — never touches purchase history. */
 async function updateConsumableImpl(
   supabase: SupabaseClient,
   input: UpdateConsumableInput,
 ): Promise<void> {
+  // Stock and the list are kept in the unit's base (g, ml, pcs…). A new
+  // preferred unit that does not convert would strand them, so it is refused
+  // while either holds an amount — the person clears them, or picks a unit
+  // that converts (kg for g, L for ml).
+  const unit = normalizeUnit(input.unit) ?? "pcs";
+  const [balance, entry] = await Promise.all([
+    supabase.from("inventory_balances").select("unit").eq("household_id", input.householdId).eq("consumable_id", input.id).maybeSingle(),
+    supabase.from("shopping_list_entries").select("unit").eq("household_id", input.householdId).eq("consumable_id", input.id).eq("state", "to_buy").maybeSingle(),
+  ]);
+  const held = [balance.data?.unit, entry.data?.unit].filter((value): value is string => typeof value === "string");
+  if (held.some((kept) => !compatible(kept, unit))) {
+    throw ApiError.conflict(`"${input.name}" is kept in ${held[0]}, which does not convert to ${unit}. Choose a unit that does, or clear what is at home and on the list first.`);
+  }
+
   const { error } = await supabase
     .from("consumables")
     .update({
       name: input.name,
       category: input.category,
-      unit: input.unit,
+      unit: normalizeUnit(input.unit) ?? "pcs",
       typical_quantity: input.typicalQuantity,
       days_per_unit: input.daysPerUnit ?? null,
       evidence_basis: input.daysPerUnit ? "member_stated" : null,
+      ...detailColumns(input),
     })
     .eq("id", input.id)
     .eq("household_id", input.householdId);
@@ -224,16 +262,22 @@ async function removePurchaseImpl(supabase: SupabaseClient, input: { householdId
   if (consumableId) await refreshPurchaseHistory(supabase, input.householdId, consumableId);
 }
 
-async function refreshPurchaseHistory(supabase: SupabaseClient, householdId: string, consumableId: string): Promise<void> {
+/** Re-derives an item's last purchase and rate from every purchase it now has. */
+export async function refreshPurchaseHistory(supabase: SupabaseClient, householdId: string, consumableId: string): Promise<void> {
   const [purchases, current] = await Promise.all([
-    supabase.from("consumable_purchases").select("purchased_on, quantity").eq("household_id", householdId).eq("consumable_id", consumableId),
-    supabase.from("consumables").select("days_per_unit, evidence_basis").eq("household_id", householdId).eq("id", consumableId).single(),
+    supabase.from("consumable_purchases").select("purchased_on, quantity, unit").eq("household_id", householdId).eq("consumable_id", consumableId),
+    supabase.from("consumables").select("days_per_unit, evidence_basis, unit").eq("household_id", householdId).eq("id", consumableId).single(),
   ]);
   if (purchases.error) throw new Error(`refreshPurchaseHistory failed: ${purchases.error.code ?? "unknown"}`);
   if (current.error) throw new Error(`refreshPurchaseHistory failed: ${current.error.code ?? "unknown"}`);
   const row = current.data as Row;
   const history = historyFrom(
-    ((purchases.data ?? []) as Row[]).map((purchase) => ({ purchasedOn: String(purchase.purchased_on), quantity: Number(purchase.quantity) })),
+    // A purchase from the list is kept in base units (2000 g); an older one in
+    // the item's own unit. The rate is worked out in the item's unit either way.
+    ((purchases.data ?? []) as Row[]).map((purchase) => ({
+      purchasedOn: String(purchase.purchased_on),
+      quantity: (purchase.unit ? convert(Number(purchase.quantity), String(purchase.unit), String(row.unit ?? "pcs")) : null) ?? Number(purchase.quantity),
+    })),
     { daysPerUnit: row.days_per_unit === null ? null : Number(row.days_per_unit), evidenceBasis: (row.evidence_basis as EvidenceBasis | null) ?? null },
   );
   const { error } = await supabase
@@ -268,13 +312,13 @@ export async function purchaseLabels(supabase: SupabaseClient, householdId: stri
   );
 }
 
-export type PurchaseRecord = { id: string; consumableId: string; purchasedOn: string; quantity: number; unitCostMinor: number | null; currency: string | null; merchant: string | null };
+export type PurchaseRecord = { id: string; consumableId: string; purchasedOn: string; quantity: number; /** Null on a purchase recorded before units were kept: then it is in the item's own unit. */ unit: string | null; unitCostMinor: number | null; currency: string | null; merchant: string | null };
 
 /** The most recent purchases, newest first — per consumable when asked. */
 export async function listPurchases(supabase: SupabaseClient, householdId: string, options: { consumableId?: string; limit?: number } = {}): Promise<PurchaseRecord[]> {
   let query = supabase
     .from("consumable_purchases")
-    .select("id, consumable_id, purchased_on, quantity, unit_cost_minor, currency, merchant")
+    .select("id, consumable_id, purchased_on, quantity, unit, unit_cost_minor, currency, merchant")
     .eq("household_id", householdId)
     .order("purchased_on", { ascending: false })
     .order("created_at", { ascending: false })
@@ -287,6 +331,7 @@ export async function listPurchases(supabase: SupabaseClient, householdId: strin
     consumableId: String(row.consumable_id),
     purchasedOn: String(row.purchased_on),
     quantity: Number(row.quantity),
+    unit: (row.unit as string | null) ?? null,
     unitCostMinor: row.unit_cost_minor === null ? null : Number(row.unit_cost_minor),
     currency: (row.currency as string | null) ?? null,
     merchant: (row.merchant as string | null) ?? null,

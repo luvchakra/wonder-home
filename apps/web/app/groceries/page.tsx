@@ -1,349 +1,390 @@
-import { Lightbulb, PackageCheck, ShoppingBasket, Sparkles, Truck } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronRight,
+  PackageCheck,
+  ShoppingBasket,
+  TriangleAlert,
+} from "lucide-react";
+import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
-import { expectedDepletion } from "@wonderhome/core/commerce/consumables";
-import { listConsumables, listOrders, listPurchases, shoppingAgenda } from "@wonderhome/core/commerce/repository";
-import { format as formatMoney } from "@wonderhome/core/finance/payments";
-import { totalsByCurrency } from "@wonderhome/core/finance/totals";
+import {
+  listGroceries,
+  listRetiredGroceries,
+  recentlyBought,
+  stockStatus,
+  type GroceryItem,
+} from "@wonderhome/core/commerce/inventory";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { ActionRow } from "@wonderhome/core/ui/action-row";
-import { Card } from "@wonderhome/core/ui/card";
-import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
-import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
+import { StatChips } from "@wonderhome/core/ui/stat-chips";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
-import { AddConsumableButton, ConsumableRowControls } from "../_components/commerce-forms";
-import { groceryFormLabels } from "../_lib/grocery-form-labels";
+import { groceryWords } from "../_lib/grocery-words";
 import { formatDate, requireSession } from "../_lib/session";
+import { AddItemButton } from "./_components/add-item";
+import { sayAmount } from "./_components/amounts";
+import { GroceryList, type ListItem } from "./_components/grocery-list";
 
 export const metadata = { title: "Groceries" };
 export const dynamic = "force-dynamic";
 
-type SuggestionRow = {
-  id: string;
-  quantity: number;
-  reason: string;
-  evidence_basis: "purchase_history" | "configured_inventory" | "member_stated";
-  needed_by: string | null;
-  estimated_cost_minor: number | null;
-  currency: string | null;
-  status: string;
-  consumables: { name: string; unit: string } | { name: string; unit: string }[] | null;
-};
+type View = "all" | "to-buy" | "use-soon";
 
 /**
- * Groceries (requirements §18): Overview, List and Orders.
- *
- * The suggested order is built from what the household actually runs out of,
- * each line carrying its reason and its evidence. "Review order" shows quantity
- * and the estimated total before anything is placed — and nothing is placed
- * here: no commerce provider is live.
+ * Groceries (Groceries Phase 1, design/GROCERIES-PANTRY-HOMETALK-PHASE0.md §3):
+ * one list of everything the household keeps, each row with what is at home
+ * and what to buy side by side. "To buy" and "Use soon" are views of the same
+ * records, never a second list. Nothing here guesses how much is at home:
+ * an amount nobody confirmed is "not counted yet".
  */
-export default async function GroceriesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const [{ tab }, session] = await Promise.all([searchParams, requireSession("/groceries")]);
+export default async function GroceriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const [{ view: requested }, session] = await Promise.all([
+    searchParams,
+    requireSession("/groceries"),
+  ]);
   const { supabase, membership, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
+  const view: View =
+    requested === "to-buy" || requested === "use-soon" ? requested : "all";
   const now = new Date();
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(
+    now,
+  );
+  const shell = {
+    active: "more" as const,
+    viewer,
+    secondary,
+    pathname: "/groceries",
+    back: { href: "/more", label: t("common.back") },
+    title: t("nav.item.groceries"),
+  };
 
-  const entitlement = await may(supabase, householdId, "commerce.orders");
-  const active = tab === "list" || tab === "orders" ? tab : "overview";
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/groceries", back: { href: "/more", label: t("common.back") }, title: t("nav.item.groceries") };
-
+  const entitlement = await may(supabase, householdId, "groceries.core");
   if (!entitlement.allowed) {
     return (
       <AppShell {...shell}>
-        <EmptyState icon={ShoppingBasket} tone="care" title={t("groceries.notInPlan")} description={entitlement.reason} />
+        <EmptyState
+          icon={ShoppingBasket}
+          tone="care"
+          title={t("groceries.notInPlan")}
+          description={entitlement.reason}
+        />
       </AppShell>
     );
   }
 
-  const [agenda, consumables, orders, suggestionRows, purchases] = await Promise.all([
-    shoppingAgenda(supabase, householdId).catch(() => null),
-    listConsumables(supabase, householdId).catch(() => []),
-    listOrders(supabase, householdId).catch(() => []),
-    supabase
-      .from("cart_suggestions")
-      .select("id, quantity, reason, evidence_basis, needed_by, estimated_cost_minor, currency, status, consumables(name, unit)")
-      .eq("household_id", householdId)
-      .in("status", ["suggested", "accepted"])
-      .order("needed_by", { ascending: true, nullsFirst: false }),
-    listPurchases(supabase, householdId, { limit: 300 }).catch(() => []),
+  const words = groceryWords(t, viewer.language);
+  const twoWeeksAgo = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+  }).format(new Date(now.getTime() - 14 * 86_400_000));
+  const [items, retired, bought] = await Promise.all([
+    listGroceries(supabase, householdId).catch(() => null),
+    listRetiredGroceries(supabase, householdId).catch(() => []),
+    view === "to-buy"
+      ? recentlyBought(supabase, householdId, twoWeeksAgo).catch(() => [])
+      : Promise.resolve([]),
   ]);
-  // What was actually bought, per item — the history a receipt adds to (09-009).
-  const purchasesByItem = new Map<string, typeof purchases>();
-  for (const purchase of purchases) purchasesByItem.set(purchase.consumableId, [...(purchasesByItem.get(purchase.consumableId) ?? []), purchase]);
-  // A purchase date is a calendar day, not an instant: read it as one, wherever the household is.
-  const day = (isoDay: string) => formatDate("UTC", new Date(`${isoDay}T00:00:00Z`), "long");
 
-  const suggestions = ((suggestionRows.data as SuggestionRow[] | null) ?? []).map((row) => {
-    const embedded = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
-    return { ...row, name: embedded?.name ?? t("groceries.item"), unit: embedded?.unit ?? "" };
-  });
-  // One estimate per currency, never one number mixing them (story 22-007).
-  const estimates = totalsByCurrency(suggestions.map((row) => ({ minor: row.estimated_cost_minor, currency: row.currency })));
-  const priced = estimates.reduce((sum, estimate) => sum + estimate.count, 0);
-  const estimateText = estimates.map((estimate) => formatMoney(estimate.minor, estimate.currency)).join(" + ");
-  const needs = agenda ? [...agenda.needed, ...agenda.lateOrders] : [];
-  const existingNames = Array.from(new Set(consumables.map((item) => item.name))).sort((a, b) => a.localeCompare(b));
-  const existingCategories = Array.from(new Set(consumables.map((item) => item.category))).sort((a, b) => a.localeCompare(b));
-  const formLabels = groceryFormLabels(t);
-  // Where a line's evidence came from, in the reader's words (the domain's own `describeBasis` is the English record).
-  const basis = (value: SuggestionRow["evidence_basis"]) => t(`groceries.basis.${value}`);
-  const suggestionSummary = [
-    t("groceries.suggested.items", { count: suggestions.length }),
-    priced > 0 ? `${t("groceries.suggested.estimate", { amount: estimateText })}${priced < suggestions.length ? ` ${t("groceries.suggested.partlyPriced")}` : ""}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const canMarkBought = membership.memberType === "adult";
+  const firstName = viewer.displayName.split(/\s+/)[0] ?? viewer.displayName;
+  const toBuyCount = (items ?? []).filter((item) => item.toBuy).length;
+  const atHomeCount = (items ?? []).filter(
+    (item) => item.stock && item.stock.quantity > 0,
+  ).length;
+  const notCounted = (items ?? []).filter((item) => !item.stock).length;
+  const listItems: ListItem[] = (items ?? []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    aliases: item.aliases,
+    category: item.category,
+    unit: item.unit,
+    step: item.step,
+    imageUrl: item.imageUrl,
+    status: stockStatus(item),
+    stockText: item.stock
+      ? sayAmount(
+          words,
+          { quantity: item.stock.quantity, unit: item.stock.unit },
+          item.unit,
+        )
+      : "—",
+    toBuy: item.toBuy
+      ? {
+          entryId: item.toBuy.entryId,
+          quantity: item.toBuy.quantity,
+          unit: item.toBuy.unit,
+        }
+      : null,
+  }));
+  const categories = [
+    ...new Set([
+      ...(items ?? []).map((item) => item.category),
+      ...words.categories,
+    ]),
+  ];
 
   return (
     <AppShell {...shell}>
       <div className="space-y-5">
-        <header className="wh-rise flex flex-wrap items-end justify-between gap-3">
-          <div className="hidden lg:block">
-            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.groceries")}</h1>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("groceries.lede")}</p>
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[length:var(--wh-text-title)] leading-tight font-bold tracking-tight">
+              {t("grocery.greeting", { name: firstName })}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--wh-foreground-muted)]">
+              {t("grocery.lede")}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <AddConsumableButton householdId={householdId} existingNames={existingNames} existingCategories={existingCategories} labels={formLabels} />
-          </div>
+          <AddItemButton
+            householdId={householdId}
+            items={(items ?? []).map((item) => ({
+              id: item.id,
+              name: item.name,
+              aliases: item.aliases,
+              category: item.category,
+              unit: item.unit,
+              step: item.step,
+              onList: Boolean(item.toBuy),
+            }))}
+            retired={retired}
+            categories={categories}
+            words={words}
+          />
         </header>
 
         <SegmentedControl
-          label={t("groceries.view")}
-          active={active}
+          label={t("grocery.view.label")}
+          active={view}
           segments={[
-            { key: "overview", label: t("groceries.tab.overview"), href: "/groceries", count: needs.length },
-            { key: "list", label: t("groceries.tab.list"), href: "/groceries?tab=list", count: suggestions.length },
-            { key: "orders", label: t("groceries.tab.orders"), href: "/groceries?tab=orders" },
+            {
+              key: "all",
+              label: t("grocery.view.all"),
+              href: "/groceries",
+              count: items?.length,
+            },
+            {
+              key: "to-buy",
+              label: t("grocery.view.toBuy"),
+              href: "/groceries?view=to-buy",
+              count: toBuyCount,
+            },
+            {
+              key: "use-soon",
+              label: t("grocery.view.useSoon"),
+              href: "/groceries?view=use-soon",
+            },
           ]}
         />
 
-        {active === "overview" ? (
+        {items === null ? (
+          <EmptyState
+            icon={TriangleAlert}
+            tone="attention"
+            title={t("grocery.loadError.title")}
+            description={t("grocery.loadError.lede")}
+          />
+        ) : (
           <>
-            <section>
-              <SectionHeader title={t("groceries.suggested")} count={suggestions.length} />
-              {suggestions.length === 0 ? (
-                <EmptyState icon={ShoppingBasket} tone="care" title={t("groceries.suggested.emptyTitle")} description={t("groceries.suggested.emptyLede")} action={<AddConsumableButton householdId={householdId} labels={formLabels} />} />
-              ) : (
-                <Card className="space-y-3">
-                  <ul className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none]">
-                    {suggestions.slice(0, 6).map((row) => (
-                      <li key={row.id} className="flex w-24 shrink-0 flex-col items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-2 py-3 text-center">
-                        <span className="grid size-10 place-items-center rounded-full bg-[var(--wh-tone-care-soft)] text-[var(--wh-tone-care)]"><ShoppingBasket className="size-5" /></span>
-                        <span className="mt-2 w-full truncate text-xs font-semibold">{row.name}</span>
-                        <span className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{row.quantity} {row.unit}</span>
+            {view === "to-buy" && items.length > 0 ? (
+              <StatChips
+                stats={[
+                  {
+                    label: t("grocery.summary.toBuy"),
+                    value: toBuyCount,
+                    tone: "info",
+                  },
+                  {
+                    label: t("grocery.summary.atHome"),
+                    value: atHomeCount,
+                    tone: "handled",
+                  },
+                  {
+                    label: t("grocery.summary.notCounted"),
+                    value: notCounted,
+                    tone: "attention",
+                  },
+                ]}
+              />
+            ) : null}
+
+            {view === "use-soon" ? (
+              <UseSoon items={items} words={words} t={t} timezone={timezone} />
+            ) : (
+              <GroceryList
+                householdId={householdId}
+                items={listItems}
+                view={view}
+                words={words}
+                canMarkBought={canMarkBought}
+                today={today}
+              />
+            )}
+
+            {view === "to-buy" ? (
+              <section className="space-y-2">
+                <SectionHeader title={t("grocery.recent.title")} />
+                {bought.length === 0 ? (
+                  <p className="rounded-[var(--wh-radius)] bg-[var(--wh-surface)] p-4 text-sm text-[var(--wh-foreground-muted)]">
+                    {t("grocery.recent.empty")}
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
+                    {bought.map((line) => (
+                      <li
+                        key={line.purchaseId}
+                        className="flex items-center gap-3 py-3"
+                      >
+                        <IconTile
+                          icon={PackageCheck}
+                          tone="handled"
+                          size="sm"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium break-words">
+                            {line.name}
+                          </span>
+                          <span className="block text-xs text-[var(--wh-foreground-muted)]">
+                            {sayAmount(words, {
+                              quantity: line.quantity,
+                              unit: line.unit,
+                            })}{" "}
+                            ·{" "}
+                            {formatDate(
+                              timezone,
+                              new Date(`${line.boughtOn}T12:00:00Z`),
+                            )}
+                          </span>
+                        </span>
                       </li>
                     ))}
                   </ul>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-[var(--wh-foreground-muted)]">{suggestionSummary}</p>
-                    <PillLink href="/groceries?tab=list" tone="primary">{t("groceries.reviewOrder")}</PillLink>
-                  </div>
-                </Card>
-              )}
-            </section>
-
-            <section>
-              <SectionHeader title={t("groceries.insights")} />
-              {needs.length === 0 ? (
-                <Card className="flex items-center gap-3 p-4">
-                  <Sparkles aria-hidden className="size-5 shrink-0 text-[var(--wh-primary)]" />
-                  <p className="text-sm text-[var(--wh-foreground-muted)]">
-                    {agenda && agenda.checked > 0 ? t("groceries.insights.watched", { count: agenda.checked }) : t("groceries.insights.learning")}
-                  </p>
-                </Card>
-              ) : (
-                <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{needs.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/groceries?tab=list" />)}</ul></Card>
-              )}
-            </section>
+                )}
+              </section>
+            ) : null}
           </>
-        ) : null}
+        )}
 
-        {active === "list" ? (
-          <>
-            <MetricGrid metrics={[{ label: t("groceries.metric.items"), value: suggestions.length, icon: ShoppingBasket, tone: "care" }, { label: t("groceries.metric.estimated"), value: priced > 0 ? estimateText : "—", icon: Lightbulb, tone: "money" }, { label: t("groceries.metric.tracked"), value: consumables.length, icon: PackageCheck, tone: "handled" }]} />
-            {suggestions.length === 0 ? (
-              <EmptyState icon={ShoppingBasket} tone="care" title={t("groceries.list.emptyTitle")} description={t("groceries.list.emptyLede")} />
-            ) : (
-              <Card className="p-2">
-                <ul className="divide-y divide-[var(--wh-border)]">
-                  {suggestions.map((row) => (
-                    <ExpandableRow
-                      key={row.id}
-                      summary={
-                        <>
-                          <IconTile icon={ShoppingBasket} tone="care" />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium">{row.name} · {row.quantity} {row.unit}</span>
-                            <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{row.reason}</span>
-                          </span>
-                          <span className="shrink-0">
-                            {row.estimated_cost_minor !== null && row.currency ? <Badge>{formatMoney(row.estimated_cost_minor, row.currency)}</Badge> : <Badge tone="neutral">{t("groceries.unpriced")}</Badge>}
-                          </span>
-                        </>
-                      }
-                    >
-                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
-                        <div>
-                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.why")}</dt>
-                          <dd>{row.reason}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.basedOn")}</dt>
-                          <dd>{basis(row.evidence_basis)}</dd>
-                        </div>
-                        {row.needed_by ? (
-                          <div>
-                            <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.neededBy")}</dt>
-                            <dd>{formatDate(timezone, new Date(row.needed_by), "long")}</dd>
-                          </div>
-                        ) : null}
-                        <div>
-                          <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.estimatedCost")}</dt>
-                          <dd>{row.estimated_cost_minor !== null && row.currency ? formatMoney(row.estimated_cost_minor, row.currency) : t("groceries.fact.notPriced")}</dd>
-                        </div>
-                      </dl>
-                    </ExpandableRow>
-                  ))}
-                </ul>
-              </Card>
-            )}
-            <Card className="flex items-start gap-3 bg-[var(--wh-attention-soft)]/50 p-4">
-              <Truck aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-attention)]" />
-              <p className="text-sm text-[var(--wh-foreground-muted)]">
-                {t("groceries.noProvider")}
-              </p>
-            </Card>
-            <section>
-              <SectionHeader title={t("groceries.tracks")} count={consumables.length} />
-              {consumables.length === 0 ? null : (
-                <Card className="p-2">
-                  <ul className="divide-y divide-[var(--wh-border)]">
-                    {consumables.slice(0, 20).map((item) => {
-                      const runsOut = expectedDepletion(item, now);
-                      return (
-                        <ExpandableRow
-                          key={item.id}
-                          summary={
-                            <>
-                              <IconTile icon={PackageCheck} tone="care" />
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-medium">{item.name}</span>
-                                <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                                  {runsOut ? t("groceries.runsOut", { date: formatDate(timezone, runsOut, "long") }) : t("groceries.notEnoughHistory")}
-                                </span>
-                              </span>
-                            </>
-                          }
-                        >
-                          <div className="space-y-3">
-                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
-                              <div>
-                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.category")}</dt>
-                                <dd>{item.category}</dd>
-                              </div>
-                              <div>
-                                <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.usualAmount")}</dt>
-                                <dd>{item.typicalQuantity} {item.unit}</dd>
-                              </div>
-                              {item.daysPerUnit ? (
-                                <div>
-                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.lastsAbout")}</dt>
-                                  <dd>{t("groceries.fact.days", { count: item.daysPerUnit })}</dd>
-                                </div>
-                              ) : null}
-                              {item.evidenceBasis ? (
-                                <div>
-                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.basedOn")}</dt>
-                                  <dd>{basis(item.evidenceBasis)}</dd>
-                                </div>
-                              ) : null}
-                              {item.lastPurchasedOn ? (
-                                <div>
-                                  <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.lastPurchased")}</dt>
-                                  <dd>
-                                    {day(item.lastPurchasedOn)}
-                                    {item.lastPurchasedQuantity ? ` · ${item.lastPurchasedQuantity} ${item.unit}` : ""}
-                                  </dd>
-                                </div>
-                              ) : null}
-                            </dl>
-                            {purchasesByItem.get(item.id)?.length ? (
-                              <div className="space-y-1.5">
-                                <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("groceries.fact.recentPurchases")}</p>
-                                <ul className="space-y-1 text-sm">
-                                  {purchasesByItem.get(item.id)!.slice(0, 5).map((purchase) => (
-                                    <li key={purchase.id} className="break-words">
-                                      {[
-                                        day(purchase.purchasedOn),
-                                        `${purchase.quantity} ${item.unit}`,
-                                        purchase.merchant,
-                                        purchase.unitCostMinor !== null && purchase.currency ? t("groceries.purchase.each", { amount: formatMoney(purchase.unitCostMinor, purchase.currency) }) : null,
-                                      ]
-                                        .filter(Boolean)
-                                        .join(" · ")}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : null}
-                            <ConsumableRowControls
-                              householdId={householdId}
-                              item={{
-                                id: item.id,
-                                name: item.name,
-                                category: item.category,
-                                unit: item.unit,
-                                typicalQuantity: item.typicalQuantity,
-                                daysPerUnit: item.daysPerUnit,
-                              }}
-                              existingNames={existingNames}
-                              existingCategories={existingCategories}
-                              labels={formLabels}
-                            />
-                          </div>
-                        </ExpandableRow>
-                      );
-                    })}
-                  </ul>
-                </Card>
-              )}
-            </section>
-          </>
-        ) : null}
-
-        {active === "orders" ? (
-          orders.length === 0 ? (
-            <EmptyState icon={Truck} tone="care" title={t("groceries.orders.emptyTitle")} description={t("groceries.orders.emptyLede")} />
-          ) : (
-            <Card className="p-2">
-              <ul className="divide-y divide-[var(--wh-border)]">
-                {orders.map((order) => (
-                  <ActionRow
-                    key={order.id}
-                    icon={Truck}
-                    tone="care"
-                    title={t("groceries.order.from", { provider: order.provider })}
-                    meta={`${formatMoney(order.totalMinor, order.currency)}${order.expectedAt ? ` · ${t("groceries.order.expected", { date: formatDate(timezone, order.expectedAt, "long") })}` : ""}`}
-                    action={<Badge tone={order.status === "delivered" ? "handled" : order.status === "failed" || order.status === "cancelled" ? "risk" : "attention"}>{t(`groceries.orderStatus.${order.status}`)}</Badge>}
-                  />
-                ))}
-              </ul>
-            </Card>
-          )
-        ) : null}
-
-        <QuoteCard>{t("groceries.quote")}</QuoteCard>
+        <QuoteCard>{t("grocery.quote")}</QuoteCard>
       </div>
     </AppShell>
+  );
+}
+
+/** Use soon (design §3.6): dates someone read off the pack, and what is at or below its low level — never mixed, never estimated. */
+function UseSoon({
+  items,
+  words,
+  t,
+  timezone,
+}: {
+  items: GroceryItem[];
+  words: ReturnType<typeof groceryWords>;
+  t: Translate;
+  timezone: string;
+}) {
+  const dated = items
+    .filter((item) => item.stock?.useBy && item.stock.quantity > 0)
+    .sort((a, b) => a.stock!.useBy!.localeCompare(b.stock!.useBy!));
+  const low = items.filter((item) => {
+    const status = stockStatus(item);
+    return status === "low" || (status === "none" && item.lowLevel !== null);
+  });
+
+  if (dated.length === 0 && low.length === 0) {
+    return (
+      <EmptyState
+        icon={CalendarClock}
+        tone="care"
+        title={t("grocery.useSoon.empty")}
+        description={t("grocery.useSoon.emptyLede")}
+      />
+    );
+  }
+
+  const row = (
+    item: GroceryItem,
+    line: string,
+    tone: "attention" | "risk" | "care",
+  ) => (
+    <li key={item.id}>
+      <Link
+        href={`/groceries/${item.id}`}
+        className="flex items-center gap-3 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+      >
+        <IconTile
+          icon={tone === "care" ? CalendarClock : TriangleAlert}
+          tone={tone}
+          size="sm"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium break-words">
+            {item.name}
+          </span>
+          <span className="block text-xs text-[var(--wh-foreground-muted)]">
+            {line}
+          </span>
+        </span>
+        <ChevronRight
+          aria-hidden
+          className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]"
+        />
+      </Link>
+    </li>
+  );
+
+  return (
+    <div className="space-y-5">
+      {dated.length > 0 ? (
+        <section className="space-y-2">
+          <SectionHeader title={t("grocery.useSoon.useFirst")} />
+          <p className="text-sm text-[var(--wh-foreground-muted)]">
+            {t("grocery.useSoon.useFirstLede")}
+          </p>
+          <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
+            {dated.map((item) =>
+              row(
+                item,
+                `${t("grocery.useSoon.useBy", { date: formatDate(timezone, new Date(`${item.stock!.useBy}T12:00:00Z`)) })} · ${t("grocery.useSoon.left", { amount: sayAmount(words, { quantity: item.stock!.quantity, unit: item.stock!.unit }, item.unit) })}`,
+                "care",
+              ),
+            )}
+          </ul>
+        </section>
+      ) : null}
+      {low.length > 0 ? (
+        <section className="space-y-2">
+          <SectionHeader title={t("grocery.useSoon.running")} />
+          <p className="text-sm text-[var(--wh-foreground-muted)]">
+            {t("grocery.useSoon.runningLede")}
+          </p>
+          <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
+            {low.map((item) =>
+              row(
+                item,
+                t("grocery.useSoon.left", {
+                  amount: sayAmount(
+                    words,
+                    { quantity: item.stock!.quantity, unit: item.stock!.unit },
+                    item.unit,
+                  ),
+                }),
+                item.stock!.quantity <= 0 ? "risk" : "attention",
+              ),
+            )}
+          </ul>
+        </section>
+      ) : null}
+    </div>
   );
 }
