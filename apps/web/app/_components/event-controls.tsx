@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, Pencil, Share2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -172,15 +172,15 @@ export function EventInviteesForm({
   );
 }
 
+const noSubscription = () => () => undefined;
+
 /** The live link: shown in full, copied in one tap, or handed to the phone's own share sheet. */
 export function EventLinkShare({ path, title, labels }: { path: string; title: string; labels: { copy: string; copied: string; share: string; shareText: string } }) {
-  const [url, setUrl] = useState(path);
+  // The origin and the share sheet exist only in the browser; the server renders the bare path.
+  const origin = useSyncExternalStore(noSubscription, () => window.location.origin, () => "");
+  const canShare = useSyncExternalStore(noSubscription, () => typeof navigator.share === "function", () => false);
+  const url = `${origin}${path}`;
   const [copied, setCopied] = useState(false);
-  const [canShare, setCanShare] = useState(false);
-  useEffect(() => {
-    setUrl(`${window.location.origin}${path}`);
-    setCanShare(typeof navigator.share === "function");
-  }, [path]);
 
   return (
     <div className="space-y-2">
