@@ -10,6 +10,7 @@ import { entryHi } from "./areas/entry/hi";
 import { installHi } from "./areas/install/hi";
 import { eventsHi } from "./areas/events/hi";
 import { groceryHi } from "./areas/grocery/hi";
+import { welcomeHi } from "./areas/welcome/hi";
 
 export const hi: Catalog = {
   "common.next": "आगे",
@@ -660,4 +661,5 @@ export const hi: Catalog = {
   ...installHi,
   ...eventsHi,
   ...groceryHi,
+  ...welcomeHi,
 };

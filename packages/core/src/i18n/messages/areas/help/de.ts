@@ -105,6 +105,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Bearbeite deine letzte Nachricht, um sie anders zu formulieren, und durchsuche deine früheren Gespräche über das Suchfeld oben. Es sagt nie, dass es etwas getan hat, wenn es das nicht wirklich hat; wo es nur etwas vorbereitet hat, sagt es „vorbereitet“, und wo nichts geändert werden musste, sagt es das.",
   "help.guide.talk-to-wonderhome.body.7":
     "Frag nach Orten in der Nähe – „Schlag etwas fürs Abendessen heute vor“, „Wo können wir nach der Schule in der Nähe von Anyas Schule hin?“ – und HomeTalk sucht in der Nähe eurer Wohnadresse oder der Schule des Kindes und zeigt nur Orte, die zu dieser Zeit geöffnet sind, jeweils mit einem Link zu Google Maps. Die Orte kommen aus der Ortssuche von Google, nicht von einem KI-Modell, und WonderHome sagt, wenn es eine Zeit angenommen hat, etwa das Schulende. Speichere die, die dir gefallen, dann kommen sie beim nächsten Mal zuerst; markiere einen als „Nichts für uns“, dann wird er nicht wieder vorgeschlagen. Orte speichern kann ein Erwachsener oder Admin.",
+  "help.guide.talk-to-wonderhome.body.8":
+    "Wenn du die Einrichtung deines Haushalts abschließt, beginnt HomeTalk mit einer Begrüßung: wer zu deinem Haushalt gehört, worum sich WonderHome kümmert, und die drei Wege, mit ihm zu sprechen (tippen, aufs Mikrofon tippen oder ein Live-Gespräch). Dann stellt es ein paar Fragen, eine nach der anderen — was die Familie gern isst, was jemand nicht isst, was ihr gern zusammen macht, eure Haustiere. Deine Antworten werden in deinen eigenen Worten unter HomeBrain-Überprüfung gespeichert, wo du sie ändern kannst. Sag jederzeit „überspringen“, um aufzuhören; das passiert nur einmal.",
 
   "help.guide.voice.title": "Stimme und freihändiges Gespräch",
   "help.guide.voice.summary": "Tippen zum Sprechen und Prüfen, oder freihändig hin und her sprechen.",
@@ -144,6 +146,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Heute zeigt den Tag als Zeitleiste in drei Ansichten: dein Tag, der der Familie und der des Haushalts. Die Einträge sind Verpflichtungen und Fristen – ein Essen, das fertig sein muss, eine fällige Rechnung, ein Kurs –, nie Aufgaben zum Abhaken. Die Haushaltsansicht schaut außerdem zwei Wochen voraus, was wahrscheinlich ausgeht oder fällig wird.",
   "help.guide.today-and-home.body.3": "„Etwas planen“ auf Start und Heute fügt ein Familienereignis hinzu, ohne den Bildschirm zu verlassen.",
   "help.guide.today-and-home.body.4": "Auf dem Handy wischst du nach links oder rechts, um zwischen Start, Heute, HomeTalk, Familie und Mehr zu wechseln.",
+  "help.guide.today-and-home.body.5":
+    "Unter dem Familienstatus zeigt Home eure Haustiere, falls ihr welche habt. Jedes öffnet dieselben Angaben wie auf der Familienseite; ändern kannst du sie unter Familie.",
 
   "help.guide.notifications.title": "Erinnerungen und Benachrichtigungen",
   "help.guide.notifications.summary": "Zu echten Dingen, an eine Person, wenn es ihr passt – und still, sobald es erledigt ist.",

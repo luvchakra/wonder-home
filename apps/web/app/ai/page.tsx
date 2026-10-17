@@ -16,6 +16,8 @@ import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
 import type { PlaceMark } from "./place-cards";
 import { ConversationSearch } from "./conversation-search";
+import { WelcomeVoice } from "./welcome-voice";
+import { startWelcome } from "../_lib/hometalk-welcome";
 import { assistantLabels, conversationSearchLabels } from "./hometalk-labels";
 
 export const metadata = { title: "HomeTalk" };
@@ -27,8 +29,8 @@ export const dynamic = "force-dynamic";
  * The history is read here with the member's own client, so what reaches the
  * browser is what RLS lets this person see. New turns go through the API.
  */
-export default async function AiPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const [{ q }, session] = await Promise.all([searchParams, requireSession("/ai")]);
+export default async function AiPage({ searchParams }: { searchParams: Promise<{ q?: string; welcome?: string }> }) {
+  const [{ q, welcome }, session] = await Promise.all([searchParams, requireSession("/ai")]);
   const { supabase, membership, viewer, secondary, locale } = session;
   const timeStyle = { locale: locale.format.locale, hour12: locale.preferences.timeFormat === "12h" };
   const labels = assistantLabels(locale.t, timeStyle);
@@ -61,6 +63,9 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
 
   let initialMessages: AssistantMessage[] = [];
   let placeMarks: Record<string, PlaceMark> = {};
+  // Straight after setup: the welcome is written into the conversation once,
+  // before the history is read, so it is simply the newest messages.
+  const welcomeWords = entitlement.allowed && welcome === "1" ? await startWelcome(supabase, membership).catch(() => null) : null;
   if (entitlement.allowed) {
     const sessionId = await currentSessionId(supabase, membership.household.id, membership.memberId);
     if (sessionId) {
@@ -96,6 +101,9 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
             labels={conversationSearchLabels(locale.t, timeStyle)}
           /> : undefined}
     >
+      {welcomeWords ? (
+        <WelcomeVoice householdId={membership.household.id} texts={welcomeWords} serverVoice={serverVoice} language={voiceSettings.language} label={locale.t("welcome.listen")} />
+      ) : null}
       {entitlement.allowed ? (
         <Assistant
           householdId={membership.household.id}

@@ -105,6 +105,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Modifiez votre dernier message pour le reformuler, et recherchez dans vos conversations passées depuis le champ de recherche en haut. Il ne dit jamais avoir fait quelque chose s’il ne l’a pas vraiment fait ; quand il a seulement préparé quelque chose, il dit « préparé », et quand rien n’avait besoin de changer, il le dit.",
   "help.guide.talk-to-wonderhome.body.7":
     "Demandez des lieux à proximité — « propose un endroit pour dîner ce soir », « où aller près de l'école d'Anya après la classe ? » — et HomeTalk cherche près de l'adresse du foyer ou de l'école de l'enfant et ne montre que les lieux ouverts à ce moment-là, chacun avec un lien vers Google Maps. Les lieux viennent de la recherche de lieux de Google, pas d'un modèle d'IA, et WonderHome indique quand il a supposé une heure, comme la fin des cours. Enregistrez ceux qui vous plaisent : ils viendront en premier la prochaine fois ; marquez-en un « Pas pour nous » et il ne sera plus proposé. Un adulte ou un Admin peut enregistrer des lieux.",
+  "help.guide.talk-to-wonderhome.body.8":
+    "Quand vous terminez la configuration de votre foyer, HomeTalk s'ouvre sur un mot d'accueil : qui fait partie de votre foyer, ce dont WonderHome s'occupe, et les trois façons de lui parler (écrire, toucher le micro ou une conversation en direct). Il pose ensuite quelques questions, une à la fois : ce que la famille aime manger, ce que quelqu'un ne mange pas, ce que vous aimez faire ensemble, vos animaux. Vos réponses sont gardées avec vos propres mots dans Revue HomeBrain, où vous pouvez les modifier. Dites « passer » pour arrêter à tout moment ; cela n'arrive qu'une fois.",
 
   "help.guide.voice.title": "Voix et conversation mains libres",
   "help.guide.voice.summary": "Touchez pour parler et relire, ou échangez mains libres.",
@@ -144,6 +146,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Aujourd’hui présente la journée comme une frise, en trois vues : votre journée, celle de la famille et celle du foyer. Les éléments sont des engagements et des échéances — un repas qui doit être prêt, une facture à payer, un cours — jamais des corvées à cocher. La vue du foyer regarde aussi deux semaines à l’avance ce qui risque de manquer ou d’arriver à échéance.",
   "help.guide.today-and-home.body.3": "« Prévoir quelque chose », sur l’Accueil et Aujourd’hui, ajoute un événement familial sans quitter l’écran.",
   "help.guide.today-and-home.body.4": "Sur un téléphone, balayez vers la gauche ou la droite pour passer d’Accueil à Aujourd’hui, HomeTalk, Famille et Plus.",
+  "help.guide.today-and-home.body.5":
+    "Sous l'état de la famille, l'accueil affiche vos animaux, si vous en avez. Chacun ouvre les mêmes informations que l'écran Famille ; pour les modifier, allez dans Famille.",
 
   "help.guide.notifications.title": "Rappels et notifications",
   "help.guide.notifications.summary": "À propos de choses réelles, pour une seule personne, au bon moment — et silencieux une fois réglés.",

@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleCheck,
   Heart,
+  PawPrint,
   Sparkles,
   Sun,
   UserRoundPlus,
@@ -12,6 +13,7 @@ import {
 import Link from "next/link";
 
 import { listEvents } from "@wonderhome/core/family/repository";
+import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { describeAction, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
@@ -50,6 +52,7 @@ import { Suspense } from "react";
 
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
+import { PetDetail } from "../_components/pet-detail";
 import { NewEventForm } from "../_components/new-event-form";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { cadenceLabel } from "../_lib/cadence";
@@ -313,7 +316,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
   const todayIso = now.toISOString().slice(0, 10);
 
-  const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows] = await Promise.all([
+  const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows, pets] = await Promise.all([
     householdAgenda(supabase, householdId, view),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
@@ -333,6 +336,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         return [];
       }
     })(),
+    // The household's pets, under the family on Home (the Family screen's own rows).
+    listPets(supabase, householdId).catch(() => []),
   ]);
 
   const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
@@ -581,6 +586,37 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                 </ExpandableRow>
               );
             })}
+          </ul>
+        </Card>
+      ) : null}
+
+      {/* The pets, after the people: the same row and panel the Family
+          screen shows, opening in place (rule 21); changes stay on Family. */}
+      {pets.length > 0 ? (
+        <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "38ms" } as React.CSSProperties}>
+          <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
+            <h2 className="text-base font-semibold tracking-tight">{t("family.pets")}</h2>
+            <PillLink href="/family#pets" tone="quiet">
+              {t("homeScreen.seeAll")}
+            </PillLink>
+          </div>
+          <ul className="divide-y divide-[var(--wh-border)]">
+            {pets.map((pet) => (
+              <ExpandableRow
+                key={pet.id}
+                summary={
+                  <>
+                    {pet.photoUrl ? <Avatar name={pet.name} size="md" imageUrl={pet.photoUrl} /> : <IconTile icon={PawPrint} tone="care" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{pet.name}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)] first-letter:uppercase">{pet.species}</span>
+                    </span>
+                  </>
+                }
+              >
+                <PetDetail pet={pet} timezone={timezone} editable={false} householdId={householdId} />
+              </ExpandableRow>
+            ))}
           </ul>
         </Card>
       ) : null}

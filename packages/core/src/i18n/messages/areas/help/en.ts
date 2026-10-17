@@ -121,6 +121,8 @@ export const helpEn = {
     "Edit your last message to rephrase it, and search your past conversations from the search box at the top. It never says it did something unless it actually did; where it only prepared something, it says prepared, and where nothing needed changing, it says so.",
   "help.guide.talk-to-wonderhome.body.7":
     "Ask for places nearby — \"suggest somewhere for dinner tonight\", \"where can we hang out near Anya's school after school?\" — and HomeTalk looks near your home address or the child's school and shows only places open for that time, each with a link to Google Maps. The places come from Google's place search, not from an AI model, and WonderHome says when it assumed a time, such as when school ends. Save the ones you like and they come first next time; mark one \"not for us\" and it is not suggested again. An adult or Admin can save places.",
+  "help.guide.talk-to-wonderhome.body.8":
+    "When you finish setting up your household, HomeTalk opens with a welcome: who is in your household, what WonderHome looks after, and the three ways to talk to it (type, tap the mic, or a live conversation). It then asks a few questions one at a time — what the family loves to eat, what someone doesn't eat, what you enjoy together, your pets. Your answers are kept in your own words under HomeBrain Review, where you can change them. Say \"skip\" to stop at any point; it happens once.",
 
   // Voice and hands-free conversation
   "help.guide.voice.title": "Voice and hands-free conversation",
@@ -165,6 +167,8 @@ export const helpEn = {
     "Plan something, on Home and Today, adds a family event without leaving the screen.",
   "help.guide.today-and-home.body.4":
     "On a phone, swipe left or right to move between Home, Today, HomeTalk, Family and More.",
+  "help.guide.today-and-home.body.5":
+    "Under Family status, Home shows your pets, if you have any. Each opens to the same details the Family screen shows; to change them, go to Family.",
 
   // Reminders and notifications
   "help.guide.notifications.title": "Reminders and notifications",

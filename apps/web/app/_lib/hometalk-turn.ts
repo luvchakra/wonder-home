@@ -79,6 +79,7 @@ import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/
 import { agendaAllows, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
 import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
+import { continueWelcome, pendingWelcome } from "@/app/_lib/hometalk-welcome";
 
 /**
  * HomeTalk's turn: one engine for talk and text (module 04), made real
@@ -292,6 +293,31 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // the only one and the model never sees the question it is replacing.
   if (body.editMessageId) {
     await beginEditMessage(admin, { householdId, sessionId, messageId: body.editMessageId });
+  }
+
+  // The welcome's question, when it is what HomeTalk asked last: the answer
+  // is the household's own words, kept as said, and the next question
+  // follows — no model is asked. A question back ("what can you do?") is
+  // not an answer, so it goes through the ordinary turn and the welcome
+  // simply ends there.
+  if (!body.editMessageId && !limits) {
+    const welcomeTopic = await pendingWelcome(admin, sessionId);
+    if (welcomeTopic && !looksLikeQuestion(body.utterance)) {
+      const step = await continueWelcome(supabase, {
+        membership,
+        sessionId,
+        topic: welcomeTopic,
+        answer: body.utterance,
+        channel: body.channel,
+        transcriptConfidence: body.transcriptConfidence,
+      });
+      return {
+        sessionId,
+        memberMessageId: step.memberMessageId,
+        reply: { id: step.replyId, text: step.text, action: null, preview: null, proposal: "answer", mode: "answer" as BrainMode },
+        welcomeLocalized: true as const,
+      };
+    }
   }
 
   // The question asked last turn, if there was one: this turn is read as
@@ -1461,6 +1487,8 @@ type ShownReply = { id: string; text: string };
 async function inTheirLanguage(input: HomeTalkInput, result: TurnResult, speaking: Speaking): Promise<TurnResult & { language?: { code: string; localized: boolean } }> {
   const membership = speaking.membership;
   if (!membership || input.limits || (input.source ?? "web") !== "web") return result;
+  // The welcome is already in their language, from the catalog.
+  if ("welcomeLocalized" in result) return result;
   const code = preferencesOf(membership.locale, membership.household.timezone).language;
   if (code === "en") return result;
 

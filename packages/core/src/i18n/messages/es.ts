@@ -10,6 +10,7 @@ import { entryEs } from "./areas/entry/es";
 import { installEs } from "./areas/install/es";
 import { eventsEs } from "./areas/events/es";
 import { groceryEs } from "./areas/grocery/es";
+import { welcomeEs } from "./areas/welcome/es";
 
 export const es: Catalog = {
   "common.next": "Siguiente",
@@ -660,4 +661,5 @@ export const es: Catalog = {
   ...installEs,
   ...eventsEs,
   ...groceryEs,
+  ...welcomeEs,
 };

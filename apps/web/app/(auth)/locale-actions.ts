@@ -293,9 +293,11 @@ export async function localeSetupAction(_previous: LocaleActionState, formData: 
  * when an Admin is part-way through it (it asks for these first), else Home.
  */
 async function afterLocaleSetup(supabase: SupabaseClient, membership: HouseholdMembership): Promise<string> {
-  if (!isHouseholdAdmin(membership)) return "/";
+  // Setup still under way goes back to it; otherwise HomeTalk says hello —
+  // once per person (`startWelcome` does nothing for someone already welcomed).
+  if (!isHouseholdAdmin(membership)) return "/ai?welcome=1";
   const state = await loadOnboarding(supabase, membership.household.id).catch(() => null);
-  return state?.status === "in_progress" ? `/onboarding?step=${state.step === "welcome" ? "basics" : state.step}` : "/";
+  return state?.status === "in_progress" ? `/onboarding?step=${state.step === "welcome" ? "basics" : state.step}` : "/ai?welcome=1";
 }
 
 /** "Not now" on Home's card: put away for good. Settings still has everything. */
