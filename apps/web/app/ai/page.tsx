@@ -9,7 +9,7 @@ import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repos
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { Sparkles } from "lucide-react";
 
-import { geminiLiveGate } from "../_lib/gemini-live";
+import { geminiFix, geminiLiveGate } from "../_lib/gemini-live";
 import { homesendReviewLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
@@ -52,7 +52,9 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // A member may switch engines in the composer; the household's setting is
   // where it starts. The token route re-checks all of this per session.
   const geminiAvailability = (await geminiLiveGate(supabase, membership.household.id)).availability;
-  const geminiLive = geminiAvailability.available ? { available: true } : { available: false, reason: geminiAvailability.reason };
+  // Where it is off for a reason this person can change, the picker links straight to it and comes back here.
+  const fix = geminiFix(geminiAvailability, { canManage: session.view.permissions.includes("household.manage"), returnTo: "/ai", t: locale.t });
+  const geminiLive = geminiAvailability.available ? { available: true } : { available: false, reason: geminiAvailability.reason, ...(fix ? { fix } : {}) };
   const liveEngine = voiceSettings.liveEngine === "gemini_live" && geminiLive.available ? "gemini_live" : "wonderhome";
 
   let initialMessages: AssistantMessage[] = [];

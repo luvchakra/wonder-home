@@ -12,6 +12,7 @@ import { listMembers } from "@wonderhome/core/identity/households";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
+import { PrivacyNote } from "@wonderhome/core/ui/privacy-note";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
@@ -155,6 +156,7 @@ export default async function SettingsPage() {
                   displayName: me.displayName,
                   dateOfBirth: me.dateOfBirth,
                   nickname: me.nickname,
+                  nicknamePreferred: me.nicknamePreferred ?? false,
                   relationship: me.relationship,
                   occupation: me.occupation,
                   schoolOrWorkLocation: me.schoolOrWorkLocation,
@@ -185,6 +187,7 @@ export default async function SettingsPage() {
           ) : (
             <Avatar name={view.displayName} size="xl" />
           )}
+          <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         </Card>
 
         <SettingsGroup title={t("settingsHome.group.personal")} rows={personal} />

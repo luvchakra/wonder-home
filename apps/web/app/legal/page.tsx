@@ -68,6 +68,54 @@ export default function LegalPage() {
             </ul>
           </Card>
 
+          <Card id="your-information" className="scroll-mt-6 space-y-4 p-5">
+            <h2 className="text-base font-semibold tracking-tight">Your personal information</h2>
+            <p className="text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+              You are trusting us with things that matter: where your family lives, when your children were born,
+              their faces. We know that, and we look after them the way we would want our own family&apos;s looked after.
+            </p>
+            <ul className="space-y-3 text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">It stays inside your home.</strong>{" "}
+                Only the people in your household can see your family&apos;s details, and only what their role allows.
+                Your home address is seen by the adults, never by helpers or children.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">It is locked up.</strong>{" "}
+                Everything travels over an encrypted connection and is stored encrypted. Photos are kept in private
+                storage and shown through links that stop working within the hour.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">We only ask for what helps.</strong>{" "}
+                Almost every detail is optional. Leave out anything you would rather not share.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">We never sell it.</strong>{" "}
+                Your information is never sold, never used for advertising, and never used to train AI models.
+                When you look up an address or a school, what you type goes to Google Maps, along with your home&apos;s
+                location when it is finding schools near you. Nothing else about your family goes with it.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">You stay in charge.</strong>{" "}
+                You can correct anything, download a copy of everything, or ask us to delete it all from
+                Settings → Privacy & security.
+              </li>
+            </ul>
+            <p className="text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+              We build WonderHome around the principles of the privacy laws that protect families where we work: India&apos;s{" "}
+              <a href="https://www.meity.gov.in/data-protection-framework" target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                Digital Personal Data Protection Act, 2023
+              </a>{" "}
+              and Europe&apos;s{" "}
+              <a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj" target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                General Data Protection Regulation (GDPR)
+              </a>
+              : ask only for what is needed, use it only for what you asked, keep it safe, and let you see, correct
+              and erase it. WonderHome has not yet been through a formal audit against either, and we will say so
+              here until it has.
+            </p>
+          </Card>
+
           <p className="text-sm text-[var(--wh-foreground-muted)]">
             Members can read the user guide in the app, under More → Get Help:{" "}
             <Link href="/sign-in?next=%2Fhelp" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">

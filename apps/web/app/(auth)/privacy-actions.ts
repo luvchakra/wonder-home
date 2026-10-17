@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { CONTENT_CLASSES, DEFAULT_DATA_USE, type ContentClass } from "@wonderhome/core/ai/privacy";
@@ -13,6 +14,7 @@ import { cancelDeletion, requestDeletion } from "@wonderhome/core/privacy/reposi
 import { STEP_UP_PURPOSES } from "@wonderhome/core/security/step-up";
 import { verifyStepUp } from "@wonderhome/core/security/step-up-repository";
 
+import { safeReturnTo } from "../_lib/return-to";
 import type { ActionState } from "./actions";
 
 /**
@@ -68,12 +70,15 @@ export async function saveDataUseAction(
       },
     });
 
-    revalidatePath("/settings");
-    revalidatePath("/settings/ai");
-    return { notice: "Saved. This takes effect on the next thing you ask." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }
+  revalidatePath("/settings");
+  revalidatePath("/settings/ai");
+  // Sent here to fix something (HomeTalk's Gemini Live, say): back where they were.
+  const back = safeReturnTo(formData.get("returnTo"));
+  if (back) redirect(back);
+  return { notice: "Saved. This takes effect on the next thing you ask." };
 }
 
 /**

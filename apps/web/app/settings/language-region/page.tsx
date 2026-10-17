@@ -6,6 +6,7 @@ import { describeTimezone, languageInfo } from "@wonderhome/core/i18n/locales";
 import { currencyLabel, regionName } from "@wonderhome/core/i18n/options";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
@@ -26,8 +27,8 @@ type Row = { icon: ComponentType<{ className?: string }>; tone: IconTone; label:
  * the household's are marked as the household's, and a member who is not
  * an Admin can read them but is told who changes them.
  */
-export default async function LanguageRegionPage() {
-  const session = await requireSession("/settings/language-region");
+export default async function LanguageRegionPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  const [query, session] = await Promise.all([searchParams, requireSession("/settings/language-region")]);
   const { membership, viewer, secondary, locale } = session;
   const { t, preferences, format } = locale;
   const admin = isHouseholdAdmin(membership);
@@ -71,6 +72,7 @@ export default async function LanguageRegionPage() {
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/settings", label: t("common.back") }} title={t("settings.languageRegion")}>
       <div className="space-y-6">
         <p className="text-[0.9375rem] text-[var(--wh-foreground-muted)]">{t("settings.languageRegion.lede")}</p>
+        {query.saved ? <Alert tone="info">{t("common.saved")}</Alert> : null}
 
         {sections.map((section) => (
           <section key={section.title}>

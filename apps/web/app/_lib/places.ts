@@ -1,0 +1,81 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
+
+import { loadHouseholdAddress, saveHouseholdAddress } from "@wonderhome/core/household/address";
+import { DEFAULT_PREFERENCES, resolvePreferences } from "@wonderhome/core/i18n/preferences";
+import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
+import { placesProviderFromEnv } from "@wonderhome/core/places/google";
+import { PlacesUnavailableError, type Place } from "@wonderhome/core/places/provider";
+
+/**
+ * Server-side halves of the place pickers, kept out of the "use server"
+ * action files so none of them is callable from a browser on its own.
+ */
+
+/** Whether this deployment has a place search; without one, screens offer a plain field. */
+export function placeSearchAvailable(): boolean {
+  return placesProviderFromEnv() !== null;
+}
+
+function preferencesOf(membership: HouseholdMembership) {
+  return membership.locale ? resolvePreferences(membership.locale.member, membership.locale.household) : DEFAULT_PREFERENCES;
+}
+
+const placeIdSchema = z.string().trim().min(1).max(300).regex(/^[A-Za-z0-9_-]+$/);
+
+/**
+ * The place an Admin picked, read again from the provider by its id. The
+ * browser never supplies an address or coordinates; null when nothing was
+ * picked or the provider is off.
+ */
+export async function pickedPlace(membership: HouseholdMembership, placeId: unknown, sessionToken: unknown): Promise<Place | null> {
+  const id = placeIdSchema.safeParse(placeId);
+  if (!id.success) return null;
+  const provider = placesProviderFromEnv();
+  if (!provider) return null;
+  const token = z.uuid().safeParse(sessionToken);
+  return provider.details(id.data, { sessionToken: token.success ? token.data : null, languageCode: preferencesOf(membership).language });
+}
+
+/** Saves the home address from a form: a picked place when there is one, else the typed line. Unchanged picks cost nothing. */
+export async function saveAddressFromForm(
+  supabase: SupabaseClient,
+  membership: HouseholdMembership,
+  formData: FormData,
+): Promise<"saved" | "unchanged" | "empty"> {
+  const placeId = String(formData.get("home_place_id") ?? "").trim();
+  const typed = String(formData.get("home_address") ?? "").trim().slice(0, 300);
+  const householdId = membership.household.id;
+  const current = await loadHouseholdAddress(supabase, householdId).catch(() => null);
+  if (placeId) {
+    if (current?.placeId === placeId) return "unchanged";
+    const place = await pickedPlace(membership, placeId, formData.get("places_session"));
+    if (!place) throw new PlacesUnavailableError("unavailable");
+    await saveHouseholdAddress(supabase, { householdId, memberId: membership.memberId, address: { place } });
+    return "saved";
+  }
+  if (!typed) return "empty";
+  if (current && current.formattedAddress === typed) return "unchanged";
+  await saveHouseholdAddress(supabase, { householdId, memberId: membership.memberId, address: { typed } });
+  return "saved";
+}
+
+
+/**
+ * A small map of the saved home, as a data URL the page carries inline. The
+ * server fetches it with the key, so neither the key nor a third-party image
+ * origin ever reaches the browser. Null when there is no search provider, no
+ * point to show, or the map service does not answer: the page then shows
+ * the address and the "Open in Google Maps" link alone.
+ */
+export async function homeMapImage(location: { latitude: number; longitude: number } | null): Promise<string | null> {
+  const provider = placesProviderFromEnv();
+  if (!provider?.staticMap || !location) return null;
+  try {
+    const image = await provider.staticMap(location, { width: 480, height: 200, zoom: 15 });
+    if (!image || image.body.byteLength > 400_000) return null;
+    return `data:${image.contentType};base64,${Buffer.from(image.body).toString("base64")}`;
+  } catch {
+    return null;
+  }
+}

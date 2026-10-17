@@ -45,6 +45,7 @@ describe("membership mapping", () => {
       {
         memberId: "m-1",
         displayName: "Kunal",
+        preferredName: null,
         memberType: "adult",
         dateOfBirth: null,
         firstSeenAt: null,
@@ -168,5 +169,14 @@ describe("siblingOrder", () => {
 
   it("never compares against an adult, even with a birthdate on file", () => {
     expect(siblingOrder(anaya, [anaya, parent])).toBeNull();
+  });
+});
+
+describe("calledName", () => {
+  it("is the nickname only when the household calls them by it", async () => {
+    const { calledName } = await import("./households");
+    expect(calledName({ displayName: "Rahul Sharma", nickname: "Ricky", nicknamePreferred: true })).toBe("Ricky");
+    expect(calledName({ displayName: "Rahul Sharma", nickname: "Ricky", nicknamePreferred: false })).toBe("Rahul Sharma");
+    expect(calledName({ displayName: "Rahul Sharma", nickname: "  ", nicknamePreferred: true })).toBe("Rahul Sharma");
   });
 });

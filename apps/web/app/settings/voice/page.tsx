@@ -12,7 +12,9 @@ import { MicVocal, Sparkles } from "lucide-react";
 
 import { removeVoiceKeyAction, saveVoice, saveVoiceKeyAction } from "../../(auth)/voice-actions";
 import { VoiceSettingsForm } from "../../_components/voice-forms";
-import { geminiLiveGate } from "../../_lib/gemini-live";
+import { ReturnLink, returnLabelKey } from "../../_components/return-link";
+import { geminiFix, geminiLiveGate } from "../../_lib/gemini-live";
+import { safeReturnTo } from "../../_lib/return-to";
 import { formatDate, requireSession } from "../../_lib/session";
 import { speechSourceWords, voiceFormLabels, voiceSummary } from "../../_lib/settings-labels";
 
@@ -35,8 +37,9 @@ export const dynamic = "force-dynamic";
  * want their own project behind it instead — their billing, their quotas,
  * their agreement with Google — and theirs wins when it is set.
  */
-export default async function VoiceSettingsPage() {
-  const session = await requireSession("/settings/voice");
+export default async function VoiceSettingsPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
+  const [query, session] = await Promise.all([searchParams, requireSession("/settings/voice")]);
+  const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
 
@@ -71,6 +74,7 @@ export default async function VoiceSettingsPage() {
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.voice.heading")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voice.lede")}</p>
         </header>
+        {returnTo ? <ReturnLink href={returnTo} label={t(returnLabelKey(returnTo))} /> : null}
 
         {!entitlement.allowed ? (
           <EmptyState
@@ -109,7 +113,11 @@ export default async function VoiceSettingsPage() {
                 ownKeySetOn={credential.updatedAt ? formatDate(membership.household.timezone, credential.updatedAt) : null}
                 sourceTitle={source.title}
                 sourceDetail={source.detail}
-                geminiLive={{ available: gemini.availability.available, reason: gemini.availability.available ? null : gemini.availability.reason }}
+                geminiLive={{
+                  available: gemini.availability.available,
+                  reason: gemini.availability.available ? null : gemini.availability.reason,
+                  fix: geminiFix(gemini.availability, { canManage: isAdmin, returnTo: "/settings/voice", t }),
+                }}
                 labels={voiceFormLabels(t, preferences.language)}
               />
             ) : (

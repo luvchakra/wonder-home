@@ -53,11 +53,14 @@ export function DataUseForm({
   householdId,
   policy,
   labels,
+  returnTo = null,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   policy: DataUsePolicy;
   labels: DataUseFormLabels;
+  /** Where to go back to once saved, when someone was sent here to fix something. */
+  returnTo?: string | null;
 }) {
   const [state, formAction] = useActionState(action, {});
   const [sending, setSending] = useState(policy.allowProviderContent);
@@ -67,6 +70,7 @@ export function DataUseForm({
       {state.error ? <Alert>{state.error}</Alert> : null}
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
 
       <label className="flex items-start gap-3">
         <input

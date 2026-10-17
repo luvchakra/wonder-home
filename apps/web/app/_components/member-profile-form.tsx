@@ -17,6 +17,7 @@ export type MemberProfileInitial = {
   displayName: string;
   dateOfBirth: string | null;
   nickname: string | null;
+  nicknamePreferred?: boolean;
   relationship: string | null;
   occupation: string | null;
   schoolOrWorkLocation: string | null;
@@ -62,6 +63,10 @@ export function MemberProfileForm({
 
           <Field label="Name" name="displayName" required defaultValue={initial.displayName} autoComplete="off" />
           <Field label="Nickname" name="nickname" defaultValue={initial.nickname ?? ""} placeholder="What the household actually calls them" autoComplete="off" />
+          <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">
+            <input type="checkbox" name="nicknamePreferred" defaultChecked={initial.nicknamePreferred ?? false} className="size-5 shrink-0 accent-[var(--wh-primary)]" />
+            Preferred name: call them by their nickname
+          </label>
           <Field label="Family calls me" name="relationship" defaultValue={initial.relationship ?? ""} placeholder="Father, Mother, Daughter, Grandmother…" autoComplete="off" />
           <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={initial.dateOfBirth ?? ""} />
           <Field label="Occupation" name="occupation" defaultValue={initial.occupation ?? ""} placeholder="What they do for work or study" autoComplete="off" />

@@ -376,6 +376,7 @@ export async function updateMemberProfileAction(
       displayName: parsed.data.displayName,
       dateOfBirth: textOrNull(parsed.data.dateOfBirth),
       nickname: textOrNull(parsed.data.nickname),
+      nicknamePreferred: Boolean(textOrNull(parsed.data.nickname)) && formData.get("nicknamePreferred") === "on",
       relationship: textOrNull(parsed.data.relationship),
       occupation: textOrNull(parsed.data.occupation),
       schoolOrWorkLocation: textOrNull(parsed.data.schoolOrWorkLocation),

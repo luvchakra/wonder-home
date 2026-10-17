@@ -1,5 +1,6 @@
-import { BookOpen, Bot, ChevronRight, Cog, FileClock, ListChecks, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
+import { BookOpen, Bot, ChevronRight, Cog, FileClock, ListChecks, MapPin, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
 
+import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
@@ -48,13 +49,14 @@ export default async function ManageHouseholdPage() {
     );
   }
 
-  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts] = await Promise.all([
+  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts, address] = await Promise.all([
     supabase.from("household_members").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "active"),
     supabase.from("playbook_items").select("id, outcome_key, name, outcome_definition, operating_window, escalation, active").eq("household_id", householdId).order("name"),
     supabase.from("policies").select("id, category, name, active, rule").eq("household_id", householdId).eq("active", true).order("category"),
     supabase.from("responsibilities").select("ai_mode").eq("household_id", householdId),
     listIntegrations(supabase, householdId).catch(() => []),
     loadSetupFacts(supabase, membership.household).catch(() => null),
+    loadHouseholdAddress(supabase, householdId).catch(() => null),
   ]);
   const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
   const controlLabels = playbookControlLabels(t);
@@ -68,6 +70,7 @@ export default async function ManageHouseholdPage() {
 
   const sections: { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } }[] = [
     { href: "/household/setup", icon: Wand2, tone: "primary", title: t("manage.section.setup"), meta: t("manage.section.setupMeta") },
+    { href: "/household/address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: address?.formattedAddress ?? t("manage.section.addressMeta") },
     { href: "/household/members", icon: Users, tone: "people", title: t("manage.section.members"), meta: t("manage.section.membersMeta", { count: memberCount ?? 0 }) },
     { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: t("nav.item.responsibilities"), meta: t("manage.section.responsibilitiesMeta", { count: modes.length }) },
     { href: "#playbook", icon: BookOpen, tone: "home", title: t("manage.section.playbook"), meta: t("manage.section.playbookMeta", { count: items.filter((i) => i.active).length }) },

@@ -623,4 +623,9 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsHome.avatar.uploading": "अपलोड हो रहा है…",
   "settingsHome.avatar.remove": "फ़ोटो हटाएँ",
   "settingsHome.avatar.removing": "हटाया जा रहा है…",
+  "settingsPage.geminiFix.not_google": "AI प्रदाता बदलें",
+  "settingsPage.geminiFix.no_consent": "देखें कि क्या साझा किया जा सकता है",
+  "settingsPage.geminiFix.not_entitled": "प्लान देखें",
+  "settingsPage.returnTo.hometalk": "HomeTalk पर वापस",
+  "settingsPage.returnTo.previous": "जहाँ थे वहाँ वापस",
 };

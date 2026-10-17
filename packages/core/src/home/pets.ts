@@ -43,6 +43,8 @@ export type Pet = {
   vetContact?: string | null;
   notes?: string | null;
   active?: boolean;
+  /** A short-lived URL for the pet's photo, minted at read time (`listPets`); null when there is none. */
+  photoUrl?: string | null;
 };
 
 export type PetCareNeed = {

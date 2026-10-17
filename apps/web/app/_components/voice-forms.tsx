@@ -172,7 +172,7 @@ export function VoiceSettingsForm({
   sourceTitle: string;
   sourceDetail: string;
   /** Whether Gemini Live may run for this household, and why not when it may not — the server's own check. */
-  geminiLive: { available: boolean; reason: string | null };
+  geminiLive: { available: boolean; reason: string | null; fix?: { href: string; label: string } | null };
   labels: VoiceFormLabels;
 }) {
   const [state, action] = useActionState(save, {});
@@ -318,6 +318,11 @@ export function VoiceSettingsForm({
               {geminiLive.available ? "" : ` ${labels.notAvailable}`}
             </option>
           </Select>
+          {!geminiLive.available && geminiLive.fix ? (
+            <a href={geminiLive.fix.href} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+              {geminiLive.fix.label}
+            </a>
+          ) : null}
         </section>
 
         <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>

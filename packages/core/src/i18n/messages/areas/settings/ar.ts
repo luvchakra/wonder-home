@@ -640,4 +640,9 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsHome.avatar.uploading": "جارٍ الرفع…",
   "settingsHome.avatar.remove": "إزالة الصورة",
   "settingsHome.avatar.removing": "جارٍ الإزالة…",
+  "settingsPage.geminiFix.not_google": "تغيير مزوّد الذكاء الاصطناعي",
+  "settingsPage.geminiFix.no_consent": "راجع ما يمكن مشاركته",
+  "settingsPage.geminiFix.not_entitled": "عرض الخطط",
+  "settingsPage.returnTo.hometalk": "العودة إلى HomeTalk",
+  "settingsPage.returnTo.previous": "العودة إلى حيث كنت",
 };

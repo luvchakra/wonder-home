@@ -46,10 +46,12 @@ import {
   moveAction,
   reviewCategoryAction,
 } from "../(auth)/onboarding-actions";
+import { PlaceSearchField } from "../_components/place-search-field";
 import { SubmitButton, SubmitPill } from "../_components/submit-pill";
 import { LaterButton, OnboardingFrame, setupChrome, type SetupWords } from "./frame";
 import { OnboardingForm } from "./onboarding-form";
-import { HelperHours } from "./screens-people";
+import { placeSearchLabels } from "../_lib/place-labels";
+import { HelperHours, type PlaceContext } from "./screens-people";
 
 /** Each category's tile; its name and subtitle are `setupWizard.category.<key>` in the reader's language. */
 const CATEGORY_LOOK: Record<SuggestionCategory, { icon: LucideIcon; tone: IconTone }> = {
@@ -144,24 +146,71 @@ function questionWords(question: GuidedQuestion, t: SetupWords["t"]): string {
 }
 
 /** Who may be offered as an owner: adults always, helpers for the home, a child only for their own kind of thing. */
-function ownerChoices(
-  snapshot: OnboardingSnapshot,
-  suggestion: Pick<SuggestedResponsibility, "adultOnly" | "category" | "primaryMemberId" | "backupMemberId">,
-  t: SetupWords["t"],
-) {
-  const members = snapshot.configMembers.filter((member) => {
-    if (member.memberType === "adult") return true;
-    if (suggestion.adultOnly) return false;
-    if (member.memberType === "child") return suggestion.category === "kids";
-    return member.memberType === "helper";
-  });
-  const options: { value: string; label: string }[] = [];
-  const primary = nameOf(snapshot, suggestion.primaryMemberId);
-  const backup = nameOf(snapshot, suggestion.backupMemberId);
-  if (primary && backup) options.push({ value: `${suggestion.primaryMemberId}:${suggestion.backupMemberId}`, label: t("setupWizard.review.withBackup", { primary, backup }) });
-  for (const member of members) options.push({ value: member.id, label: member.displayName });
-  options.push({ value: "", label: t("manage.resp.nobodyYet") });
-  return options;
+function ownerChoices(snapshot: OnboardingSnapshot, suggestion: Pick<SuggestedResponsibility, "adultOnly" | "category">) {
+  return snapshot.configMembers
+    .filter((member) => {
+      if (member.memberType === "adult") return true;
+      if (suggestion.adultOnly) return false;
+      if (member.memberType === "child") return suggestion.category === "kids";
+      return member.memberType === "helper";
+    })
+    .map((member) => ({ value: member.id, label: member.displayName }));
+}
+
+const OWNER_SELECT =
+  "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]";
+
+/**
+ * Who looks after something, as two plain choices: the primary holder, and
+ * the backup for when they are away. Never one picker of "X, with Y" pairs.
+ */
+function OwnerPickers({
+  idPrefix,
+  primaryName,
+  backupName,
+  choices,
+  primary,
+  backup,
+  t,
+}: {
+  idPrefix: string;
+  primaryName: string;
+  backupName: string;
+  choices: { value: string; label: string }[];
+  primary: string | null;
+  backup: string | null;
+  t: SetupWords["t"];
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-1.5">
+        <label htmlFor={`${idPrefix}-primary`} className="block text-sm font-medium">
+          {t("setupWizard.review.primary")}
+        </label>
+        <select id={`${idPrefix}-primary`} name={primaryName} defaultValue={primary ?? ""} className={OWNER_SELECT}>
+          {choices.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+          <option value="">{t("manage.resp.nobodyYet")}</option>
+        </select>
+      </div>
+      <div className="space-y-1.5">
+        <label htmlFor={`${idPrefix}-backup`} className="block text-sm font-medium">
+          {t("setupWizard.review.backup")}
+        </label>
+        <select id={`${idPrefix}-backup`} name={backupName} defaultValue={backup ?? ""} className={OWNER_SELECT}>
+          <option value="">{t("setupWizard.review.noBackup")}</option>
+          {choices.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +284,7 @@ export function ReviewScreen({ snapshot, category, words }: { snapshot: Onboardi
   const look = CATEGORY_LOOK[category];
   const suggestions = snapshot.facts.pending.filter((entry) => entry.category === category);
   const alreadySet = snapshot.facts.responsibilityKeys.filter((key) => responsibilityCategory(key) === category).length;
-  const addOwners = ownerChoices(snapshot, { adultOnly: category === "finance", category, primaryMemberId: null, backupMemberId: null }, t);
+  const addOwners = ownerChoices(snapshot, { adultOnly: category === "finance", category });
 
   return (
     <OnboardingFrame step="review" progress={4} {...setupChrome(words, 4)} back="/onboarding?step=suggestions" close accent={t("entry.script.lessLoad")}>
@@ -258,8 +307,8 @@ export function ReviewScreen({ snapshot, category, words }: { snapshot: Onboardi
         ) : (
           <Card className="divide-y divide-[var(--wh-border)] p-1">
             {suggestions.map((suggestion) => {
-              const choices = ownerChoices(snapshot, suggestion, t);
-              const suggested = suggestion.backupMemberId && nameOf(snapshot, suggestion.backupMemberId) ? `${suggestion.primaryMemberId}:${suggestion.backupMemberId}` : (suggestion.primaryMemberId ?? "");
+              const choices = ownerChoices(snapshot, suggestion);
+              const offered = new Set(choices.map((choice) => choice.value));
               return (
                 <div key={suggestion.key} className="space-y-2.5 p-3">
                   <input type="hidden" name={`seen_${suggestion.key}`} value="1" />
@@ -272,22 +321,17 @@ export function ReviewScreen({ snapshot, category, words }: { snapshot: Onboardi
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pl-11">
-                    <label className="sr-only" htmlFor={`owner_${suggestion.key}`}>
-                      {t("setupWizard.review.whoFor", { title: suggestion.title })}
-                    </label>
-                    <select
-                      id={`owner_${suggestion.key}`}
-                      name={`owner_${suggestion.key}`}
-                      defaultValue={suggested}
-                      className="block min-h-10 min-w-0 flex-1 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
-                    >
-                      {choices.map((choice) => (
-                        <option key={choice.value || "none"} value={choice.value}>
-                          {choice.label}
-                        </option>
-                      ))}
-                    </select>
+                  <fieldset className="space-y-2.5 pl-11">
+                    <legend className="sr-only">{t("setupWizard.review.whoFor", { title: suggestion.title })}</legend>
+                    <OwnerPickers
+                      idPrefix={`owner-${suggestion.key}`}
+                      primaryName={`primary_${suggestion.key}`}
+                      backupName={`backup_${suggestion.key}`}
+                      choices={choices}
+                      primary={suggestion.primaryMemberId && offered.has(suggestion.primaryMemberId) ? suggestion.primaryMemberId : null}
+                      backup={suggestion.backupMemberId && offered.has(suggestion.backupMemberId) ? suggestion.backupMemberId : null}
+                      t={t}
+                    />
                     <label className="relative shrink-0 cursor-pointer">
                       <input type="checkbox" name={`keep_${suggestion.key}`} defaultChecked className="peer absolute inset-0 size-full cursor-pointer opacity-0" aria-label={t("setupWizard.review.keepLabel", { title: suggestion.title })} />
                       <span className="inline-flex min-h-10 items-center gap-1 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] px-3 text-xs font-semibold text-[var(--wh-foreground-muted)] peer-checked:border-[var(--wh-primary)] peer-checked:bg-[var(--wh-primary-soft)] peer-checked:text-[var(--wh-primary)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--wh-primary)]">
@@ -295,7 +339,7 @@ export function ReviewScreen({ snapshot, category, words }: { snapshot: Onboardi
                         {t("setupWizard.review.keep")}
                       </span>
                     </label>
-                  </div>
+                  </fieldset>
                 </div>
               );
             })}
@@ -312,18 +356,7 @@ export function ReviewScreen({ snapshot, category, words }: { snapshot: Onboardi
         <OnboardingForm action={addResponsibilityAction} className="space-y-3">
           <input type="hidden" name="category" value={category} />
           <Field label={t("setupWizard.review.whatField")} name="title" placeholder={t("setupWizard.review.whatPlaceholder")} autoComplete="off" required />
-          <div className="space-y-1.5">
-            <label htmlFor="new-owner" className="block text-sm font-medium">
-              {t("setupWizard.review.whoField")}
-            </label>
-            <select id="new-owner" name="owner" defaultValue="" className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base">
-              {addOwners.map((choice) => (
-                <option key={choice.value || "none"} value={choice.value}>
-                  {choice.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <OwnerPickers idPrefix="new-owner" primaryName="primary" backupName="backup" choices={addOwners} primary={null} backup={null} t={t} />
           <SubmitPill tone="soft" pendingLabel={t("common.adding")} className="min-h-11 w-full text-sm">
             {t("setupWizard.review.add")}
           </SubmitPill>
@@ -420,12 +453,14 @@ export function GuidedScreen({
   question,
   skipped,
   skipToken,
+  places,
   words,
 }: {
   snapshot: OnboardingSnapshot;
   question: GuidedQuestion | null;
   skipped: string[];
   skipToken: string | null;
+  places: PlaceContext;
   words: SetupWords;
 }) {
   const { t } = words;
@@ -447,12 +482,17 @@ export function GuidedScreen({
             <OnboardingForm action={answerSchoolAction} className="space-y-3">
               <Card className="space-y-4 p-4">
                 {question.children.map((child) => (
-                  <Field
+                  <PlaceSearchField
                     key={child.id}
+                    householdId={places.householdId}
+                    kind="school"
                     label={t("setupWizard.guided.schoolOf", { name: child.name })}
-                    name={`school_${child.id}`}
-                    autoComplete="off"
-                    placeholder={t("setupWizard.guided.schoolPlaceholder")}
+                    textName={`school_${child.id}`}
+                    placeName={`school_place_${child.id}`}
+                    sessionName={`school_session_${child.id}`}
+                    initial={null}
+                    available={places.available}
+                    labels={{ ...placeSearchLabels(t, "school"), placeholder: places.available ? placeSearchLabels(t, "school").placeholder : t("setupWizard.guided.schoolPlaceholder") }}
                   />
                 ))}
               </Card>

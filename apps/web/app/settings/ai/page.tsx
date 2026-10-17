@@ -13,6 +13,8 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { removeAiKey, saveAiKey } from "../../(auth)/ai-key-actions";
 import { saveDataUseAction } from "../../(auth)/privacy-actions";
 import { AiKeyForm } from "../../_components/ai-key-form";
+import { ReturnLink, returnLabelKey } from "../../_components/return-link";
+import { safeReturnTo } from "../../_lib/return-to";
 import { DataUseForm } from "../../_components/data-use-form";
 import { formatDate, requireSession } from "../../_lib/session";
 import { aiKeyFormLabels, dataUseFormLabels, dataUseLines, keySourceWords } from "../../_lib/settings-labels";
@@ -27,8 +29,9 @@ export const dynamic = "force-dynamic";
  * only someone with `household.manage` sees the editors, and the actions
  * check that again on the server. A stored key is never shown back.
  */
-export default async function AiAssistantSettingsPage() {
-  const session = await requireSession("/settings/ai");
+export default async function AiAssistantSettingsPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
+  const [query, session] = await Promise.all([searchParams, requireSession("/settings/ai")]);
+  const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
   const [credential, dataUse] = await Promise.all([
@@ -53,6 +56,7 @@ export default async function AiAssistantSettingsPage() {
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.ai.title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.lede", { household: membership.household.name })}</p>
         </header>
+        {returnTo ? <ReturnLink href={returnTo} label={t(returnLabelKey(returnTo))} /> : null}
 
         <section>
           <SectionHeader title={t("settingsPage.ai.section.key")} />
@@ -74,7 +78,7 @@ export default async function AiAssistantSettingsPage() {
             {manages ? (
               <>
                 <p className="text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.ownKeyIntro")}</p>
-                <AiKeyForm householdId={householdId} save={saveAiKey} remove={removeAiKey} configured={credential.configured} labels={aiKeyFormLabels(t)} />
+                <AiKeyForm householdId={householdId} save={saveAiKey} remove={removeAiKey} configured={credential.configured} labels={aiKeyFormLabels(t)} returnTo={returnTo} />
                 {key.source === "none" ? (
                   <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs text-[var(--wh-foreground-muted)]">
                     {noKeyBefore}
@@ -89,7 +93,7 @@ export default async function AiAssistantSettingsPage() {
           </Card>
         </section>
 
-        <section>
+        <section id="share">
           <SectionHeader title={t("settingsPage.ai.section.share")} />
           <Card className="space-y-4 p-4">
             {/* Read on the server every time. A screen cannot cache its way
@@ -103,7 +107,7 @@ export default async function AiAssistantSettingsPage() {
               </ul>
             </div>
             {manages ? (
-              <DataUseForm action={saveDataUseAction} householdId={householdId} policy={dataUse} labels={dataUseFormLabels(t)} />
+              <DataUseForm action={saveDataUseAction} householdId={householdId} policy={dataUse} labels={dataUseFormLabels(t)} returnTo={returnTo} />
             ) : (
               <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
             )}

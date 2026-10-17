@@ -56,13 +56,13 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.first-week.title": "Deinen Haushalt einrichten",
   "help.guide.first-week.summary": "Eine geführte Einrichtung für den Admin und eine Fortschrittskarte auf der Startseite, bis sie fertig ist.",
   "help.guide.first-week.body.1":
-    "Wer den Haushalt anlegt, wird durch eine geführte Einrichtung begleitet: die Grunddaten des Haushalts, die Erwachsenen, die Kinder, Haustiere und Haushaltshilfe, eine Reihe vorgeschlagener Zuständigkeiten zum Durchsehen und ein paar geführte Fragen. Schritte, die nicht zutreffen – keine Kinder, keine Haustiere –, werden übersprungen.",
+    "Wer den Haushalt anlegt, wird durch eine geführte Einrichtung geleitet. Sie beginnt mit Sprache, Region, Währung und Zeitzone, damit alles Weitere in deinen eigenen Worten ist. Danach kommen die Grunddaten und die Wohnadresse, die Erwachsenen, die Kinder, Haustiere und Haushaltshilfen, vorgeschlagene Zuständigkeiten zum Prüfen und ein paar geführte Fragen. Was nicht zutrifft, etwa keine Kinder oder keine Haustiere, wird übersprungen.",
   "help.guide.first-week.body.2":
     "Du kannst jederzeit aufhören. Die Startseite zeigt eine Karte „Haushalt einrichten“ mit einem Fortschrittsring und dem nächsten Schritt, und „Fortfahren“ macht genau dort weiter, wo du aufgehört hast.",
   "help.guide.first-week.body.3":
     "Der Prozentwert ist Rechnung über Fakten, die es gibt – eine hinzugefügte Rechnung, eine vergebene Zuständigkeit, das eingetragene Geburtsdatum eines Kindes –, keine Zählung abgehakter Kästchen. Schritte, die auf deinen Haushalt nicht zutreffen, zählen nicht mit, sodass jeder Haushalt 100 % erreichen kann. Die vollständige Checkliste findest du immer unter „Haushalt verwalten“.",
   "help.guide.first-week.body.4":
-    "Jede Person bekommt außerdem eine eigene kurze, freiwillige Einrichtung für Sprache und Region, die sie später in den Einstellungen abschließen kann.",
+    "Dabei kannst du für jede Person ein Foto, einen Spitznamen und das Geburtsdatum hinzufügen. Mit „Bevorzugter Name“ begrüßt WonderHome sie mit dem Spitznamen. Ein Geburtsdatum trägt den Geburtstag in den Familienkalender ein, und eine spätere Änderung verschiebt ihn. Die Wohnadresse wird in Google Maps gesucht, wo dein WonderHome das eingeschaltet hat, oder eingetippt. Nur die Erwachsenen im Haushalt sehen sie. Jede Zuständigkeit hat eine Hauptperson und eine Vertretung für Abwesenheiten. Alle anderen bekommen ihre eigene kurze Spracheinrichtung, die sie später in den Einstellungen abschließen können.",
 
   "help.guide.accounts.title": "Anmelden und Passwörter",
   "help.guide.accounts.summary": "E-Mail und Passwort, ein Link zum Zurücksetzen und Google, wo es eingeschaltet ist.",
@@ -111,7 +111,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.voice.body.2":
     "Das Live-Gespräch ist freihändig: WonderHome hört zu, antwortet laut und macht weiter, bis du es beendest, und du kannst pausieren und fortsetzen. Es läuft mit der eigenen Stimme von WonderHome oder, wo dein Haushalt es gewählt hat und es verfügbar ist, mit Gemini Live. Das Eingabefeld zeigt, wer gerade antwortet, und lässt dich wechseln.",
   "help.guide.voice.body.3":
-    "Unter Einstellungen → Stimme wählst du den Spracherkennungsdienst (den deines Browsers oder einen genaueren), die Stimme und wie zugehört wird. Wo eine Option für deinen Haushalt nicht verfügbar ist, wird sie mit dem Grund angezeigt, statt angeboten zu werden und nicht zu funktionieren.",
+    "Einstellungen → Stimme wählt den Sprachdienst (den deines Browsers oder einen genaueren), die Stimme und wie zugehört wird. Was deinem Haushalt nicht zur Verfügung steht, wird mit dem Grund gezeigt, statt kaputt angeboten. Kann ein Admin den Grund ändern, etwa weil Gemini Live einen Google-KI-Schlüssel braucht, führt ein Link direkt zur Einstellung und nach dem Speichern zurück.",
   "help.guide.voice.body.4":
     "Sprachassistenten wie Alexa oder Gemini Voice lassen sich unter Einstellungen → Sprachassistenten mit einer Person verknüpfen, sobald sie für dein WonderHome verfügbar sind. Ein verknüpfter Assistent spricht als diese Person und sieht nur, was sie sehen darf, und er kann nie bezahlen oder bestellen.",
 
@@ -222,7 +222,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.family.summary": "Alle an einem Ort, Haustiere eingeschlossen, und Zeit, die für einander frei bleibt.",
   "help.guide.family.body.1":
     "Familie listet alle auf, die Angaben jeder Person nur einen Tipp entfernt. Dein eigenes Profil und Foto bearbeitest du in den Einstellungen; ein Admin kann die von allen bearbeiten. „Die Familie nennt mich“ hält fest, wie die Familie eine Person nennt – Papa, Nani –, damit WonderHome über Menschen so sprechen kann wie du.",
-  "help.guide.family.body.2": "Haustiere gehören hier zur Familie, und ihre Pflege wird neben der aller anderen verfolgt.",
+  "help.guide.family.body.2": "Haustiere gehören hier zur Familie, mit Foto, Geburtsdatum und eigener Pflege, die neben allen anderen verfolgt wird.",
   "help.guide.family.body.3":
     "Familienereignisse – Geburtstage, Ausflüge, Besuche, Termine – lassen sich als geschützte Zeit markieren, und WonderHome plant nie etwas darüber. Was eine Antwort braucht, etwa eine Überschneidung oder ein noch offenes Geschenk, bleibt in der Liste, bis es geklärt ist.",
 
@@ -274,7 +274,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.privacy.summary": "Was gespeichert wird, wer es sehen kann und wie du es mitnimmst oder löschen lässt.",
   "help.guide.privacy.body.1": "Die Daten deines Haushalts werden standardmäßig nicht zum Trainieren von Modellen verwendet.",
   "help.guide.privacy.body.2":
-    "Wer was sehen darf, wird im Hintergrund entschieden, bevor irgendetwas ein Gerät erreicht. Wenn ein Bildschirm etwas ausblendet, ist das Darstellung; es ist nie das, was etwas privat hält.",
+    "Wer was sehen darf, wird im Hintergrund entschieden, bevor irgendetwas ein Gerät erreicht. Wenn ein Bildschirm etwas ausblendet, ist das Darstellung; es ist nie das, was etwas privat hält. Wo du persönliche Angaben machst, etwa eine Adresse, ein Geburtsdatum oder ein Foto, führt eine kurze Zeile dazu, wie wir sie schützen.",
   "help.guide.privacy.body.3":
     "Unter Einstellungen → Datenschutz & Sicherheit kannst du nach Bestätigung deines Passworts eine Kopie deiner Daten herunterladen. Du kannst auch die Löschung deiner Daten verlangen: Es läuft ein 30-tägiger Countdown, den du abbrechen kannst, und was der Haushalt gemeinsam hat, wie das Playbook und was bezahlt wurde, bleibt beim Haushalt. Der Eigentümer des Haushalts übergibt diese Rolle zuerst an jemand anderen.",
   "help.guide.privacy.body.4":

@@ -205,7 +205,7 @@ export default async function FamilyPage() {
                       key={pet.id}
                       summary={
                         <>
-                          <IconTile icon={PawPrint} tone="care" size="sm" />
+                          {pet.photoUrl ? <Avatar name={pet.name} size="sm" imageUrl={pet.photoUrl} /> : <IconTile icon={PawPrint} tone="care" size="sm" />}
                           <span className="min-w-0 flex-1">
                             <span className="block text-sm font-medium">{pet.name}</span>
                             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
