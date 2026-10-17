@@ -41,6 +41,9 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "API की",
   "settingsPage.aiKey.hint": "फक्त या घरासाठी साठवली जाते. ती कधीही परत वाचता येत नाही — तुम्ही ती बदलू शकता, पाहू शकत नाही.",
   "settingsPage.aiKey.useOwn": "आमची स्वतःची की वापरा",
+  "settingsPage.aiKey.saved": "की जतन केली",
+  "settingsPage.aiKey.newKey": "नवी की",
+  "settingsPage.aiKey.newKeyPlaceholder": "बदलण्यासाठी नवी की पेस्ट करा",
   "settingsPage.aiKey.remove": "काढा आणि WonderHome च्या कीवर परत जा",
 
   "settingsPage.dataUse.nothing": "तुमच्या घराबद्दल काहीही कोणत्याही मॉडेल प्रदात्याला पाठवले जात नाही. सहाय्यक फक्त स्वतःच्या नियमांतून उत्तर देतो.",

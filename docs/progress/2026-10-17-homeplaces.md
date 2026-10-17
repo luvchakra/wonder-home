@@ -98,3 +98,11 @@ What changed:
 - **Writes without reading.** An upsert needs SELECT on the columns it sets, so key writes are now an insert, then an update by household (`ai/key-row.ts`), and never read the key.
 - **Tests.** The full RLS suite passes, 566 tests.
 - **Rollout.** The grant change is applied live only after this code is deployed, because the live code upserts and would fail under the new grants.
+
+## Follow-up: a saved key shows as saved
+
+Once a key is set, each of the three key forms shows a masked, read-only "Key saved" row: the assistant key and the Gemini voice key on AI Assistant, and the speech key on Voice. That row is `SavedKeyRow` in `ai-key-form.tsx`.
+- **What the dots are.** They stand in for the key; they are neither the key nor its length, because the key can never be read back.
+- **Replacing a key.** The field below it is labelled "New key", with the placeholder "Paste a new key to replace it".
+- **The provider picker** starts on the saved provider.
+- **Browser check at 360px.** A Google key was saved, then the page reloaded: the masked row, the "New key" label and the saved provider all showed, with no horizontal scroll.

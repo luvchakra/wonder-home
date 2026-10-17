@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -18,6 +19,12 @@ export type AiKeyFormLabels = {
   useOwn: string;
   saving: string;
   remove: string;
+  /** Beside the masked key once one is set: "Key saved". */
+  saved: string;
+  /** The field's label once a key is set: it now replaces the saved one. */
+  newKey: string;
+  /** Its placeholder then: "Paste a new key to replace it". */
+  newKeyPlaceholder: string;
 };
 
 function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
@@ -45,6 +52,7 @@ export function AiKeyForm({
   labels,
   returnTo = null,
   googleOnly = false,
+  provider = null,
 }: {
   householdId: string;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -55,6 +63,8 @@ export function AiKeyForm({
   returnTo?: string | null;
   /** The Gemini voice key: always Google's, so there is no provider to pick. */
   googleOnly?: boolean;
+  /** The saved key's provider, so the picker starts on it. */
+  provider?: string | null;
 }) {
   const [saveState, saveAction] = useActionState(save, {});
   const [removeState, removeAction] = useActionState(remove, {});
@@ -76,7 +86,7 @@ export function AiKeyForm({
             <select
               id="provider"
               name="provider"
-              defaultValue="anthropic"
+              defaultValue={provider ?? "anthropic"}
               className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
             >
               <option value="anthropic">Anthropic (Claude)</option>
@@ -85,14 +95,15 @@ export function AiKeyForm({
             </select>
           </div>
         )}
+        {configured ? <SavedKeyRow label={labels.apiKey} saved={labels.saved} /> : null}
         <PasswordField
-          label={labels.apiKey}
+          label={configured ? labels.newKey : labels.apiKey}
           name="apiKey"
           id={googleOnly ? "geminiVoiceKey" : "apiKey"}
           required
           minLength={20}
           autoComplete="off"
-          placeholder={googleOnly ? "AIza…" : "sk-…"}
+          placeholder={configured ? labels.newKeyPlaceholder : googleOnly ? "AIza…" : "sk-…"}
           hint={labels.hint}
         />
         <Submit
@@ -109,6 +120,24 @@ export function AiKeyForm({
           </Button>
         </form>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * A saved key, shown as saved. The key itself can never be read back, so the
+ * dots are a stand-in that only says one is set: not the key, nor its length.
+ */
+export function SavedKeyRow({ label, saved }: { label: string; saved: string }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium">{label}</p>
+      <div className="flex min-h-11 items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-3">
+        <span aria-hidden className="font-mono text-base tracking-widest text-[var(--wh-foreground-muted)]">••••••••••••••••</span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[var(--wh-handled)]">
+          <Check aria-hidden className="size-3.5" /> {saved}
+        </span>
+      </div>
     </div>
   );
 }

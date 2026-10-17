@@ -41,6 +41,9 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "Clé d’API",
   "settingsPage.aiKey.hint": "Conservée pour ce foyer uniquement. Elle ne peut jamais être relue : vous pouvez la remplacer, pas l’afficher.",
   "settingsPage.aiKey.useOwn": "Utiliser notre propre clé",
+  "settingsPage.aiKey.saved": "Clé enregistrée",
+  "settingsPage.aiKey.newKey": "Nouvelle clé",
+  "settingsPage.aiKey.newKeyPlaceholder": "Collez une nouvelle clé pour la remplacer",
   "settingsPage.aiKey.remove": "La retirer et revenir à la clé de WonderHome",
 
   "settingsPage.dataUse.nothing": "Rien sur votre foyer n’est envoyé à un fournisseur de modèles. L’assistant répond uniquement à partir de ses propres règles.",

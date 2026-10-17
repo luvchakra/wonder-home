@@ -85,7 +85,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
             {manages ? (
               <>
                 <p className="text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.ownKeyIntro")}</p>
-                <AiKeyForm householdId={householdId} save={saveAiKey} remove={removeAiKey} configured={credential.configured} labels={aiKeyFormLabels(t)} returnTo={returnTo} />
+                <AiKeyForm householdId={householdId} save={saveAiKey} remove={removeAiKey} configured={credential.configured} provider={credential.provider} labels={aiKeyFormLabels(t)} returnTo={returnTo} />
                 {key.source === "none" ? (
                   <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs text-[var(--wh-foreground-muted)]">
                     {noKeyBefore}

@@ -41,6 +41,9 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "Clave de API",
   "settingsPage.aiKey.hint": "Se guarda solo para este hogar. Nunca se puede volver a leer: puedes reemplazarla, pero no verla.",
   "settingsPage.aiKey.useOwn": "Usar nuestra propia clave",
+  "settingsPage.aiKey.saved": "Clave guardada",
+  "settingsPage.aiKey.newKey": "Clave nueva",
+  "settingsPage.aiKey.newKeyPlaceholder": "Pega una clave nueva para reemplazarla",
   "settingsPage.aiKey.remove": "Quitarla y volver a la clave de WonderHome",
 
   "settingsPage.dataUse.nothing": "No se envía nada sobre tu hogar a ningún proveedor de modelos. El asistente responde solo con sus propias reglas.",

@@ -39,6 +39,9 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "API 密钥",
   "settingsPage.aiKey.hint": "仅为这个家庭保存。它永远无法再被读出——你可以更换它，但无法查看。",
   "settingsPage.aiKey.useOwn": "使用我们自己的密钥",
+  "settingsPage.aiKey.saved": "密钥已保存",
+  "settingsPage.aiKey.newKey": "新密钥",
+  "settingsPage.aiKey.newKeyPlaceholder": "粘贴新密钥以替换",
   "settingsPage.aiKey.remove": "移除并改回 WonderHome 的密钥",
 
   "settingsPage.dataUse.nothing": "不会向任何模型服务商发送关于你家的任何内容。助手只依据自己的规则作答。",

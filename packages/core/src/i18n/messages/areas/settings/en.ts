@@ -41,6 +41,9 @@ export const settingsEn = {
   "settingsPage.aiKey.apiKey": "API key",
   "settingsPage.aiKey.hint": "Stored for this household only. It can never be read back out — you can replace it, but not view it.",
   "settingsPage.aiKey.useOwn": "Use our own key",
+  "settingsPage.aiKey.saved": "Key saved",
+  "settingsPage.aiKey.newKey": "New key",
+  "settingsPage.aiKey.newKeyPlaceholder": "Paste a new key to replace it",
   "settingsPage.aiKey.remove": "Remove and go back to WonderHome's key",
 
   // What the assistant may share (AI Assistant and Privacy).

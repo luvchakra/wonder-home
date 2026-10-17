@@ -41,6 +41,9 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "مفتاح API",
   "settingsPage.aiKey.hint": "يُحفظ لهذه الأسرة فقط. لا يمكن قراءته مرة أخرى أبدًا — يمكنك استبداله، لكن لا يمكنك عرضه.",
   "settingsPage.aiKey.useOwn": "استخدام مفتاحنا الخاص",
+  "settingsPage.aiKey.saved": "تم حفظ المفتاح",
+  "settingsPage.aiKey.newKey": "مفتاح جديد",
+  "settingsPage.aiKey.newKeyPlaceholder": "الصق مفتاحًا جديدًا لاستبداله",
   "settingsPage.aiKey.remove": "إزالته والعودة إلى مفتاح WonderHome",
 
   "settingsPage.dataUse.nothing": "لا يُرسل أي شيء عن منزلك إلى مزوّد نماذج. يجيب المساعد وفق قواعده الخاصة فقط.",
