@@ -20,6 +20,7 @@ import { mapsLink } from "@wonderhome/core/places/provider";
 import { moveAction, saveAdultsAction, saveBasicsAction, saveChildrenAction, savePetsAndHelpAction } from "../(auth)/onboarding-actions";
 import { PhotoPickField, type PhotoPickLabels } from "../_components/photo-pick-field";
 import { PlaceSearchField } from "../_components/place-search-field";
+import { HELPER_ROLES, splitHelperRoles } from "../_lib/helper-roles";
 import { placeSearchLabels } from "../_lib/place-labels";
 import { SubmitButton } from "../_components/submit-pill";
 import { genderFieldLabels } from "../_lib/member-form-labels";
@@ -34,7 +35,6 @@ import { OnboardingForm } from "./onboarding-form";
 const ADULT_RELATIONSHIPS = ["Dad", "Mom", "Partner", "Parent", "Grandparent", "Aunt", "Uncle"] as const;
 const CHILD_GENDERS = ["Boy", "Girl"] as const;
 const PET_KINDS = ["Dog", "Cat", "Bird", "Fish", "Rabbit"] as const;
-const HELPER_ROLES = ["Maid", "Cook", "Driver", "Nanny", "Gardener", "Caregiver"] as const;
 /** Monday first, as a week is read; values are day_of_week (0 = Sunday). */
 const WEEKDAY_VALUES = ["1", "2", "3", "4", "5", "6", "0"] as const;
 /** Half-hour steps across a working day: the value saved, and the clock reading for it. */
@@ -616,9 +616,7 @@ export function PetsAndHelpScreen({ snapshot, backTo, words }: { snapshot: Onboa
  */
 function HelperRolesField({ name, occupation, roleWords, words }: { name: string; occupation: string | null; roleWords: Record<string, string>; words: SetupWords }) {
   const { t } = words;
-  const said = (occupation ?? "").split(",").map((role) => role.trim()).filter(Boolean);
-  const known = said.filter((role) => (HELPER_ROLES as readonly string[]).includes(role));
-  const other = said.filter((role) => !(HELPER_ROLES as readonly string[]).includes(role)).join(", ");
+  const { known, other } = splitHelperRoles(occupation);
   return (
     <div className="space-y-2">
       <ChoiceChips legend={t("setupWizard.helpers.role")} name={name} type="checkbox" options={HELPER_ROLES.map((role) => ({ value: role, label: roleWords[role] ?? role }))} defaultValue={known} />

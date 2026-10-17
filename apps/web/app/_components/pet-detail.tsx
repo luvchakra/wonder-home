@@ -5,6 +5,7 @@ import { requestT } from "@wonderhome/core/i18n/request";
 import { formatDate } from "../_lib/session";
 import { PetProfileForm } from "./pet-profile-form";
 import { RetirePetControl } from "./retire-pet-control";
+import { MemberAvatarControl, type AvatarLabels } from "./member-avatar-control";
 
 function Fact({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
@@ -22,11 +23,14 @@ export function PetDetail({
   timezone,
   editable,
   householdId,
+  avatarLabels,
 }: {
   pet: Pet;
   timezone: string;
   editable: boolean;
   householdId: string;
+  /** The photo control's words in the viewer's language; English otherwise. */
+  avatarLabels?: AvatarLabels;
 }) {
   const t = requestT();
   const dob = parseDateOfBirth(pet.dateOfBirth ?? null);
@@ -36,6 +40,7 @@ export function PetDetail({
 
   return (
     <div className="space-y-3">
+      {editable ? <MemberAvatarControl kind="pet" householdId={householdId} memberId={pet.id} displayName={pet.name} avatarUrl={pet.photoUrl ?? null} labels={avatarLabels} /> : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         <Fact label={t("family.fact.species")} value={pet.species} />
         <Fact label={t("family.fact.age")} value={age} />

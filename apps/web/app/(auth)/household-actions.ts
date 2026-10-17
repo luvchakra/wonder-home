@@ -14,6 +14,7 @@ import {
 import { GENDER_MAX_LENGTH, MEMBER_NOTES_MAX_LENGTH } from "@wonderhome/core/identity/member-details";
 import { log } from "@wonderhome/core/observability/logger";
 
+import { helperRolesFrom } from "../_lib/helper-roles";
 import type { ActionState } from "./actions";
 
 /** Membership actions for story 01-002. */
@@ -345,7 +346,8 @@ export async function updateMemberProfileAction(
     dateOfBirth: formData.get("dateOfBirth") ?? "",
     nickname: formData.get("nickname") ?? "",
     relationship: formData.get("relationship") ?? "",
-    occupation: formData.get("occupation") ?? "",
+    // A househelper's occupation is everything ticked (rule 20), kept as "Maid, Cook".
+    occupation: formData.get("helperRolesField") === "1" ? (helperRolesFrom(formData, "helperRoles") ?? "") : (formData.get("occupation") ?? ""),
     schoolOrWorkLocation: formData.get("schoolOrWorkLocation") ?? "",
     specialOccasionLabel: formData.get("specialOccasionLabel") ?? "",
     specialOccasionDate: formData.get("specialOccasionDate") ?? "",

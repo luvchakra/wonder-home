@@ -10,6 +10,7 @@ import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { GENDER_MAX_LENGTH } from "@wonderhome/core/identity/member-details";
 
+import { deletePhoto, petPhotoPath, postedPhoto, storePhoto } from "../_lib/photos";
 import type { ActionState } from "./actions";
 
 /**
@@ -231,6 +232,50 @@ export async function reactivatePetAction(_previous: ActionState, formData: Form
     revalidatePath("/family");
     revalidatePath("/household/home");
     return { notice: "Back on the roster." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/**
+ * A pet's photo, added or changed from Family — the same private `avatars`
+ * bucket and path onboarding uses, checked by its bytes before it is kept.
+ */
+export async function updatePetPhotoAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = petIdSchema.safeParse({ householdId: formData.get("householdId"), petId: formData.get("petId") });
+  if (!parsed.success) return { error: "Please try again." };
+
+  try {
+    const photo = await postedPhoto(formData, "photo");
+    if (!photo) return { error: "Choose a photo first." };
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const path = petPhotoPath(parsed.data.householdId, parsed.data.petId);
+    await storePhoto(supabase, path, photo);
+    await updatePet(supabase, parsed.data.householdId, parsed.data.petId, { photoPath: path });
+
+    revalidatePath("/family");
+    revalidatePath("/household/home");
+    return { notice: "Photo updated." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/** The other half of adding a pet's photo (rule 12): taking it away again. */
+export async function removePetPhotoAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = petIdSchema.safeParse({ householdId: formData.get("householdId"), petId: formData.get("petId") });
+  if (!parsed.success) return { error: "Please try again." };
+
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await deletePhoto(supabase, petPhotoPath(parsed.data.householdId, parsed.data.petId));
+    await updatePet(supabase, parsed.data.householdId, parsed.data.petId, { photoPath: null });
+
+    revalidatePath("/family");
+    revalidatePath("/household/home");
+    return { notice: "Photo removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "home").body.error.message };
   }

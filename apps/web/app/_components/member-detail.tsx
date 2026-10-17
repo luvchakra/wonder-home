@@ -8,6 +8,7 @@ import { UserRoundPen } from "lucide-react";
 
 import { formatDate } from "../_lib/session";
 import { describeRoles } from "../_lib/member-role";
+import { HELPER_ROLES } from "../_lib/helper-roles";
 import { MemberAvatarControl } from "./member-avatar-control";
 import { MemberProfileForm } from "./member-profile-form";
 import { RemoveMemberControl } from "./remove-member-control";
@@ -77,7 +78,7 @@ export function MemberDetail({
         <Fact label={t("family.fact.age")} value={age} />
         <Fact label={t("family.fact.dateOfBirth")} value={born} />
         <Fact label={t("family.fact.gender")} value={member.gender} />
-        <Fact label={t("family.fact.occupation")} value={member.occupation} />
+        <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
         <Fact label={t("family.fact.schoolOrWork")} value={member.schoolOrWorkLocation} />
         <Fact label={t("family.fact.specialOccasion")} value={occasion} />
         <Fact label={t("family.fact.siblings")} value={siblings} />
@@ -112,6 +113,16 @@ export function MemberDetail({
               gender: member.gender,
               notes: member.notes,
             }}
+            helperRoles={
+              member.memberType === "helper"
+                ? {
+                    legend: t("setupWizard.helpers.role"),
+                    other: t("setupWizard.helpers.roleOther"),
+                    placeholder: t("setupWizard.helpers.rolePlaceholder"),
+                    roles: Object.fromEntries(HELPER_ROLES.map((role) => [role, t(`setupWizard.helperRole.${role}`)])),
+                  }
+                : undefined
+            }
           />
           {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (
             <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} />

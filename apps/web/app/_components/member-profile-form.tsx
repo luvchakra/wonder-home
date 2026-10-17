@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
+import { ChoiceChips } from "@wonderhome/core/ui/choice-chips";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -11,7 +12,11 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import { updateMemberProfileAction } from "../(auth)/household-actions";
+import { HELPER_ROLES, splitHelperRoles } from "../_lib/helper-roles";
 import { MemberDetailFields } from "./member-detail-fields";
+
+/** A househelper's "what they do", ticked rather than typed, in the viewer's language. */
+export type HelperRoleWords = { legend: string; other: string; placeholder: string; roles: Record<string, string> };
 
 export type MemberProfileInitial = {
   displayName: string;
@@ -41,10 +46,13 @@ export function MemberProfileForm({
   householdId,
   memberId,
   initial,
+  helperRoles,
 }: {
   householdId: string;
   memberId: string;
   initial: MemberProfileInitial;
+  /** Set for a househelper: everything they do, as checkboxes, in place of a free-text occupation. */
+  helperRoles?: HelperRoleWords;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateMemberProfileAction, {});
@@ -69,7 +77,22 @@ export function MemberProfileForm({
           </label>
           <Field label="Family calls me" name="relationship" defaultValue={initial.relationship ?? ""} placeholder="Father, Mother, Daughter, Grandmother…" autoComplete="off" />
           <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={initial.dateOfBirth ?? ""} />
-          <Field label="Occupation" name="occupation" defaultValue={initial.occupation ?? ""} placeholder="What they do for work or study" autoComplete="off" />
+          {helperRoles ? (
+            <div className="space-y-2">
+              {/* Tells the action the occupation is these ticks, so un-ticking them all clears it. */}
+              <input type="hidden" name="helperRolesField" value="1" />
+              <ChoiceChips
+                legend={helperRoles.legend}
+                name="helperRoles"
+                type="checkbox"
+                options={HELPER_ROLES.map((role) => ({ value: role, label: helperRoles.roles[role] ?? role }))}
+                defaultValue={splitHelperRoles(initial.occupation).known}
+              />
+              <Field label={helperRoles.other} name="helperRoles_other" defaultValue={splitHelperRoles(initial.occupation).other} placeholder={helperRoles.placeholder} autoComplete="off" maxLength={40} />
+            </div>
+          ) : (
+            <Field label="Occupation" name="occupation" defaultValue={initial.occupation ?? ""} placeholder="What they do for work or study" autoComplete="off" />
+          )}
           <Field label="School or work location" name="schoolOrWorkLocation" defaultValue={initial.schoolOrWorkLocation ?? ""} placeholder="Where they spend the day" autoComplete="off" />
 
           <div className="grid grid-cols-2 gap-3">

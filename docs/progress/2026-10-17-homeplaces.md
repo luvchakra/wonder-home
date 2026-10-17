@@ -74,3 +74,8 @@ What changed:
 **The HomeTalk button pulses during a conversation.** While the composer is listening or holding a live conversation, the raised HomeTalk button in the phone tab bar pulses with a steady ring around it. Under reduced motion only the ring stays. Screen readers hear "Conversation in progress" (`components/shell/talk-activity.tsx`).
 - Checked at 360px by forcing the state: four frames, plus reduced motion.
 - Help was updated in all eight languages.
+
+## Also in this change: a pet's photo from Family, and a helper's tasks as checkboxes
+
+- **A pet's photo can be added, changed and removed from Family.** It is the same control a person's photo uses (`MemberAvatarControl` with `kind="pet"`). It goes through `updatePetPhotoAction` / `removePetPhotoAction` (`home-actions.ts`), into the same private bucket and path that setup uses, checked by its bytes. Browser check: a photo uploaded at 360px, and Change / Remove then offered.
+- **A househelper's profile editor ticks everything they do.** It is the same list setup uses, now shared (`_lib/helper-roles.ts`), plus one task in the household's own words. It is kept as "Maid, Cook" on the member. Family labels it "What they do". Browser check: Cook, Driver and "Plant care" added to a helper who was a Maid, saved as "Maid, Cook, Driver, Plant care".
