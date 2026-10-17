@@ -3,7 +3,7 @@ import { z } from "zod";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, createReplyTranslator, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, routeToProvider, unpseudonymise, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, restoreParameterNames, routeToProvider, unpseudonymise, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { FAIR_USE_DISCLOSURE } from "@wonderhome/core/billing/policies";
@@ -43,6 +43,7 @@ import {
 import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
 import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
+import { composeRoster } from "@wonderhome/core/conversation/roster";
 import { contentClassFor } from "@wonderhome/core/context/privacy";
 import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { preferencesOf } from "@wonderhome/core/i18n/preferences";
@@ -714,6 +715,17 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     places = found.places;
     carry(speaking, ["location"]);
     brain = { source: "deterministic", factsSent: 0 };
+  } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && result.intent.parameters.scope === "people") {
+    // Who is in the household: the whole member list, by rules (roster.ts).
+    const { data: petRows } = await supabase.from("pets").select("name, species").eq("household_id", householdId).eq("active", true);
+    composedAt = Date.now();
+    text = composeRoster(people, {
+      viewerMemberId: membership.memberId,
+      householdName: membership.household.name,
+      pets: ((petRows as { name: string; species: string | null }[] | null) ?? []).map((pet) => ({ name: pet.name, species: pet.species })),
+    });
+    carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
+    brain = { source: "deterministic", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain === "string") {
     // "Why?", "where did this come from?", "what did I just send?" — from
     // the recorded evidence, assembled here; never a model (§10).
@@ -1308,7 +1320,12 @@ async function decideProviderRouting(
   const runtime: RuntimeContext | undefined = moment
     ? { role: moment.role, localDateTime: moment.localDateTime, pending: sentText("pending"), recent: sentText("recent")?.split(", ") ?? [], language: moment.language ?? null }
     : undefined;
-  const toHousehold = (intent: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
+  const toHousehold = (understood: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
+    // Every word the model wrote back ("Child A likes pink pasta") names a
+    // person by placeholder. Placeholders are only this turn's: a member
+    // added later shifts them, so one stored as-is would come to mean
+    // somebody else. Real names go back in before anything is kept.
+    const intent: HouseholdIntent = { ...understood, parameters: restoreParameterNames(understood.parameters, pseudonyms, people) };
     if (intent.target.kind === "member" && intent.target.reference) {
       const mapped = unpseudonymise(intent.target.reference, pseudonyms, people);
       return {

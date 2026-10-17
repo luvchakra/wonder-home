@@ -35,3 +35,18 @@ How a question is answered:
 - **Leftover QA household.** The QA account was deleted, but deleting its household (`c6f4b70a-54c1-4ed9-b9a4-32bbd44ebe7c`, "QA Places Home") was cancelled from the SQL tool. Remove it with `delete from public.households where id = 'c6f4b70a-54c1-4ed9-b9a4-32bbd44ebe7c';`, which cascades to its members, enrolment, address and places.
 - **School hours are assumed.** School end times are not recorded yet, so "after school" uses 3:30 pm and says so.
 - **No place-book screen yet.** There is no screen for the place book; saving and undoing happen on the cards in HomeTalk.
+
+## Also in this change: a second child mixed up with the first
+
+**What was reported.** After a second child (Manan) was added, HomeTalk gave him the first child's food preference. "Who are the family members?" also named three people and left him out.
+
+**Root causes, found in the household's own data:**
+1. **Placeholders were stored.** A model reads names as placeholders ("Child A", "Adult B"). Its reading came back as "Child A likes pink pasta" and was stored as is. Placeholders are given in member-id order, so adding Manan made him "Child A", and Asmi's stored preference read back as his.
+2. **Same key, different person.** An earlier memory was matched by its key alone, so the same key about two people could replace one another.
+3. **The roster depended on the model.** A model only sees the facts sent to it. A child with nothing else on record was missing from its answer.
+
+**Fixes:**
+- **Real names before storage.** The model's reading has real names restored in every string before anything is kept (`restoreParameterNames` in `ai/privacy.ts`, applied in HomeTalk's `toHousehold`).
+- **Memories stay with their person.** A memory resolved to a member is kept as that member's (`attributeMemory`). A belief is matched by key and by person (`remember`).
+- **The roster comes from rules.** "Who are the family members?" is read by the rules and answered from the whole member list, pets included (`conversation/roster.ts`, eval case HT-22).
+- **Data repair (applied).** The three memories in the household that had a placeholder were corrected to Asmi and Kunal and attached to them. Old proposal records keep their wording as the record of what was proposed.

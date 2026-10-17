@@ -452,6 +452,17 @@ export function restoreNames(
   return out;
 }
 
+/**
+ * `restoreNames` over a model's structured reading: every string, and every
+ * string in a list, with its placeholders turned back into names. Numbers,
+ * booleans and nulls pass through untouched.
+ */
+export function restoreParameterNames<T extends Record<string, unknown>>(parameters: T, pseudonyms: Record<string, string>, people: readonly Person[]): T {
+  const restore = (value: unknown): unknown =>
+    typeof value === "string" ? restoreNames(value, pseudonyms, people) : Array.isArray(value) ? value.map(restore) : value;
+  return Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, restore(value)])) as T;
+}
+
 /** Replaces every household name in the text, longest first so "Ravi Nair" wins over "Ravi". */
 function substitute(
   text: string,
