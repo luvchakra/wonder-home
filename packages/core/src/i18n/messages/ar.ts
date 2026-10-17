@@ -8,6 +8,7 @@ import { settingsAr } from "./areas/settings/ar";
 import { householdAr } from "./areas/household/ar";
 import { entryAr } from "./areas/entry/ar";
 import { installAr } from "./areas/install/ar";
+import { eventsAr } from "./areas/events/ar";
 
 export const ar: Catalog = {
   "common.next": "التالي",
@@ -757,4 +758,5 @@ export const ar: Catalog = {
   ...householdAr,
   ...entryAr,
   ...installAr,
+  ...eventsAr,
 };

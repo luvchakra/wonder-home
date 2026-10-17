@@ -46,6 +46,9 @@ const AUTHENTICATED_PREFIXES = [
  *   agreeing to them.
  * - `/oauth/*` and the provider webhooks under `/api` — protocol endpoints
  *   that authenticate their own callers.
+ * - `/e/<token>` — a family event's invite link, for people outside the
+ *   household. The token is the only credential: it shows that one event's
+ *   title, time, place and the household's name, and takes a reply.
  *
  * The user guide (`/help`) is not on this list: it is for members.
  */

@@ -8,6 +8,7 @@ import { settingsDe } from "./areas/settings/de";
 import { householdDe } from "./areas/household/de";
 import { entryDe } from "./areas/entry/de";
 import { installDe } from "./areas/install/de";
+import { eventsDe } from "./areas/events/de";
 
 export const de: Catalog = {
   "common.next": "Weiter",
@@ -733,4 +734,5 @@ export const de: Catalog = {
   ...householdDe,
   ...entryDe,
   ...installDe,
+  ...eventsDe,
 };

@@ -366,6 +366,7 @@ export default async function FamilyPage() {
                         day={formatDate(timezone, event.startsAt).split(" ")[0] ?? ""}
                         month={formatDate(timezone, event.startsAt).split(" ")[1] ?? ""}
                         when={`${formatDate(timezone, event.startsAt, "long")} · ${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}`}
+                        href={`/family/events/${event.id}`}
                         action={event.actionState === "needs_gift" ? <SettleEventPill householdId={householdId} eventId={event.id} label={needLabels.giftSorted} /> : undefined}
                       />
                     ))}

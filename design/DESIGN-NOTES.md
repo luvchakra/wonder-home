@@ -567,3 +567,5 @@ the workspace links `@wonderhome/core` there. Without the explicit
 used **only** by a shared component is never generated.
 
 **A conversation in progress shows on the one door (`TalkButtonDisc`, `components/shell/talk-activity.tsx`).** While the composer is listening or holding a live conversation, the raised HomeTalk button in the phone tab bar pulses, with a steady primary ring around it and a soft wave behind it. A screen reader hears "Conversation in progress". Under `prefers-reduced-motion` the ring stays and nothing moves, so the state is still shown without motion (rules 3 and 10). The composer is the only writer of that state, and nothing else may set it.
+
+**An event row opens its plan (`CalendarItem`'s `href`).** A calendar row with an `href` becomes a link with a chevron, and its own action, such as the gift pill, stays a separate button. It opens `/family/events/[id]`, the event's full detail (rule 21). A plan needs more than an in-place panel can hold: who is asked, the invite link, guests' replies. So this is a page, not an `ExpandableRow`. Home's expanded event row links to the same page, so there is one way in (rule 14).
