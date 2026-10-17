@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { DayHours } from "./day-hours";
 import { listPets } from "../home/repository";
 import { listMembers, type HouseholdMember } from "../identity/households";
 import { log } from "../observability/logger";
@@ -147,7 +148,7 @@ export type OnboardingSnapshot = {
   pets: { id: string; name: string; species: string; dateOfBirth: string | null; photoUrl: string | null }[];
   /** The home address, for the basics step. */
   address: HouseholdAddress | null;
-  schools: Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null }>;
+  schools: Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null; hours: DayHours | null }>;
 };
 
 /** Everything setup needs about a household, read from where it really lives. */
@@ -177,9 +178,9 @@ export async function loadOnboardingSnapshot(
     list.push({ dayOfWeek: Number(row.day_of_week), startTime: String(row.start_time).slice(0, 5), endTime: String(row.end_time).slice(0, 5) });
     availability.set(id, list);
   }
-  const schools = new Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null }>();
+  const schools = new Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null; hours: DayHours | null }>();
   for (const enrolment of enrolments) {
-    schools.set(enrolment.childMemberId, { schoolName: enrolment.schoolName, grade: enrolment.grade, placeId: enrolment.placeId ?? null, schoolAddress: enrolment.schoolAddress ?? null });
+    schools.set(enrolment.childMemberId, { schoolName: enrolment.schoolName, grade: enrolment.grade, placeId: enrolment.placeId ?? null, schoolAddress: enrolment.schoolAddress ?? null, hours: enrolment.hours ?? null });
   }
 
   const profile: HouseholdProfile = {

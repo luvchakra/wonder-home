@@ -22,6 +22,12 @@ describe("reading a place question", () => {
     expect(readPlaceRequest("recommend a family restaurant for lunch")!.query).toBe("family friendly restaurant for lunch");
   });
 
+  it("after work, in the ways people say it", () => {
+    expect(readPlaceRequest("suggest somewhere for dinner after work")!.when).toEqual({ kind: "after_work", forMinutes: 120 });
+    expect(readPlaceRequest("any good cafes near home when I finish work?")!.when).toEqual({ kind: "after_work", forMinutes: 120 });
+    expect(readPlaceRequest("places to hang out after office")!.when.kind).toBe("after_work");
+  });
+
   it("is not every sentence that mentions food", () => {
     expect(isPlaceQuestion("The food was good")).toBe(false);
     expect(isPlaceQuestion("add pizza to the list")).toBe(false);

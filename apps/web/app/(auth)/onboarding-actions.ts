@@ -41,7 +41,8 @@ import {
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { log } from "@wonderhome/core/observability/logger";
 import { PlacesUnavailableError } from "@wonderhome/core/places/provider";
-import { saveEnrolment } from "@wonderhome/core/school/enrolments";
+import { HOURS_PROBLEM, readHoursInput } from "@wonderhome/core/household/day-hours";
+import { saveEnrolment, setSchoolHours } from "@wonderhome/core/school/enrolments";
 
 import { helperRolesFrom } from "../_lib/helper-roles";
 import { deletePhoto, memberPhotoPath, petPhotoPath, postedPhoto, storePhoto, wantsPhotoRemoved } from "../_lib/photos";
@@ -287,7 +288,17 @@ export async function saveAdultsAction(_previous: OnboardingActionState, formDat
       }
       // A birthday event follows the date of birth on its own (wh.sync_member_occasions).
       const dateOfBirth = pastDate(formData, `dob_${index}`);
-      await updateMemberProfile(supabase, membership, { memberId: adultId, displayName: name, relationship, workArrangement, ...called, ...(dateOfBirth ? { dateOfBirth } : {}) });
+      const hours = readHoursInput(formData.get(`work_starts_${index}`), formData.get(`work_ends_${index}`), { overnight: true });
+      if (!hours.ok) return { error: `${name}: ${HOURS_PROBLEM[hours.problem]}` };
+      await updateMemberProfile(supabase, membership, {
+        memberId: adultId,
+        displayName: name,
+        relationship,
+        workArrangement,
+        ...called,
+        ...(dateOfBirth ? { dateOfBirth } : {}),
+        ...(formData.has(`work_starts_${index}`) ? { workHours: hours.hours } : {}),
+      });
       await saveMemberPhoto(context, formData, `photo_${index}`, adultId);
     }
   } catch (error) {
@@ -324,6 +335,8 @@ export async function saveChildrenAction(_previous: OnboardingActionState, formD
         children.push({ id: childId, name });
         await recordOnboardingEvent(supabase, { householdId, event: "member_added", step: "children", detail: { kind: "child" } });
       }
+      const schoolHours = readHoursInput(formData.get(`school_starts_${index}`), formData.get(`school_ends_${index}`), { overnight: false });
+      if (!schoolHours.ok) return { error: `${name}: ${HOURS_PROBLEM[schoolHours.problem]}` };
       const dateOfBirth = pastDate(formData, `dob_${index}`);
       const ageText = text(formData, `age_${index}`, 3);
       const age = ageText === "" ? null : Number(ageText);
@@ -337,7 +350,9 @@ export async function saveChildrenAction(_previous: OnboardingActionState, formD
         ...(!dateOfBirth && age !== null && Number.isInteger(age) && age >= 0 && age <= 17 ? { ageYears: age } : {}),
       });
       await saveMemberPhoto(context, formData, `photo_${index}`, childId);
-      await saveSchool(context, formData, childId, `school_${index}`, `school_place_${index}`, `school_session_${index}`, snapshot.schools.get(childId) ?? null);
+      const hasSchool = await saveSchool(context, formData, childId, `school_${index}`, `school_place_${index}`, `school_session_${index}`, snapshot.schools.get(childId) ?? null);
+      // The school day rides on the school: with no school there is nothing to hang it on.
+      if (hasSchool && formData.has(`school_starts_${index}`)) await setSchoolHours(supabase, { householdId, childMemberId: childId, hours: schoolHours.hours });
     }
   } catch (error) {
     if (error instanceof PlacesUnavailableError) return { error: "That school could not be read from Google Maps just now. Try again, or type its name in." };

@@ -445,7 +445,7 @@ describe("14. HomeTalk referring to the previous proposal", () => {
 
 describe("what setup records reaches HomeBrain (story 02-009)", () => {
   const setupMembers: HouseholdMember[] = [
-    member("kunal", "Kunal", "adult", { roles: ["head"], workArrangement: "office" }),
+    member("kunal", "Kunal", "adult", { roles: ["head"], workArrangement: "office", workHours: { starts: "09:30", ends: "18:00" } }),
     member("priya", "Priya", "adult", { workArrangement: "home" }),
     member("aarav", "Aarav", "child", { ageYears: 10 }),
     member("anya", "Anya", "child", { ageYears: 6 }),
@@ -462,6 +462,17 @@ describe("what setup records reaches HomeBrain (story 02-009)", () => {
   it("says which school a child goes to, once the school is added", () => {
     expect(about("anya").summary).toContain("goes to Greenwood High");
     expect(about("anya").attributes).toMatchObject({ school: "Greenwood High" });
+  });
+
+  it("says an adult's working day and a school's day, as recorded", () => {
+    expect(about("kunal").summary).toContain("Kunal's working day is usually 09:30 to 18:00");
+    expect(about("kunal").attributes).toMatchObject({ workHours: "09:30–18:00" });
+    expect(about("priya").summary).not.toContain("working day");
+    const timed = buildContextItems(
+      { members: setupMembers, pets: [], enrolments: [{ childMemberId: "anya", schoolName: "Greenwood High", grade: null, hours: { starts: "08:00", ends: "15:10" } }] },
+      { householdId: HOUSEHOLD, householdName: "QA Home", timezone: TZ, now: NOW, viewerMemberId: "kunal" },
+    ).find((item) => item.entityType === "member" && item.entityId === "anya")!;
+    expect(timed.summary).toContain("goes to Greenwood High (school day 08:00 to 15:10)");
   });
 
   it("says a stated age and how an adult works, and nothing that was not said", () => {

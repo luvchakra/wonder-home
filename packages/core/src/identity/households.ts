@@ -4,6 +4,7 @@ import { cache } from "react";
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { parseHouseholdSettings, parseLocaleSetup, parseMemberChoices } from "../i18n/preferences";
+import { hoursFromRow, type DayHours } from "../household/day-hours";
 import { completedYears, parseDateOfBirth } from "./age";
 import { dispatchWebhookEvent } from "../webhooks/dispatch";
 import type {
@@ -232,6 +233,8 @@ export type HouseholdMember = {
   avatarUrl: string | null;
   /** How an adult works, as the family said it during setup — shapes suggestions, never a permission. */
   workArrangement?: WorkArrangement | null;
+  /** An adult's usual working day ("09:30"–"18:00"), on the household's clock; null when not said. */
+  workHours?: DayHours | null;
   /** Current age in whole years: from the date of birth when there is one, else from an age the family stated. */
   ageYears?: number | null;
   /** Whether they sign in themselves — false for a child, a helper, or an adult added during setup who has not accepted an invitation yet. */
@@ -284,12 +287,14 @@ export type MemberProfileUpdate = {
   /** The storage object path just uploaded to the `avatars` bucket, or null to clear the photo. */
   avatarPath?: string | null;
   workArrangement?: WorkArrangement | null;
+  /** An adult's usual working day, or null to clear it. Only an adult keeps one (the database refuses others). */
+  workHours?: DayHours | null;
   /** An age stated instead of a date of birth; recorded as true today. */
   ageYears?: number | null;
 };
 
 const MEMBER_SELECT =
-  "id, profile_id, display_name, member_type, status, date_of_birth, nickname, nickname_preferred, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, work_arrangement, age_years, age_recorded_on, household_roles(role)";
+  "id, profile_id, display_name, member_type, status, date_of_birth, nickname, nickname_preferred, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, work_arrangement, work_starts_at, work_ends_at, age_years, age_recorded_on, household_roles(role)";
 
 type MemberRow = {
   id: string;
@@ -309,6 +314,8 @@ type MemberRow = {
   notes: string | null;
   avatar_path: string | null;
   work_arrangement: string | null;
+  work_starts_at?: string | null;
+  work_ends_at?: string | null;
   age_years: number | null;
   age_recorded_on: string | null;
   household_roles: { role: HouseholdRole }[] | null;
@@ -334,6 +341,7 @@ function toHouseholdMember(row: MemberRow, ownerMemberId: string | null, avatarU
     notes: row.notes,
     avatarUrl,
     workArrangement: (WORK_ARRANGEMENTS as readonly string[]).includes(row.work_arrangement ?? "") ? (row.work_arrangement as WorkArrangement) : null,
+    workHours: hoursFromRow(row.work_starts_at, row.work_ends_at),
     ageYears: currentAge({ dateOfBirth: row.date_of_birth, ageYears: row.age_years, ageRecordedOn: row.age_recorded_on }),
     hasAccount: Boolean(row.profile_id),
   };
@@ -423,6 +431,10 @@ export async function updateMemberProfile(
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.avatarPath !== undefined) patch.avatar_path = input.avatarPath;
   if (input.workArrangement !== undefined) patch.work_arrangement = input.workArrangement;
+  if (input.workHours !== undefined) {
+    patch.work_starts_at = input.workHours?.starts ?? null;
+    patch.work_ends_at = input.workHours?.ends ?? null;
+  }
   if (input.ageYears !== undefined) {
     patch.age_years = input.ageYears;
     patch.age_recorded_on = input.ageYears === null ? null : new Date().toISOString().slice(0, 10);

@@ -129,6 +129,8 @@ const SHIPPED_TABLES = [
 const SHIPPED_COLUMNS = [
   { table: "agent_runs", column: "contracts" },
   { table: "household_members", column: "nickname" },
+  { table: "household_members", column: "work_ends_at" },
+  { table: "school_enrolments", column: "ends_at" },
   { table: "household_members", column: "avatar_path" },
   { table: "household_members", column: "gender" },
   { table: "pets", column: "gender" },

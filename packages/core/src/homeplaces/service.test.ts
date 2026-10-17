@@ -81,6 +81,24 @@ describe("suggestPlaces", () => {
     expect(text).toContain("I've taken school as finishing around 3:30 pm.");
   });
 
+  it("starts after school when that school's day actually ends, with nothing assumed", async () => {
+    const request = readPlaceRequest("Where can we hang out near Anya's school after school ends?")!;
+    const timed = { ...context, schools: [{ ...context.schools[0]!, endsMinute: 15 * 60 + 10 }, context.schools[1]!] };
+    const outcome = await suggestPlaces(unreadable, provider([place("p1")]), request, timed);
+    expect(outcome).toMatchObject({ kind: "found", window: "after school, from 3:10 pm", assumption: null });
+    expect(placesReply(request, outcome)).not.toContain("I've taken");
+  });
+
+  it("starts after work at the speaker's own office hours, or says what it assumed", async () => {
+    const request = readPlaceRequest("Suggest somewhere to eat near Anya's school after work")!;
+    expect(request.when.kind).toBe("after_work");
+    const known = await suggestPlaces(unreadable, provider([place("p1")]), request, { ...context, workEndsMinute: 17 * 60 + 30 });
+    expect(known).toMatchObject({ kind: "found", window: "after work, from 5:30 pm", assumption: null });
+    const assumed = await suggestPlaces(unreadable, provider([place("p1")]), request, context);
+    expect(assumed).toMatchObject({ kind: "found", window: "after work, from 6 pm" });
+    expect(placesReply(request, assumed)).toContain("I've taken work as finishing around 6 pm. Add your office hours to your details in Settings");
+  });
+
   it("asks whose school when two children go to different schools and none is named", async () => {
     const request = readPlaceRequest("Suggest a park near school after school")!;
     expect(await suggestPlaces(unreadable, provider([place("p1")]), request, context)).toEqual({ kind: "which_child", names: ["Anya Sharma", "Kabir Sharma"] });

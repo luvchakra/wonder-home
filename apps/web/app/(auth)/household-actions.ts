@@ -365,8 +365,28 @@ export async function updateMemberProfileAction(
     return { error: "Use a date like 2016-09-18 for the special occasion." };
   }
 
+  // An adult's work and office hours, and a child's school day: only when
+  // the form carried them, so an older form never clears what it never showed.
+  const { readHoursInput, HOURS_PROBLEM } = await import("@wonderhome/core/household/day-hours");
+  const { WORK_ARRANGEMENTS, updateMemberProfile } = await import("@wonderhome/core/identity/households");
+  let work: { workArrangement: (typeof WORK_ARRANGEMENTS)[number] | null; workHours: { starts: string; ends: string } | null } | null = null;
+  if (formData.get("workField") === "1") {
+    const said = String(formData.get("workArrangement") ?? "");
+    const hours = readHoursInput(formData.get("workStarts"), formData.get("workEnds"), { overnight: true });
+    if (!hours.ok) return { error: HOURS_PROBLEM[hours.problem] };
+    work = {
+      workArrangement: (WORK_ARRANGEMENTS as readonly string[]).includes(said) ? (said as (typeof WORK_ARRANGEMENTS)[number]) : null,
+      workHours: hours.hours,
+    };
+  }
+  let schoolHours: { hours: { starts: string; ends: string } | null } | null = null;
+  if (formData.get("schoolHoursField") === "1") {
+    const hours = readHoursInput(formData.get("schoolStarts"), formData.get("schoolEnds"), { overnight: false });
+    if (!hours.ok) return { error: HOURS_PROBLEM[hours.problem] };
+    schoolHours = { hours: hours.hours };
+  }
+
   const supabase = await createClient();
-  const { updateMemberProfile } = await import("@wonderhome/core/identity/households");
 
   try {
     const actor = await requireMembership(supabase, parsed.data.householdId);
@@ -383,7 +403,12 @@ export async function updateMemberProfileAction(
       specialOccasionDate: textOrNull(parsed.data.specialOccasionDate),
       gender: textOrNull(parsed.data.gender),
       notes: textOrNull(parsed.data.notes),
+      ...(work ?? {}),
     });
+    if (schoolHours) {
+      const { setSchoolHours } = await import("@wonderhome/core/school/enrolments");
+      await setSchoolHours(supabase, { householdId: parsed.data.householdId, childMemberId: parsed.data.memberId, hours: schoolHours.hours });
+    }
   } catch (error) {
     const { toErrorBody } = await import("@wonderhome/core/api/errors");
     return { error: toErrorBody(error, "household").body.error.message };

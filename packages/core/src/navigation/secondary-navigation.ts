@@ -20,6 +20,7 @@ export type SecondaryNavKey =
   | "health"
   | "certification"
   | "homesend"
+  | "places"
   | "notifications"
   | "manage"
   | "settings";
@@ -40,6 +41,7 @@ export type SecondaryNavItem = {
     | "heart-pulse"
     | "badge-check"
     | "send"
+    | "map-pin"
     | "bell"
     | "settings-2"
     | "user-round-cog";
@@ -76,6 +78,7 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "meals", label: "Meals & Recipes", href: "/meals", icon: "utensils", tone: "meals", purpose: "Plan, cook, enjoy", requires: null, group: "food" },
   { key: "bills", label: "Bills & Finance", href: "/bills", icon: "wallet", tone: "money", purpose: "Stay on top", requires: ["finance.view"], group: "food" },
   { key: "upkeep", label: "Home & Upkeep", href: "/household/home", icon: "wrench", tone: "home", purpose: "A well-kept home", requires: null, adultOnly: true, group: "home" },
+  { key: "places", label: "Places", href: "/places", icon: "map-pin", tone: "home", purpose: "Places your family likes", requires: null, group: "home" },
   { key: "health", label: "Health & Fitness", href: "/health", icon: "heart-pulse", tone: "health", purpose: "Stay on top, without keeping track of it all", requires: null, adultOnly: true, group: "home" },
   { key: "certification", label: "HomeBrain Review", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true, group: "ai" },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true, group: "ai" },
