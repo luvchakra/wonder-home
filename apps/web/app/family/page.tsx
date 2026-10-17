@@ -29,6 +29,7 @@ import { PetDetail } from "../_components/pet-detail";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { describeRoles } from "../_lib/member-role";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
+import { MemberRoleControl } from "../_components/member-role-control";
 
 export const metadata = { title: "Our Family" };
 export const dynamic = "force-dynamic";
@@ -154,7 +155,7 @@ export default async function FamilyPage() {
                     key={member.id}
                     summary={
                       <>
-                        <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") ? "👑" : undefined} />
+                        <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") || member.roles.includes("administrator") ? "👑" : undefined} />
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">{member.displayName}</span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
@@ -175,6 +176,16 @@ export default async function FamilyPage() {
                         currentMemberId={membership.memberId}
                         statusLabel={statusLabel(member.status)}
                       />
+                      {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
+                      {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (
+                        <MemberRoleControl
+                          householdId={householdId}
+                          memberId={member.id}
+                          isAdministrator={member.roles.includes("administrator")}
+                          labels={{ makeAdmin: t("manage.members.makeAdmin"), removeAdmin: t("manage.members.removeAdmin") }}
+                          withLabel
+                        />
+                      ) : null}
                       {member.memberType === "child" && view.permissions.includes("school.manage") ? (
                         <PillLink href={`/school?child=${member.id}`} tone="quiet">
                           <GraduationCap aria-hidden className="size-3.5" /> {t("family.viewSchool")}

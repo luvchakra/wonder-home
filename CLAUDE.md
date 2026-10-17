@@ -570,7 +570,7 @@ describes — HomeSend and manual entry are Inputs, HomeBrain is Understand,
 - Notifications are precise, timely, recipient-specific, actionable, grouped, threaded and automatically resolved.
 - Talk and text share one conversation engine — HomeTalk, backed by HomeBrain.
 - One household has multiple identities and personalized views.
-- Head of Family can designate Household Administrators.
+- Every Admin is equal: any Admin can make another adult an Admin or step one back. The owner always stays an Admin, and only adults can be Admins.
 - Children have age-appropriate access and privacy.
 - Manage Household defines responsibilities, playbook, routines, policies and AI autonomy.
 - Certification exposes what WonderHome believes and lets authorized users correct it.

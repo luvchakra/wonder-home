@@ -153,7 +153,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "household-and-roles",
     group: "Your household",
-    updated: "2026-10-16",
+    updated: "2026-10-17",
     keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "admin", "child", "helper", "guardian", "remove member", "activity", "audit", "history", "who changed"],
   },
   {

@@ -213,7 +213,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "Membres, rôles et ce que voit chacun",
   "help.guide.household-and-roles.summary": "Un foyer, plusieurs identités, et une vue différente pour chacune.",
   "help.guide.household-and-roles.body.1":
-    "La personne qui crée le foyer en est la propriétaire et l’Admin. Elle peut nommer d’autres personnes Admin, qui peuvent faire presque tout ce qu’elle peut faire.",
+    "La personne qui crée le foyer en est la propriétaire et un Admin. Tous les Admin peuvent faire les mêmes choses : n’importe quel Admin peut nommer un autre adulte Admin, ou le repasser adulte, depuis Family ou Manage Household. Seuls les adultes peuvent être Admin, et le propriétaire le reste toujours : un foyer n’est donc jamais sans Admin.",
   "help.guide.household-and-roles.body.2":
     "Les adultes, les enfants et l’aide à domicile ont chacun leur propre vue. Ce n’est pas un filtre appliqué à l’écran : une section qu’une personne ne peut pas voir n’est jamais envoyée sur son appareil, et WonderHome vérifie à nouveau en coulisses à chaque fois.",
   "help.guide.household-and-roles.body.3":

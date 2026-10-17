@@ -213,7 +213,7 @@ export const helpHi: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "सदस्य, भूमिकाएँ और हर व्यक्ति क्या देखता है",
   "help.guide.household-and-roles.summary": "एक घर, कई पहचानें, और हर एक के लिए अलग नज़रिया।",
   "help.guide.household-and-roles.body.1":
-    "जो व्यक्ति घर बनाता है वह उसका मालिक और Admin होता है। वे दूसरे लोगों को Admin बना सकते हैं, जो लगभग सब कुछ कर सकते हैं जो वे कर सकते हैं।",
+    "जो व्यक्ति घर बनाता है वह उसका मालिक और एक Admin होता है। हर Admin एक जैसे काम कर सकता है: कोई भी Admin, Family या Manage Household से, किसी दूसरे वयस्क को Admin बना सकता है या वापस वयस्क कर सकता है। केवल वयस्क ही Admin हो सकते हैं, और मालिक हमेशा Admin रहता है, ताकि घर कभी बिना Admin के न रहे।",
   "help.guide.household-and-roles.body.2":
     "वयस्कों, बच्चों और घरेलू सहायकों को अपना-अपना नज़रिया मिलता है। यह स्क्रीन पर लगाया गया फ़िल्टर नहीं है: जो हिस्सा कोई नहीं देख सकता, वह उसके डिवाइस पर भेजा ही नहीं जाता, और WonderHome हर बार पर्दे के पीछे फिर से जाँचता है।",
   "help.guide.household-and-roles.body.3":

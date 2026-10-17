@@ -213,7 +213,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "Mitglieder, Rollen und was jede Person sieht",
   "help.guide.household-and-roles.summary": "Ein Haushalt, mehrere Identitäten und für jede eine eigene Ansicht.",
   "help.guide.household-and-roles.body.1":
-    "Wer den Haushalt anlegt, ist sein Eigentümer und Admin. Diese Person kann andere zu Admins machen, die fast alles können, was sie kann.",
+    "Wer den Haushalt anlegt, ist sein Eigentümer und ein Admin. Jeder Admin kann dasselbe: Jeder Admin kann unter Family oder Manage Household einen anderen Erwachsenen zum Admin machen oder wieder zum Erwachsenen zurückstufen. Nur Erwachsene können Admins sein, und der Eigentümer bleibt immer einer – so ist ein Haushalt nie ohne Admin.",
   "help.guide.household-and-roles.body.2":
     "Erwachsene, Kinder und Haushaltshilfen bekommen jeweils ihre eigene Ansicht. Das ist kein Filter auf dem Bildschirm: Ein Bereich, den jemand nicht sehen darf, wird gar nicht erst an sein Gerät geschickt, und WonderHome prüft jedes Mal im Hintergrund erneut.",
   "help.guide.household-and-roles.body.3":

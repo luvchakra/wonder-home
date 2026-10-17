@@ -50,3 +50,27 @@ How a question is answered:
 - **Memories stay with their person.** A memory resolved to a member is kept as that member's (`attributeMemory`). A belief is matched by key and by person (`remember`).
 - **The roster comes from rules.** "Who are the family members?" is read by the rules and answered from the whole member list, pets included (`conversation/roster.ts`, eval case HT-22).
 - **Data repair (applied).** The three memories in the household that had a placeholder were corrected to Asmi and Kunal and attached to them. Old proposal records keep their wording as the record of what was proposed.
+
+## Also in this change: every Admin is equal, and the HomeTalk button shows a conversation
+
+**Every Admin is equal.** The household asked that no two Admins differ. Until now only the owner could make or remove Admins.
+
+What changed:
+- **Rule.** Any Admin can make another adult an Admin, or step one back.
+- **App permissions** (`identity/permissions.ts`). `administrator` now holds `members.assign_admin`, and `setMemberRole` refuses anyone but an adult.
+- **Database rule** (migration `20261017170000_equal_admins.sql`). Ownership (`head`) is never granted or removed by a role change, so the owner always stays an Admin and a household is never left without one.
+- **Invitations.** Inviting an Admin is open to every Admin.
+- **Screens.** Every Admin sees Make Admin / Remove Admin on Manage Household → Members and inside each adult's details on Family. Every Admin carries the 👑 on Family.
+
+**Tests.**
+- New suite `scripts/test-equal-admins-rls.mjs`, 5/5.
+- `test-roles-rls.mjs` and `permissions.test.ts` were rewritten to the new rule, by the household's explicit decision.
+- The full RLS suite passed, 560 tests.
+
+**Browser check.** At 360px, the owner made an adult an Admin from Family.
+
+**Live database: open.** `apply_migration` and `execute_sql` both timed out on the policy change, and no lock was held. The SQL was handed to the owner to run in the Supabase SQL editor. Until it runs, an Admin who is not the owner is still refused by the database.
+
+**The HomeTalk button pulses during a conversation.** While the composer is listening or holding a live conversation, the raised HomeTalk button in the phone tab bar pulses with a steady ring around it. Under reduced motion only the ring stays. Screen readers hear "Conversation in progress" (`components/shell/talk-activity.tsx`).
+- Checked at 360px by forcing the state: four frames, plus reduced motion.
+- Help was updated in all eight languages.

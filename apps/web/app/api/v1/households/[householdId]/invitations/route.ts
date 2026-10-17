@@ -39,12 +39,7 @@ export async function POST(request: Request, { params }: Params) {
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, householdId);
 
-    // Only the household's owner may create another Admin, matching the RLS policy.
-    if (body.role === "administrator" && !membership.roles.includes("head")) {
-      const { ApiError } = await import("@wonderhome/core/api/errors");
-      throw ApiError.forbidden("Only the household's owner can invite another Admin.");
-    }
-
+    // Any Admin may invite another Admin (every Admin is equal).
     const invitation = await createInvitation(supabase, membership.memberId, {
       householdId,
       ...body,

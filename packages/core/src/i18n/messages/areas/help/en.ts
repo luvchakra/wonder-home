@@ -244,7 +244,7 @@ export const helpEn = {
   "help.guide.household-and-roles.title": "Members, roles and what each person sees",
   "help.guide.household-and-roles.summary": "One household, several identities, and a different view for each.",
   "help.guide.household-and-roles.body.1":
-    "The person who creates the household is its owner and Admin. They can make other people Admins, who can do nearly everything they can.",
+    "The person who creates the household is its owner and an Admin. Every Admin can do the same things: any Admin can make another adult an Admin, or step one back to adult, from Family or Manage Household. Only adults can be Admins, and the owner always stays one, so a household is never left without an Admin.",
   "help.guide.household-and-roles.body.2":
     "Adults, children and househelpers each get their own view. This is not a filter applied on the screen: a section somebody may not see is never sent to their device at all, and WonderHome checks again behind the scenes every time.",
   "help.guide.household-and-roles.body.3":

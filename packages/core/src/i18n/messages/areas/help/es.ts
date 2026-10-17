@@ -213,7 +213,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "Miembros, roles y lo que ve cada persona",
   "help.guide.household-and-roles.summary": "Un hogar, varias identidades y una vista distinta para cada una.",
   "help.guide.household-and-roles.body.1":
-    "La persona que crea el hogar es su propietaria y Admin. Puede hacer Admin a otras personas, que pueden hacer casi todo lo que ella puede.",
+    "Quien crea el hogar es su propietario y un Admin. Todos los Admin pueden hacer lo mismo: cualquier Admin puede convertir a otro adulto en Admin, o devolverlo a adulto, desde Family o Manage Household. Solo los adultos pueden ser Admin, y el propietario siempre lo es, así que un hogar nunca se queda sin Admin.",
   "help.guide.household-and-roles.body.2":
     "Los adultos, los niños y la ayuda doméstica tienen cada uno su propia vista. No es un filtro aplicado en la pantalla: una sección que alguien no puede ver nunca llega a su dispositivo, y WonderHome vuelve a comprobarlo por detrás cada vez.",
   "help.guide.household-and-roles.body.3":

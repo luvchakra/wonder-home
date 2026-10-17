@@ -49,10 +49,6 @@ export async function inviteMemberAction(
   try {
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
-    if (parsed.data.role === "administrator" && !membership.roles.includes("head")) {
-      return { error: "Only the household's owner can invite another Admin." };
-    }
-
     // An adult already named during setup, without a login yet: the
     // invitation is for them, and accepting it makes the account theirs
     // rather than adding the same person twice (story 02-009).
@@ -154,6 +150,7 @@ export async function setMemberRoleAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/household/members");
+  revalidatePath("/family");
 }
 
 const addChildSchema = z.object({

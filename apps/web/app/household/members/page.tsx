@@ -132,7 +132,7 @@ export default async function MembersPage() {
               <>
                 <InviteMemberForm
                   householdId={membership.household.id}
-                  canInviteAdministrator={membership.roles.includes("head")}
+                  canInviteAdministrator={admin}
                   labels={formLabels}
                 />
                 <PendingInvitations invitations={invitations} timezone={membership.household.timezone} labels={pendingInvitationLabels(t)} />
@@ -200,7 +200,8 @@ function MemberRow({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {member.status !== "active" ? <Badge>{member.status === "invited" ? t("family.status.invited") : t("family.status.inactive")}</Badge> : null}
-        {membership.roles.includes("head") && !member.isOwner ? (
+        {/* Any Admin makes an adult an Admin or steps one back; the owner always stays one. */}
+        {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (
           <MemberRoleControl
             householdId={membership.household.id}
             memberId={member.id}

@@ -551,7 +551,7 @@ export async function setMemberRole(
   if (!canAssignRole({ roles: actor.roles }, input.role)) {
     throw ApiError.forbidden(
       input.role === "administrator"
-        ? "Only the household's owner can change who administers the household."
+        ? "Only an Admin can change who administers the household."
         : "You do not have permission to change roles.",
     );
   }
@@ -562,13 +562,16 @@ export async function setMemberRole(
   // scoped so a mismatched id simply matches nothing.
   const { data: target, error: lookupError } = await supabase
     .from("household_members")
-    .select("id")
+    .select("id, member_type")
     .eq("id", input.memberId)
     .eq("household_id", householdId)
     .maybeSingle();
 
   if (lookupError) throw new Error(`setMemberRole lookup failed: ${lookupError.code ?? "unknown"}`);
   if (!target) throw ApiError.notFound("That member is not part of this household.");
+  if (input.role === "administrator" && (target as { member_type: string }).member_type !== "adult") {
+    throw ApiError.badRequest("Only an adult can be an Admin.");
+  }
 
   if (input.granted) {
     const { error } = await supabase

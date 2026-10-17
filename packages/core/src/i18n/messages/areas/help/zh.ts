@@ -191,7 +191,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
 
   "help.guide.household-and-roles.title": "成员、角色以及每个人能看到什么",
   "help.guide.household-and-roles.summary": "一个家，多种身份，每个人一个不同的视图。",
-  "help.guide.household-and-roles.body.1": "创建家庭的人是它的所有者和管理员。他们可以让其他人成为管理员，这些人几乎能做所有者能做的一切。",
+  "help.guide.household-and-roles.body.1": "创建家庭的人是它的所有者，也是一名 Admin。每位 Admin 能做的事情都一样：任何 Admin 都可以在 Family 或 Manage Household 中把另一位成年人设为 Admin，或改回成年人。只有成年人可以成为 Admin，而所有者始终是 Admin，因此家庭永远不会没有 Admin。",
   "help.guide.household-and-roles.body.2":
     "成年人、孩子和家政帮手各有自己的视图。这不是屏幕上加的一层过滤：某人不能看的部分根本不会发送到他的设备上，而且 WonderHome 每次都会在后台再检查一遍。",
   "help.guide.household-and-roles.body.3": "孩子获得与年龄相适应的访问权限。家政帮手从不会被要求更新家务，WonderHome 也不保存关于他们的任何工作效率数据。",
