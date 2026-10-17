@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeTalk's welcome after setup, and pets on Home](2026-10-18-hometalk-welcome-and-home-pets.md) |
 | 2026-10-17 | [Groceries Phase 1: one list, with what's at home and what to buy](2026-10-17-groceries-phase-1.md) |
 | 2026-10-17 | [A family event opens to its full detail, with an invite link](2026-10-17-event-detail-and-invite-links.md) |
 | 2026-10-17 | [HomePlaces, HomeTalk that speaks like a person, and a second child no longer mixed up](2026-10-17-homeplaces.md) |

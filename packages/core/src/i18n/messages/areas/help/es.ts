@@ -105,6 +105,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Edita tu último mensaje para reformularlo y busca en tus conversaciones anteriores desde el cuadro de búsqueda de arriba. Nunca dice que hizo algo a menos que lo hiciera de verdad; cuando solo preparó algo, dice que lo preparó, y cuando no hacía falta cambiar nada, también lo dice.",
   "help.guide.talk-to-wonderhome.body.7":
     "Pide lugares cercanos — «sugiere un sitio para cenar esta noche», «¿adónde podemos ir cerca del colegio de Anya al salir de clase?» — y HomeTalk busca cerca de la dirección de tu casa o del colegio del niño y muestra solo lugares abiertos a esa hora, cada uno con un enlace a Google Maps. Los lugares vienen de la búsqueda de lugares de Google, no de un modelo de IA, y WonderHome avisa cuando ha supuesto una hora, como el fin de las clases. Guarda los que te gusten y saldrán primero la próxima vez; marca uno como «No es para nosotros» y no se volverá a sugerir. Un adulto o un Admin puede guardar lugares.",
+  "help.guide.talk-to-wonderhome.body.8":
+    "Cuando terminas de configurar tu hogar, HomeTalk se abre con una bienvenida: quién forma tu hogar, de qué se ocupa WonderHome y las tres formas de hablarle (escribir, tocar el micrófono o una conversación en vivo). Después hace unas preguntas, de una en una: qué le encanta comer a la familia, qué no come alguien, qué os gusta hacer juntos, vuestras mascotas. Tus respuestas se guardan con tus propias palabras en Revisión de HomeBrain, donde puedes cambiarlas. Di «saltar» para parar cuando quieras; solo ocurre una vez.",
 
   "help.guide.voice.title": "Voz y conversación manos libres",
   "help.guide.voice.summary": "Toca para hablar y revisar, o conversa sin manos.",
@@ -144,6 +146,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Hoy es el día como una línea de tiempo, en tres vistas: tu día, el de la familia y el del hogar. Los elementos son compromisos y plazos —una comida que tiene que estar lista, una factura que vence, una clase—, nunca tareas que marcar. La vista del hogar también mira dos semanas adelante lo que probablemente se acabe o venza.",
   "help.guide.today-and-home.body.3": "Planear algo, en Inicio y en Hoy, añade un evento familiar sin salir de la pantalla.",
   "help.guide.today-and-home.body.4": "En el teléfono, desliza a izquierda o derecha para moverte entre Inicio, Hoy, HomeTalk, Familia y Más.",
+  "help.guide.today-and-home.body.5":
+    "Debajo del estado de la familia, Inicio muestra tus mascotas, si tienes. Cada una abre los mismos datos que la pantalla Familia; para cambiarlos, ve a Familia.",
 
   "help.guide.notifications.title": "Recordatorios y notificaciones",
   "help.guide.notifications.summary": "Sobre cosas reales, para una persona, cuando le viene bien, y en silencio una vez resuelto.",

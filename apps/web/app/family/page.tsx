@@ -200,7 +200,7 @@ export default async function FamilyPage() {
         </section>
 
         {pets.length > 0 || admin ? (
-          <section className="wh-rise" style={{ "--wh-rise-delay": "75ms" } as React.CSSProperties}>
+          <section id="pets" className="wh-rise scroll-mt-20" style={{ "--wh-rise-delay": "75ms" } as React.CSSProperties}>
             <SectionHeader
               title={t("family.pets")}
               count={pets.length}

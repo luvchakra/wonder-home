@@ -19,6 +19,7 @@ import { entryEn } from "./areas/entry/en";
 import { installEn } from "./areas/install/en";
 import { eventsEn } from "./areas/events/en";
 import { groceryEn } from "./areas/grocery/en";
+import { welcomeEn } from "./areas/welcome/en";
 
 // Each area's words are spread in at the end (story 22-004).
 export const en = {
@@ -670,6 +671,7 @@ export const en = {
   ...installEn,
   ...eventsEn,
   ...groceryEn,
+  ...welcomeEn,
 } as const;
 
 export type MessageKey = keyof typeof en;

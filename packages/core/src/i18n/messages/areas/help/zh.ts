@@ -95,6 +95,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "编辑你的上一条消息可以换个说法，用顶部的搜索框可以搜索以前的对话。除非真的做了，它绝不会说自己做了；如果只是准备好了，它会说“已准备”；如果不需要做任何改动，它也会直说。",
   "help.guide.talk-to-wonderhome.body.7":
     "询问附近的地方——“推荐今晚吃晚饭的地方”“放学后在 Anya 学校附近可以去哪儿玩？”——HomeTalk 会在您的住址或孩子学校附近查找，只显示那个时间营业的地方，并附上 Google 地图链接。这些地方来自 Google 的地点搜索，而不是 AI 模型；如果 WonderHome 假设了某个时间（例如放学时间），它会说明。保存您喜欢的地方，下次会优先推荐；标记为“不适合我们”的地方不会再被推荐。成人或 Admin 可以保存地点。",
+  "help.guide.talk-to-wonderhome.body.8":
+    "完成家庭设置后，HomeTalk 会以一段欢迎开场：你家里有谁、WonderHome 会照看哪些事，以及和它交谈的三种方式（打字、点麦克风说一句，或实时对话）。然后它会一次问一个问题——家人爱吃什么、谁不吃什么、你们喜欢一起做什么、你们的宠物。你的回答会以你自己的话保存在 HomeBrain 核对 里，你可以随时修改。随时说“跳过”就能停下；欢迎只会出现一次。",
 
   "help.guide.voice.title": "语音和免提对话",
   "help.guide.voice.summary": "点一下说话再核对，或者免提来回对话。",
@@ -133,6 +135,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "“今天”把一天显示成时间线，有三种视图：你的一天、家人的一天和整个家的一天。上面的条目是承诺和截止时间——一顿必须做好的饭、一张到期的账单、一节课——从来不是要打勾的家务。家庭视图还会向前看两周，看哪些东西可能用完或到期。",
   "help.guide.today-and-home.body.3": "首页和“今天”上的“安排点什么”，不用离开页面就能添加一个家庭活动。",
   "help.guide.today-and-home.body.4": "在手机上，向左或向右滑动，就能在首页、今天、HomeTalk、家人和更多之间切换。",
+  "help.guide.today-and-home.body.5":
+    "在家庭状态下方，首页会显示你家的宠物（如果有的话）。每只都会展开和家庭页面相同的信息；要修改，请到家庭页面。",
 
   "help.guide.notifications.title": "提醒和通知",
   "help.guide.notifications.summary": "关于真实的事，发给一个人，在合适的时候——处理完就安静。",

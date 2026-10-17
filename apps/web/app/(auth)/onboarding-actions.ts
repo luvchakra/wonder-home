@@ -204,7 +204,8 @@ export async function completeAction(): Promise<OnboardingActionState> {
   revalidatePath("/");
   // Then, once and optionally, how WonderHome should speak to them (story
   // 22-003) — a separate, skippable step, never part of family setup itself.
-  redirect(membership.locale?.setup.status ? "/" : "/onboarding/personalize");
+  // HomeTalk's welcome comes next: who is home, how to talk, a few questions.
+  redirect(membership.locale?.setup.status ? "/ai?welcome=1" : "/onboarding/personalize");
 }
 
 // ---------------------------------------------------------------------------

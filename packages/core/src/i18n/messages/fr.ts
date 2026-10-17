@@ -10,6 +10,7 @@ import { entryFr } from "./areas/entry/fr";
 import { installFr } from "./areas/install/fr";
 import { eventsFr } from "./areas/events/fr";
 import { groceryFr } from "./areas/grocery/fr";
+import { welcomeFr } from "./areas/welcome/fr";
 
 export const fr: Catalog = {
   "common.next": "Suivant",
@@ -660,4 +661,5 @@ export const fr: Catalog = {
   ...installFr,
   ...eventsFr,
   ...groceryFr,
+  ...welcomeFr,
 };

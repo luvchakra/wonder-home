@@ -10,6 +10,7 @@ import { entryDe } from "./areas/entry/de";
 import { installDe } from "./areas/install/de";
 import { eventsDe } from "./areas/events/de";
 import { groceryDe } from "./areas/grocery/de";
+import { welcomeDe } from "./areas/welcome/de";
 
 export const de: Catalog = {
   "common.next": "Weiter",
@@ -660,4 +661,5 @@ export const de: Catalog = {
   ...installDe,
   ...eventsDe,
   ...groceryDe,
+  ...welcomeDe,
 };
