@@ -261,6 +261,7 @@ Available actions:
 - make_payment: pay a bill.
 - order_items: place or prepare an order.
 - assign_responsibility: change who owns an outcome. parameters.outcomeKey is a short dotted key for the outcome ("school.run").
+- find_places: asking for real places to go nearby — somewhere to eat, a cafe, a park, somewhere to hang out with the children ("suggest places for dinner tonight", "where can we go near school after school?"). No parameters are needed; the place search reads the sentence itself.
 - greet: a hello, a thank-you, or "what can you do?". parameters.kind is "greeting", "thanks" or "help".
 - unknown: anything that is not clearly one of the above, or is too vague to act on.
 

@@ -93,6 +93,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "“提醒我明天 5 点给水管工打电话”只为你一个人设置提醒，到时间才会送达。当提到某人而有两个人都可能符合时，HomeTalk 会问是哪一位，而不是去猜。",
   "help.guide.talk-to-wonderhome.body.6":
     "编辑你的上一条消息可以换个说法，用顶部的搜索框可以搜索以前的对话。除非真的做了，它绝不会说自己做了；如果只是准备好了，它会说“已准备”；如果不需要做任何改动，它也会直说。",
+  "help.guide.talk-to-wonderhome.body.7":
+    "询问附近的地方——“推荐今晚吃晚饭的地方”“放学后在 Anya 学校附近可以去哪儿玩？”——HomeTalk 会在您的住址或孩子学校附近查找，只显示那个时间营业的地方，并附上 Google 地图链接。这些地方来自 Google 的地点搜索，而不是 AI 模型；如果 WonderHome 假设了某个时间（例如放学时间），它会说明。保存您喜欢的地方，下次会优先推荐；标记为“不适合我们”的地方不会再被推荐。成人或 Admin 可以保存地点。",
 
   "help.guide.voice.title": "语音和免提对话",
   "help.guide.voice.summary": "点一下说话再核对，或者免提来回对话。",

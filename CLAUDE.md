@@ -419,6 +419,38 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   is swept both opportunistically on every share request and for real by
   `/platform/retention`.
 
+- **HomePlaces** (`packages/core/src/homeplaces/`, intent `find_places`)
+  answers location questions: "somewhere for dinner tonight", "where can
+  we hang out near Anya's school after school?". It is a read, never a
+  write:
+  - **Rules read the request.** `request.ts` reads the request (eat or go
+    out, near home or a child's school, now, a meal time or after school).
+    A model only ever says that a sentence is a place question.
+  - **Where comes from the record.** `service.ts` takes the anchor from
+    the saved home address or the child's picked school, never a guess.
+    Two children at two schools and no name gets one question.
+  - **Places are checked and ranked.** Google's text search
+    (`places/google.ts`'s `findNearby`, behind the same
+    `GOOGLE_MAPS_API_KEY`) supplies the places. Each one is checked
+    against its weekly hours for the whole window (`isOpenFor`), then
+    ranked by rating, distance and the family's own place book.
+  - **Assumptions are said back.** An assumed time, such as school ending
+    at 3:30 pm, is stated in the reply.
+  - **The reply is deterministic** (`answer.ts`). The places travel as
+    cards (`apps/web/app/ai/place-cards.tsx`, kept in the message's
+    metadata).
+  - **The family is the only teacher.** Save and "not for us" go to
+    `household_places` through `apps/web/app/ai/place-actions.ts`. That
+    action re-reads the place from the stored reply, never from the
+    browser. Every member reads the book; adults and Admins write it.
+    Saved places rank first, and turned-down places never return.
+  - **Searches are budgeted.** `places.find` limits each household to 30
+    searches an hour. Voice channels leave place questions to the app.
+
+  Spoken replies go through `conversation/speech.ts`'s `speakable`. It
+  drops arrows, links, list markers and symbols for words a person would
+  say. Every voice path speaks through it, never the raw reply.
+
 **Voice channels are doors into HomeTalk, never second brains**
 (`design/voice-integration/`). Every channel — the app, Gemini Voice,
 Alexa — asks through one gateway (`hometalk/gateway.ts`, the canonical

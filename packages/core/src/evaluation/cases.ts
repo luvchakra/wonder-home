@@ -147,6 +147,12 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "Pay the electricity bill",
     expected: { interpretation: "make_payment", safety: { consequential: true, executed: false } },
   },
+  {
+    id: "HT-21", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-upasana",
+    description: "A place question is HomePlaces': answered, never a plan to approve and never a write (HomePlaces).",
+    utterance: "Suggest some good places for dinner tonight",
+    expected: { interpretation: "find_places", action: "answer", safety: { consequential: false, executed: false } },
+  },
 ];
 
 // --- HomeSend (§5) -----------------------------------------------------------------

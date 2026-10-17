@@ -4,6 +4,7 @@ import type { ActionPreviewLabels } from "@wonderhome/core/ui/action-preview";
 import type { TalkComposerLabels } from "@wonderhome/core/ui/talk-composer";
 
 import type { ConversationSearchLabels } from "./conversation-search";
+import type { PlaceCardLabels } from "./place-cards";
 
 /**
  * The HomeTalk screen's own words in the viewer's language (story 22-004).
@@ -34,6 +35,8 @@ export type AssistantLabels = {
   time: MessageTimeStyle;
   composer: TalkComposerLabels;
   preview: ActionPreviewLabels;
+  /** HomePlaces cards; `{name}` is filled per place on the client. */
+  places: PlaceCardLabels;
 };
 
 /** The most results one search returns (`searchMessages` caps its limit at 50). */
@@ -94,6 +97,17 @@ export function assistantLabels(t: Translate, time: Pick<MessageTimeStyle, "loca
     time: { ...time, today: t("hometalk.ui.today"), yesterday: t("hometalk.ui.yesterday") },
     // `{engine}`/`{who}` stay placeholders for the composer to fill.
     composer: Object.fromEntries(COMPOSER_KEYS.map((name) => [name, t(key(`hometalk.composer.${name}`), { engine: "{engine}", who: "{who}" })])) as TalkComposerLabels,
+    places: {
+      heading: t("hometalk.places.heading"),
+      open: t("hometalk.places.open", { name: "{name}" }),
+      save: t("hometalk.places.save", { name: "{name}" }),
+      saved: t("hometalk.places.saved"),
+      unsave: t("hometalk.places.unsave", { name: "{name}" }),
+      notForUs: t("hometalk.places.notForUs", { name: "{name}" }),
+      hidden: t("hometalk.places.hidden", { name: "{name}" }),
+      undo: t("hometalk.places.undo"),
+      failed: t("hometalk.places.failed"),
+    },
     preview: {
       title: t("hometalk.preview.title"),
       state: Object.fromEntries(PREVIEW_STATES.map((state) => [state, t(key(`hometalk.preview.state.${state}`))])) as ActionPreviewLabels["state"],

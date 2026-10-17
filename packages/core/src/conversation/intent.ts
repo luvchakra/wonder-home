@@ -44,6 +44,8 @@ export const INTENT_ACTIONS = [
   "log_vital",
   /** "I want to walk three times a week" — sets a real, consistency-oriented fitness goal via the governed health service; never scored, never a leaderboard entry. */
   "set_fitness_goal",
+  /** "Suggest somewhere for dinner tonight", "where can we hang out near Anya's school after school" — HomePlaces finds real places; read-only. */
+  "find_places",
   /** A hello, a thank-you, or "what can you do?" — answered warmly, never as a failure to understand. */
   "greet",
   "unknown",
@@ -135,7 +137,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
     return { kind: "clarify", question: clarifyingQuestionFor(intent) };
   }
 
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 

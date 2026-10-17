@@ -119,6 +119,8 @@ export const helpEn = {
     "\"Remind me to call the plumber tomorrow at 5\" sets a reminder for you alone, delivered when it is due. When someone is mentioned and two people could fit, HomeTalk asks which one rather than guessing.",
   "help.guide.talk-to-wonderhome.body.6":
     "Edit your last message to rephrase it, and search your past conversations from the search box at the top. It never says it did something unless it actually did; where it only prepared something, it says prepared, and where nothing needed changing, it says so.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Ask for places nearby — \"suggest somewhere for dinner tonight\", \"where can we hang out near Anya's school after school?\" — and HomeTalk looks near your home address or the child's school and shows only places open for that time, each with a link to Google Maps. The places come from Google's place search, not from an AI model, and WonderHome says when it assumed a time, such as when school ends. Save the ones you like and they come first next time; mark one \"not for us\" and it is not suggested again. An adult or Admin can save places.",
 
   // Voice and hands-free conversation
   "help.guide.voice.title": "Voice and hands-free conversation",

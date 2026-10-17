@@ -103,6 +103,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "„Erinnere mich morgen um 17 Uhr daran, den Klempner anzurufen“ legt eine Erinnerung nur für dich an, die kommt, wenn sie fällig ist. Wenn jemand erwähnt wird und zwei Personen passen könnten, fragt HomeTalk nach, wer gemeint ist, statt zu raten.",
   "help.guide.talk-to-wonderhome.body.6":
     "Bearbeite deine letzte Nachricht, um sie anders zu formulieren, und durchsuche deine früheren Gespräche über das Suchfeld oben. Es sagt nie, dass es etwas getan hat, wenn es das nicht wirklich hat; wo es nur etwas vorbereitet hat, sagt es „vorbereitet“, und wo nichts geändert werden musste, sagt es das.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Frag nach Orten in der Nähe – „Schlag etwas fürs Abendessen heute vor“, „Wo können wir nach der Schule in der Nähe von Anyas Schule hin?“ – und HomeTalk sucht in der Nähe eurer Wohnadresse oder der Schule des Kindes und zeigt nur Orte, die zu dieser Zeit geöffnet sind, jeweils mit einem Link zu Google Maps. Die Orte kommen aus der Ortssuche von Google, nicht von einem KI-Modell, und WonderHome sagt, wenn es eine Zeit angenommen hat, etwa das Schulende. Speichere die, die dir gefallen, dann kommen sie beim nächsten Mal zuerst; markiere einen als „Nichts für uns“, dann wird er nicht wieder vorgeschlagen. Orte speichern kann ein Erwachsener oder Admin.",
 
   "help.guide.voice.title": "Stimme und freihändiges Gespräch",
   "help.guide.voice.summary": "Tippen zum Sprechen und Prüfen, oder freihändig hin und her sprechen.",

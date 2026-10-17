@@ -213,6 +213,8 @@ export const REPLY_CLASSES: Readonly<Record<IntentAction, readonly ContentClass[
   resolve_health_issue: ["health"],
   log_vital: ["health"],
   set_fitness_goal: ["health"],
+  // Places near home or a child's school say where the family is.
+  find_places: ["location"],
   greet: [],
   unknown: [],
 };

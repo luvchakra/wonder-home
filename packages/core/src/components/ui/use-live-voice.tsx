@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { speakable, voiceQuality } from "../../conversation/speech";
 import { captureUtterance, microphoneAvailable, playClip } from "../../voice/capture";
 import { recognitionConstructor, type RecognitionLike } from "../../voice/recognition";
 
@@ -44,7 +45,13 @@ export function pickVoice<V extends { name: string; lang: string }>(voices: read
   if (voices.length === 0) return null;
   const prefix = lang.slice(0, 2).toLowerCase();
   const sameLanguage = voices.filter((voice) => voice.lang.toLowerCase().startsWith(prefix));
-  const pool = sameLanguage.length > 0 ? sameLanguage : voices;
+  // A voice from the reader's own region (en-IN) before one from another (en-GB).
+  const sameRegion = sameLanguage.filter((voice) => voice.lang.toLowerCase().replace("_", "-") === lang.toLowerCase());
+  const candidates = sameRegion.length > 0 ? sameRegion : sameLanguage.length > 0 ? sameLanguage : voices;
+  // The most natural-sounding voices first (a "Natural" or "Google" voice
+  // over a robotic system fallback), and only then the gender preference.
+  const best = Math.max(...candidates.map((voice) => voiceQuality(voice)));
+  const pool = candidates.filter((voice) => voiceQuality(voice) === best);
   return pool.find((voice) => MALE_NAME.test(voice.name)) ?? pool.find((voice) => !FEMALE_NAME.test(voice.name)) ?? pool[0] ?? null;
 }
 
@@ -113,11 +120,12 @@ export function useLiveVoice(input: {
   const speakHere = useCallback(
     (text: string) =>
       new Promise<void>((resolve) => {
-        if (typeof window === "undefined" || !("speechSynthesis" in window) || !text.trim()) {
+        if (typeof window === "undefined" || !("speechSynthesis" in window) || !speakable(text)) {
           resolve();
           return;
         }
-        const utterance = new SpeechSynthesisUtterance(text);
+        // Said as a person would say it: no arrows, symbols or link addresses read out.
+        const utterance = new SpeechSynthesisUtterance(speakable(text));
         const voice = pickVoice(voicesRef.current, lang);
         if (voice) utterance.voice = voice;
         utterance.lang = lang;
@@ -143,7 +151,7 @@ export function useLiveVoice(input: {
       const response = await fetch(`/api/v1/households/${householdId}/voice`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ speak: text }),
+        body: JSON.stringify({ speak: speakable(text) }),
       });
       const payload = await response.json();
       // Spoken replies being switched off is a setting, not a failure: the

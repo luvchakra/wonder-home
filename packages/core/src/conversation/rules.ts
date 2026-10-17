@@ -4,6 +4,7 @@ import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
 import { splitTrailingWhen } from "./temporal";
+import { isPlaceQuestion } from "../homeplaces/request";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -445,6 +446,16 @@ const RULES: readonly Rule[] = [
     }),
   },
 
+  // --- HomePlaces: "suggest somewhere for dinner tonight" ----------------------
+  {
+    // Read before "plan …", so "where can we go for dinner" is a place
+    // question and not a plan. What it asks for is read again, in full, by
+    // homeplaces/request.ts; this only recognises it.
+    pattern: /^.+$/,
+    read: (_match, utterance) =>
+      isPlaceQuestion(utterance) ? { action: "find_places", target: { kind: "unspecified" }, parameters: { request: utterance.trim().slice(0, 300) }, confidence: 0.9 } : null,
+  },
+
   // --- Planning and schedule --------------------------------------------------
   {
     pattern: new RegExp(`^plan (?:a |an |some |something )?(.*?)(?:\\s+(?:for|on))?\\s*(${WHEN_WORDS})?$`, "i"),
@@ -761,4 +772,5 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "resolve_health_issue",
   "log_health_issue",
   "set_preference",
+  "find_places",
 ];

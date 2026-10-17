@@ -207,6 +207,15 @@ describe("what it does not know", () => {
     expect(read("Reticulate the household splines").action).toBe("unknown");
   });
 
+  it("hands a place question to HomePlaces, and leaves plans and preferences alone", () => {
+    expect(read("Suggest some good places for dinner tonight").action).toBe("find_places");
+    expect(read("Where can we hang out near Anya's school after school ends?").action).toBe("find_places");
+    expect(read("any good cafes nearby").action).toBe("find_places");
+    expect(read("plan a picnic this weekend").action).toBe("plan_event");
+    expect(read("we prefer lunch at 1").action).not.toBe("find_places");
+    expect(read("the food was good").action).not.toBe("find_places");
+  });
+
   it("covers every action it claims to", () => {
     const seen = new Set(
       [
@@ -230,6 +239,7 @@ describe("what it does not know", () => {
         "I've had a headache since yesterday",
         "My headache is gone",
         "I want to walk three times a week",
+        "suggest some good places for dinner tonight",
       ].map((utterance) => read(utterance).action),
     );
     for (const action of RULE_ACTIONS) expect(seen.has(action)).toBe(true);

@@ -103,6 +103,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "« Rappelle-moi d’appeler le plombier demain à 17 h » crée un rappel pour vous seul, envoyé au bon moment. Quand quelqu’un est mentionné et que deux personnes pourraient correspondre, HomeTalk demande laquelle plutôt que de deviner.",
   "help.guide.talk-to-wonderhome.body.6":
     "Modifiez votre dernier message pour le reformuler, et recherchez dans vos conversations passées depuis le champ de recherche en haut. Il ne dit jamais avoir fait quelque chose s’il ne l’a pas vraiment fait ; quand il a seulement préparé quelque chose, il dit « préparé », et quand rien n’avait besoin de changer, il le dit.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Demandez des lieux à proximité — « propose un endroit pour dîner ce soir », « où aller près de l'école d'Anya après la classe ? » — et HomeTalk cherche près de l'adresse du foyer ou de l'école de l'enfant et ne montre que les lieux ouverts à ce moment-là, chacun avec un lien vers Google Maps. Les lieux viennent de la recherche de lieux de Google, pas d'un modèle d'IA, et WonderHome indique quand il a supposé une heure, comme la fin des cours. Enregistrez ceux qui vous plaisent : ils viendront en premier la prochaine fois ; marquez-en un « Pas pour nous » et il ne sera plus proposé. Un adulte ou un Admin peut enregistrer des lieux.",
 
   "help.guide.voice.title": "Voix et conversation mains libres",
   "help.guide.voice.summary": "Touchez pour parler et relire, ou échangez mains libres.",

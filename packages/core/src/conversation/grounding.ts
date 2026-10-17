@@ -428,7 +428,7 @@ function billKey(label: string): string {
 
 /** Whether an intent is one grounding has anything to do for. */
 export function needsGrounding(intent: HouseholdIntent): boolean {
-  return intent.action !== "unknown" && intent.action !== "greet" && intent.action !== "ask_status" && intent.action !== "check_agents";
+  return intent.action !== "unknown" && intent.action !== "greet" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places";
 }
 
 // ---------------------------------------------------------------------------
