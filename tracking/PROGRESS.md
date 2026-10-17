@@ -37,7 +37,7 @@ disagree again.)
 | 09 | Commerce, Groceries & Pet Supplies | 13 | 6 | 6 | 1 | 11 | In Progress |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
-| 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done |
+| 12 | Family Time & Social Activities | 14 | 5 | 6 | 3 | 8 | In Progress |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
 | 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 19 | Done |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
