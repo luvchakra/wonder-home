@@ -49,7 +49,7 @@ test("an Admin replaces it the way the app does, with an update that reads nothi
 test("nobody can read a stored key back, the Admin who set it included, on any key table", () => {
   assert.ok(deniedForProfile(OWNER, `select api_key from public.household_gemini_voice_credentials;`, options));
   assert.ok(deniedForProfile(ADULT, `select api_key from public.household_gemini_voice_credentials;`, options));
-  asProfile(OWNER, `insert into public.household_ai_credentials (household_id, provider, api_key, set_by_member_id) values ('${household}', 'anthropic', 'sk-ant-TEST-not-a-real-key-000000', '${ownerMember}');`, options);
+  asProfile(OWNER, `insert into public.household_ai_credentials (household_id, provider, api_key, set_by_member_id) values ('${household}', 'anthropic', 'test-assistant-key-placeholder-0000', '${ownerMember}');`, options);
   assert.ok(deniedForProfile(OWNER, `select api_key from public.household_ai_credentials;`, options));
   assert.ok(deniedForProfile(OWNER, `select * from public.household_voice_credentials;`, options));
   // The row itself is still there to replace or remove; only the key is unreadable.
