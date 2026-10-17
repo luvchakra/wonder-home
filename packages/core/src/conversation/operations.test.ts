@@ -14,6 +14,7 @@ const commerce = vi.hoisted(() => ({
   createConsumable: vi.fn(),
   retireConsumable: vi.fn(),
 }));
+const inventory = vi.hoisted(() => ({ listGroceries: vi.fn(), adjustListEntry: vi.fn(), changeStock: vi.fn(), markBought: vi.fn() }));
 const meals = vi.hoisted(() => ({ createMeal: vi.fn(), attachIngredients: vi.fn() }));
 const helpers = vi.hoisted(() => ({ recordAvailabilityException: vi.fn() }));
 const school = vi.hoisted(() => ({ completeSchoolItem: vi.fn(), updateSchoolItem: vi.fn(), listSchoolItems: vi.fn() }));
@@ -21,6 +22,7 @@ const home = vi.hoisted(() => ({ createServiceRequest: vi.fn() }));
 const family = vi.hoisted(() => ({ createEvent: vi.fn() }));
 
 vi.mock("../commerce/repository", () => commerce);
+vi.mock("../commerce/inventory", () => inventory);
 vi.mock("../meals/repository", () => meals);
 vi.mock("../household/helpers-repository", () => helpers);
 vi.mock("../school/repository", () => school);
@@ -47,6 +49,24 @@ const consumable = (id: string, name: string) => ({
   evidenceBasis: null,
   lastPurchasedOn: null,
   lastPurchasedQuantity: null,
+});
+
+/** A Groceries item as the list reads it: base-unit amounts, null when unknown. */
+const grocery = (id: string, name: string, over: { unit?: string; toBuy?: { quantity: number; unit: string } | null; stock?: { quantity: number; unit: string } | null } = {}) => ({
+  id,
+  name,
+  category: "grocery",
+  unit: over.unit ?? "pcs",
+  step: null,
+  lowLevel: null,
+  storage: null,
+  note: null,
+  aliases: [],
+  imageUrl: null,
+  imagePath: null,
+  lastPurchasedOn: null,
+  stock: over.stock ? { ...over.stock, confirmedAt: NOW.toISOString(), confirmedBy: null, source: "stated", version: 1, useBy: null, useByBasis: null } : null,
+  toBuy: over.toBuy ? { ...over.toBuy, entryId: `e-${id}`, version: 1, source: "manual", mealId: null } : null,
 });
 
 const intent = (over: Partial<HouseholdIntent>): HouseholdIntent => ({
@@ -95,37 +115,60 @@ beforeEach(() => {
   let next = 0;
   commerce.createConsumable.mockImplementation(async () => ({ id: `c-${(next += 1)}` }));
   commerce.retireConsumable.mockResolvedValue(undefined);
+  inventory.listGroceries.mockResolvedValue([]);
+  // The list's own arithmetic is the database's; here an add lands as exactly what was added.
+  inventory.adjustListEntry.mockImplementation(async (_supabase: unknown, change: { amount?: { quantity: number; unit: string } }) => ({
+    before: 0,
+    after: change.amount?.quantity ?? 0,
+    unit: change.amount?.unit ?? "pcs",
+    version: 1,
+    clamped: false,
+    replayed: false,
+    conflict: false,
+    entryId: "e-new",
+  }));
 });
 
 describe("several things at once (§10): each item on its own", () => {
   it("adds each, and says exactly what was added", async () => {
     const done = await executeIntent(intent({ parameters: { items: ["milk", "bananas"] } }), context());
     expect(commerce.createConsumable).toHaveBeenCalledTimes(2);
-    expect(done.ok && done.text).toMatch(/Added \*\*Milk\*\* and \*\*Bananas\*\*/);
+    expect(inventory.adjustListEntry).toHaveBeenCalledTimes(2);
+    expect(done.ok && done.text).toMatch(/^Added \*\*Milk\*\* \(1 pc\) and \*\*Bananas\*\* \(1 pc\) to the \[shopping list\]/);
     expect(done.ok && focusFromResult("add_to_list", done.result, NOW.toISOString()).map((entity) => entity.label)).toEqual(["Milk", "Bananas"]);
   });
 
   it("one already on the list never hides the other — and is not added twice", async () => {
-    commerce.listConsumables.mockResolvedValue([consumable("c-milk", "Milk")]);
+    inventory.listGroceries.mockResolvedValue([grocery("c-milk", "Milk", { unit: "l", toBuy: { quantity: 1000, unit: "ml" } })]);
     const done = await executeIntent(intent({ parameters: { items: ["milk", "bananas"] } }), context());
     expect(commerce.createConsumable).toHaveBeenCalledTimes(1);
-    expect(done.ok && done.text).toMatch(/Added \*\*Bananas\*\*.*\*\*Milk\*\* was already there/);
+    expect(inventory.adjustListEntry).toHaveBeenCalledTimes(1);
+    expect(done.ok && done.text).toMatch(/Added \*\*Bananas\*\* \(1 pc\).*\*\*Milk\*\* is already on the .*\(1 L\)/);
     expect(done.ok && unchangedResult(done.result)).toBe(false);
   });
 
   it("nothing written is \"nothing to change\", never \"done\" (§12)", async () => {
-    commerce.listConsumables.mockResolvedValue([consumable("c-milk", "Milk")]);
+    inventory.listGroceries.mockResolvedValue([grocery("c-milk", "Milk", { unit: "l", toBuy: { quantity: 1000, unit: "ml" } })]);
     const done = await executeIntent(intent({ parameters: { item: "milk" } }), context());
     expect(commerce.createConsumable).not.toHaveBeenCalled();
+    expect(inventory.adjustListEntry).not.toHaveBeenCalled();
     expect(done.ok && done.text).toMatch(/already on the .*nothing to add/);
     expect(done.ok && unchangedResult(done.result)).toBe(true);
   });
 
-  it("\"make sure we have everything\" says it checked the list, because it cannot see the kitchen", async () => {
-    commerce.listConsumables.mockResolvedValue([consumable("c-pasta", "Pasta")]);
+  it("\"add 6 more\" adds six to what is listed, never replaces it (Groceries §5.2)", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-eggs", "Eggs", { toBuy: { quantity: 6, unit: "pcs" } })]);
+    inventory.adjustListEntry.mockResolvedValueOnce({ before: 6, after: 12, unit: "pcs", version: 2, clamped: false, replayed: false, conflict: false, entryId: "e-c-eggs" });
+    const done = await executeIntent(intent({ parameters: { item: "6 more eggs" } }), context());
+    expect(inventory.adjustListEntry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-eggs", kind: "add", amount: { quantity: 6, unit: "pcs" } }));
+    expect(done.ok && done.text).toBe("Added **Eggs** (+6 pcs, now 12 pcs) to the [shopping list](/groceries?view=to-buy).");
+  });
+
+  it("\"make sure we have everything\" leaves off what is confirmed at home, and says what it checked", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-pasta", "Pasta", { unit: "g", stock: { quantity: 500, unit: "g" } })]);
     const done = await executeIntent(intent({ parameters: { items: ["pasta", "tomatoes", "basil"], forMeal: "Tomato pasta" } }), context());
-    expect(done.ok && done.text).toMatch(/^I cannot see what is in the kitchen, so I checked what tomato pasta needs/);
-    expect(done.ok && done.text).toMatch(/added \*\*Tomatoes\*\* and \*\*Basil\*\*; \*\*Pasta\*\* was already there/);
+    expect(done.ok && done.text).toMatch(/^For tomato pasta, I checked what is at home and on the list\./);
+    expect(done.ok && done.text).toMatch(/Added \*\*Tomatoes\*\* \(1 pc\) and \*\*Basil\*\* \(1 pc\) to the .*; \*\*Pasta\*\* is already at home\./);
   });
 
   it("can be carried out with one item or several, and not with none", () => {
@@ -201,8 +244,17 @@ describe("correcting something already done (§9): undo through its own service,
     );
     expect(commerce.retireConsumable).toHaveBeenCalledWith(expect.anything(), { id: "c-milk", householdId: "hh-1" });
     expect(commerce.createConsumable).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "Almond milk" }));
-    expect(done.ok && done.text).toMatch(/^Took \*\*Milk\*\* off the .* Added \*\*Almond milk\*\*/);
+    expect(done.ok && done.text).toMatch(/^Took \*\*Milk\*\* back off the .* Added \*\*Almond milk\*\*/);
     expect(done.ok && done.result.corrected).toBe("a-1");
+  });
+
+  it("what HomeTalk put on the list comes back off by the amount it added", async () => {
+    await executeIntent(
+      intent({ parameters: { item: "almond milk", corrects: { actionId: "a-1", actionType: "add_to_list", result: { items: [{ name: "Milk", consumableId: "c-milk", created: false, delta: { quantity: 1000, unit: "ml" } }] } } } }),
+      context(),
+    );
+    expect(inventory.adjustListEntry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-milk", kind: "subtract", amount: { quantity: 1000, unit: "ml" } }));
+    expect(commerce.retireConsumable).not.toHaveBeenCalled();
   });
 
   it("what was on the list before HomeTalk touched it is never taken off", async () => {
@@ -254,7 +306,7 @@ describe("correcting one of several things (§9)", () => {
     expect(commerce.retireConsumable).toHaveBeenCalledWith(expect.anything(), { id: "c-milk", householdId: "hh-1" });
     expect(commerce.createConsumable).toHaveBeenCalledTimes(1);
     expect(commerce.createConsumable).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "Almond milk" }));
-    expect(done.ok && done.text).toBe("Took **Milk** off the [groceries](/groceries). Added **Almond milk** to the [groceries](/groceries). Once I see it bought a few times I will work out how often you need it.");
+    expect(done.ok && done.text).toBe("Took **Milk** back off the [shopping list](/groceries?view=to-buy). Added **Almond milk** (1 pc) to the [shopping list](/groceries?view=to-buy).");
   });
 });
 
@@ -269,17 +321,27 @@ describe("a reminder's wording", () => {
 });
 
 describe("the §21 domain actions — each through its own domain service", () => {
-  it("\"remove the bananas\" retires the tracked item; one not on the list is said so, nothing else touched", async () => {
-    commerce.listConsumables.mockResolvedValue([consumable("c-ban", "Bananas")]);
+  it("\"remove the bananas\" takes it off the list and never stops tracking it; one not on the list is said so", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-ban", "Bananas", { toBuy: { quantity: 6, unit: "pcs" } })]);
     const done = await executeIntent(intent({ action: "remove_from_list", parameters: { items: ["bananas", "caviar"] } }), context());
-    expect(commerce.retireConsumable).toHaveBeenCalledTimes(1);
-    expect(commerce.retireConsumable).toHaveBeenCalledWith(expect.anything(), { id: "c-ban", householdId: "hh-1" });
+    expect(inventory.adjustListEntry).toHaveBeenCalledTimes(1);
+    expect(inventory.adjustListEntry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-ban", kind: "remove" }));
+    expect(commerce.retireConsumable).not.toHaveBeenCalled();
     expect(done.ok && done.text).toMatch(/^Took \*\*Bananas\*\* off the .* \*\*Caviar\*\* was not on the/);
+  });
+
+  it("\"remove 500 grams of rice\" takes that much off the list, never what is at home (Groceries G)", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-rice", "Rice", { unit: "kg", toBuy: { quantity: 2000, unit: "g" }, stock: { quantity: 3000, unit: "g" } })]);
+    inventory.adjustListEntry.mockResolvedValueOnce({ before: 2000, after: 1500, unit: "g", version: 2, clamped: false, replayed: false, conflict: false, entryId: "e-c-rice" });
+    const done = await executeIntent(intent({ action: "remove_from_list", parameters: { item: "500 grams of rice" } }), context());
+    expect(inventory.adjustListEntry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-rice", kind: "subtract", amount: { quantity: 500, unit: "g" } }));
+    expect(inventory.changeStock).not.toHaveBeenCalled();
+    expect(done.ok && done.text).toMatch(/^Took \*\*500 g\*\* of \*\*Rice\*\* off \(now \*\*1\.5 kg\*\* to buy\)/);
   });
 
   it("removing something that was never there changes nothing, and says so (§12)", async () => {
     const done = await executeIntent(intent({ action: "remove_from_list", parameters: { item: "caviar" } }), context());
-    expect(commerce.retireConsumable).not.toHaveBeenCalled();
+    expect(inventory.adjustListEntry).not.toHaveBeenCalled();
     expect(done.ok && unchangedResult(done.result)).toBe(true);
   });
 
@@ -348,9 +410,59 @@ describe("HomeTalk and HomeSend share one truth about the list (§15)", () => {
   });
 
   it("and what HomeSend put on the list is what HomeTalk will not add twice", async () => {
-    commerce.listConsumables.mockResolvedValue([consumable("c-2", "Amul milk")]);
+    inventory.listGroceries.mockResolvedValue([grocery("c-2", "Amul milk", { unit: "l", toBuy: { quantity: 1000, unit: "ml" } })]);
     const done = await executeIntent(intent({ parameters: { item: "milk" } }), context());
     expect(commerce.createConsumable).not.toHaveBeenCalled();
     expect(done.ok && unchangedResult(done.result)).toBe(true);
+  });
+});
+
+describe("what is at home, from conversation (Groceries Phase 2)", () => {
+  const stockIntent = (action: "set_stock" | "use_stock" | "mark_bought", items: string[]) =>
+    intent({ action, target: { kind: "outcome", reference: "groceries.stocked" }, parameters: { items } });
+
+  it("D: \"we have 10 eggs\" sets what is at home, leaves the list alone, and points at it", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-eggs", "Eggs", { toBuy: { quantity: 6, unit: "pcs" } })]);
+    inventory.changeStock.mockResolvedValue({ before: null, after: 10, unit: "pcs", version: 1, clamped: false, replayed: false, conflict: false });
+    const done = await executeIntent(stockIntent("set_stock", ["10 eggs in the fridge"]), context());
+    expect(inventory.changeStock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-eggs", kind: "set", amount: { quantity: 10, unit: "pcs" }, source: "stated" }));
+    expect(inventory.adjustListEntry).not.toHaveBeenCalled();
+    expect(done.ok && done.text).toMatch(/^\*\*Eggs\*\*: \*\*10 pcs\*\* at home now\. It is also on the \[shopping list\].*\(\*\*6 pcs\*\*\)/);
+  });
+
+  it("\"used 20 eggs\" with 10 at home stops at none, and says so", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-eggs", "Eggs", { stock: { quantity: 10, unit: "pcs" } })]);
+    inventory.changeStock.mockResolvedValue({ before: 10, after: 0, unit: "pcs", version: 2, clamped: true, replayed: false, conflict: false });
+    const done = await executeIntent(stockIntent("use_stock", ["20 eggs"]), context());
+    expect(done.ok && done.text).toBe("That was more **Eggs** than was recorded, so there is none at home now.");
+  });
+
+  it("a count needs a number: \"we have eggs\" is not carried out", () => {
+    expect(canExecute(stockIntent("set_stock", ["eggs"]))).toBe(false);
+    expect(canExecute(stockIntent("set_stock", ["10 eggs"]))).toBe(true);
+  });
+
+  it("E: \"bought 2 kg potatoes and 1 litre milk\" records each once and leaves any rest on the list", async () => {
+    inventory.listGroceries.mockResolvedValue([
+      grocery("c-pot", "Potatoes", { unit: "kg", toBuy: { quantity: 2000, unit: "g" } }),
+      grocery("c-milk", "Milk", { unit: "l", toBuy: { quantity: 2000, unit: "ml" } }),
+    ]);
+    inventory.markBought
+      .mockResolvedValueOnce({ remaining: 0, unit: "g", stockAfter: 2000, replayed: false })
+      .mockResolvedValueOnce({ remaining: 1000, unit: "ml", stockAfter: 1000, replayed: false });
+    const done = await executeIntent(stockIntent("mark_bought", ["2 kg potatoes", "1 litre milk"]), context());
+    expect(inventory.markBought).toHaveBeenCalledTimes(2);
+    expect(inventory.markBought).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ entryId: "e-c-pot", amount: { quantity: 2000, unit: "g" }, purchasedOn: "2026-09-23" }));
+    expect(done.ok && done.text).toBe(
+      "Recorded **2 kg** of **Potatoes** bought (now **2 kg** at home). Recorded **1 L** of **Milk** bought (now **1 L** at home). **1 L** is still on the [shopping list](/groceries?view=to-buy).",
+    );
+  });
+
+  it("something bought that was not on the list is recorded the same way, once", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-bread", "Bread")]);
+    inventory.markBought.mockResolvedValue({ remaining: 0, unit: "pcs", stockAfter: 1, replayed: false });
+    await executeIntent(stockIntent("mark_bought", ["bread"]), context());
+    expect(inventory.adjustListEntry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-bread", kind: "add", amount: { quantity: 1, unit: "pcs" } }));
+    expect(inventory.markBought).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ entryId: "e-new", amount: { quantity: 1, unit: "pcs" } }));
   });
 });

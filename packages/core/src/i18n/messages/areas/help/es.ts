@@ -197,6 +197,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Comidas tiene un plan, tus recetas y preferencias. Una receta puede llevar los nutrientes aproximados por ración. Sugerir propone una comida con lo que tienes y lo que le gusta a la gente, y los ingredientes que faltan van a la lista de la compra.",
   "help.guide.meals-and-shopping.body.5":
     "Las preferencias registran de quién son —algo que no gusta, una alergia, una elección médica o ética—, para que lo que no le gusta a una persona nunca se convierta en silencio en una norma de la casa. Una alergia siempre gana.",
+  "help.guide.meals-and-shopping.body.6":
+    "También puedes decirle cantidades a HomeTalk con tus propias palabras: «añade 6 huevos más», «quita 500 g de arroz de la lista», «tenemos 10 huevos», «hemos usado medio kilo de arroz», «he comprado 2 kg de patatas». Pedir que añada algo que ya está en la lista, sin cantidad, no cambia nada; con una cantidad, se suma a lo que ya hay. Quitar algo de la lista nunca deja de seguirlo. Los cambios en lo que hay en casa se proponen primero y esperan tu sí, salvo que tu hogar deje que WonderHome actúe solo con la compra.",
 
   "help.guide.health.title": "Salud y actividad",
   "help.guide.health.summary": "Historiales, constantes y rutinas, privados para cada persona salvo que los comparta.",

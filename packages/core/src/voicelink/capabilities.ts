@@ -119,6 +119,15 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     policy: everywhere,
   },
   {
+    id: "pantry_changes",
+    label: "Changing what is at home, and recording what was bought",
+    category: "sensitive",
+    actions: ["set_stock", "use_stock", "mark_bought"],
+    geminiTools: [],
+    policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
+    note: "Counts of what is at home are changed in the WonderHome app, where you can see the amount before it is saved.",
+  },
+  {
     id: "reminders",
     label: "Reminders for you",
     category: "low_risk",

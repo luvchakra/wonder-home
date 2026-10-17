@@ -1,3 +1,4 @@
+import { readItemAmount } from "./quantity";
 import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments";
 import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
@@ -44,6 +45,11 @@ function core(utterance: string): string {
     .trim()
     .replace(/[.!?]+$/g, "")
     .replace(/^(?:ok(?:ay)?|so|hey|hi|hello|please|wonderhome|alright|right|um|uh|well)[,\s]+/i, "")
+    // "No, I meant remove 500 grams of rice": the request the correction introduces.
+    .replace(/^(?:no|sorry|oops)[,\s]+(?:i meant|i mean|i wanted to)\s+(?=(?:add|remove|take|put|buy|get|use)\b)/i, "")
+    // "Yes, add 6" / "sure, add milk": the answer and the request together.
+    .replace(/^(?:yes|yeah|yep|sure)[,\s]+(?=\S+\s)/i, "")
+    .replace(/^(?:ok(?:ay)?)[,\s]+/i, "")
     .replace(/^(?:can|could|would|will) you (?:please )?/i, "")
     .replace(/^(?:please )?/i, "")
     .replace(/\s+please$/i, "")
@@ -160,6 +166,23 @@ function withItems(intent: Omit<HouseholdIntent, "actorMemberId" | "channel" | "
   const parameters: Record<string, unknown> = { ...intent.parameters, items };
   delete parameters.item;
   return { ...intent, parameters };
+}
+
+
+/**
+ * "10 eggs", "2 kg potatoes and 1 litre milk" — counts of things, each with a
+ * number. Anything without one (a headache, a meeting, a plan) is not a count
+ * of what is at home, and the sentence is left to the rules after.
+ */
+function stockLines(said: string): string[] | null {
+  const parts = (/,|;|&|\band\b|\bplus\b/i.test(said) ? extractItems(said) : [said]).map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+  for (const part of parts) {
+    const read = readItemAmount(part);
+    if (!read.amount || !read.item || read.item.split(" ").length > 4) return null;
+    if (/\b(?:kids?|children|sons?|daughters?|people|members|meetings?|appointments?|calls?|days?|hours?|minutes?|weeks?|months?|years?|bills?|questions?|ideas?|tickets?|classes|exams?|tests?)\b/i.test(read.item)) return null;
+  }
+  return parts;
 }
 
 const RULES: readonly Rule[] = [
@@ -348,6 +371,41 @@ const RULES: readonly Rule[] = [
     // is usually asked for one.
     pattern: new RegExp(`^(?:set|create|make|add)(?: me)? an? reminder (?:to|about|for|that) (.+?)(?:\\s+(${REMIND_WHEN}))?(?:\\s+at\\s+(${TIME_WORDS}))?$`, "i"),
     read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[1]!, match[2], match[3]), confidence: 0.9 }),
+  },
+
+  // --- What is at home (Groceries Phase 2) ------------------------------------
+  // First, so "I have 10 eggs" is a count and never a symptom or a preference.
+  {
+    // "We have 10 eggs (in the fridge)", "actually we've got 2 litres of milk", "there are 6 eggs".
+    pattern: /^(?:actually,?\s+)?(?:(?:we|i)(?:'ve| have| still have| have got|'ve got| got| now have)|there(?:'s| is| are))\s+(.+)$/i,
+    read: (match) => {
+      const lines = stockLines(match[1]!);
+      if (!lines) return null;
+      return { action: "set_stock", target: { kind: "outcome", reference: "groceries.stocked" }, parameters: { items: lines }, confidence: 0.9 };
+    },
+  },
+  {
+    // "Used 2 eggs", "we used half a kilo of rice", "I finished 1 litre of milk".
+    pattern: /^(?:we|i)?\s*(?:(?:have|'ve)\s+)?(?:used|used up|finished|cooked|ate|took)\s+(.+)$/i,
+    read: (match) => {
+      const lines = stockLines(match[1]!);
+      if (!lines) return null;
+      return { action: "use_stock", target: { kind: "outcome", reference: "groceries.stocked" }, parameters: { items: lines }, confidence: 0.88 };
+    },
+  },
+  {
+    // "Bought 2 kg potatoes and 1 litre milk", "we picked up the eggs".
+    pattern: /^(?:we|i)?\s*(?:(?:have|'ve|just)\s+)*(?:bought|purchased|picked up|got)\s+(.+?)(?:\s+(?:today|yesterday|this morning|just now))?$/i,
+    read: (match, utterance) => {
+      const said = match[1]!.trim();
+      const items = /,|;|&|\band\b|\bplus\b/i.test(said) ? extractItems(said) : [item(said)];
+      const lines = items.map((entry) => entry.trim()).filter(Boolean);
+      if (lines.length === 0 || lines.some((entry) => entry.split(" ").length > 6)) return null;
+      // "Got" alone is too common to mean shopping unless an amount says so.
+      if (/\bgot\b/i.test(utterance) && !/\bbought|purchased|picked up\b/i.test(utterance) && !lines.some((entry) => readItemAmount(entry).amount)) return null;
+      if (lines.some((entry) => /\b(?:call|message|email|letter|ticket|job|idea|time|chance|appointment|reply)\b/i.test(entry))) return null;
+      return { action: "mark_bought", target: { kind: "outcome", reference: "groceries.stocked" }, parameters: { items: lines }, confidence: 0.86 };
+    },
   },
 
   // --- Lists: add something --------------------------------------------------
@@ -768,6 +826,9 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "add_to_list",
   "set_reminder",
   "remove_from_list",
+  "set_stock",
+  "use_stock",
+  "mark_bought",
   "complete_school_item",
   "raise_service_request",
   "record_absence",

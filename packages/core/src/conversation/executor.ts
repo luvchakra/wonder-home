@@ -2,9 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
-import { createConsumable, listConsumables, retireConsumable } from "../commerce/repository";
 import { buildContextItems, personItems, type PersonLike } from "../context/builders";
-import { matchIncoming } from "../context/matching";
 import { resolveEntity, resolvePerson } from "../context/resolution";
 import { createAppointment, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
@@ -17,6 +15,7 @@ import { movedSchoolWhen } from "../school/times";
 import type { MealSlot } from "../meals/meals";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
+import { addToShoppingList, changeStockFromTalk, linesOf, markBoughtFromTalk, removeFromShoppingList, undoAddToList } from "./grocery-actions";
 import type { HouseholdIntent } from "./intent";
 import { joinWords } from "./proposal";
 import { linkTo } from "./reply-format";
@@ -74,7 +73,12 @@ export function canExecute(intent: HouseholdIntent): boolean {
     case "set_reminder":
       return typeof intent.parameters.what === "string" && intent.parameters.what.trim().length > 0 && typeof intent.parameters.when === "string";
     case "remove_from_list":
+    case "mark_bought":
       return itemsOf(intent).length > 0;
+    // A count of what is at home needs a number; "we have eggs" says none.
+    case "set_stock":
+    case "use_stock":
+      return linesOf(intent).some((line) => line.amount !== null);
     case "complete_school_item":
       return typeof intent.parameters.schoolItemId === "string";
     case "raise_service_request":
@@ -166,13 +170,18 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
   try {
     switch (intent.action) {
       case "add_to_list":
-        return await addToGroceries(intent, context);
+        return { ok: true, ...(await addToShoppingList(intent, context)) };
       case "plan_meal":
         return await planMeal(intent, context);
       case "set_reminder":
         return await setReminder(intent, context);
       case "remove_from_list":
-        return await removeFromGroceries(intent, context);
+        return { ok: true, ...(await removeFromShoppingList(intent, context)) };
+      case "set_stock":
+      case "use_stock":
+        return { ok: true, ...(await changeStockFromTalk(intent, context)) };
+      case "mark_bought":
+        return { ok: true, ...(await markBoughtFromTalk(intent, { ...context, today: new Intl.DateTimeFormat("en-CA", { timeZone: context.timezone }).format(context.now ?? new Date()) })) };
       case "complete_school_item":
         return await markSchoolItemDone(intent, context);
       case "raise_service_request":
@@ -234,18 +243,22 @@ async function undoForCorrection(
   const result = corrects.result;
   switch (corrects.actionType) {
     case "add_to_list": {
-      // Only what HomeTalk itself added comes off; what was already on the
-      // list before it touched it was never ours to take back — and what the
-      // corrected request still names stays exactly where it is.
-      const all = addedItems(result);
-      if (all === null) return { ok: false, reason: "I could not find what I added earlier, so I left the list as it was." };
+      // Only what HomeTalk itself added comes off — the amount it put on the
+      // list, and an item it created — and what the corrected request still
+      // names stays exactly where it is.
       const wanted = new Set(itemsOf(intent).map((name) => name.toLowerCase()));
-      const earlier = Array.isArray(result.items) ? (result.items as { name?: unknown }[]).map((entry) => String(entry.name ?? "")) : typeof result.name === "string" ? [result.name] : [];
-      const keep = earlier.filter((name) => wanted.has(name.toLowerCase()));
-      const added = all.filter((entry) => !wanted.has(entry.name.toLowerCase()));
-      if (added.length === 0) return { ok: true, text: "", keep };
-      for (const entry of added) await retireConsumable(context.supabase, { id: entry.consumableId, householdId: context.householdId });
-      return { ok: true, text: `Took ${joinWords(added.map((entry) => `**${entry.name}**`))} off the ${linkTo("/groceries", "groceries")}.`, keep };
+      // A record from before the shopping list names one item at the top level.
+      const entries = Array.isArray(result.items)
+        ? (result.items as { name?: unknown }[])
+        : typeof result.consumableId === "string"
+          ? [{ name: result.name, consumableId: result.consumableId, alreadyTracked: result.alreadyTracked === true }]
+          : [];
+      const keep = entries.map((entry) => String(entry.name ?? "")).filter((name) => wanted.has(name.toLowerCase()));
+      const undoable = { ...result, items: entries.filter((entry) => !wanted.has(String(entry.name ?? "").toLowerCase())) };
+      if ((undoable.items as unknown[]).length === 0) return { ok: true, text: "", keep };
+      const undone = await undoAddToList(undoable, context);
+      if (undone === null) return { ok: false, reason: "I could not find what I added earlier, so I left the list as it was." };
+      return { ok: true, text: `Took ${joinWords(undone.map((entry) => `**${entry.name}**`))} back off the ${linkTo("/groceries?view=to-buy", "shopping list")}.`, keep };
     }
     case "set_reminder": {
       if (typeof result.notificationId !== "string") return { ok: false, reason: "I could not find the reminder I set earlier, so I left it as it was." };
@@ -286,115 +299,6 @@ function itemsOf(intent: HouseholdIntent): string[] {
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter((value) => value.length > 0 && !seen.has(value.toLowerCase()) && (seen.add(value.toLowerCase()), true));
-}
-
-type AddedItem = { name: string; consumableId: string | null; alreadyTracked: boolean };
-
-/** What an earlier add actually wrote, newest shape or the single-item one; null when unreadable. */
-function addedItems(result: Record<string, unknown>): { name: string; consumableId: string }[] | null {
-  const entries: AddedItem[] = Array.isArray(result.items)
-    ? (result.items as AddedItem[])
-    : typeof result.name === "string"
-      ? [{ name: result.name, consumableId: typeof result.consumableId === "string" ? result.consumableId : null, alreadyTracked: result.alreadyTracked === true }]
-      : [];
-  if (entries.length === 0) return null;
-  const ours = entries.filter((entry) => !entry.alreadyTracked);
-  if (ours.some((entry) => typeof entry.consumableId !== "string")) return null;
-  return ours.map((entry) => ({ name: entry.name, consumableId: entry.consumableId! }));
-}
-
-/**
- * "Add milk and bananas" — each item matched, added or found already there
- * on its own, so one already on the list never hides the other, and the
- * reply says exactly which was which.
- */
-async function addToGroceries(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
-  const names = itemsOf(intent).map((raw) => raw.charAt(0).toUpperCase() + raw.slice(1));
-  if (names.length === 0) return { ok: false, reason: "What should I add?" };
-
-  // "Milk" when "Amul milk" is already tracked is the same milk, not a new
-  // item — checked by the context engine's matcher, the same one HomeSend
-  // uses, so the two can never disagree about what is already on the list.
-  const tracked = await listConsumables(context.supabase, context.householdId).catch(() => []);
-  const known = buildContextItems({ consumables: tracked }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now: context.now ?? new Date(), viewerMemberId: context.actorMemberId });
-
-  const entries: AddedItem[] = [];
-  for (const name of names) {
-    const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
-    if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate")) {
-      entries.push({ name: String(match.item.attributes.title ?? name), consumableId: match.item.entityId, alreadyTracked: true });
-      continue;
-    }
-    try {
-      const { id } = await createConsumable(context.supabase, { householdId: context.householdId, name, category: "grocery", unit: "item", typicalQuantity: 1 });
-      entries.push({ name, consumableId: id, alreadyTracked: false });
-    } catch (thrown) {
-      if (thrown instanceof ApiError && thrown.code === "conflict") {
-        entries.push({ name, consumableId: null, alreadyTracked: true });
-        continue;
-      }
-      // Something already added stays added and is said so; the rest is not claimed.
-      if (entries.some((entry) => !entry.alreadyTracked)) {
-        return { ok: true, text: `${describeAdds(entries, intent)} I could not add ${joinWords(names.slice(entries.length).map((rest) => `**${rest}**`))} just now.`, result: addResult(entries) };
-      }
-      throw thrown;
-    }
-  }
-
-  return { ok: true, text: describeAdds(entries, intent), result: addResult(entries) };
-}
-
-function addResult(entries: AddedItem[]): Record<string, unknown> {
-  const single = entries.length === 1 ? entries[0]! : null;
-  return {
-    items: entries,
-    ...(single ? { name: single.name, ...(single.consumableId ? { consumableId: single.consumableId } : {}) } : {}),
-    // Nothing written at all is the one honest "nothing to change" (§12).
-    alreadyTracked: entries.every((entry) => entry.alreadyTracked),
-  };
-}
-
-function describeAdds(entries: AddedItem[], intent: HouseholdIntent): string {
-  const groceries = linkTo("/groceries", "groceries");
-  const added = entries.filter((entry) => !entry.alreadyTracked).map((entry) => `**${entry.name}**`);
-  const there = entries.filter((entry) => entry.alreadyTracked).map((entry) => `**${entry.name}**`);
-  const forMeal = typeof intent.parameters.forMeal === "string" ? intent.parameters.forMeal : null;
-  // WonderHome sees the list, not the cupboard — "make sure we have
-  // everything" is answered from what it can actually see, and says so.
-  const lead = forMeal ? `I cannot see what is in the kitchen, so I checked what ${forMeal.toLowerCase()} needs against the ${groceries}: ` : "";
-  if (added.length === 0) {
-    return `${lead}${forMeal ? `${joinWords(there)} ${there.length === 1 ? "is" : "are"} already on it, so there was nothing to add.` : `${joinWords(there)} ${there.length === 1 ? "is" : "are"} already on the ${groceries}, so there was nothing to add.`}`;
-  }
-  const addedLine = forMeal ? `added ${joinWords(added)}` : `Added ${joinWords(added)} to the ${groceries}`;
-  const thereLine = there.length > 0 ? `; ${joinWords(there)} ${there.length === 1 ? "was" : "were"} already there` : "";
-  const learn = !forMeal && added.length === 1 && there.length === 0 ? " Once I see it bought a few times I will work out how often you need it." : "";
-  return `${lead}${addedLine}${thereLine}.${learn}`;
-}
-
-/**
- * "Remove the bananas" — each named item taken off through the same retire
- * a person's own remove on the Groceries screen uses. One not on the list is
- * said so; nothing else is touched.
- */
-async function removeFromGroceries(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
-  const names = itemsOf(intent);
-  const tracked = await listConsumables(context.supabase, context.householdId).catch(() => []);
-  const known = buildContextItems({ consumables: tracked }, { householdId: context.householdId, householdName: "", timezone: context.timezone, now: context.now ?? new Date(), viewerMemberId: context.actorMemberId });
-  const removed: { name: string; consumableId: string }[] = [];
-  const missing: string[] = [];
-  for (const name of names) {
-    const match = matchIncoming({ domain: "groceries", title: name }, known, { timezone: context.timezone });
-    if (match.item && (match.verdict === "exact_match" || match.verdict === "likely_duplicate") && match.item.entityId && !removed.some((entry) => entry.consumableId === match.item!.entityId)) {
-      await retireConsumable(context.supabase, { id: match.item.entityId, householdId: context.householdId });
-      removed.push({ name: String(match.item.attributes.title ?? name), consumableId: match.item.entityId });
-    } else {
-      missing.push(name.charAt(0).toUpperCase() + name.slice(1));
-    }
-  }
-  const groceries = linkTo("/groceries", "groceries");
-  const took = removed.length > 0 ? `Took ${joinWords(removed.map((entry) => `**${entry.name}**`))} off the ${groceries}.` : "";
-  const absent = missing.length > 0 ? `${joinWords(missing.map((name) => `**${name}**`))} ${missing.length === 1 ? "was" : "were"} not on the ${groceries}, so there was nothing to take off.` : "";
-  return { ok: true, text: [took, absent].filter(Boolean).join(" "), result: { removed, missing, alreadyTracked: removed.length === 0 } };
 }
 
 /** "Mark Asmi's worksheet complete" — the School service's own done, as a person's tap on it would be. */

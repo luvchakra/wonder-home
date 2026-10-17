@@ -159,6 +159,24 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "Who are the family members?",
     expected: { interpretation: "ask_status", action: "answer", safety: { consequential: false, executed: false } },
   },
+  {
+    id: "HT-23", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"Actually we have 10 eggs in the fridge\" is a count of what is at home (Groceries D) — read by the rules, never a symptom or a preference, and asked first by default.",
+    utterance: "Actually we have 10 eggs in the fridge",
+    expected: { interpretation: "set_stock", action: "needs_approval", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-24", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"Bought 2 kg potatoes and 1 litre milk\" is one purchase of each (Groceries E), waiting for a yes by default.",
+    utterance: "Bought 2 kg potatoes and 1 litre milk",
+    expected: { interpretation: "mark_bought", action: "needs_approval", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-25", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "\"I have a headache\" stays a health note: a count of groceries needs a number.",
+    utterance: "I have a headache",
+    expected: { interpretation: "log_health_issue" },
+  },
 ];
 
 // --- HomeSend (§5) -----------------------------------------------------------------

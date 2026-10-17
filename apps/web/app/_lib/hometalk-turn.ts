@@ -60,6 +60,7 @@ import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { getHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { answerDocumentChanges, documentReplyClasses, documentReplyText, readDocumentChangeQuestion } from "@wonderhome/core/homesend/talk";
 import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
+import { listGroceries } from "@wonderhome/core/commerce/inventory";
 import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
@@ -468,6 +469,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     references: read,
     recipes: () => (recipeRead ??= listRecipeNames(supabase, householdId).catch(() => [])),
     ingredients: (of) => ingredientNames(supabase, householdId, of).catch(() => []),
+    groceries: () => listGroceries(supabase, householdId).catch(() => []),
     schoolItems: () =>
       (schoolRead ??= listSchoolItems(supabase, householdId)
         .then((items) => items.map((entry) => ({ id: entry.id, title: entry.title, childMemberId: entry.childMemberId, dueAt: entry.dueAt?.toISOString() ?? null, status: entry.status, dueTimeKnown: entry.dueTimeKnown, endsAt: entry.endsAt?.toISOString() ?? null })))

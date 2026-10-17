@@ -156,11 +156,16 @@ describe("the assessment other modules read", () => {
     expect(assessment.reason).toContain("does not know how fast");
   });
 
-  it("treats having run out as blocking", () => {
-    const empty = consumable({ lastPurchasedOn: "2026-09-01" });
-    const assessment = assessConsumable(empty, NOW);
+  // Groceries spec §2: a purchase date is never proof of what is left. An
+  // estimate past its usual life is worth a look — said as an estimate,
+  // never "run out", never blocking.
+  it("never claims something has run out from a purchase date alone", () => {
+    const old = consumable({ lastPurchasedOn: "2026-09-01" });
+    const assessment = assessConsumable(old, NOW);
 
-    expect(assessment.status).toBe("blocked");
+    expect(assessment.status).toBe("at_risk");
+    expect(assessment.reason).not.toMatch(/run out/);
+    expect(assessment.reason).toMatch(/going by past purchases\. Nobody has said how much is left\./);
     expect(assessment.action).toEqual({ action: "add_to_cart", target: "milk" });
   });
 

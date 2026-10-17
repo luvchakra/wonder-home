@@ -23,8 +23,14 @@ export const INTENT_ACTIONS = [
   "plan_meal",
   /** "Remind me to buy them tomorrow" — a real in-app reminder to the speaker, due at that time (Wave 4 §10). */
   "set_reminder",
-  /** "Remove the bananas" — takes something off the list through the same retire a person's own remove uses. */
+  /** "Remove the bananas", "remove 500 g of rice" — takes it, or that much of it, off the shopping list; never touches what is at home. */
   "remove_from_list",
+  /** "Actually we have 10 eggs in the fridge" — sets what is at home (Groceries Phase 2); never the list. */
+  "set_stock",
+  /** "Used 2 eggs" — takes that much off what is at home; never below nothing. */
+  "use_stock",
+  /** "Bought 2 kg potatoes and 1 litre milk" — a purchase: what is at home goes up, the list comes down, once. */
+  "mark_bought",
   /** "Mark Asmi's worksheet complete" — an open school item marked done through the School service. */
   "complete_school_item",
   /** "The washing machine is making that noise again" — a service request logged against the appliance. */

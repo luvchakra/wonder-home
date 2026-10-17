@@ -135,8 +135,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "meals-and-shopping",
     group: "Everyday use",
-    updated: "2026-10-17",
-    keywords: ["meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences"],
+    updated: "2026-10-18",
+    keywords: ["amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences"],
   },
   {
     id: "health",

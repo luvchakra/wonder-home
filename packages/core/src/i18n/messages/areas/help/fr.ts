@@ -197,6 +197,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Repas comprend un planning, vos recettes et les préférences. Une recette peut indiquer des nutriments approximatifs par portion. Suggérer propose un repas à partir de ce que vous avez et de ce que les gens aiment, et les ingrédients manquants vont sur la liste de courses.",
   "help.guide.meals-and-shopping.body.5":
     "Les préférences indiquent à qui elles appartiennent — un aliment qu’on n’aime pas, une allergie, un choix médical ou éthique — pour que ce qu’une personne n’aime pas ne devienne jamais en silence une règle de la maison. Une allergie l’emporte toujours.",
+  "help.guide.meals-and-shopping.body.6":
+    "Vous pouvez aussi donner des quantités à HomeTalk avec vos propres mots : « ajoute 6 œufs de plus », « enlève 500 g de riz de la liste », « on a 10 œufs », « on a utilisé un demi-kilo de riz », « j'ai acheté 2 kg de pommes de terre ». Demander d'ajouter quelque chose qui est déjà sur la liste, sans quantité, ne change rien ; avec une quantité, elle s'ajoute à ce qui y est. Retirer un article de la liste n'arrête jamais son suivi. Les changements de ce qu'il y a à la maison sont d'abord proposés et attendent votre accord, sauf si votre foyer laisse WonderHome agir seul sur les courses.",
 
   "help.guide.health.title": "Santé et forme",
   "help.guide.health.summary": "Dossiers, constantes et routines, privés pour chacun sauf s’il les partage.",

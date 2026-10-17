@@ -1,3 +1,6 @@
+import { groceryCandidates } from "./grocery-actions";
+import { readItemAmount } from "./quantity";
+import type { GroceryItem } from "../commerce/inventory";
 import { reminderMoment } from "./reminder-time";
 import { resolvePerson } from "../context/resolution";
 import type { HouseholdContextItem } from "../context/types";
@@ -53,6 +56,8 @@ export type GroundingEnv = {
   schoolItems?: () => Promise<readonly SchoolItemRef[]>;
   /** The household's appliances and fixtures, for "the washing machine is making that noise". */
   assets?: () => Promise<readonly { id: string; name: string }[]>;
+  /** What the household keeps on its Groceries list, for "tomatoes or cherry tomatoes?". */
+  groceries?: () => Promise<readonly GroceryItem[]>;
 };
 
 export type SchoolItemRef = { id: string; title: string; childMemberId: string; dueAt: string | null; status: string; dueTimeKnown?: boolean; endsAt?: string | null };
@@ -76,7 +81,14 @@ const IMPLICIT_TARGET: Partial<Record<HouseholdIntent["action"], HouseholdIntent
   set_reminder: { kind: "outcome", reference: "reminders" },
   raise_service_request: { kind: "outcome", reference: "home" },
   plan_meal: { kind: "outcome", reference: "meals" },
+  // What is at home follows the groceries outcome's own autonomy (Groceries D6).
+  set_stock: { kind: "outcome", reference: "groceries.stocked" },
+  use_stock: { kind: "outcome", reference: "groceries.stocked" },
+  mark_bought: { kind: "outcome", reference: "groceries.stocked" },
 };
+
+/** Grocery actions whose items may carry an amount ("6 more eggs") and may point back ("6 more"). */
+const GROCERY_LINE_ACTIONS: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "remove_from_list", "set_stock", "use_stock", "mark_bought"]);
 
 const SAID_DAY = new RegExp(`\\b(${TEMPORAL_PHRASE})\\b`, "i");
 
@@ -199,8 +211,21 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     }
   }
 
+  // --- An amount on its own (Groceries Phase 2): "add 6 more", "make it one litre"
+  // is about the thing just discussed, so it is grounded like "that".
+  let amountOnly: string | null = null;
+  if (GROCERY_LINE_ACTIONS.has(grounded.action)) {
+    const said = typeof grounded.parameters.item === "string" ? grounded.parameters.item : Array.isArray(grounded.parameters.items) && grounded.parameters.items.length === 1 ? String(grounded.parameters.items[0]) : null;
+    const read = said ? readItemAmount(said) : null;
+    if (said && read?.amount && !read.item) {
+      amountOnly = said;
+      grounded.parameters = { ...grounded.parameters, item: "that" };
+      delete grounded.parameters.items;
+    }
+  }
+
   // --- References (§8): "put that on the list" ------------------------------
-  if (grounded.action === "add_to_list" || grounded.action === "order_items" || grounded.action === "remove_from_list") {
+  if (grounded.action === "add_to_list" || grounded.action === "order_items" || GROCERY_LINE_ACTIONS.has(grounded.action)) {
     const item = typeof grounded.parameters.item === "string" ? grounded.parameters.item : Array.isArray(grounded.parameters.items) && grounded.parameters.items.length === 1 ? String(grounded.parameters.items[0]) : null;
     const anaphor = item ? anaphorOf(item) : null;
     if (anaphor) {
@@ -220,6 +245,30 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
         return clarify(grounded, "referent", resolved.question, resolved.candidates);
       } else {
         return clarify(grounded, "item", `What should I put on the list? I am not sure what "${item}" refers to.`, []);
+      }
+    }
+  }
+
+  if (amountOnly) {
+    if (typeof grounded.parameters.item === "string" && grounded.parameters.item !== "that") {
+      grounded.parameters = { ...grounded.parameters, item: `${amountOnly} ${grounded.parameters.item}` };
+    } else if (Array.isArray(grounded.parameters.items)) {
+      grounded.parameters = { ...grounded.parameters, items: (grounded.parameters.items as string[]).map((name) => `${amountOnly} ${name}`) };
+    }
+  }
+
+  // --- Which grocery (Groceries Phase 2): "tomatoes" when the household keeps
+  // tomatoes and cherry tomatoes is the one it says, but "tomato" with only
+  // "cherry tomatoes" and "plum tomatoes" on record is one question.
+  if (GROCERY_LINE_ACTIONS.has(grounded.action) && env.groceries) {
+    const known = [...(await env.groceries().catch(() => []))];
+    const names = typeof grounded.parameters.item === "string" ? [grounded.parameters.item] : Array.isArray(grounded.parameters.items) ? (grounded.parameters.items as string[]) : [];
+    for (const name of names) {
+      const read = readItemAmount(name);
+      const candidates = groceryCandidates(read.item || name, known);
+      if (candidates.length > 1) {
+        const options = candidates.slice(0, 4).map((candidate) => ({ entityType: "consumable", entityId: candidate.id, label: candidate.name, source: "clarification" as const, at }));
+        return clarify(grounded, "item", `Should I use ${joinOr(candidates.slice(0, 4).map((candidate) => candidate.name.toLowerCase()))}?`, options);
       }
     }
   }

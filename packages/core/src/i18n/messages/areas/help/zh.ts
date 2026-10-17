@@ -179,6 +179,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.meals-and-shopping.body.4":
     "“餐食”里有计划、你的食谱和偏好。食谱可以附上每份的大致营养成分。“推荐”会根据你现有的食材和大家的喜好推荐一道菜，缺的食材会加入购物清单。",
   "help.guide.meals-and-shopping.body.5": "偏好会记录是谁的——不喜欢的东西、过敏、医疗或伦理上的选择——这样一个人不喜欢的东西就不会悄悄变成全家的规矩。过敏永远优先。",
+  "help.guide.meals-and-shopping.body.6":
+    "你也可以用自己的话告诉 HomeTalk 数量：“再加 6 个鸡蛋”“从清单上去掉 500 克大米”“我们有 10 个鸡蛋”“我们用了半公斤大米”“我买了 2 公斤土豆”。要求添加清单上已有的东西而不说数量，不会有任何改变；说了数量，就会加到已有的数量上。从清单上去掉某样东西，不会停止跟踪它。家里库存的更改会先提出，等你同意，除非你的家庭允许 WonderHome 自行处理购物。",
 
   "help.guide.health.title": "健康与运动",
   "help.guide.health.summary": "记录、生命体征和日常安排，除非本人分享，否则只属于本人。",
