@@ -8,7 +8,7 @@ import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository
 import { getVerifiedUser } from "@wonderhome/core/db/server";
 import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { regionName } from "@wonderhome/core/i18n/options";
-import { listMembers } from "@wonderhome/core/identity/households";
+import { listMembers, WORK_ARRANGEMENTS } from "@wonderhome/core/identity/households";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -164,7 +164,11 @@ export default async function SettingsPage() {
                   specialOccasionDate: me.specialOccasionDate,
                   gender: me.gender,
                   notes: me.notes,
+                  memberType: me.memberType,
+                  workArrangement: me.workArrangement ?? null,
+                  workHours: me.workHours ?? null,
                 }}
+                workOptions={me.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
               />
             ) : (
               <UserRound aria-hidden className="size-5 shrink-0 text-[var(--wh-foreground-subtle)]" />

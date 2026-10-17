@@ -398,6 +398,14 @@ export function AdultsScreen({ snapshot, selfId, backTo, words }: { snapshot: On
                 options={WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) }))}
                 defaultValue={adult?.workArrangement ?? null}
               />
+              <HoursFields
+                startName={`work_starts_${index}`}
+                endName={`work_ends_${index}`}
+                startLabel={t("setupWizard.adults.workStarts")}
+                endLabel={t("setupWizard.adults.workEnds")}
+                hint={t("setupWizard.adults.workHoursHint")}
+                value={adult?.workHours ?? null}
+              />
             </Card>
           );
         })}
@@ -485,6 +493,14 @@ export function ChildrenScreen({ snapshot, places, words }: { snapshot: Onboardi
                 available={places.available}
                 labels={{ ...schoolLabels, hint: snapshot.address?.location ? schoolLabels.hint : t("setupWizard.children.schoolHint") }}
               />
+              <HoursFields
+                startName={`school_starts_${index}`}
+                endName={`school_ends_${index}`}
+                startLabel={t("setupWizard.children.schoolStarts")}
+                endLabel={t("setupWizard.children.schoolEnds")}
+                hint={t("setupWizard.children.schoolHoursHint")}
+                value={child ? (snapshot.schools.get(child.id)?.hours ?? null) : null}
+              />
             </Card>
           );
         })}
@@ -495,6 +511,19 @@ export function ChildrenScreen({ snapshot, places, words }: { snapshot: Onboardi
         </SubmitButton>
       </OnboardingForm>
     </OnboardingFrame>
+  );
+}
+
+/** A usual day's start and end, side by side: two time fields fit a phone's two-up row. */
+function HoursFields({ startName, endName, startLabel, endLabel, hint, value }: { startName: string; endName: string; startLabel: string; endLabel: string; hint: string; value: { starts: string; ends: string } | null }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={startLabel} name={startName} type="time" defaultValue={value?.starts ?? ""} />
+        <Field label={endLabel} name={endName} type="time" defaultValue={value?.ends ?? ""} />
+      </div>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">{hint}</p>
+    </div>
   );
 }
 

@@ -434,8 +434,16 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
     `GOOGLE_MAPS_API_KEY`) supplies the places. Each one is checked
     against its weekly hours for the whole window (`isOpenFor`), then
     ranked by rating, distance and the family's own place book.
-  - **Assumptions are said back.** An assumed time, such as school ending
-    at 3:30 pm, is stated in the reply.
+  - **When comes from the record too.** "After school" starts when that
+    child's school day ends (`school_enrolments.ends_at`), "after work" when
+    the speaker's office hours end (`household_members.work_ends_at`); both
+    are read through `household/day-hours.ts`.
+  - **Assumptions are said back.** With no hours on record, school is taken
+    to end at 3:30 pm and work at 6 pm, and the reply says so and where to
+    set them.
+  - **The place book has a screen.** `/places` (under More) lists saved and
+    turned-down places; an adult keeps a note, removes one, or lets a
+    turned-down place be suggested again (`app/places/actions.ts`).
   - **The reply is deterministic** (`answer.ts`). The places travel as
     cards (`apps/web/app/ai/place-cards.tsx`, kept in the message's
     metadata).

@@ -6,7 +6,7 @@
  * near Anya's school after school ends" are read into a `PlaceRequest`:
  * - what kind of place (somewhere to eat, or somewhere to go);
  * - near what (home, or a child's school);
- * - for when (now, a meal time today, or after school).
+ * - for when (now, a meal time today, after school, or after work).
  *
  * The model, when there is one, only decides that the sentence is a place
  * question (`find_places`). Everything that decides which places come back
@@ -19,7 +19,9 @@ export type PlaceWhen =
   | { kind: "now" }
   /** A window starting today at `minute` past midnight, in the household's own time. */
   | { kind: "today"; minute: number; forMinutes: number; label: string }
-  | { kind: "after_school"; forMinutes: number };
+  | { kind: "after_school"; forMinutes: number }
+  /** After the speaker's working day, by the office hours they keep. */
+  | { kind: "after_work"; forMinutes: number };
 
 export type PlaceRequest = {
   purpose: "eat" | "outing";
@@ -99,6 +101,7 @@ function anchorFrom(said: string): PlaceAnchor {
 
 function whenFrom(lower: string, meal: string | null): PlaceWhen {
   if (/\bafter school\b|\bschool (?:ends|gets out|is over)\b/.test(lower)) return { kind: "after_school", forMinutes: 120 };
+  if (/\bafter (?:work|office)\b|\bwhen (?:i|we) (?:finish|get off|leave) (?:work|the office)\b|\b(?:work|office) (?:ends|is over|gets over)\b/.test(lower)) return { kind: "after_work", forMinutes: 120 };
   if (/\b(?:right )?now\b|\bopen now\b|\bat the moment\b/.test(lower)) return { kind: "now" };
   const at = /\bat (\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/.exec(lower);
   if (at) {

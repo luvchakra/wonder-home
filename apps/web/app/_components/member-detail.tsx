@@ -2,7 +2,9 @@ import { completedYears, parseDateOfBirth } from "@wonderhome/core/identity/age"
 import { siblingOrder } from "@wonderhome/core/identity/households";
 import type { HouseholdMember } from "@wonderhome/core/identity/households";
 
-import { requestT } from "@wonderhome/core/i18n/request";
+import { hoursLabel, type DayHours } from "@wonderhome/core/household/day-hours";
+import { WORK_ARRANGEMENTS } from "@wonderhome/core/identity/households";
+import { requestFormatIn, requestT } from "@wonderhome/core/i18n/request";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { UserRoundPen } from "lucide-react";
 
@@ -41,6 +43,7 @@ export function MemberDetail({
   householdId,
   statusLabel,
   currentMemberId,
+  school,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -49,8 +52,11 @@ export function MemberDetail({
   householdId: string;
   statusLabel?: string | null;
   currentMemberId: string;
+  /** A child's current school and its day, when one is on record. */
+  school?: { schoolName: string; hours: DayHours | null } | null;
 }) {
   const t = requestT();
+  const clockTime = requestFormatIn("UTC").time;
   const dob = parseDateOfBirth(member.dateOfBirth);
   const age = dob ? t("family.fact.yearsOld", { count: completedYears(dob) }) : null;
   const born = member.dateOfBirth ? formatDate(timezone, new Date(member.dateOfBirth), "long") : null;
@@ -80,6 +86,8 @@ export function MemberDetail({
         <Fact label={t("family.fact.gender")} value={member.gender} />
         <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
         <Fact label={t("family.fact.schoolOrWork")} value={member.schoolOrWorkLocation} />
+        <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
+        <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />
         <Fact label={t("family.fact.specialOccasion")} value={occasion} />
         <Fact label={t("family.fact.siblings")} value={siblings} />
       </dl>
@@ -112,7 +120,12 @@ export function MemberDetail({
               specialOccasionDate: member.specialOccasionDate,
               gender: member.gender,
               notes: member.notes,
+              memberType: member.memberType,
+              workArrangement: member.workArrangement ?? null,
+              workHours: member.workHours ?? null,
+              school: member.memberType === "child" ? (school ?? null) : null,
             }}
+            workOptions={member.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
             helperRoles={
               member.memberType === "helper"
                 ? {

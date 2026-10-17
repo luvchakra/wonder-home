@@ -12,6 +12,9 @@ import { listHouseholdPlaces, type HouseholdPlace } from "./repository";
  * 1. **Where.** The anchor is home, or a child's school, taken from what the
  *    household saved: never guessed. Two children at different schools and
  *    no name is one question back.
+ * 1b. **When.** "After school" starts when that school's day ends, and
+ *    "after work" when the speaker's office hours end, both as recorded.
+ *    With nothing on record the usual time is assumed and said aloud.
  * 2. **What.** The provider (Google Places) is asked near that point, then
  *    every place is checked against its weekly hours for the whole window
  *    the family asked about. Unknown hours rank lower; closed is dropped.
@@ -24,6 +27,8 @@ import { listHouseholdPlaces, type HouseholdPlace } from "./repository";
 
 /** "After school" with no school hours on record: said back as an assumption, never hidden. */
 export const ASSUMED_SCHOOL_END_MINUTE = 15 * 60 + 30;
+/** "After work" with no office hours on record: the same, said back. */
+export const ASSUMED_WORK_END_MINUTE = 18 * 60;
 export const MAX_SUGGESTIONS = 5;
 
 export type PlaceSuggestion = {
@@ -66,12 +71,16 @@ export type PlacesContext = {
   /** The household's own clock: weekday (0 is Sunday) and minute past midnight now. */
   now: { day: number; minute: number };
   children: readonly { id: string; name: string }[];
-  schools: readonly { childMemberId: string; schoolName: string; location: LatLng | null }[];
+  /** `endsMinute`: when that school's day ends, minutes past midnight, when recorded. */
+  schools: readonly { childMemberId: string; schoolName: string; location: LatLng | null; endsMinute?: number | null }[];
+  /** When the speaker's working day ends, minutes past midnight, when recorded. */
+  workEndsMinute?: number | null;
   languageCode?: string | null;
   regionCode?: string | null;
 };
 
-type Anchor = { point: LatLng; near: string };
+/** `schoolEnds`: when the school it is anchored at finishes, when that is recorded. */
+type Anchor = { point: LatLng; near: string; schoolEnds?: number | null };
 
 export async function suggestPlaces(
   supabase: SupabaseClient,
@@ -84,7 +93,7 @@ export async function suggestPlaces(
   const anchor = await anchorFor(supabase, request, context);
   if ("kind" in anchor) return anchor;
 
-  const window = windowFor(request, context);
+  const window = windowFor(request, context, anchor);
   let found: PlaceResult[];
   try {
     found = await provider.findNearby({
@@ -125,12 +134,23 @@ async function anchorFor(supabase: SupabaseClient, request: PlaceRequest, contex
   const { child, school } = withSchool[0]!;
   if (!school.location) return { kind: "needs_school", childName: child.name };
   const firstName = child.name.split(/\s+/)[0] ?? child.name;
-  return { point: school.location, near: withSchool.length > 1 ? school.schoolName : `${firstName}'s school` };
+  return { point: school.location, near: withSchool.length > 1 ? school.schoolName : `${firstName}'s school`, schoolEnds: school.endsMinute ?? null };
 }
 
 type Window = { day: number; minute: number; forMinutes: number; label: string; assumption: string | null; now: boolean };
 
-function windowFor(request: PlaceRequest, context: PlacesContext): Window {
+/**
+ * When "after school" starts. Anchored at a school: that school's own end.
+ * Anchored at home: the last of the children's recorded ends, since that is
+ * when everyone is out. Null when nothing is recorded.
+ */
+function schoolEndFor(anchor: Anchor, context: PlacesContext): number | null {
+  if (anchor.schoolEnds !== undefined) return anchor.schoolEnds ?? null;
+  const ends = context.schools.map((school) => school.endsMinute).filter((end): end is number => typeof end === "number");
+  return ends.length ? Math.max(...ends) : null;
+}
+
+function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor): Window {
   const { day, minute } = context.now;
   switch (request.when.kind) {
     case "now":
@@ -141,13 +161,26 @@ function windowFor(request: PlaceRequest, context: PlacesContext): Window {
       return { day, minute: start, forMinutes: request.when.forMinutes, label: start === minute ? "now" : `from ${clock(start)}`, assumption: null, now: start === minute };
     }
     case "after_school": {
-      const start = Math.max(ASSUMED_SCHOOL_END_MINUTE, minute);
+      const known = schoolEndFor(anchor, context);
+      const start = Math.max(known ?? ASSUMED_SCHOOL_END_MINUTE, minute);
       return {
         day,
         minute: start,
         forMinutes: request.when.forMinutes,
         label: `after school, from ${clock(start)}`,
-        assumption: `I've taken school as finishing around ${clock(ASSUMED_SCHOOL_END_MINUTE)}.`,
+        assumption: known === null ? `I've taken school as finishing around ${clock(ASSUMED_SCHOOL_END_MINUTE)}. Add school hours to the child's details in Family to make this exact.` : null,
+        now: false,
+      };
+    }
+    case "after_work": {
+      const known = context.workEndsMinute ?? null;
+      const start = Math.max(known ?? ASSUMED_WORK_END_MINUTE, minute);
+      return {
+        day,
+        minute: start,
+        forMinutes: request.when.forMinutes,
+        label: `after work, from ${clock(start)}`,
+        assumption: known === null ? `I've taken work as finishing around ${clock(ASSUMED_WORK_END_MINUTE)}. Add your office hours to your details in Settings to make this exact.` : null,
         now: false,
       };
     }

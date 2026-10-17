@@ -129,6 +129,7 @@ function setupDetail(member: HouseholdMember, schools: readonly string[]): strin
     const how = { office: "works from the office", home: "works from home", hybrid: "works partly from home", not_working: "is not working at the moment" }[member.workArrangement];
     parts.push(`${member.displayName} ${how}`);
   }
+  if (member.memberType === "adult" && member.workHours) parts.push(`${member.displayName}'s working day is usually ${member.workHours.starts} to ${member.workHours.ends}`);
   return parts.length > 0 ? ` ${capitalize(parts.join(", "))}.` : "";
 }
 
@@ -266,7 +267,10 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   });
 
   const schoolsOf = (memberId: string) =>
-    (records.enrolments ?? []).filter((enrolment) => enrolment.childMemberId === memberId).map((enrolment) => (enrolment.grade ? `${enrolment.schoolName} (${enrolment.grade})` : enrolment.schoolName));
+    (records.enrolments ?? []).filter((enrolment) => enrolment.childMemberId === memberId).map((enrolment) => {
+        const details = [enrolment.grade, enrolment.hours ? `school day ${enrolment.hours.starts} to ${enrolment.hours.ends}` : null].filter(Boolean);
+        return details.length > 0 ? `${enrolment.schoolName} (${details.join(", ")})` : enrolment.schoolName;
+      });
 
   if (records.members) {
     const active = members.filter((member) => member.status === "active");
@@ -294,6 +298,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           occupation: member.occupation,
           roles: member.roles,
           ...(member.workArrangement ? { workArrangement: member.workArrangement } : {}),
+          ...(member.memberType === "adult" && member.workHours ? { workHours: `${member.workHours.starts}–${member.workHours.ends}` } : {}),
           ...(member.ageYears !== null && member.ageYears !== undefined ? { ageYears: member.ageYears } : {}),
           ...(schoolsOf(member.id).length > 0 ? { school: schoolsOf(member.id).join(", ") } : {}),
           ...(member.nicknamePreferred && member.nickname ? { goesBy: member.nickname } : {}),

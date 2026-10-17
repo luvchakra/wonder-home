@@ -22,6 +22,7 @@ const AUTHENTICATED_PREFIXES = [
   "/househelper",
   "/notifications",
   "/certification",
+  "/places",
   "/settings",
   "/welcome",
   // Accepting an invitation needs an account, so an invitee is sent to sign in

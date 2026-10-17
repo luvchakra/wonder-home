@@ -6,6 +6,7 @@ import { familyAgenda, listEvents } from "@wonderhome/core/family/repository";
 import { listPets } from "@wonderhome/core/home/repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
+import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { ButtonLink } from "@wonderhome/core/ui/button";
@@ -46,12 +47,18 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, integrations, pets] = await Promise.all([
+  const [members, entitlement, integrations, pets, enrolments] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     listIntegrations(supabase, householdId).catch(() => []),
     listPets(supabase, householdId).catch(() => []),
+    listEnrolments(supabase, householdId).catch(() => []),
   ]);
+  // Each child's current school and its day, read beside their other details.
+  const schoolOf = (memberId: string) => {
+    const enrolment = enrolments.find((entry) => entry.childMemberId === memberId);
+    return enrolment ? { schoolName: enrolment.schoolName, hours: enrolment.hours ?? null } : null;
+  };
 
   // A stale calendar and a free afternoon must never look alike (17-002): if a
   // connected calendar is not working, the screen says so before the events.
@@ -175,6 +182,7 @@ export default async function FamilyPage() {
                         householdId={householdId}
                         currentMemberId={membership.memberId}
                         statusLabel={statusLabel(member.status)}
+                        school={member.memberType === "child" ? schoolOf(member.id) : null}
                       />
                       {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
                       {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (

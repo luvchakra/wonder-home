@@ -66,6 +66,7 @@ import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { placesReply } from "@wonderhome/core/homeplaces/answer";
 import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
+import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
@@ -1183,12 +1184,22 @@ async function findPlaces(input: {
   if (!request) return { text: "Tell me what kind of place you have in mind, like somewhere for dinner tonight or a park near school, and I'll look nearby.", places: null };
   if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null };
   const preferences = preferencesOf(input.membership.locale, input.membership.household.timezone);
-  const enrolments = await listEnrolments(input.supabase, input.householdId).catch(() => []);
+  const [enrolments, speaker] = await Promise.all([
+    listEnrolments(input.supabase, input.householdId).catch(() => []),
+    // The speaker's own office hours: what "after work" means.
+    input.supabase
+      .from("household_members")
+      .select("work_ends_at")
+      .eq("id", input.membership.memberId)
+      .maybeSingle()
+      .then(({ data }) => (data as { work_ends_at: string | null } | null)?.work_ends_at ?? null, () => null),
+  ]);
   const outcome = await suggestPlaces(input.supabase, placesProviderFromEnv(), request, {
     householdId: input.householdId,
     now: householdNow(new Date(), input.membership.household.timezone),
     children: input.people.filter((person) => person.memberType === "child").map((person) => ({ id: person.id, name: person.displayName })),
-    schools: enrolments.map((enrolment) => ({ childMemberId: enrolment.childMemberId, schoolName: enrolment.schoolName, location: enrolment.location ?? null })),
+    schools: enrolments.map((enrolment) => ({ childMemberId: enrolment.childMemberId, schoolName: enrolment.schoolName, location: enrolment.location ?? null, endsMinute: minuteOf(enrolment.hours?.ends) })),
+    workEndsMinute: minuteOf(speaker),
     languageCode: preferences.language,
     regionCode: preferences.region,
   }).catch((error: unknown) => {

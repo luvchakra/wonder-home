@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import { invalidatesContext } from "../context/invalidation";
+import { hoursFromRow, type DayHours } from "../household/day-hours";
 import type { Place } from "../places/provider";
 
 /**
@@ -22,12 +23,14 @@ export type Enrolment = {
   schoolAddress?: string | null;
   /** The school's point, when it was picked from a place search: what HomePlaces looks near. */
   location?: { latitude: number; longitude: number } | null;
+  /** When the school day starts and ends for this child; what "after school" means. */
+  hours?: DayHours | null;
 };
 
 export async function listEnrolments(supabase: SupabaseClient, householdId: string): Promise<Enrolment[]> {
   const { data, error } = await supabase
     .from("school_enrolments")
-    .select("child_member_id, school_name, grade, place_id, school_address, latitude, longitude")
+    .select("child_member_id, school_name, grade, place_id, school_address, latitude, longitude, starts_at, ends_at")
     .eq("household_id", householdId)
     .eq("active", true);
   if (error) throw new Error(`listEnrolments failed: ${error.code ?? "unknown"}`);
@@ -39,6 +42,8 @@ export async function listEnrolments(supabase: SupabaseClient, householdId: stri
     school_address: string | null;
     latitude: number | string | null;
     longitude: number | string | null;
+    starts_at?: string | null;
+    ends_at?: string | null;
   };
   return ((data ?? []) as Row[]).map((row) => ({
     childMemberId: row.child_member_id,
@@ -47,6 +52,7 @@ export async function listEnrolments(supabase: SupabaseClient, householdId: stri
     placeId: row.place_id,
     schoolAddress: row.school_address,
     location: row.latitude !== null && row.longitude !== null ? { latitude: Number(row.latitude), longitude: Number(row.longitude) } : null,
+    hours: hoursFromRow(row.starts_at, row.ends_at),
   }));
 }
 
@@ -61,6 +67,8 @@ async function saveEnrolmentImpl(
     place?: Place | null;
     /** This is the child's school now: any other school on record for them stops being current (kept, not deleted). */
     only?: boolean;
+    /** The school day's hours; null clears them, left alone when not given. */
+    hours?: DayHours | null;
   },
 ): Promise<void> {
   const schoolName = (input.place?.name ?? input.schoolName).trim().slice(0, 120);
@@ -80,6 +88,7 @@ async function saveEnrolmentImpl(
             longitude: input.place ? Math.round(input.place.longitude * 1e6) / 1e6 : null,
           }
         : {}),
+      ...(input.hours !== undefined ? { starts_at: input.hours?.starts ?? null, ends_at: input.hours?.ends ?? null } : {}),
       active: true,
     },
     { onConflict: "child_member_id,school_name" },
@@ -101,3 +110,28 @@ async function saveEnrolmentImpl(
 }
 
 export const saveEnrolment = invalidatesContext(saveEnrolmentImpl, (_supabase, input) => input.householdId);
+
+/**
+ * A child's school day, set on whichever school is theirs now — from Family
+ * or Settings, where the school itself is not re-picked. Nothing happens
+ * when no school is on record; the caller says so.
+ */
+async function setSchoolHoursImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; childMemberId: string; hours: DayHours | null },
+): Promise<{ updated: number }> {
+  const { data, error } = await supabase
+    .from("school_enrolments")
+    .update({ starts_at: input.hours?.starts ?? null, ends_at: input.hours?.ends ?? null })
+    .eq("household_id", input.householdId)
+    .eq("child_member_id", input.childMemberId)
+    .eq("active", true)
+    .select("id");
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only the child's guardians or an Admin can change their school hours.");
+    throw new Error(`setSchoolHours failed: ${error.code ?? "unknown"}`);
+  }
+  return { updated: (data ?? []).length };
+}
+
+export const setSchoolHours = invalidatesContext(setSchoolHoursImpl, (_supabase, input) => input.householdId);

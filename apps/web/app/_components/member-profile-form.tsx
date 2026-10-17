@@ -1,13 +1,15 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { ChoiceChips } from "@wonderhome/core/ui/choice-chips";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
+import { Select } from "@wonderhome/core/ui/select";
+import type { DayHours } from "@wonderhome/core/household/day-hours";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -30,6 +32,13 @@ export type MemberProfileInitial = {
   specialOccasionDate: string | null;
   gender: string | null;
   notes: string | null;
+  /** Shapes which of the day's fields apply: an adult's work, a child's school. */
+  memberType?: "adult" | "child" | "helper";
+  workArrangement?: string | null;
+  /** An adult's usual working day: what "after work" means to HomeTalk. */
+  workHours?: DayHours | null;
+  /** A child's current school and its day, when a school is on record. */
+  school?: { schoolName: string; hours: DayHours | null } | null;
 };
 
 /**
@@ -47,12 +56,15 @@ export function MemberProfileForm({
   memberId,
   initial,
   helperRoles,
+  workOptions,
 }: {
   householdId: string;
   memberId: string;
   initial: MemberProfileInitial;
   /** Set for a househelper: everything they do, as checkboxes, in place of a free-text occupation. */
   helperRoles?: HelperRoleWords;
+  /** How an adult may work, as the picker offers it (rule 20). */
+  workOptions?: readonly { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateMemberProfileAction, {});
@@ -64,7 +76,17 @@ export function MemberProfileForm({
       </Pill>
 
       <Sheet open={open} onOpenChange={setOpen} title={`${initial.displayName}'s details`} description="Blank fields stay blank — nothing here is guessed.">
-        <form action={formAction} className="space-y-4">
+        <form
+          className="space-y-4"
+          // Submitted by hand rather than as a form action, so a refusal
+          // ("give both a start and an end") leaves what was typed in place
+          // instead of resetting every field.
+          onSubmit={(event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            startTransition(() => formAction(data));
+          }}
+        >
           {state.error ? <Alert>{state.error}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="memberId" value={memberId} />
@@ -95,6 +117,38 @@ export function MemberProfileForm({
           )}
           <Field label="School or work location" name="schoolOrWorkLocation" defaultValue={initial.schoolOrWorkLocation ?? ""} placeholder="Where they spend the day" autoComplete="off" />
 
+          {initial.memberType === "adult" ? (
+            <fieldset className="space-y-3">
+              <legend className="sr-only">Work</legend>
+              <input type="hidden" name="workField" value="1" />
+              <Select label="How they work" name="workArrangement" defaultValue={initial.workArrangement ?? ""}>
+                <option value="">Not said</option>
+                {(workOptions ?? []).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Work starts" name="workStarts" type="time" defaultValue={initial.workHours?.starts ?? ""} />
+                <Field label="Work ends" name="workEnds" type="time" defaultValue={initial.workHours?.ends ?? ""} />
+              </div>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">Optional. HomeTalk uses this when they ask for something after work.</p>
+            </fieldset>
+          ) : null}
+
+          {initial.memberType === "child" && initial.school ? (
+            <fieldset className="space-y-3">
+              <input type="hidden" name="schoolHoursField" value="1" />
+              <legend className="text-sm font-medium">School hours at {initial.school.schoolName}</legend>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="School starts" name="schoolStarts" type="time" defaultValue={initial.school.hours?.starts ?? ""} />
+                <Field label="School ends" name="schoolEnds" type="time" defaultValue={initial.school.hours?.ends ?? ""} />
+              </div>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">Optional. HomeTalk uses this when someone asks for something after school.</p>
+            </fieldset>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Special occasion" name="specialOccasionLabel" defaultValue={initial.specialOccasionLabel ?? ""} placeholder="Anniversary, graduation…" autoComplete="off" />
             <Field label="Date" name="specialOccasionDate" type="date" defaultValue={initial.specialOccasionDate ?? ""} />
@@ -102,6 +156,12 @@ export function MemberProfileForm({
 
           <MemberDetailFields gender={initial.gender} notes={initial.notes} />
 
+          {/* Said again beside the button, where a phone's eye is; the alert above is what is announced. */}
+          {state.error ? (
+            <p aria-hidden className="text-sm text-[var(--wh-risk)]">
+              {state.error}
+            </p>
+          ) : null}
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? "Saving…" : "Save details"}
           </Button>
