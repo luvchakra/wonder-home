@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { languageInfo, LANGUAGES } from "@wonderhome/core/i18n/locales";
 import { currencyLabel, regionName } from "@wonderhome/core/i18n/options";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { languageName, listMemberLanguages, SPOKEN_LANGUAGES, type SpokenLanguage } from "@wonderhome/core/identity/member-languages";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -15,6 +16,7 @@ import {
   savePersonalLocaleAction,
 } from "../../../(auth)/locale-actions";
 import { LocaleForm } from "../../../_components/locale-form";
+import { SpokenLanguagesField } from "../../../_components/spoken-languages-field";
 import { CurrencyPicker, DateTimeUnitsFields, LanguagePicker, RegionPicker } from "../../../_components/locale-pickers";
 import { SubmitButton } from "../../../_components/submit-pill";
 import { requireSession } from "../../../_lib/session";
@@ -128,10 +130,24 @@ export default async function LanguageRegionFieldPage({
   }
 
   // Member languages: everyone the household has, each with their own choice.
-  const [members, { data: languageRows }] = await Promise.all([
+  const [members, { data: languageRows }, spoken] = await Promise.all([
     listMembers(supabase, membership.household.id, membership.household.ownerMemberId),
     supabase.from("household_members").select("id, language").eq("household_id", membership.household.id),
+    listMemberLanguages(supabase, membership.household.id).catch(() => new Map<string, SpokenLanguage[]>()),
   ]);
+  const reader = locale.preferences.language;
+  const spokenOptions = SPOKEN_LANGUAGES.map((code) => ({ code, label: languageName(code, reader) })).sort((a, b) => a.label.localeCompare(b.label, reader));
+  const spokenLabels = {
+    legend: t("settings.spoken.legend"),
+    none: t("settings.spoken.none"),
+    add: t("settings.spoken.add"),
+    other: t("settings.spoken.other"),
+    otherPlaceholder: t("settings.spoken.otherPlaceholder"),
+    addOther: t("settings.spoken.addOther"),
+    remove: t("settings.spoken.remove", { language: "{language}" }),
+    meter: t("settings.spoken.meter", { name: "{name}", language: "{language}" }),
+    fluency: { basic: t("settings.spoken.fluency.basic"), conversational: t("settings.spoken.fluency.conversational"), fluent: t("settings.spoken.fluency.fluent"), native: t("settings.spoken.fluency.native") },
+  };
   const chosen = new Map(((languageRows as { id: string; language: string | null }[] | null) ?? []).map((row) => [row.id, row.language]));
   const active = members.filter((member) => member.status === "active");
   const householdDefault = membership.locale?.household.language ?? null;
@@ -147,7 +163,7 @@ export default async function LanguageRegionFieldPage({
         name={name}
         defaultValue={value}
         disabled={disabled}
-        className="block min-h-11 w-full min-w-0 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base disabled:opacity-70 sm:w-44"
+        className="block min-h-11 w-full min-w-0 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base disabled:opacity-70 sm:w-auto"
       >
         <option value="default">{defaultLabel}</option>
         {LANGUAGES.map((language) => (
@@ -190,6 +206,16 @@ export default async function LanguageRegionFieldPage({
                   `${t("field.language")} — ${member.displayName}`,
                   `${t("settings.memberLanguages.default")} (${languageInfo(householdDefault ?? "en").nativeName})`,
                 )}
+              </div>
+              <div className="w-full">
+                <SpokenLanguagesField
+                  memberId={member.id}
+                  displayName={member.displayName}
+                  initial={(spoken.get(member.id) ?? []).map((entry) => ({ ...entry, label: languageName(entry.language, reader) }))}
+                  options={spokenOptions}
+                  disabled={!editable}
+                  labels={spokenLabels}
+                />
               </div>
             </div>
           );

@@ -8,6 +8,7 @@ import { ApiError } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { loadOnboarding } from "@wonderhome/core/household/onboarding-repository";
 import { isHouseholdAdmin, listMemberships } from "@wonderhome/core/identity/households";
+import { isFluency, replaceMemberLanguages } from "@wonderhome/core/identity/member-languages";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import {
   isRegion,
@@ -187,6 +188,17 @@ export async function saveMemberLanguagesAction(_previous: LocaleActionState, fo
       const language = raw === "default" || raw === "" ? null : (raw as LanguageCode);
       await saveMemberLocale(supabase, membership, { memberId, language });
       await recordLocaleEvent(supabase, { householdId, event: memberId === membership.memberId ? "language_changed" : "member_language_changed", detail: { language: language ?? "default" } });
+    }
+    // The languages each person speaks, and how well: their own, or anyone's for an Admin.
+    const admin = isHouseholdAdmin(membership);
+    for (const key of formData.keys()) {
+      if (!key.startsWith("langs_")) continue;
+      const memberId = key.slice("langs_".length);
+      if (!admin && memberId !== membership.memberId) continue;
+      const spoken = formData.getAll(`speaks_${memberId}`).map(String);
+      const levels = formData.getAll(`fluency_${memberId}`).map(String);
+      const languages = spoken.flatMap((language, index) => (isFluency(levels[index]) ? [{ language, fluency: levels[index] }] : []));
+      await replaceMemberLanguages(supabase, { householdId, memberId, languages });
     }
   } catch (error) {
     return problem(error);

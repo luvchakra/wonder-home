@@ -77,7 +77,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.language.title": "Sprache, Region und Formate",
   "help.guide.language.summary": "Jede Person wählt ihre Sprache; der Haushalt legt Region, Währung und Zeitzone fest.",
   "help.guide.language.body.1":
-    "WonderHome spricht Englisch, Hindi, Marathi, Spanisch, Französisch, Deutsch, Arabisch und Chinesisch (vereinfacht, Mandarin). Jede Person wählt ihre eigene Sprache unter Einstellungen → Sprache & Region, sodass ein Haushalt mehrere gleichzeitig nutzen kann. Arabisch wird von rechts nach links angezeigt; einige Bildschirme werden noch angepasst.",
+    "WonderHome spricht Englisch, Hindi, Marathi, Spanisch, Französisch, Deutsch, Arabisch und Chinesisch (vereinfacht, Mandarin). Jede Person wählt ihre eigene Sprache unter Einstellungen → Sprache & Region, sodass ein Haushalt mehrere gleichzeitig nutzen kann. Arabisch wird von rechts nach links angezeigt; einige Bildschirme werden noch angepasst. Unter Sprachen der Mitglieder kannst du außerdem jede Sprache eintragen, die eine Person spricht, mit einer vierstufigen Anzeige von „Ein paar Wörter“ bis „Muttersprache“. Die App-Sprache ändert das nicht; HomeTalk weiß dadurch, wer was versteht.",
   "help.guide.language.body.2":
     "Region, Währung und Zeitzone des Haushalts legt ein Admin fest, und jede Person kann ihr eigenes Datumsformat, die 12- oder 24-Stunden-Uhr und metrische oder imperiale Einheiten wählen.",
   "help.guide.language.body.3":

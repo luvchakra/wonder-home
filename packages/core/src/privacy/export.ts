@@ -60,6 +60,14 @@ export const EXPORT_SECTIONS: readonly ExportSection[] = [
     memberColumn: "id",
   },
   {
+    key: "languages",
+    label: "The languages you speak",
+    table: "member_languages",
+    columns: ["language", "fluency", "created_at", "updated_at"],
+    scope: "member",
+    memberColumn: "member_id",
+  },
+  {
     key: "roles",
     label: "What you may do",
     table: "household_roles",

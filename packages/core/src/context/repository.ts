@@ -17,6 +17,7 @@ import { listResponsibilities } from "../household/configuration-repository";
 import { listChildren } from "../identity/children";
 import { listEnrolments } from "../school/enrolments";
 import { listMembers } from "../identity/households";
+import { listMemberLanguages } from "../identity/member-languages";
 import { listIntegrations } from "../integrations/repository";
 import { listMeals } from "../meals/repository";
 import { listCommunications, listSchoolItems } from "../school/repository";
@@ -81,14 +82,16 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
     label: "who is in the household",
     permitted: anyone,
     read: async (supabase, scope) => {
-      const [members, children, enrolments] = await Promise.all([
+      const [members, children, enrolments, languages] = await Promise.all([
         listMembers(supabase, scope.householdId, null),
         listChildren(supabase, scope.householdId, scope.now).catch(() => []),
         listEnrolments(supabase, scope.householdId).catch(() => []),
+        listMemberLanguages(supabase, scope.householdId).catch(() => new Map()),
       ]);
       return {
         members,
         enrolments,
+        languages,
         guardianOf: children.filter((child) => child.guardianMemberIds.includes(scope.viewer.memberId)).map((child) => child.memberId),
       };
     },

@@ -136,6 +136,7 @@ async function fulfillOne(
       display_name: "Removed member",
       date_of_birth: null,
       nickname: null,
+      nickname_preferred: false,
       relationship: null,
       occupation: null,
       school_or_work_location: null,
@@ -148,6 +149,14 @@ async function fulfillOne(
     .eq("id", input.subjectMemberId)
     .eq("household_id", input.householdId);
   if (memberError) throw new Error(`member scrub failed: ${memberError.code ?? "unknown"}`);
+
+  // The languages they speak are about them alone.
+  const { error: languagesError } = await adminClient
+    .from("member_languages")
+    .delete()
+    .eq("household_id", input.householdId)
+    .eq("member_id", input.subjectMemberId);
+  if (languagesError) throw new Error(`language cleanup failed: ${languagesError.code ?? "unknown"}`);
 
   // Roles lapse with membership, same as any other removal.
   const { error: rolesError } = await adminClient

@@ -17,6 +17,7 @@ function fakeAdminClient(options: FakeOptions = {}) {
   const memberUpdates: Record<string, unknown>[] = [];
   const requestUpdates: Record<string, unknown>[] = [];
   const rolesDeletedFor: string[] = [];
+  const languagesDeletedFor: string[] = [];
   const storageRemoved: string[][] = [];
   const audited: Record<string, unknown>[] = [];
 
@@ -55,6 +56,19 @@ function fakeAdminClient(options: FakeOptions = {}) {
           },
         };
       }
+      if (table === "member_languages") {
+        return {
+          delete: () => ({
+            eq: () => ({
+              eq: (_column: string, value: string) => {
+                void _column;
+                languagesDeletedFor.push(value);
+                return Promise.resolve({ error: null });
+              },
+            }),
+          }),
+        };
+      }
       if (table === "household_roles") {
         return {
           delete: () => ({
@@ -88,7 +102,7 @@ function fakeAdminClient(options: FakeOptions = {}) {
     },
   };
 
-  return { client: client as never, memberUpdates, requestUpdates, rolesDeletedFor, storageRemoved, audited };
+  return { client: client as never, memberUpdates, requestUpdates, rolesDeletedFor, languagesDeletedFor, storageRemoved, audited };
 }
 
 describe("fulfillMaturedDeletions", () => {
@@ -123,9 +137,11 @@ describe("fulfillMaturedDeletions", () => {
   });
 
   it("drops the member's household roles, same as any other removal", async () => {
-    const { client, rolesDeletedFor } = fakeAdminClient();
+    const { client, rolesDeletedFor, languagesDeletedFor } = fakeAdminClient();
     await fulfillMaturedDeletions(client);
     expect(rolesDeletedFor).toEqual(["m-1"]);
+    // The languages they speak are about them alone, so they go too.
+    expect(languagesDeletedFor).toEqual(["m-1"]);
   });
 
   it("writes an audit event naming the request it fulfilled", async () => {
