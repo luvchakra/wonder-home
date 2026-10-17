@@ -1,4 +1,4 @@
-import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
+import { readHouseholdKey, readGeminiVoiceKey } from "@wonderhome/core/ai/credentials";
 import { platformKey, resolveModelKey, type ModelKey } from "@wonderhome/core/ai/model-key";
 import type { DataUsePolicy } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
@@ -17,12 +17,16 @@ import { withReturnTo } from "./return-to";
  * made in another tab takes effect on the very next thing said.
  */
 export async function geminiLiveGate(supabase: Supabase, householdId: string): Promise<{ availability: GeminiLiveAvailability; key: ModelKey; policy: DataUsePolicy }> {
-  const [entitlement, policy, householdKey] = await Promise.all([
+  const [entitlement, policy, voiceKey, householdKey] = await Promise.all([
     may(supabase, householdId, "conversation.voice"),
     loadDataUse(supabase, householdId),
+    readGeminiVoiceKey(householdId).catch(() => null),
     readHouseholdKey(householdId).catch(() => null),
   ]);
-  const key = resolveModelKey(householdKey, platformKey());
+  // The household's Gemini voice key first (voice only, always Google), so an
+  // assistant on Anthropic or OpenAI can still talk through Gemini; otherwise
+  // the assistant's own key, which works for voice only when it is Google's.
+  const key = resolveModelKey(voiceKey ?? householdKey, platformKey());
   const availability = geminiLiveAvailability({ voiceEnabled: flags().voice_conversation, entitled: entitlement.allowed, key, policy });
   return { availability, key, policy };
 }
@@ -39,7 +43,7 @@ export function geminiFix(
   // Voice being off is the deployment's rollout switch, not a household setting: nothing to link to.
   if (availability.available || !options.canManage || availability.code === "voice_off") return null;
   const target: Record<Exclude<typeof availability.code, "voice_off">, string> = {
-    not_google: "/settings/ai",
+    not_google: "/settings/ai#voice-key",
     no_consent: "/settings/ai#share",
     not_entitled: "/settings/plan",
   };

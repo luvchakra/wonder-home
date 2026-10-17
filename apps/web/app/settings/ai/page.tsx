@@ -1,6 +1,6 @@
-import { Bot, ShieldCheck } from "lucide-react";
+import { Bot, Mic, ShieldCheck } from "lucide-react";
 
-import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -10,7 +10,7 @@ import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 
-import { removeAiKey, saveAiKey } from "../../(auth)/ai-key-actions";
+import { removeAiKey, removeGeminiVoiceKey, saveAiKey, saveGeminiVoiceKey } from "../../(auth)/ai-key-actions";
 import { saveDataUseAction } from "../../(auth)/privacy-actions";
 import { AiKeyForm } from "../../_components/ai-key-form";
 import { ReturnLink, returnLabelKey } from "../../_components/return-link";
@@ -34,8 +34,9 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, dataUse] = await Promise.all([
+  const [credential, voiceCredential, dataUse] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
+    geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
   ]);
 
@@ -46,6 +47,12 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const manages = view.permissions.includes("household.manage");
   const { t } = session.locale;
   const keyWords = keySourceWords(t, key.source);
+  // Gemini voice runs only on Google: its own key first, else the assistant's when that is Google's.
+  const voiceLine = voiceCredential.configured
+    ? t("settingsPage.ai.voiceKey.own", { date: voiceCredential.updatedAt ? formatDate(membership.household.timezone, voiceCredential.updatedAt, "long") : "" })
+    : key.provider === "google"
+      ? t("settingsPage.ai.voiceKey.assistant")
+      : t("settingsPage.ai.voiceKey.none");
   // The environment variable's name keeps its own code styling wherever the sentence puts it.
   const [noKeyBefore, noKeyAfter] = t("settingsPage.ai.noPlatformKey", { variable: "{variable}" }).split("{variable}");
 
@@ -87,6 +94,32 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                   </p>
                 ) : null}
               </>
+            ) : (
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
+            )}
+          </Card>
+        </section>
+
+        <section id="voice-key">
+          <SectionHeader title={t("settingsPage.ai.voiceKey.title")} />
+          <Card className="space-y-4 p-4">
+            <div className="flex items-start gap-3">
+              <IconTile icon={Mic} tone="ai" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{voiceLine}</p>
+                <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.voiceKey.intro")}</p>
+              </div>
+            </div>
+            {manages ? (
+              <AiKeyForm
+                householdId={householdId}
+                save={saveGeminiVoiceKey}
+                remove={removeGeminiVoiceKey}
+                configured={voiceCredential.configured}
+                labels={{ ...aiKeyFormLabels(t), useOwn: t("settingsPage.ai.voiceKey.save"), remove: t("settingsPage.ai.voiceKey.remove") }}
+                returnTo={returnTo}
+                googleOnly
+              />
             ) : (
               <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
             )}

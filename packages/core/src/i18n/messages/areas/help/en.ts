@@ -119,6 +119,8 @@ export const helpEn = {
     "\"Remind me to call the plumber tomorrow at 5\" sets a reminder for you alone, delivered when it is due. When someone is mentioned and two people could fit, HomeTalk asks which one rather than guessing.",
   "help.guide.talk-to-wonderhome.body.6":
     "Edit your last message to rephrase it, and search your past conversations from the search box at the top. It never says it did something unless it actually did; where it only prepared something, it says prepared, and where nothing needed changing, it says so.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Ask for places nearby — \"suggest somewhere for dinner tonight\", \"where can we hang out near Anya's school after school?\" — and HomeTalk looks near your home address or the child's school and shows only places open for that time, each with a link to Google Maps. The places come from Google's place search, not from an AI model, and WonderHome says when it assumed a time, such as when school ends. Save the ones you like and they come first next time; mark one \"not for us\" and it is not suggested again. An adult or Admin can save places.",
 
   // Voice and hands-free conversation
   "help.guide.voice.title": "Voice and hands-free conversation",
@@ -131,6 +133,10 @@ export const helpEn = {
     "Settings → Voice chooses the speech service (your browser's own, or a more accurate one), the voice, and how it listens. Where a choice is not available to your household, it is shown with the reason rather than offered and broken. If an Admin can change that reason, for example Gemini Live needing a Google AI key, a link goes straight to the setting and brings you back once it is saved.",
   "help.guide.voice.body.4":
     "Voice assistants such as Alexa or Gemini Voice can be linked to one person from Settings → Voice assistants once they are available for your WonderHome. A linked assistant speaks as that person and sees only what they may see, and it can never pay or place an order.",
+  "help.guide.voice.body.5":
+    "While WonderHome is listening or a live conversation is going, the HomeTalk button in the middle of the tab bar pulses with a ring around it, so you can see from any screen that a conversation is in progress.",
+  "help.guide.voice.body.6":
+    "Gemini voice always runs on Google. If your assistant's key under Settings → AI Assistant is a Google (Gemini) key, voice uses that same key. If your assistant uses Anthropic or OpenAI, an Admin can add a separate Gemini voice key on the same page: it is used only for Gemini voice, and everything else keeps using the assistant's key.",
 
   // HomeSend: sending WonderHome things
   "help.guide.home-send.title": "HomeSend: sending WonderHome things",
@@ -240,7 +246,7 @@ export const helpEn = {
   "help.guide.household-and-roles.title": "Members, roles and what each person sees",
   "help.guide.household-and-roles.summary": "One household, several identities, and a different view for each.",
   "help.guide.household-and-roles.body.1":
-    "The person who creates the household is its owner and Admin. They can make other people Admins, who can do nearly everything they can.",
+    "The person who creates the household is its owner and an Admin. Every Admin can do the same things: any Admin can make another adult an Admin, or step one back to adult, from Family or Manage Household. Only adults can be Admins, and the owner always stays one, so a household is never left without an Admin.",
   "help.guide.household-and-roles.body.2":
     "Adults, children and househelpers each get their own view. This is not a filter applied on the screen: a section somebody may not see is never sent to their device at all, and WonderHome checks again behind the scenes every time.",
   "help.guide.household-and-roles.body.3":

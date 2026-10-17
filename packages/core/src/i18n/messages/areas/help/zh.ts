@@ -93,6 +93,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "“提醒我明天 5 点给水管工打电话”只为你一个人设置提醒，到时间才会送达。当提到某人而有两个人都可能符合时，HomeTalk 会问是哪一位，而不是去猜。",
   "help.guide.talk-to-wonderhome.body.6":
     "编辑你的上一条消息可以换个说法，用顶部的搜索框可以搜索以前的对话。除非真的做了，它绝不会说自己做了；如果只是准备好了，它会说“已准备”；如果不需要做任何改动，它也会直说。",
+  "help.guide.talk-to-wonderhome.body.7":
+    "询问附近的地方——“推荐今晚吃晚饭的地方”“放学后在 Anya 学校附近可以去哪儿玩？”——HomeTalk 会在您的住址或孩子学校附近查找，只显示那个时间营业的地方，并附上 Google 地图链接。这些地方来自 Google 的地点搜索，而不是 AI 模型；如果 WonderHome 假设了某个时间（例如放学时间），它会说明。保存您喜欢的地方，下次会优先推荐；标记为“不适合我们”的地方不会再被推荐。成人或 Admin 可以保存地点。",
 
   "help.guide.voice.title": "语音和免提对话",
   "help.guide.voice.summary": "点一下说话再核对，或者免提来回对话。",
@@ -103,6 +105,10 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "设置 → 语音用于选择语音服务（浏览器自带的，或更准确的服务）、声音以及聆听方式。你家不能用的选项会附上原因显示，而不是给出一个用不了的选项。如果管理员可以改变这个原因，例如 Gemini Live 需要 Google AI 密钥，会有一个链接直达该设置，保存后再把你带回来。",
   "help.guide.voice.body.4":
     "像 Alexa 或 Gemini Voice 这样的语音助手，在你的 WonderHome 可用后，可以在“设置 → 语音助手”中关联到某一个人。关联后的助手以那个人的身份说话，只能看到那个人能看到的内容，而且绝不能付款或下单。",
+  "help.guide.voice.body.5":
+    "当 WonderHome 正在聆听或实时对话进行中时，标签栏中间的 HomeTalk 按钮会带着一圈光环闪动，让您在任何页面都能看到对话正在进行。",
+  "help.guide.voice.body.6":
+    "Gemini 语音始终在 Google 上运行。如果 Settings → AI Assistant 中助手的密钥是 Google（Gemini）密钥，语音就使用同一个密钥。如果您的助手使用 Anthropic 或 OpenAI，Admin 可以在同一页面添加一个单独的 Gemini 语音密钥：它只用于 Gemini 语音，其他功能仍使用助手的密钥。",
 
   "help.guide.home-send.title": "HomeSend：把东西发给 WonderHome",
   "help.guide.home-send.summary": "一张照片、一个 PDF、一条语音、一个链接或一条转发——先读取，再由你确认。",
@@ -187,7 +193,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
 
   "help.guide.household-and-roles.title": "成员、角色以及每个人能看到什么",
   "help.guide.household-and-roles.summary": "一个家，多种身份，每个人一个不同的视图。",
-  "help.guide.household-and-roles.body.1": "创建家庭的人是它的所有者和管理员。他们可以让其他人成为管理员，这些人几乎能做所有者能做的一切。",
+  "help.guide.household-and-roles.body.1": "创建家庭的人是它的所有者，也是一名 Admin。每位 Admin 能做的事情都一样：任何 Admin 都可以在 Family 或 Manage Household 中把另一位成年人设为 Admin，或改回成年人。只有成年人可以成为 Admin，而所有者始终是 Admin，因此家庭永远不会没有 Admin。",
   "help.guide.household-and-roles.body.2":
     "成年人、孩子和家政帮手各有自己的视图。这不是屏幕上加的一层过滤：某人不能看的部分根本不会发送到他的设备上，而且 WonderHome 每次都会在后台再检查一遍。",
   "help.guide.household-and-roles.body.3": "孩子获得与年龄相适应的访问权限。家政帮手从不会被要求更新家务，WonderHome 也不保存关于他们的任何工作效率数据。",

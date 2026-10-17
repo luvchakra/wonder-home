@@ -5,6 +5,7 @@ import { DropdownMenu } from "radix-ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, createContext, useContext } from "react";
 
 import { cn } from "../../lib/cn";
+import { setTalkActivity } from "../shell/talk-activity";
 import { BrandMark } from "./brand";
 import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
@@ -262,6 +263,12 @@ export function TalkComposer({
   });
 
   const composing = state === "idle" || state === "typing";
+
+  // The tab bar's raised HomeTalk button shows a conversation in progress.
+  useEffect(() => {
+    setTalkActivity(state === "live" ? "live" : state === "paused" ? "paused" : state === "listening" || state === "transcribing" ? "listening" : "idle");
+  }, [state]);
+  useEffect(() => () => setTalkActivity("idle"), []);
 
   const onStateChangeRef = useRef(onStateChange);
   onStateChangeRef.current = onStateChange;

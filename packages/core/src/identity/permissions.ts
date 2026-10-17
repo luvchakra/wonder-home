@@ -33,8 +33,10 @@ export type Permission = keyof typeof PERMISSIONS;
 /**
  * What each role may do by default.
  *
- * Head and Administrator differ in exactly one thing — only the head may change
- * who administers the household — which is the same line the RLS policy draws.
+ * Every Admin is equal: head (the owner) and Administrator may do exactly the
+ * same things, including making another adult an Admin. Ownership itself is
+ * not a permission here — it is never granted or revoked by a role change,
+ * which is what keeps the owner an Admin and a household never without one.
  */
 const ROLE_DEFAULTS: Record<HouseholdRole, readonly Permission[]> = {
   head: [
@@ -53,6 +55,7 @@ const ROLE_DEFAULTS: Record<HouseholdRole, readonly Permission[]> = {
   administrator: [
     "household.manage",
     "members.manage",
+    "members.assign_admin",
     "responsibilities.manage",
     "finance.view",
     "finance.pay",
@@ -95,9 +98,10 @@ export function can(context: PermissionContext, permission: Permission): boolean
 /**
  * Whether `actor` may grant or revoke `role` on someone else.
  *
- * Only the head may create or remove administrators, so an administrator cannot
- * promote themselves or a confederate. The RLS policy enforces the same rule;
- * this is the application-side check that is authoritative.
+ * Any Admin may make or remove Administrators (a non-Admin never can, so
+ * nobody promotes themselves); "head" is ownership and is never assigned
+ * here. The RLS policy enforces the same rule, and only an adult can be made
+ * an Administrator.
  */
 export function canAssignRole(actor: PermissionContext, role: HouseholdRole): boolean {
   if (role === "head") return false; // Ownership transfer is its own operation.

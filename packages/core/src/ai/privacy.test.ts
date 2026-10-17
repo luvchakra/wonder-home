@@ -8,6 +8,7 @@ import {
   describeDataUse,
   minimiseContext,
   restoreNames,
+  restoreParameterNames,
   routeToProvider,
   type ContextCandidate,
   type DataUsePolicy,
@@ -316,3 +317,13 @@ describe("restoring names in a composed answer", () => {
     expect(restoreNames("Adult Z is away.", { a1: "Adult A" }, PEOPLE)).toBe("Adult Z is away.");
   });
 });
+
+describe("restoring names in a model's reading", () => {
+  it("puts names back into every string before anything is kept, so a later member never inherits a placeholder", () => {
+    const { pseudonyms } = minimiseContext([candidate({ text: "Aarav." })], { policy: policy(), people: PEOPLE });
+    const child = pseudonyms.b2!;
+    const restored = restoreParameterNames({ statement: `${child} likes pink pasta`, items: [`${child}'s lunchbox`], amount: 3, corrects: null }, pseudonyms, PEOPLE);
+    expect(restored).toEqual({ statement: "Aarav likes pink pasta", items: ["Aarav's lunchbox"], amount: 3, corrects: null });
+  });
+});
+

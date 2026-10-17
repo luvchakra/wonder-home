@@ -19,6 +19,7 @@
     "./school/*": "./src/school/*.ts",
     "./places/*": "./src/places/*.ts",
     "./homesend/*": "./src/homesend/*.ts",
+    "./homeplaces/*": "./src/homeplaces/*.ts",
     "./whatsapp/*": "./src/whatsapp/*.ts",
     "./evaluation/*": "./src/evaluation/*.ts",
     "./hometalk/*": "./src/hometalk/*.ts",

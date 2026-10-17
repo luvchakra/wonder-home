@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-17 | [HomePlaces, HomeTalk that speaks like a person, and a second child no longer mixed up](2026-10-17-homeplaces.md) |
 | 2026-10-17 | [The languages each member speaks, with a four-step fluency meter; HomeTalk knows who speaks what; included in export and removed on deletion](2026-10-17-member-languages.md) |
 | 2026-10-17 | [Setup asks language first, then the home address and each child's school from Google Maps (server-side, inert without a key), photos, nicknames with a preferred name, dates of birth (birthdays follow), helpers with several roles, Primary and Backup owners; Settings photos fixed; Gemini Live links to its fix and back](2026-10-17-setup-places-photos.md) |
 | 2026-10-16 | [The user guide is for members only (route gate, page, search action, no guide text in client JS, no-store and noindex), public links retargeted, and its content brought up to date with the app in all eight languages, with Last updated dates and a link check](2026-10-16-help-members-only.md) |

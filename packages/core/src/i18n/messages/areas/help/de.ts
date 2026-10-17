@@ -103,6 +103,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "„Erinnere mich morgen um 17 Uhr daran, den Klempner anzurufen“ legt eine Erinnerung nur für dich an, die kommt, wenn sie fällig ist. Wenn jemand erwähnt wird und zwei Personen passen könnten, fragt HomeTalk nach, wer gemeint ist, statt zu raten.",
   "help.guide.talk-to-wonderhome.body.6":
     "Bearbeite deine letzte Nachricht, um sie anders zu formulieren, und durchsuche deine früheren Gespräche über das Suchfeld oben. Es sagt nie, dass es etwas getan hat, wenn es das nicht wirklich hat; wo es nur etwas vorbereitet hat, sagt es „vorbereitet“, und wo nichts geändert werden musste, sagt es das.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Frag nach Orten in der Nähe – „Schlag etwas fürs Abendessen heute vor“, „Wo können wir nach der Schule in der Nähe von Anyas Schule hin?“ – und HomeTalk sucht in der Nähe eurer Wohnadresse oder der Schule des Kindes und zeigt nur Orte, die zu dieser Zeit geöffnet sind, jeweils mit einem Link zu Google Maps. Die Orte kommen aus der Ortssuche von Google, nicht von einem KI-Modell, und WonderHome sagt, wenn es eine Zeit angenommen hat, etwa das Schulende. Speichere die, die dir gefallen, dann kommen sie beim nächsten Mal zuerst; markiere einen als „Nichts für uns“, dann wird er nicht wieder vorgeschlagen. Orte speichern kann ein Erwachsener oder Admin.",
 
   "help.guide.voice.title": "Stimme und freihändiges Gespräch",
   "help.guide.voice.summary": "Tippen zum Sprechen und Prüfen, oder freihändig hin und her sprechen.",
@@ -114,6 +116,10 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Einstellungen → Stimme wählt den Sprachdienst (den deines Browsers oder einen genaueren), die Stimme und wie zugehört wird. Was deinem Haushalt nicht zur Verfügung steht, wird mit dem Grund gezeigt, statt kaputt angeboten. Kann ein Admin den Grund ändern, etwa weil Gemini Live einen Google-KI-Schlüssel braucht, führt ein Link direkt zur Einstellung und nach dem Speichern zurück.",
   "help.guide.voice.body.4":
     "Sprachassistenten wie Alexa oder Gemini Voice lassen sich unter Einstellungen → Sprachassistenten mit einer Person verknüpfen, sobald sie für dein WonderHome verfügbar sind. Ein verknüpfter Assistent spricht als diese Person und sieht nur, was sie sehen darf, und er kann nie bezahlen oder bestellen.",
+  "help.guide.voice.body.5":
+    "Während WonderHome zuhört oder ein Live-Gespräch läuft, pulsiert die HomeTalk-Taste in der Mitte der Tab-Leiste mit einem Ring darum – so siehst du auf jedem Bildschirm, dass ein Gespräch läuft.",
+  "help.guide.voice.body.6":
+    "Gemini-Sprache läuft immer bei Google. Ist der Schlüssel deines Assistenten unter Settings → AI Assistant ein Google-(Gemini-)Schlüssel, nutzt die Sprache denselben Schlüssel. Nutzt dein Assistent Anthropic oder OpenAI, kann ein Admin auf derselben Seite einen eigenen Gemini-Sprachschlüssel hinzufügen: Er wird nur für Gemini-Sprache genutzt, alles andere nutzt weiter den Schlüssel des Assistenten.",
 
   "help.guide.home-send.title": "HomeSend: WonderHome Dinge schicken",
   "help.guide.home-send.summary": "Ein Foto, ein PDF, eine Sprachnachricht, ein Link oder eine Weiterleitung – gelesen, dann von dir bestätigt.",
@@ -209,7 +215,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "Mitglieder, Rollen und was jede Person sieht",
   "help.guide.household-and-roles.summary": "Ein Haushalt, mehrere Identitäten und für jede eine eigene Ansicht.",
   "help.guide.household-and-roles.body.1":
-    "Wer den Haushalt anlegt, ist sein Eigentümer und Admin. Diese Person kann andere zu Admins machen, die fast alles können, was sie kann.",
+    "Wer den Haushalt anlegt, ist sein Eigentümer und ein Admin. Jeder Admin kann dasselbe: Jeder Admin kann unter Family oder Manage Household einen anderen Erwachsenen zum Admin machen oder wieder zum Erwachsenen zurückstufen. Nur Erwachsene können Admins sein, und der Eigentümer bleibt immer einer – so ist ein Haushalt nie ohne Admin.",
   "help.guide.household-and-roles.body.2":
     "Erwachsene, Kinder und Haushaltshilfen bekommen jeweils ihre eigene Ansicht. Das ist kein Filter auf dem Bildschirm: Ein Bereich, den jemand nicht sehen darf, wird gar nicht erst an sein Gerät geschickt, und WonderHome prüft jedes Mal im Hintergrund erneut.",
   "help.guide.household-and-roles.body.3":

@@ -419,6 +419,44 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   is swept both opportunistically on every share request and for real by
   `/platform/retention`.
 
+- **HomePlaces** (`packages/core/src/homeplaces/`, intent `find_places`)
+  answers location questions: "somewhere for dinner tonight", "where can
+  we hang out near Anya's school after school?". It is a read, never a
+  write:
+  - **Rules read the request.** `request.ts` reads the request (eat or go
+    out, near home or a child's school, now, a meal time or after school).
+    A model only ever says that a sentence is a place question.
+  - **Where comes from the record.** `service.ts` takes the anchor from
+    the saved home address or the child's picked school, never a guess.
+    Two children at two schools and no name gets one question.
+  - **Places are checked and ranked.** Google's text search
+    (`places/google.ts`'s `findNearby`, behind the same
+    `GOOGLE_MAPS_API_KEY`) supplies the places. Each one is checked
+    against its weekly hours for the whole window (`isOpenFor`), then
+    ranked by rating, distance and the family's own place book.
+  - **Assumptions are said back.** An assumed time, such as school ending
+    at 3:30 pm, is stated in the reply.
+  - **The reply is deterministic** (`answer.ts`). The places travel as
+    cards (`apps/web/app/ai/place-cards.tsx`, kept in the message's
+    metadata).
+  - **The family is the only teacher.** Save and "not for us" go to
+    `household_places` through `apps/web/app/ai/place-actions.ts`. That
+    action re-reads the place from the stored reply, never from the
+    browser. Every member reads the book; adults and Admins write it.
+    Saved places rank first, and turned-down places never return.
+  - **Searches are budgeted.** `places.find` limits each household to 30
+    searches an hour. Voice channels leave place questions to the app.
+
+  A model's reading names people by placeholder ("Child A"), and the letters
+  move when a member is added, so `restoreParameterNames` puts real names back
+  into every string before anything is kept. Never store a placeholder.
+  "Who is in the family" is answered from the whole member list by rules
+  (`conversation/roster.ts`), never from what a model was shown.
+
+  Spoken replies go through `conversation/speech.ts`'s `speakable`. It
+  drops arrows, links, list markers and symbols for words a person would
+  say. Every voice path speaks through it, never the raw reply.
+
 **Voice channels are doors into HomeTalk, never second brains**
 (`design/voice-integration/`). Every channel — the app, Gemini Voice,
 Alexa — asks through one gateway (`hometalk/gateway.ts`, the canonical
@@ -435,8 +473,14 @@ reach a model provider (Gemini hears every answer). A new voice capability
 is a new allowlisted tool that maps to a HomeTalk utterance — never a tool
 that reaches a table. Alexa (`/api/v1/voice/alexa`) is verified as Amazon
 documents and stays inert until a person creates the skill and sets
-`ALEXA_*`; Gemini Live runs only where the household's key is Google's and
-its data-use agreement allows it, re-checked on every tool call. What each
+`ALEXA_*`; Gemini Live runs only on a Google key and only where the household's
+data-use agreement allows it, re-checked on every tool call. That key is the
+household's own Gemini voice key (`household_gemini_voice_credentials`,
+voice only) if one is set, otherwise the assistant's key when that is
+Google's, so an assistant on Anthropic can still talk through Gemini. No key
+table ever lets a session read `api_key` back. Each one grants SELECT on
+every column except the key, so key writes are an insert, then an update by
+household (`ai/key-row.ts`), never an upsert. What each
 channel may do is `voicelink/capabilities.ts` — every HomeTalk action is
 placed in it exactly once and its tests hold each cell to the real gates, so
 a new action forces a decision about voice. A conversation belongs to its
@@ -532,7 +576,7 @@ describes — HomeSend and manual entry are Inputs, HomeBrain is Understand,
 - Notifications are precise, timely, recipient-specific, actionable, grouped, threaded and automatically resolved.
 - Talk and text share one conversation engine — HomeTalk, backed by HomeBrain.
 - One household has multiple identities and personalized views.
-- Head of Family can designate Household Administrators.
+- Every Admin is equal: any Admin can make another adult an Admin or step one back. The owner always stays an Admin, and only adults can be Admins.
 - Children have age-appropriate access and privacy.
 - Manage Household defines responsibilities, playbook, routines, policies and AI autonomy.
 - Certification exposes what WonderHome believes and lets authorized users correct it.

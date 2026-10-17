@@ -93,8 +93,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "talk-to-wonderhome",
     group: "Everyday use",
-    updated: "2026-10-16",
-    keywords: ["ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages"],
+    updated: "2026-10-17",
+    keywords: ["ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces"],
   },
   {
     id: "voice",
@@ -153,7 +153,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "household-and-roles",
     group: "Your household",
-    updated: "2026-10-16",
+    updated: "2026-10-17",
     keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "admin", "child", "helper", "guardian", "remove member", "activity", "audit", "history", "who changed"],
   },
   {

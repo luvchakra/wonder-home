@@ -1,6 +1,15 @@
 import { z } from "zod";
 
-import { PlacesUnavailableError, type LatLng, type Place, type PlaceSearchInput, type PlaceSuggestion, type PlacesProvider } from "./provider";
+import {
+  PlacesUnavailableError,
+  type LatLng,
+  type NearbyQuery,
+  type Place,
+  type PlaceResult,
+  type PlaceSearchInput,
+  type PlaceSuggestion,
+  type PlacesProvider,
+} from "./provider";
 
 /**
  * Google Places (New) behind the `PlacesProvider` port.
@@ -56,6 +65,51 @@ const detailsSchema = z.object({
   formattedAddress: z.string().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
 });
+
+const PRICE_LEVELS: Record<string, number> = {
+  PRICE_LEVEL_FREE: 0,
+  PRICE_LEVEL_INEXPENSIVE: 1,
+  PRICE_LEVEL_MODERATE: 2,
+  PRICE_LEVEL_EXPENSIVE: 3,
+  PRICE_LEVEL_VERY_EXPENSIVE: 4,
+};
+
+const dayTime = z.object({ day: z.number().int().min(0).max(6), hour: z.number().int().min(0).max(23).optional(), minute: z.number().int().min(0).max(59).optional() });
+
+const textSearchSchema = z.object({
+  places: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        displayName: z.object({ text: z.string() }).optional(),
+        formattedAddress: z.string().optional(),
+        location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
+        primaryTypeDisplayName: z.object({ text: z.string() }).optional(),
+        rating: z.number().optional(),
+        userRatingCount: z.number().optional(),
+        priceLevel: z.string().optional(),
+        currentOpeningHours: z.object({ openNow: z.boolean().optional() }).optional(),
+        regularOpeningHours: z.object({ periods: z.array(z.object({ open: dayTime, close: dayTime.optional() })).optional() }).optional(),
+        googleMapsUri: z.string().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/** What a text search asks Google for: enough to judge a place, nothing about the people who reviewed it. */
+const TEXT_SEARCH_FIELDS = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.primaryTypeDisplayName",
+  "places.rating",
+  "places.userRatingCount",
+  "places.priceLevel",
+  "places.currentOpeningHours.openNow",
+  "places.regularOpeningHours.periods",
+  "places.googleMapsUri",
+].join(",");
 
 export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fetch; timeoutMs?: number }): PlacesProvider {
   const doFetch = options.fetch ?? fetch;
@@ -128,6 +182,46 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
         latitude: parsed.data.location.latitude,
         longitude: parsed.data.location.longitude,
       };
+    },
+
+    async findNearby(query: NearbyQuery): Promise<PlaceResult[]> {
+      const body: Record<string, unknown> = {
+        textQuery: query.text,
+        pageSize: Math.min(Math.max(query.max ?? 8, 1), 20),
+        locationBias: { circle: { center: point(query.near), radius: Math.min(query.radiusMeters, 50_000) } },
+      };
+      if (query.openNow) body.openNow = true;
+      if (query.languageCode) body.languageCode = query.languageCode;
+      if (query.regionCode) body.regionCode = query.regionCode.toLowerCase();
+      const response = await call("https://places.googleapis.com/v1/places:searchText", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": options.apiKey, "x-goog-fieldmask": TEXT_SEARCH_FIELDS },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new PlacesUnavailableError("unavailable");
+      const parsed = textSearchSchema.safeParse(await response.json().catch(() => null));
+      if (!parsed.success) throw new PlacesUnavailableError("unavailable");
+      const found: PlaceResult[] = [];
+      for (const place of parsed.data.places ?? []) {
+        if (!place.location || !place.displayName?.text) continue;
+        found.push({
+          placeId: place.id,
+          name: place.displayName.text,
+          address: place.formattedAddress ?? "",
+          location: place.location,
+          kind: place.primaryTypeDisplayName?.text ?? null,
+          rating: place.rating ?? null,
+          ratingCount: place.userRatingCount ?? null,
+          priceLevel: place.priceLevel && place.priceLevel in PRICE_LEVELS ? PRICE_LEVELS[place.priceLevel]! : null,
+          openNow: place.currentOpeningHours?.openNow ?? null,
+          periods: (place.regularOpeningHours?.periods ?? []).map((period) => ({
+            open: { day: period.open.day, minute: (period.open.hour ?? 0) * 60 + (period.open.minute ?? 0) },
+            close: period.close ? { day: period.close.day, minute: (period.close.hour ?? 0) * 60 + (period.close.minute ?? 0) } : null,
+          })),
+          mapsUri: place.googleMapsUri ?? null,
+        });
+      }
+      return found;
     },
 
     async staticMap(at: LatLng, { width, height, zoom }) {

@@ -64,6 +64,16 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     policy: everywhere,
   },
   {
+    id: "places",
+    label: "Places nearby (HomePlaces)",
+    category: "informational",
+    actions: ["find_places"],
+    contentClass: "location",
+    geminiTools: [],
+    policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
+    note: "Finding places nearby happens in the WonderHome app, where the places can be opened on a map.",
+  },
+  {
     id: "todays_agenda",
     label: "Today's agenda",
     category: "informational",

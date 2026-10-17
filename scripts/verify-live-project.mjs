@@ -782,6 +782,22 @@ async function main() {
     Boolean(anonSpoken.error) || (Array.isArray(anonSpoken.data) && anonSpoken.data.length === 0),
     anonSpoken.error ? anonSpoken.error.code : `${anonSpoken.data?.length ?? "?"} rows`,
   );
+  const placeBook = await admin.from("household_places").select("place_id, status, maps_uri").limit(1);
+  check("migration landed: household_places", !placeBook.error, placeBook.error?.code ?? "ok");
+  const anonPlaces = await anon.from("household_places").select("place_id").limit(1);
+  check(
+    "anonymous cannot read a household's places",
+    Boolean(anonPlaces.error) || (Array.isArray(anonPlaces.data) && anonPlaces.data.length === 0),
+    anonPlaces.error ? anonPlaces.error.code : `${anonPlaces.data?.length ?? "?"} rows`,
+  );
+  const geminiKey = await admin.from("household_gemini_voice_credentials").select("household_id").limit(1);
+  check("migration landed: household_gemini_voice_credentials", !geminiKey.error, geminiKey.error?.code ?? "ok");
+  const anonGeminiKey = await anon.from("household_gemini_voice_credentials").select("api_key").limit(1);
+  check(
+    "anonymous cannot read a Gemini voice key",
+    Boolean(anonGeminiKey.error) || (Array.isArray(anonGeminiKey.data) && anonGeminiKey.data.length === 0),
+    anonGeminiKey.error ? anonGeminiKey.error.code : `${anonGeminiKey.data?.length ?? "?"} rows`,
+  );
   const preferred = await admin.from("household_members").select("nickname_preferred").limit(1);
   check("a member can go by their nickname", !preferred.error, preferred.error?.code ?? "ok");
 

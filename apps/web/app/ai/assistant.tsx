@@ -14,6 +14,7 @@ import {
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
+import type { PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
 import { plainText } from "@wonderhome/core/conversation/reply-format";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
@@ -28,6 +29,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
 import { HomeSendSheet } from "../_components/home-send-sheet";
+import { PlaceCards, type PlaceMark } from "./place-cards";
 import type { HomeSendReviewLabels } from "../_lib/homesend-labels";
 
 /**
@@ -53,6 +55,8 @@ export type AssistantMessage = {
   speaker?: string;
   /** When it was said (ISO 8601). Unset only on the "thinking" placeholder. */
   at?: string;
+  /** Places a HomePlaces answer offered, shown as cards under it. */
+  places?: PlaceSuggestion[] | null;
 };
 
 /** Far enough back to be deliberate rather than a stray touch. */
@@ -86,6 +90,7 @@ export function Assistant({
   timeZone = "Asia/Kolkata",
   labels = ENGLISH_LABELS,
   homeSendLabels,
+  placeMarks = {},
 }: {
   householdId: string;
   memberName: string;
@@ -111,6 +116,8 @@ export function Assistant({
   labels?: AssistantLabels;
   /** The paperclip's HomeSend sheet in the viewer's language; English when not given. */
   homeSendLabels?: HomeSendReviewLabels;
+  /** What the household already said about places (saved, not for us), by place id. */
+  placeMarks?: Readonly<Record<string, PlaceMark>>;
 }) {
   const errorWords = labels.error;
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
@@ -220,7 +227,7 @@ export function Assistant({
 
         // A request with several parts comes back as one reply per part,
         // each with its own preview (Wave 4 §10); anything else is one.
-        const replies: { id: string; text: string; action?: AssistantMessage["action"]; preview?: ActionPreviewShape | null; proposal?: string }[] =
+        const replies: { id: string; text: string; action?: AssistantMessage["action"]; preview?: ActionPreviewShape | null; proposal?: string; places?: PlaceSuggestion[] }[] =
           Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : [payload.reply];
         setMessages((current) =>
           current
@@ -234,6 +241,7 @@ export function Assistant({
                 action: reply.action ?? null,
                 preview: reply.preview ?? null,
                 proposal: reply.proposal,
+                places: reply.places ?? null,
                 speaker: speaker?.assistant,
                 at: new Date().toISOString(),
               })),
@@ -499,7 +507,19 @@ export function Assistant({
                 ) : null
               }
             >
-              {message.role === "assistant" ? <ReplyText text={message.text} /> : message.text}
+              {message.role === "assistant" ? (
+                message.places && message.places.length > 0 ? (
+                  <div className="space-y-3">
+                    {/* The cards say what the list said; the words around it stay. */}
+                    <ReplyText text={withoutList(message.text)} />
+                    <PlaceCards householdId={householdId} messageId={message.id} places={message.places} marks={placeMarks} labels={labels.places} />
+                  </div>
+                ) : (
+                  <ReplyText text={message.text} />
+                )
+              ) : (
+                message.text
+              )}
             </ChatMessage>
             </Fragment>
           ))}
@@ -633,4 +653,16 @@ function newIdempotencyKey(): string {
     return `turn-${crypto.randomUUID()}`;
   }
   return `turn-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/** A reply without its bulleted list, for when the same list is shown as cards. */
+function withoutList(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !/^\s*[-*•]\s/.test(line))
+    // A lead-in that introduced the list ends the sentence instead.
+    .map((line) => line.replace(/:\s*$/, "."))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

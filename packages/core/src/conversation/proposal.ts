@@ -88,6 +88,8 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   // autonomy gate stays harmless rather than treating it like a payment.
   log_vital: "draft",
   set_fitness_goal: "draft",
+  // HomePlaces looks places up; nothing in the household changes.
+  find_places: "read",
   greet: "read",
   unknown: "read",
 };
@@ -139,6 +141,10 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
 
   if (required && !can(context.actor, required)) {
     return { kind: "refused", reason: refusalFor(intent) };
+  }
+
+  if (intent.action === "find_places") {
+    return { kind: "answer", summary: "Here are some places that fit." };
   }
 
   if (intent.action === "ask_status") {

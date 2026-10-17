@@ -103,6 +103,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "“Recuérdame llamar al fontanero mañana a las 5” crea un recordatorio solo para ti, que llega cuando toca. Cuando se menciona a alguien y podrían encajar dos personas, HomeTalk pregunta cuál en lugar de adivinar.",
   "help.guide.talk-to-wonderhome.body.6":
     "Edita tu último mensaje para reformularlo y busca en tus conversaciones anteriores desde el cuadro de búsqueda de arriba. Nunca dice que hizo algo a menos que lo hiciera de verdad; cuando solo preparó algo, dice que lo preparó, y cuando no hacía falta cambiar nada, también lo dice.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Pide lugares cercanos — «sugiere un sitio para cenar esta noche», «¿adónde podemos ir cerca del colegio de Anya al salir de clase?» — y HomeTalk busca cerca de la dirección de tu casa o del colegio del niño y muestra solo lugares abiertos a esa hora, cada uno con un enlace a Google Maps. Los lugares vienen de la búsqueda de lugares de Google, no de un modelo de IA, y WonderHome avisa cuando ha supuesto una hora, como el fin de las clases. Guarda los que te gusten y saldrán primero la próxima vez; marca uno como «No es para nosotros» y no se volverá a sugerir. Un adulto o un Admin puede guardar lugares.",
 
   "help.guide.voice.title": "Voz y conversación manos libres",
   "help.guide.voice.summary": "Toca para hablar y revisar, o conversa sin manos.",
@@ -114,6 +116,10 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Ajustes → Voz elige el servicio de voz (el de tu navegador o uno más preciso), la voz y cómo escucha. Lo que no está disponible para tu hogar se muestra con el motivo, en lugar de ofrecerse roto. Si un Admin puede cambiar ese motivo, por ejemplo que Gemini Live necesita una clave de IA de Google, un enlace lleva directo al ajuste y te devuelve al guardar.",
   "help.guide.voice.body.4":
     "Los asistentes de voz como Alexa o Gemini Voice se pueden vincular a una persona desde Ajustes → Asistentes de voz cuando estén disponibles para tu WonderHome. Un asistente vinculado habla como esa persona y solo ve lo que ella puede ver, y nunca puede pagar ni hacer un pedido.",
+  "help.guide.voice.body.5":
+    "Mientras WonderHome escucha o hay una conversación en directo, el botón de HomeTalk en el centro de la barra de pestañas late con un anillo alrededor, para que veas desde cualquier pantalla que hay una conversación en curso.",
+  "help.guide.voice.body.6":
+    "La voz de Gemini siempre funciona en Google. Si la clave de tu asistente en Settings → AI Assistant es de Google (Gemini), la voz usa esa misma clave. Si tu asistente usa Anthropic u OpenAI, un Admin puede añadir en la misma página una clave de voz de Gemini aparte: se usa solo para la voz de Gemini, y todo lo demás sigue usando la clave del asistente.",
 
   "help.guide.home-send.title": "HomeSend: enviar cosas a WonderHome",
   "help.guide.home-send.summary": "Una foto, un PDF, una nota de voz, un enlace o un reenvío: se lee y luego lo confirmas tú.",
@@ -209,7 +215,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "Miembros, roles y lo que ve cada persona",
   "help.guide.household-and-roles.summary": "Un hogar, varias identidades y una vista distinta para cada una.",
   "help.guide.household-and-roles.body.1":
-    "La persona que crea el hogar es su propietaria y Admin. Puede hacer Admin a otras personas, que pueden hacer casi todo lo que ella puede.",
+    "Quien crea el hogar es su propietario y un Admin. Todos los Admin pueden hacer lo mismo: cualquier Admin puede convertir a otro adulto en Admin, o devolverlo a adulto, desde Family o Manage Household. Solo los adultos pueden ser Admin, y el propietario siempre lo es, así que un hogar nunca se queda sin Admin.",
   "help.guide.household-and-roles.body.2":
     "Los adultos, los niños y la ayuda doméstica tienen cada uno su propia vista. No es un filtro aplicado en la pantalla: una sección que alguien no puede ver nunca llega a su dispositivo, y WonderHome vuelve a comprobarlo por detrás cada vez.",
   "help.guide.household-and-roles.body.3":

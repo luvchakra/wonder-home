@@ -103,6 +103,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "« Rappelle-moi d’appeler le plombier demain à 17 h » crée un rappel pour vous seul, envoyé au bon moment. Quand quelqu’un est mentionné et que deux personnes pourraient correspondre, HomeTalk demande laquelle plutôt que de deviner.",
   "help.guide.talk-to-wonderhome.body.6":
     "Modifiez votre dernier message pour le reformuler, et recherchez dans vos conversations passées depuis le champ de recherche en haut. Il ne dit jamais avoir fait quelque chose s’il ne l’a pas vraiment fait ; quand il a seulement préparé quelque chose, il dit « préparé », et quand rien n’avait besoin de changer, il le dit.",
+  "help.guide.talk-to-wonderhome.body.7":
+    "Demandez des lieux à proximité — « propose un endroit pour dîner ce soir », « où aller près de l'école d'Anya après la classe ? » — et HomeTalk cherche près de l'adresse du foyer ou de l'école de l'enfant et ne montre que les lieux ouverts à ce moment-là, chacun avec un lien vers Google Maps. Les lieux viennent de la recherche de lieux de Google, pas d'un modèle d'IA, et WonderHome indique quand il a supposé une heure, comme la fin des cours. Enregistrez ceux qui vous plaisent : ils viendront en premier la prochaine fois ; marquez-en un « Pas pour nous » et il ne sera plus proposé. Un adulte ou un Admin peut enregistrer des lieux.",
 
   "help.guide.voice.title": "Voix et conversation mains libres",
   "help.guide.voice.summary": "Touchez pour parler et relire, ou échangez mains libres.",
@@ -114,6 +116,10 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Réglages → Voix choisit le service vocal (celui de votre navigateur, ou un plus précis), la voix et la façon d’écouter. Ce qui n’est pas disponible pour votre foyer est montré avec la raison, plutôt que proposé et cassé. Si un Admin peut changer cette raison, par exemple quand Gemini Live demande une clé d’IA Google, un lien mène directement au réglage et vous ramène une fois enregistré.",
   "help.guide.voice.body.4":
     "Des assistants vocaux comme Alexa ou Gemini Voice peuvent être liés à une personne depuis Paramètres → Assistants vocaux une fois qu’ils sont disponibles pour votre WonderHome. Un assistant lié parle en tant que cette personne et ne voit que ce qu’elle peut voir, et il ne peut jamais payer ni passer commande.",
+  "help.guide.voice.body.5":
+    "Pendant que WonderHome écoute ou qu'une conversation en direct est en cours, le bouton HomeTalk au centre de la barre d'onglets pulse, entouré d'un anneau : vous voyez depuis n'importe quel écran qu'une conversation est en cours.",
+  "help.guide.voice.body.6":
+    "La voix Gemini fonctionne toujours chez Google. Si la clé de votre assistant dans Settings → AI Assistant est une clé Google (Gemini), la voix utilise cette même clé. Si votre assistant utilise Anthropic ou OpenAI, un Admin peut ajouter sur la même page une clé vocale Gemini distincte : elle sert uniquement à la voix Gemini, et tout le reste continue d’utiliser la clé de l’assistant.",
 
   "help.guide.home-send.title": "HomeSend : envoyer des choses à WonderHome",
   "help.guide.home-send.summary": "Une photo, un PDF, un message vocal, un lien ou un transfert — lu, puis confirmé par vous.",
@@ -209,7 +215,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.title": "Membres, rôles et ce que voit chacun",
   "help.guide.household-and-roles.summary": "Un foyer, plusieurs identités, et une vue différente pour chacune.",
   "help.guide.household-and-roles.body.1":
-    "La personne qui crée le foyer en est la propriétaire et l’Admin. Elle peut nommer d’autres personnes Admin, qui peuvent faire presque tout ce qu’elle peut faire.",
+    "La personne qui crée le foyer en est la propriétaire et un Admin. Tous les Admin peuvent faire les mêmes choses : n’importe quel Admin peut nommer un autre adulte Admin, ou le repasser adulte, depuis Family ou Manage Household. Seuls les adultes peuvent être Admin, et le propriétaire le reste toujours : un foyer n’est donc jamais sans Admin.",
   "help.guide.household-and-roles.body.2":
     "Les adultes, les enfants et l’aide à domicile ont chacun leur propre vue. Ce n’est pas un filtre appliqué à l’écran : une section qu’une personne ne peut pas voir n’est jamais envoyée sur son appareil, et WonderHome vérifie à nouveau en coulisses à chaque fois.",
   "help.guide.household-and-roles.body.3":

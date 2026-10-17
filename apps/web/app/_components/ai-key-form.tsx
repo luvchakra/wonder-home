@@ -44,6 +44,7 @@ export function AiKeyForm({
   configured,
   labels,
   returnTo = null,
+  googleOnly = false,
 }: {
   householdId: string;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -52,6 +53,8 @@ export function AiKeyForm({
   labels: AiKeyFormLabels;
   /** Where to go back to once saved, when someone was sent here to fix something. */
   returnTo?: string | null;
+  /** The Gemini voice key: always Google's, so there is no provider to pick. */
+  googleOnly?: boolean;
 }) {
   const [saveState, saveAction] = useActionState(save, {});
   const [removeState, removeAction] = useActionState(remove, {});
@@ -65,26 +68,31 @@ export function AiKeyForm({
       <form action={saveAction} className="space-y-3">
         <input type="hidden" name="householdId" value={householdId} />
         {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
-        <div className="space-y-1.5">
-          <label htmlFor="provider" className="block text-sm font-medium">{labels.provider}</label>
-          <select
-            id="provider"
-            name="provider"
-            defaultValue="anthropic"
-            className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-          >
-            <option value="anthropic">Anthropic (Claude)</option>
-            <option value="google">Google (Gemini)</option>
-            <option value="openai">OpenAI</option>
-          </select>
-        </div>
+        {googleOnly ? (
+          <input type="hidden" name="provider" value="google" />
+        ) : (
+          <div className="space-y-1.5">
+            <label htmlFor="provider" className="block text-sm font-medium">{labels.provider}</label>
+            <select
+              id="provider"
+              name="provider"
+              defaultValue="anthropic"
+              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+            >
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="google">Google (Gemini)</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+        )}
         <PasswordField
           label={labels.apiKey}
           name="apiKey"
+          id={googleOnly ? "geminiVoiceKey" : "apiKey"}
           required
           minLength={20}
           autoComplete="off"
-          placeholder="sk-…"
+          placeholder={googleOnly ? "AIza…" : "sk-…"}
           hint={labels.hint}
         />
         <Submit

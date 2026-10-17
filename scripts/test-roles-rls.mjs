@@ -122,16 +122,21 @@ test("a role change takes effect immediately, with no cache to invalidate", () =
   assert.equal(asProfile(ADULT, `select wh.is_household_admin('${household}');`, options), "f");
 });
 
-test("an administrator cannot designate another administrator", () => {
-  assert.ok(
-    deniedForProfile(
-      ADMIN,
-      `insert into public.household_roles (household_id, member_id, role)
-       values ('${household}', '${adultMember}', 'administrator');`,
-      options,
-    ),
-    "an administrator designated another administrator",
+test("an administrator designates another adult an administrator, and steps them back (every Admin is equal)", () => {
+  asProfile(
+    ADMIN,
+    `insert into public.household_roles (household_id, member_id, role)
+     values ('${household}', '${adultMember}', 'administrator');`,
+    options,
   );
+  assert.ok(rolesOf(adultMember).includes("administrator"), "an administrator could not designate another administrator");
+  asProfile(
+    ADMIN,
+    `delete from public.household_roles where household_id = '${household}'
+     and member_id = '${adultMember}' and role = 'administrator';`,
+    options,
+  );
+  assert.ok(!rolesOf(adultMember).includes("administrator"), "an administrator could not step another administrator back");
 });
 
 test("an administrator cannot remove the head's role", () => {

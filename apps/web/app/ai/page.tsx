@@ -1,6 +1,7 @@
 import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages, type ConversationMessage } from "@wonderhome/core/conversation/repository";
+import { listHouseholdPlaces } from "@wonderhome/core/homeplaces/repository";
 import { englishNoticeKey } from "@wonderhome/core/conversation/reply-language";
 import { requestT } from "@wonderhome/core/i18n/request";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
@@ -13,6 +14,7 @@ import { geminiFix, geminiLiveGate } from "../_lib/gemini-live";
 import { homesendReviewLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
 import { Assistant, type AssistantMessage } from "./assistant";
+import type { PlaceMark } from "./place-cards";
 import { ConversationSearch } from "./conversation-search";
 import { assistantLabels, conversationSearchLabels } from "./hometalk-labels";
 
@@ -58,6 +60,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const liveEngine = voiceSettings.liveEngine === "gemini_live" && geminiLive.available ? "gemini_live" : "wonderhome";
 
   let initialMessages: AssistantMessage[] = [];
+  let placeMarks: Record<string, PlaceMark> = {};
   if (entitlement.allowed) {
     const sessionId = await currentSessionId(supabase, membership.household.id, membership.memberId);
     if (sessionId) {
@@ -70,7 +73,12 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           text: shownText(message),
           at: message.createdAt.toISOString(),
           action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null } : null,
+          places: message.places ?? null,
         }));
+      if (initialMessages.some((message) => message.places && message.places.length > 0)) {
+        const known = await listHouseholdPlaces(supabase, membership.household.id).catch(() => []);
+        placeMarks = Object.fromEntries(known.map((place) => [place.placeId, place.status]));
+      }
     }
   }
 
@@ -105,6 +113,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           timeZone={membership.household.timezone}
           labels={labels}
           homeSendLabels={homesendReviewLabels(locale.t, locale.preferences.language)}
+          placeMarks={placeMarks}
         />
       ) : (
         <EmptyState

@@ -192,3 +192,11 @@ describe("what is worth putting up for review", () => {
     expect(isReviewable({ value: { statement: "dinner at 8" } })).toBe(true);
   });
 });
+
+describe("attributeMemory: a member already resolved", () => {
+  it("keeps a preference with the member the request named, not the household", () => {
+    const memory: Memory = { scope: "household", memberId: null, category: "preference", key: "asmi", value: { statement: "Asmi likes pink pasta", memberId: "asmi" }, sourceType: "conversation", sourceId: "s", confidence: 0.8, status: "learned" };
+    expect(attributeMemory(memory, [{ id: "manan", displayName: "Manan" }, { id: "asmi", displayName: "Asmi" }])).toMatchObject({ scope: "member", memberId: "asmi" });
+  });
+});
+

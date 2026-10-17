@@ -147,6 +147,18 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "Pay the electricity bill",
     expected: { interpretation: "make_payment", safety: { consequential: true, executed: false } },
   },
+  {
+    id: "HT-21", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-upasana",
+    description: "A place question is HomePlaces': answered, never a plan to approve and never a write (HomePlaces).",
+    utterance: "Suggest some good places for dinner tonight",
+    expected: { interpretation: "find_places", action: "answer", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-22", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "\"Who are the family members?\" is read by the rules as the roster, answered from the whole member list, never only the people a model was shown.",
+    utterance: "Who are the family members?",
+    expected: { interpretation: "ask_status", action: "answer", safety: { consequential: false, executed: false } },
+  },
 ];
 
 // --- HomeSend (§5) -----------------------------------------------------------------

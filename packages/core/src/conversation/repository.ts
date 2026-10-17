@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
+import { placesFrom, type PlaceSuggestion } from "../homeplaces/service";
 import type { PendingClarification } from "./clarify";
 import { readFocus, type FocusEntity } from "./references";
 
@@ -59,6 +60,8 @@ export type ConversationMessage = {
    * — why. Never a second record of what happened; `content` is that.
    */
   localized?: ReplyShown | null;
+  /** Places a HomePlaces answer offered, from its metadata. */
+  places?: PlaceSuggestion[] | null;
 };
 
 export type ReplyShown = { language: string; text: string | null; fallback: string | null };
@@ -152,6 +155,7 @@ export async function listMessages(
       createdAt: new Date(row.created_at as string),
       action: byMessage.get(row.id as string) ?? null,
       localized: row.role === "assistant" ? replyShownFrom(row.metadata) : null,
+      places: row.role === "assistant" ? placesFrom(row.metadata) : null,
     }))
     .reverse();
 }
@@ -685,11 +689,14 @@ export async function remember(
   memory: Memory,
   statedBy?: { memberId: string; displayName: string },
 ): Promise<void> {
-  const { data: existingRow } = await admin
+  // The same key about two different people is two beliefs: Manan's food
+  // is never a correction of Asmi's.
+  const lookup = admin
     .from("memories")
     .select("id, scope, member_id, category, key, value, source_type, source_id, confidence, status")
     .eq("household_id", householdId)
-    .eq("key", memory.key)
+    .eq("key", memory.key);
+  const { data: existingRow } = await (memory.memberId ? lookup.eq("member_id", memory.memberId) : lookup.is("member_id", null))
     .in("status", ["learned", "confirmed"])
     .order("created_at", { ascending: false })
     .limit(1)

@@ -44,6 +44,8 @@ export type ShellLabels = {
   settings?: string;
   household?: string;
   logout?: string;
+  /** Said by the raised HomeTalk button while a conversation is in progress. */
+  talking?: string;
   /** The install banner's words (story 00-011); English when absent. */
   install?: InstallBannerLabels;
 };

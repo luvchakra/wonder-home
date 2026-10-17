@@ -8,6 +8,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 
 import type { ActionState } from "../(auth)/actions";
 import { shrinkPhoto } from "../_lib/shrink-photo";
+import { removePetPhotoAction, updatePetPhotoAction } from "../(auth)/home-actions";
 import { removeMemberAvatarAction, updateMemberAvatarAction } from "../(auth)/household-actions";
 
 /**
@@ -29,16 +30,21 @@ export function MemberAvatarControl({
   displayName,
   avatarUrl,
   labels = AVATAR_ENGLISH,
+  kind = "member",
 }: {
   householdId: string;
+  /** The member's id, or the pet's when `kind` is "pet". */
   memberId: string;
+  /** A person's profile picture, or a pet's: the same control, each through its own write. */
+  kind?: "member" | "pet";
   displayName: string;
   avatarUrl: string | null;
   /** Server-built words; English when a caller has not localized yet. */
   labels?: AvatarLabels;
 }) {
-  const [uploadState, uploadAction, uploading] = useActionState<ActionState, FormData>(updateMemberAvatarAction, {});
-  const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(removeMemberAvatarAction, {});
+  const [uploadState, uploadAction, uploading] = useActionState<ActionState, FormData>(kind === "pet" ? updatePetPhotoAction : updateMemberAvatarAction, {});
+  const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(kind === "pet" ? removePetPhotoAction : removeMemberAvatarAction, {});
+  const idField = kind === "pet" ? "petId" : "memberId";
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadFormRef = useRef<HTMLFormElement>(null);
 
@@ -49,7 +55,7 @@ export function MemberAvatarControl({
         <div className="flex flex-wrap gap-2">
           <form ref={uploadFormRef} action={uploadAction}>
             <input type="hidden" name="householdId" value={householdId} />
-            <input type="hidden" name="memberId" value={memberId} />
+            <input type="hidden" name={idField} value={memberId} />
             <input
               ref={inputRef}
               type="file"
@@ -77,7 +83,7 @@ export function MemberAvatarControl({
           {avatarUrl ? (
             <form action={removeAction}>
               <input type="hidden" name="householdId" value={householdId} />
-              <input type="hidden" name="memberId" value={memberId} />
+              <input type="hidden" name={idField} value={memberId} />
               <Pill type="submit" tone="quiet" disabled={removing} className="text-[var(--wh-risk)]">
                 <Trash2 aria-hidden className="size-3.5" /> {removing ? labels.removing : labels.remove}
               </Pill>

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, createReplyTranslator, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, routeToProvider, unpseudonymise, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, restoreParameterNames, routeToProvider, unpseudonymise, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { FAIR_USE_DISCLOSURE } from "@wonderhome/core/billing/policies";
@@ -43,6 +43,7 @@ import {
 import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
 import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
+import { composeRoster } from "@wonderhome/core/conversation/roster";
 import { contentClassFor } from "@wonderhome/core/context/privacy";
 import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { preferencesOf } from "@wonderhome/core/i18n/preferences";
@@ -61,6 +62,11 @@ import { answerDocumentChanges, documentReplyClasses, documentReplyText, readDoc
 import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
 import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
+import { listEnrolments } from "@wonderhome/core/school/enrolments";
+import { placesReply } from "@wonderhome/core/homeplaces/answer";
+import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
+import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
+import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
 import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
@@ -348,7 +354,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // nothing downstream, because the answer comes from the HomeBrain
   // either way. Everything else still goes to the model to be understood.
   const quick = resolveDeterministicIntent(body.utterance, { actorMemberId: membership.memberId, channel: body.channel });
-  const plainQuestion = (quick.action === "ask_status" || quick.action === "greet") && quick.confidence >= 0.8;
+  const plainQuestion = (quick.action === "ask_status" || quick.action === "greet" || quick.action === "find_places") && quick.confidence >= 0.8;
   const rulesRead = input.rulesFirst === true && quick.action !== "unknown" && quick.confidence >= 0.8;
 
   // The HomeBrain reads the home while the request is being
@@ -698,7 +704,29 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   const previousQuestion = [...history].reverse().find((turn) => turn.role === "member")?.text ?? null;
   const lastAssistantText = [...history].reverse().find((turn) => turn.role === "assistant")?.text ?? null;
 
-  if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain === "string") {
+  let places: PlaceSuggestion[] | null = null;
+  if (result.kind === "reply" && result.intent.action === "find_places") {
+    // HomePlaces: real places near home or a child's school, open when asked,
+    // ranked by the rules and by what the family saved before. The request is
+    // read from the person's own words; a model only said it was one.
+    const found = await findPlaces({ supabase, admin, householdId, membership, people, utterance: body.utterance, said: result.intent.parameters.request });
+    composedAt = Date.now();
+    text = found.text;
+    places = found.places;
+    carry(speaking, ["location"]);
+    brain = { source: "deterministic", factsSent: 0 };
+  } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && result.intent.parameters.scope === "people") {
+    // Who is in the household: the whole member list, by rules (roster.ts).
+    const { data: petRows } = await supabase.from("pets").select("name, species").eq("household_id", householdId).eq("active", true);
+    composedAt = Date.now();
+    text = composeRoster(people, {
+      viewerMemberId: membership.memberId,
+      householdName: membership.household.name,
+      pets: ((petRows as { name: string; species: string | null }[] | null) ?? []).map((pet) => ({ name: pet.name, species: pet.species })),
+    });
+    carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
+    brain = { source: "deterministic", factsSent: 0 };
+  } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain === "string") {
     // "Why?", "where did this come from?", "what did I just send?" — from
     // the recorded evidence, assembled here; never a model (§10).
     const [read, recorded] = await Promise.all([(brainRead ?? readBrain()).catch(() => null), latestAction(admin, sessionId)]);
@@ -823,6 +851,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
             mode,
           }
         : { kind: result.kind }),
+      // The places offered, so the cards survive a reload (HomePlaces).
+      ...(places && places.length > 0 ? { places } : {}),
       // What this turn was about (Wave 4 §16): ids and labels only,
       // never the text around them, for the next turn's "that".
       ...(turnFocus.length > 0 ? { focus: turnFocus.slice(0, 8) } : {}),
@@ -889,6 +919,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       preview: result.kind === "reply" ? previewOf(result.proposal) : null,
       proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
       mode,
+      ...(places && places.length > 0 ? { places } : {}),
     },
     /** What, if anything, left this household this turn (15-005). */
     privacy: {
@@ -1107,6 +1138,38 @@ async function loadReferences(input: {
   };
 }
 
+/**
+ * A HomePlaces question, answered: read, rate limited per household (each is
+ * a paid search), searched near the right anchor and said back by rules.
+ */
+async function findPlaces(input: {
+  supabase: Supabase;
+  admin: ReturnType<typeof createAdminClient>;
+  householdId: string;
+  membership: HouseholdMembership;
+  people: readonly (Person & PersonLike)[];
+  utterance: string;
+  said: unknown;
+}): Promise<{ text: string; places: PlaceSuggestion[] | null }> {
+  const request = (typeof input.said === "string" ? readPlaceRequest(input.said) : null) ?? readPlaceRequest(input.utterance);
+  if (!request) return { text: "Tell me what kind of place you have in mind, like somewhere for dinner tonight or a park near school, and I'll look nearby.", places: null };
+  if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null };
+  const preferences = preferencesOf(input.membership.locale, input.membership.household.timezone);
+  const enrolments = await listEnrolments(input.supabase, input.householdId).catch(() => []);
+  const outcome = await suggestPlaces(input.supabase, placesProviderFromEnv(), request, {
+    householdId: input.householdId,
+    now: householdNow(new Date(), input.membership.household.timezone),
+    children: input.people.filter((person) => person.memberType === "child").map((person) => ({ id: person.id, name: person.displayName })),
+    schools: enrolments.map((enrolment) => ({ childMemberId: enrolment.childMemberId, schoolName: enrolment.schoolName, location: enrolment.location ?? null })),
+    languageCode: preferences.language,
+    regionCode: preferences.region,
+  }).catch((error: unknown) => {
+    log.warn("hometalk.places_failed", { householdId: input.householdId, error: error instanceof Error ? error.name : "unknown" });
+    return { kind: "unavailable" } as const;
+  });
+  return { text: placesReply(request, outcome), places: outcome.kind === "found" ? outcome.places : null };
+}
+
 async function listPeople(supabase: Supabase, householdId: string): Promise<(Person & PersonLike)[]> {
   const { data } = await supabase
     .from("household_members")
@@ -1257,7 +1320,12 @@ async function decideProviderRouting(
   const runtime: RuntimeContext | undefined = moment
     ? { role: moment.role, localDateTime: moment.localDateTime, pending: sentText("pending"), recent: sentText("recent")?.split(", ") ?? [], language: moment.language ?? null }
     : undefined;
-  const toHousehold = (intent: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
+  const toHousehold = (understood: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
+    // Every word the model wrote back ("Child A likes pink pasta") names a
+    // person by placeholder. Placeholders are only this turn's: a member
+    // added later shifts them, so one stored as-is would come to mean
+    // somebody else. Real names go back in before anything is kept.
+    const intent: HouseholdIntent = { ...understood, parameters: restoreParameterNames(understood.parameters, pseudonyms, people) };
     if (intent.target.kind === "member" && intent.target.reference) {
       const mapped = unpseudonymise(intent.target.reference, pseudonyms, people);
       return {

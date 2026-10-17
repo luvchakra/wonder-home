@@ -11,6 +11,7 @@ import { resolveVoiceName } from "@wonderhome/core/voice/google";
 import { VoiceError } from "@wonderhome/core/voice/provider";
 import { loadVoiceSettings, resolveProvider, speechKeySource } from "@wonderhome/core/voice/repository";
 import { describeVoice, listeningLanguage, voiceSettingsSchema } from "@wonderhome/core/voice/settings";
+import { speakable } from "@wonderhome/core/conversation/speech";
 
 /**
  * Speaking and listening, on the server (story 04-009).
@@ -132,7 +133,8 @@ export async function POST(request: Request, { params }: Params) {
         const voiceName =
           settings.voiceName ?? resolveVoiceName(settings, await provider.voices(settings.language).catch(() => []));
 
-        const spoken = await provider.speak({ text: body.speak, settings: { ...settings, voiceName } });
+        // Said as a person would say it, whichever client sent it: no arrows, symbols or link addresses.
+        const spoken = await provider.speak({ text: speakable(body.speak) || body.speak, settings: { ...settings, voiceName } });
         return {
           audio: spoken.base64,
           mimeType: spoken.mimeType,

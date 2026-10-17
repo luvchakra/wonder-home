@@ -565,3 +565,5 @@ Tailwind's automatic source detection never looks inside `node_modules`, and
 the workspace links `@wonderhome/core` there. Without the explicit
 `@source "../../../packages/core/src"` in `apps/web/app/globals.css`, a class
 used **only** by a shared component is never generated.
+
+**A conversation in progress shows on the one door (`TalkButtonDisc`, `components/shell/talk-activity.tsx`).** While the composer is listening or holding a live conversation, the raised HomeTalk button in the phone tab bar pulses, with a steady primary ring around it and a soft wave behind it. A screen reader hears "Conversation in progress". Under `prefers-reduced-motion` the ring stays and nothing moves, so the state is still shown without motion (rules 3 and 10). The composer is the only writer of that state, and nothing else may set it.

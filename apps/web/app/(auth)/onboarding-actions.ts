@@ -43,6 +43,7 @@ import { log } from "@wonderhome/core/observability/logger";
 import { PlacesUnavailableError } from "@wonderhome/core/places/provider";
 import { saveEnrolment } from "@wonderhome/core/school/enrolments";
 
+import { helperRolesFrom } from "../_lib/helper-roles";
 import { deletePhoto, memberPhotoPath, petPhotoPath, postedPhoto, storePhoto, wantsPhotoRemoved } from "../_lib/photos";
 import { pickedPlace, saveAddressFromForm } from "../_lib/places";
 
@@ -397,14 +398,6 @@ function helperWindows(formData: FormData, prefix: string): { dayOfWeek: number;
   return [...new Set(days)].map((dayOfWeek) => ({ dayOfWeek, startTime: start, endTime: end }));
 }
 
-/** Everything a helper does, as ticked (plus one in their own words), kept as "Maid, Cook". */
-function helperRoles(formData: FormData, key: string): string | null {
-  const said = [...formData.getAll(key), formData.get(`${key}_other`)]
-    .map((value) => (typeof value === "string" ? value.trim().slice(0, 40) : ""))
-    .filter(Boolean);
-  const unique = [...new Map(said.map((role) => [role.toLocaleLowerCase(), role])).values()];
-  return unique.join(", ").slice(0, 100) || null;
-}
 
 export async function savePetsAndHelpAction(_previous: OnboardingActionState, formData: FormData): Promise<OnboardingActionState> {
   let context = await adminContext();
@@ -463,7 +456,7 @@ export async function savePetsAndHelpAction(_previous: OnboardingActionState, fo
       await updateMemberProfile(supabase, membership, {
         memberId: helperId,
         displayName: name,
-        occupation: helperRoles(formData, `helper_role_${index}`),
+        occupation: helperRolesFrom(formData, `helper_role_${index}`),
         ...nicknameFrom(formData, `helper_nickname_${index}`, `helper_preferred_${index}`),
         ...((dob) => (dob ? { dateOfBirth: dob } : {}))(pastDate(formData, `helper_dob_${index}`)),
       });

@@ -20,22 +20,33 @@ export type Enrolment = {
   /** Where the school is, when it was picked from a place search. */
   placeId?: string | null;
   schoolAddress?: string | null;
+  /** The school's point, when it was picked from a place search: what HomePlaces looks near. */
+  location?: { latitude: number; longitude: number } | null;
 };
 
 export async function listEnrolments(supabase: SupabaseClient, householdId: string): Promise<Enrolment[]> {
   const { data, error } = await supabase
     .from("school_enrolments")
-    .select("child_member_id, school_name, grade, place_id, school_address")
+    .select("child_member_id, school_name, grade, place_id, school_address, latitude, longitude")
     .eq("household_id", householdId)
     .eq("active", true);
   if (error) throw new Error(`listEnrolments failed: ${error.code ?? "unknown"}`);
-  type Row = { child_member_id: string; school_name: string; grade: string | null; place_id: string | null; school_address: string | null };
+  type Row = {
+    child_member_id: string;
+    school_name: string;
+    grade: string | null;
+    place_id: string | null;
+    school_address: string | null;
+    latitude: number | string | null;
+    longitude: number | string | null;
+  };
   return ((data ?? []) as Row[]).map((row) => ({
     childMemberId: row.child_member_id,
     schoolName: row.school_name,
     grade: row.grade,
     placeId: row.place_id,
     schoolAddress: row.school_address,
+    location: row.latitude !== null && row.longitude !== null ? { latitude: Number(row.latitude), longitude: Number(row.longitude) } : null,
   }));
 }
 

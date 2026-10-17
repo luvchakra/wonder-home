@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createGooglePlacesProvider, placesProviderFromEnv, SCHOOL_RADIUS_METERS } from "./google";
-import { distanceLabel, mapsLink, PlacesUnavailableError } from "./provider";
+import { distanceLabel, isOpenFor, mapsLink, metresBetween, PlacesUnavailableError } from "./provider";
 
 type Call = { url: string; init: RequestInit };
 
@@ -89,5 +89,76 @@ describe("place helpers", () => {
     const link = mapsLink({ name: "Greenwood High", formattedAddress: "Sarjapur Road", placeId: "abc" });
     expect(link).toBe("https://www.google.com/maps/search/?api=1&query=Greenwood+High%2C+Sarjapur+Road&query_place_id=abc");
     expect(link).not.toContain("key=");
+  });
+});
+
+describe("finding places near a point", () => {
+  it("asks for only what a household weighs, near the point, and reads hours and price", async () => {
+    const { fetch, calls } = fakeFetch(() =>
+      json({
+        places: [
+          {
+            id: "p1",
+            displayName: { text: "Cubbon Park" },
+            formattedAddress: "Kasturba Road, Bengaluru",
+            location: { latitude: 12.97, longitude: 77.59 },
+            primaryTypeDisplayName: { text: "Park" },
+            rating: 4.6,
+            userRatingCount: 120000,
+            priceLevel: "PRICE_LEVEL_FREE",
+            currentOpeningHours: { openNow: true },
+            regularOpeningHours: { periods: [{ open: { day: 1, hour: 6, minute: 0 }, close: { day: 1, hour: 18, minute: 0 } }] },
+            googleMapsUri: "https://maps.google.com/?cid=1",
+          },
+          { id: "nameless" },
+        ],
+      }),
+    );
+    const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby!({ text: "park", near: { latitude: 12.9, longitude: 77.6 }, radiusMeters: 3000, openNow: true, max: 5 });
+    expect(found).toEqual([
+      {
+        placeId: "p1",
+        name: "Cubbon Park",
+        address: "Kasturba Road, Bengaluru",
+        location: { latitude: 12.97, longitude: 77.59 },
+        kind: "Park",
+        rating: 4.6,
+        ratingCount: 120000,
+        priceLevel: 0,
+        openNow: true,
+        periods: [{ open: { day: 1, minute: 360 }, close: { day: 1, minute: 1080 } }],
+        mapsUri: "https://maps.google.com/?cid=1",
+      },
+    ]);
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body).toMatchObject({ textQuery: "park", pageSize: 5, openNow: true, locationBias: { circle: { center: { latitude: 12.9, longitude: 77.6 }, radius: 3000 } } });
+    const mask = (calls[0]!.init.headers as Record<string, string>)["x-goog-fieldmask"];
+    expect(mask).toContain("places.regularOpeningHours.periods");
+    expect(mask).not.toContain("reviews");
+  });
+});
+
+describe("opening hours", () => {
+  const weekdays = [1, 2, 3, 4, 5].map((day) => ({ open: { day, minute: 11 * 60 }, close: { day, minute: 22 * 60 } }));
+
+  it("is open for a window that sits inside a period, and not for one that runs past closing", () => {
+    expect(isOpenFor(weekdays, 3, 15 * 60 + 30, 120)).toBe(true);
+    expect(isOpenFor(weekdays, 3, 21 * 60, 120)).toBe(false);
+    expect(isOpenFor(weekdays, 0, 15 * 60, 60)).toBe(false);
+  });
+
+  it("handles a period past midnight and one that wraps the week", () => {
+    const lateBar = [{ open: { day: 6, minute: 20 * 60 }, close: { day: 0, minute: 2 * 60 } }];
+    expect(isOpenFor(lateBar, 6, 23 * 60, 120)).toBe(true);
+    expect(isOpenFor(lateBar, 0, 60, 30)).toBe(true);
+  });
+
+  it("is open around the clock with no close, and unknown with no hours", () => {
+    expect(isOpenFor([{ open: { day: 0, minute: 0 }, close: null }], 4, 600, 600)).toBe(true);
+    expect(isOpenFor([], 4, 600, 60)).toBeNull();
+  });
+
+  it("measures straight-line distance", () => {
+    expect(Math.round(metresBetween({ latitude: 12.9716, longitude: 77.5946 }, { latitude: 12.9352, longitude: 77.6245 }) / 100)).toBe(52);
   });
 });

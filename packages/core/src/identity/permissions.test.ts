@@ -9,11 +9,10 @@ describe("permissions", () => {
     expect(permissionsFor(head).size).toBe(Object.keys(PERMISSIONS).length - 1); // school.view_own is the child's
   });
 
-  it("differs from head to administrator in exactly one permission", () => {
+  it("gives every Admin exactly the same permissions, owner or not", () => {
     const head = permissionsFor({ roles: ["head"] });
     const admin = permissionsFor({ roles: ["administrator"] });
-    const difference = [...head].filter((permission) => !admin.has(permission));
-    expect(difference).toEqual(["members.assign_admin"]);
+    expect([...admin].sort()).toEqual([...head].sort());
   });
 
   it("denies a child the household's money, administration and other people's privacy", () => {
@@ -51,10 +50,12 @@ describe("permissions", () => {
     expect(can(adult, "finance.pay")).toBe(false);
   });
 
-  it("allows only the head to assign the administrator role", () => {
+  it("lets any Admin assign the administrator role, and nobody else", () => {
     expect(canAssignRole({ roles: ["head"] }, "administrator")).toBe(true);
-    expect(canAssignRole({ roles: ["administrator"] }, "administrator")).toBe(false);
+    expect(canAssignRole({ roles: ["administrator"] }, "administrator")).toBe(true);
     expect(canAssignRole({ roles: ["adult"] }, "administrator")).toBe(false);
+    expect(canAssignRole({ roles: ["child"] }, "administrator")).toBe(false);
+    expect(canAssignRole({ roles: ["helper"] }, "administrator")).toBe(false);
   });
 
   it("never treats head as an assignable role", () => {

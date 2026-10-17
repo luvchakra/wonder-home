@@ -4,6 +4,8 @@ import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
 import { splitTrailingWhen } from "./temporal";
+import { isPlaceQuestion } from "../homeplaces/request";
+import { isRosterQuestion } from "./roster";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -195,6 +197,15 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:help(?: me)?|what can you do(?: for me)?|what do you do|how do (?:you|i) (?:work|use this)|what can i (?:ask|say)(?: you)?|what are you|who are you)$/i,
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "help" }, confidence: 0.99 }),
+  },
+
+  // --- Who is in the household ------------------------------------------------
+  {
+    // "Who are the family members?" is answered from the member list itself
+    // (roster.ts), so nobody without other records is left out.
+    pattern: /^.+$/,
+    read: (_match, utterance) =>
+      isRosterQuestion(utterance) ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "people" }, confidence: 0.95 } : null,
   },
 
   // --- Status: what is going on ---------------------------------------------
@@ -443,6 +454,16 @@ const RULES: readonly Rule[] = [
       parameters: { items: extractItems(match[0]!) },
       confidence: 0.86,
     }),
+  },
+
+  // --- HomePlaces: "suggest somewhere for dinner tonight" ----------------------
+  {
+    // Read before "plan …", so "where can we go for dinner" is a place
+    // question and not a plan. What it asks for is read again, in full, by
+    // homeplaces/request.ts; this only recognises it.
+    pattern: /^.+$/,
+    read: (_match, utterance) =>
+      isPlaceQuestion(utterance) ? { action: "find_places", target: { kind: "unspecified" }, parameters: { request: utterance.trim().slice(0, 300) }, confidence: 0.9 } : null,
   },
 
   // --- Planning and schedule --------------------------------------------------
@@ -761,4 +782,5 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "resolve_health_issue",
   "log_health_issue",
   "set_preference",
+  "find_places",
 ];

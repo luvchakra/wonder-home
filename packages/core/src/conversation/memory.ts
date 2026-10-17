@@ -199,6 +199,9 @@ function keyPart(value: string): string {
  */
 export function attributeMemory(memory: Memory, people: readonly { id: string; displayName: string; nickname?: string | null; relationship?: string | null }[]): Memory {
   const value = memory.value as Record<string, unknown> | null;
+  // Already resolved to a member (the request named them): that member.
+  const resolved = typeof value?.memberId === "string" ? people.find((entry) => entry.id === value.memberId) : undefined;
+  if (resolved) return { ...memory, scope: "member", memberId: resolved.id };
   const subject = typeof value?.subject === "string" ? value.subject.toLowerCase() : null;
   if (!subject) return memory;
   const person = people.find((entry) => {

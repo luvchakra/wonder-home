@@ -9,10 +9,13 @@ export type MemberRoleControlProps = {
   isAdministrator: boolean;
   /** "Make Admin" / "Remove Admin" in the viewer's language (story 22-004). */
   labels?: { makeAdmin: string; removeAdmin: string };
+  /** Say the words beside the icon, where the control has the room (an opened member's details). */
+  withLabel?: boolean;
 };
 
 /**
- * Designating Admins, shown only to the household's owner.
+ * Designating Admins, shown to every Admin (every Admin is equal), for an
+ * adult who is not the owner.
  *
  * Hiding it from everyone else is presentation, not protection — the server
  * refuses the change regardless, and the RLS policy refuses it again. An
@@ -24,6 +27,7 @@ export function MemberRoleControl({
   memberId,
   isAdministrator,
   labels = { makeAdmin: "Make Admin", removeAdmin: "Remove Admin" },
+  withLabel = false,
 }: MemberRoleControlProps) {
   const label = isAdministrator ? labels.removeAdmin : labels.makeAdmin;
   return (
@@ -32,8 +36,9 @@ export function MemberRoleControl({
       <input type="hidden" name="memberId" value={memberId} />
       <input type="hidden" name="role" value="administrator" />
       <input type="hidden" name="granted" value={isAdministrator ? "false" : "true"} />
-      <SubmitPill aria-label={label} title={label} pendingLabel="…">
+      <SubmitPill aria-label={withLabel ? undefined : label} title={withLabel ? undefined : label} pendingLabel="…">
         {isAdministrator ? <ShieldOff aria-hidden className="size-3.5" /> : <ShieldCheck aria-hidden className="size-3.5" />}
+        {withLabel ? label : null}
       </SubmitPill>
     </form>
   );
