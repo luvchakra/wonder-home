@@ -73,6 +73,12 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   // repair are the household's own low-stakes records, each undoable on its
   // screen — as harmless as adding to the list.
   remove_from_list: "draft",
+  // What is at home is a fact others plan from, so changing it follows the
+  // groceries outcome's own autonomy — asked first unless the household
+  // chose to let it happen (Groceries design D6).
+  set_stock: "schedule",
+  use_stock: "schedule",
+  mark_bought: "schedule",
   complete_school_item: "draft",
   raise_service_request: "draft",
   adjust_schedule: "schedule",
@@ -218,8 +224,14 @@ function summarize(intent: HouseholdIntent): string {
     }
     case "remove_from_list": {
       const items = listItems(intent);
-      return `Take ${items.length > 0 ? joinWords(items) : "that"} off the ${intent.target.reference ?? "list"}`;
+      return `Take ${items.length > 0 ? joinWords(items) : "that"} off the shopping list`;
     }
+    case "set_stock":
+      return `Record what is at home: ${joinWords(listItems(intent))}`;
+    case "use_stock":
+      return `Take what was used off what is at home: ${joinWords(listItems(intent))}`;
+    case "mark_bought":
+      return `Record what was bought: ${joinWords(listItems(intent))}`;
     case "complete_school_item":
       return `Mark ${typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : ""}${String(intent.parameters.title ?? "that")} done`;
     case "raise_service_request":
@@ -272,7 +284,13 @@ function describeChanges(intent: HouseholdIntent): string[] {
     case "set_reminder":
       return ["Show you a reminder under Notifications at that time — only you see it"];
     case "remove_from_list":
-      return ["Take it off the groceries — you can add it back any time"];
+      return ["Take it off the shopping list — what is at home stays as it is"];
+    case "set_stock":
+      return ["Change what is recorded at home — the shopping list stays as it is"];
+    case "use_stock":
+      return ["Take it off what is recorded at home — never below nothing"];
+    case "mark_bought":
+      return ["Record the purchase", "Add it to what is at home", "Take it off the shopping list, leaving any rest on it"];
     case "complete_school_item":
       return ["Mark it done under Kids & School"];
     case "raise_service_request":

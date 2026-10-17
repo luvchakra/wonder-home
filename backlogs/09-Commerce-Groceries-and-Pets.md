@@ -14,7 +14,7 @@
 | 8 | P2 | 09-008 | Merchant optimization | Done | cheapest that can actually deliver in time; stale prices are excluded |
 | 9 | P1 | 09-009 | A receipt becomes purchase history | Done | Found by the test spec's live E2E-002 (23 Sep 2026): a paid receipt sent through HomeSend is now correctly not a bill, but nothing records the purchase — `consumable_purchases` is modelled and never written |
 | 10 | P0 | 09-010 | One Groceries list: what's at home and what to buy | Done | Groceries Phase 1 (design/GROCERIES-PANTRY-HOMETALK-PHASE0.md, approved 2026-10-17): stock and to-buy are separate amounts with unit-safe arithmetic, written only through three database functions; item page, add-item search, mark bought, use soon; groceries on every plan |
-| 11 | P0 | 09-011 | HomeTalk manages groceries | Not Started | Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens; dialogues A–H as evaluation cases |
+| 11 | P0 | 09-011 | HomeTalk manages groceries | Done | Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens; dialogues A–H as evaluation cases |
 | 12 | P1 | 09-012 | Meals, receipts and use-soon reconcile with stock | Not Started | Phase 3: meal shortfalls by servings and units, receipts add to stock and close list entries, depletion wording never claims stock |
 | 13 | P1 | 09-013 | Send to Cook over WhatsApp | Not Started | Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
 

@@ -205,6 +205,15 @@ export function focusFromResult(action: string, result: Record<string, unknown>,
       const name = text("name");
       return name ? [{ entityType: "consumable", entityId: id("consumableId"), label: name, source: "action_result", at }] : [];
     }
+    // What is at home was just talked about — "6 more" next means that.
+    case "set_stock":
+    case "use_stock":
+    case "mark_bought": {
+      const rows = (Array.isArray(result.stock) ? result.stock : Array.isArray(result.bought) ? result.bought : []) as { name?: unknown; consumableId?: unknown }[];
+      return rows
+        .filter((entry) => typeof entry.name === "string")
+        .map((entry) => ({ entityType: "consumable", entityId: typeof entry.consumableId === "string" ? entry.consumableId : null, label: entry.name as string, source: "action_result" as const, at }));
+    }
     case "complete_school_item":
     case "adjust_schedule":
       return id("schoolItemId") ? [{ entityType: "school_item", entityId: id("schoolItemId"), label: text("title") ?? "that", source: "action_result", at }] : [];

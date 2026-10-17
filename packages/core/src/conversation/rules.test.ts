@@ -216,6 +216,21 @@ describe("what it does not know", () => {
     expect(read("the food was good").action).not.toBe("find_places");
   });
 
+  it("reads what is at home, what was used and what was bought — with their amounts (Groceries D, E)", () => {
+    expect(read("Actually we have 10 eggs in the fridge")).toMatchObject({ action: "set_stock", target: { reference: "groceries.stocked" }, parameters: { items: ["10 eggs in the fridge"] } });
+    expect(read("I have 2 litres of milk")).toMatchObject({ action: "set_stock", parameters: { items: ["2 litres of milk"] } });
+    expect(read("we used half a kilo of rice")).toMatchObject({ action: "use_stock", parameters: { items: ["half a kilo of rice"] } });
+    expect(read("Bought 2 kg potatoes and 1 litre milk")).toMatchObject({ action: "mark_bought", parameters: { items: ["2 kg potatoes", "1 litre milk"] } });
+    expect(read("Yes, add 6")).toMatchObject({ action: "add_to_list", parameters: { item: "6" } });
+  });
+
+  it("never mistakes a symptom, a meeting or a family for a count of groceries", () => {
+    expect(read("I have a headache").action).toBe("log_health_issue");
+    expect(read("we have 2 kids").action).not.toBe("set_stock");
+    expect(read("I have 3 meetings tomorrow").action).not.toBe("set_stock");
+    expect(read("I got a call from school").action).not.toBe("mark_bought");
+  });
+
   it("covers every action it claims to", () => {
     const seen = new Set(
       [
@@ -240,6 +255,9 @@ describe("what it does not know", () => {
         "My headache is gone",
         "I want to walk three times a week",
         "suggest some good places for dinner tonight",
+        "actually we have 10 eggs in the fridge",
+        "used 2 eggs",
+        "bought 2 kg potatoes and 1 litre milk",
       ].map((utterance) => read(utterance).action),
     );
     for (const action of RULE_ACTIONS) expect(seen.has(action)).toBe(true);

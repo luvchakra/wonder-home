@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [Groceries Phase 2: HomeTalk manages groceries](2026-10-18-groceries-phase-2-hometalk.md) |
 | 2026-10-18 | [HomeTalk's welcome after setup, and pets on Home](2026-10-18-hometalk-welcome-and-home-pets.md) |
 | 2026-10-17 | [Groceries Phase 1: one list, with what's at home and what to buy](2026-10-17-groceries-phase-1.md) |
 | 2026-10-17 | [A family event opens to its full detail, with an invite link](2026-10-17-event-detail-and-invite-links.md) |

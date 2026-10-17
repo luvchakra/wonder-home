@@ -197,6 +197,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Essen hat einen Plan, deine Rezepte und Vorlieben. Ein Rezept kann ungefähre Nährwerte pro Portion enthalten. „Vorschlagen“ schlägt ein Essen aus dem vor, was du da hast und was die Leute mögen, und fehlende Zutaten kommen auf die Einkaufsliste.",
   "help.guide.meals-and-shopping.body.5":
     "Vorlieben halten fest, wem sie gehören – eine Abneigung, eine Allergie, eine medizinische oder ethische Entscheidung –, damit die Abneigung einer Person nie stillschweigend zur Hausregel wird. Eine Allergie hat immer Vorrang.",
+  "help.guide.meals-and-shopping.body.6":
+    "Du kannst HomeTalk Mengen auch in deinen eigenen Worten sagen: „füge 6 weitere Eier hinzu“, „nimm 500 g Reis von der Liste“, „wir haben 10 Eier“, „wir haben ein halbes Kilo Reis verbraucht“, „ich habe 2 kg Kartoffeln gekauft“. Etwas ohne Menge hinzuzufügen, das schon auf der Liste steht, ändert nichts; mit einer Menge kommt sie zu dem hinzu, was schon da ist. Etwas von der Liste zu nehmen beendet nie das Verfolgen. Änderungen am Vorrat zu Hause werden zuerst vorgeschlagen und warten auf dein Ja, außer dein Haushalt lässt WonderHome bei Einkäufen selbst handeln.",
 
   "help.guide.health.title": "Gesundheit und Fitness",
   "help.guide.health.summary": "Unterlagen, Vitalwerte und Routinen, privat für jede Person, solange sie sie nicht teilt.",

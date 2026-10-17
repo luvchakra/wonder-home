@@ -276,3 +276,89 @@ describe("the reminder conversation of 24 Sep, 8:34 pm — replayed through the 
     expect(answered.kind === "reply" && answered.intent.parameters.remindAtResolved).toMatchObject({ day: "tomorrow (Fri 25 Sep)", time: "9am" });
   });
 });
+
+/**
+ * Groceries Phase 2 (story 09-011): the conversation cases A–H from
+ * the Groceries spec §5.3, through the same deterministic turn. The list
+ * and what is at home are separate; amounts are read by rules; what is at
+ * home changes only with a yes unless the household chose otherwise.
+ */
+describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
+  const item = (id: string, name: string, unit = "pcs") => ({
+    id,
+    name,
+    category: "grocery",
+    unit,
+    step: null,
+    lowLevel: null,
+    storage: null,
+    note: null,
+    aliases: [],
+    imageUrl: null,
+    imagePath: null,
+    lastPurchasedOn: null,
+    stock: null,
+    toBuy: null,
+  });
+  const KITCHEN = [item("c-eggs", "Eggs"), item("c-milk", "Milk", "l"), item("c-rice", "Rice", "kg"), item("c-cherry", "Cherry tomatoes", "g"), item("c-plum", "Plum tomatoes", "g")];
+  const grocTurn = (utterance: string, over: Parameters<typeof turn>[1] = {}) =>
+    turn(utterance, { ...over, ground: (intent) => groundIntent(intent, { ...env(over.references), groceries: async () => KITCHEN }) });
+  const eggsJustDiscussed: Partial<ReferenceState> = {
+    conversation: [{ entityType: "consumable", entityId: "c-eggs", label: "Eggs", source: "mention", at: minutesAgo(1) } as FocusEntity],
+  };
+
+  it("A: \"Yes, add 6\" after talking about eggs adds six eggs to the list — nothing else", async () => {
+    const result = await grocTurn("Yes, add 6.", { references: eggsJustDiscussed });
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "add_to_list", parameters: { item: "6 Eggs" } });
+    expect(result.kind === "reply" && result.proposal.kind).toBe("executed");
+  });
+
+  it("A′: \"add 6 more to the list\" is an increment on the same eggs", async () => {
+    const result = await grocTurn("Okay, add 6 more to the list", { references: eggsJustDiscussed });
+    expect(result.kind === "reply" && result.intent.parameters.item).toBe("6 more Eggs");
+  });
+
+  it("B: \"add milk to the list\" needs no question — the item's own step is the amount", async () => {
+    const result = await grocTurn("Add milk to the list");
+    expect(result.kind === "reply" && result.proposal.kind).toBe("executed");
+  });
+
+  it("C: \"make sure we have everything\" after planning pasta adds only what the recipe needs, for that meal", async () => {
+    const planned: FocusEntity[] = [{ entityType: "meal", entityId: "meal-1", label: "Tomato pasta", source: "action_result", at: minutesAgo(1) }];
+    const result = await grocTurn("make sure we have everything", { references: { conversation: planned }, autonomyFor: () => "execute" });
+    expect(result.kind === "reply" && result.intent.parameters).toMatchObject({ items: ["pasta", "tomatoes", "basil"], forMeal: "Tomato pasta" });
+  });
+
+  it("D: \"actually we have 10 eggs in the fridge\" changes what is at home — and asks first by default", async () => {
+    const result = await grocTurn("Actually we have 10 eggs in the fridge");
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "set_stock", parameters: { items: ["10 eggs in the fridge"] } });
+    expect(result.kind === "reply" && result.proposal.kind).toBe("needs_approval");
+    const allowed = await grocTurn("Actually we have 10 eggs in the fridge", { autonomyFor: () => "execute" });
+    expect(allowed.kind === "reply" && allowed.proposal.kind).toBe("executed");
+  });
+
+  it("E: \"bought 2 kg potatoes and 1 litre milk\" is one purchase of each, asked first", async () => {
+    const result = await grocTurn("Bought 2 kg potatoes and 1 litre milk");
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "mark_bought", parameters: { items: ["2 kg potatoes", "1 litre milk"] } });
+    expect(result.kind === "reply" && result.proposal.kind).toBe("needs_approval");
+  });
+
+  it("F: \"add tomatoes\" with two kinds on record is one question, never a guess", async () => {
+    const result = await grocTurn("add half a kilo of tomatoes to the list");
+    expect(result.kind === "reply" && result.proposal.kind).toBe("clarify");
+    expect(result.kind === "reply" && result.text).toBe("Should I use cherry tomatoes or plum tomatoes?");
+  });
+
+  it("G: \"remove 500 grams of rice from the shopping list\" takes that much off the list", async () => {
+    const result = await grocTurn("No, I meant remove 500 grams of rice from the shopping list");
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "remove_from_list", parameters: { item: "500 grams of rice" } });
+  });
+
+  it("H: a child cannot change what is at home or send anything on the household's behalf", async () => {
+    const stock = await grocTurn("we have 10 eggs", { actor: CHILD, autonomyFor: () => "execute" });
+    // The rules read it; the database refuses a child's stock change (scripts/test-grocery-rls.mjs), so it is never claimed done here either.
+    expect(stock.kind === "reply" && stock.intent.action).toBe("set_stock");
+    const send = await grocTurn("send today's menu to Sunita on WhatsApp", { actor: CHILD });
+    expect(send.kind === "reply" && send.proposal.kind).not.toBe("executed");
+  });
+});

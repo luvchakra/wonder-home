@@ -224,6 +224,8 @@ export const helpEn = {
     "Meals has a plan, your recipes, and preferences. A recipe can carry rough nutrients per serving. Suggest proposes a meal from what you have and what people like, and missing ingredients go on the shopping list.",
   "help.guide.meals-and-shopping.body.5":
     "Preferences record whose they are — a dislike, an allergy, a medical or ethical choice — so one person's dislike never quietly becomes a house rule. An allergy always wins.",
+  "help.guide.meals-and-shopping.body.6":
+    "You can also tell HomeTalk amounts in your own words: \"add 6 more eggs\", \"take 500 g rice off the list\", \"we have 10 eggs\", \"we used half a kilo of rice\", \"I bought 2 kg potatoes\". Asking to add something already on the list, with no amount, changes nothing; with an amount, it adds to what's there. Taking something off the list never stops tracking it. Changes to what's at home are proposed first and wait for your yes, unless your household lets WonderHome act on groceries on its own.",
 
   // Health and fitness
   "help.guide.health.title": "Health and fitness",

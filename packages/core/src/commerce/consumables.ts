@@ -128,10 +128,12 @@ export function suggestPurchase(consumable: Consumable, now: Date = new Date()):
     consumableId: consumable.id,
     name: consumable.name,
     quantity: consumable.typicalQuantity,
+    // A purchase date says when it was bought, never what is left (Groceries
+    // §2): the estimate is said as an estimate, and stock is not claimed.
     reason:
       daysLeft <= 0
-        ? `${consumable.name} has probably run out.`
-        : `${consumable.name} should last about ${daysLeft} more ${daysLeft === 1 ? "day" : "days"}.`,
+        ? `${consumable.name} usually runs low by now, going by past purchases. Nobody has said how much is left.`
+        : `${consumable.name} may run low in about ${daysLeft} ${daysLeft === 1 ? "day" : "days"}, going by past purchases. Nobody has said how much is left.`,
     evidenceBasis: consumable.evidenceBasis,
     neededBy: isoDate(depletion),
   };
@@ -152,13 +154,13 @@ export function assessConsumable(consumable: Consumable, now: Date = new Date())
     );
   }
 
-  const outOfStock = suggestion.reason.includes("run out");
-
+  // An estimate from purchase dates is never "out of stock": it is worth a
+  // look, not an emergency, unless it is medicine.
   return {
     subjectKey,
     title: consumable.name,
-    status: outOfStock ? "blocked" : "at_risk",
-    riskLevel: outOfStock ? "high" : consumable.category === "medical" ? "high" : "medium",
+    status: "at_risk",
+    riskLevel: consumable.category === "medical" ? "high" : "medium",
     notable: true,
     reason: suggestion.reason,
     action: { action: "add_to_cart", target: consumable.id },
