@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-17 | [Groceries Phase 1: one list, with what's at home and what to buy](2026-10-17-groceries-phase-1.md) |
 | 2026-10-17 | [A family event opens to its full detail, with an invite link](2026-10-17-event-detail-and-invite-links.md) |
 | 2026-10-17 | [HomePlaces, HomeTalk that speaks like a person, and a second child no longer mixed up](2026-10-17-homeplaces.md) |
 | 2026-10-17 | [The languages each member speaks, with a four-step fluency meter; HomeTalk knows who speaks what; included in export and removed on deletion](2026-10-17-member-languages.md) |

@@ -808,6 +808,38 @@ async function main() {
       anonRead.error ? anonRead.error.code : `${anonRead.data?.length ?? "?"} rows`,
     );
   }
+  for (const table of ["inventory_balances", "inventory_events", "shopping_list_entries", "shopping_list_events"]) {
+    const landed = await admin.from(table).select("id").limit(1);
+    check(`migration landed: ${table}`, !landed.error, landed.error?.code ?? "ok");
+    const anonRead = await anon.from(table).select("id").limit(1);
+    check(
+      `anonymous cannot read ${table}`,
+      Boolean(anonRead.error) || (Array.isArray(anonRead.data) && anonRead.data.length === 0),
+      anonRead.error ? anonRead.error.code : `${anonRead.data?.length ?? "?"} rows`,
+    );
+  }
+  const itemDetails = await admin.from("consumables").select("step, low_level, storage, note, aliases, image_path").limit(1);
+  check("a grocery item keeps its step, low level, storage and photo", !itemDetails.error, itemDetails.error?.code ?? "ok");
+  const purchaseUnit = await admin.from("consumable_purchases").select("unit, shopping_entry_id, best_before, expiry_basis").limit(1);
+  check("a purchase keeps its unit and the list entry it closed", !purchaseUnit.error, purchaseUnit.error?.code ?? "ok");
+  const groceriesEverywhere = await admin.from("plans").select("key, plan_features!inner(feature_key)").eq("plan_features.feature_key", "groceries.core");
+  const plans = await admin.from("plans").select("key");
+  check(
+    "groceries is part of every plan",
+    !groceriesEverywhere.error && !plans.error && (groceriesEverywhere.data?.length ?? 0) === (plans.data?.length ?? -1),
+    `${groceriesEverywhere.data?.length ?? "?"} of ${plans.data?.length ?? "?"}`,
+  );
+  const anonStock = await anon.rpc("apply_inventory_change", {
+    p_household_id: "00000000-0000-4000-8000-000000000000",
+    p_consumable_id: "00000000-0000-4000-8000-000000000000",
+    p_kind: "set",
+    p_quantity: 1,
+    p_unit: "pcs",
+    p_source: "stated",
+    p_idempotency_key: "verify-live-anon",
+  });
+  check("anonymous cannot change stock", Boolean(anonStock.error), anonStock.error?.code ?? "allowed!");
+
   const preferred = await admin.from("household_members").select("nickname_preferred").limit(1);
   check("a member can go by their nickname", !preferred.error, preferred.error?.code ?? "ok");
 

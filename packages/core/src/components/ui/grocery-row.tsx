@@ -1,0 +1,188 @@
+import {
+  Apple,
+  Baby,
+  Carrot,
+  ChevronRight,
+  Cookie,
+  Croissant,
+  CupSoda,
+  Drumstick,
+  Egg,
+  Fish,
+  Flame,
+  Milk,
+  PawPrint,
+  Pill,
+  ShoppingBasket,
+  Soup,
+  SprayCan,
+  Sparkles,
+  Wheat,
+} from "lucide-react";
+import Link from "next/link";
+import type { ComponentType, ReactNode } from "react";
+
+import { cn } from "../../lib/cn";
+import { IconTile } from "./icon-tile";
+
+/**
+ * One item on the Groceries list (Groceries Phase 1, design §3.1):
+ *
+ * `[status bar] [photo or tile] [name · category] [IN STOCK] [TO BUY stepper] [›]`
+ *
+ * The two amounts are separate cells and never stand in for each other. The
+ * slim bar on the left says how much is at home — and says it in words too
+ * (`statusLabel`, read by a screen reader and shown as a tooltip), so the
+ * colour is never the only signal. Low stock is red or amber; "unknown" is
+ * grey, because nobody has said how much there is and the row never guesses.
+ *
+ * The name wraps rather than truncating (rule 11). At phone width the
+ * amounts move onto their own line under the name, so neither is squeezed.
+ * The stepper is the caller's (it writes); the row is only the layout.
+ */
+export type GroceryStatus = "unknown" | "none" | "low" | "enough";
+
+const BAR: Record<GroceryStatus, string> = {
+  none: "bg-[var(--wh-risk)]",
+  low: "bg-[var(--wh-attention)]",
+  enough: "bg-[var(--wh-handled)]",
+  unknown: "bg-[var(--wh-border-strong)]",
+};
+
+/** An illustrated tile for an item with no photo, picked from its name and category. */
+export function groceryIcon(
+  name: string,
+  category: string,
+): ComponentType<{ className?: string }> {
+  const text = `${name} ${category}`.toLowerCase();
+  const rules: [RegExp, ComponentType<{ className?: string }>][] = [
+    [/\begg/, Egg],
+    [/milk|curd|paneer|cheese|butter|yogh?urt|dairy|ghee|cream/, Milk],
+    [/fish|prawn|seafood/, Fish],
+    [/chicken|mutton|meat|lamb|pork|beef/, Drumstick],
+    [/bread|bun|croissant|bakery|cake/, Croissant],
+    [/rice|atta|flour|wheat|grain|dal|lentil|oats|pasta|cereal/, Wheat],
+    [/apple|banana|mango|orange|grape|fruit|berr|papaya|melon/, Apple],
+    [
+      /vegetable|tomato|onion|potato|carrot|spinach|leaf|greens|coriander|chilli|ginger|garlic|cucumber|veg/,
+      Carrot,
+    ],
+    [/spice|masala|salt|pepper|turmeric|cumin/, Flame],
+    [/biscuit|cookie|snack|chips|namkeen|chocolate/, Cookie],
+    [/juice|tea|coffee|drink|beverage|soda|water/, CupSoda],
+    [/soup|sauce|oil|ketchup|pickle/, Soup],
+    [/pet|dog|cat|kibble/, PawPrint],
+    [/medic|tablet|pill|vitamin/, Pill],
+    [/diaper|nappy|baby/, Baby],
+    [/soap|shampoo|detergent|clean|household|toilet|dish/, SprayCan],
+    [/personal|toothpaste|cosmetic/, Sparkles],
+  ];
+  return rules.find(([pattern]) => pattern.test(text))?.[1] ?? ShoppingBasket;
+}
+
+export type GroceryRowProps = {
+  name: string;
+  category: string;
+  href: string;
+  /** A short-lived URL for the household's own photo, or null for the illustrated tile. */
+  imageUrl?: string | null;
+  status: GroceryStatus;
+  /** The status in words ("Low", "Not known yet") — announced and shown on hover. */
+  statusLabel: string;
+  /** "In stock", in the reader's language. */
+  stockLabel: string;
+  /** "1.5 kg", or a dash when unknown. */
+  stockText: string;
+  /** "To buy", in the reader's language. */
+  toBuyLabel: string;
+  /** The to-buy stepper — the caller's, because it writes. */
+  stepper: ReactNode;
+  /** "Open {name}" — the chevron's accessible name. */
+  openLabel: string;
+  className?: string;
+};
+
+export function GroceryRow({
+  name,
+  category,
+  href,
+  imageUrl,
+  status,
+  statusLabel,
+  stockLabel,
+  stockText,
+  toBuyLabel,
+  stepper,
+  openLabel,
+  className,
+}: GroceryRowProps) {
+  const icon = groceryIcon(name, category);
+  return (
+    <li
+      className={cn(
+        "relative flex items-stretch gap-3 py-3 pr-1 pl-3",
+        className,
+      )}
+    >
+      <span
+        aria-hidden
+        title={statusLabel}
+        className={cn(
+          "absolute top-3 bottom-3 left-0 w-1 rounded-full",
+          BAR[status],
+        )}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--wh-radius-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+        >
+          {imageUrl ? (
+            // A signed, short-lived URL for the household's own photo; next/image would cache it past its expiry.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt=""
+              loading="lazy"
+              className="size-12 shrink-0 rounded-[var(--wh-radius-sm)] object-cover"
+            />
+          ) : (
+            <IconTile icon={icon} tone="care" size="lg" />
+          )}
+          <span className="min-w-0">
+            <span className="block text-[0.9375rem] leading-snug font-semibold break-words">
+              {name}
+            </span>
+            <span className="block text-xs text-[var(--wh-foreground-muted)] first-letter:uppercase">
+              {category}
+            </span>
+            <span className="sr-only">{statusLabel}</span>
+          </span>
+        </Link>
+        <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
+          <div className="min-w-[4.5rem] text-left sm:text-right">
+            <span className="block text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+              {stockLabel}
+            </span>
+            <span className="block text-sm font-semibold tabular-nums">
+              {stockText}
+            </span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="mb-0.5 block text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+              {toBuyLabel}
+            </span>
+            {stepper}
+          </div>
+        </div>
+      </div>
+      <Link
+        href={href}
+        aria-label={openLabel}
+        className="grid w-8 shrink-0 place-items-center self-center rounded-full text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+      >
+        <ChevronRight aria-hidden className="size-5" />
+      </Link>
+    </li>
+  );
+}

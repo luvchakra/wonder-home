@@ -182,13 +182,13 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Die Schulaufgaben eines Kindes sehen das Kind selbst, seine Erziehungsberechtigten und die Admins – im selben Haus zu wohnen reicht allein nicht aus.",
 
   "help.guide.meals-and-shopping.title": "Essen, Einkäufe und was zur Neige geht",
-  "help.guide.meals-and-shopping.summary": "Ein Verbrauchstempo mit Belegen, keine Vorratsliste, die du pflegen musst.",
+  "help.guide.meals-and-shopping.summary": "Eine Liste: was zu Hause ist und was zu kaufen ist, nebeneinander.",
   "help.guide.meals-and-shopping.body.1":
-    "WonderHome führt keinen Vorratsbestand, denn ein Bestand braucht jemanden, der ihn genau hält. Es merkt sich ein Tempo – wie schnell etwas verbraucht wird – und die Belege dafür, und sagt voraus, wann es ausgeht.",
+    "Einkäufe zeigt jeden Artikel, den du verfolgst, in einer einzigen Liste. Jede Zeile sagt, wie viel vorrätig und wie viel zu kaufen ist, und das eine überschreibt nie das andere. Das + und − in einer Zeile ändern nur, wie viel zu kaufen ist. Was zu Hause ist, ändert sich nur, wenn du es auf der eigenen Seite des Artikels einträgst („Vorrat aktualisieren“) oder etwas als gekauft markierst, und nur Erwachsene im Haushalt können es ändern. Eine Menge, die niemand angegeben hat, wird als „Noch nicht gezählt“ angezeigt; WonderHome schätzt sie nie, und das Datum, an dem du etwas zuletzt gekauft hast, gilt nie als Zeichen, dass es aufgebraucht ist.",
   "help.guide.meals-and-shopping.body.2":
-    "Schick einen Kassenbon über HomeSend, und jede Zeile, die du behältst, wird zur Kaufhistorie dieses Artikels, was die Vorhersage genauer macht. Zeilen, die es keinem verfolgten Artikel zuordnen kann, kannst du selbst zuordnen, ab jetzt verfolgen oder überspringen; es rät nie.",
+    "„Zu kaufen“ zeigt nur, was auf der Liste steht, nach Kategorie. „Als gekauft markieren“ fragt, wie viel du von jedem Artikel tatsächlich gekauft hast: Diese Menge kommt zum Vorrat zu Hause, und wovon du weniger gekauft hast, das bleibt auf der Liste. „Bald aufbrauchen“ zeigt Haltbarkeitsdaten, die jemand von der Packung eingetragen hat, und Artikel, die auf oder unter dem Mindeststand liegen, den du auf ihrer Seite festgelegt hast. „Artikel hinzufügen“ durchsucht zuerst, was du schon hast, auch Dinge, die du nicht mehr verfolgst, damit nichts doppelt angelegt wird.",
   "help.guide.meals-and-shopping.body.3":
-    "Jeder Einkaufsvorschlag kann beantworten: „Warum glaubst du, dass wir das brauchen?“. Bestellen bei einem Geschäft ist noch nicht verfügbar, also wird nie etwas in deinem Namen gekauft.",
+    "Schick einen Kassenbon über HomeSend, und jede Zeile, die du behältst, wird zur Kaufhistorie dieses Artikels. Zeilen, die es keinem verfolgten Artikel zuordnen kann, kannst du selbst zuordnen, ab jetzt verfolgen oder überspringen; es rät nie. Bestellen bei einem Geschäft ist nicht verfügbar, also wird nie etwas in deinem Namen gekauft.",
   "help.guide.meals-and-shopping.body.4":
     "Essen hat einen Plan, deine Rezepte und Vorlieben. Ein Rezept kann ungefähre Nährwerte pro Portion enthalten. „Vorschlagen“ schlägt ein Essen aus dem vor, was du da hast und was die Leute mögen, und fehlende Zutaten kommen auf die Einkaufsliste.",
   "help.guide.meals-and-shopping.body.5":
@@ -255,7 +255,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "Dein Tarif",
   "help.guide.plan.summary": "Free, Pro und Max – und während des Early Access ist Wechseln kostenlos.",
   "help.guide.plan.body.1":
-    "Einstellungen → Ihr Tarif zeigt die Tarife, was jeder enthält und seine monatlichen Grenzen, und die Nutzung deines Haushalts in diesem Zeitraum. Free deckt die Grundlagen des Haushalts ab: Ergebnisse, Erinnerungen, Instandhaltung und schriftliche Unterhaltung. Pro ergänzt Schule, Einkäufe, Mahlzeiten, Rechnungen, Familienzeit, Gesundheit und Fitness, Sprache und Wetter. Max ergänzt Handeln ohne vorherige Rückfrage, tiefere Verbindungen und keine monatlichen Grenzen.",
+    "Einstellungen → Ihr Tarif zeigt die Tarife, was jeder enthält und seine monatlichen Grenzen, und die Nutzung deines Haushalts in diesem Zeitraum. Free deckt die Grundlagen des Haushalts ab: Ergebnisse, Erinnerungen, Instandhaltung, Einkäufe und schriftliche Unterhaltung. Pro ergänzt Schule, Mahlzeiten, Rechnungen, Familienzeit, Gesundheit und Fitness, Sprache und Wetter. Max ergänzt Handeln ohne vorherige Rückfrage, tiefere Verbindungen und keine monatlichen Grenzen.",
   "help.guide.plan.body.2":
     "Während des Early Access ist ein Tarifwechsel kostenlos, und es wird nichts berechnet. Preise werden monatlich oder jährlich angezeigt, damit du weißt, was dich später erwartet.",
   "help.guide.plan.body.3":

@@ -162,6 +162,8 @@ function keeps(featureKey: string): string {
       return "Everything you have said to the assistant stays, and stays readable.";
     case "school.connector":
       return "Your children's school work and documents stay.";
+    case "groceries.core":
+      return "Your groceries, what is at home and what was bought all stay.";
     case "commerce.orders":
       return "Your orders and their history stay.";
     case "finance.bills":

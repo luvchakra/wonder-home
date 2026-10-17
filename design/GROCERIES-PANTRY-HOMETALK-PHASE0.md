@@ -1,6 +1,6 @@
 # Groceries, Pantry, Shopping & HomeTalk — Phase 0 design
 
-**Status:** Phase 0 deliverable. The design is waiting for approval; nothing below is built yet.
+**Status:** Approved by the owner on 2026-10-17, as written, including decisions D1–D6. Phase 1 (the unified Groceries list) is built: story 09-010, `docs/progress/2026-10-17-groceries-phase-1.md`. Phases 2–4 are stories 09-011 to 09-013.
 **Implements:** *WonderHome — Groceries, Pantry, Shopping & HomeTalk Integration* (the "spec" below, §1–§14), together with the ten-screen mockup.
 **Date:** 2026-10-17
 
