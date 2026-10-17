@@ -41,6 +41,9 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "API-Schlüssel",
   "settingsPage.aiKey.hint": "Nur für diesen Haushalt gespeichert. Er kann nie wieder ausgelesen werden – Sie können ihn ersetzen, aber nicht ansehen.",
   "settingsPage.aiKey.useOwn": "Unseren eigenen Schlüssel verwenden",
+  "settingsPage.aiKey.saved": "Schlüssel gespeichert",
+  "settingsPage.aiKey.newKey": "Neuer Schlüssel",
+  "settingsPage.aiKey.newKeyPlaceholder": "Neuen Schlüssel einfügen, um ihn zu ersetzen",
   "settingsPage.aiKey.remove": "Entfernen und zum Schlüssel von WonderHome zurückkehren",
 
   "settingsPage.dataUse.nothing": "Nichts über Ihr Zuhause wird an einen Modellanbieter gesendet. Der Assistent antwortet nur nach seinen eigenen Regeln.",

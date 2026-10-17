@@ -52,6 +52,9 @@ export function aiKeyFormLabels(t: Translate): AiKeyFormLabels {
     useOwn: t("settingsPage.aiKey.useOwn"),
     saving: t("common.saving"),
     remove: t("settingsPage.aiKey.remove"),
+    saved: t("settingsPage.aiKey.saved"),
+    newKey: t("settingsPage.aiKey.newKey"),
+    newKeyPlaceholder: t("settingsPage.aiKey.newKeyPlaceholder"),
   };
 }
 
@@ -382,6 +385,9 @@ export function voiceFormLabels(t: Translate, language: string): VoiceFormLabels
       replace: t("settingsPage.replaceKey"),
       use: t("settingsPage.voice.ownKey.use"),
       remove: t("settingsPage.voice.ownKey.remove"),
+      saved: t("settingsPage.aiKey.saved"),
+      newKey: t("settingsPage.aiKey.newKey"),
+      newKeyPlaceholder: t("settingsPage.aiKey.newKeyPlaceholder"),
     },
   };
 }

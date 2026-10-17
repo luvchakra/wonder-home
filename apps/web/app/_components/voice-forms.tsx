@@ -34,6 +34,7 @@ import {
 } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "../(auth)/actions";
+import { SavedKeyRow } from "./ai-key-form";
 
 type VoiceOption = {
   name: string;
@@ -124,6 +125,9 @@ export type VoiceFormLabels = {
     replace: string;
     use: string;
     remove: string;
+    saved: string;
+    newKey: string;
+    newKeyPlaceholder: string;
   };
 };
 
@@ -662,13 +666,14 @@ function OwnKeyForm({
           <>
             <form action={saveAction} className="space-y-3">
               <input type="hidden" name="householdId" value={householdId} />
+              {configured ? <SavedKeyRow label={words.apiKey} saved={words.saved} /> : null}
               <PasswordField
-                label={words.apiKey}
+                label={configured ? words.newKey : words.apiKey}
                 name="apiKey"
                 required
                 minLength={20}
                 autoComplete="off"
-                placeholder="AIza…"
+                placeholder={configured ? words.newKeyPlaceholder : "AIza…"}
                 hint={words.hint}
               />
               <Submit label={configured ? words.replace : words.use} pendingLabel={labels.saving} />

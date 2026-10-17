@@ -41,6 +41,9 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.apiKey": "API कुंजी",
   "settingsPage.aiKey.hint": "केवल इस घर के लिए संग्रहीत। इसे कभी वापस पढ़ा नहीं जा सकता — आप इसे बदल सकते हैं, देख नहीं सकते।",
   "settingsPage.aiKey.useOwn": "अपनी कुंजी इस्तेमाल करें",
+  "settingsPage.aiKey.saved": "कुंजी सहेजी गई",
+  "settingsPage.aiKey.newKey": "नई कुंजी",
+  "settingsPage.aiKey.newKeyPlaceholder": "बदलने के लिए नई कुंजी चिपकाएँ",
   "settingsPage.aiKey.remove": "हटाएँ और WonderHome की कुंजी पर लौटें",
 
   "settingsPage.dataUse.nothing": "आपके घर के बारे में कुछ भी किसी मॉडल प्रदाता को नहीं भेजा जाता। सहायक केवल अपने नियमों से जवाब देता है।",
