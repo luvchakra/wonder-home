@@ -49,6 +49,8 @@ export const RATE_LIMITS = {
   "weather.search": { max: 30, windowSeconds: 600 },
   /** Address and school searches, per member: typing, debounced, each a provider call. */
   "places.search": { max: 120, windowSeconds: 600 },
+  /** Replies through an event's invite link, per hashed client address: a guest list, not a flood. */
+  "event.reply": { max: 20, windowSeconds: 600 },
   /** HomePlaces questions in HomeTalk, per household: each is a paid nearby search. */
   "places.find": { max: 30, windowSeconds: 3600 },
   /** Partner API requests, per key (story 18-008): an integration syncing, not a scraper. */

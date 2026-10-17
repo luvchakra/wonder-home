@@ -231,6 +231,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.family.body.2": "Aquí las mascotas son parte de la familia, con foto, fecha de nacimiento y su propio cuidado junto al de los demás.",
   "help.guide.family.body.3":
     "Los eventos familiares —cumpleaños, salidas, visitas, citas— pueden marcarse como tiempo protegido, y WonderHome nunca programa nada encima. Lo que necesita respuesta, como un choque de horarios o un regalo aún por resolver, aparece en la lista hasta que se resuelve.",
+  "help.guide.family.body.4":
+    "Toca un evento para abrirlo. Verás los detalles, lo que falta por planear (un lugar, quién viene, una nota, un enlace) y las respuestas de todos. Quien lo planea, o un Admin, puede editarlo o cancelarlo y elegir a quién de la familia se invita. «Invitar con un enlace» crea un enlace que puedes enviar a cualquiera: solo muestra el nombre, la hora y el lugar del evento y el nombre de tu hogar, y responden sí, quizá o no con su nombre. Al desactivar el enlace deja de funcionar; las respuestas ya dadas se mantienen.",
 
   "help.guide.househelp.title": "Ayuda doméstica",
   "help.guide.househelp.summary": "Quién ayuda en casa, cuándo se le espera y quién cubre cuando falta.",

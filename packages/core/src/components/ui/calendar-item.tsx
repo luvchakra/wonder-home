@@ -1,4 +1,5 @@
-import { CalendarDays, Cake, Gift, Heart, PartyPopper, Plane, Users } from "lucide-react";
+import { CalendarDays, Cake, ChevronRight, Gift, Heart, PartyPopper, Plane, Users } from "lucide-react";
+import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
@@ -20,6 +21,8 @@ export type CalendarItemProps = {
   className?: string;
   /** The "Protected" badge in the viewer's language; English by default. */
   protectedLabel?: string;
+  /** Where the event opens to its full detail. The row becomes a link with a chevron; its action stays its own button. */
+  href?: string;
 };
 
 const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
@@ -32,11 +35,11 @@ const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; t
   special_occasion: { icon: Gift, tone: "people" },
 };
 
-export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className, protectedLabel = "Protected" }: CalendarItemProps) {
+export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className, protectedLabel = "Protected", href }: CalendarItemProps) {
   const presentation = (kind && KIND_ICON[kind]) || { icon: CalendarDays, tone: "primary" as IconTone };
 
-  return (
-    <li className={cn("flex items-center gap-3 py-3", className)}>
+  const body = (
+    <>
       <span
         aria-hidden
         className="grid w-12 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-1 leading-none"
@@ -56,6 +59,22 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
         </p>
         <p className="text-xs text-[var(--wh-foreground-subtle)]">{when}</p>
       </div>
+      {href ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}
+    </>
+  );
+
+  return (
+    <li className={cn("flex items-center gap-3 py-3", className)}>
+      {href ? (
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--wh-radius-sm)] transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+        >
+          {body}
+        </Link>
+      ) : (
+        body
+      )}
       {action ? <div className="shrink-0">{action}</div> : null}
     </li>
   );

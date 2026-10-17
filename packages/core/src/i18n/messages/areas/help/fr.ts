@@ -231,6 +231,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.family.body.2": "Ici, les animaux font partie de la famille, avec une photo, une date de naissance et leurs propres soins suivis avec ceux des autres.",
   "help.guide.family.body.3":
     "Les événements familiaux — anniversaires, sorties, visites, rendez-vous — peuvent être marqués comme temps protégé, et WonderHome ne planifie jamais rien par-dessus. Ce qui demande une réponse, comme un conflit d’horaires ou un cadeau encore à régler, reste dans la liste jusqu’à ce que ce soit réglé.",
+  "help.guide.family.body.4":
+    "Touchez un événement pour l’ouvrir. Vous voyez les détails, ce qu’il reste à prévoir (un lieu, qui vient, une note, un lien) et les réponses de chacun. La personne qui l’organise, ou un Admin, peut le modifier ou l’annuler et choisir qui inviter dans la famille. « Inviter avec un lien » crée un lien à envoyer à qui vous voulez : il n’affiche que le nom, l’heure et le lieu de l’événement et le nom de votre foyer, et les invités répondent oui, peut-être ou non avec leur nom. Désactiver le lien l’arrête aussitôt ; les réponses déjà données restent.",
 
   "help.guide.househelp.title": "Aide à domicile",
   "help.guide.househelp.summary": "Qui aide à la maison, quand on l’attend, et qui prend le relais en son absence.",

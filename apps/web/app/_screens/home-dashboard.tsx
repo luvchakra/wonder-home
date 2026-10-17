@@ -215,6 +215,10 @@ function TodayEventRow({ event, timezone, t }: { event: FamilyEvent; timezone: s
             <dd className="text-sm">{event.actionState ? describeAction(event.actionState) : t("homeScreen.noAction")}</dd>
           </div>
         </dl>
+        {/* Everything else about it — who's asked, the invite link, what's left to plan — is on its own page. */}
+        <PillLink href={`/family/events/${event.id}`} tone="quiet">
+          {t("events.open")}
+        </PillLink>
       </div>
     </ExpandableRow>
   );

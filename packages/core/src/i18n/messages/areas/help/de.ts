@@ -231,6 +231,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.family.body.2": "Haustiere gehören hier zur Familie, mit Foto, Geburtsdatum und eigener Pflege, die neben allen anderen verfolgt wird.",
   "help.guide.family.body.3":
     "Familienereignisse – Geburtstage, Ausflüge, Besuche, Termine – lassen sich als geschützte Zeit markieren, und WonderHome plant nie etwas darüber. Was eine Antwort braucht, etwa eine Überschneidung oder ein noch offenes Geschenk, bleibt in der Liste, bis es geklärt ist.",
+  "help.guide.family.body.4":
+    "Tippe auf einen Termin, um ihn zu öffnen. Du siehst die Details, was noch zu planen ist (ein Ort, wer kommt, eine Notiz, ein Link) und alle Antworten. Wer den Termin plant, oder ein Admin, kann ihn bearbeiten oder absagen und auswählen, wer aus der Familie eingeladen ist. „Mit Link einladen“ erstellt einen Link, den du an jeden schicken kannst: Er zeigt nur Namen, Zeit und Ort des Termins und den Namen eures Haushalts, und die Eingeladenen antworten mit Ja, Vielleicht oder Nein und ihrem Namen. Schaltest du den Link aus, funktioniert er nicht mehr; bereits gegebene Antworten bleiben.",
 
   "help.guide.househelp.title": "Haushaltshilfe",
   "help.guide.househelp.summary": "Wer im Haushalt hilft, wann die Person erwartet wird und wer einspringt, wenn sie fehlt.",

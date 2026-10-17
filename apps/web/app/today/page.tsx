@@ -150,7 +150,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       mine: participates || event.participants.length === 0,
       family: true,
       household: false,
-      action: event.actionState && event.actionState !== "ready" ? <PillLink href="/family">{t("today.action.reply")}</PillLink> : undefined,
+      action: event.actionState && event.actionState !== "ready" ? <PillLink href={`/family/events/${event.id}`}>{t("today.action.reply")}</PillLink> : undefined,
     });
   }
 

@@ -798,6 +798,16 @@ async function main() {
     Boolean(anonGeminiKey.error) || (Array.isArray(anonGeminiKey.data) && anonGeminiKey.data.length === 0),
     anonGeminiKey.error ? anonGeminiKey.error.code : `${anonGeminiKey.data?.length ?? "?"} rows`,
   );
+  for (const table of ["event_invite_links", "event_guests"]) {
+    const landed = await admin.from(table).select("id").limit(1);
+    check(`migration landed: ${table}`, !landed.error, landed.error?.code ?? "ok");
+    const anonRead = await anon.from(table).select("id").limit(1);
+    check(
+      `anonymous cannot read ${table}`,
+      Boolean(anonRead.error) || (Array.isArray(anonRead.data) && anonRead.data.length === 0),
+      anonRead.error ? anonRead.error.code : `${anonRead.data?.length ?? "?"} rows`,
+    );
+  }
   const preferred = await admin.from("household_members").select("nickname_preferred").limit(1);
   check("a member can go by their nickname", !preferred.error, preferred.error?.code ?? "ok");
 

@@ -264,6 +264,8 @@ export const helpEn = {
     "Pets are part of the family here, with a photo, a date of birth and their own care tracked alongside everyone else's.",
   "help.guide.family.body.3":
     "Family events — birthdays, outings, visits, appointments — can be marked as protected time, and WonderHome never schedules over them. Things that need a reply, such as a clash or a gift still to sort, are listed until they are settled.",
+  "help.guide.family.body.4":
+    "Tap an event to open it. It shows the details, what is still to plan (a place, who's coming, a note, a link), and everyone's replies. The event's planner or an Admin can edit or cancel it and choose who in the family is asked. \"Invite with a link\" makes a link you can send to anyone: it shows only the event's name, time, place and your household's name, and they reply yes, maybe or no with their name. Turning the link off stops it working; replies already given stay.",
 
   // Household help
   "help.guide.househelp.title": "Household help",
