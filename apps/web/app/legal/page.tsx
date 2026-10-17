@@ -50,26 +50,28 @@ export default function LegalPage() {
                 hiding something is presentation, never the thing keeping it private.
               </li>
               <li>
-                <strong className="font-semibold text-[var(--wh-foreground)]">No provider is connected.</strong>{" "}
-                Calendar, mail, school and payment connectors exist in the code but none is live, so
-                nothing is being read from or written to an outside account.
+                <strong className="font-semibold text-[var(--wh-foreground)]">The assistant uses an AI provider.</strong>{" "}
+                The assistant sends it what it needs to understand you and word an answer, leaving out
+                any kind of information an Admin has not allowed in Settings → AI Assistant. Calendar,
+                mail, school and payment connectors exist in the code but none is live, so nothing is
+                read from or written to those accounts.
               </li>
               <li>
                 <strong className="font-semibold text-[var(--wh-foreground)]">Nothing spends money.</strong>{" "}
                 No payment provider is configured. Paying a bill prepares an approval and stops.
               </li>
               <li>
-                <strong className="font-semibold text-[var(--wh-foreground)]">Export and deletion are not built yet.</strong>{" "}
-                They are listed in Settings as coming rather than as buttons that do nothing. Until
-                they exist, ask and we will do it by hand.
+                <strong className="font-semibold text-[var(--wh-foreground)]">You can take your data with you, or have it deleted.</strong>{" "}
+                Settings → Privacy & security downloads a copy after you confirm your password, and a
+                deletion request waits 30 days, so you can call it off.
               </li>
             </ul>
           </Card>
 
           <p className="text-sm text-[var(--wh-foreground-muted)]">
-            The user guide explains the same ground in more detail, from inside the product:{" "}
-            <Link href="/help" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-              Get Help
+            Members can read the user guide in the app, under More → Get Help:{" "}
+            <Link href="/sign-in?next=%2Fhelp" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+              sign in to read it
             </Link>
             .
           </p>

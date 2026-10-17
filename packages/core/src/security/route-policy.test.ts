@@ -65,11 +65,16 @@ describe("route policy", () => {
     expect(routeRequirement("/families")).toBe("public");
   });
 
-  it("lets anybody read the help guide", () => {
-    // Somebody who cannot get in is exactly the person who needs it, and
-    // nothing in the guide is about a particular household.
-    expect(routeRequirement("/help")).toBe("public");
-    expect(redirectFor("/help", false)).toBeNull();
+  it("keeps the help guide for members, and returns a signed-out visitor to it after sign-in", () => {
+    expect(routeRequirement("/help")).toBe("authenticated");
+    expect(redirectFor("/help", false)).toEqual({ redirectTo: "/sign-in?next=%2Fhelp" });
+    expect(redirectFor("/help/anything", false)).toEqual({ redirectTo: "/sign-in?next=%2Fhelp%2Fanything" });
     expect(redirectFor("/help", true)).toBeNull();
+  });
+
+  it("keeps public only what somebody needs before they have an account or when locked out", () => {
+    for (const path of ["/", "/legal", "/sign-in", "/sign-up", "/forgot-password", "/reset-password", "/auth/callback"]) {
+      expect(redirectFor(path, false), path).toBeNull();
+    }
   });
 });

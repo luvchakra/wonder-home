@@ -4,18 +4,14 @@ import type { helpEn } from "./en";
 export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.page.title": "获取帮助",
   "help.page.lede": "WonderHome 如何运作、哪些事它绝不会不问就做，以及家庭最先会问的问题的答案。",
-  "help.page.homeLink": "WonderHome 首页",
   "help.page.contents": "指南目录",
   "help.page.inThisGuide": "本指南内容",
   "help.page.commonQuestions": "常见问题",
   "help.page.readMore": "在指南中阅读更多",
+  "help.page.updated": "最后更新：{date}",
   "help.page.stuck.title": "还是没解决？",
   "help.page.stuck.body": "直接问 WonderHome——它可以在你的家里采取行动，而这份指南做不到。",
   "help.page.stuck.open": "打开 HomeTalk",
-  "help.page.signedOut.title": "想在你家用上它吗？",
-  "help.page.signedOut.body": "这份指南介绍 WonderHome 做什么。登录之后，它就开始去做。",
-  "help.page.signedOut.getStarted": "开始使用",
-  "help.page.signedOut.signIn": "登录",
   "help.page.correct": "这里有错误或遗漏？{link}关于你家的内容，并加以更正。",
   "help.page.correct.link": "查看 WonderHome 认为的",
   "help.page.quote": "每个家都不一样。你的家，就该有你的样子。",
@@ -50,7 +46,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.what-wonderhome-is.body.2":
     "它管理的是结果，而不是任务清单。没人需要为日常家务打勾，运转正常的日常安排按设计就是安静的。如果某个屏幕很安静，那是产品在正常工作——不是它漏掉了什么。",
   "help.guide.what-wonderhome-is.body.3":
-    "有三个名字随处可见。HomeTalk 是你对 WonderHome 说话或打字的地方。HomeSend 是你把东西交给它的方式——一张照片、一个 PDF、一条转发的消息。HomeBrain 是这两者背后的思考：WonderHome 理解了什么，以及为什么。",
+    "有三个名字到处都会出现。HomeTalk 是你和 WonderHome 说话或打字的地方。HomeSend 是你把东西交给它的方式——一张照片、一份 PDF、一条转发的消息。HomeBrain 是两者背后的思考：WonderHome 理解了什么，以及为什么。HomeBrain 用一个 AI 模型来理解你说的和发来的内容；接下来发生什么，由 WonderHome 自己的规则决定，任何重要的事都会等你决定。",
   "help.guide.what-wonderhome-is.body.4":
     "你只会被问到少数真正需要人来处理的事：一个决定、一次批准、一件只有你知道的事实。",
 
@@ -69,7 +65,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "忘记密码？使用登录页上的链接。WonderHome 会发送一封邮件，里面的链接只能用一次，一小时后失效；无论该地址是否有账户，回复都一样——这样就没法用这个页面查出谁有账户。",
   "help.guide.accounts.body.2": "两个密码框都有显示按钮，方便你核对自己输入的内容。",
   "help.guide.accounts.body.3": "Google 登录只在已开启的地方出现。没有开启的地方，按钮干脆不显示，而不是显示出来却用不了。",
-  "help.guide.accounts.body.4": "要退出登录，可以点屏幕顶部你的头像打开账户菜单，或使用“更多”底部的“退出登录”。",
+  "help.guide.accounts.body.4":
+    "要退出登录，可以点屏幕顶部你的头像打开账户菜单，选择“退出登录”，或使用“更多”底部的“退出登录”。",
 
   "help.guide.language.title": "语言、地区和格式",
   "help.guide.language.summary": "每个人选择自己的语言；家庭设定地区、货币和时区。",
@@ -80,11 +77,13 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "HomeTalk 用你的语言理解你，也用你的语言回复。名字、物品、日期和金额在传递过程中绝不会被翻译或改动。当一条回复无法安全翻译时，你会看到英文原文，并附一行说明原因。",
   "help.guide.language.body.4": "提醒会以每个人自己的语言送达，所有页面也都以该语言显示。名字和家人输入的内容保持原样；WonderHome 的少数简短提示仍为英文，“语言与地区”页面会说明。",
   "help.guide.language.body.5": "更改语言绝不会改变已保存的内容。金额保持记录时的货币，任何东西都不会被换算。",
-  "help.guide.language.body.6": "登录之前，登录、注册和帮助页面会跟随你的浏览器语言；登录后，以你自己的选择为准。帮助里的搜索也能理解你用自己语言提出的问题。",
+  "help.guide.language.body.6":
+    "登录之前，登录和注册页面跟随你浏览器的语言；登录之后，就以你自己的选择为准。帮助的搜索也能理解你用自己语言提的问题。",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "说话或打字——同一段对话，没做的事它绝不会说做了。",
-  "help.guide.talk-to-wonderhome.body.1": "HomeTalk 就是助手，位于标签栏正中间、凸起的那个按钮。打字和说话是同一段对话——麦克风只是另一个入口。",
+  "help.guide.talk-to-wonderhome.body.1":
+    "HomeTalk 就是助手，位于标签栏中间、略微凸起。打字和说话是同一段对话——麦克风只是另一种进入方式。一个 AI 模型帮助它理解你、组织回答的措辞；每个回答在你看到之前都会和已记录的信息核对，任何重要的事都不会在你不知情时发生。",
   "help.guide.talk-to-wonderhome.body.2":
     "任何有影响的事，在发生之前都会先以计划的形式回来：WonderHome 理解了什么、打算做什么、会影响到什么，以及“确认”“修改”或“取消”。你的同意只批准那一个提议，而且只在短时间内有效；过期或被改动的提议会收到一个问题，而不是被执行。付款和更改谁能做什么，一律都会先问。",
   "help.guide.talk-to-wonderhome.body.3":
@@ -110,9 +109,9 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.home-send.body.1":
     "HomeSend 接收照片、PDF、文本和 CSV 文件、语音消息、链接以及粘贴的消息。使用 HomeTalk 里麦克风旁边的回形针，或者 HomeSend 页面——它还有一个收件箱，放着等你处理的内容。",
   "help.guide.home-send.body.2":
-    "把 WonderHome 安装到手机上（从你的账户菜单或 HomeSend 页面），手机自带的“分享”按钮就能直接发送到 HomeSend。在那部手机上登录之前发起的分享，会在你登录后被接收。",
+    "把 WonderHome 安装到手机上——在手机上从屏幕顶部的横幅、从你的账户菜单，或从 HomeSend 页面安装——之后手机自带的“分享”按钮就能直接发送到 HomeSend。在那部手机上登录之前发起的分享，会在你登录后被接收。",
   "help.guide.home-send.body.3":
-    "WonderHome 会读完整个文档——一系列中的每个日期、每笔费用、每样要买的东西——并把找到的内容与已有记录对照展示：要新增的内容、要更新的现有条目、要取消的条目，或者无需改动。在你确认之前什么都不会写入，而且你可以编辑每一项或将其排除。",
+    "一个 AI 模型会读完整份文件——系列活动的每个日期、每笔费用、每样要买的东西——WonderHome 再把找到的内容和已有记录对照展示：要新增的、要更新的现有条目、要取消的，或者无需改动。在你确认之前什么都不会写入，你可以编辑每一项，也可以把它略过。",
   "help.guide.home-send.body.4":
     "账单、健康文件和收据无论看起来多清楚，都一定会等人来处理。清楚、新的杂货和学校事项，只有在你家允许的情况下才会自动生效，并且附带“撤销”。",
   "help.guide.home-send.body.5":
@@ -220,15 +219,17 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "你的套餐",
   "help.guide.plan.summary": "Free、Pro 和 Max——抢先体验期间切换免费。",
   "help.guide.plan.body.1":
-    "“设置 → 你的套餐”显示各个套餐、每个套餐包含的内容，以及你家本周期的使用情况。Free 涵盖家庭的基本功能；Pro 增加学校、购物、餐食、账单和家庭时光；Max 增加更多自主操作和更深入的连接。",
+    "设置 → 你的套餐会显示各个套餐、每个包含什么及其每月限额，以及你家这一周期的使用情况。Free 涵盖家庭的基本功能：目标、提醒、家居维护和文字对话。Pro 增加学校、买菜、餐食、账单、家庭时光、健康与健身、语音和天气。Max 增加无需事先询问即可执行、更深入的连接，并且没有每月限额。",
   "help.guide.plan.body.2": "抢先体验期间，切换套餐免费，不收取任何费用。价格按月或按年显示，让你知道以后大概要付多少。",
   "help.guide.plan.body.3": "不在你套餐内的功能，会在它原本出现的地方直接说明，而不是给你一个没有作用的按钮。如果某个功能属于试用，设置里会告诉你。",
   "help.guide.plan.body.4": "付费套餐开始后，你将在支付服务商自己的页面上付款——WonderHome 从不会看到你的卡——“设置 → 你的套餐 → 账单”会保存每一笔付款和发票。取消或换成更小的套餐，会等到你已付费周期结束时才生效。",
 
   "help.guide.ai-autonomy.title": "WonderHome 可以自己做多少",
   "help.guide.ai-autonomy.summary": "四个级别，按每项职责设定，由你来选。",
-  "help.guide.ai-autonomy.body.1": "每项职责都有一个自主级别：观察、准备、征求同意或执行。由你按职责逐项设定，WonderHome 会在后台强制执行——而不仅仅是在屏幕上。",
-  "help.guide.ai-autonomy.body.2": "敏感操作无论如何都需要批准，而付款需要你在批准的那一刻确认是你本人。",
+  "help.guide.ai-autonomy.body.1":
+    "每项职责都有一个自主程度，由管理员在“家庭管理 → AI 自主程度”中设置：建议（观察并告诉你）、准备（准备好并等你）、征求同意（你同意后就去做）或执行（处理好并告诉你做了什么）。WonderHome 会在后台强制执行——不只是在屏幕上。",
+  "help.guide.ai-autonomy.body.2":
+    "付款、权限变更和删除操作，无论如何设置，都始终需要一个人来决定；付款时还需要你在批准的那一刻确认是你本人。",
 
   "help.guide.certification.title": "HomeBrain 核对以及问“为什么？”",
   "help.guide.certification.summary": "WonderHome 认为的一切、每条认知从哪里来，以及怎样更正。",
@@ -248,7 +249,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
 
   "help.guide.ai-key.title": "助手由哪个模型驱动",
   "help.guide.ai-key.summary": "默认用我们的；如果你愿意，也可以用你自己的。",
-  "help.guide.ai-key.body.1": "WonderHome 用自己的账户运行助手，所以你不需要在任何 AI 公司开账户。",
+  "help.guide.ai-key.body.1":
+    "WonderHome 用自己在 AI 服务商那里的账户运行助手，所以你不需要在任何 AI 公司开账户。设置 → AI 助手会显示正在使用谁的密钥。",
   "help.guide.ai-key.body.2": "如果你希望请求的费用由你来付、并受你自己与 AI 公司的协议约束，管理员可以在“设置 → AI 助手”中添加你家自己的密钥。之后将优先使用你的密钥。",
   "help.guide.ai-key.body.3": "你添加的密钥永远无法再被读出来——我们不行，你也不行。你可以替换或删除它，但这个值只会单向传递。",
 

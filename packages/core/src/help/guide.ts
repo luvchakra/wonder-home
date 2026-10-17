@@ -17,13 +17,13 @@
  * **Words live in the catalog** (story 22-004). This module holds the guide's
  * shape — each section's id (its URL anchor), its group and its search
  * keywords — and reads every title, summary, paragraph and FAQ from the
- * `help` area of the message catalogs (`i18n/messages/areas/help/`). English
+ * help catalogs (`i18n/messages/areas/help/`, read through `help/words.ts`
+ * and never through the app's general catalogs, which reach the browser). English
  * is `helpEn`, so it has one source; another language is the same guide read
- * through that person's translator (`localizedGuide(t)`), with the same ids
+ * through `helpWords(language)` (`localizedGuide(words)`), with the same ids
  * and anchors. Keywords stay English: they are a search aid, never shown.
  */
-import { helpEn } from "../i18n/messages/areas/help/en";
-import type { Translate } from "../i18n/translate";
+import { englishHelp, helpEn, type HelpKey, type HelpWords } from "./words";
 
 export type GuideSection = {
   /** Anchors the URL, so an answer can link to `/help#outcomes`. */
@@ -36,6 +36,11 @@ export type GuideSection = {
   /** Extra words people might search with that the body does not contain. */
   keywords: string[];
   group: GuideGroup;
+  /**
+   * When this section's words last changed (YYYY-MM-DD), shown as "Last
+   * updated". Set it in the same change that rewrites the section.
+   */
+  updated: string;
 };
 
 /** The groups, by their English names — which is also how they are identified. */
@@ -47,13 +52,8 @@ export const GUIDE_GROUPS = [
 ] as const;
 export type GuideGroup = (typeof GUIDE_GROUPS)[number];
 
-type HelpKey = keyof typeof helpEn;
-
-/** Reads one of the guide's words: English by default, a person's language through their translator. */
-type Words = (key: HelpKey) => string;
-
-const english: Words = (key) => helpEn[key];
-const wordsOf = (t?: Translate): Words => (t ? (key) => t(key) : english);
+/** Reads one of the guide's words: English by default, a person's language through `helpWords(language)`. */
+const wordsOf = (t?: HelpWords): HelpWords => t ?? englishHelp;
 
 const GROUP_KEYS: Record<GuideGroup, HelpKey> = {
   "Getting started": "help.group.gettingStarted",
@@ -62,128 +62,152 @@ const GROUP_KEYS: Record<GuideGroup, HelpKey> = {
   "Privacy and trust": "help.group.privacyAndTrust",
 };
 
-type SectionShape = Pick<GuideSection, "id" | "group" | "keywords">;
+type SectionShape = Pick<GuideSection, "id" | "group" | "keywords" | "updated">;
 
 /** Every section, in reading order. Its words are `help.guide.<id>.*`. */
 const SECTIONS: readonly SectionShape[] = [
   {
     id: "what-wonderhome-is",
     group: "Getting started",
+    updated: "2026-10-16",
     keywords: ["about", "purpose", "overview", "what is", "intro", "mental load", "hometalk", "homebrain", "homesend"],
   },
   {
     id: "first-week",
     group: "Getting started",
+    updated: "2026-10-16",
     keywords: ["setup", "onboarding", "get started", "progress", "checklist", "100%", "wizard", "guided setup"],
   },
   {
     id: "accounts",
     group: "Getting started",
+    updated: "2026-10-16",
     keywords: ["sign in", "login", "password", "forgot", "reset", "google", "account", "locked out", "log out", "sign out"],
   },
   {
     id: "language",
     group: "Getting started",
+    updated: "2026-10-16",
     keywords: ["language", "hindi", "marathi", "arabic", "chinese", "mandarin", "中文", "singapore", "spanish", "french", "german", "translate", "region", "currency", "time zone", "date format", "units"],
   },
   {
     id: "talk-to-wonderhome",
     group: "Everyday use",
+    updated: "2026-10-16",
     keywords: ["ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages"],
   },
   {
     id: "voice",
     group: "Everyday use",
+    updated: "2026-09-25",
     keywords: ["voice", "speech", "microphone", "hands-free", "live", "listen", "gemini live", "alexa", "speak out loud", "pause"],
   },
   {
     id: "home-send",
     group: "Everyday use",
+    updated: "2026-10-16",
     keywords: ["homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo"],
   },
   {
     id: "today-and-home",
     group: "Everyday use",
+    updated: "2026-09-25",
     keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe"],
   },
   {
     id: "notifications",
     group: "Everyday use",
+    updated: "2026-09-25",
     keywords: ["notification", "alert", "reminder", "quiet hours", "push", "notify", "snooze", "remind me later", "summary", "timing"],
   },
   {
     id: "bills",
     group: "Everyday use",
+    updated: "2026-09-26",
     keywords: ["bill", "payment", "money", "finance", "due", "overdue", "budget", "anomaly", "pay", "transaction", "currency"],
   },
   {
     id: "school",
     group: "Everyday use",
+    updated: "2026-09-25",
     keywords: ["school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice"],
   },
   {
     id: "meals-and-shopping",
     group: "Everyday use",
+    updated: "2026-09-25",
     keywords: ["meal", "recipe", "grocery", "shopping", "cart", "pantry", "food", "allergy", "run out", "nutrients", "receipt", "suggest", "preferences"],
   },
   {
     id: "health",
     group: "Everyday use",
+    updated: "2026-09-25",
     keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private"],
   },
   {
     id: "home-upkeep",
     group: "Everyday use",
+    updated: "2026-09-26",
     keywords: ["maintenance", "appliance", "repair", "service", "laundry", "pets", "weather", "upkeep", "device"],
   },
   {
     id: "household-and-roles",
     group: "Your household",
+    updated: "2026-10-16",
     keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "admin", "child", "helper", "guardian", "remove member", "activity", "audit", "history", "who changed"],
   },
   {
     id: "family",
     group: "Your household",
+    updated: "2026-09-25",
     keywords: ["family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
   },
   {
     id: "househelp",
     group: "Your household",
+    updated: "2026-09-25",
     keywords: ["househelper", "helper", "maid", "cook", "driver", "schedule", "leave", "absence", "away", "cover", "backup"],
   },
   {
     id: "outcomes",
     group: "Your household",
+    updated: "2026-10-16",
     keywords: ["outcome", "responsibility", "playbook", "routine", "policy", "owner", "who does what", "backup", "workload", "share the load", "fair", "balance"],
   },
   {
     id: "plan",
     group: "Your household",
+    updated: "2026-10-16",
     keywords: ["plan", "subscription", "pro", "max", "free", "price", "upgrade", "downgrade", "billing", "invoice", "trial"],
   },
   {
     id: "ai-autonomy",
     group: "Privacy and trust",
+    updated: "2026-10-16",
     keywords: ["autonomy", "permission", "approve", "execute", "automation", "control", "ai settings"],
   },
   {
     id: "certification",
     group: "Privacy and trust",
+    updated: "2026-09-25",
     keywords: ["belief review", "certification", "understanding", "belief", "correct", "source", "confidence", "wrong", "why", "homebrain", "explain"],
   },
   {
     id: "privacy",
     group: "Privacy and trust",
+    updated: "2026-09-25",
     keywords: ["privacy", "data", "security", "training", "delete", "export", "download", "gdpr", "consent"],
   },
   {
     id: "ai-key",
     group: "Privacy and trust",
+    updated: "2026-10-16",
     keywords: ["api key", "byok", "anthropic", "openai", "gemini", "model", "billing", "own key"],
   },
   {
     id: "connections",
     group: "Privacy and trust",
+    updated: "2026-10-08",
     keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather", "app", "apps", "api", "partner", "developer", "developer access", "key"],
   },
 ];
@@ -198,15 +222,16 @@ function paragraphKeys(id: string): HelpKey[] {
 }
 
 /** The whole guide in one person's language — the same ids, anchors and keywords as English. */
-export function localizedGuide(t?: Translate): GuideSection[] {
+export function localizedGuide(t?: HelpWords): GuideSection[] {
   const words = wordsOf(t);
-  return SECTIONS.map(({ id, group, keywords }) => ({
+  return SECTIONS.map(({ id, group, keywords, updated }) => ({
     id,
     title: words(`help.guide.${id}.title` as HelpKey),
     summary: words(`help.guide.${id}.summary` as HelpKey),
-    body: paragraphKeys(id).map(words),
+    body: paragraphKeys(id).map((key) => words(key)),
     keywords,
     group,
+    updated,
   }));
 }
 
@@ -246,7 +271,7 @@ const FAQ_SHAPE: readonly Pick<FaqEntry, "id" | "section">[] = [
 ];
 
 /** The questions people ask first, in one person's language. */
-export function localizedFaq(t?: Translate): FaqEntry[] {
+export function localizedFaq(t?: HelpWords): FaqEntry[] {
   const words = wordsOf(t);
   return FAQ_SHAPE.map(({ id, section }) => ({
     id,
@@ -260,7 +285,7 @@ export function localizedFaq(t?: Translate): FaqEntry[] {
 export const FAQ: FaqEntry[] = localizedFaq();
 
 /** A group's heading in one person's language. */
-export function groupTitle(group: GuideGroup, t?: Translate): string {
+export function groupTitle(group: GuideGroup, t?: HelpWords): string {
   return wordsOf(t)(GROUP_KEYS[group]);
 }
 
@@ -269,7 +294,7 @@ export function groupTitle(group: GuideGroup, t?: Translate): string {
  * `group` identifies it; `title` is what a person reads.
  */
 export function guideByGroup(
-  t?: Translate,
+  t?: HelpWords,
 ): { group: GuideGroup; title: string; sections: GuideSection[] }[] {
   const guide = localizedGuide(t);
   return GUIDE_GROUPS.map((group) => ({

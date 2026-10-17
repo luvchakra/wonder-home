@@ -157,6 +157,11 @@ jobs:
         if: env.CODE == 'true'
         run: npm run lint:boundaries
 
+      # The user guide never links to a page or a section that is gone.
+      - name: Help links resolve
+        if: env.CODE == 'true'
+        run: npm run lint:help-links
+
       - name: Progress tracker is current
         run: npm run tracker -- --check
 
@@ -327,6 +332,11 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # The user guide is for signed-in members, and everything under
+      # /_next/static can be downloaded signed out.
+      - name: User guide stays out of client JavaScript
+        run: npm run check:bundle
 
       - name: Save Next.js build cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

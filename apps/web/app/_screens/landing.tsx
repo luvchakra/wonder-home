@@ -578,11 +578,11 @@ export async function Landing() {
             <ContactCard
               icon={BookOpen}
               tone="home"
-              title="Read the guide"
-              copy="How WonderHome works, what it will never do without asking, and the questions families ask first."
+              title="The user guide"
+              copy="The full guide and its search are for members. Once you are signed in, it opens from More → Get Help."
               action={
-                <Link href="/help" className="text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
-                  Open the user guide
+                <Link href="/sign-in?next=%2Fhelp" className="text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                  Sign in to read it
                 </Link>
               }
             />
@@ -647,7 +647,7 @@ export async function Landing() {
               {
                 heading: "More",
                 links: [
-                  ["/help", "User guide"],
+                  ["/sign-in?next=%2Fhelp", "User guide (sign in)"],
                   ["/legal", "Terms & privacy"],
                   ["#top", "Back to top"],
                 ],

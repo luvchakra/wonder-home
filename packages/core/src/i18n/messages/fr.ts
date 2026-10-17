@@ -7,7 +7,6 @@ import { homesendFr } from "./areas/homesend/fr";
 import { settingsFr } from "./areas/settings/fr";
 import { householdFr } from "./areas/household/fr";
 import { entryFr } from "./areas/entry/fr";
-import { helpFr } from "./areas/help/fr";
 import { installFr } from "./areas/install/fr";
 
 export const fr: Catalog = {
@@ -723,6 +722,5 @@ export const fr: Catalog = {
   ...settingsFr,
   ...householdFr,
   ...entryFr,
-  ...helpFr,
   ...installFr,
 };

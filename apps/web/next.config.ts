@@ -16,7 +16,17 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4.5mb" },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders() }];
+    // The user guide is for signed-in members: never stored by a shared
+    // cache or the browser's back-forward cache, and never indexed.
+    const membersOnly = [
+      { key: "Cache-Control", value: "private, no-store, max-age=0" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+    ];
+    return [
+      { source: "/:path*", headers: securityHeaders() },
+      { source: "/help", headers: membersOnly },
+      { source: "/help/:path*", headers: membersOnly },
+    ];
   },
 };
 

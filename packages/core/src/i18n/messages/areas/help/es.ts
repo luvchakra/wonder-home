@@ -5,18 +5,14 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.page.title": "Obtener ayuda",
   "help.page.lede":
     "Cómo funciona WonderHome, qué no hará nunca sin preguntar y las respuestas a las preguntas que las familias hacen primero.",
-  "help.page.homeLink": "Inicio de WonderHome",
   "help.page.contents": "Contenido de la guía",
   "help.page.inThisGuide": "En esta guía",
   "help.page.commonQuestions": "Preguntas frecuentes",
   "help.page.readMore": "Leer más en la guía",
+  "help.page.updated": "Última actualización: {date}",
   "help.page.stuck.title": "¿Sigues atascado?",
   "help.page.stuck.body": "Pregúntale directamente a WonderHome: puede actuar en tu hogar, algo que esta guía no puede hacer.",
   "help.page.stuck.open": "Abrir HomeTalk",
-  "help.page.signedOut.title": "¿Quieres esto para tu hogar?",
-  "help.page.signedOut.body": "La guía describe lo que hace WonderHome. Al iniciar sesión es cuando empieza a hacerlo.",
-  "help.page.signedOut.getStarted": "Empezar",
-  "help.page.signedOut.signIn": "Iniciar sesión",
   "help.page.correct": "¿Algo aquí está mal o falta? {link} sobre tu hogar y corrígelo.",
   "help.page.correct.link": "Revisa lo que cree WonderHome",
   "help.page.quote": "Cada hogar es distinto. El tuyo debería sentirse así.",
@@ -53,7 +49,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.what-wonderhome-is.body.2":
     "Gestiona resultados, no listas de tareas. A nadie se le pide que marque el trabajo normal de la casa, y una rutina que funciona bien está en silencio a propósito. Si una pantalla está tranquila, es el producto funcionando, no el producto dejándose algo.",
   "help.guide.what-wonderhome-is.body.3":
-    "Hay tres nombres que aparecen por todas partes. HomeTalk es donde hablas o escribes a WonderHome. HomeSend es cómo le entregas cosas: una foto, un PDF, un mensaje reenviado. HomeBrain es el razonamiento detrás de ambos: lo que WonderHome entendió y por qué.",
+    "Tres nombres aparecen por todas partes. HomeTalk es donde hablas o escribes a WonderHome. HomeSend es cómo le entregas cosas: una foto, un PDF, un mensaje reenviado. HomeBrain es el razonamiento detrás de ambos: qué entendió WonderHome y por qué. HomeBrain usa un modelo de IA para entender lo que dices y envías; las propias reglas de WonderHome deciden qué pasa después, y todo lo importante espera por ti.",
   "help.guide.what-wonderhome-is.body.4":
     "Solo te preguntará por las pocas cosas que de verdad necesitan a una persona: una decisión, una aprobación, un dato que solo tú conoces.",
 
@@ -76,7 +72,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.accounts.body.3":
     "El inicio de sesión con Google aparece donde está activado. Donde no lo está, el botón no aparece en lugar de aparecer roto.",
   "help.guide.accounts.body.4":
-    "Para cerrar sesión, abre el menú de tu cuenta desde tu foto en la parte superior de la pantalla, o usa Cerrar sesión al final de Más.",
+    "Para cerrar sesión, abre el menú de tu cuenta desde tu foto en la parte superior de la pantalla y elige Cerrar sesión, o usa Cerrar sesión al final de Más.",
 
   "help.guide.language.title": "Idioma, región y formatos",
   "help.guide.language.summary": "Cada persona elige su idioma; el hogar fija su región, moneda y zona horaria.",
@@ -90,12 +86,13 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Los recordatorios llegan en el idioma de cada persona, y todas las pantallas se muestran en él. Los nombres y lo que escribe tu familia se quedan tal cual; algunos mensajes breves de WonderHome siguen en inglés, y la página Idioma y región lo indica.",
   "help.guide.language.body.5":
     "Cambiar de idioma nunca cambia lo que está guardado. Un importe se queda en la moneda en la que se registró, y nada se convierte nunca.",
-  "help.guide.language.body.6": "Antes de iniciar sesión, las páginas de inicio de sesión, registro y Ayuda siguen el idioma de tu navegador; una vez dentro, manda tu propia elección. La búsqueda de Ayuda también entiende preguntas en tu idioma.",
+  "help.guide.language.body.6":
+    "Antes de iniciar sesión, las páginas de inicio de sesión y de registro siguen el idioma de tu navegador; una vez dentro, manda tu propia elección. La búsqueda de Ayuda entiende preguntas en tu idioma también.",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Habla o escribe: una sola conversación, y nunca dice que ha actuado cuando no lo ha hecho.",
   "help.guide.talk-to-wonderhome.body.1":
-    "HomeTalk es el asistente, elevado en el centro de la barra de pestañas. Escribir y hablar son la misma conversación: el micrófono es solo otra forma de entrar.",
+    "HomeTalk es el asistente, elevado en el centro de la barra de pestañas. Escribir y hablar son la misma conversación: el micrófono es solo otra forma de entrar. Un modelo de IA le ayuda a entenderte y a redactar sus respuestas; cada respuesta se comprueba con lo que hay registrado antes de que la veas, y nada importante ocurre sin ti.",
   "help.guide.talk-to-wonderhome.body.2":
     "Todo lo importante vuelve como un plan antes de ocurrir: lo que WonderHome entendió, lo que pretende hacer, a qué afectaría, y Confirmar, Cambiar o Cancelar. Un sí aprueba exactamente esa propuesta y solo durante un rato; una propuesta caducada o cambiada recibe una pregunta en lugar de una acción. Los pagos y los cambios sobre quién puede hacer qué siempre preguntan.",
   "help.guide.talk-to-wonderhome.body.3":
@@ -123,9 +120,9 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.home-send.body.1":
     "HomeSend acepta fotos, PDF, archivos de texto y CSV, notas de voz, enlaces y mensajes pegados. Usa el clip junto al micrófono en HomeTalk, o la pantalla de HomeSend, que además guarda una bandeja de lo que te está esperando.",
   "help.guide.home-send.body.2":
-    "Instala WonderHome en tu teléfono (desde el menú de tu cuenta o la pantalla de HomeSend) y el botón Compartir de tu propio teléfono envía directamente a HomeSend. Algo compartido antes de iniciar sesión en ese teléfono se recoge en cuanto lo haces.",
+    "Instala WonderHome en tu teléfono —desde el aviso en la parte superior de la pantalla en un teléfono, desde el menú de tu cuenta o desde la pantalla de HomeSend— y el propio botón Compartir de tu teléfono envía directamente a HomeSend. Algo compartido antes de iniciar sesión en ese teléfono se recoge en cuanto lo haces.",
   "help.guide.home-send.body.3":
-    "WonderHome lee el documento entero —cada fecha de una serie, cada cuota, cada cosa que comprar— y muestra lo que encontró frente a lo que ya está registrado: algo nuevo que añadir, una entrada existente que actualizar, una que cancelar o nada que cambiar. No se escribe nada hasta que confirmas, y puedes editar cada elemento o dejarlo fuera.",
+    "Un modelo de IA lee el documento entero —cada fecha de una serie, cada cuota, cada cosa que comprar— y WonderHome muestra lo que encontró frente a lo que ya está registrado: algo nuevo que añadir, una entrada existente que actualizar, una que cancelar o nada que cambiar. No se guarda nada hasta que lo confirmas, y puedes editar cada elemento o dejarlo fuera.",
   "help.guide.home-send.body.4":
     "Las facturas, los documentos de salud y los recibos siempre esperan a una persona, por claros que parezcan. La compra y las cosas del colegio claras y nuevas pueden aplicarse solas solo donde tu hogar lo ha permitido, y vienen con Deshacer.",
   "help.guide.home-send.body.5":
@@ -250,7 +247,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "Tu plan",
   "help.guide.plan.summary": "Free, Pro y Max, y cambiar es gratis durante el acceso anticipado.",
   "help.guide.plan.body.1":
-    "Ajustes → Tu plan muestra los planes, lo que incluye cada uno y el uso de tu hogar en este periodo. Free cubre lo básico del hogar; Pro añade colegio, compra, comidas, facturas y tiempo en familia; Max añade más acción autónoma y conexiones más profundas.",
+    "Ajustes → Tu plan muestra los planes, qué incluye cada uno y sus límites mensuales, y el uso de tu hogar en este periodo. Free cubre lo básico del hogar: resultados, recordatorios, mantenimiento y conversación por texto. Pro añade colegio, compras del súper, comidas, facturas, tiempo en familia, salud y forma física, voz y el tiempo. Max añade actuar sin preguntar antes, conexiones más profundas y sin límites mensuales.",
   "help.guide.plan.body.2":
     "Durante el acceso anticipado, cambiar de plan es gratis y no se cobra nada. Los precios se muestran por mes o por año para que sepas qué esperar más adelante.",
   "help.guide.plan.body.3":
@@ -260,9 +257,9 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "Cuánto puede hacer WonderHome por su cuenta",
   "help.guide.ai-autonomy.summary": "Cuatro niveles, fijados por responsabilidad, y los eliges tú.",
   "help.guide.ai-autonomy.body.1":
-    "Cada responsabilidad tiene un nivel de autonomía: observar, preparar, pedir aprobación o ejecutar. Lo fijas tú, por responsabilidad, y WonderHome lo hace cumplir por detrás, no solo en la pantalla.",
+    "Cada responsabilidad tiene un nivel de autonomía, que un Admin fija en Gestionar el hogar → Autonomía de la IA: Sugerir (observar y avisarte), Preparar (dejarlo listo y esperar), Pedir aprobación (hacerlo cuando digas que sí) o Ejecutar (encargarse y contarte qué se hizo). WonderHome lo hace cumplir por detrás, no solo en la pantalla.",
   "help.guide.ai-autonomy.body.2":
-    "Las acciones delicadas necesitan aprobación en cualquier caso, y pagar dinero requiere que confirmes que eres tú en el momento de aprobarlo.",
+    "Los pagos, los cambios de permisos y las eliminaciones siempre necesitan a una persona, sea cual sea el ajuste, y pagar requiere que confirmes que eres tú en el momento de aprobarlo.",
 
   "help.guide.certification.title": "Revisión de HomeBrain y preguntar “¿por qué?”",
   "help.guide.certification.summary": "Todo lo que cree WonderHome, de dónde salió cada creencia y cómo corregirla.",
@@ -285,7 +282,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
 
   "help.guide.ai-key.title": "Qué modelo mueve al asistente",
   "help.guide.ai-key.summary": "El nuestro por defecto; el tuyo si lo prefieres.",
-  "help.guide.ai-key.body.1": "WonderHome ejecuta el asistente con su propia cuenta, así que no necesitas una con ninguna empresa de IA.",
+  "help.guide.ai-key.body.1":
+    "WonderHome ejecuta el asistente con su propia cuenta en un proveedor de IA, así que no necesitas una con ninguna empresa de IA. Ajustes → Asistente de IA muestra qué clave se está usando.",
   "help.guide.ai-key.body.2":
     "Si prefieres que las solicitudes se te facturen a ti y queden cubiertas por tu propio acuerdo con la empresa de IA, un Admin puede añadir la clave propia de tu hogar en Ajustes → Asistente de IA. Entonces la tuya tiene prioridad.",
   "help.guide.ai-key.body.3":

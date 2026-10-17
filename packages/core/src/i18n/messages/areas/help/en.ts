@@ -12,18 +12,14 @@ export const helpEn = {
   "help.page.title": "Get help",
   "help.page.lede":
     "How WonderHome works, what it will never do without asking, and the answers to the questions families ask first.",
-  "help.page.homeLink": "WonderHome home",
   "help.page.contents": "Guide contents",
   "help.page.inThisGuide": "In this guide",
   "help.page.commonQuestions": "Common questions",
   "help.page.readMore": "Read more in the guide",
+  "help.page.updated": "Last updated {date}",
   "help.page.stuck.title": "Still stuck?",
   "help.page.stuck.body": "Ask WonderHome directly — it can act on your household, which this guide cannot.",
   "help.page.stuck.open": "Open HomeTalk",
-  "help.page.signedOut.title": "Want this for your home?",
-  "help.page.signedOut.body": "The guide describes what WonderHome does. Signing in is where it starts doing it.",
-  "help.page.signedOut.getStarted": "Get started",
-  "help.page.signedOut.signIn": "Sign in",
   "help.page.correct": "Something here wrong or missing? {link} about your household and correct it.",
   "help.page.correct.link": "Check what WonderHome believes",
   "help.page.quote": "Every home is different. Yours should feel like it.",
@@ -64,7 +60,7 @@ export const helpEn = {
   "help.guide.what-wonderhome-is.body.2":
     "It manages outcomes rather than task lists. Nobody is asked to tick off normal household work, and a routine that is running fine is silent by design. If a screen is quiet, that is the product working — not the product missing something.",
   "help.guide.what-wonderhome-is.body.3":
-    "Three names come up everywhere. HomeTalk is where you talk or type to WonderHome. HomeSend is how you hand it things — a photo, a PDF, a forwarded message. HomeBrain is the reasoning behind both: what WonderHome understood, and why.",
+    "Three names come up everywhere. HomeTalk is where you talk or type to WonderHome. HomeSend is how you hand it things — a photo, a PDF, a forwarded message. HomeBrain is the reasoning behind both: what WonderHome understood, and why. HomeBrain uses an AI model to understand what you say and send; WonderHome's own rules decide what happens next, and anything consequential waits for you.",
   "help.guide.what-wonderhome-is.body.4":
     "What you will be asked about is the small number of things that genuinely need a person: a decision, an approval, a fact only you know.",
 
@@ -76,7 +72,7 @@ export const helpEn = {
   "help.guide.first-week.body.2":
     "You can stop at any point. Home shows a Household setup card with a progress ring and the next step, and Continue picks up exactly where you left off.",
   "help.guide.first-week.body.3":
-    "The percentage is arithmetic over facts that exist — a bill added, a responsibility assigned, a child's date of birth recorded — not a count of ticked boxes. Steps that do not apply to your household are left out of the total, so every household can reach 100%. The full checklist always lives on Manage household.",
+    "The percentage is arithmetic over facts that exist — a bill added, a responsibility assigned, a child's date of birth recorded — not a count of ticked boxes. Steps that do not apply to your household are left out of the total, so every household can reach 100%. The full checklist always lives on Manage Household.",
   "help.guide.first-week.body.4":
     "Each person also gets a short, optional setup of their own for language and region, which they can finish later from Settings.",
 
@@ -90,7 +86,7 @@ export const helpEn = {
   "help.guide.accounts.body.3":
     "Google sign-in appears where it is switched on. Where it is not, the button is absent rather than present and broken.",
   "help.guide.accounts.body.4":
-    "To sign out, open your account menu from your picture at the top of the screen, or use Sign out at the bottom of More.",
+    "To sign out, open your account menu from your picture at the top of the screen and choose Log out, or use Sign out at the bottom of More.",
 
   // Language, region and formats
   "help.guide.language.title": "Language, region and formats",
@@ -105,13 +101,14 @@ export const helpEn = {
     "Reminders arrive in each person's own language, and every screen is shown in it. Names and what your family types stay as written; a few of WonderHome's short messages are still in English, and the Language & Region page says so.",
   "help.guide.language.body.5":
     "Changing your language never changes what is stored. An amount stays in the currency it was recorded in, and nothing is ever converted.",
-  "help.guide.language.body.6": "Before you sign in, the sign-in, sign-up and Help pages follow your browser's language; once you are in, your own choice takes over. Help's search understands questions in your language too.",
+  "help.guide.language.body.6":
+    "Before you sign in, the sign-in and sign-up pages follow your browser's language; once you are in, your own choice takes over. Help's search understands questions in your language too.",
 
   // HomeTalk
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Talk or type — one conversation, and it never claims to have acted when it has not.",
   "help.guide.talk-to-wonderhome.body.1":
-    "HomeTalk is the assistant, raised in the middle of the tab bar. Typing and speaking are the same conversation — the microphone is just another way in.",
+    "HomeTalk is the assistant, raised in the middle of the tab bar. Typing and speaking are the same conversation — the microphone is just another way in. An AI model helps it understand you and word its answers; an answer is checked against what is on record before you see it, and nothing consequential happens without you.",
   "help.guide.talk-to-wonderhome.body.2":
     "Anything consequential comes back as a plan before it happens: what WonderHome understood, what it intends to do, what that would affect, and Confirm, Change or Cancel. A yes approves that exact proposal and only for a short while; a stale or changed one gets a question instead of an action. Payments and changes to who can do what always ask.",
   "help.guide.talk-to-wonderhome.body.3":
@@ -141,9 +138,9 @@ export const helpEn = {
   "help.guide.home-send.body.1":
     "HomeSend takes photos, PDFs, text and CSV files, voice notes, links and pasted messages. Use the paperclip beside the microphone in HomeTalk, or the HomeSend screen, which also keeps an inbox of what is waiting for you.",
   "help.guide.home-send.body.2":
-    "Install WonderHome on your phone (from your account menu or the HomeSend screen) and your phone's own Share button sends straight into HomeSend. A share started before you have signed in on that phone is picked up once you do.",
+    "Install WonderHome on your phone — from the banner at the top of the screen on a phone, your account menu, or the HomeSend screen — and your phone's own Share button sends straight into HomeSend. A share started before you have signed in on that phone is picked up once you do.",
   "help.guide.home-send.body.3":
-    "WonderHome reads the whole document — every date of a series, every fee, every thing to buy — and shows what it found against what is already on record: something new to add, an existing entry to update, one to cancel, or nothing to change. Nothing is written until you confirm, and you can edit each item or leave it out.",
+    "An AI model reads the whole document — every date of a series, every fee, every thing to buy — and WonderHome shows what it found against what is already on record: something new to add, an existing entry to update, one to cancel, or nothing to change. Nothing is written until you confirm, and you can edit each item or leave it out.",
   "help.guide.home-send.body.4":
     "Bills, health documents and receipts always wait for a person, however clear they look. Clear, new groceries and school items may apply on their own only where your household has allowed that, and they come with an Undo.",
   "help.guide.home-send.body.5":
@@ -249,8 +246,8 @@ export const helpEn = {
   "help.guide.household-and-roles.body.3":
     "Children get age-appropriate access. Househelpers are never asked to update chores, and WonderHome holds no productivity data about them.",
   "help.guide.household-and-roles.body.4":
-    "Admins invite, change and remove members from Manage household. Removing someone never deletes the history they were part of.",
-  "help.guide.household-and-roles.body.5": "Admins can see who changed what, and when, under Manage household → Activity: changes to roles, invitations, the playbook, your rules and connected accounts. It is kept as a record and never edited. It holds nothing anyone said, wrote or asked, and no keys or passwords.",
+    "Admins invite, change and remove members from Manage Household. Removing someone never deletes the history they were part of.",
+  "help.guide.household-and-roles.body.5": "Admins can see who changed what, and when, under Manage Household → Activity: changes to roles, invitations, the playbook, your rules and connected accounts. It is kept as a record and never edited. It holds nothing anyone said, wrote or asked, and no keys or passwords.",
 
   // Family, pets and family time
   "help.guide.family.title": "Family, pets and family time",
@@ -281,13 +278,13 @@ export const helpEn = {
     "Responsibilities say who looks after what, and who covers when they cannot. An outcome with an owner has somebody to ask; one without is a gap, and WonderHome shows you the gaps and where the load sits unevenly.",
   "help.guide.outcomes.body.3":
     "Policies cover spending limits, who approves what, quiet hours and privacy. Until you set them, WonderHome asks before anything consequential — safe, but slower.",
-  "help.guide.outcomes.body.4": "Share the load, on Manage household → Responsibilities, shows how many times a week each person's responsibilities come round. When one person carries far more than another, it can suggest that the backup already named takes one over; nothing changes until an Admin accepts.",
+  "help.guide.outcomes.body.4": "Share the load, on Manage Household → Responsibilities, shows how many times a week each person's responsibilities come round. When one person carries far more than another, it can suggest that the backup already named takes one over; nothing changes until an Admin accepts.",
 
   // Your plan
   "help.guide.plan.title": "Your plan",
   "help.guide.plan.summary": "Free, Pro and Max — and free to switch during early access.",
   "help.guide.plan.body.1":
-    "Settings → Your plan shows the plans, what each includes, and your household's usage this period. Free covers the household basics; Pro adds school, shopping, meals, bills and family time; Max adds more autonomous action and deeper connections.",
+    "Settings → Your plan shows the plans, what each includes and its monthly limits, and your household's usage this period. Free covers the household basics: outcomes, reminders, upkeep and text conversation. Pro adds school, groceries, meals, bills, family time, health and fitness, voice and weather. Max adds acting without asking first, deeper connections, and no monthly limits.",
   "help.guide.plan.body.2":
     "During early access, switching plans is free and nothing is charged. Prices are shown monthly or yearly so you know what to expect later.",
   "help.guide.plan.body.3":
@@ -298,9 +295,9 @@ export const helpEn = {
   "help.guide.ai-autonomy.title": "How much WonderHome may do on its own",
   "help.guide.ai-autonomy.summary": "Four levels, set per responsibility, and you choose them.",
   "help.guide.ai-autonomy.body.1":
-    "Each responsibility carries an autonomy level: observe, prepare, ask approval, or execute. It is set by you, per responsibility, and WonderHome enforces it behind the scenes — not just on the screen.",
+    "Each responsibility carries an autonomy level, which an Admin sets in Manage Household → AI autonomy: Suggest (watch and tell you), Prepare (get things ready and wait), Ask approval (do the work once you say yes) or Execute (handle it and tell you what was done). WonderHome enforces it behind the scenes — not just on the screen.",
   "help.guide.ai-autonomy.body.2":
-    "Sensitive actions need approval regardless, and paying money needs you to confirm it is you at the moment you approve.",
+    "Payments, permission changes and deletions always need a person, whatever the setting, and paying money needs you to confirm it is you at the moment you approve.",
 
   // HomeBrain Review and asking "why?"
   "help.guide.certification.title": "HomeBrain Review and asking \"why?\"",
@@ -328,7 +325,7 @@ export const helpEn = {
   "help.guide.ai-key.title": "Which model powers the assistant",
   "help.guide.ai-key.summary": "Ours by default; yours if you would rather.",
   "help.guide.ai-key.body.1":
-    "WonderHome runs the assistant on its own account, so you do not need one with an AI company.",
+    "WonderHome runs the assistant on its own account with an AI provider, so you do not need one with an AI company. Settings → AI Assistant shows whose key is in use.",
   "help.guide.ai-key.body.2":
     "If you would rather the requests were billed to you and covered by your own agreement with the AI company, an Admin can add your household's own key in Settings → AI Assistant. Yours then takes precedence.",
   "help.guide.ai-key.body.3":
@@ -398,11 +395,11 @@ export const helpEn = {
     "Not during early access. Switching plans is free and nothing is charged; Settings → Your plan shows what each plan will cost later.",
   "help.faq.full-setup.q": "How do I get to 100% setup?",
   "help.faq.full-setup.a":
-    "Manage household lists every step. Steps that do not apply to your home — no children, no helper — are left out of the total, so 100% is reachable for every household.",
+    "Manage Household lists every step. Steps that do not apply to your home — no children, no helper — are left out of the total, so 100% is reachable for every household.",
   "help.faq.budget.q": "Can I set a budget?",
   "help.faq.budget.a": "Yes. On Bills, an Admin can set a budget for one kind of bill per month, quarter or year, and everyone who can see money sees what is left. A budget never stops a bill being paid.",
   "help.faq.other-apps.q": "Can other apps connect to WonderHome?",
   "help.faq.other-apps.a": "Where it is switched on for your WonderHome, an Admin can create a key in Settings → Connected accounts that lets an app you trust see or add to the grocery list — only what you ticked, and it can be revoked at any time.",
   "help.faq.activity-trail.q": "Can I see who changed a setting?",
-  "help.faq.activity-trail.a": "If you are an Admin, yes. Manage household → Activity lists who changed what and when — roles, invitations, the playbook, your rules and connected accounts. It never records what anyone said or asked.",
+  "help.faq.activity-trail.a": "If you are an Admin, yes. Manage Household → Activity lists who changed what and when — roles, invitations, the playbook, your rules and connected accounts. It never records what anyone said or asked.",
 } as const;

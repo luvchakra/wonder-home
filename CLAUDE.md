@@ -741,6 +741,7 @@ All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_mi
 
 ## Opening and merging pull requests
 Merging is automatic, and standing permission covers it: never ask before opening or merging.
+- **Every change reaches `main` through a pull request,** never a direct push, so every build and deployment has CI behind it.
 - **Open a PR for finished work** pushed to a story or feature branch. Never leave pushed commits on a branch with no PR against them.
 - **Turn on auto-merge as soon as the PR is open.** Use squash, per the build-slot budget below, so GitHub merges it once every required check passes.
 - **Where auto-merge can't be enabled, merge it yourself.** That covers a repo setting that rejects it and a PR with no required checks. Merge as soon as CI is green on the current head and there is no merge conflict.
@@ -755,9 +756,27 @@ Merging is automatic, and standing permission covers it: never ask before openin
 [`docs/CI.md`](docs/CI.md) is the full account.
 - **Pull requests** run fast checks only: typecheck, ESLint on the changed files, the unit tests related to what changed, the security and evaluation gates, DB tests when migrations change, and a build.
 - **Pushes to `main`** run every unit test and the whole lint.
-- **The full Playwright suite** runs nightly against a fresh build, never on a pull request.
+- **The full Playwright suite** runs nightly at 03:00 IST (`e2e-nightly.yml`, cron `30 21 * * *` UTC) against a fresh build, never on a pull request.
 - **Before merging something risky,** run the affected specs locally with `npm run test:e2e -- <spec files>`. Risky means sign-in, permissions, a migration, payments, or a new cross-feature flow. That command pins the app to a placeholder Supabase project, so it never reaches production data.
 - **Never skip, disable or delete a test** to make CI green.
+- **Pre-launch testing is pre-authorized.** WonderHome has no real households yet, and the owner allows the following without asking:
+  - running every test, including the full E2E suite and the signed-in specs;
+  - creating QA and E2E test users and households on the live project. For E2E, set `E2E_ALLOW_LIVE_PROJECT=1` with the `E2E_SUPABASE_*` variables.
+
+  Clean up afterwards as *Cleaning up test data after the merge* requires. This permission ends the day WonderHome launches. From then on, E2E needs its own test project, and the live project is refused again.
+
+## Help content changes with the feature
+The user guide is for signed-in members only.
+- **Where it lives:**
+  - the route gate is `security/route-policy.ts`;
+  - the words are `packages/core/src/i18n/messages/areas/help/`, read through `help/words.ts` and never through the general catalogs;
+  - its shape is `help/guide.ts`.
+- **What a feature change carries.** A pull request that adds, removes or renames a user-facing feature updates the help content in the same pull request:
+  - the section's words, in all eight languages;
+  - the FAQ if one covers it;
+  - the section's `updated` date.
+- **How to write it.** Describe what the code does, in the UI's own labels. Say when something is AI-generated or done on the person's behalf, and what they stay in control of. Never describe a planned feature as available.
+- **The checks.** `npm run lint:help-links` fails on a link to a route or section that is gone. `npm run check:bundle` fails if the guide's words reach client JavaScript.
 
 ## Where it is hosted
 Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunals-projects-9f64757f`, `team_nGnxn1FrUI78kVpMm12R7FIF`, Hobby plan) — the account the Vercel connector is signed in to. The earlier teams (`wonder-team4`, `luvchakras-projects`) are history; older progress notes that name them are superseded.

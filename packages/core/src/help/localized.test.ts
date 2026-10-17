@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { LANGUAGE_CODES } from "../i18n/locales";
-import { translatorFor } from "../i18n/translate";
+import { helpWords } from "./words";
 import { FAQ, GUIDE, guideByGroup, localizedFaq, localizedGuide } from "./guide";
 import { answerQuestion, answerQuestionIn, SUGGESTED_QUESTIONS, suggestedQuestions, terms } from "./search";
 
@@ -14,7 +14,7 @@ const OTHER_LANGUAGES = LANGUAGE_CODES.filter((code) => code !== "en");
 
 describe("the English guide", () => {
   it("is the same guide whether read directly or through the English translator", async () => {
-    const t = await translatorFor("en");
+    const t = helpWords("en");
     expect(localizedGuide(t)).toStrictEqual(GUIDE);
     expect(localizedFaq(t)).toStrictEqual(FAQ);
     expect(suggestedQuestions(t)).toEqual(SUGGESTED_QUESTIONS);
@@ -23,7 +23,7 @@ describe("the English guide", () => {
   });
 
   it("answers exactly as before when asked through the English translator", async () => {
-    const t = await translatorFor("en");
+    const t = helpWords("en");
     for (const question of [
       ...SUGGESTED_QUESTIONS,
       ...FAQ.map((entry) => entry.question),
@@ -38,7 +38,7 @@ describe("the English guide", () => {
 
 describe.each(OTHER_LANGUAGES)("the guide in %s", (language) => {
   it("keeps every section, anchor, group and paragraph, and says each in the language", async () => {
-    const t = await translatorFor(language);
+    const t = helpWords(language);
     const guide = localizedGuide(t);
 
     expect(guide.map((section) => section.id)).toEqual(GUIDE.map((section) => section.id));
@@ -61,7 +61,7 @@ describe.each(OTHER_LANGUAGES)("the guide in %s", (language) => {
   });
 
   it("never translates a product name away", async () => {
-    const guide = localizedGuide(await translatorFor(language));
+    const guide = localizedGuide(helpWords(language));
     const text = (id: string) => {
       const section = guide.find((entry) => entry.id === id)!;
       return [section.title, section.summary, ...section.body].join(" ");
@@ -74,7 +74,7 @@ describe.each(OTHER_LANGUAGES)("the guide in %s", (language) => {
   });
 
   it("answers each common question, asked in the language, from its own section", async () => {
-    const t = await translatorFor(language);
+    const t = helpWords(language);
     for (const entry of localizedFaq(t)) {
       const answer = answerQuestionIn(entry.question, t, language);
       expect(answer.confident, entry.question).toBe(true);
@@ -84,7 +84,7 @@ describe.each(OTHER_LANGUAGES)("the guide in %s", (language) => {
   });
 
   it("answers every suggested question the way English does", async () => {
-    const t = await translatorFor(language);
+    const t = helpWords(language);
     const localized = suggestedQuestions(t);
     SUGGESTED_QUESTIONS.forEach((english, index) => {
       const expected = answerQuestion(english);
@@ -95,7 +95,7 @@ describe.each(OTHER_LANGUAGES)("the guide in %s", (language) => {
   });
 
   it("finds a section from its own title, and links it with the translated title", async () => {
-    const t = await translatorFor(language);
+    const t = helpWords(language);
     const guide = localizedGuide(t);
     for (const section of guide) {
       const answer = answerQuestionIn(section.title, t, language);
@@ -105,7 +105,7 @@ describe.each(OTHER_LANGUAGES)("the guide in %s", (language) => {
   });
 
   it("says it does not know in the language, rather than guessing", async () => {
-    const t = await translatorFor(language);
+    const t = helpWords(language);
     const answer = answerQuestionIn("zzqx vvyk", t, language);
     expect(answer.confident).toBe(false);
     expect(answer.reply).toBe(t("help.ask.notFound"));

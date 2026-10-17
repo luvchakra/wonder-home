@@ -8,9 +8,8 @@ name: E2E nightly
 # a root cause: a test that passed only on retry is reported by name.
 on:
   schedule:
-    # 02:17 IST (Asia/Kolkata), off the hour so it is not queued behind
-    # everyone else's midnight jobs.
-    - cron: "47 20 * * *"
+    # 03:00 IST (Asia/Kolkata), as the owner asked.
+    - cron: "30 21 * * *"
   workflow_dispatch:
     inputs:
       specs:
@@ -66,6 +65,7 @@ jobs:
         env:
           E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
           E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT }}
         run: node scripts/e2e-cleanup.mjs
 
       - id: plan
@@ -78,6 +78,18 @@ jobs:
   e2e:
     needs: plan
     runs-on: ubuntu-latest
+    # With a real test project configured as secrets, the build and the specs
+    # that need a signed-in member use it (help.spec.ts creates and deletes
+    # its own account); without one, everything runs against the placeholder
+    # and those specs say they were skipped. E2E_ALLOW_LIVE_PROJECT is a
+    # repository variable, set only while WonderHome is pre-launch (CLAUDE.md).
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL || 'https://ci.placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ci_placeholder_key' }}
+      E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+      E2E_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
+      E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT }}
     # The part's own budget (at most 60 minutes) ends the tests cleanly with a
     # summary; this is only the backstop for a hang outside Playwright.
     timeout-minutes: 90
@@ -108,6 +120,9 @@ jobs:
       # also proves a cold build of main still works.
       - name: Build
         run: npm run build
+
+      - name: User guide stays out of client JavaScript
+        run: npm run check:bundle
 
       - name: Playwright version
         id: playwright-version

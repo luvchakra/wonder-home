@@ -7,7 +7,6 @@ import { homesendEs } from "./areas/homesend/es";
 import { settingsEs } from "./areas/settings/es";
 import { householdEs } from "./areas/household/es";
 import { entryEs } from "./areas/entry/es";
-import { helpEs } from "./areas/help/es";
 import { installEs } from "./areas/install/es";
 
 export const es: Catalog = {
@@ -723,6 +722,5 @@ export const es: Catalog = {
   ...settingsEs,
   ...householdEs,
   ...entryEs,
-  ...helpEs,
   ...installEs,
 };

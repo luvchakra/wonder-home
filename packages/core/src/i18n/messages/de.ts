@@ -7,7 +7,6 @@ import { homesendDe } from "./areas/homesend/de";
 import { settingsDe } from "./areas/settings/de";
 import { householdDe } from "./areas/household/de";
 import { entryDe } from "./areas/entry/de";
-import { helpDe } from "./areas/help/de";
 import { installDe } from "./areas/install/de";
 
 export const de: Catalog = {
@@ -723,6 +722,5 @@ export const de: Catalog = {
   ...settingsDe,
   ...householdDe,
   ...entryDe,
-  ...helpDe,
   ...installDe,
 };

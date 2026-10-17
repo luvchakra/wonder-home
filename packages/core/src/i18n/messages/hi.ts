@@ -7,7 +7,6 @@ import { homesendHi } from "./areas/homesend/hi";
 import { settingsHi } from "./areas/settings/hi";
 import { householdHi } from "./areas/household/hi";
 import { entryHi } from "./areas/entry/hi";
-import { helpHi } from "./areas/help/hi";
 import { installHi } from "./areas/install/hi";
 
 export const hi: Catalog = {
@@ -723,6 +722,5 @@ export const hi: Catalog = {
   ...settingsHi,
   ...householdHi,
   ...entryHi,
-  ...helpHi,
   ...installHi,
 };

@@ -5,18 +5,14 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.page.title": "Hilfe erhalten",
   "help.page.lede":
     "Wie WonderHome funktioniert, was es nie ohne Nachfrage tun wird, und die Antworten auf die Fragen, die Familien zuerst stellen.",
-  "help.page.homeLink": "WonderHome-Startseite",
   "help.page.contents": "Inhalt der Anleitung",
   "help.page.inThisGuide": "In dieser Anleitung",
   "help.page.commonQuestions": "Häufige Fragen",
   "help.page.readMore": "Mehr in der Anleitung lesen",
+  "help.page.updated": "Zuletzt aktualisiert: {date}",
   "help.page.stuck.title": "Kommst du nicht weiter?",
   "help.page.stuck.body": "Frag WonderHome direkt – es kann in deinem Haushalt handeln, was diese Anleitung nicht kann.",
   "help.page.stuck.open": "HomeTalk öffnen",
-  "help.page.signedOut.title": "Möchtest du das für dein Zuhause?",
-  "help.page.signedOut.body": "Die Anleitung beschreibt, was WonderHome tut. Mit der Anmeldung fängt es an, es zu tun.",
-  "help.page.signedOut.getStarted": "Loslegen",
-  "help.page.signedOut.signIn": "Anmelden",
   "help.page.correct": "Stimmt hier etwas nicht oder fehlt etwas? {link} über deinen Haushalt und korrigiere es.",
   "help.page.correct.link": "Prüfe, was WonderHome glaubt",
   "help.page.quote": "Jedes Zuhause ist anders. Deins soll sich auch so anfühlen.",
@@ -53,7 +49,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.what-wonderhome-is.body.2":
     "Es kümmert sich um Ergebnisse statt um Aufgabenlisten. Niemand muss normale Hausarbeit abhaken, und eine Routine, die gut läuft, ist absichtlich still. Wenn ein Bildschirm ruhig ist, arbeitet das Produkt – es fehlt nicht etwas.",
   "help.guide.what-wonderhome-is.body.3":
-    "Drei Namen tauchen überall auf. HomeTalk ist der Ort, an dem du mit WonderHome sprichst oder schreibst. HomeSend ist der Weg, ihm Dinge zu übergeben – ein Foto, ein PDF, eine weitergeleitete Nachricht. HomeBrain ist das Denken hinter beidem: was WonderHome verstanden hat und warum.",
+    "Drei Namen tauchen überall auf. HomeTalk ist der Ort, an dem du mit WonderHome sprichst oder schreibst. Mit HomeSend gibst du ihm Dinge – ein Foto, ein PDF, eine weitergeleitete Nachricht. HomeBrain ist das Denken hinter beidem: was WonderHome verstanden hat und warum. HomeBrain nutzt ein KI-Modell, um zu verstehen, was du sagst und schickst; was danach geschieht, entscheiden WonderHomes eigene Regeln, und alles Wichtige wartet auf dich.",
   "help.guide.what-wonderhome-is.body.4":
     "Gefragt wirst du nur nach den wenigen Dingen, die wirklich einen Menschen brauchen: eine Entscheidung, eine Freigabe, etwas, das nur du weißt.",
 
@@ -76,7 +72,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.accounts.body.3":
     "Die Anmeldung mit Google erscheint dort, wo sie eingeschaltet ist. Wo nicht, fehlt die Schaltfläche, statt da zu sein und nicht zu funktionieren.",
   "help.guide.accounts.body.4":
-    "Zum Abmelden öffnest du dein Kontomenü über dein Bild oben auf dem Bildschirm oder nutzt „Abmelden“ ganz unten unter „Mehr“.",
+    "Zum Abmelden öffnest du dein Kontomenü über dein Bild oben auf dem Bildschirm und wählst „Abmelden“, oder du nutzt „Abmelden“ ganz unten unter „Mehr“.",
 
   "help.guide.language.title": "Sprache, Region und Formate",
   "help.guide.language.summary": "Jede Person wählt ihre Sprache; der Haushalt legt Region, Währung und Zeitzone fest.",
@@ -90,12 +86,13 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Erinnerungen kommen in der eigenen Sprache jeder Person, und jeder Bildschirm wird darin angezeigt. Namen und was deine Familie eingibt, bleiben, wie sie geschrieben wurden; ein paar kurze Meldungen von WonderHome sind noch auf Englisch, und die Seite Sprache & Region sagt das.",
   "help.guide.language.body.5":
     "Ein Sprachwechsel ändert nie, was gespeichert ist. Ein Betrag bleibt in der Währung, in der er erfasst wurde, und nichts wird je umgerechnet.",
-  "help.guide.language.body.6": "Vor der Anmeldung folgen die Seiten zum Anmelden, Registrieren und die Hilfe der Sprache deines Browsers; sobald du angemeldet bist, gilt deine eigene Wahl. Die Suche in der Hilfe versteht auch Fragen in deiner Sprache.",
+  "help.guide.language.body.6":
+    "Bevor du dich anmeldest, folgen die Anmelde- und Registrierungsseiten der Sprache deines Browsers; sobald du drin bist, gilt deine eigene Wahl. Die Suche in der Hilfe versteht Fragen auch in deiner Sprache.",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Sprich oder schreib – ein Gespräch, und es behauptet nie, gehandelt zu haben, wenn es das nicht hat.",
   "help.guide.talk-to-wonderhome.body.1":
-    "HomeTalk ist der Assistent, hervorgehoben in der Mitte der Tab-Leiste. Schreiben und Sprechen sind dasselbe Gespräch – das Mikrofon ist nur ein weiterer Weg hinein.",
+    "HomeTalk ist der Assistent, erhöht in der Mitte der Tab-Leiste. Schreiben und Sprechen sind dasselbe Gespräch – das Mikrofon ist nur ein weiterer Weg hinein. Ein KI-Modell hilft ihm, dich zu verstehen und seine Antworten zu formulieren; jede Antwort wird mit dem Gespeicherten abgeglichen, bevor du sie siehst, und nichts Wichtiges geschieht ohne dich.",
   "help.guide.talk-to-wonderhome.body.2":
     "Alles, was Folgen hat, kommt erst als Plan zurück, bevor es passiert: was WonderHome verstanden hat, was es vorhat, was davon betroffen wäre, und „Bestätigen“, „Ändern“ oder „Abbrechen“. Ein Ja gibt genau diesen Vorschlag frei, und nur für kurze Zeit; ein veralteter oder geänderter Vorschlag bekommt eine Rückfrage statt einer Handlung. Zahlungen und Änderungen daran, wer was darf, fragen immer nach.",
   "help.guide.talk-to-wonderhome.body.3":
@@ -123,9 +120,9 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.home-send.body.1":
     "HomeSend nimmt Fotos, PDFs, Text- und CSV-Dateien, Sprachnachrichten, Links und eingefügte Nachrichten an. Nutze die Büroklammer neben dem Mikrofon in HomeTalk oder den HomeSend-Bildschirm, der außerdem einen Posteingang mit allem führt, was auf dich wartet.",
   "help.guide.home-send.body.2":
-    "Installiere WonderHome auf deinem Handy (über dein Kontomenü oder den HomeSend-Bildschirm), und die eigene Teilen-Schaltfläche deines Handys schickt direkt an HomeSend. Etwas, das du geteilt hast, bevor du dich auf diesem Handy angemeldet hast, wird aufgenommen, sobald du es tust.",
+    "Installiere WonderHome auf deinem Handy – über das Banner oben auf dem Bildschirm am Handy, über dein Kontomenü oder über den HomeSend-Bildschirm – und die Teilen-Taste deines Handys schickt direkt an HomeSend. Etwas, das du geteilt hast, bevor du dich auf diesem Handy angemeldet hast, wird übernommen, sobald du es tust.",
   "help.guide.home-send.body.3":
-    "WonderHome liest das ganze Dokument – jedes Datum einer Reihe, jede Gebühr, alles, was gekauft werden muss – und zeigt, was es gefunden hat, im Vergleich zu dem, was schon erfasst ist: etwas Neues zum Hinzufügen, ein bestehender Eintrag zum Aktualisieren, einer zum Absagen oder nichts zu ändern. Nichts wird geschrieben, bevor du bestätigst, und du kannst jeden Punkt bearbeiten oder weglassen.",
+    "Ein KI-Modell liest das ganze Dokument – jeden Termin einer Reihe, jede Gebühr, alles, was zu kaufen ist – und WonderHome zeigt, was es gefunden hat, neben dem, was schon gespeichert ist: etwas Neues zum Hinzufügen, einen bestehenden Eintrag zum Aktualisieren, einen zum Absagen oder nichts zu ändern. Nichts wird gespeichert, bevor du bestätigst, und du kannst jeden Punkt bearbeiten oder weglassen.",
   "help.guide.home-send.body.4":
     "Rechnungen, Gesundheitsdokumente und Kassenbons warten immer auf einen Menschen, so eindeutig sie auch aussehen. Eindeutige, neue Einkäufe und Schulsachen dürfen nur dort von selbst übernommen werden, wo dein Haushalt das erlaubt hat, und sie kommen mit „Rückgängig“.",
   "help.guide.home-send.body.5":
@@ -250,7 +247,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "Dein Tarif",
   "help.guide.plan.summary": "Free, Pro und Max – und während des Early Access ist Wechseln kostenlos.",
   "help.guide.plan.body.1":
-    "Einstellungen → Ihr Tarif zeigt die Tarife, was jeder enthält, und die Nutzung deines Haushalts in diesem Zeitraum. Free deckt die Grundlagen des Haushalts ab; Pro fügt Schule, Einkäufe, Essen, Rechnungen und Familienzeit hinzu; Max fügt mehr selbstständiges Handeln und tiefere Verbindungen hinzu.",
+    "Einstellungen → Ihr Tarif zeigt die Tarife, was jeder enthält und seine monatlichen Grenzen, und die Nutzung deines Haushalts in diesem Zeitraum. Free deckt die Grundlagen des Haushalts ab: Ergebnisse, Erinnerungen, Instandhaltung und schriftliche Unterhaltung. Pro ergänzt Schule, Einkäufe, Mahlzeiten, Rechnungen, Familienzeit, Gesundheit und Fitness, Sprache und Wetter. Max ergänzt Handeln ohne vorherige Rückfrage, tiefere Verbindungen und keine monatlichen Grenzen.",
   "help.guide.plan.body.2":
     "Während des Early Access ist ein Tarifwechsel kostenlos, und es wird nichts berechnet. Preise werden monatlich oder jährlich angezeigt, damit du weißt, was dich später erwartet.",
   "help.guide.plan.body.3":
@@ -260,9 +257,9 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "Wie viel WonderHome selbst tun darf",
   "help.guide.ai-autonomy.summary": "Vier Stufen, je Zuständigkeit festgelegt, und du wählst sie.",
   "help.guide.ai-autonomy.body.1":
-    "Jede Zuständigkeit hat eine Autonomiestufe: beobachten, vorbereiten, um Freigabe bitten oder ausführen. Du legst sie fest, je Zuständigkeit, und WonderHome setzt sie im Hintergrund durch – nicht nur auf dem Bildschirm.",
+    "Jede Verantwortung hat eine Selbstständigkeitsstufe, die ein Admin unter „Haushalt verwalten → KI-Selbstständigkeit“ festlegt: Vorschlagen (beobachten und dir Bescheid geben), Vorbereiten (alles bereitlegen und warten), Um Freigabe bitten (handeln, sobald du Ja sagst) oder Ausführen (es erledigen und dir sagen, was getan wurde). WonderHome setzt das im Hintergrund durch – nicht nur auf dem Bildschirm.",
   "help.guide.ai-autonomy.body.2":
-    "Heikle Aktionen brauchen in jedem Fall eine Freigabe, und beim Bezahlen musst du im Moment der Freigabe bestätigen, dass du es bist.",
+    "Zahlungen, geänderte Berechtigungen und Löschungen brauchen immer einen Menschen, egal wie die Einstellung ist, und beim Bezahlen musst du im Moment der Freigabe bestätigen, dass du es bist.",
 
   "help.guide.certification.title": "HomeBrain-Überprüfung und „Warum?“ fragen",
   "help.guide.certification.summary": "Alles, was WonderHome glaubt, woher jede Annahme stammt und wie du sie korrigierst.",
@@ -285,7 +282,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
 
   "help.guide.ai-key.title": "Welches Modell den Assistenten antreibt",
   "help.guide.ai-key.summary": "Standardmäßig unseres; deins, wenn dir das lieber ist.",
-  "help.guide.ai-key.body.1": "WonderHome betreibt den Assistenten über sein eigenes Konto, du brauchst also keins bei einem KI-Unternehmen.",
+  "help.guide.ai-key.body.1":
+    "WonderHome betreibt den Assistenten über sein eigenes Konto bei einem KI-Anbieter, du brauchst also keins bei einem KI-Unternehmen. Einstellungen → KI-Assistent zeigt, wessen Schlüssel verwendet wird.",
   "help.guide.ai-key.body.2":
     "Wenn dir lieber ist, dass die Anfragen dir berechnet werden und unter deine eigene Vereinbarung mit dem KI-Unternehmen fallen, kann ein Admin den eigenen Schlüssel deines Haushalts unter Einstellungen → KI-Assistent hinzufügen. Deiner hat dann Vorrang.",
   "help.guide.ai-key.body.3":

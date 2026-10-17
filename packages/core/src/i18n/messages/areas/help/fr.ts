@@ -5,18 +5,14 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.page.title": "Obtenir de l’aide",
   "help.page.lede":
     "Comment fonctionne WonderHome, ce qu’il ne fera jamais sans demander, et les réponses aux questions que les familles posent en premier.",
-  "help.page.homeLink": "Accueil WonderHome",
   "help.page.contents": "Sommaire du guide",
   "help.page.inThisGuide": "Dans ce guide",
   "help.page.commonQuestions": "Questions fréquentes",
   "help.page.readMore": "En savoir plus dans le guide",
+  "help.page.updated": "Dernière mise à jour : {date}",
   "help.page.stuck.title": "Toujours bloqué ?",
   "help.page.stuck.body": "Demandez directement à WonderHome : il peut agir pour votre foyer, ce que ce guide ne peut pas faire.",
   "help.page.stuck.open": "Ouvrir HomeTalk",
-  "help.page.signedOut.title": "Vous voulez cela pour votre foyer ?",
-  "help.page.signedOut.body": "Le guide décrit ce que fait WonderHome. C’est en vous connectant qu’il commence à le faire.",
-  "help.page.signedOut.getStarted": "Commencer",
-  "help.page.signedOut.signIn": "Se connecter",
   "help.page.correct": "Quelque chose d’inexact ou de manquant ici ? {link} sur votre foyer et corrigez-le.",
   "help.page.correct.link": "Vérifiez ce que croit WonderHome",
   "help.page.quote": "Chaque foyer est différent. Le vôtre devrait vous ressembler.",
@@ -53,7 +49,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.what-wonderhome-is.body.2":
     "Il gère des résultats plutôt que des listes de tâches. Personne n’a à cocher le travail ordinaire de la maison, et une routine qui fonctionne bien reste silencieuse, par conception. Si un écran est calme, c’est que le produit fonctionne — pas qu’il lui manque quelque chose.",
   "help.guide.what-wonderhome-is.body.3":
-    "Trois noms reviennent partout. HomeTalk est l’endroit où vous parlez ou écrivez à WonderHome. HomeSend est la façon de lui confier des choses — une photo, un PDF, un message transféré. HomeBrain est le raisonnement derrière les deux : ce que WonderHome a compris, et pourquoi.",
+    "Trois noms reviennent partout. HomeTalk est l’endroit où vous parlez ou écrivez à WonderHome. HomeSend est la façon de lui confier des choses : une photo, un PDF, un message transféré. HomeBrain est le raisonnement derrière les deux : ce que WonderHome a compris, et pourquoi. HomeBrain utilise un modèle d’IA pour comprendre ce que vous dites et envoyez ; ce sont les propres règles de WonderHome qui décident de la suite, et tout ce qui compte attend votre accord.",
   "help.guide.what-wonderhome-is.body.4":
     "On ne vous sollicitera que pour le petit nombre de choses qui ont vraiment besoin d’une personne : une décision, un accord, un fait que vous seul connaissez.",
 
@@ -76,7 +72,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.accounts.body.3":
     "La connexion avec Google apparaît là où elle est activée. Là où elle ne l’est pas, le bouton est absent plutôt que présent et cassé.",
   "help.guide.accounts.body.4":
-    "Pour vous déconnecter, ouvrez le menu de votre compte depuis votre photo en haut de l’écran, ou utilisez « Se déconnecter » tout en bas de Plus.",
+    "Pour vous déconnecter, ouvrez le menu de votre compte depuis votre photo en haut de l’écran et choisissez « Se déconnecter », ou utilisez « Se déconnecter » tout en bas de Plus.",
 
   "help.guide.language.title": "Langue, région et formats",
   "help.guide.language.summary": "Chacun choisit sa langue ; le foyer définit sa région, sa devise et son fuseau horaire.",
@@ -90,12 +86,13 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Les rappels arrivent dans la langue de chacun, et tous les écrans s'affichent dans cette langue. Les noms et ce que votre famille écrit restent tels quels ; quelques courts messages de WonderHome sont encore en anglais, et la page Langue et région le signale.",
   "help.guide.language.body.5":
     "Changer de langue ne change jamais ce qui est enregistré. Un montant reste dans la devise dans laquelle il a été saisi, et rien n’est jamais converti.",
-  "help.guide.language.body.6": "Avant la connexion, les pages de connexion, d'inscription et d'Aide suivent la langue de votre navigateur ; une fois connecté, votre propre choix prend le relais. La recherche de l'Aide comprend aussi les questions dans votre langue.",
+  "help.guide.language.body.6":
+    "Avant la connexion, les pages de connexion et d’inscription suivent la langue de votre navigateur ; une fois connecté, votre propre choix prend le relais. La recherche de l’Aide comprend aussi les questions dans votre langue.",
 
   "help.guide.talk-to-wonderhome.title": "HomeTalk",
   "help.guide.talk-to-wonderhome.summary": "Parlez ou écrivez — une seule conversation, et il ne prétend jamais avoir agi s’il ne l’a pas fait.",
   "help.guide.talk-to-wonderhome.body.1":
-    "HomeTalk est l’assistant, surélevé au milieu de la barre d’onglets. Écrire et parler, c’est la même conversation — le micro n’est qu’une autre façon d’entrer.",
+    "HomeTalk est l’assistant, surélevé au milieu de la barre d’onglets. Écrire et parler, c’est la même conversation : le micro n’est qu’une autre porte d’entrée. Un modèle d’IA l’aide à vous comprendre et à formuler ses réponses ; chaque réponse est vérifiée par rapport à ce qui est enregistré avant que vous la voyiez, et rien d’important ne se fait sans vous.",
   "help.guide.talk-to-wonderhome.body.2":
     "Tout ce qui a des conséquences revient sous forme de plan avant d’avoir lieu : ce que WonderHome a compris, ce qu’il compte faire, ce que cela toucherait, et Confirmer, Modifier ou Annuler. Un oui approuve exactement cette proposition, et seulement pour un court moment ; une proposition périmée ou modifiée reçoit une question plutôt qu’une action. Les paiements et les changements de qui peut faire quoi demandent toujours.",
   "help.guide.talk-to-wonderhome.body.3":
@@ -123,9 +120,9 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.home-send.body.1":
     "HomeSend accepte les photos, les PDF, les fichiers texte et CSV, les messages vocaux, les liens et les messages collés. Utilisez le trombone à côté du micro dans HomeTalk, ou l’écran HomeSend, qui garde aussi une boîte de réception de ce qui vous attend.",
   "help.guide.home-send.body.2":
-    "Installez WonderHome sur votre téléphone (depuis le menu de votre compte ou l’écran HomeSend) et le bouton Partager de votre téléphone envoie directement dans HomeSend. Un partage lancé avant que vous vous soyez connecté sur ce téléphone est repris dès que vous le faites.",
+    "Installez WonderHome sur votre téléphone — depuis la bannière en haut de l’écran sur un téléphone, depuis le menu de votre compte ou depuis l’écran HomeSend — et le bouton Partager de votre téléphone envoie directement dans HomeSend. Un partage lancé avant de vous être connecté sur ce téléphone est récupéré dès que vous l’êtes.",
   "help.guide.home-send.body.3":
-    "WonderHome lit le document en entier — chaque date d’une série, chaque frais, chaque chose à acheter — et montre ce qu’il a trouvé face à ce qui est déjà enregistré : quelque chose de nouveau à ajouter, une entrée existante à mettre à jour, une à annuler, ou rien à changer. Rien n’est écrit tant que vous n’avez pas confirmé, et vous pouvez modifier chaque élément ou l’écarter.",
+    "Un modèle d’IA lit tout le document — chaque date d’une série, chaque frais, chaque chose à acheter — et WonderHome montre ce qu’il a trouvé face à ce qui est déjà enregistré : quelque chose de nouveau à ajouter, une entrée existante à mettre à jour, une à annuler, ou rien à changer. Rien n’est enregistré tant que vous n’avez pas confirmé, et vous pouvez modifier chaque élément ou le laisser de côté.",
   "help.guide.home-send.body.4":
     "Les factures, les documents de santé et les reçus attendent toujours une personne, aussi clairs qu’ils paraissent. Les courses et les éléments scolaires clairs et nouveaux ne peuvent s’appliquer seuls que là où votre foyer l’a autorisé, et ils sont accompagnés d’une option Annuler.",
   "help.guide.home-send.body.5":
@@ -250,7 +247,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.title": "Votre formule",
   "help.guide.plan.summary": "Free, Pro et Max — et changer est gratuit pendant l’accès anticipé.",
   "help.guide.plan.body.1":
-    "Paramètres → Votre formule présente les formules, ce que chacune comprend, et l’utilisation de votre foyer sur la période. Free couvre l’essentiel du foyer ; Pro ajoute l’école, les courses, les repas, les factures et le temps en famille ; Max ajoute davantage d’actions autonomes et des connexions plus poussées.",
+    "Paramètres → Votre formule montre les formules, ce que chacune comprend et ses limites mensuelles, et l’utilisation de votre foyer sur la période. Free couvre l’essentiel du foyer : objectifs, rappels, entretien et conversation écrite. Pro ajoute l’école, les courses, les repas, les factures, le temps en famille, la santé et la forme, la voix et la météo. Max ajoute l’action sans demander d’abord, des connexions plus poussées et aucune limite mensuelle.",
   "help.guide.plan.body.2":
     "Pendant l’accès anticipé, changer de formule est gratuit et rien n’est facturé. Les prix sont affichés au mois ou à l’année pour que vous sachiez à quoi vous attendre plus tard.",
   "help.guide.plan.body.3":
@@ -260,9 +257,9 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "Ce que WonderHome peut faire de lui-même",
   "help.guide.ai-autonomy.summary": "Quatre niveaux, fixés par responsabilité, et c’est vous qui les choisissez.",
   "help.guide.ai-autonomy.body.1":
-    "Chaque responsabilité a un niveau d’autonomie : observer, préparer, demander l’accord ou exécuter. C’est vous qui le fixez, responsabilité par responsabilité, et WonderHome l’applique en coulisses — pas seulement à l’écran.",
+    "Chaque responsabilité a un niveau d’autonomie, qu’un Admin règle dans Gérer le foyer → Autonomie de l’IA : Suggérer (observer et vous prévenir), Préparer (tout préparer et attendre), Demander l’accord (agir dès que vous dites oui) ou Exécuter (s’en charger et vous dire ce qui a été fait). WonderHome l’applique en coulisses — pas seulement à l’écran.",
   "help.guide.ai-autonomy.body.2":
-    "Les actions sensibles demandent un accord dans tous les cas, et payer exige de confirmer que c’est bien vous au moment où vous donnez votre accord.",
+    "Les paiements, les changements de droits et les suppressions demandent toujours une personne, quel que soit le réglage, et payer exige que vous confirmiez que c’est bien vous au moment où vous approuvez.",
 
   "help.guide.certification.title": "Revue HomeBrain et demander « pourquoi ? »",
   "help.guide.certification.summary": "Tout ce que croit WonderHome, d’où vient chaque croyance, et comment la corriger.",
@@ -285,7 +282,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
 
   "help.guide.ai-key.title": "Quel modèle fait fonctionner l’assistant",
   "help.guide.ai-key.summary": "Le nôtre par défaut ; le vôtre si vous préférez.",
-  "help.guide.ai-key.body.1": "WonderHome fait fonctionner l’assistant sur son propre compte, vous n’avez donc pas besoin d’en avoir un auprès d’une entreprise d’IA.",
+  "help.guide.ai-key.body.1":
+    "WonderHome fait fonctionner l’assistant sur son propre compte auprès d’un fournisseur d’IA, vous n’avez donc pas besoin d’en avoir un auprès d’une entreprise d’IA. Paramètres → Assistant IA indique quelle clé est utilisée.",
   "help.guide.ai-key.body.2":
     "Si vous préférez que les requêtes vous soient facturées et couvertes par votre propre accord avec l’entreprise d’IA, un Admin peut ajouter la clé propre à votre foyer dans Paramètres → Assistant IA. La vôtre a alors la priorité.",
   "help.guide.ai-key.body.3":
