@@ -77,7 +77,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.language.title": "Langue, région et formats",
   "help.guide.language.summary": "Chacun choisit sa langue ; le foyer définit sa région, sa devise et son fuseau horaire.",
   "help.guide.language.body.1":
-    "WonderHome parle anglais, hindi, marathi, espagnol, français, allemand, arabe et chinois (simplifié, mandarin). Chacun choisit sa propre langue dans Paramètres → Langue et région, si bien qu’un même foyer peut en utiliser plusieurs à la fois. L’arabe s’affiche de droite à gauche ; quelques écrans sont encore en cours d’ajustement.",
+    "WonderHome parle anglais, hindi, marathi, espagnol, français, allemand, arabe et chinois (simplifié, mandarin). Chacun choisit sa propre langue dans Paramètres → Langue et région, si bien qu’un même foyer peut en utiliser plusieurs à la fois. L’arabe s’affiche de droite à gauche ; quelques écrans sont encore en cours d’ajustement. Dans Langues des membres, vous pouvez aussi ajouter chaque langue que parle chacun, avec une jauge en quatre niveaux, de « Quelques mots » à « Langue maternelle ». Cela ne change pas la langue de l’app ; HomeTalk s’en sert pour savoir qui comprend quoi.",
   "help.guide.language.body.2":
     "La région, la devise et le fuseau horaire du foyer sont définis par un Admin, et chacun peut choisir son propre format de date, l’horloge sur 12 ou 24 heures, et les unités métriques ou impériales.",
   "help.guide.language.body.3":

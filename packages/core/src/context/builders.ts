@@ -20,6 +20,7 @@ import type { Integration } from "../integrations/repository";
 import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
 import type { Enrolment } from "../school/enrolments";
+import { spokenSummary, type SpokenLanguage } from "../identity/member-languages";
 import type { SchoolItem } from "../school/items";
 import { capitalize, describeValue, formatDate, formatTime, humanKey, isoDateIn, money, words } from "./format";
 import type { ContextDomain, ContextTier, HealthScope, HouseholdContextItem, PrivacyClass, SourceRef } from "./types";
@@ -135,6 +136,8 @@ export type ContextRecords = {
   members?: readonly HouseholdMember[];
   /** Which school each child attends (story 02-009). */
   enrolments?: readonly Enrolment[];
+  /** The languages each member speaks, and how well, by member id. */
+  languages?: ReadonlyMap<string, readonly SpokenLanguage[]>;
   pets?: readonly Pet[];
   responsibilities?: readonly ResponsibilityRow[];
   outcomes?: readonly OutcomeRecord[];
@@ -293,6 +296,8 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           ...(member.workArrangement ? { workArrangement: member.workArrangement } : {}),
           ...(member.ageYears !== null && member.ageYears !== undefined ? { ageYears: member.ageYears } : {}),
           ...(schoolsOf(member.id).length > 0 ? { school: schoolsOf(member.id).join(", ") } : {}),
+          ...(member.nicknamePreferred && member.nickname ? { goesBy: member.nickname } : {}),
+          ...((records.languages?.get(member.id)?.length ?? 0) > 0 ? { speaks: spokenSummary(records.languages!.get(member.id)!) } : {}),
         },
         source: { type: "household_members" },
         aliases: [member.displayName, firstName(member.displayName), member.nickname, member.relationship],

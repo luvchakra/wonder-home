@@ -87,7 +87,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "language",
     group: "Getting started",
-    updated: "2026-10-16",
+    updated: "2026-10-17",
     keywords: ["language", "hindi", "marathi", "arabic", "chinese", "mandarin", "中文", "singapore", "spanish", "french", "german", "translate", "region", "currency", "time zone", "date format", "units"],
   },
   {

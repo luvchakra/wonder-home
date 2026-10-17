@@ -774,6 +774,14 @@ async function main() {
   check("a school can carry the place it was picked from", !placeColumns.error, placeColumns.error?.code ?? "ok");
   const petPhoto = await admin.from("pets").select("photo_path").limit(1);
   check("a pet can have a photo", !petPhoto.error, petPhoto.error?.code ?? "ok");
+  const spoken = await admin.from("member_languages").select("member_id, language, fluency").limit(1);
+  check("migration landed: member_languages", !spoken.error, spoken.error?.code ?? "ok");
+  const anonSpoken = await anon.from("member_languages").select("language").limit(1);
+  check(
+    "anonymous cannot read anyone's languages",
+    Boolean(anonSpoken.error) || (Array.isArray(anonSpoken.data) && anonSpoken.data.length === 0),
+    anonSpoken.error ? anonSpoken.error.code : `${anonSpoken.data?.length ?? "?"} rows`,
+  );
   const preferred = await admin.from("household_members").select("nickname_preferred").limit(1);
   check("a member can go by their nickname", !preferred.error, preferred.error?.code ?? "ok");
 
