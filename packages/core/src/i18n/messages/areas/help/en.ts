@@ -135,6 +135,8 @@ export const helpEn = {
     "Voice assistants such as Alexa or Gemini Voice can be linked to one person from Settings → Voice assistants once they are available for your WonderHome. A linked assistant speaks as that person and sees only what they may see, and it can never pay or place an order.",
   "help.guide.voice.body.5":
     "While WonderHome is listening or a live conversation is going, the HomeTalk button in the middle of the tab bar pulses with a ring around it, so you can see from any screen that a conversation is in progress.",
+  "help.guide.voice.body.6":
+    "Gemini voice always runs on Google. If your assistant's key under Settings → AI Assistant is a Google (Gemini) key, voice uses that same key. If your assistant uses Anthropic or OpenAI, an Admin can add a separate Gemini voice key on the same page: it is used only for Gemini voice, and everything else keeps using the assistant's key.",
 
   // HomeSend: sending WonderHome things
   "help.guide.home-send.title": "HomeSend: sending WonderHome things",

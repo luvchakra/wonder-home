@@ -118,6 +118,8 @@ export const helpAr: AreaCatalog<typeof helpEn> = {
     "يمكن ربط المساعدات الصوتية مثل Alexa أو Gemini Voice بشخص واحد من الإعدادات ← المساعدات الصوتية بمجرد أن تتاح لـ WonderHome الخاص بك. يتحدث المساعد المرتبط بصفة ذلك الشخص ولا يرى إلا ما يحق له رؤيته، ولا يمكنه أبدًا الدفع أو تقديم طلب شراء.",
   "help.guide.voice.body.5":
     "أثناء استماع WonderHome أو جريان محادثة مباشرة، ينبض زر HomeTalk في منتصف شريط التبويبات وحوله حلقة، فترى من أي شاشة أن هناك محادثة جارية.",
+  "help.guide.voice.body.6":
+    "يعمل صوت Gemini دائمًا على Google. إذا كان مفتاح مساعدك في Settings → AI Assistant مفتاح Google (Gemini)، فإن الصوت يستخدم المفتاح نفسه. وإذا كان مساعدك يستخدم Anthropic أو OpenAI، يمكن للمسؤول (Admin) إضافة مفتاح صوت Gemini منفصل في الصفحة نفسها: يُستخدم لصوت Gemini فقط، ويستمر كل شيء آخر في استخدام مفتاح المساعد.",
 
   "help.guide.home-send.title": "HomeSend: إرسال الأشياء إلى WonderHome",
   "help.guide.home-send.summary": "صورة، أو PDF، أو رسالة صوتية، أو رابط، أو رسالة معاد توجيهها — تُقرأ، ثم تؤكدها أنت.",

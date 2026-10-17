@@ -7,6 +7,7 @@ import { googleProvider } from "./google";
 import { platformSpeechKey, resolveSpeechKey, type SpeechKeySource } from "./platform-key";
 import { browserProvider, type SpeechProvider } from "./provider";
 import { DEFAULT_VOICE_SETTINGS, voiceSettingsSchema, type VoiceSettings } from "./settings";
+import { writeKeyRow } from "../ai/key-row";
 
 /**
  * Where a household's voice lives (story 04-009).
@@ -91,10 +92,7 @@ export async function setVoiceKey(
   const apiKey = input.apiKey.trim();
   if (apiKey.length < 20) throw ApiError.badRequest("That does not look like a Google API key.");
 
-  const { error } = await supabase.from("household_voice_credentials").upsert(
-    { household_id: input.householdId, provider: "google", api_key: apiKey, set_by_member_id: input.memberId },
-    { onConflict: "household_id" },
-  );
+  const error = await writeKeyRow(supabase, "household_voice_credentials", { household_id: input.householdId, provider: "google", api_key: apiKey, set_by_member_id: input.memberId });
 
   if (error) {
     if (error.code === "42501") {

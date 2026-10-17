@@ -79,3 +79,22 @@ What changed:
 
 - **A pet's photo can be added, changed and removed from Family.** It is the same control a person's photo uses (`MemberAvatarControl` with `kind="pet"`). It goes through `updatePetPhotoAction` / `removePetPhotoAction` (`home-actions.ts`), into the same private bucket and path that setup uses, checked by its bytes. Browser check: a photo uploaded at 360px, and Change / Remove then offered.
 - **A househelper's profile editor ticks everything they do.** It is the same list setup uses, now shared (`_lib/helper-roles.ts`), plus one task in the household's own words. It is kept as "Maid, Cook" on the member. Family labels it "What they do". Browser check: Cook, Driver and "Plant care" added to a helper who was a Maid, saved as "Maid, Cook, Driver, Plant care".
+
+## Also in this change: a separate Gemini voice key, and API keys that can never be read back
+
+**The question.** Is the Gemini key entered on AI Assistant also the one voice uses? It was. A household held exactly one key, and Gemini voice ran only when that key was Google's. A household that chose Anthropic for its assistant could not use Gemini voice at all.
+
+**The Gemini voice key.**
+- **New, optional key.** It is Google only and used for Gemini Live voice only (`household_gemini_voice_credentials`, migration `20261017180000`, applied live).
+- **Where it is set.** It has its own section on `/settings/ai`. That section says which key voice is using right now, and an Admin can set or remove it there.
+- **How voice picks a key.** Gemini voice uses this key if it is set, otherwise the assistant's key when that is Google's (`_lib/gemini-live.ts`). HomeTalk's "turn on Gemini voice" link now opens this section.
+- **Audit.** Changes are recorded as `ai.voice_key_set` / `ai.voice_key_removed`.
+- **Tests.** RLS suite `scripts/test-gemini-voice-key-rls.mjs`, 6/6.
+- **Browser check at 360px.** A key was saved, which turned voice on; it was then removed, which turned voice back off.
+
+**A security gap found on the way.**
+- **The gap.** The assistant-key and speech-key tables were documented as "no SELECT policy". In fact their `for all` admin policy also matched SELECT, and `authenticated` held SELECT on the whole table. An Admin's session could read a stored `api_key` back through PostgREST.
+- **The fix.** Migration `20261017180100_api_keys_never_readable.sql` grants SELECT on every column except `api_key` on all three key tables.
+- **Writes without reading.** An upsert needs SELECT on the columns it sets, so key writes are now an insert, then an update by household (`ai/key-row.ts`), and never read the key.
+- **Tests.** The full RLS suite passes, 566 tests.
+- **Rollout.** The grant change is applied live only after this code is deployed, because the live code upserts and would fail under the new grants.

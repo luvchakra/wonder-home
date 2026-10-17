@@ -118,6 +118,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Los asistentes de voz como Alexa o Gemini Voice se pueden vincular a una persona desde Ajustes → Asistentes de voz cuando estén disponibles para tu WonderHome. Un asistente vinculado habla como esa persona y solo ve lo que ella puede ver, y nunca puede pagar ni hacer un pedido.",
   "help.guide.voice.body.5":
     "Mientras WonderHome escucha o hay una conversación en directo, el botón de HomeTalk en el centro de la barra de pestañas late con un anillo alrededor, para que veas desde cualquier pantalla que hay una conversación en curso.",
+  "help.guide.voice.body.6":
+    "La voz de Gemini siempre funciona en Google. Si la clave de tu asistente en Settings → AI Assistant es de Google (Gemini), la voz usa esa misma clave. Si tu asistente usa Anthropic u OpenAI, un Admin puede añadir en la misma página una clave de voz de Gemini aparte: se usa solo para la voz de Gemini, y todo lo demás sigue usando la clave del asistente.",
 
   "help.guide.home-send.title": "HomeSend: enviar cosas a WonderHome",
   "help.guide.home-send.summary": "Una foto, un PDF, una nota de voz, un enlace o un reenvío: se lee y luego lo confirmas tú.",

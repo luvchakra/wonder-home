@@ -124,6 +124,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/ai/credentials.ts",
   },
   {
+    event: "ai.voice_key_set",
+    because: "Lets Gemini voice run on the family's own Google key, whichever company answers everything else.",
+    recordedIn: "packages/core/src/ai/credentials.ts",
+  },
+  {
+    event: "ai.voice_key_removed",
+    because: "Gemini voice goes back to the assistant's own key, or stops where that key is not Google's.",
+    recordedIn: "packages/core/src/ai/credentials.ts",
+  },
+  {
     event: "voice.key_set",
     because: "Moves who hears this household from WonderHome's speech service to the family's own Google account.",
     recordedIn: "packages/core/src/voice/repository.ts",
@@ -540,6 +550,10 @@ export function describeAuditEvent(
       return { title: "The household's own AI key was set", detail: stringOr(metadata.provider, null) };
     case "ai.key_removed":
       return { title: "The household's own AI key was removed", detail: "Back to the included assistant." };
+    case "ai.voice_key_set":
+      return { title: "The household's Gemini voice key was set", detail: "Google" };
+    case "ai.voice_key_removed":
+      return { title: "The household's Gemini voice key was removed", detail: null };
     case "voice.key_set":
       return { title: "The household's own speech key was set", detail: stringOr(metadata.provider, null) };
     case "voice.key_removed":

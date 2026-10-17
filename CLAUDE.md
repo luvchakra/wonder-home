@@ -473,8 +473,14 @@ reach a model provider (Gemini hears every answer). A new voice capability
 is a new allowlisted tool that maps to a HomeTalk utterance — never a tool
 that reaches a table. Alexa (`/api/v1/voice/alexa`) is verified as Amazon
 documents and stays inert until a person creates the skill and sets
-`ALEXA_*`; Gemini Live runs only where the household's key is Google's and
-its data-use agreement allows it, re-checked on every tool call. What each
+`ALEXA_*`; Gemini Live runs only on a Google key and only where the household's
+data-use agreement allows it, re-checked on every tool call. That key is the
+household's own Gemini voice key (`household_gemini_voice_credentials`,
+voice only) if one is set, otherwise the assistant's key when that is
+Google's, so an assistant on Anthropic can still talk through Gemini. No key
+table ever lets a session read `api_key` back. Each one grants SELECT on
+every column except the key, so key writes are an insert, then an update by
+household (`ai/key-row.ts`), never an upsert. What each
 channel may do is `voicelink/capabilities.ts` — every HomeTalk action is
 placed in it exactly once and its tests hold each cell to the real gates, so
 a new action forces a decision about voice. A conversation belongs to its

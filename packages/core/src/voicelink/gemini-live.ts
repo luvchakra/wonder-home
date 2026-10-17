@@ -308,7 +308,7 @@ export function geminiLiveAvailability(input: {
   if (!input.voiceEnabled) return { available: false, code: "voice_off", reason: "Voice conversation is turned off." };
   if (!input.entitled) return { available: false, code: "not_entitled", reason: "Your plan does not include voice conversation." };
   if (input.key.provider !== "google" || input.key.source === "none") {
-    return { available: false, code: "not_google", reason: "Gemini voice needs a Google AI key, and this household's assistant uses another provider." };
+    return { available: false, code: "not_google", reason: "Gemini voice needs a Google AI key. An Admin can add one just for voice under AI Assistant, and the assistant keeps its own provider." };
   }
   const route = routeToProvider({ provider: "google", keySource: input.key.source, policy: input.policy, hasContent: true });
   if (!route.ok) return { available: false, code: "no_consent", reason: route.reason };

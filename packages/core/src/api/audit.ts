@@ -41,6 +41,8 @@ export const AUDIT_EVENTS = [
   "integration.disconnected",
   "ai.key_set",
   "ai.key_removed",
+  "ai.voice_key_set",
+  "ai.voice_key_removed",
   "voice.key_set",
   "voice.key_removed",
   "voice.settings_changed",

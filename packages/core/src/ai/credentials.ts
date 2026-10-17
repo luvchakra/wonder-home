@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
+import { writeKeyRow } from "./key-row";
 import { MODEL_PROVIDERS, type HouseholdKey, type ModelProvider } from "./model-key";
 
 /**
@@ -54,15 +55,12 @@ export async function setHouseholdKey(
     throw ApiError.badRequest("That provider is not one WonderHome can use.");
   }
 
-  const { error } = await supabase.from("household_ai_credentials").upsert(
-    {
-      household_id: input.householdId,
-      provider: input.provider,
-      api_key: apiKey,
-      set_by_member_id: input.memberId,
-    },
-    { onConflict: "household_id" },
-  );
+  const error = await writeKeyRow(supabase, "household_ai_credentials", {
+    household_id: input.householdId,
+    provider: input.provider,
+    api_key: apiKey,
+    set_by_member_id: input.memberId,
+  });
 
   if (error) {
     if (error.code === "42501") {
@@ -134,4 +132,61 @@ export async function readHouseholdKey(householdId: string): Promise<HouseholdKe
 
   const row = data as Row;
   return { provider: row.provider as ModelProvider, key: row.api_key as string };
+}
+
+/**
+ * The Gemini voice key: a second, optional Google key used only for Gemini
+ * Live voice, so a household whose assistant thinks with Anthropic or OpenAI
+ * can still talk to Gemini. Same rules as the assistant key: written through
+ * the caller's session (RLS: Admins only), read only here on the admin client,
+ * and its status never carries the key.
+ */
+export async function geminiVoiceKeyStatus(supabase: SupabaseClient, householdId: string): Promise<CredentialStatus> {
+  const { data, error } = await supabase.rpc("gemini_voice_credential_status", { p_household_id: householdId });
+  if (error) throw new Error(`geminiVoiceKeyStatus failed: ${error.code ?? "unknown"}`);
+  const row = ((data as Row[] | null) ?? [])[0];
+  if (!row) return { configured: false, provider: null, updatedAt: null };
+  return { configured: true, provider: "google", updatedAt: row.updated_at ? new Date(row.updated_at as string) : null };
+}
+
+export async function setGeminiVoiceKey(supabase: SupabaseClient, input: { householdId: string; memberId: string; apiKey: string }): Promise<void> {
+  const apiKey = input.apiKey.trim();
+  if (apiKey.length < 20) throw ApiError.badRequest("That does not look like a Google AI key.");
+  const error = await writeKeyRow(supabase, "household_gemini_voice_credentials", { household_id: input.householdId, provider: "google", api_key: apiKey, set_by_member_id: input.memberId });
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can set the Gemini voice key.");
+    throw new Error(`setGeminiVoiceKey failed: ${error.code ?? "unknown"}`);
+  }
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.memberId,
+    eventType: "ai.voice_key_set",
+    targetTable: "household_gemini_voice_credentials",
+    targetId: input.householdId,
+    metadata: { provider: "google" },
+  });
+}
+
+export async function clearGeminiVoiceKey(supabase: SupabaseClient, householdId: string, actorMemberId?: string): Promise<void> {
+  const { error } = await supabase.from("household_gemini_voice_credentials").delete().eq("household_id", householdId);
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can remove the Gemini voice key.");
+    throw new Error(`clearGeminiVoiceKey failed: ${error.code ?? "unknown"}`);
+  }
+  await auditChange({
+    householdId,
+    actorMemberId: actorMemberId ?? null,
+    eventType: "ai.voice_key_removed",
+    targetTable: "household_gemini_voice_credentials",
+    targetId: householdId,
+  });
+}
+
+/** The Gemini voice key, for the server opening a Gemini Live session. Never put in a response, a log or a page. */
+export async function readGeminiVoiceKey(householdId: string): Promise<HouseholdKey> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("household_gemini_voice_credentials").select("api_key").eq("household_id", householdId).maybeSingle();
+  if (error) throw new Error(`readGeminiVoiceKey failed: ${error.code ?? "unknown"}`);
+  if (!data) return null;
+  return { provider: "google", key: (data as Row).api_key as string };
 }

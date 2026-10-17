@@ -38,9 +38,12 @@ export function PasswordField({
   className,
   showLabel = "Show password",
   hideLabel = "Hide password",
+  id,
   ...props
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  // Two of these on one page (two keys, say) need their own ids.
+  const fieldId = id ?? name;
   const hintId = useId();
   const errorId = useId();
 
@@ -49,7 +52,7 @@ export function PasswordField({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <label htmlFor={name} className="block text-sm font-medium">
+        <label htmlFor={fieldId} className="block text-sm font-medium">
           {label}
         </label>
         {action}
@@ -58,7 +61,7 @@ export function PasswordField({
       <div className="relative">
         <input
           {...props}
-          id={name}
+          id={fieldId}
           name={name}
           type={visible ? "text" : "password"}
           aria-invalid={error ? true : undefined}
@@ -74,7 +77,7 @@ export function PasswordField({
           type="button"
           onClick={() => setVisible((shown) => !shown)}
           aria-pressed={visible}
-          aria-controls={name}
+          aria-controls={fieldId}
           // The icon alone would leave a screen reader guessing, and "show"
           // and "hide" are the two things worth announcing here.
           aria-label={visible ? hideLabel : showLabel}

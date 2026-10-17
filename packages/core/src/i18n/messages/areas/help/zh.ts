@@ -107,6 +107,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "像 Alexa 或 Gemini Voice 这样的语音助手，在你的 WonderHome 可用后，可以在“设置 → 语音助手”中关联到某一个人。关联后的助手以那个人的身份说话，只能看到那个人能看到的内容，而且绝不能付款或下单。",
   "help.guide.voice.body.5":
     "当 WonderHome 正在聆听或实时对话进行中时，标签栏中间的 HomeTalk 按钮会带着一圈光环闪动，让您在任何页面都能看到对话正在进行。",
+  "help.guide.voice.body.6":
+    "Gemini 语音始终在 Google 上运行。如果 Settings → AI Assistant 中助手的密钥是 Google（Gemini）密钥，语音就使用同一个密钥。如果您的助手使用 Anthropic 或 OpenAI，Admin 可以在同一页面添加一个单独的 Gemini 语音密钥：它只用于 Gemini 语音，其他功能仍使用助手的密钥。",
 
   "help.guide.home-send.title": "HomeSend：把东西发给 WonderHome",
   "help.guide.home-send.summary": "一张照片、一个 PDF、一条语音、一个链接或一条转发——先读取，再由你确认。",

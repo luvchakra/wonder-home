@@ -118,6 +118,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Sprachassistenten wie Alexa oder Gemini Voice lassen sich unter Einstellungen → Sprachassistenten mit einer Person verknüpfen, sobald sie für dein WonderHome verfügbar sind. Ein verknüpfter Assistent spricht als diese Person und sieht nur, was sie sehen darf, und er kann nie bezahlen oder bestellen.",
   "help.guide.voice.body.5":
     "Während WonderHome zuhört oder ein Live-Gespräch läuft, pulsiert die HomeTalk-Taste in der Mitte der Tab-Leiste mit einem Ring darum – so siehst du auf jedem Bildschirm, dass ein Gespräch läuft.",
+  "help.guide.voice.body.6":
+    "Gemini-Sprache läuft immer bei Google. Ist der Schlüssel deines Assistenten unter Settings → AI Assistant ein Google-(Gemini-)Schlüssel, nutzt die Sprache denselben Schlüssel. Nutzt dein Assistent Anthropic oder OpenAI, kann ein Admin auf derselben Seite einen eigenen Gemini-Sprachschlüssel hinzufügen: Er wird nur für Gemini-Sprache genutzt, alles andere nutzt weiter den Schlüssel des Assistenten.",
 
   "help.guide.home-send.title": "HomeSend: WonderHome Dinge schicken",
   "help.guide.home-send.summary": "Ein Foto, ein PDF, eine Sprachnachricht, ein Link oder eine Weiterleitung – gelesen, dann von dir bestätigt.",
