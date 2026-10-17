@@ -7,6 +7,7 @@ import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Pill } from "@wonderhome/core/ui/pill";
 
 import type { ActionState } from "../(auth)/actions";
+import { shrinkPhoto } from "../_lib/shrink-photo";
 import { removeMemberAvatarAction, updateMemberAvatarAction } from "../(auth)/household-actions";
 
 /**
@@ -53,9 +54,21 @@ export function MemberAvatarControl({
               ref={inputRef}
               type="file"
               name="photo"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               className="sr-only"
-              onChange={() => uploadFormRef.current?.requestSubmit()}
+              onChange={async (event) => {
+                // Shrunk first: a phone photo is often larger than a request may carry.
+                const input = event.currentTarget;
+                const file = input.files?.[0];
+                if (!file) return;
+                const small = await shrinkPhoto(file);
+                if (small !== file) {
+                  const swap = new DataTransfer();
+                  swap.items.add(small);
+                  input.files = swap.files;
+                }
+                uploadFormRef.current?.requestSubmit();
+              }}
             />
             <Pill type="button" tone="quiet" onClick={() => inputRef.current?.click()} disabled={uploading}>
               <Camera aria-hidden className="size-3.5" /> {uploading ? labels.uploading : avatarUrl ? labels.change : labels.add}

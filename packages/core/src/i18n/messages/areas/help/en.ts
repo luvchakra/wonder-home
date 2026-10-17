@@ -68,13 +68,13 @@ export const helpEn = {
   "help.guide.first-week.title": "Setting up your household",
   "help.guide.first-week.summary": "A guided setup for the Admin, and a progress card on Home until it is done.",
   "help.guide.first-week.body.1":
-    "Whoever creates the household is walked through a guided setup: the household's basics, the adults, the children, pets and household help, a set of suggested responsibilities to review, and a few guided questions. Steps that do not apply — no children, no pets — are skipped.",
+    "Whoever creates the household is walked through a guided setup. It starts with language, region, currency and time zone, so everything after is in your own words. Then come the household's basics and its home address, the adults, the children, pets and household help, a set of suggested responsibilities to review, and a few guided questions. Steps that do not apply, such as no children or no pets, are skipped.",
   "help.guide.first-week.body.2":
     "You can stop at any point. Home shows a Household setup card with a progress ring and the next step, and Continue picks up exactly where you left off.",
   "help.guide.first-week.body.3":
     "The percentage is arithmetic over facts that exist — a bill added, a responsibility assigned, a child's date of birth recorded — not a count of ticked boxes. Steps that do not apply to your household are left out of the total, so every household can reach 100%. The full checklist always lives on Manage Household.",
   "help.guide.first-week.body.4":
-    "Each person also gets a short, optional setup of their own for language and region, which they can finish later from Settings.",
+    "Along the way you can add each person's photo, nickname and date of birth. Tick Preferred name and WonderHome greets them by the nickname. A date of birth puts their birthday on the family calendar, and changing it later moves the birthday. The home address is searched on Google Maps where your WonderHome has it switched on, or typed. Only the household's adults can see it. Each responsibility gets a Primary and a Backup for when they are away. Everyone else gets the short language setup of their own, which they can finish later from Settings.",
 
   // Signing in and passwords
   "help.guide.accounts.title": "Signing in and passwords",
@@ -128,7 +128,7 @@ export const helpEn = {
   "help.guide.voice.body.2":
     "Live conversation is hands-free: WonderHome listens, answers out loud and keeps going until you end it, and you can pause and resume. It runs on WonderHome's own voice or, where your household has chosen it and it is available, on Gemini Live. The composer shows which one is answering and lets you switch.",
   "help.guide.voice.body.3":
-    "Settings → Voice chooses the speech service (your browser's own, or a more accurate one), the voice, and how it listens. Where a choice is not available to your household, it is shown with the reason rather than offered and broken.",
+    "Settings → Voice chooses the speech service (your browser's own, or a more accurate one), the voice, and how it listens. Where a choice is not available to your household, it is shown with the reason rather than offered and broken. If an Admin can change that reason, for example Gemini Live needing a Google AI key, a link goes straight to the setting and brings you back once it is saved.",
   "help.guide.voice.body.4":
     "Voice assistants such as Alexa or Gemini Voice can be linked to one person from Settings → Voice assistants once they are available for your WonderHome. A linked assistant speaks as that person and sees only what they may see, and it can never pay or place an order.",
 
@@ -255,7 +255,7 @@ export const helpEn = {
   "help.guide.family.body.1":
     "Family lists everyone, with each person's details a tap away. You edit your own profile and photo in Settings; an Admin can edit anyone's. \"Family calls me\" records what the family calls a person — Dad, Nani — so WonderHome can talk about people the way you do.",
   "help.guide.family.body.2":
-    "Pets are part of the family here, with their own care tracked alongside everyone else's.",
+    "Pets are part of the family here, with a photo, a date of birth and their own care tracked alongside everyone else's.",
   "help.guide.family.body.3":
     "Family events — birthdays, outings, visits, appointments — can be marked as protected time, and WonderHome never schedules over them. Things that need a reply, such as a clash or a gift still to sort, are listed until they are settled.",
 
@@ -315,7 +315,7 @@ export const helpEn = {
   "help.guide.privacy.body.1":
     "Your household's data is not used to train models by default.",
   "help.guide.privacy.body.2":
-    "Who can see what is decided behind the scenes, before anything reaches a device. A screen hiding something is presentation; it is never the thing keeping it private.",
+    "Who can see what is decided behind the scenes, before anything reaches a device. A screen hiding something is presentation; it is never the thing keeping it private. Wherever you enter personal details, such as an address, a date of birth or a photo, a short line links to how we protect them.",
   "help.guide.privacy.body.3":
     "Settings → Privacy & security lets you download a copy of your data after confirming your password. You can also ask for your data to be deleted: there is a 30-day countdown you can call off, and things the household shares, such as the playbook and what was paid, stay with the household. The household's owner hands that role to someone else first.",
   "help.guide.privacy.body.4":

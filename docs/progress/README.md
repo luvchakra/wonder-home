@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-17 | [Setup asks language first, then the home address and each child's school from Google Maps (server-side, inert without a key), photos, nicknames with a preferred name, dates of birth (birthdays follow), helpers with several roles, Primary and Backup owners; Settings photos fixed; Gemini Live links to its fix and back](2026-10-17-setup-places-photos.md) |
 | 2026-10-16 | [The user guide is for members only (route gate, page, search action, no guide text in client JS, no-store and noindex), public links retargeted, and its content brought up to date with the app in all eight languages, with Last updated dates and a link check](2026-10-16-help-members-only.md) |
 | 2026-10-16 | [Fast pull-request CI (typecheck, changed-file lint, related unit tests, security gates, build) and the full Playwright suite nightly, split by measured time, with budgets, flaky reporting and a production guard](2026-10-16-fast-pr-ci-nightly-e2e.md) |
 | 2026-10-15 | [Claude is the live AI provider; HomeSend reads through a non-strict tool on Claude because the intake schema is past what strict structured output compiles](2026-10-15-claude-primary-provider.md) |

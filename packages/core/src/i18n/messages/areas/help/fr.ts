@@ -56,13 +56,13 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.first-week.title": "Configurer votre foyer",
   "help.guide.first-week.summary": "Une configuration guidée pour l’Admin, et une carte de progression sur l’Accueil jusqu’à ce qu’elle soit terminée.",
   "help.guide.first-week.body.1":
-    "La personne qui crée le foyer est accompagnée dans une configuration guidée : les informations de base du foyer, les adultes, les enfants, les animaux et l’aide à domicile, une série de responsabilités suggérées à passer en revue, et quelques questions guidées. Les étapes qui ne s’appliquent pas — pas d’enfants, pas d’animaux — sont sautées.",
+    "La personne qui crée le foyer suit une configuration guidée. Elle commence par la langue, la région, la devise et le fuseau horaire, pour que tout le reste soit dans vos propres mots. Viennent ensuite les informations de base du foyer et son adresse, les adultes, les enfants, les animaux et les aides à domicile, des responsabilités suggérées à vérifier et quelques questions guidées. Les étapes sans objet, comme l’absence d’enfants ou d’animaux, sont sautées.",
   "help.guide.first-week.body.2":
     "Vous pouvez vous arrêter à tout moment. L’Accueil affiche une carte « Configuration du foyer » avec un anneau de progression et l’étape suivante, et « Continuer » reprend exactement là où vous vous étiez arrêté.",
   "help.guide.first-week.body.3":
     "Le pourcentage est un calcul sur des faits qui existent — une facture ajoutée, une responsabilité attribuée, la date de naissance d’un enfant enregistrée — et non un décompte de cases cochées. Les étapes qui ne concernent pas votre foyer sont exclues du total, si bien que chaque foyer peut atteindre 100 %. La liste complète se trouve toujours dans Gérer le foyer.",
   "help.guide.first-week.body.4":
-    "Chaque personne dispose aussi d’une courte configuration facultative pour la langue et la région, qu’elle peut terminer plus tard depuis les Paramètres.",
+    "En chemin, vous pouvez ajouter la photo, le surnom et la date de naissance de chacun. Cochez Nom préféré et WonderHome l’accueille par son surnom. Une date de naissance inscrit l’anniversaire au calendrier familial, et la modifier ensuite le déplace. L’adresse se recherche dans Google Maps là où votre WonderHome l’a activé, ou se saisit. Seuls les adultes du foyer la voient. Chaque responsabilité a un Principal et un Relais en cas d’absence. Les autres membres ont leur propre courte configuration de langue, qu’ils peuvent finir plus tard dans Réglages.",
 
   "help.guide.accounts.title": "Connexion et mots de passe",
   "help.guide.accounts.summary": "E-mail et mot de passe, un lien de réinitialisation, et Google là où il est activé.",
@@ -111,7 +111,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.voice.body.2":
     "La conversation en direct est mains libres : WonderHome écoute, répond à voix haute et continue jusqu’à ce que vous y mettiez fin, et vous pouvez la mettre en pause puis la reprendre. Elle fonctionne avec la voix propre de WonderHome ou, là où votre foyer l’a choisi et où il est disponible, avec Gemini Live. La zone de saisie indique lequel répond et vous permet de changer.",
   "help.guide.voice.body.3":
-    "Paramètres → Voix choisit le service de reconnaissance vocale (celui de votre navigateur, ou un plus précis), la voix et la façon d’écouter. Quand un choix n’est pas disponible pour votre foyer, il est affiché avec la raison plutôt que proposé et cassé.",
+    "Réglages → Voix choisit le service vocal (celui de votre navigateur, ou un plus précis), la voix et la façon d’écouter. Ce qui n’est pas disponible pour votre foyer est montré avec la raison, plutôt que proposé et cassé. Si un Admin peut changer cette raison, par exemple quand Gemini Live demande une clé d’IA Google, un lien mène directement au réglage et vous ramène une fois enregistré.",
   "help.guide.voice.body.4":
     "Des assistants vocaux comme Alexa ou Gemini Voice peuvent être liés à une personne depuis Paramètres → Assistants vocaux une fois qu’ils sont disponibles pour votre WonderHome. Un assistant lié parle en tant que cette personne et ne voit que ce qu’elle peut voir, et il ne peut jamais payer ni passer commande.",
 
@@ -222,7 +222,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.family.summary": "Tout le monde au même endroit, animaux compris, et du temps gardé libre les uns pour les autres.",
   "help.guide.family.body.1":
     "Famille liste tout le monde, avec les informations de chacun à portée de doigt. Vous modifiez votre propre profil et votre photo dans les Paramètres ; un Admin peut modifier ceux de n’importe qui. « La famille m’appelle » enregistre comment la famille appelle une personne — Papa, Nani — pour que WonderHome puisse parler des gens comme vous le faites.",
-  "help.guide.family.body.2": "Ici, les animaux font partie de la famille, et leurs soins sont suivis avec ceux de tous les autres.",
+  "help.guide.family.body.2": "Ici, les animaux font partie de la famille, avec une photo, une date de naissance et leurs propres soins suivis avec ceux des autres.",
   "help.guide.family.body.3":
     "Les événements familiaux — anniversaires, sorties, visites, rendez-vous — peuvent être marqués comme temps protégé, et WonderHome ne planifie jamais rien par-dessus. Ce qui demande une réponse, comme un conflit d’horaires ou un cadeau encore à régler, reste dans la liste jusqu’à ce que ce soit réglé.",
 
@@ -274,7 +274,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.privacy.summary": "Ce qui est conservé, qui peut le voir, et comment l’emporter ou le faire supprimer.",
   "help.guide.privacy.body.1": "Les données de votre foyer ne servent pas à entraîner des modèles par défaut.",
   "help.guide.privacy.body.2":
-    "Qui peut voir quoi est décidé en coulisses, avant que quoi que ce soit n’arrive sur un appareil. Qu’un écran masque quelque chose relève de la présentation ; ce n’est jamais ce qui le garde privé.",
+    "Qui peut voir quoi est décidé en coulisses, avant que quoi que ce soit n’arrive sur un appareil. Qu’un écran masque quelque chose relève de la présentation ; ce n’est jamais ce qui le garde privé. Partout où vous saisissez des informations personnelles, comme une adresse, une date de naissance ou une photo, une courte ligne mène à la façon dont nous les protégeons.",
   "help.guide.privacy.body.3":
     "Paramètres → Confidentialité et sécurité vous permet de télécharger une copie de vos données après avoir confirmé votre mot de passe. Vous pouvez aussi demander la suppression de vos données : un compte à rebours de 30 jours démarre, que vous pouvez annuler, et ce que le foyer partage, comme le guide de la maison et ce qui a été payé, reste au foyer. Le propriétaire du foyer transmet d’abord ce rôle à quelqu’un d’autre.",
   "help.guide.privacy.body.4":

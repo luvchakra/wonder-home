@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, AudioLines, ChevronDown, Mic, Plus, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, ChevronDown, ChevronRight, Mic, Plus, Square, X } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, createContext, useContext } from "react";
 
@@ -205,7 +205,8 @@ export function TalkComposer({
    * the server's own check. The picker offers it only when it may; the
    * token route checks again on every session regardless.
    */
-  geminiLive?: { available: boolean; reason?: string };
+  /** `fix` links to where an Admin can make Gemini Live available, and comes back. */
+  geminiLive?: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   /** Gemini Live only: each side's words, once per utterance, for the conversation on screen. */
   onLiveTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
   className?: string;
@@ -518,7 +519,7 @@ function LiveEnginePicker({
 }: {
   value: LiveEngineChoice;
   onChange: (engine: LiveEngineChoice) => void;
-  geminiLive: { available: boolean; reason?: string };
+  geminiLive: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   disabled?: boolean;
 }) {
   const labels = useContext(LabelsContext);
@@ -581,6 +582,17 @@ function LiveEnginePicker({
               </DropdownMenu.RadioItem>
             ))}
           </DropdownMenu.RadioGroup>
+          {!geminiLive.available && geminiLive.fix ? (
+            <DropdownMenu.Item asChild>
+              <a
+                href={geminiLive.fix.href}
+                className="flex min-h-11 items-center gap-1.5 border-t border-[var(--wh-border)] px-4 py-2.5 text-sm font-semibold text-[var(--wh-primary)] outline-none data-[highlighted]:bg-[var(--wh-surface-muted)]"
+              >
+                {geminiLive.fix.label}
+                <ChevronRight aria-hidden className="size-4 rtl:rotate-180" />
+              </a>
+            </DropdownMenu.Item>
+          ) : null}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

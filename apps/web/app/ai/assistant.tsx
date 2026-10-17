@@ -100,7 +100,7 @@ export function Assistant({
   /** Who runs a live conversation: WonderHome's own loop, or Gemini Live calling HomeTalk's tools (voice phase 3). */
   liveEngine?: "wonderhome" | "gemini_live";
   /** Whether Gemini Live may run now, and why not — the composer's picker offers only what can. */
-  geminiLive?: { available: boolean; reason?: string };
+  geminiLive?: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   /** For HomeSend's school-item confirm step ("who is this for"). */
   kids?: { id: string; displayName: string }[];
   /** Whether the viewer may add a child from a school notice (story 08-009). */

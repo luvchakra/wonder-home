@@ -762,6 +762,20 @@ async function main() {
   );
   const claimColumn = await admin.from("household_invitations").select("member_id").limit(1);
   check("an invitation can name the member it claims", !claimColumn.error, claimColumn.error?.code ?? "ok");
+  const homeAddress = await admin.from("household_addresses").select("household_id, formatted_address, place_id, latitude, longitude, set_by_member_id").limit(1);
+  check("migration landed: household_addresses", !homeAddress.error, homeAddress.error?.code ?? "ok");
+  const anonAddress = await anon.from("household_addresses").select("formatted_address").limit(1);
+  check(
+    "anonymous cannot read a home address",
+    Boolean(anonAddress.error) || (Array.isArray(anonAddress.data) && anonAddress.data.length === 0),
+    anonAddress.error ? anonAddress.error.code : `${anonAddress.data?.length ?? "?"} rows`,
+  );
+  const placeColumns = await admin.from("school_enrolments").select("place_id, school_address, latitude, longitude").limit(1);
+  check("a school can carry the place it was picked from", !placeColumns.error, placeColumns.error?.code ?? "ok");
+  const petPhoto = await admin.from("pets").select("photo_path").limit(1);
+  check("a pet can have a photo", !petPhoto.error, petPhoto.error?.code ?? "ok");
+  const preferred = await admin.from("household_members").select("nickname_preferred").limit(1);
+  check("a member can go by their nickname", !preferred.error, preferred.error?.code ?? "ok");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

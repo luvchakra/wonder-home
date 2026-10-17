@@ -594,4 +594,9 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsHome.avatar.uploading": "正在上传…",
   "settingsHome.avatar.remove": "移除照片",
   "settingsHome.avatar.removing": "正在移除…",
+  "settingsPage.geminiFix.not_google": "更换 AI 提供方",
+  "settingsPage.geminiFix.no_consent": "查看可以共享的内容",
+  "settingsPage.geminiFix.not_entitled": "查看方案",
+  "settingsPage.returnTo.hometalk": "返回 HomeTalk",
+  "settingsPage.returnTo.previous": "返回刚才的页面",
 };

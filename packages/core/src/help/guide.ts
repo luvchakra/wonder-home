@@ -75,7 +75,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "first-week",
     group: "Getting started",
-    updated: "2026-10-16",
+    updated: "2026-10-17",
     keywords: ["setup", "onboarding", "get started", "progress", "checklist", "100%", "wizard", "guided setup"],
   },
   {
@@ -99,7 +99,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "voice",
     group: "Everyday use",
-    updated: "2026-09-25",
+    updated: "2026-10-17",
     keywords: ["voice", "speech", "microphone", "hands-free", "live", "listen", "gemini live", "alexa", "speak out loud", "pause"],
   },
   {
@@ -159,7 +159,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "family",
     group: "Your household",
-    updated: "2026-09-25",
+    updated: "2026-10-17",
     keywords: ["family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
   },
   {
@@ -195,7 +195,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "privacy",
     group: "Privacy and trust",
-    updated: "2026-09-25",
+    updated: "2026-10-17",
     keywords: ["privacy", "data", "security", "training", "delete", "export", "download", "gdpr", "consent"],
   },
   {

@@ -20,6 +20,8 @@ import { CancelPlanButton } from "../../_components/cancel-plan-button";
 import { PlanForm } from "../../_components/plan-form";
 import { cancelPlanLabels, planFormLabels, planPriceNote, planPriceText } from "../../_lib/plan-labels";
 import { formatDate, requireSession } from "../../_lib/session";
+import { ReturnLink, returnLabelKey } from "../../_components/return-link";
+import { safeReturnTo } from "../../_lib/return-to";
 
 export const metadata = { title: "Your plan" };
 export const dynamic = "force-dynamic";
@@ -30,8 +32,9 @@ export const dynamic = "force-dynamic";
  * write path; entitlements everywhere else read from the same subscription.
  * Every price here is the catalogue's, every payment the ledger's.
  */
-export default async function PlanSettingsPage({ searchParams }: { searchParams: Promise<{ checkout?: string; interval?: string }> }) {
-  const [{ checkout, interval: requested }, session] = await Promise.all([searchParams, requireSession("/settings/plan")]);
+export default async function PlanSettingsPage({ searchParams }: { searchParams: Promise<{ checkout?: string; interval?: string; returnTo?: string }> }) {
+  const [{ checkout, interval: requested, returnTo: returnParam }, session] = await Promise.all([searchParams, requireSession("/settings/plan")]);
+  const returnTo = safeReturnTo(returnParam);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
@@ -75,6 +78,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.plan.title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.plan.lede", { household: membership.household.name, plan: current })}</p>
         </header>
+        {returnTo ? <ReturnLink href={returnTo} label={session.locale.t(returnLabelKey(returnTo))} /> : null}
 
         {/* Back from the payment provider without paying (story 20-006). */}
         {checkout === "cancelled" ? <Alert tone="info">{t("settingsPage.plan.checkoutCancelled")}</Alert> : null}

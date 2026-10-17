@@ -103,6 +103,7 @@ export function MemberDetail({
               displayName: member.displayName,
               dateOfBirth: member.dateOfBirth,
               nickname: member.nickname,
+              nicknamePreferred: member.nicknamePreferred ?? false,
               relationship: member.relationship,
               occupation: member.occupation,
               schoolOrWorkLocation: member.schoolOrWorkLocation,

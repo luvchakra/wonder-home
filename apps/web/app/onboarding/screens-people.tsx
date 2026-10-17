@@ -1,4 +1,4 @@
-import { Baby, ChevronRight, HandHelping, PawPrint, Plus, Settings2, Sparkles, UserRound, Users, Zap } from "lucide-react";
+import { Baby, ChevronRight, ExternalLink, HandHelping, MapPin, PawPrint, Plus, Settings2, Sparkles, UserRound, Users, Zap } from "lucide-react";
 import Link from "next/link";
 
 import type { OnboardingSnapshot } from "@wonderhome/core/household/onboarding-repository";
@@ -11,10 +11,16 @@ import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { CozyCornerIllustration } from "@wonderhome/core/ui/cozy-corner-illustration";
 import { Field } from "@wonderhome/core/ui/field";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
+import { PrivacyNote } from "@wonderhome/core/ui/privacy-note";
 import { Select } from "@wonderhome/core/ui/select";
 import { Stepper } from "@wonderhome/core/ui/stepper";
 
+import { mapsLink } from "@wonderhome/core/places/provider";
+
 import { moveAction, saveAdultsAction, saveBasicsAction, saveChildrenAction, savePetsAndHelpAction } from "../(auth)/onboarding-actions";
+import { PhotoPickField, type PhotoPickLabels } from "../_components/photo-pick-field";
+import { PlaceSearchField } from "../_components/place-search-field";
+import { placeSearchLabels } from "../_lib/place-labels";
 import { SubmitButton } from "../_components/submit-pill";
 import { genderFieldLabels } from "../_lib/member-form-labels";
 import { LaterButton, OnboardingFrame, setupChrome, type SetupWords } from "./frame";
@@ -42,6 +48,35 @@ const TIMES = Array.from({ length: 35 }, (_, index) => {
 /** The words shown for each stored option, in the reader's language. */
 function shownAs<T extends string>(options: readonly T[], words: (option: T) => string): Record<string, string> {
   return Object.fromEntries(options.map((option) => [option, words(option)]));
+}
+
+/** What the place pickers need from the page: whose household, and whether this deployment has a place search. */
+export type PlaceContext = { householdId: string; available: boolean };
+
+export function photoPickLabels(t: SetupWords["t"]): PhotoPickLabels {
+  return { add: t("setupWizard.photo.add"), change: t("setupWizard.photo.change"), remove: t("setupWizard.photo.remove"), undo: t("setupWizard.photo.undo"), tooLarge: t("setupWizard.photo.tooLarge") };
+}
+
+/** A nickname, and a tick for "this is what we call them". */
+function NicknameField({ nicknameName, preferredName, nickname, preferred, words }: { nicknameName: string; preferredName: string; nickname: string | null; preferred: boolean; words: SetupWords }) {
+  const { t } = words;
+  return (
+    <div className="space-y-2">
+      <Field label={t("setupWizard.nickname")} name={nicknameName} defaultValue={nickname ?? ""} autoComplete="off" maxLength={40} hint={t("setupWizard.nicknameHint")} />
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">
+        <input type="checkbox" name={preferredName} defaultChecked={preferred} className="size-5 shrink-0 accent-[var(--wh-primary)]" />
+        {t("setupWizard.preferredName")}
+      </label>
+    </div>
+  );
+}
+
+/** A date of birth. Saving one puts their birthday on the family calendar, and changing it moves the birthday. */
+function BirthdayField({ name, value, words, hint }: { name: string; value: string | null; words: SetupWords; hint?: string }) {
+  const { t } = words;
+  return (
+    <Field label={t("setupWizard.pets.dateOfBirth")} name={name} type="date" min="1900-01-01" max={new Date().toISOString().slice(0, 10)} defaultValue={value ?? ""} hint={hint ?? t("setupWizard.dateOfBirthHint")} />
+  );
 }
 
 function active(snapshot: OnboardingSnapshot, type: HouseholdMember["memberType"]) {
@@ -92,7 +127,7 @@ export function WelcomeScreen({ firstName, words }: { firstName: string; words: 
 // 2. Family basics
 // ---------------------------------------------------------------------------
 
-export function BasicsScreen({ snapshot, words }: { snapshot: OnboardingSnapshot; words: SetupWords }) {
+export function BasicsScreen({ snapshot, places, mapImage, words }: { snapshot: OnboardingSnapshot; places: PlaceContext; mapImage: string | null; words: SetupWords }) {
   const { t } = words;
   const { composition } = snapshot.state;
   // Never fewer than who is already on record.
@@ -142,6 +177,37 @@ export function BasicsScreen({ snapshot, words }: { snapshot: OnboardingSnapshot
             fewerLabel={t("setupWizard.basics.fewer.helpers")}
             moreLabel={t("setupWizard.basics.more.helpers")}
           />
+        </Card>
+        <Card className="space-y-3 p-4">
+          <div className="flex items-start gap-3">
+            <IconTile icon={MapPin} tone="home" size="sm" />
+            <div className="min-w-0">
+              <h2 className="font-semibold">{t("setupWizard.basics.address")}</h2>
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{t("setupWizard.basics.addressLede")}</p>
+            </div>
+          </div>
+          {mapImage && snapshot.address ? (
+            // eslint-disable-next-line @next/next/no-img-element -- an inline data URL the server fetched; nothing for the image optimizer to do
+            <img src={mapImage} alt={t("places.mapAlt", { address: snapshot.address.formattedAddress })} className="h-auto w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]" />
+          ) : null}
+          <PlaceSearchField
+            householdId={places.householdId}
+            kind="address"
+            label={places.available ? t("setupWizard.basics.addressField") : t("setupWizard.basics.address")}
+            textName="home_address"
+            placeName="home_place_id"
+            sessionName="places_session"
+            initial={snapshot.address ? { text: snapshot.address.formattedAddress, placeId: snapshot.address.placeId, detail: null } : null}
+            available={places.available}
+            labels={placeSearchLabels(t, "address")}
+          />
+          {snapshot.address && !snapshot.address.placeId ? (
+            <a href={mapsLink({ formattedAddress: snapshot.address.formattedAddress })} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+              {t("places.openInMaps")} <ExternalLink aria-hidden className="size-3" />
+            </a>
+          ) : null}
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("setupWizard.basics.addressPrivacy")}</p>
+          <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         </Card>
         <SubmitButton className="w-full" pendingLabel={t("common.saving")}>
           {t("common.next")}
@@ -284,6 +350,7 @@ export function AdultsScreen({ snapshot, selfId, backTo, words }: { snapshot: On
   const adults = active(snapshot, "adult").sort((a, b) => (a.id === selfId ? -1 : b.id === selfId ? 1 : 0));
   const rows = Math.max(snapshot.state.composition.adults, adults.length, 1);
   const relationshipWords = shownAs(ADULT_RELATIONSHIPS, (option) => t(`setupWizard.relationship.${option}`));
+  const photos = photoPickLabels(t);
   return (
     <OnboardingFrame
       step="adults"
@@ -303,12 +370,17 @@ export function AdultsScreen({ snapshot, selfId, backTo, words }: { snapshot: On
           const self = adult?.id === selfId;
           return (
             <Card key={adult?.id ?? `new-${index}`} className="space-y-4 p-4">
-              <div className="flex items-center gap-3">
-                <Avatar name={adult?.displayName ?? "?"} size="lg" />
-                <p className="text-sm font-semibold text-[var(--wh-foreground-muted)]">{self ? t("setupWizard.adults.you") : adult ? adult.displayName : t("setupWizard.adults.numbered", { number: index + 1 })}</p>
-              </div>
+              <PhotoPickField
+                name={`photo_${index}`}
+                displayName={adult?.displayName ?? "?"}
+                currentUrl={adult?.avatarUrl ?? null}
+                caption={self ? t("setupWizard.adults.you") : adult ? adult.displayName : t("setupWizard.adults.numbered", { number: index + 1 })}
+                labels={photos}
+              />
               {adult ? <input type="hidden" name={`member_${index}`} value={adult.id} /> : null}
               <Field label={t("setupWizard.name")} name={`name_${index}`} defaultValue={adult?.displayName ?? ""} autoComplete="off" required={self} />
+              <NicknameField nicknameName={`nickname_${index}`} preferredName={`preferred_${index}`} nickname={adult?.nickname ?? null} preferred={adult?.nicknamePreferred ?? false} words={words} />
+              <BirthdayField name={`dob_${index}`} value={adult?.dateOfBirth ?? null} words={words} />
               <ComboboxField
                 label={t("setupWizard.adults.relationship")}
                 name={`relationship_${index}`}
@@ -330,6 +402,7 @@ export function AdultsScreen({ snapshot, selfId, backTo, words }: { snapshot: On
           );
         })}
         <AddRowButton intent="add_row">{t("setupWizard.adults.add")}</AddRowButton>
+        <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         <SubmitButton className="w-full" pendingLabel={t("common.saving")}>
           {t("common.next")}
         </SubmitButton>
@@ -342,8 +415,10 @@ export function AdultsScreen({ snapshot, selfId, backTo, words }: { snapshot: On
 // 5. Children
 // ---------------------------------------------------------------------------
 
-export function ChildrenScreen({ snapshot, words }: { snapshot: OnboardingSnapshot; words: SetupWords }) {
+export function ChildrenScreen({ snapshot, places, words }: { snapshot: OnboardingSnapshot; places: PlaceContext; words: SetupWords }) {
   const { t } = words;
+  const photos = photoPickLabels(t);
+  const schoolLabels = placeSearchLabels(t, "school");
   const children = active(snapshot, "child");
   const rows = Math.max(snapshot.state.composition.children, children.length, 1);
   const gender = genderFieldLabels(t);
@@ -366,12 +441,17 @@ export function ChildrenScreen({ snapshot, words }: { snapshot: OnboardingSnapsh
           const child = children[index];
           return (
             <Card key={child?.id ?? `new-${index}`} className="space-y-4 p-4">
-              <div className="flex items-center gap-3">
-                <Avatar name={child?.displayName ?? "?"} size="lg" />
-                <p className="text-sm font-semibold text-[var(--wh-foreground-muted)]">{child ? child.displayName : t("setupWizard.children.numbered", { number: index + 1 })}</p>
-              </div>
+              <PhotoPickField
+                name={`photo_${index}`}
+                displayName={child?.displayName ?? "?"}
+                currentUrl={child?.avatarUrl ?? null}
+                caption={child ? child.displayName : t("setupWizard.children.numbered", { number: index + 1 })}
+                labels={photos}
+              />
               {child ? <input type="hidden" name={`member_${index}`} value={child.id} /> : null}
               <Field label={t("setupWizard.name")} name={`name_${index}`} defaultValue={child?.displayName ?? ""} autoComplete="off" />
+              <NicknameField nicknameName={`nickname_${index}`} preferredName={`preferred_${index}`} nickname={child?.nickname ?? null} preferred={child?.nicknamePreferred ?? false} words={words} />
+              <BirthdayField name={`dob_${index}`} value={child?.dateOfBirth ?? null} words={words} hint={t("setupWizard.dateOfBirthChildHint")} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <ComboboxField
                   label={gender.label}
@@ -394,23 +474,33 @@ export function ChildrenScreen({ snapshot, words }: { snapshot: OnboardingSnapsh
                   ))}
                 </Select>
               </div>
-              <Field
+              <PlaceSearchField
+                householdId={places.householdId}
+                kind="school"
                 label={t("setupWizard.children.school")}
-                name={`school_${index}`}
-                defaultValue={child ? (snapshot.schools.get(child.id)?.schoolName ?? "") : ""}
-                autoComplete="off"
-                hint={t("setupWizard.children.schoolHint")}
+                textName={`school_${index}`}
+                placeName={`school_place_${index}`}
+                sessionName={`school_session_${index}`}
+                initial={schoolValue(child ? snapshot.schools.get(child.id) : undefined)}
+                available={places.available}
+                labels={{ ...schoolLabels, hint: snapshot.address?.location ? schoolLabels.hint : t("setupWizard.children.schoolHint") }}
               />
             </Card>
           );
         })}
         <AddRowButton intent="add_row">{t("setupWizard.children.add")}</AddRowButton>
+        <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         <SubmitButton className="w-full" pendingLabel={t("common.saving")}>
           {t("common.next")}
         </SubmitButton>
       </OnboardingForm>
     </OnboardingFrame>
   );
+}
+
+/** A school on record, as the picker shows it. */
+export function schoolValue(school: { schoolName: string; placeId: string | null; schoolAddress: string | null } | undefined) {
+  return school ? { text: school.schoolName, placeId: school.placeId, detail: school.schoolAddress } : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -425,6 +515,8 @@ export function PetsAndHelpScreen({ snapshot, backTo, words }: { snapshot: Onboa
   const helpers = active(snapshot, "helper");
   const petRows = Math.max(composition.pets, snapshot.pets.length);
   const helperRows = Math.max(composition.helpers, helpers.length);
+  const photos = photoPickLabels(t);
+  const today = new Date().toISOString().slice(0, 10);
   return (
     <OnboardingFrame
       step="pets"
@@ -450,10 +542,13 @@ export function PetsAndHelpScreen({ snapshot, backTo, words }: { snapshot: Onboa
               const pet = snapshot.pets[index];
               return (
                 <Card key={pet?.id ?? `new-pet-${index}`} className="space-y-4 p-4">
-                  <div className="flex items-center gap-3">
-                    <IconTile icon={PawPrint} tone="handled" size="lg" />
-                    <p className="text-sm font-semibold text-[var(--wh-foreground-muted)]">{pet ? pet.name : t("setupWizard.pets.numbered", { number: index + 1 })}</p>
-                  </div>
+                  <PhotoPickField
+                    name={`pet_photo_${index}`}
+                    displayName={pet?.name ?? "?"}
+                    currentUrl={pet?.photoUrl ?? null}
+                    caption={pet ? pet.name : t("setupWizard.pets.numbered", { number: index + 1 })}
+                    labels={photos}
+                  />
                   {pet ? <input type="hidden" name={`pet_${index}`} value={pet.id} /> : null}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label={t("setupWizard.name")} name={`pet_name_${index}`} defaultValue={pet?.name ?? ""} autoComplete="off" />
@@ -469,6 +564,7 @@ export function PetsAndHelpScreen({ snapshot, backTo, words }: { snapshot: Onboa
                       newValuePlaceholder={t("setupWizard.pets.kindPlaceholder")}
                     />
                   </div>
+                  <Field label={t("setupWizard.pets.dateOfBirth")} name={`pet_dob_${index}`} type="date" max={today} min="1950-01-01" defaultValue={pet?.dateOfBirth ?? ""} hint={t("setupWizard.pets.dateOfBirthHint")} />
                 </Card>
               );
             })}
@@ -485,25 +581,18 @@ export function PetsAndHelpScreen({ snapshot, backTo, words }: { snapshot: Onboa
             const windows = helper ? (snapshot.availability.get(helper.id) ?? []) : [];
             return (
               <Card key={helper?.id ?? `new-helper-${index}`} className="space-y-4 p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar name={helper?.displayName ?? "?"} size="lg" />
-                  <p className="text-sm font-semibold text-[var(--wh-foreground-muted)]">{helper ? helper.displayName : t("setupWizard.helpers.numbered", { number: index + 1 })}</p>
-                </div>
+                <PhotoPickField
+                  name={`helper_photo_${index}`}
+                  displayName={helper?.displayName ?? "?"}
+                  currentUrl={helper?.avatarUrl ?? null}
+                  caption={helper ? helper.displayName : t("setupWizard.helpers.numbered", { number: index + 1 })}
+                  labels={photos}
+                />
                 {helper ? <input type="hidden" name={`helper_${index}`} value={helper.id} /> : null}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label={t("setupWizard.name")} name={`helper_name_${index}`} defaultValue={helper?.displayName ?? ""} autoComplete="off" />
-                  <ComboboxField
-                    label={t("setupWizard.helpers.role")}
-                    name={`helper_role_${index}`}
-                    options={[...HELPER_ROLES]}
-                    optionLabels={roleWords}
-                    defaultValue={helper?.occupation ?? undefined}
-                    emptyLabel={t("setupWizard.notRecorded")}
-                    addNewLabel={t("setupWizard.somethingElse")}
-                    chooseExistingLabel={t("common.chooseExisting")}
-                    newValuePlaceholder={t("setupWizard.helpers.rolePlaceholder")}
-                  />
-                </div>
+                <Field label={t("setupWizard.name")} name={`helper_name_${index}`} defaultValue={helper?.displayName ?? ""} autoComplete="off" />
+                <NicknameField nicknameName={`helper_nickname_${index}`} preferredName={`helper_preferred_${index}`} nickname={helper?.nickname ?? null} preferred={helper?.nicknamePreferred ?? false} words={words} />
+                <BirthdayField name={`helper_dob_${index}`} value={helper?.dateOfBirth ?? null} words={words} />
+                <HelperRolesField name={`helper_role_${index}`} occupation={helper?.occupation ?? null} roleWords={roleWords} words={words} />
                 <HelperHours prefix={`helper_${index}_`} windows={windows} words={words} />
               </Card>
             );
@@ -511,11 +600,30 @@ export function PetsAndHelpScreen({ snapshot, backTo, words }: { snapshot: Onboa
           <AddRowButton intent="add_helper">{helperRows > 0 ? t("setupWizard.helpers.addAnother") : t("setupWizard.helpers.addFirst")}</AddRowButton>
         </section>
 
+        <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         <SubmitButton className="w-full" pendingLabel={t("common.saving")}>
           {t("common.next")}
         </SubmitButton>
       </OnboardingForm>
     </OnboardingFrame>
+  );
+}
+
+/**
+ * Everything a helper does, ticked (a helper is often a maid and a cook),
+ * plus one more in the household's own words when none of these fits
+ * (rule 20). Saved together as "Maid, Cook".
+ */
+function HelperRolesField({ name, occupation, roleWords, words }: { name: string; occupation: string | null; roleWords: Record<string, string>; words: SetupWords }) {
+  const { t } = words;
+  const said = (occupation ?? "").split(",").map((role) => role.trim()).filter(Boolean);
+  const known = said.filter((role) => (HELPER_ROLES as readonly string[]).includes(role));
+  const other = said.filter((role) => !(HELPER_ROLES as readonly string[]).includes(role)).join(", ");
+  return (
+    <div className="space-y-2">
+      <ChoiceChips legend={t("setupWizard.helpers.role")} name={name} type="checkbox" options={HELPER_ROLES.map((role) => ({ value: role, label: roleWords[role] ?? role }))} defaultValue={known} />
+      <Field label={t("setupWizard.helpers.roleOther")} name={`${name}_other`} defaultValue={other} autoComplete="off" maxLength={40} placeholder={t("setupWizard.helpers.rolePlaceholder")} />
+    </div>
   );
 }
 

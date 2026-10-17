@@ -71,6 +71,8 @@ export type HouseholdMembership = {
   household: Household;
   memberId: string;
   displayName: string;
+  /** Their nickname when the household calls them by it, else null (greetings use it). */
+  preferredName?: string | null;
   memberType: MemberType;
   /** ISO date, when known. Drives the age band; never stored as an age. */
   dateOfBirth?: string | null;

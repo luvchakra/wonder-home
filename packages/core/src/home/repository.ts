@@ -10,6 +10,7 @@ import type { DeviceSignal, SignalKind } from "./signals";
 import { dryingConditions, type DryingConditions, type WeatherWindow } from "./weather";
 import { householdWeather, type HouseholdWeather } from "./weather-service";
 import { invalidatesContext } from "../context/invalidation";
+import { signAvatarPaths } from "../identity/households";
 
 /**
  * Reading and writing the home domain (module 13).
@@ -235,7 +236,7 @@ export async function listPets(
 ): Promise<Pet[]> {
   let query = supabase
     .from("pets")
-    .select("id, name, species, date_of_birth, gender, vet_name, vet_contact, notes, active")
+    .select("id, name, species, date_of_birth, gender, vet_name, vet_contact, notes, active, photo_path")
     .eq("household_id", householdId)
     .order("name", { ascending: true });
   if (!options?.includeRetired) query = query.eq("active", true);
@@ -243,7 +244,13 @@ export async function listPets(
   const { data, error } = await query;
   if (error) throw new Error(`listPets failed: ${error.code ?? "unknown"}`);
 
-  return (data ?? []).map((row: Row) => ({
+  const rows = (data ?? []) as Row[];
+  const photoUrls = await signAvatarPaths(
+    supabase,
+    rows.map((row) => row.photo_path as string | null).filter((path): path is string => Boolean(path)),
+  );
+
+  return rows.map((row: Row) => ({
     id: row.id as string,
     name: row.name as string,
     species: row.species as string,
@@ -253,6 +260,7 @@ export async function listPets(
     vetContact: (row.vet_contact as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     active: row.active as boolean,
+    photoUrl: row.photo_path ? (photoUrls.get(row.photo_path as string) ?? null) : null,
   }));
 }
 
@@ -299,6 +307,8 @@ export type UpdatePetInput = {
   vetName?: string | null;
   vetContact?: string | null;
   notes?: string | null;
+  /** The storage object path just uploaded to the `avatars` bucket, or null to clear the photo. */
+  photoPath?: string | null;
 };
 
 async function updatePetImpl(
@@ -315,6 +325,7 @@ async function updatePetImpl(
   if (input.vetName !== undefined) patch.vet_name = input.vetName;
   if (input.vetContact !== undefined) patch.vet_contact = input.vetContact;
   if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.photoPath !== undefined) patch.photo_path = input.photoPath;
   if (Object.keys(patch).length === 0) return;
 
   const { error } = await supabase.from("pets").update(patch).eq("id", petId).eq("household_id", householdId);

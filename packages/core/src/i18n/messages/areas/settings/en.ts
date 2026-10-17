@@ -643,4 +643,9 @@ export const settingsEn = {
   "settingsHome.avatar.uploading": "Uploading…",
   "settingsHome.avatar.remove": "Remove photo",
   "settingsHome.avatar.removing": "Removing…",
+  "settingsPage.geminiFix.not_google": "Change the AI provider",
+  "settingsPage.geminiFix.no_consent": "Review what may be shared",
+  "settingsPage.geminiFix.not_entitled": "See plans",
+  "settingsPage.returnTo.hometalk": "Back to HomeTalk",
+  "settingsPage.returnTo.previous": "Back to where you were",
 } as const;

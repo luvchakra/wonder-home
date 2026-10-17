@@ -1,10 +1,12 @@
 "use server";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { ApiError } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
+import { loadOnboarding } from "@wonderhome/core/household/onboarding-repository";
 import { isHouseholdAdmin, listMemberships } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import {
@@ -190,7 +192,8 @@ export async function saveMemberLanguagesAction(_previous: LocaleActionState, fo
     return problem(error);
   }
   revalidatePath("/", "layout");
-  redirect("/settings/language-region/members?saved=1");
+  // Saved: back to Language & Region, which says so, rather than the same form again.
+  redirect("/settings/language-region?saved=members");
 }
 
 // ---------------------------------------------------------------------------
@@ -217,7 +220,7 @@ export async function localeSetupAction(_previous: LocaleActionState, formData: 
     await updateLocaleSetup(supabase, membership, { status: "skipped", step });
     await recordLocaleEvent(supabase, { householdId, event: "localization_setup_skipped", step });
     revalidatePath("/", "layout");
-    redirect("/");
+    redirect(await afterLocaleSetup(supabase, membership));
   }
   if (intent === "back") {
     const previous = previousLocaleStep(step, admin);
@@ -266,11 +269,21 @@ export async function localeSetupAction(_previous: LocaleActionState, formData: 
     await updateLocaleSetup(supabase, membership, { status: "completed", step: "review" });
     await recordLocaleEvent(supabase, { householdId, event: "localization_setup_completed", step });
     revalidatePath("/", "layout");
-    redirect("/");
+    redirect(await afterLocaleSetup(supabase, membership));
   }
   await updateLocaleSetup(supabase, membership, { status: "in_progress", step: next });
   revalidatePath("/", "layout");
   redirect(`/onboarding/personalize?step=${next}`);
+}
+
+/**
+ * Where to go once language and region are settled: back into family setup
+ * when an Admin is part-way through it (it asks for these first), else Home.
+ */
+async function afterLocaleSetup(supabase: SupabaseClient, membership: HouseholdMembership): Promise<string> {
+  if (!isHouseholdAdmin(membership)) return "/";
+  const state = await loadOnboarding(supabase, membership.household.id).catch(() => null);
+  return state?.status === "in_progress" ? `/onboarding?step=${state.step === "welcome" ? "basics" : state.step}` : "/";
 }
 
 /** "Not now" on Home's card: put away for good. Settings still has everything. */

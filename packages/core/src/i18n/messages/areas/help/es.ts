@@ -56,13 +56,13 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.first-week.title": "Configurar tu hogar",
   "help.guide.first-week.summary": "Una configuración guiada para el Admin y una tarjeta de progreso en Inicio hasta que esté hecha.",
   "help.guide.first-week.body.1":
-    "Quien crea el hogar recorre una configuración guiada: lo básico del hogar, los adultos, los niños, las mascotas y la ayuda doméstica, un conjunto de responsabilidades sugeridas para revisar y algunas preguntas guiadas. Los pasos que no aplican —sin niños, sin mascotas— se omiten.",
+    "Quien crea el hogar pasa por una configuración guiada. Empieza por el idioma, la región, la moneda y la zona horaria, para que todo lo demás esté en tus propias palabras. Después vienen los datos básicos del hogar y su dirección, los adultos, los niños, las mascotas y el personal de ayuda, unas responsabilidades sugeridas para revisar y algunas preguntas guiadas. Los pasos que no aplican, como no tener niños o mascotas, se saltan.",
   "help.guide.first-week.body.2":
     "Puedes parar en cualquier momento. Inicio muestra una tarjeta de Configuración del hogar con un anillo de progreso y el siguiente paso, y Continuar retoma exactamente donde lo dejaste.",
   "help.guide.first-week.body.3":
     "El porcentaje es aritmética sobre hechos que existen —una factura añadida, una responsabilidad asignada, la fecha de nacimiento de un niño registrada—, no un recuento de casillas marcadas. Los pasos que no aplican a tu hogar quedan fuera del total, así que todos los hogares pueden llegar al 100%. La lista completa está siempre en Gestionar el hogar.",
   "help.guide.first-week.body.4":
-    "Cada persona tiene además una configuración propia, breve y opcional, para el idioma y la región, que puede terminar más tarde desde Ajustes.",
+    "Por el camino puedes añadir la foto, el apodo y la fecha de nacimiento de cada persona. Si marcas Nombre preferido, WonderHome las saluda por el apodo. Una fecha de nacimiento pone su cumpleaños en el calendario familiar, y si la cambias después, el cumpleaños se mueve. La dirección se busca en Google Maps donde tu WonderHome lo tenga activado, o se escribe. Solo la ven los adultos del hogar. Cada responsabilidad tiene un Principal y un Suplente para cuando no esté. Los demás tienen su propia configuración breve de idioma, que pueden terminar más tarde en Ajustes.",
 
   "help.guide.accounts.title": "Iniciar sesión y contraseñas",
   "help.guide.accounts.summary": "Correo y contraseña, un enlace para restablecerla y Google donde esté activado.",
@@ -111,7 +111,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.voice.body.2":
     "La conversación en directo es manos libres: WonderHome escucha, responde en voz alta y sigue hasta que la terminas, y puedes pausarla y reanudarla. Funciona con la voz propia de WonderHome o, donde tu hogar lo ha elegido y está disponible, con Gemini Live. El redactor muestra cuál está respondiendo y te deja cambiar.",
   "help.guide.voice.body.3":
-    "Ajustes → Voz elige el servicio de voz (el de tu navegador o uno más preciso), la voz y cómo escucha. Cuando una opción no está disponible para tu hogar, se muestra con el motivo en lugar de ofrecerse rota.",
+    "Ajustes → Voz elige el servicio de voz (el de tu navegador o uno más preciso), la voz y cómo escucha. Lo que no está disponible para tu hogar se muestra con el motivo, en lugar de ofrecerse roto. Si un Admin puede cambiar ese motivo, por ejemplo que Gemini Live necesita una clave de IA de Google, un enlace lleva directo al ajuste y te devuelve al guardar.",
   "help.guide.voice.body.4":
     "Los asistentes de voz como Alexa o Gemini Voice se pueden vincular a una persona desde Ajustes → Asistentes de voz cuando estén disponibles para tu WonderHome. Un asistente vinculado habla como esa persona y solo ve lo que ella puede ver, y nunca puede pagar ni hacer un pedido.",
 
@@ -222,7 +222,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.family.summary": "Todos en un mismo lugar, mascotas incluidas, y tiempo reservado para estar juntos.",
   "help.guide.family.body.1":
     "Familia muestra a todos, con los datos de cada persona a un toque. Tu perfil y tu foto los editas en Ajustes; un Admin puede editar los de cualquiera. “La familia me llama” registra cómo llama la familia a una persona —Papá, Nani— para que WonderHome pueda hablar de la gente como lo haces tú.",
-  "help.guide.family.body.2": "Aquí las mascotas son parte de la familia, y sus cuidados se siguen junto a los de todos los demás.",
+  "help.guide.family.body.2": "Aquí las mascotas son parte de la familia, con foto, fecha de nacimiento y su propio cuidado junto al de los demás.",
   "help.guide.family.body.3":
     "Los eventos familiares —cumpleaños, salidas, visitas, citas— pueden marcarse como tiempo protegido, y WonderHome nunca programa nada encima. Lo que necesita respuesta, como un choque de horarios o un regalo aún por resolver, aparece en la lista hasta que se resuelve.",
 
@@ -274,7 +274,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.privacy.summary": "Qué se guarda, quién puede verlo y cómo llevártelo o pedir que se borre.",
   "help.guide.privacy.body.1": "Los datos de tu hogar no se usan para entrenar modelos por defecto.",
   "help.guide.privacy.body.2":
-    "Quién puede ver qué se decide por detrás, antes de que nada llegue a un dispositivo. Que una pantalla oculte algo es presentación; nunca es lo que lo mantiene privado.",
+    "Quién puede ver qué se decide por detrás, antes de que nada llegue a un dispositivo. Que una pantalla oculte algo es presentación; nunca es lo que lo mantiene privado. Donde introduces datos personales, como una dirección, una fecha de nacimiento o una foto, una línea breve enlaza a cómo los protegemos.",
   "help.guide.privacy.body.3":
     "Ajustes → Privacidad y seguridad te permite descargar una copia de tus datos tras confirmar tu contraseña. También puedes pedir que se borren tus datos: hay una cuenta atrás de 30 días que puedes cancelar, y lo que comparte el hogar, como el manual y lo que se pagó, se queda con el hogar. La persona propietaria del hogar primero cede ese papel a otra persona.",
   "help.guide.privacy.body.4":

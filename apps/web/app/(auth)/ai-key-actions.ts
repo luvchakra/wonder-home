@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { clearHouseholdKey, setHouseholdKey } from "@wonderhome/core/ai/credentials";
@@ -9,6 +10,7 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
+import { safeReturnTo } from "../_lib/return-to";
 import type { ActionState } from "./actions";
 
 /**
@@ -50,6 +52,9 @@ export async function saveAiKey(_previous: ActionState, formData: FormData): Pro
 
   revalidatePath("/settings");
   revalidatePath("/settings/ai");
+  // Sent here to fix something (HomeTalk's Gemini Live, say): back where they were.
+  const back = safeReturnTo(formData.get("returnTo"));
+  if (back) redirect(back);
   return { notice: "Saved. Your household's own key is in use from now on." };
 }
 

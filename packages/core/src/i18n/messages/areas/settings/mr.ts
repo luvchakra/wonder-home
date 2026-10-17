@@ -623,4 +623,9 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsHome.avatar.uploading": "अपलोड होत आहे…",
   "settingsHome.avatar.remove": "फोटो काढा",
   "settingsHome.avatar.removing": "काढत आहे…",
+  "settingsPage.geminiFix.not_google": "AI प्रदाता बदला",
+  "settingsPage.geminiFix.no_consent": "काय शेअर करता येईल ते पाहा",
+  "settingsPage.geminiFix.not_entitled": "प्लॅन पाहा",
+  "settingsPage.returnTo.hometalk": "HomeTalk वर परत",
+  "settingsPage.returnTo.previous": "जिथे होता तिथे परत",
 };

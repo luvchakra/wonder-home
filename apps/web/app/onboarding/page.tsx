@@ -13,6 +13,7 @@ import {
 import { loadOnboarding, loadOnboardingSnapshot, type OnboardingState } from "@wonderhome/core/household/onboarding-repository";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 
+import { homeMapImage, placeSearchAvailable } from "../_lib/places";
 import { requireSession } from "../_lib/session";
 import { AdultsScreen, BasicsScreen, ChildrenScreen, OverviewScreen, PetsAndHelpScreen, WelcomeScreen } from "./screens-people";
 import { DoneScreen, GuidedScreen, ReviewScreen, SuggestionsScreen, SummaryScreen } from "./screens-plan";
@@ -52,21 +53,22 @@ export default async function OnboardingPage({
   const step: OnboardingStep = requested ?? state.step;
   const snapshot = await loadOnboardingSnapshot(supabase, membership.household, state);
   const composition = snapshot.state.composition;
-  const firstName = membership.displayName.split(/\s+/)[0] ?? membership.displayName;
+  const firstName = membership.preferredName ?? membership.displayName.split(/\s+/)[0] ?? membership.displayName;
   // Every word on these screens is in the Admin's own language (story 22-004).
   const words = { language: session.locale.preferences.language, dir: session.locale.preferences.dir, t: session.locale.t };
+  const places = { householdId: membership.household.id, available: placeSearchAvailable() };
 
   switch (step) {
     case "welcome":
       return <WelcomeScreen firstName={firstName} words={words} />;
     case "basics":
-      return <BasicsScreen snapshot={snapshot} words={words} />;
+      return <BasicsScreen snapshot={snapshot} places={places} mapImage={await homeMapImage(snapshot.address?.location ?? null)} words={words} />;
     case "overview":
       return <OverviewScreen snapshot={snapshot} words={words} />;
     case "adults":
       return <AdultsScreen snapshot={snapshot} selfId={membership.memberId} backTo={previousStep("adults", composition)} words={words} />;
     case "children":
-      return <ChildrenScreen snapshot={snapshot} words={words} />;
+      return <ChildrenScreen snapshot={snapshot} places={places} words={words} />;
     case "pets":
       return <PetsAndHelpScreen snapshot={snapshot} backTo={previousStep("pets", composition)} words={words} />;
     case "suggestions":
@@ -83,7 +85,7 @@ export default async function OnboardingPage({
       // Set aside for this visit only: "Maybe later" never becomes "never".
       const skipped = (params.skip ?? "").split(",").filter((token) => /^[a-z_]{1,40}$/.test(token));
       const question = guidedQuestions(snapshot.facts, skipped)[0] ?? null;
-      return <GuidedScreen snapshot={snapshot} question={question} skipped={skipped} skipToken={question ? questionToken(question) : null} words={words} />;
+      return <GuidedScreen snapshot={snapshot} question={question} skipped={skipped} skipToken={question ? questionToken(question) : null} places={places} words={words} />;
     }
     case "done":
       return <DoneScreen snapshot={snapshot} words={words} />;

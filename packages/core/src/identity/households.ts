@@ -42,6 +42,8 @@ type HouseholdRow = {
 type MembershipRow = {
   id: string;
   display_name: string;
+  nickname?: string | null;
+  nickname_preferred?: boolean | null;
   member_type: MemberType;
   date_of_birth?: string | null;
   first_seen_at?: string | null;
@@ -124,7 +126,7 @@ export const listMemberships = cache(async (supabase: SupabaseClient): Promise<H
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, member_type, date_of_birth, first_seen_at, language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id, region, currency, measurement_system, default_language), household_roles(role, created_at)",
+      "id, display_name, nickname, nickname_preferred, member_type, date_of_birth, first_seen_at, language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id, region, currency, measurement_system, default_language), household_roles(role, created_at)",
     )
     .eq("status", "active")
     .eq("profile_id", userId);
@@ -142,6 +144,7 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
     {
       memberId: row.id,
       displayName: row.display_name,
+      preferredName: row.nickname_preferred && row.nickname?.trim() ? row.nickname.trim() : null,
       memberType: row.member_type,
       dateOfBirth: row.date_of_birth ?? null,
       roles: (row.household_roles ?? []).map((entry) => entry.role),
@@ -214,6 +217,8 @@ export type HouseholdMember = {
   isOwner: boolean;
   dateOfBirth: string | null;
   nickname: string | null;
+  /** The household calls them by their nickname (greetings, Family); their name stays the record. */
+  nicknamePreferred?: boolean;
   relationship: string | null;
   occupation: string | null;
   schoolOrWorkLocation: string | null;
@@ -232,6 +237,11 @@ export type HouseholdMember = {
   /** Whether they sign in themselves — false for a child, a helper, or an adult added during setup who has not accepted an invitation yet. */
   hasAccount?: boolean;
 };
+
+/** What the household calls someone: their nickname when that is what they go by, else their name. */
+export function calledName(member: { displayName: string; nickname?: string | null; nicknamePreferred?: boolean }): string {
+  return member.nicknamePreferred && member.nickname?.trim() ? member.nickname.trim() : member.displayName;
+}
 
 export const WORK_ARRANGEMENTS = ["office", "home", "hybrid", "not_working"] as const;
 export type WorkArrangement = (typeof WORK_ARRANGEMENTS)[number];
@@ -263,6 +273,7 @@ export type MemberProfileUpdate = {
   displayName?: string;
   dateOfBirth?: string | null;
   nickname?: string | null;
+  nicknamePreferred?: boolean;
   relationship?: string | null;
   occupation?: string | null;
   schoolOrWorkLocation?: string | null;
@@ -278,7 +289,7 @@ export type MemberProfileUpdate = {
 };
 
 const MEMBER_SELECT =
-  "id, profile_id, display_name, member_type, status, date_of_birth, nickname, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, work_arrangement, age_years, age_recorded_on, household_roles(role)";
+  "id, profile_id, display_name, member_type, status, date_of_birth, nickname, nickname_preferred, relationship, occupation, school_or_work_location, special_occasion_label, special_occasion_date, gender, notes, avatar_path, work_arrangement, age_years, age_recorded_on, household_roles(role)";
 
 type MemberRow = {
   id: string;
@@ -288,6 +299,7 @@ type MemberRow = {
   status: string;
   date_of_birth: string | null;
   nickname: string | null;
+  nickname_preferred?: boolean | null;
   relationship: string | null;
   occupation: string | null;
   school_or_work_location: string | null;
@@ -312,6 +324,7 @@ function toHouseholdMember(row: MemberRow, ownerMemberId: string | null, avatarU
     isOwner: row.id === ownerMemberId,
     dateOfBirth: row.date_of_birth,
     nickname: row.nickname,
+    nicknamePreferred: Boolean(row.nickname_preferred && row.nickname),
     relationship: row.relationship,
     occupation: row.occupation,
     schoolOrWorkLocation: row.school_or_work_location,
@@ -360,7 +373,8 @@ export async function listMembers(
   return rows.map((row) => toHouseholdMember(row, ownerMemberId, row.avatar_path ? (avatarUrlByPath.get(row.avatar_path) ?? null) : null));
 }
 
-async function signAvatarPaths(supabase: SupabaseClient, paths: string[]): Promise<Map<string, string>> {
+/** Short-lived URLs for photos in the private `avatars` bucket, one round trip for all of them. Members' and pets' photos alike. */
+export async function signAvatarPaths(supabase: SupabaseClient, paths: string[]): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   if (paths.length === 0) return result;
 
@@ -399,6 +413,7 @@ export async function updateMemberProfile(
   if (input.displayName !== undefined) patch.display_name = input.displayName;
   if (input.dateOfBirth !== undefined) patch.date_of_birth = input.dateOfBirth;
   if (input.nickname !== undefined) patch.nickname = input.nickname;
+  if (input.nicknamePreferred !== undefined) patch.nickname_preferred = input.nicknamePreferred;
   if (input.relationship !== undefined) patch.relationship = input.relationship;
   if (input.occupation !== undefined) patch.occupation = input.occupation;
   if (input.schoolOrWorkLocation !== undefined) patch.school_or_work_location = input.schoolOrWorkLocation;

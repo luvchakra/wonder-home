@@ -233,7 +233,7 @@ export function HomeDashboard({ session }: { session: Session }) {
   const { t } = session.locale;
   const timezone = membership.household.timezone;
   const now = new Date();
-  const firstName = view.displayName.split(" ")[0] ?? view.displayName;
+  const firstName = membership.preferredName ?? view.displayName.split(" ")[0] ?? view.displayName;
 
   // The greeting needs nothing from the database, so it is on screen in the
   // first flush; everything below it streams in as its queries return.

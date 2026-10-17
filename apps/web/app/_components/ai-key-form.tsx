@@ -43,12 +43,15 @@ export function AiKeyForm({
   remove,
   configured,
   labels,
+  returnTo = null,
 }: {
   householdId: string;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
   remove: (state: ActionState, formData: FormData) => Promise<ActionState>;
   configured: boolean;
   labels: AiKeyFormLabels;
+  /** Where to go back to once saved, when someone was sent here to fix something. */
+  returnTo?: string | null;
 }) {
   const [saveState, saveAction] = useActionState(save, {});
   const [removeState, removeAction] = useActionState(remove, {});
@@ -61,6 +64,7 @@ export function AiKeyForm({
 
       <form action={saveAction} className="space-y-3">
         <input type="hidden" name="householdId" value={householdId} />
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
         <div className="space-y-1.5">
           <label htmlFor="provider" className="block text-sm font-medium">{labels.provider}</label>
           <select

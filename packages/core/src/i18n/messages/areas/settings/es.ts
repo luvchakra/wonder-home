@@ -630,4 +630,9 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsHome.avatar.uploading": "Subiendo…",
   "settingsHome.avatar.remove": "Quitar foto",
   "settingsHome.avatar.removing": "Quitando…",
+  "settingsPage.geminiFix.not_google": "Cambiar el proveedor de IA",
+  "settingsPage.geminiFix.no_consent": "Revisar qué se puede compartir",
+  "settingsPage.geminiFix.not_entitled": "Ver planes",
+  "settingsPage.returnTo.hometalk": "Volver a HomeTalk",
+  "settingsPage.returnTo.previous": "Volver a donde estabas",
 };

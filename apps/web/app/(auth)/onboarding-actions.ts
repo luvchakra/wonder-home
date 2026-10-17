@@ -40,7 +40,11 @@ import {
 } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { log } from "@wonderhome/core/observability/logger";
+import { PlacesUnavailableError } from "@wonderhome/core/places/provider";
 import { saveEnrolment } from "@wonderhome/core/school/enrolments";
+
+import { deletePhoto, memberPhotoPath, petPhotoPath, postedPhoto, storePhoto, wantsPhotoRemoved } from "../_lib/photos";
+import { pickedPlace, saveAddressFromForm } from "../_lib/places";
 
 /**
  * Household setup (story 02-009). Every action here is an Admin's, and every
@@ -95,6 +99,36 @@ function problem(error: unknown, fallback: string): OnboardingActionState {
   return { error: fallback };
 }
 
+/** A nickname and whether it is what the household calls them. Preferring an empty nickname means nothing. */
+function nicknameFrom(formData: FormData, nicknameKey: string, preferredKey: string): { nickname: string | null; nicknamePreferred: boolean } {
+  const nickname = text(formData, nicknameKey, 40) || null;
+  return { nickname, nicknamePreferred: Boolean(nickname) && formData.get(preferredKey) === "on" };
+}
+
+/** A photo chosen on a person's card, stored and recorded once they exist; or a saved photo removed. */
+async function saveMemberPhoto(context: Context, formData: FormData, field: string, memberId: string): Promise<void> {
+  const { supabase, membership } = context;
+  const path = memberPhotoPath(membership.household.id, memberId);
+  const photo = await postedPhoto(formData, field);
+  if (photo) {
+    await storePhoto(supabase, path, photo);
+    await updateMemberProfile(supabase, membership, { memberId, avatarPath: path });
+  } else if (wantsPhotoRemoved(formData, field)) {
+    await deletePhoto(supabase, path);
+    await updateMemberProfile(supabase, membership, { memberId, avatarPath: null });
+  }
+}
+
+/** A date of birth from a date field: a real day, not in the future. */
+function pastDate(formData: FormData, key: string): string | null {
+  const value = text(formData, key, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const day = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== value) return null;
+  if (day.getTime() > Date.now() || day.getUTCFullYear() < 1900) throw ApiError.badRequest("A date of birth needs to be a real day, and not in the future.");
+  return value;
+}
+
 function sameName(a: string, b: string): boolean {
   return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
 }
@@ -137,6 +171,14 @@ async function goTo(context: Context, step: OnboardingStep, options: { category?
 export async function moveAction(_previous: OnboardingActionState, formData: FormData): Promise<OnboardingActionState> {
   const context = await adminContext();
   const to = stepFrom(formData.get("to")) ?? "basics";
+  // Language, region, currency and time zone come first: everything after
+  // this is said in the language they choose. Family setup waits at "basics"
+  // and the personalize steps hand back to it when they finish.
+  if (to === "basics" && !context.membership.locale?.setup.status) {
+    const { supabase, membership } = context;
+    await updateOnboarding(supabase, { householdId: membership.household.id, memberId: membership.memberId, step: "basics", status: "in_progress" });
+    redirect("/onboarding/personalize");
+  }
   return goTo(context, to, { category: categoryFrom(formData.get("category")) });
 }
 
@@ -179,7 +221,9 @@ export async function saveBasicsAction(_previous: OnboardingActionState, formDat
   });
   try {
     await updateOnboarding(supabase, { householdId: membership.household.id, memberId: membership.memberId, composition });
+    await saveAddressFromForm(supabase, membership, formData);
   } catch (error) {
+    if (error instanceof PlacesUnavailableError) return { error: "That address could not be read from Google Maps just now. Try again, or type it in." };
     return problem(error, "We could not save that. Please try again.");
   }
   await recordOnboardingEvent(supabase, { householdId: membership.household.id, event: "household_composition_completed", step: "basics", detail: composition });
@@ -231,13 +275,18 @@ export async function saveAdultsAction(_previous: OnboardingActionState, formDat
       const workArrangement = (WORK_ARRANGEMENTS as readonly string[]).includes(work) ? (work as WorkArrangement) : null;
       const id = text(formData, `member_${index}`, 40);
       const existing = adults.find((adult) => adult.id === id) ?? adults.find((adult) => sameName(adult.displayName, name));
-      if (existing) {
-        await updateMemberProfile(supabase, membership, { memberId: existing.id, displayName: name, relationship, workArrangement });
-      } else {
+      const called = nicknameFrom(formData, `nickname_${index}`, `preferred_${index}`);
+      let adultId = existing?.id;
+      if (!adultId) {
         const added = await createAdultMember(supabase, membership, { displayName: name, relationship, workArrangement });
-        adults.push({ id: added.memberId, displayName: name });
+        adultId = added.memberId;
+        adults.push({ id: adultId, displayName: name });
         await recordOnboardingEvent(supabase, { householdId, event: "member_added", step: "adults", detail: { kind: "adult" } });
       }
+      // A birthday event follows the date of birth on its own (wh.sync_member_occasions).
+      const dateOfBirth = pastDate(formData, `dob_${index}`);
+      await updateMemberProfile(supabase, membership, { memberId: adultId, displayName: name, relationship, workArrangement, ...called, ...(dateOfBirth ? { dateOfBirth } : {}) });
+      await saveMemberPhoto(context, formData, `photo_${index}`, adultId);
     }
   } catch (error) {
     return problem(error, "We could not save everyone's details. Please try again.");
@@ -273,25 +322,60 @@ export async function saveChildrenAction(_previous: OnboardingActionState, formD
         children.push({ id: childId, name });
         await recordOnboardingEvent(supabase, { householdId, event: "member_added", step: "children", detail: { kind: "child" } });
       }
+      const dateOfBirth = pastDate(formData, `dob_${index}`);
       const ageText = text(formData, `age_${index}`, 3);
       const age = ageText === "" ? null : Number(ageText);
       await updateMemberProfile(supabase, membership, {
         memberId: childId,
         displayName: name,
+        ...nicknameFrom(formData, `nickname_${index}`, `preferred_${index}`),
         gender: text(formData, `gender_${index}`, 40) || null,
         // A date of birth, when the family gives one elsewhere, always wins over this.
-        ...(age !== null && Number.isInteger(age) && age >= 0 && age <= 17 ? { ageYears: age } : {}),
+        ...(dateOfBirth ? { dateOfBirth } : {}),
+        ...(!dateOfBirth && age !== null && Number.isInteger(age) && age >= 0 && age <= 17 ? { ageYears: age } : {}),
       });
-      const school = text(formData, `school_${index}`, 120);
-      if (school) await saveEnrolment(supabase, { householdId, childMemberId: childId, schoolName: school });
+      await saveMemberPhoto(context, formData, `photo_${index}`, childId);
+      await saveSchool(context, formData, childId, `school_${index}`, `school_place_${index}`, `school_session_${index}`, snapshot.schools.get(childId) ?? null);
     }
   } catch (error) {
+    if (error instanceof PlacesUnavailableError) return { error: "That school could not be read from Google Maps just now. Try again, or type its name in." };
     return problem(error, "We could not save the children's details. Please try again.");
   }
 
   if (formData.get("intent") === "add_row") return addRow(context, "children", "children", rows);
   context = await settleComposition(context, "children", named);
   return goTo(context, jumpFrom(formData) ?? nextStep("children", context.state.composition));
+}
+
+/**
+ * A child's school from the children step or the guided question: a school
+ * picked from the search is read again from Google Maps by its id; one typed
+ * is saved by name. Either way it becomes the child's current school.
+ */
+async function saveSchool(
+  context: Context,
+  formData: FormData,
+  childId: string,
+  textKey: string,
+  placeKey: string,
+  sessionKey: string,
+  current: { schoolName: string; placeId: string | null } | null,
+): Promise<boolean> {
+  const { supabase, membership } = context;
+  const householdId = membership.household.id;
+  const placeId = text(formData, placeKey, 300);
+  const typed = text(formData, textKey, 120);
+  if (placeId && current?.placeId === placeId) return true;
+  if (placeId) {
+    const place = await pickedPlace(membership, placeId, formData.get(sessionKey));
+    if (!place) throw new PlacesUnavailableError("unavailable");
+    await saveEnrolment(supabase, { householdId, childMemberId: childId, schoolName: place.name, place, only: true });
+    return true;
+  }
+  if (!typed) return false;
+  if (current && sameName(current.schoolName, typed)) return true;
+  await saveEnrolment(supabase, { householdId, childMemberId: childId, schoolName: typed, place: null, only: true });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +397,15 @@ function helperWindows(formData: FormData, prefix: string): { dayOfWeek: number;
   return [...new Set(days)].map((dayOfWeek) => ({ dayOfWeek, startTime: start, endTime: end }));
 }
 
+/** Everything a helper does, as ticked (plus one in their own words), kept as "Maid, Cook". */
+function helperRoles(formData: FormData, key: string): string | null {
+  const said = [...formData.getAll(key), formData.get(`${key}_other`)]
+    .map((value) => (typeof value === "string" ? value.trim().slice(0, 40) : ""))
+    .filter(Boolean);
+  const unique = [...new Map(said.map((role) => [role.toLocaleLowerCase(), role])).values()];
+  return unique.join(", ").slice(0, 100) || null;
+}
+
 export async function savePetsAndHelpAction(_previous: OnboardingActionState, formData: FormData): Promise<OnboardingActionState> {
   let context = await adminContext();
   const { supabase, membership } = context;
@@ -323,20 +416,34 @@ export async function savePetsAndHelpAction(_previous: OnboardingActionState, fo
   let petsNamed = 0;
   let helpersNamed = 0;
   try {
-    const pets = (await listPets(supabase, householdId)).map((pet) => ({ id: pet.id, name: pet.name, species: pet.species }));
+    const pets = (await listPets(supabase, householdId)).map((pet) => ({ id: pet.id, name: pet.name, species: pet.species, dateOfBirth: pet.dateOfBirth ?? null }));
     for (let index = 0; index < petRows; index += 1) {
       const name = text(formData, `pet_name_${index}`, 60);
       if (!name) continue;
       petsNamed += 1;
       const species = text(formData, `pet_species_${index}`, 40) || "Other";
       const id = text(formData, `pet_${index}`, 40);
+      const dateOfBirth = pastDate(formData, `pet_dob_${index}`);
       const existing = pets.find((pet) => pet.id === id) ?? pets.find((pet) => sameName(pet.name, name));
+      let petId = existing?.id;
       if (existing) {
-        if (existing.name !== name || existing.species !== species) await updatePet(supabase, householdId, existing.id, { name, species });
+        if (existing.name !== name || existing.species !== species || existing.dateOfBirth !== dateOfBirth) {
+          await updatePet(supabase, householdId, existing.id, { name, species, dateOfBirth });
+        }
       } else {
-        const added = await createPet(supabase, { householdId, name, species });
-        pets.push({ id: added.id, name, species });
+        const added = await createPet(supabase, { householdId, name, species, dateOfBirth });
+        petId = added.id;
+        pets.push({ id: added.id, name, species, dateOfBirth });
         await recordOnboardingEvent(supabase, { householdId, event: "pet_added", step: "pets", detail: { species: species.slice(0, 20) } });
+      }
+      const photo = await postedPhoto(formData, `pet_photo_${index}`);
+      const path = petPhotoPath(householdId, petId!);
+      if (photo) {
+        await storePhoto(supabase, path, photo);
+        await updatePet(supabase, householdId, petId!, { photoPath: path });
+      } else if (wantsPhotoRemoved(formData, `pet_photo_${index}`)) {
+        await deletePhoto(supabase, path);
+        await updatePet(supabase, householdId, petId!, { photoPath: null });
       }
     }
 
@@ -353,7 +460,14 @@ export async function savePetsAndHelpAction(_previous: OnboardingActionState, fo
         helpers.push({ id: helperId, name });
         await recordOnboardingEvent(supabase, { householdId, event: "helper_added", step: "pets" });
       }
-      await updateMemberProfile(supabase, membership, { memberId: helperId, displayName: name, occupation: text(formData, `helper_role_${index}`, 60) || null });
+      await updateMemberProfile(supabase, membership, {
+        memberId: helperId,
+        displayName: name,
+        occupation: helperRoles(formData, `helper_role_${index}`),
+        ...nicknameFrom(formData, `helper_nickname_${index}`, `helper_preferred_${index}`),
+        ...((dob) => (dob ? { dateOfBirth: dob } : {}))(pastDate(formData, `helper_dob_${index}`)),
+      });
+      await saveMemberPhoto(context, formData, `helper_photo_${index}`, helperId);
       const windows = helperWindows(formData, `helper_${index}_`);
       if (windows) await replaceAvailabilityPattern(supabase, { householdId, memberId: helperId, windows });
     }
@@ -373,9 +487,8 @@ export async function savePetsAndHelpAction(_previous: OnboardingActionState, fo
 // Responsibilities
 // ---------------------------------------------------------------------------
 
-/** "primary:backup" from an owner picker, checked against who is actually in the household. */
-function ownersFrom(value: string, eligible: ReadonlySet<string>): { primary: string | null; backup: string | null } | null {
-  const [primary = "", backup = ""] = value.split(":");
+/** The primary and backup owner pickers, checked against who is actually in the household. A backup is never the primary too. */
+function ownersFrom(primary: string, backup: string, eligible: ReadonlySet<string>): { primary: string | null; backup: string | null } | null {
   if (primary && !eligible.has(primary)) return null;
   if (backup && !eligible.has(backup)) return null;
   return { primary: primary || null, backup: backup && backup !== primary ? backup : null };
@@ -401,13 +514,14 @@ export async function reviewCategoryAction(_previous: OnboardingActionState, for
 
   try {
     for (const suggestion of pending) {
-      const field = `owner_${suggestion.key}`;
       if (!formData.has(`seen_${suggestion.key}`)) continue;
       if (formData.get(`keep_${suggestion.key}`) !== "on") {
         dismissed.push(suggestion.key);
         continue;
       }
-      const owners = ownersFrom(text(formData, field, 80), eligible) ?? { primary: suggestion.primaryMemberId, backup: suggestion.backupMemberId };
+      const owners =
+        ownersFrom(text(formData, `primary_${suggestion.key}`, 40), text(formData, `backup_${suggestion.key}`, 40), eligible) ??
+        { primary: suggestion.primaryMemberId, backup: suggestion.backupMemberId };
       await acceptSuggestion(supabase, {
         householdId,
         actorMemberId: membership.memberId,
@@ -448,7 +562,7 @@ export async function addResponsibilityAction(_previous: OnboardingActionState, 
   try {
     const snapshot = await loadOnboardingSnapshot(supabase, membership.household, context.state);
     const eligible = new Set(snapshot.configMembers.map((member) => member.id));
-    const owners = ownersFrom(text(formData, "owner", 80), eligible) ?? { primary: null, backup: null };
+    const owners = ownersFrom(text(formData, "primary", 40), text(formData, "backup", 40), eligible) ?? { primary: null, backup: null };
     const key = customResponsibilityKey(title, [...snapshot.facts.responsibilityKeys, ...snapshot.facts.pending.map((entry) => entry.key)], category);
     await savePlaybookItem(supabase, {
       householdId,
@@ -480,12 +594,11 @@ export async function answerSchoolAction(_previous: OnboardingActionState, formD
   try {
     const snapshot = await loadOnboardingSnapshot(supabase, membership.household, context.state);
     for (const child of snapshot.facts.profile.children) {
-      const school = text(formData, `school_${child.id}`, 120);
-      if (!school) continue;
-      await saveEnrolment(supabase, { householdId, childMemberId: child.id, schoolName: school });
-      answered += 1;
+      const saved = await saveSchool(context, formData, child.id, `school_${child.id}`, `school_place_${child.id}`, `school_session_${child.id}`, snapshot.schools.get(child.id) ?? null);
+      if (saved) answered += 1;
     }
   } catch (error) {
+    if (error instanceof PlacesUnavailableError) return { error: "That school could not be read from Google Maps just now. Try again, or type its name in." };
     return problem(error, "We could not save the school. Please try again.");
   }
   if (answered === 0) return { error: "Add a school for at least one child, or choose Maybe later." };

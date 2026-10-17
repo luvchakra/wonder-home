@@ -4,6 +4,7 @@ import { listPets } from "../home/repository";
 import { listMembers, type HouseholdMember } from "../identity/households";
 import { log } from "../observability/logger";
 import { listEnrolments } from "../school/enrolments";
+import { loadHouseholdAddress, type HouseholdAddress } from "./address";
 import type { ConfigMember } from "./configuration";
 import { listResponsibilities, savePlaybookItem, saveResponsibility } from "./configuration-repository";
 import {
@@ -143,8 +144,10 @@ export type OnboardingSnapshot = {
   facts: OnboardingFacts;
   /** Helpers' working windows, by member. */
   availability: Map<string, { dayOfWeek: number; startTime: string; endTime: string }[]>;
-  pets: { id: string; name: string; species: string }[];
-  schools: Map<string, { schoolName: string; grade: string | null }>;
+  pets: { id: string; name: string; species: string; dateOfBirth: string | null; photoUrl: string | null }[];
+  /** The home address, for the basics step. */
+  address: HouseholdAddress | null;
+  schools: Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null }>;
 };
 
 /** Everything setup needs about a household, read from where it really lives. */
@@ -153,7 +156,7 @@ export async function loadOnboardingSnapshot(
   household: { id: string; ownerMemberId: string | null },
   state: OnboardingState,
 ): Promise<OnboardingSnapshot> {
-  const [members, pets, enrolments, responsibilities, availabilityRows] = await Promise.all([
+  const [members, pets, enrolments, responsibilities, availabilityRows, address] = await Promise.all([
     listMembers(supabase, household.id, household.ownerMemberId),
     listPets(supabase, household.id),
     listEnrolments(supabase, household.id).catch(() => []),
@@ -163,6 +166,7 @@ export async function loadOnboardingSnapshot(
       .select("member_id, day_of_week, start_time, end_time")
       .eq("household_id", household.id)
       .then(({ data }) => (data ?? []) as Row[]),
+    loadHouseholdAddress(supabase, household.id).catch(() => null),
   ]);
 
   const active = members.filter((member) => member.status === "active");
@@ -173,8 +177,10 @@ export async function loadOnboardingSnapshot(
     list.push({ dayOfWeek: Number(row.day_of_week), startTime: String(row.start_time).slice(0, 5), endTime: String(row.end_time).slice(0, 5) });
     availability.set(id, list);
   }
-  const schools = new Map<string, { schoolName: string; grade: string | null }>();
-  for (const enrolment of enrolments) schools.set(enrolment.childMemberId, { schoolName: enrolment.schoolName, grade: enrolment.grade });
+  const schools = new Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null }>();
+  for (const enrolment of enrolments) {
+    schools.set(enrolment.childMemberId, { schoolName: enrolment.schoolName, grade: enrolment.grade, placeId: enrolment.placeId ?? null, schoolAddress: enrolment.schoolAddress ?? null });
+  }
 
   const profile: HouseholdProfile = {
     adults: active
@@ -204,7 +210,8 @@ export async function loadOnboardingSnapshot(
       helpersWithHours: profile.helpers.filter((helper) => helper.workingDays > 0).length,
     },
     availability,
-    pets: profile.pets.map((pet) => ({ ...pet })),
+    pets: pets.map((pet) => ({ id: pet.id, name: pet.name, species: pet.species, dateOfBirth: pet.dateOfBirth ?? null, photoUrl: pet.photoUrl ?? null })),
+    address,
     schools,
   };
 }
