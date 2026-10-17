@@ -116,6 +116,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Ajustes → Voz elige el servicio de voz (el de tu navegador o uno más preciso), la voz y cómo escucha. Lo que no está disponible para tu hogar se muestra con el motivo, en lugar de ofrecerse roto. Si un Admin puede cambiar ese motivo, por ejemplo que Gemini Live necesita una clave de IA de Google, un enlace lleva directo al ajuste y te devuelve al guardar.",
   "help.guide.voice.body.4":
     "Los asistentes de voz como Alexa o Gemini Voice se pueden vincular a una persona desde Ajustes → Asistentes de voz cuando estén disponibles para tu WonderHome. Un asistente vinculado habla como esa persona y solo ve lo que ella puede ver, y nunca puede pagar ni hacer un pedido.",
+  "help.guide.voice.body.5":
+    "Mientras WonderHome escucha o hay una conversación en directo, el botón de HomeTalk en el centro de la barra de pestañas late con un anillo alrededor, para que veas desde cualquier pantalla que hay una conversación en curso.",
 
   "help.guide.home-send.title": "HomeSend: enviar cosas a WonderHome",
   "help.guide.home-send.summary": "Una foto, un PDF, una nota de voz, un enlace o un reenvío: se lee y luego lo confirmas tú.",

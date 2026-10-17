@@ -34,6 +34,7 @@ import { Wordmark } from "../ui/brand";
 import { IconTile, type IconTone } from "../ui/icon-tile";
 import type { ShellLabels } from "./mobile-header";
 import { MoreTabButton } from "./nav-drawer";
+import { TalkButtonDisc } from "./talk-activity";
 
 /**
  * Today: a calendar in whatever colour the tab itself is (grey resting, blue
@@ -177,15 +178,17 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
           const isAi = item.key === "ai";
           const content = isAi ? (
             <>
-              <span
-                className={cn(
-                  "-mt-5 grid size-12 place-items-center rounded-full text-[var(--wh-primary-foreground)] shadow-[var(--wh-shadow-primary)] ring-4 ring-[var(--wh-background)] transition-transform",
-                  isActive ? "scale-105" : "",
-                )}
-                style={{ background: "var(--wh-gradient-primary)" }}
-              >
-                <Icon className="size-5" />
-              </span>
+              <TalkButtonDisc className="-mt-5 grid place-items-center" label={labels?.talking ?? "Conversation in progress"}>
+                <span
+                  className={cn(
+                    "relative grid size-12 place-items-center rounded-full text-[var(--wh-primary-foreground)] shadow-[var(--wh-shadow-primary)] ring-4 ring-[var(--wh-background)] transition-transform",
+                    isActive ? "scale-105" : "",
+                  )}
+                  style={{ background: "var(--wh-gradient-primary)" }}
+                >
+                  <Icon className="size-5" />
+                </span>
+              </TalkButtonDisc>
               <span>{labelOf(item)}</span>
             </>
           ) : (

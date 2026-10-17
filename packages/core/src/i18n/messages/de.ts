@@ -30,6 +30,7 @@ export const de: Catalog = {
   "nav.family": "Familie",
   "nav.more": "Mehr",
   "nav.settings": "Einstellungen",
+  "nav.talking": "Gespräch läuft",
   "nav.logout": "Abmelden",
   "nav.group.family": "Familie & Menschen",
   "nav.group.food": "Essen & Alltag",

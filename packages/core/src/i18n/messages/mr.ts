@@ -30,6 +30,7 @@ export const mr: Catalog = {
   "nav.family": "कुटुंब",
   "nav.more": "अधिक",
   "nav.settings": "सेटिंग्ज",
+  "nav.talking": "संभाषण सुरू आहे",
   "nav.logout": "लॉग आउट",
   "nav.group.family": "कुटुंब आणि लोक",
   "nav.group.food": "अन्न आणि गरजेच्या वस्तू",

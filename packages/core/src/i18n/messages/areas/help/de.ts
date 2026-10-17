@@ -116,6 +116,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Einstellungen → Stimme wählt den Sprachdienst (den deines Browsers oder einen genaueren), die Stimme und wie zugehört wird. Was deinem Haushalt nicht zur Verfügung steht, wird mit dem Grund gezeigt, statt kaputt angeboten. Kann ein Admin den Grund ändern, etwa weil Gemini Live einen Google-KI-Schlüssel braucht, führt ein Link direkt zur Einstellung und nach dem Speichern zurück.",
   "help.guide.voice.body.4":
     "Sprachassistenten wie Alexa oder Gemini Voice lassen sich unter Einstellungen → Sprachassistenten mit einer Person verknüpfen, sobald sie für dein WonderHome verfügbar sind. Ein verknüpfter Assistent spricht als diese Person und sieht nur, was sie sehen darf, und er kann nie bezahlen oder bestellen.",
+  "help.guide.voice.body.5":
+    "Während WonderHome zuhört oder ein Live-Gespräch läuft, pulsiert die HomeTalk-Taste in der Mitte der Tab-Leiste mit einem Ring darum – so siehst du auf jedem Bildschirm, dass ein Gespräch läuft.",
 
   "help.guide.home-send.title": "HomeSend: WonderHome Dinge schicken",
   "help.guide.home-send.summary": "Ein Foto, ein PDF, eine Sprachnachricht, ein Link oder eine Weiterleitung – gelesen, dann von dir bestätigt.",

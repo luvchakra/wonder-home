@@ -133,6 +133,8 @@ export const helpEn = {
     "Settings → Voice chooses the speech service (your browser's own, or a more accurate one), the voice, and how it listens. Where a choice is not available to your household, it is shown with the reason rather than offered and broken. If an Admin can change that reason, for example Gemini Live needing a Google AI key, a link goes straight to the setting and brings you back once it is saved.",
   "help.guide.voice.body.4":
     "Voice assistants such as Alexa or Gemini Voice can be linked to one person from Settings → Voice assistants once they are available for your WonderHome. A linked assistant speaks as that person and sees only what they may see, and it can never pay or place an order.",
+  "help.guide.voice.body.5":
+    "While WonderHome is listening or a live conversation is going, the HomeTalk button in the middle of the tab bar pulses with a ring around it, so you can see from any screen that a conversation is in progress.",
 
   // HomeSend: sending WonderHome things
   "help.guide.home-send.title": "HomeSend: sending WonderHome things",

@@ -105,6 +105,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "设置 → 语音用于选择语音服务（浏览器自带的，或更准确的服务）、声音以及聆听方式。你家不能用的选项会附上原因显示，而不是给出一个用不了的选项。如果管理员可以改变这个原因，例如 Gemini Live 需要 Google AI 密钥，会有一个链接直达该设置，保存后再把你带回来。",
   "help.guide.voice.body.4":
     "像 Alexa 或 Gemini Voice 这样的语音助手，在你的 WonderHome 可用后，可以在“设置 → 语音助手”中关联到某一个人。关联后的助手以那个人的身份说话，只能看到那个人能看到的内容，而且绝不能付款或下单。",
+  "help.guide.voice.body.5":
+    "当 WonderHome 正在聆听或实时对话进行中时，标签栏中间的 HomeTalk 按钮会带着一圈光环闪动，让您在任何页面都能看到对话正在进行。",
 
   "help.guide.home-send.title": "HomeSend：把东西发给 WonderHome",
   "help.guide.home-send.summary": "一张照片、一个 PDF、一条语音、一个链接或一条转发——先读取，再由你确认。",

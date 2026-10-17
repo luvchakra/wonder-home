@@ -30,6 +30,7 @@ export const ar: Catalog = {
   "nav.family": "العائلة",
   "nav.more": "المزيد",
   "nav.settings": "الإعدادات",
+  "nav.talking": "المحادثة جارية",
   "nav.logout": "تسجيل الخروج",
   "nav.group.family": "العائلة والأشخاص",
   "nav.group.food": "الطعام والأساسيات",

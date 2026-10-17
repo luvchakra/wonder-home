@@ -40,6 +40,7 @@ export const en = {
   "nav.family": "Family",
   "nav.more": "More",
   "nav.settings": "Settings",
+  "nav.talking": "Conversation in progress",
   "nav.logout": "Log out",
   "nav.group.family": "Family & People",
   "nav.group.food": "Food & Essentials",

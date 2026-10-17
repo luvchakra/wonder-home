@@ -30,6 +30,7 @@ export const zh: Catalog = {
   "nav.family": "家人",
   "nav.more": "更多",
   "nav.settings": "设置",
+  "nav.talking": "对话进行中",
   "nav.logout": "退出登录",
   "nav.group.family": "家人与亲友",
   "nav.group.food": "饮食与日用品",
