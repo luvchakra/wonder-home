@@ -2,10 +2,11 @@ import type { AnswerComposer } from "../ai/model-client";
 import { minimiseContext, restoreNames, type DataUsePolicy, type Person } from "../ai/privacy";
 import { describeLocalNow } from "../context/format";
 import { isoDay } from "../context/normalize";
-import type { HouseholdContextItem } from "../context/types";
+import type { ContextDomain, HouseholdContextItem } from "../context/types";
 import type { ConversationTurn } from "../conversation/engine";
 import { answeringFacts, composeFromFacts, composeGrounded, heldForAdultsAnswer, unknownAnswer } from "./answer";
 import { gateCandidates, groundFacts, type GroundedFact } from "./grounding";
+import { deepReadTargets, mergeLiveItems, withinDeepReadBudget, type DeepReadRecord } from "./deep-read";
 import { readBrainQuestion, type BrainReading } from "./question";
 import type { ViolationKind } from "./validate";
 
@@ -50,6 +51,14 @@ export type HomeBrainTurn = {
   factBudget: number;
   /** The asker's own upcoming appointments they may not read (a child's): a count, never a detail. */
   heldForAdults?: number;
+  /**
+   * A live read of these domains through the asker's own session (HomeBrain
+   * 4.0 §3.7): run once, before "nothing on record", when the question
+   * named something. Absent, HomeBrain answers from `items` alone, as before.
+   */
+  deepRead?: (domains: ContextDomain[]) => Promise<readonly HouseholdContextItem[]>;
+  /** The person asked HomeBrain to look again ("can you check the database?"). */
+  deeper?: boolean;
 };
 
 export type HomeBrainAnswer = {
@@ -63,9 +72,45 @@ export type HomeBrainAnswer = {
   validation: { attempts: number; rejected: ViolationKind[] };
   reading: BrainReading;
   facts: GroundedFact[];
+  /** The deeper look, when one ran (§3.7): for `homebrain_misses` and the store repair. */
+  deepRead?: DeepReadRecord;
 };
 
+/**
+ * One answer, and — when it would be "nothing on record" about something the
+ * question named, or the person asked to look again — one deeper look first
+ * (HomeBrain 4.0 §3.7): the named parts of the home read again live, merged
+ * over the stored facts, and the question answered once more.
+ */
 export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
+  const first = await answerOnce(turn);
+  const missed = first.mode === "unknown" || first.source === "not_on_record";
+  if (!turn.deepRead || !(missed || turn.deeper) || first.mode === "clarify") return first;
+
+  const domains = deepReadTargets(first.reading, turn.items);
+  if (domains.length === 0) return first;
+  const started = Date.now();
+  const live = await withinDeepReadBudget(turn.deepRead(domains));
+  const latencyMs = Date.now() - started;
+  const trigger: DeepReadRecord["trigger"] = turn.deeper ? "asked_to_look" : first.mode === "unknown" ? "unknown" : "not_on_record";
+  if (!live || live.length === 0) return { ...first, deepRead: { domains, trigger, found: false, latencyMs } };
+
+  const merged = mergeLiveItems(turn.items, live);
+  const found = merged.added + merged.changed > 0;
+  if (!found && !turn.deeper) return { ...first, deepRead: { domains, trigger, found, latencyMs } };
+  const second = await answerOnce({ ...turn, items: merged.items });
+  // The second answer stands when it found something to say; otherwise the
+  // honest first one does — and says it looked.
+  const answer = second.mode === "answer" && second.text ? second : { ...first, text: first.text ? lookedEverywhere(first.text) : first.text };
+  return { ...answer, deepRead: { domains, trigger, found, latencyMs } };
+}
+
+/** "Not on record", said after a deeper look: it looked, rather than guessed. */
+function lookedEverywhere(text: string): string {
+  return text.replace(/^WonderHome does not have anything on record about that/, "I looked through everything WonderHome has, and there is nothing on record about that");
+}
+
+async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
   const reading = readBrainQuestion(turn.question, turn.items, {
     viewerMemberId: turn.viewer.memberId,
     timezone: turn.timezone,
@@ -83,7 +128,7 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
   const held = heldForAdultsAnswer(reading, turn.viewer.memberId, turn.heldForAdults ?? 0);
   if (held) return { ...base, text: held, mode: "answer", source: "deterministic" };
 
-  const facts = groundFacts(turn.items, reading);
+  const facts = groundFacts(turn.items, reading, { timezone: turn.timezone, today: isoDay(turn.now, turn.timezone) });
   const validation = { attempts: 0, rejected: [] as ViolationKind[] };
   let factsSent = 0;
 
@@ -114,12 +159,18 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
           // A composer that throws — a timeout, an outage it did not catch
           // itself — is a model with no answer, never an error the person sees.
           try {
-            return await compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems });
+            return await compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems, goal: reading.goal });
           } catch {
             return null;
           }
         },
-        validation: { question: turn.sentQuestion, history: turn.sentHistory.map((entry) => entry.text), localNow, today: isoDay(turn.now, turn.timezone) },
+        validation: {
+          question: turn.sentQuestion,
+          history: turn.sentHistory.map((entry) => entry.text),
+          localNow,
+          today: isoDay(turn.now, turn.timezone),
+          inferences: facts.filter((fact) => fact.domain === "insight").map((fact) => fact.contextId),
+        },
       });
       validation.attempts = outcome.attempts;
       validation.rejected = [...new Set(outcome.rejected.map((violation) => violation.kind))];
@@ -136,7 +187,7 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
         !reading.broad &&
         reading.focus.size > 0 &&
         answering.length === 0 &&
-        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)));
+        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && (fact.domain === "insight" || (fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)))));
       if (unfounded) validation.rejected = [...new Set([...validation.rejected, "unfounded_answer" as const])];
       if (outcome.status === "accepted" && !unfounded && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
         return {

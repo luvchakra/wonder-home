@@ -87,12 +87,25 @@ const BACKGROUND = new Set(["household", "people", "pets"]);
  */
 export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainReading, options: { limit?: number } = {}): string | null {
   const limit = options.limit ?? 6;
-  const pool = answeringFacts(facts, reading);
-  if (pool.length === 0) return null;
+  const answering = answeringFacts(facts, reading);
+  if (answering.length === 0) return null;
+  // The goal's shape (HomeBrain 4.0 §3.10). To find out, the fact comes
+  // first and what the rules noticed about it after — except a count, which
+  // is the fact. To decide, what the rules noticed leads: it is what decides.
+  const noticed = (fact: GroundedFact) => fact.domain === "insight" && !fact.reasons.some((reason) => reason.startsWith("inference (count)"));
+  const pool =
+    reading.goal === "decide"
+      ? [...answering.filter(noticed), ...answering.filter((fact) => !noticed(fact))]
+      : [...answering.filter((fact) => !noticed(fact)).slice(0, limit - Math.min(2, answering.filter(noticed).length)), ...answering.filter(noticed).slice(0, 2)];
 
   // "For Kunal" would undersell an answer that also carries his children's plans.
   const who = (reading.dependants ?? []).length > 0 ? "" : reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
-  const lead = who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
+  const plainLead = who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
+  // Yes or no first, then the evidence; and what decides it, said as that.
+  // "Yes" only where a fact's being there is the answer ("is there anything on
+  // Thursday?"); "did Kunal pay it?" or "do we have milk?" is answered by
+  // what the fact says, which the reader sees for themselves.
+  const lead = reading.goal === "check" && /\b(?:is there anything|are there any|is anything|anything (?:on|due|planned|happening))\b/i.test(reading.retrievalText) ? `Yes. ${plainLead}` : reading.goal === "decide" ? `Here is what WonderHome has on record that bears on it${reading.time ? ` ${reading.time.label}` : ""}:` : plainLead;
   return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${fact.statement}`).join("\n")}`;
 }
 
@@ -119,7 +132,7 @@ function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading):
     // The household, its people and its pets are background to most answers
     // — but a question about them ("who are the members?", "what pets do we
     // have?") is answered by them (HomeBrain 4.0 §3.2).
-    if (fact.domain !== "conflict" && BACKGROUND.has(fact.domain) && !reading.focus.has(fact.domain)) return false;
+    if (fact.domain !== "conflict" && fact.domain !== "insight" && BACKGROUND.has(fact.domain) && !reading.focus.has(fact.domain)) return false;
     // A question about a day is answered with what falls on it: an undated
     // standing fact is never presented as "tomorrow".
     if (reading.time && !(fact.date && inWindow(fact.date, reading.time))) return false;

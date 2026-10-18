@@ -230,6 +230,41 @@ export async function rebuildHousehold(admin: SupabaseClient, householdId: strin
   return rebuildStoredContext(admin, { householdId, householdName: household.name, timezone: household.timezone, now });
 }
 
+/** At most this many stored contexts are rebuilt per delivery tick: the clock is every five minutes, and a turn rebuilds its own anyway. */
+export const KEEP_WARM_PER_TICK = 4;
+/** A store nobody has read for this long is left to the next turn rather than kept warm. */
+const KEEP_WARM_IDLE_MS = 7 * DAY_MS;
+
+/**
+ * Keeping it whole (HomeBrain 4.0 §3.8, story 14-031): the stores that are
+ * behind — a write marked them (a service, or the database's own trigger for
+ * a write that went round one) — or older than an hour, rebuilt off the
+ * request path, oldest first, so the next turn reads a current row instead
+ * of rebuilding while someone waits. Run from the delivery clock. Returns how
+ * many were rebuilt; a failure costs only that household's warm row.
+ */
+export async function keepStoresWarm(admin: SupabaseClient, now: Date = new Date(), limit: number = KEEP_WARM_PER_TICK): Promise<number> {
+  const { data, error } = await admin
+    .from("household_context")
+    .select("household_id, built_at, stale_since")
+    .gte("built_at", new Date(now.getTime() - KEEP_WARM_IDLE_MS).toISOString())
+    .order("built_at", { ascending: true })
+    .limit(200);
+  if (error) {
+    if (error.code !== "42P01") log.warn("household_context keep-warm read failed", { reason: error.code ?? "unknown", allow: ["reason"] });
+    return 0;
+  }
+  const behind = ((data ?? []) as { household_id: string; built_at: string; stale_since: string | null }[]).filter((row) => {
+    const builtAt = Date.parse(row.built_at);
+    return (row.stale_since !== null && Date.parse(row.stale_since) >= builtAt) || now.getTime() - builtAt > STORE_MAX_AGE_MS;
+  });
+  let rebuilt = 0;
+  for (const row of behind.slice(0, limit)) {
+    if (await runRebuild(row.household_id, () => rebuildHousehold(admin, row.household_id, now))) rebuilt += 1;
+  }
+  return rebuilt;
+}
+
 // --- one rebuild at a time per household, on this instance ------------------------------
 
 const inflight = new Map<string, Promise<StoredContext | null>>();

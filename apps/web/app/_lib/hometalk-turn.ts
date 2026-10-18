@@ -47,6 +47,9 @@ import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, r
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
 import { normaliseUtterance } from "@wonderhome/core/conversation/normalise";
+import { gatherHouseholdContext } from "@wonderhome/core/context/repository";
+import { invalidateHouseholdContext } from "@wonderhome/core/context/invalidation";
+import type { DeepReadRecord } from "@wonderhome/core/homebrain/deep-read";
 import { contentClassFor } from "@wonderhome/core/context/privacy";
 import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { preferencesOf } from "@wonderhome/core/i18n/preferences";
@@ -778,6 +781,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   let brainAnswer: HomeBrainAnswer | null = null;
   let explained = false;
   const previousQuestion = [...history].reverse().find((turn) => turn.role === "member")?.text ?? null;
+  // "Can you check the WonderHome database and find out?" asks the last question again, harder (HomeBrain 4.0 §3.7).
+  const lookAgain = normaliseUtterance(said ?? body.utterance).deeper;
   const lastAssistantText = [...history].reverse().find((turn) => turn.role === "assistant")?.text ?? null;
 
   let places: PlaceSuggestion[] | null = null;
@@ -919,7 +924,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       agenda
         ? answerStatus(supabase, householdId, membership, result.intent, agenda).catch(() => HOME_UNREADABLE)
         : Promise.resolve(HOME_UNREADABLE),
-      askHomeBrain({ routing, question: body.utterance, previousQuestion, people, view, membership, read: brainRead }),
+      askHomeBrain({ routing, question: lookAgain && previousQuestion ? previousQuestion : body.utterance, previousQuestion, people, view, membership, read: brainRead, supabase, limits, deeper: lookAgain }),
     ]);
     composedAt = Date.now();
     brainAnswer = answered;
@@ -936,7 +941,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   ) {
     // Not a request the engine knows, and not a model outage: before saying
     // "I did not follow that", see whether the home's own facts answer it.
-    const answered = await askHomeBrain({ routing, question: body.utterance, previousQuestion, people, view, membership, read: brainRead });
+    const answered = await askHomeBrain({ routing, question: lookAgain && previousQuestion ? previousQuestion : body.utterance, previousQuestion, people, view, membership, read: brainRead, supabase, limits, deeper: lookAgain });
     composedAt = Date.now();
     const usable =
       answered?.text &&
@@ -1214,11 +1219,20 @@ async function askHomeBrain(input: {
   membership: HouseholdMembership;
   /** The read that started while the request was being understood. */
   read: Promise<{ agenda: HouseholdAgenda; context: HouseholdContext }> | null;
+  /** For the deeper look (HomeBrain 4.0 §3.7): the asker's own session, and what their channel may reach. */
+  supabase: Supabase;
+  limits?: ChannelLimits;
+  deeper?: boolean;
 }): Promise<HomeBrainAnswer | null> {
   if (!input.read) return null;
   try {
     const { context } = await input.read;
-    return await answerWithHomeBrain({
+    const answer = await answerWithHomeBrain({
+      // Read again live, through this person's own session (RLS decides), and
+      // narrowed to what their channel may reach — never the store, never wider.
+      deepRead: (domains) =>
+        gatherHouseholdContext(input.supabase, context.snapshot.scope, { domains }).then((live) => (input.limits ? narrowToChannel(live.items, input.limits) : live.items)),
+      deeper: input.deeper === true,
       question: input.question,
       sentQuestion: input.routing.sentUtterance ?? input.question,
       previousQuestion: input.previousQuestion,
@@ -1233,10 +1247,27 @@ async function askHomeBrain(input: {
       factBudget: FACT_BUDGET,
       heldForAdults: context.snapshot.heldForAdults,
     });
+    if (answer.deepRead) recordDeepRead(input.membership.household.id, answer.deepRead);
+    return answer;
   } catch (thrown) {
     console.error("[conversation] HomeBrain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });
     return null;
   }
+}
+
+/**
+ * What a deeper look found (HomeBrain 4.0 §3.8): when the live read had
+ * something the stored context lacked, the store is marked stale so it is
+ * rebuilt after the response, and every look leaves one content-free row in
+ * `homebrain_misses`. Neither is ever the turn's failure.
+ */
+function recordDeepRead(householdId: string, record: DeepReadRecord): void {
+  if (record.found) invalidateHouseholdContext(householdId);
+  void Promise.resolve(
+    createAdminClient()
+      .from("homebrain_misses")
+      .insert({ household_id: householdId, domains: record.domains, trigger: record.trigger, found: record.found, latency_ms: record.latencyMs }),
+  ).catch(() => undefined);
 }
 
 /** Whether an utterance is asking something, rather than telling or requesting. */

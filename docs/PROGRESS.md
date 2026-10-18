@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**275 of 301 stories done — 91.4%**
+**276 of 295 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 275 |
+| Done | 276 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 19 |
+| Not Started | 12 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `███████░░░` | 22 | 31 | 6 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 22 | 25 | 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -50,8 +50,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
-| 25 HomeFood | `█████░░░░░` | 10 | 19 | 1 in progress, 8 not started |
-| 26 HomeEvents | `█████░░░░░` | 7 | 12 | 1 in progress, 4 not started |
+| 25 HomeFood | `█████░░░░░` | 10 | 18 | 1 in progress, 7 not started |
+| 26 HomeEvents | `██████░░░░` | 8 | 13 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -62,12 +62,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
-| `14-026` HomeBrain 4.0 phase 2 — look deeper | 14 AI Orchestration & Learning | P0 | Not Started |
-| `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | Not Started |
-| `14-028` HomeBrain 4.0 phase 4 — the household graph | 14 AI Orchestration & Learning | P1 | Not Started |
-| `14-029` HomeBrain 4.0 phase 5 — inferences with evidence | 14 AI Orchestration & Learning | P1 | Not Started |
-| `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | 14 AI Orchestration & Learning | P1 | Not Started |
-| `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
@@ -75,7 +69,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
 | `25-015` Change or remove a recipe and its ingredients | 25 HomeFood | P1 | Not Started |
-| `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | 25 HomeFood | P0 | Not Started |
 | `25-018` Suggest a meal from what is at home, and save it as a recipe | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
@@ -335,7 +328,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-22 of 31 done `███████░░░`
+22 of 25 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -364,12 +357,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | P1 | Deferred | Folded into HomeBrain 4.0 (`design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`), built as 14-031. Spec §3.2/§3.1: DB-trigger safety net for writes that bypass a service, an hourly rebuild of dated sections (until then a store older than an hour rebuilds on the next turn), the store's lag on the AI quality page |
 | `14-024` HomeBrain 4.0 phase 0 — hearing it right | P0 | Done | PR #240. Built: `conversation/normalise.ts` runs first in `converse` and in the HomeTalk turn (the stored message keeps the person's words); \"I am planning X\" reads as \"plan X\"; `ROSTER_QUESTION` plus `ROSTER_ALSO` and a trailing \"in this household\"; `people` words put people in focus, and `relevantAnswers` lets people and pets answer when they are the focus. Browser-checked on the live project: Gemini's exact sentence gets the roster. Spec §3.1–§3.2. `conversation/normalise.ts` (lead-ins, wrappers, repeats; a "check the database" marker); every rule and the roster read the canonical sentence; `ROSTER_QUESTION` widened ("in this household", "who all", "who lives in this house"); people and pets answer questions about them (out of `BACKGROUND` when asked). The owner's report 2026-10-18: Gemini's "Okay, so. Okay, who are the family members in this household?" got "couldn't find the list". Golden HT-100, HT-101 |
 | `14-025` HomeBrain 4.0 phase 1 — do what was asked | P0 | Done | PR #240. Built: `conversation/consent.ts` (act / confirm / step_up; children and helpers keep autonomy) through `proposeFromIntent`'s `requestedBy: \"person\"`; `readPlan` (the day out of the name, the time of day from the name, guests); a gathering stays an event, not a meal; \"undo\" (`isUndo`, `undoExecuted` now also cancels an event and removes a meal); \"Say undo to take it back\" on undoable replies; Gemini in the app gets `in_app` for plans, what is at home and who does what (Alexa unchanged); the `ask_household` tool and Gemini's instructions pass requests through; the Settings → AI Assistant switch is a `policies` row (`ai_autonomy`), no migration. As built differently from the spec: no `do_household_change` tool (ask_household already reaches the engine) and no Undo chip yet (voice and typed \"undo\" work). Voice settings page reworked too (the owner's ask): what is really speaking, Gemini Live first, tips, Alexa link, Google-only controls hidden when unused. Browser-checked: movie night executed on Friday 6–11 pm, undo cancelled it, the switch made the next plan a question. Spec §3.9. The owner, 2026-10-18: "it should just understand user intent and do what is asked during conversation, no separate okay required". `conversation/consent.ts`: Act (everyday reversible changes the person asked for run at once, with undo by voice or chip), Confirm in the conversation (others' duties, guests, medium-confidence grounding), App with step-up (payments, orders, access, deleting). `decideAutonomy` gains `requestedBy`. Gemini in the app gets the app's policy and a `do_household_change` tool; Alexa unchanged. Settings → AI Assistant switch "Ask before acting on what I say" (default off, a `policies` row). Footer, CLAUDE.md and help in 8 languages. Golden HT-103 to HT-107, HT-110 |
-| `14-026` HomeBrain 4.0 phase 2 — look deeper | P0 | Not Started | Spec §3.7–§3.8. Before "not on record", a targeted live read of the question's domains through the viewer's own session (≤3 adapters, ≤1.5 s), answered again; the store is marked stale when the read found what it lacked; `homebrain_misses` (service-role, content-free) counted on the AI quality page. Golden HT-102 |
-| `14-027` HomeBrain 4.0 phase 3 — one pass over the store | P0 | Not Started | Spec §3.4, §3.6 (was 14-021). `homebrain/retrieve.ts` (lexical index, token budget), `homebrain/one-pass.ts` (structured answer-or-intent, cached household prefix, streaming); the understand call dropped for questions; timings. Typed p95 2.5 s to the first token |
-| `14-028` HomeBrain 4.0 phase 4 — the household graph | P1 | Not Started | Spec §3.3. Typed edges between every module's records (person, school, events and guests, meals and needs, bills, responsibilities, places, health), built with the store, viewer-filtered; retrieval follows them. Golden HT-111 |
-| `14-029` HomeBrain 4.0 phase 5 — inferences with evidence | P1 | Not Started | Spec §3.5. `homebrain/insights.ts`: night before an exam, a meal short of ingredients, away but assigned, clashes, a bill due while away, guests' food needs, school kit not on the list, a helper's leave with no cover, counts; `unsupported_inference` in `validate.ts`. Golden HT-108, HT-109 |
-| `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | P1 | Not Started | Spec §3.10. `homebrain/goal.ts` (find out, plan, decide, check, remember, do) chooses retrieval hops, insights and the answer's shape |
-| `14-031` HomeBrain 4.0 phase 7 — keep it whole | P1 | Not Started | Spec §3.2, §3.8 (was 14-022 and 14-023). Rules read the store; the agenda summary only for broad questions; the "not on record while on record" gate; a database trigger safety net; an hourly rebuild; the store's lag on the AI quality page |
 
 ### 15 — Privacy, Security & Governance
 
@@ -533,7 +520,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-10 of 19 done `█████░░░░░`
+10 of 18 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -552,14 +539,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-014` Ingredients as raw items with amounts, and a recipe added from a meal | P0 | Done | The owner, 2026-10-18 (PR #232). The ingredient text boxes are gone: a meal's Ingredients, Add recipe and Plan a meal's quick recipe take one row per raw item, each with how much and a unit picked from the grocery list's units, with its own way to add a unit (`ui/ingredient-rows.tsx`; read on the server by `meals/ingredient-lines.ts`: decimals with a comma or a point, the same item twice in one unit added together, no amount kept as "not known"). A recipe now stores what it needs (it used to store 1 "unit" of everything), so a meal planned from it gets real amounts. Change meal shows a small **Add a recipe** link under the recipe picker when there is none, and the new recipe is picked for the meal. Fixed on the way: an ingredient with no amount was read as "1 pc" (`normalizeUnit` turns "unit" into pieces); it now says the amount isn't known. Help Meals ¶10 in eight languages. Browser-checked at 360px and desktop on the live project |
 | `25-015` Change or remove a recipe and its ingredients | P1 | Not Started | Left open by 25-014: a recipe can be added but not edited or removed (rule 12), so a recipe saved before 25-014 keeps its "amount not known" ingredients until it is added again |
 | `25-016` Every sheet opens calmly with the keyboard, and the field stays in view | P0 | Done | The owner's report, 2026-10-18 (PR #234): a sheet and the keyboard opened together and flickered while they settled, and the keyboard could hide the field to fill in. On a phone a sheet now opens with focus on the sheet itself, so the keyboard waits for a tap (Add an item's search still takes focus at once on a desktop); Android Chrome lifts the sheet with the keyboard natively (`interactiveWidget: "resizes-content"`); iOS's keyboard is measured once per frame with no competing transition; and the tapped field is scrolled to the middle of what is visible once the keyboard has settled. Kit change (`ui/sheet.tsx`), so every sheet gets it. Checked in Chromium emulating a phone and on a desktop: no field focused on open on the phone, the search focused on desktop, a field below the fold scrolled into view on tap. A real phone keyboard needs the owner's phone |
-| `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | P0 | Not Started | The owner, 2026-10-18: the ingredient row searches the catalog (a new item can still be added inline), and calories, protein, carbs and fat per serving fill in from the picked items and amounts |
 | `25-018` Suggest a meal from what is at home, and save it as a recipe | P1 | Not Started | The owner, 2026-10-18: with no recipes yet (or none that fit), WonderHome suggests dishes from the items at home and the family's preferences, using only what is on record, and a suggestion can be planned and saved as a new recipe |
 | `25-019` Plan a meal starts from the recipe | P0 | Done | PR #238. The owner, 2026-10-18: the recipe picker comes first; picking it fills the meal's name and its essential ingredients with amounts (`IngredientRows` `initial`), and "Where these ingredients apply" offers Just for this meal (`setMealEssentials`), Save to the recipe as well (`replaceRecipeEssentials`, nice-to-haves kept) or Save as a new recipe (named, then the meal is planned from it). The meal is created first, so a taken slot changes no recipe |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents
 
-7 of 12 done `█████░░░░░`
+8 of 13 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -575,5 +561,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-010` A member's birthday is the whole day, not 5:30 am to 5:30 am | P1 | Done | The owner's report, 2026-10-18 (PR #236): the member-occasion trigger wrote a birthday as UTC midnight to midnight, so in India the event read "5:30 am – 5:30 am". It now writes the household's local day as an all-day event, and the rows already written were moved onto that day (same migration). DB test; `verify:live` checks no timed member occasion is left |
 | `26-011` Event cards say who is going, and use their width | P1 | Done | The owner's report, 2026-10-18 (PR #236): Home's event card showed every family member's avatar although only Asmi was going, and squeezed the title and time beside a second kind tile and the button. Now every event list (Home's card, Today's focus, Family's Upcoming, a child's Home) says when the same way — "All day" for an all-day event, never a midnight time (`_lib/event-when.ts`) — and its place; Home's card and Family's list name who is going from the event's own list ("With Asmi", or on Home "Nobody from the family is asked yet" with a button to ask), and the card gives the title the full width with the action beside who is going. Today's rows wear the event's kind, not always a heart, and no longer cut the time. Every event row tucks its kind's tile under the date leaf, so the title, time and place take the row's width and a time no longer wraps. Checked at 360px and 1280px: a school trip only Asmi goes to reads "With Asmi QA"; a birthday reads "All day" |
 | `26-012` A tall, phone-shaped invitation, and a preview before saving | P1 | Done | The owner, 2026-10-18 (PR #237): Share invitation sends the invitation as a 1080×1350 picture with the link (`e/[token]/card`, one renderer with the link preview, `render-invitation.tsx`), so it shows whole in a chat; the wide picture stays as the link preview, since a chat only shows a wide one large. Preview in the design picker shows the invitation with the design and line picked, before saving. Checked: three designs drawn tall; the wedding preview at 360px; Share invitation opened the picture where the browser can't share files |
+| `26-013` "More family time!" only on family events | P1 | Done | The owner, 2026-10-18 (PR #241): Home's event card closed every event with "More family time!", a school event or an office review included. It now shows only for family kinds (family time, outing, birthday, gathering, travel, special occasion; `momentLook.family` in `_screens/home-dashboard.tsx`). Checked at 360px: a school event has no line, a movie night does |
 
 _Generated 2026-10-18 from 27 backlog files._

@@ -11,12 +11,12 @@ import { mealShortfalls, servingScale, type ShortfallLine } from "@wonderhome/co
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { IngredientRows, type IngredientRowsLabels } from "@wonderhome/core/ui/ingredient-rows";
+import { IngredientRows, type IngredientRowsLabels, type IngredientSearchLabels } from "@wonderhome/core/ui/ingredient-rows";
 import { Pill, PillLink } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import { addMealIngredientsAction, addMealShortfallsAction, attachRecipeToMealAction } from "../(auth)/meal-actions";
+import { addMealIngredientsAction, addMealShortfallsAction, attachRecipeToMealAction, searchIngredientChoicesAction } from "../(auth)/meal-actions";
 import type { GroceryWords } from "../_lib/grocery-words";
 import { fill, newKey, pluralOf, sayAmount } from "../groceries/_components/amounts";
 
@@ -44,7 +44,7 @@ export type MealIngredientsLabels = {
   empty: {
     lede: string;
     write: string;
-    rows: Omit<IngredientRowsLabels, "legend">;
+    rows: Omit<IngredientRowsLabels, "legend"> & { search: IngredientSearchLabels };
     unitNames: Record<string, string>;
     save: string;
     saving: string;
@@ -228,7 +228,13 @@ function NoIngredientsYet({
       <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.lede}</p>
       {error ? <Alert>{error}</Alert> : null}
       <form action={saveLines} className="space-y-3">
-        <IngredientRows prefix="ingredient" labels={{ ...labels.rows, legend: labels.write }} unitLabels={labels.unitNames} />
+        <IngredientRows
+          prefix="ingredient"
+          labels={{ ...labels.rows, legend: labels.write }}
+          unitLabels={labels.unitNames}
+          search={(query) => searchIngredientChoicesAction(householdId, query)}
+          searchLabels={labels.rows.search}
+        />
         <Button type="submit" className="w-full" disabled={pending}>
           {pending ? labels.saving : labels.save}
         </Button>

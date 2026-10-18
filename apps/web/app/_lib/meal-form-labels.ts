@@ -68,6 +68,11 @@ export function mealFormLabels(t: Translate, unitNames: Record<string, string>):
       thisItem: t("mealForm.rows.thisItem"),
       addNewUnit: t("grocery.picker.addNew"),
       chooseUnit: t("grocery.picker.chooseExisting"),
+      search: {
+        useTyped: t("mealForm.rows.useTyped", { name: "{name}" }),
+        searching: t("mealForm.rows.searching"),
+        atHome: t("mealForm.rows.atHome"),
+      },
     },
     unitNames,
     saveIngredients: t("mealForm.saveIngredients"),

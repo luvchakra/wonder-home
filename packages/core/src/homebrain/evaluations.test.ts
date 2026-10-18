@@ -17,6 +17,8 @@ import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
 import type { SchoolItem } from "../school/items";
 import { composeFromFacts, composeGrounded, modeFor, unknownAnswer, type ModelDraft } from "./answer";
+import { buildHouseholdGraph } from "./graph";
+import { householdInsights } from "./insights";
 import { gateCandidates, groundFacts, relevantFacts, type GroundedFact } from "./grounding";
 import { readBrainQuestion } from "./question";
 import { answerWithHomeBrain, type HomeBrainTurn } from "./turn";
@@ -231,7 +233,7 @@ const KUNAL = itemsFor({ memberId: "kunal" });
 function ask(question: string, options: { items?: HouseholdContextItem[]; viewer?: string; previous?: string } = {}) {
   const items = options.items ?? KUNAL;
   const reading = readBrainQuestion(question, items, { viewerMemberId: options.viewer ?? "kunal", timezone: TZ, now: NOW, previousQuestion: options.previous ?? null });
-  const facts = groundFacts(items, reading);
+  const facts = groundFacts(items, reading, { timezone: TZ, today: TODAY });
   return { reading, facts, relevant: relevantFacts(facts), text: relevantFacts(facts).map((fact) => fact.statement).join("\n") };
 }
 
@@ -775,5 +777,225 @@ describe("Corrections and current truth (§8, §9)", () => {
     const why = readWhyQuestion("Where did that come from?")!;
     const answer = explain({ ...why, items, viewerMemberId: "kunal", timezone: TZ, now: NOW, lastAssistantText: "The children are in bed by 9pm on school nights.", lastAction: null, clarifying: null });
     expect(answer.text).toContain("Something the household told WonderHome in HomeBrain, and confirmed.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Looking deeper (HomeBrain 4.0 §3.7, story 14-026)
+// ---------------------------------------------------------------------------
+
+describe("Looking deeper before 'nothing on record'", () => {
+  // A stored context that missed the bills — a builder or a write path that forgot them.
+  const STALE = itemsFor({ memberId: "kunal" }, { ...RECORDS, obligations: [] });
+
+  it("reads the named part of the home again, live, and answers from it", async () => {
+    const asked: string[][] = [];
+    const answer = await turn("Which bills are due this week?", null, {
+      items: STALE,
+      deepRead: async (domains) => {
+        asked.push(domains);
+        return KUNAL.filter((item) => domains.includes(item.domain));
+      },
+    });
+    expect(asked).toEqual([expect.arrayContaining(["bills"])]);
+    expect(answer.text).toContain("Electricity");
+    expect(answer.deepRead).toMatchObject({ found: true, trigger: expect.stringMatching(/not_on_record|unknown/) });
+  });
+
+  it("says it looked when the live read has nothing either, and never invents", async () => {
+    const answer = await turn("Which bills are due this week?", null, { items: STALE, deepRead: async () => [] });
+    expect(answer.text ?? "").not.toContain("Electricity");
+    expect(answer.deepRead).toMatchObject({ found: false });
+  });
+
+  it("does not look when the stored context already answers", async () => {
+    let looked = false;
+    const answer = await turn("Which bills are due this week?", null, { deepRead: async () => ((looked = true), []) });
+    expect(looked).toBe(false);
+    expect(answer.deepRead).toBeUndefined();
+  });
+
+  it("a read that hangs is a read that found nothing", async () => {
+    const answer = await turn("Which bills are due this week?", null, { items: STALE, deepRead: () => new Promise(() => undefined) });
+    expect(answer.deepRead).toMatchObject({ found: false });
+  }, 5000);
+
+  it("looks again when asked to, even after an answer", async () => {
+    let looked = false;
+    await turn("Which bills are due this week?", null, { deeper: true, deepRead: async (domains) => ((looked = true), KUNAL.filter((item) => domains.includes(item.domain))) });
+    expect(looked).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The household graph (HomeBrain 4.0 §3.3–§3.4, story 14-028)
+// ---------------------------------------------------------------------------
+
+describe("Following the household graph", () => {
+  it("brings the day's other plans along with the event asked about, below the answer", () => {
+    const { reading, facts } = ask("When is the office review?");
+    const linked = facts.filter((fact) => fact.reasons.some((reason) => reason.startsWith("on the same day as")));
+    expect(linked.length).toBeGreaterThan(0);
+    expect(linked.every((fact) => fact.relevant && fact.score === 0.45)).toBe(true);
+    // A rules answer is still the review alone.
+    const answer = composeFromFacts(facts, reading) ?? "";
+    expect(answer).toContain("Office review");
+    expect(answer).not.toContain("Electricity");
+  });
+
+  it("links a meal to the grocery item it is short of", () => {
+    const graph = buildHouseholdGraph(KUNAL);
+    const meal = KUNAL.find((item) => item.entityType === "meal")!;
+    const pasta = KUNAL.find((item) => item.entityType === "consumable" && item.attributes.title === "Pasta")!;
+    expect(graph.edges).toContainEqual({ from: meal.id, to: pasta.id, kind: "needs" });
+  });
+
+  it("links a responsibility to its owner and backup", () => {
+    const graph = buildHouseholdGraph(KUNAL);
+    const groceries = KUNAL.find((item) => item.entityType === "responsibility" && item.attributes.outcomeKey === "groceries.stocked")!;
+    const owners = graph.edges.filter((edge) => edge.from === groceries.id && edge.kind === "responsible_for").map((edge) => KUNAL.find((item) => item.id === edge.to)?.entityId);
+    expect(owners.sort()).toEqual(["kunal", "upasana"]);
+  });
+
+  it("never links to what the viewer cannot see: Asmi's graph has no one else's appointment", () => {
+    const asmi = itemsFor({ memberId: "asmi", tone: "child", permissions: [] });
+    const graph = buildHouseholdGraph(asmi);
+    const ids = new Set(asmi.map((item) => item.id));
+    expect(graph.edges.every((edge) => ids.has(edge.from) && ids.has(edge.to))).toBe(true);
+    expect(asmi.some((item) => item.domain === "health")).toBe(false);
+  });
+
+  it("never lifts a fact about someone the question did not ask about", () => {
+    const { facts } = ask("What does Asmi have tomorrow?");
+    expect(facts.filter((fact) => fact.relevant && fact.statement.includes("Maths worksheet"))).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inferences with evidence (HomeBrain 4.0 §3.5, story 14-029)
+// ---------------------------------------------------------------------------
+
+describe("Inferences the rules draw, with their evidence", () => {
+  const LINKED: ContextRecords = {
+    ...RECORDS,
+    events: [
+      ...RECORDS.events!,
+      // Thu 24 Sep, 7 pm in Kolkata.
+      event("e-movie", "Movie night", ["kunal", "asmi"], "2026-09-24T13:30:00Z", { kind: "family_time" }),
+    ],
+    eventGuests: [
+      { eventId: "e-dinner", name: "The Sharmas", response: "yes", partySize: 3, note: null },
+      { eventId: "e-dinner", name: "Meera", response: "yes", partySize: 1, note: null },
+      { eventId: "e-dinner", name: "The Raos", response: "maybe", partySize: 2, note: null },
+    ],
+    schoolItems: [...RECORDS.schoolItems!, { ...schoolItem("s-exam", "asmi", "Unit test 2", "Maths", "2026-09-25T04:30:00Z"), kind: "exam" }],
+    absences: [
+      { memberId: "sunita", onDate: TODAY, available: false, reason: null },
+      { memberId: "kunal", onDate: "2026-09-25", available: false, reason: "travel" },
+      { memberId: "upasana", onDate: "2026-09-24", available: false, reason: null },
+    ],
+  };
+  const items = itemsFor({ memberId: "kunal" }, LINKED);
+  const drawn = householdInsights(items, { timezone: TZ, today: TODAY, question: "How many people are coming?" });
+  const rule = (name: string) => drawn.filter((insight) => insight.rule === name);
+
+  it("notices an evening plan the night before a child's exam", () => {
+    expect(rule("night_before").map((insight) => insight.statement)).toEqual(["Movie night on Thursday evening is the night before Asmi's Maths exam (Unit test 2) on Friday."]);
+    expect(rule("night_before")[0]!.evidence).toHaveLength(2);
+  });
+
+  it("notices a meal short of things, a cook who is away, a bill due while its payer is away, and a duty nobody covers", () => {
+    expect(rule("meal_short")[0]!.statement).toBe("Wednesday's dinner, Pasta arrabbiata, needs 1 thing not at home: Pasta.");
+    expect(rule("away_but_assigned")[0]!.statement).toContain("Sunita is away on Wednesday");
+    expect(rule("bill_before_trip")[0]!.statement).toBe("The Electricity bill is due on Friday 25 Sep, a day Kunal is away.");
+    expect(rule("routine_gap").map((insight) => insight.statement)).toContain("Upasana is away on Thursday and nobody backs them up for school run.");
+  });
+
+  it("HT-111: counts who is coming as arithmetic over the replies", () => {
+    const { reading, facts } = ask("How many people are coming to the family dinner?", { items });
+    const count = facts.find((fact) => fact.domain === "insight" && fact.statement.startsWith("4 guests"));
+    expect(count?.statement).toBe("4 guests are coming to Family dinner (The Sharmas 3 + Meera 1), from 3 replies; 1 not decided yet.");
+    expect(count?.relevant).toBe(true);
+    expect(composeFromFacts(facts, reading)).toContain("4 guests are coming");
+  });
+
+  it("sends an inference with its evidence and leads with it for the day it is about", () => {
+    const { reading, facts } = ask("What's on Thursday?", { items });
+    const insight = facts.find((fact) => fact.domain === "insight" && fact.statement.startsWith("Movie night"));
+    expect(insight?.relevant).toBe(true);
+    const evidence = facts.filter((fact) => insight!.evidence!.includes(fact.contextId));
+    expect(evidence.map((fact) => fact.statement).join(" ")).toMatch(/Movie night.*Unit test 2|Unit test 2.*Movie night/s);
+    expect(evidence.every((fact) => fact.relevant)).toBe(true);
+    expect(composeFromFacts(facts, reading)).toContain("night before Asmi's Maths exam");
+  });
+
+  it("draws nothing from what the viewer may not see", () => {
+    const manan = itemsFor({ memberId: "manan", tone: "child", permissions: [] }, LINKED);
+    const theirs = householdInsights(manan, { timezone: TZ, today: TODAY });
+    const visible = new Set(manan.map((item) => item.id));
+    expect(theirs.every((insight) => insight.evidence.every((id) => visible.has(id)))).toBe(true);
+    // Bills are not a child's to read, so neither is a bill due while someone is away.
+    expect(theirs.some((insight) => insight.rule === "bill_before_trip")).toBe(false);
+  });
+
+  it("HT-108/HT-109: a model's own 'because' is refused; the same link cited from an inference stands", () => {
+    const facts = [
+      { id: "F1", text: "Movie night (family time) is on Thu 24 Sep at 7:00pm, with Kunal, Asmi." },
+      { id: "F2", text: "Asmi has exam: Unit test 2 (Maths), due Fri 25 Sep, pending." },
+      { id: "F3", text: "Movie night on Thursday evening is the night before Asmi's Maths exam (Unit test 2) on Friday." },
+    ];
+    const context = { facts, question: "Is Thursday ok for movie night?", localNow: "Wed 23 Sep, 11:30am", today: TODAY, inferences: ["F3"] };
+    const invented = validateAnswer({ text: "Thursday may not suit, because Asmi has her Maths exam on Friday.", usedFacts: ["F1", "F2"] }, context);
+    expect(invented.violations.map((violation) => violation.kind)).toContain("unsupported_inference");
+    const cited = validateAnswer({ text: "Thursday may not suit, because Asmi has her Maths exam on Friday.", usedFacts: ["F1", "F2", "F3"] }, context);
+    expect(cited.violations.map((violation) => violation.kind)).not.toContain("unsupported_inference");
+  });
+});
+
+describe("Answers shaped to the person's goal (HomeBrain 4.0 §3.10, story 14-030)", () => {
+  const LINKED: ContextRecords = {
+    ...RECORDS,
+    events: [...RECORDS.events!, event("e-movie", "Movie night", ["kunal", "asmi"], "2026-09-24T13:30:00Z", { kind: "family_time" })],
+    schoolItems: [...RECORDS.schoolItems!, { ...schoolItem("s-exam", "asmi", "Unit test 2", "Maths", "2026-09-25T04:30:00Z"), kind: "exam" }],
+  };
+  const items = itemsFor({ memberId: "kunal" }, LINKED);
+
+  it("to find out: the fact first, what the rules noticed after", () => {
+    const { reading, facts } = ask("When is movie night?", { items });
+    expect(reading.goal).toBe("find_out");
+    const answer = composeFromFacts(facts, reading) ?? "";
+    expect(answer.indexOf("Movie night (family time)")).toBeGreaterThan(-1);
+    expect(answer.indexOf("Movie night (family time)")).toBeLessThan(answer.indexOf("night before"));
+  });
+
+  it("to decide: what decides it leads, said as that", () => {
+    const { reading, facts } = ask("Should we do movie night on Thursday?", { items });
+    expect(reading.goal).toBe("decide");
+    const answer = composeFromFacts(facts, reading) ?? "";
+    expect(answer).toMatch(/^Here is what WonderHome has on record that bears on it/);
+    expect(answer.split("\n")[1]).toContain("night before Asmi's Maths exam");
+  });
+
+  it("to check whether anything is there: yes first, then the evidence", () => {
+    const { reading, facts } = ask("Is there anything on Thursday?", { items });
+    expect(reading.goal).toBe("check");
+    expect(composeFromFacts(facts, reading)).toMatch(/^Yes\. /);
+  });
+
+  it("never answers 'did it happen?' with a yes the record does not say", () => {
+    const { reading, facts } = ask("Did Kunal pay the electricity bill?", { items });
+    expect(composeFromFacts(facts, reading) ?? "").not.toMatch(/^Yes/);
+  });
+});
+
+describe("The facts budget is tokens, not only a count (HomeBrain 4.0 §3.4, story 14-027)", () => {
+  it("stops choosing facts once about that many tokens are chosen, keeping the most relevant", () => {
+    const { reading } = ask("What do we need today?");
+    const all = groundFacts(KUNAL, reading, { timezone: TZ, today: TODAY });
+    const tight = groundFacts(KUNAL, reading, { timezone: TZ, today: TODAY, tokenBudget: 40 });
+    const chosen = tight.filter((fact) => fact.relevant);
+    expect(chosen.length).toBeGreaterThan(0);
+    expect(chosen.length).toBeLessThan(all.filter((fact) => fact.relevant).length);
+    expect(chosen[0]!.statement).toBe(all.find((fact) => fact.relevant)!.statement);
   });
 });

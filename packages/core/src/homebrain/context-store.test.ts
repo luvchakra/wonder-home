@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { FamilyEvent } from "../family/schedule";
 import type { HouseholdMember } from "../identity/households";
 import { gatherHouseholdContext, loadHouseholdContext, setContextStoreReader, type ContextSnapshot } from "../context/repository";
-import { STORE_MAX_BYTES, buildStoreItems, fitToCap, storeIsCurrent, storedItemsForViewer } from "./context-store";
+import { STORE_MAX_BYTES, buildStoreItems, fitToCap, keepStoresWarm, storeIsCurrent, storedItemsForViewer } from "./context-store";
 import type { ContextScope, ContextViewer, HouseholdContextItem } from "../context/types";
 
 const HOUSEHOLD = "h0000000-0000-4000-8000-000000000001";
@@ -173,5 +173,39 @@ describe("loadHouseholdContext and the store", () => {
     } finally {
       setContextStoreReader(null);
     }
+  });
+});
+
+describe("keeping the stores warm (HomeBrain 4.0 §3.8, story 14-031)", () => {
+  it("rebuilds only stores that are behind or over an hour old, a few per tick, oldest first", async () => {
+    const now = new Date("2026-10-18T10:00:00Z");
+    const rows = [
+      { household_id: "old", built_at: "2026-10-18T08:30:00Z", stale_since: null },
+      { household_id: "marked", built_at: "2026-10-18T09:50:00Z", stale_since: "2026-10-18T09:55:00Z" },
+      { household_id: "fresh", built_at: "2026-10-18T09:55:00Z", stale_since: "2026-10-18T09:00:00Z" },
+    ];
+    const asked: string[] = [];
+    const chain = (result: unknown) => {
+      const query: Record<string, unknown> = {};
+      for (const method of ["select", "gte", "order", "limit", "eq"]) query[method] = () => query;
+      query.maybeSingle = async () => result;
+      query.then = (resolve: (value: unknown) => unknown) => resolve(result);
+      return query;
+    };
+    const admin = {
+      from: (table: string) => {
+        if (table === "household_context") return chain({ data: rows, error: null });
+        return {
+          select: () => ({
+            eq: (_column: string, id: string) => {
+              asked.push(id);
+              return { maybeSingle: async () => ({ data: null, error: null }) };
+            },
+          }),
+        };
+      },
+    } as unknown as Parameters<typeof keepStoresWarm>[0];
+    await keepStoresWarm(admin, now, 4);
+    expect(asked).toEqual(["old", "marked"]);
   });
 });

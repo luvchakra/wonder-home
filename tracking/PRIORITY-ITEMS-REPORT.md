@@ -100,7 +100,9 @@ Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 p
 | Invitations vertical, shaped for a phone, and a preview option | 26-012 | Done in #237 |
 | Play Gemini's voice through the floating window, so switching apps floats it on its own | 04-024 | Done in #237; real-phone check is the owner's |
 | School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Next |
-| Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Next |
+| Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Done in #241: every ingredient row picks from the catalog or your own items, and empty nutrients are worked out |
+| Don't write "More family time" on school or office events, only on family events | 26-013 | Done in #241 |
+| HomeBrain 4.0: look deeper, the household graph, inferences with evidence, answers shaped by the goal | 14-026, 14-028–14-030 | Done in #241; 14-027 (one pass, streaming) and part of 14-031 open |
 | Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Next |
 | Plan a meal: recipe first, fills the rest; change for this meal, save to the recipe, or save as a new one | 25-019 | Done (#238) |
 | Gemini Live hears well, but the chat writes different, misspelt words: write what was actually said | 04-023 | Done in #234: each turn written down again from its audio with the listening language and family names |

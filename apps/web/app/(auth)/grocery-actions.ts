@@ -16,7 +16,8 @@ import {
   setGroceryImage,
   setUseBy,
 } from "@wonderhome/core/commerce/inventory";
-import { getCatalogEntry, searchCatalog, type CatalogEntry } from "@wonderhome/core/commerce/catalog";
+import { searchCatalog, type CatalogEntry } from "@wonderhome/core/commerce/catalog";
+import { householdItemForCatalog } from "@wonderhome/core/commerce/catalog-items";
 import { changeItemUnit } from "@wonderhome/core/commerce/unit-change";
 import {
   createConsumable,
@@ -613,26 +614,12 @@ export async function addFromCatalogAction(input: {
   try {
     const supabase = await createClient();
     await requireMembership(supabase, householdId);
-    const entry = await getCatalogEntry(supabase, catalogId, publicEnv().NEXT_PUBLIC_SUPABASE_URL);
-    if (!entry) return { ok: false, error: "That item is no longer in the catalog." };
-
+    // The same rule a recipe's ingredient rows use (`householdItemForCatalog`).
+    const found = await householdItemForCatalog(supabase, { householdId, catalogId, supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL });
+    if (!found) return { ok: false, error: "That item is no longer in the catalog." };
+    const { entry, existing, created } = found;
     const name = entry.name;
-    const existing = (await listGroceries(supabase, householdId)).find(
-      (item) => item.catalog?.id === entry.id || [item.name, ...item.aliases].some((known) => similarity(known, name) >= 0.9),
-    );
-    let itemId = existing?.id ?? null;
-    let created = false;
-    if (!itemId) {
-      ({ id: itemId } = await createConsumable(supabase, {
-        householdId,
-        name,
-        category: entry.category,
-        unit: entry.unit,
-        typicalQuantity: entry.pack?.quantity ?? 1,
-        catalogId: entry.id,
-      }));
-      created = true;
-    }
+    const itemId = found.item.id;
     const preferred = existing?.unit ?? entry.unit;
     const chosen = parsed.data.amount;
     if (chosen && !compatible(chosen.unit, preferred)) return { ok: false, error: "That amount doesn't fit how this item is counted." };

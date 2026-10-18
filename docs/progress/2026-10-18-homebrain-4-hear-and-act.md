@@ -65,4 +65,4 @@ The owner then said: "it should just understand user intent and do what is asked
 
 ## QA cleanup
 
-Recorded after the merge. The #238 and #239 cleanup is in `docs/progress/2026-10-18-homebrain-4-design.md`.
+Ran after #240 merged (recorded in #241): QA user `b58adbe1-45c1-4754-b99c-40bef455f607` deleted with `qa-test-user.mjs delete`; its household `f5c44cee…` deleted with a scoped service-role script; SQL counts of its households, family_events, conversation_messages, household_subscriptions and policies all 0; the scratch folder removed. The #238 and #239 cleanup is in `docs/progress/2026-10-18-homebrain-4-design.md`.

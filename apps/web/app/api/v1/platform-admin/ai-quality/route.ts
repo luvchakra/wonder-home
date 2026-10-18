@@ -3,6 +3,7 @@ import { defineRoute } from "@wonderhome/core/api/route";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { loadProductionMetrics } from "@wonderhome/core/evaluation/production";
+import { loadHomeBrainKeeping } from "@wonderhome/core/homebrain/misses";
 import { platformCan, requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 
 /**
@@ -15,14 +16,19 @@ import { platformCan, requirePlatformAdmin } from "@wonderhome/core/platform/adm
  * status, correction surface and error type), never from anything a
  * household said. So, like AI operations and HomeSend metrics, it needs
  * `ai_operations.read` and no support-access grant. `?days=` sets the
- * window (1–365, default 30).
+ * window (1–365, default 30). `homeBrainKeeping` (HomeBrain 4.0 §3.8) adds
+ * the deeper looks HomeBrain took and what they found that its stored
+ * context lacked, by part of the home, and how far behind the stores are.
  */
 export const GET = defineRoute(
   { authenticate: async () => requirePlatformAdmin(await createClient()) },
   async ({ actor, request }) => {
     if (!platformCan(actor, "ai_operations.read")) throw ApiError.forbidden("Your platform role cannot view AI quality metrics.");
     const days = Number(new URL(request.url).searchParams.get("days") ?? "30");
-    return { metrics: await loadProductionMetrics(createAdminClient(), { windowDays: Number.isFinite(days) ? days : 30 }) };
+    const windowDays = Number.isFinite(days) ? Math.min(Math.max(Math.trunc(days), 1), 365) : 30;
+    const admin = createAdminClient();
+    const [metrics, homeBrainKeeping] = await Promise.all([loadProductionMetrics(admin, { windowDays }), loadHomeBrainKeeping(admin, { windowDays })]);
+    return { metrics, homeBrainKeeping };
   },
 );
 

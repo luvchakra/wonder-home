@@ -1,10 +1,22 @@
 import { normalizeUnit } from "../commerce/units";
 
-/** One ingredient as a recipe or a meal keeps it: a raw item and how much of it. */
-export type IngredientLine = { name: string; quantity: number; unit: string };
+/**
+ * One ingredient as a recipe or a meal keeps it: a raw item and how much of
+ * it — and, once resolved on the server (`ingredient-links.ts`), the
+ * household's own grocery item it is (25-017).
+ */
+export type IngredientLine = {
+  name: string;
+  quantity: number;
+  unit: string;
+  /** The household's grocery item, when the row was picked from the catalog or the household's own items. */
+  consumableId?: string | null;
+  /** What the row was picked from, as the form sent it — `catalog:<id>` or `item:<id>`. Resolved on the server, never trusted. */
+  ref?: string | null;
+};
 
 /** What a form's ingredient rows send: the same position in each list is one row. */
-export type IngredientRowsInput = { names: string[]; quantities: string[]; units: string[] };
+export type IngredientRowsInput = { names: string[]; quantities: string[]; units: string[]; refs?: string[] };
 
 /** The most rows one form may carry, the same cap `addMealIngredients` keeps. */
 export const MAX_INGREDIENT_ROWS = 40;
@@ -28,9 +40,10 @@ export function ingredientLinesFrom(input: IngredientRowsInput): IngredientLine[
     if (!raw) continue;
     const name = raw.charAt(0).toUpperCase() + raw.slice(1);
     const amount = readQuantity(input.quantities[index]);
+    const ref = readRef(input.refs?.[index]);
     const line: IngredientLine = amount === null
-      ? { name, quantity: 1, unit: "unit" }
-      : { name, quantity: amount, unit: normalizeUnit(input.units[index]) ?? "pcs" };
+      ? { name, quantity: 1, unit: "unit", ...(ref ? { ref } : {}) }
+      : { name, quantity: amount, unit: normalizeUnit(input.units[index]) ?? "pcs", ...(ref ? { ref } : {}) };
     const key = name.toLowerCase();
     const earlier = byName.get(key);
     if (earlier) {
@@ -54,7 +67,13 @@ export function readQuantity(raw: string | undefined): number | null {
 /** A form's ingredient rows (`ui/ingredient-rows.tsx`, prefix `essential`, `ingredient` …) as the lists `ingredientLinesFrom` reads. */
 export function ingredientRowsOf(form: FormData, prefix: string): IngredientRowsInput {
   const all = (field: string) => form.getAll(`${prefix}${field}`).map((value) => (typeof value === "string" ? value : ""));
-  return { names: all("Name"), quantities: all("Quantity"), units: all("Unit") };
+  return { names: all("Name"), quantities: all("Quantity"), units: all("Unit"), refs: all("Ref") };
+}
+
+/** A row's pick, only in the two shapes the form makes: anything else is a typed name. */
+function readRef(raw: string | undefined): string | null {
+  const text = (raw ?? "").trim();
+  return /^(?:catalog|item):[0-9a-f-]{36}$/i.test(text) ? text.toLowerCase() : null;
 }
 
 /** Two places, what `numeric(10, 2)` keeps. */

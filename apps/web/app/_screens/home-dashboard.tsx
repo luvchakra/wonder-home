@@ -858,9 +858,13 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   </PillLink>
                 )}
               </div>
-              <ScriptAccent size="sm" tilt={false} heart className="mt-2 block text-end">
-                {t("homeScreen.moreFamilyTime")}
-              </ScriptAccent>
+              {/* "More family time!" belongs to family time — never to a
+                  school trip or an office event (the owner, 2026-10-18). */}
+              {momentLook.family ? (
+                <ScriptAccent size="sm" tilt={false} heart className="mt-2 block text-end">
+                  {t("homeScreen.moreFamilyTime")}
+                </ScriptAccent>
+              ) : null}
             </>
           ) : (
             <div className="flex flex-1 flex-col">
