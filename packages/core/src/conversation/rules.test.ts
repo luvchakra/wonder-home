@@ -225,6 +225,8 @@ describe("what it does not know", () => {
     expect(read("Suggest some good places for dinner tonight").action).toBe("find_places");
     expect(read("Where can we hang out near Anya's school after school ends?").action).toBe("find_places");
     expect(read("any good cafes nearby").action).toBe("find_places");
+    expect(read("Okay. Can you suggest a two-day vacation plan?").action).toBe("find_places");
+    expect(read("suggest a weekend getaway").action).toBe("find_places");
     expect(read("plan a picnic this weekend").action).toBe("plan_event");
     expect(read("we prefer lunch at 1").action).not.toBe("find_places");
     expect(read("the food was good").action).not.toBe("find_places");

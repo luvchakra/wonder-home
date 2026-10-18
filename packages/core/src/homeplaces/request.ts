@@ -25,10 +25,12 @@ export type PlaceWhen =
   | { kind: "today"; minute: number; forMinutes: number; label: string }
   | { kind: "after_school"; forMinutes: number }
   /** After the speaker's working day, by the office hours they keep. */
-  | { kind: "after_work"; forMinutes: number };
+  | { kind: "after_work"; forMinutes: number }
+  /** A getaway of a few days: no opening hours to check, somewhere worth the drive. */
+  | { kind: "trip"; days: number };
 
 export type PlaceRequest = {
-  purpose: "eat" | "outing";
+  purpose: "eat" | "outing" | "getaway";
   /** The words sent to the place search: "family friendly restaurant for dinner". */
   query: string;
   /** How the request is said back: "dinner", "somewhere to hang out". */
@@ -37,6 +39,8 @@ export type PlaceRequest = {
   anchor: PlaceAnchor;
   when: PlaceWhen;
   radiusMeters: number;
+  /** A place type the search keeps to, when the words alone draw the wrong kind (a getaway's "tourist_attraction"). */
+  placeType?: string;
 };
 
 const ASKING =
@@ -50,18 +54,50 @@ const MEALS: Record<string, { minute: number; forMinutes: number }> = {
 };
 const EAT = /\b(dinner|lunch|breakfast|brunch|snacks?|eat(?:ing)?|food|restaurants?|cafes?|caf[eé]s?|coffee|dine|dining|meal|takeaway|ice ?cream|desserts?|pizza|biryani|dosa|burgers?|sushi|chinese|italian|south indian|north indian|thai|mexican|vegetarian|vegan|pure veg)\b/i;
 const OUTING = /\b(hang ?out|chill|outing|go out|day out|fun|play(?:ground| area)?|parks?|things to do|visit|walk|picnic|museum|activit(?:y|ies)|games?|bowling|trampoline|swim(?:ming)?|zoo|aquarium|library|mall)\b/i;
+/** "A two-day vacation plan", "a weekend getaway", "somewhere for a short trip": a getaway, not a dinner. */
+const GETAWAY = /\b(vacations?|holidays?|getaways?|trips?|staycations?|weekend away|road ?trips?|excursions?|places? to travel|travel plan)\b/i;
+const DAYS: Record<string, number> = { one: 1, a: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, couple: 2 };
 const CUISINE = /\b(pizza|biryani|dosa|burgers?|sushi|chinese|italian|south indian|north indian|thai|mexican|vegetarian|vegan|pure veg|ice ?cream|desserts?|coffee)\b/i;
 const CHILDREN = /\b(kids?|child(?:ren)?|son|daughter|little ones?|family|her|him|them)\b|\b\w+'s school\b|after school/i;
 
 /** Whether a sentence is asking for places at all: an asking word and a kind of place. */
 export function isPlaceQuestion(utterance: string): boolean {
-  return ASKING.test(utterance) && (EAT.test(utterance) || OUTING.test(utterance));
+  return ASKING.test(utterance) && (EAT.test(utterance) || OUTING.test(utterance) || GETAWAY.test(utterance));
+}
+
+/** How many days a getaway is for: "two-day", "3 day", "a weekend" (2), "a couple of days"; 2 when nothing is said. */
+function tripDays(lower: string): number {
+  const number = /\b(\d{1,2}|one|two|three|four|five|six|seven|couple(?: of)?)[- ](?:days?|nights?)\b/.exec(lower)?.[1];
+  if (number) return Math.min(Math.max(Number(number) || DAYS[number.replace(/ of$/, "")] || 2, 1), 14);
+  if (/\bweek-?long\b|\ba week\b/.test(lower)) return 7;
+  return 2;
 }
 
 export function readPlaceRequest(utterance: string): PlaceRequest | null {
   const said = utterance.trim();
   if (!isPlaceQuestion(said)) return null;
   const lower = said.toLowerCase();
+
+  // A getaway is its own kind of question, even if food comes up on the way.
+  if (GETAWAY.test(said) && !/\b(dinner|lunch|breakfast|brunch|restaurant)\b/i.test(said)) {
+    const days = tripDays(lower);
+    const forChildren = CHILDREN.test(said);
+    return {
+      purpose: "getaway",
+      // Asked of the place search as attractions, which is what a trip is to:
+      // "getaway destinations" alone brings back travel agencies.
+      // "Hill station weekend getaway" drew Mahabaleshwar, Matheran and
+      // Bhandardara from Pune when tried; vaguer words drew resorts and agencies.
+      query: `${forChildren ? "family friendly " : ""}${days <= 2 ? "hill station weekend getaway" : "holiday destination"}`,
+      placeType: "tourist_attraction",
+      label: `a ${days}-day getaway`,
+      forChildren,
+      anchor: { kind: "home" },
+      when: { kind: "trip", days },
+      // A day or two away: a few hours' drive. The search itself is biased within 50 km.
+      radiusMeters: days <= 1 ? 80_000 : 200_000,
+    };
+  }
 
   const eat = EAT.exec(said);
   const outing = OUTING.exec(said);

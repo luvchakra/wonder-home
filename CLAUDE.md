@@ -456,7 +456,13 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
     browser. Every member reads the book; adults and Admins write it.
     Saved places rank first, and turned-down places never return.
   - **Searches are budgeted.** `places.find` limits each household to 30
-    searches an hour. Voice channels leave place questions to the app.
+    searches an hour. Alexa leaves place questions to the app; Gemini Live
+    inside the app answers them where location may reach Google
+    (`channelAllowsAction`, `inApp` limits).
+  - **Getaways.** "A two-day vacation plan" is a getaway (`purpose:
+    "getaway"`): tourist attractions within a few hours' drive of home,
+    kept to that area rather than only biased to it, day-trip distances left
+    out, no opening hours checked.
 
   A model's reading names people by placeholder ("Child A"), and the letters
   move when a member is added, so `restoreParameterNames` puts real names back

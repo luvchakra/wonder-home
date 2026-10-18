@@ -65,6 +65,8 @@ import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { openScreenReply } from "@wonderhome/core/conversation/screens";
+import { composeLikes, personNamed, type LikesRecord } from "@wonderhome/core/conversation/likes";
+import { listMemories } from "@wonderhome/core/context/repository";
 import type { Viewer } from "@wonderhome/core/navigation/secondary-navigation";
 import { placesReply } from "@wonderhome/core/homeplaces/answer";
 import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
@@ -85,7 +87,7 @@ import { isHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/h
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 
-import { agendaAllows, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
+import { agendaAllows, channelAllowsAction, channelRefusal, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
 import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
 import { continueWelcome, pendingWelcome } from "@/app/_lib/hometalk-welcome";
@@ -210,7 +212,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   speaking.membership = membership;
   const actor = { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType };
   const admin = createAdminClient();
-  const channelLimits = limits ? { allows: (intent: HouseholdIntent) => voiceAllowsAction(intent.action, limits.scopes), refusal: VOICE_NOT_ALLOWED } : null;
+  const channelLimits = limits ? { allows: (intent: HouseholdIntent) => channelAllowsAction(intent.action, limits), refusal: channelRefusal(limits) } : null;
+  const notByVoice = limits ? channelRefusal(limits) : VOICE_NOT_ALLOWED;
   // A "yes" over a voice link settles only what the link may do: a payment
   // proposed in the app is approved in the app.
   const blockedOnChannel = async (actionId: string): Promise<boolean> => {
@@ -514,8 +517,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       const replies = [];
       for (const entry of [...open].reverse()) {
         if (await blockedOnChannel(entry.id)) {
-          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: VOICE_NOT_ALLOWED, metadata: { proposal: "refused", mode: "answer" } });
-          replies.push({ id, text: VOICE_NOT_ALLOWED, action: null, preview: null, proposal: "refused", mode: "answer" as BrainMode });
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: notByVoice, metadata: { proposal: "refused", mode: "answer" } });
+          replies.push({ id, text: notByVoice, action: null, preview: null, proposal: "refused", mode: "answer" as BrainMode });
           continue;
         }
         const decided = await decideAction(admin, { householdId, actionId: entry.id, memberId: membership.memberId, decision: approve ? "approved" : "rejected" });
@@ -763,6 +766,42 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     places = found.places;
     carry(speaking, ["location"]);
     brain = { source: "deterministic", factsSent: 0 };
+  } else if (
+    result.kind === "reply" &&
+    result.intent.action === "ask_status" &&
+    result.proposal.kind === "answer" &&
+    result.intent.parameters.scope === "likes" &&
+    (!limits || (limits.scopes as readonly string[]).includes("household.read"))
+  ) {
+    // "What does Upasana like in food?": every record about her, by rules
+    // (likes.ts) — what HomeTalk was told and the Meals screen's preferences.
+    const asked = { name: String(result.intent.parameters.subject ?? ""), food: result.intent.parameters.food === true };
+    const person = personNamed(asked.name, people);
+    if (!person) {
+      text = `I don't know who ${asked.name} is in your household. Check the name under Family.`;
+    } else {
+      const [memories, preferences] = await Promise.all([
+        listMemories(supabase, householdId).catch(() => []),
+        supabase.from("food_preferences").select("member_id, kind, subject").eq("household_id", householdId).then(({ data }) => (data as { member_id: string | null; kind: string; subject: string }[] | null) ?? []),
+      ]);
+      const records: LikesRecord[] = [
+        ...memories
+          .filter((memory) => memory.category === "preference" || memory.key.startsWith("pref."))
+          .flatMap((memory) => {
+            const statement = (memory.value as { statement?: unknown } | null)?.statement;
+            return typeof statement === "string" && statement.trim()
+              ? [{ kind: "memory" as const, memberId: memory.memberId, statement: statement.trim(), confirmed: memory.status === "confirmed" }]
+              : [];
+          }),
+        ...preferences.map((row) => ({ kind: "food" as const, memberId: row.member_id, preference: row.kind as "preference", subject: row.subject })),
+      ];
+      const told = composeLikes(asked, person, records);
+      text = told.text;
+      const isChild = people.find((entry) => entry.id === person.id)?.memberType === "child";
+      carry(speaking, [...(isChild ? (["child"] as const) : []), ...(told.health ? (["health"] as const) : [])]);
+    }
+    composedAt = Date.now();
+    brain = { source: "deterministic", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && result.intent.parameters.scope === "people") {
     // Who is in the household: the whole member list, by rules (roster.ts).
     const { data: petRows } = await supabase.from("pets").select("name, species").eq("household_id", householdId).eq("active", true);
@@ -963,7 +1002,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   });
 
   if ((result.kind === "approve" || result.kind === "reject") && (await blockedOnChannel(result.actionId))) {
-    text = VOICE_NOT_ALLOWED;
+    text = notByVoice;
     await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
     return {
       sessionId,

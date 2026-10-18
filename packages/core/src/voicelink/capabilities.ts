@@ -72,8 +72,10 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     actions: ["find_places"],
     contentClass: "location",
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
-    note: "Finding places nearby happens in the WonderHome app, where the places can be opened on a map.",
+    // Gemini Live in the app answers it (the places show as cards on the same
+    // screen) where the household lets location reach Google; a speaker cannot show them.
+    policy: { app: "yes", gemini_voice: "consent", alexa: "app_only" },
+    note: "A speaker can't show places on a map, so Alexa leaves place questions to the WonderHome app.",
   },
   {
     id: "screens",

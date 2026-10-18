@@ -109,6 +109,8 @@ export async function suggestPlaces(
       radiusMeters: request.radiusMeters,
       openNow: request.when.kind === "now",
       max: 15,
+      ...(request.placeType ? { includedType: request.placeType } : {}),
+      ...(request.purpose === "getaway" ? { within: true } : {}),
       languageCode: context.languageCode,
       regionCode: context.regionCode,
     });
@@ -118,7 +120,15 @@ export async function suggestPlaces(
   }
 
   const known = await listHouseholdPlaces(supabase, context.householdId).catch(() => [] as HouseholdPlace[]);
-  const places = rankPlaces(found, { anchor: anchor.point, window, known, radiusMeters: request.radiusMeters });
+  const places = rankPlaces(found, {
+    anchor: anchor.point,
+    window,
+    known,
+    radiusMeters: request.radiusMeters,
+    perKm: request.purpose === "getaway" ? 0.004 : 0.12,
+    // Two days somewhere 6 km away is a day out, not a getaway.
+    minMeters: request.when.kind === "trip" && request.when.days >= 2 ? 25_000 : 0,
+  });
   if (places.length === 0) return { kind: "none", near: anchor.near, window: window.label };
   return { kind: "found", places, near: anchor.near, window: window.label, assumption: window.assumption };
 }
@@ -162,7 +172,7 @@ function workAnchor(personName: string | null, context: PlacesContext): Anchor |
   return { point: theirs.location, near: theirs.memberId === context.speakerMemberId ? "your office" : `${firstName}'s office` };
 }
 
-type Window = { day: number; minute: number; forMinutes: number; label: string; assumption: string | null; now: boolean };
+type Window = { day: number; minute: number; forMinutes: number; label: string; assumption: string | null; now: boolean; anyHours?: boolean };
 
 /**
  * When "after school" starts. Anchored at a school: that school's own end.
@@ -180,6 +190,9 @@ function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor
   switch (request.when.kind) {
     case "now":
       return { day, minute, forMinutes: 60, label: "now", assumption: null, now: true };
+    case "trip":
+      // A getaway is days away and days long: opening hours say nothing yet.
+      return { day, minute, forMinutes: 0, label: `for ${request.when.days === 1 ? "a day" : `${request.when.days} days`}`, assumption: null, now: false, anyHours: true };
     case "today": {
       // A time already gone today ("dinner" asked at 10 pm) means from now.
       const start = Math.max(request.when.minute, minute);
@@ -215,7 +228,7 @@ function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor
 /** Best first: the family's own saves, then open-and-good, then near. Never a place they turned down. */
 export function rankPlaces(
   found: readonly PlaceResult[],
-  options: { anchor: LatLng; window: Pick<Window, "day" | "minute" | "forMinutes" | "now">; known: readonly HouseholdPlace[]; radiusMeters: number },
+  options: { anchor: LatLng; window: Pick<Window, "day" | "minute" | "forMinutes" | "now" | "anyHours">; known: readonly HouseholdPlace[]; radiusMeters: number; perKm?: number; minMeters?: number },
 ): PlaceSuggestion[] {
   const rejected = new Set(options.known.filter((place) => place.status === "not_for_us").map((place) => place.placeId));
   const saved = new Set(options.known.filter((place) => place.status === "saved").map((place) => place.placeId));
@@ -226,13 +239,14 @@ export function rankPlaces(
     if (rejected.has(place.placeId)) continue;
     const distanceMeters = metresBetween(options.anchor, place.location);
     if (distanceMeters > options.radiusMeters * 1.5) continue;
-    const open = options.window.now && place.openNow !== null ? place.openNow : isOpenFor(place.periods, options.window.day, options.window.minute, options.window.forMinutes);
+    if (options.minMeters && distanceMeters < options.minMeters) continue;
+    const open = options.window.anyHours ? null : options.window.now && place.openNow !== null ? place.openNow : isOpenFor(place.periods, options.window.day, options.window.minute, options.window.forMinutes);
     if (open === false) continue;
 
     let score = place.rating ?? 3.6;
     score += Math.min(Math.log10((place.ratingCount ?? 0) + 1), 4) * 0.15;
-    score -= (distanceMeters / 1000) * 0.12;
-    if (open === null) score -= 0.4;
+    score -= (distanceMeters / 1000) * (options.perKm ?? 0.12);
+    if (open === null && !options.window.anyHours) score -= 0.4;
     if (saved.has(place.placeId)) score += 1.5;
     if (place.kind && likedKinds.has(place.kind.toLowerCase())) score += 0.3;
 

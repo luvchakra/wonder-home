@@ -94,7 +94,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "talk-to-wonderhome",
     group: "Everyday use",
     updated: "2026-10-18",
-    keywords: ["after school", "after work", "office hours", "school hours", "place book", "saved places", "ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces", "welcome", "getting to know"],
+    keywords: ["after school", "after work", "office hours", "school hours", "place book", "saved places", "ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces", "welcome", "getting to know", "vacation", "getaway", "trip", "weekend", "holiday"],
   },
   {
     id: "voice",

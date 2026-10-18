@@ -29,7 +29,7 @@ disagree again.)
 | 01 | Identity & Family Accounts | 9 | 5 | 3 | 1 | 9 | Done |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
-| 04 | Conversation, Voice & Text | 18 | 15 | 3 | 0 | 17 | In Progress |
+| 04 | Conversation, Voice & Text | 19 | 16 | 3 | 0 | 18 | In Progress |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -49,7 +49,7 @@ disagree again.)
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
-| 24 | HomePlaces | 7 | 1 | 4 | 2 | 4 | In Progress |
+| 24 | HomePlaces | 8 | 2 | 4 | 2 | 5 | In Progress |
 | 25 | HomeFood | 13 | 6 | 4 | 3 | 6 | In Progress |
 | 26 | HomeEvents | 6 | 2 | 2 | 2 | 0 | In Progress |
 
@@ -272,3 +272,4 @@ disagree again.)
 | 2026-10-18 | 04 | 04-018 | Done | `conversation/screens.test.ts` 30, rules/gateway/Gemini tests, all unit tests 3,330; eval 117/117 (voice gate 23/23, 27/27 actions placed); typecheck, lint, build, bundle check; browser QA at 360px and desktop with a scripted recogniser: Groceries → bananas added there → Calendar → back to HomeTalk, bar on every other screen, no horizontal scroll | HomeTalk follows you across screens: `open_screen`, a live conversation that survives navigation, and a glowing bar on every screen (`docs/progress/2026-10-18-hometalk-across-screens.md`) |
 | 2026-10-18 | 25 | 25-012, 25-013 | Done (25-012); 25-013 queued | `commerce/catalog-names.test.ts` 9; commerce/conversation/ai/i18n 914; typecheck, lint; browser QA at 360px and 1280px with a QA household: rows 105px against 128px before, labels on one line, nutrition on catalog items, "Add pasta" through HomeTalk made Pasta under Rice & grains in grams | Compact grocery cards with nutrition; items named in words counted like the catalog. Changing pieces to grams held back with its migration (`docs/progress/2026-10-18-compact-grocery-cards.md`) |
 | 2026-10-18 | 10, 25 | 10-009, 25-010 pictures | Done | typecheck, lint, meals/commerce tests; browser QA at 360px and 1280px with a QA household: planned 8:00 pm reads 8:00 pm, Ingredients took "500 g rajma / 2 onions / rice" and listed the shortfalls, Change meal saved "Rajma Rice" at 8:30 pm in place, Remove from the plan took it off; 341 catalog pictures from Wikimedia Commons copied and credited | A meal card that does what it says, and pictures for the everyday catalog items (`docs/progress/2026-10-18-meal-card-and-pictures.md`) |
+| 2026-10-18 | 04, 24 | 04-019, 24-008 | Done; HomeBrain 3.0 design written | `conversation/likes.test.ts` 12, `homeplaces/request.test.ts` getaways, voicelink in-app tests; voicelink/homeplaces/conversation/evaluation 728; eval 118/118 (voice 23/23); browser QA with a QA household: "two-day vacation plan" gave Mahabaleshwar, Naneghat, the Wai hills from Pune; "What does Cards like? In food." answered from the remembered fact | Voice in the app is HomeTalk (never "use the WonderHome app"), getaways answered with real places, likes answered from the record. The forgetting is a design limit: `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` (`docs/progress/2026-10-18-hometalk-in-app-voice-and-homebrain-3-design.md`) |

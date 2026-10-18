@@ -17,16 +17,26 @@ export function placesReply(request: PlaceRequest, outcome: PlacesOutcome): stri
         return `- **${place.name}**${facts ? ` — ${facts}` : ""}${place.saved ? " (saved)" : ""}`;
       });
       const count = outcome.places.length;
-      const intro = `Here ${count === 1 ? "is a place" : `are ${count} places`} for ${request.label} near ${outcome.near}, open ${outcome.window}:`;
-      const unknownHours = outcome.places.some((place) => place.openForWindow === null);
+      const intro =
+        request.purpose === "getaway"
+          ? `For ${request.label}, here ${count === 1 ? "is a place" : `are ${count} places`} worth the trip from ${outcome.near}, the best rated first:`
+          : `Here ${count === 1 ? "is a place" : `are ${count} places`} for ${request.label} near ${outcome.near}, open ${outcome.window}:`;
+      const unknownHours = request.purpose !== "getaway" && outcome.places.some((place) => place.openForWindow === null);
       return [
         intro,
         lines.join("\n"),
-        [outcome.assumption, unknownHours ? "For any without hours listed, check before you go." : null, "Save the ones you like and I'll suggest them first next time."].filter(Boolean).join(" "),
+        [
+          outcome.assumption,
+          unknownHours ? "For any without hours listed, check before you go." : null,
+          request.purpose === "getaway" ? "Check the drive, the weather and where to stay before you book." : null,
+          "Save the ones you like and I'll suggest them first next time.",
+        ].filter(Boolean).join(" "),
       ].join("\n\n");
     }
     case "none":
-      return `I couldn't find anywhere for ${request.label} near ${outcome.near} that's open ${outcome.window}. Try another time, or ask about somewhere a bit further away.`;
+      return request.purpose === "getaway"
+        ? `I couldn't find a getaway within a few hours of ${outcome.near}. Try naming the kind of place, like hills, a beach or a lake.`
+        : `I couldn't find anywhere for ${request.label} near ${outcome.near} that's open ${outcome.window}. Try another time, or ask about somewhere a bit further away.`;
     case "needs_home":
       return "I don't know where home is yet. An Admin can add the home address in Manage Household, under Home address, and then I can look nearby.";
     case "needs_school":
