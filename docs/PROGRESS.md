@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**230 of 246 stories done — 93.5%**
+**234 of 246 stories done — 95.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 230 |
-| In Progress | 8 |
+| Done | 234 |
+| In Progress | 4 |
 | Blocked | 0 |
 | Not Started | 7 |
 | Deferred | 1 |
@@ -25,8 +25,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
-| 00 Project Bootstrap & Architecture | `█████████░` | 11 | 12 | 1 in progress |
-| 01 Identity & Family Accounts | `█████████░` | 9 | 10 | 1 in progress |
+| 00 Project Bootstrap & Architecture | `██████████` | 12 | 12 | — |
+| 01 Identity & Family Accounts | `██████████` | 10 | 10 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
@@ -49,25 +49,21 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
-| 24 HomePlaces | `█████░░░░░` | 4 | 7 | 3 in progress |
+| 24 HomePlaces | `███████░░░` | 5 | 7 | 2 in progress |
 | 25 HomeFood | `████░░░░░░` | 2 | 5 | 3 not started |
-| 26 HomeEvents | `░░░░░░░░░░` | 0 | 6 | 2 in progress, 4 not started |
+| 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
-| `00-012` Bars step aside while reading on a phone | 00 Project Bootstrap & Architecture | P1 | In Progress |
-| `01-010` Every member signs in as themselves | 01 Identity & Family Accounts | P0 | In Progress |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `24-005` Places near the office | 24 HomePlaces | P1 | In Progress |
 | `24-006` Search for places from the Places screen | 24 HomePlaces | P2 | In Progress |
-| `24-007` Work hours as a fact in Family | 24 HomePlaces | P2 | In Progress |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | Not Started |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
-| `26-001` Family Calendar foundation | 26 HomeEvents | P0 | In Progress |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
@@ -78,7 +74,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 00 — Project Bootstrap & Architecture
 
-11 of 12 done `█████████░`
+12 of 12 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -93,11 +89,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `00-009` Create observability foundation | P1 | Done | Redacting structured logs; reporter seam |
 | `00-010` Create feature configuration | P1 | Done | Flags + fail-fast startup validation |
 | `00-011` Offer to install the app on phones and tablets | P1 | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
-| `00-012` Bars step aside while reading on a phone | P1 | In Progress | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser check at 360px still to do |
+| `00-012` Bars step aside while reading on a phone | P1 | Done | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): the header hides after about 40px, the tab bar only after 280px (raised from 120 so the two are visibly staged), and a 20px scroll up brings both back |
 
 ### 01 — Identity & Family Accounts
 
-9 of 10 done `█████████░`
+10 of 10 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -110,7 +106,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-007` Preferences | P1 | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | `01-008` Helper/service identity | P2 | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 | `01-009` Settings & Profile consolidation | P1 | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
-| `01-010` Every member signs in as themselves | P0 | In Progress | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser check at 360px still to do: this session had no sign-in credentials |
+| `01-010` Every member signs in as themselves | P0 | Done | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): an Admin set a child's sign-in email in Family; that child then signed in by password and landed straight in the household on the child Home, with Bills refused and Members and Plan read-only; Invite made a link (Send email opened a filled-in mail, Copy worked; Share appears only where the browser has a share sheet); a helper opened her link signed out, signed in, accepted and became the helper already on record, with no second member |
 
 ### 02 — Household Configuration & Playbook
 
@@ -474,7 +470,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-4 of 7 done `█████░░░░░`
+5 of 7 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -482,9 +478,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-002` The family's place book | P1 | Done | #204: save and "not for us" from a place card (`apps/web/app/ai/place-actions.ts`, re-read from the stored reply, never the browser) into `household_places`; every member reads, adults and Admins write; saved places rank first, turned-down places never return |
 | `24-003` School and office hours | P1 | Done | #210: `school_enrolments.starts_at/ends_at` and `household_members.work_starts_at/work_ends_at` (migration `20261018090000`, live); "after school" uses the recorded end time and "after work" is read; an assumed time is said in the reply |
 | `24-004` The place book screen | P1 | Done | #210: `/places` lists saved and turned-down places, with undo |
-| `24-005` Places near the office | P1 | In Progress | An adult's office is picked from Google Maps (`member_work_places`, migration `20261018150000`, live; the person or an Admin writes, adults and Admins read; `scripts/test-work-places-rls.mjs`), in Settings for yourself and in Family for an Admin. "Near my office" / "near Rohan's work" anchors there (`homeplaces/request.ts` work anchor, `service.ts` `workAnchor`); with no office picked HomeTalk says where to add it (`needs_work`). Golden HT-81. Browser check at 360px still to do (no QA credentials in the session) |
-| `24-006` Search for places from the Places screen | P2 | In Progress | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser check still to do |
-| `24-007` Work hours as a fact in Family | P2 | In Progress | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser check still to do |
+| `24-005` Places near the office | P1 | In Progress | An adult's office is picked from Google Maps (`member_work_places`, migration `20261018150000`, live; the person or an Admin writes, adults and Admins read; `scripts/test-work-places-rls.mjs`), in Settings for yourself and in Family for an Admin. "Near my office" / "near Rohan's work" anchors there (`homeplaces/request.ts` work anchor, `service.ts` `workAnchor`); with no office picked HomeTalk says where to add it (`needs_work`). Golden HT-81. Browser check still to do with a Google Maps key (the local QA build had none, so the picker is hidden there by design) |
+| `24-006` Search for places from the Places screen | P2 | In Progress | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser check still to do with a Google Maps key |
+| `24-007` Work hours as a fact in Family | P2 | Done | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): Family shows How they work and Office hours |
 
 ### 25 — HomeFood
 
@@ -500,11 +496,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-0 of 6 done `░░░░░░░░░░`
+1 of 6 done `█░░░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
-| `26-001` Family Calendar foundation | P0 | In Progress | Formerly 12-009. C1 (design/FAMILY-CALENDAR-PHASE0.md, D1–D7 approved 2026-10-18) built: migration `20261018120000` (visibility, all-day, repeat rules, exceptions, DoP&T holidays, preferences, family events on every plan), `packages/core/src/calendar/`, `/calendar` Month/Week/Day/Year, the Today tab is Calendar. Migration live 2026-10-18 (applied by the owner in the SQL editor, verified by query). Waiting on: signed-in browser QA at 360px and 1280px |
+| `26-001` Family Calendar foundation | P0 | Done | Formerly 12-009. C1 (design/FAMILY-CALENDAR-PHASE0.md, D1–D7 approved 2026-10-18) built: migration `20261018120000` (visibility, all-day, repeat rules, exceptions, DoP&T holidays, preferences, family events on every plan), `packages/core/src/calendar/`, `/calendar` Month/Week/Day/Year, the Today tab is Calendar. Migration live 2026-10-18 (applied by the owner in the SQL editor, verified by query). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): Month, Week, Day and Year at both sizes with no sideways scroll; adding an event at 360px put it on its day |
 | `26-002` Calendar module adapters | P0 | Not Started | Formerly 12-010. C2: school, meals, bills, health, helpers, upkeep, outcomes and orders on the calendar, each through its own visibility rules; "Busy" for health; dedupe by source |
 | `26-003` HomeTalk plans with the calendar | P1 | In Progress | Formerly 12-011. Read half done (2026-10-18): a question over a month-sized span ("any events in December?", "the next few months") is answered by rules from `calendarRange` for the speaker (`calendar/answer.ts`, `resolveCalendarSpan`, golden HT-26/HT-27); day and week questions keep HomeBrain's answer. A month question about another part of the home ("which bills are due this month?") is HomeBrain's, not a calendar list (`asksTheCalendar`); the golden set checks each member's month against visibility (HT-56 to HT-64). "What's the next upcoming event?", "how about the public holiday?" and "any birthdays coming up?" are answered from the calendar a year ahead (`readLookAhead`, `lookAheadReply`), never "your week is clear" (HT-76 to HT-80). Still to do: C3: plan_event with participants and conflicts, find_free_time, moving and cancelling events, answers read from the projection |
 | `26-004` Calendar reminders and holiday region | P1 | Not Started | Formerly 12-012. C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |

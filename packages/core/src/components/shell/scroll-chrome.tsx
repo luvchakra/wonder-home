@@ -18,7 +18,7 @@ import { useEffect } from "react";
  * server-rendered.
  */
 export const HIDE_TOP_AFTER = 24;
-export const HIDE_BOTTOM_AFTER = 120;
+export const HIDE_BOTTOM_AFTER = 280;
 const SHOW_AFTER = 12;
 
 export type ChromeState = "shown" | "top-hidden" | "all-hidden";
