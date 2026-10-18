@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, Lightbulb, Plus } from "lucide-react";
+import { Lightbulb, Plus } from "lucide-react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -13,8 +13,9 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 import type { ActionState } from "../(auth)/actions";
 import {
   addSuggestedMealAction,
-  attachRecipeToMealAction,
   createMealAction,
+  removeMealAction,
+  updateMealAction,
   createPreferenceAction,
   createRecipeAction,
   suggestMealAction,
@@ -59,6 +60,21 @@ export type MealFormLabels = {
   planning: string;
   attach: string;
   attachTitle: string;
+  change: string;
+  changeTitle: string;
+  changeDescription: string;
+  save: string;
+  saving: string;
+  remove: string;
+  removing: string;
+  noRecipe: string;
+  writeIngredients: string;
+  writeHint: string;
+  writePlaceholder: string;
+  saveIngredients: string;
+  orRecipe: string;
+  useRecipe: string;
+  noIngredientsYet: string;
   attachDescription: string;
   whichRecipe: string;
   attachSubmit: string;
@@ -349,69 +365,110 @@ export function PlanMealButton({
   );
 }
 
-/** Attaching an existing recipe to a meal that was planned without one — a meal card's own "add a recipe". */
-export function AttachRecipeControl({
+/**
+ * "Change meal" on a meal's card: the same fields as planning one, changed
+ * right here (rule 12), never sent to HomeTalk as a sentence to retype (rule
+ * 13). The recipe is one of the fields, so picking or dropping one is part
+ * of the same change; "Remove from the plan" sits at the bottom.
+ */
+export function ChangeMealButton({
   householdId,
-  mealId,
+  meal,
+  members,
   recipes,
   labels,
 }: {
   householdId: string;
-  mealId: string;
+  meal: { id: string; name: string; slot: (typeof SLOTS)[number]; onDate: string; readyByTime: string; cookMemberId: string | null; recipeId: string | null };
+  members: { id: string; displayName: string }[];
   recipes: { id: string; name: string }[];
   labels: MealFormLabels;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    attachRecipeToMealAction,
-    {},
-  );
-
-  if (recipes.length === 0) return null;
+  const [state, formAction] = useActionState<ActionState, FormData>(updateMealAction, {});
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [handled, setHandled] = useState<string | undefined>(undefined);
+  // A save that went through closes the sheet; the card shows the change.
+  if (state.notice && state.notice !== handled) {
+    setHandled(state.notice);
+    setOpen(false);
+  }
+  const select = "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
 
   return (
     <>
-      <Pill
-        type="button"
-        tone="quiet"
-        onClick={() => setOpen(true)}
-        className="gap-1.5"
-      >
-        <ChefHat aria-hidden className="size-3.5" /> {labels.attach}
+      <Pill type="button" tone="quiet" onClick={() => setOpen(true)}>
+        {labels.change}
       </Pill>
-
-      <Sheet
-        open={open}
-        onOpenChange={setOpen}
-        title={labels.attachTitle}
-        description={labels.attachDescription}
-      >
-        <form action={formAction} className="space-y-3">
-          {state.error ? <Alert>{state.error}</Alert> : null}
-          <input type="hidden" name="householdId" value={householdId} />
-          <input type="hidden" name="mealId" value={mealId} />
-          <div className="space-y-1.5">
-            <label
-              htmlFor={`recipe-${mealId}`}
-              className="block text-sm font-medium"
+      <Sheet open={open} onOpenChange={setOpen} title={fill(labels.changeTitle, { name: meal.name })} description={labels.changeDescription}>
+        {open ? (
+          <form action={formAction} className="space-y-3">
+            {state.error ? <Alert>{state.error}</Alert> : null}
+            {removeError ? <Alert>{removeError}</Alert> : null}
+            <input type="hidden" name="householdId" value={householdId} />
+            <input type="hidden" name="mealId" value={meal.id} />
+            <Field label={labels.mealName} name="name" required defaultValue={meal.name} autoComplete="off" />
+            <div className="space-y-1.5">
+              <label htmlFor={`recipe-${meal.id}`} className="block text-sm font-medium">
+                {labels.fromRecipe}
+              </label>
+              <select id={`recipe-${meal.id}`} name="recipeId" defaultValue={meal.recipeId ?? ""} className={select}>
+                <option value="">{labels.noRecipe}</option>
+                {recipes.map((recipe) => (
+                  <option key={recipe.id} value={recipe.id}>
+                    {recipe.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor={`slot-${meal.id}`} className="block text-sm font-medium">
+                {labels.slot}
+              </label>
+              <select id={`slot-${meal.id}`} name="slot" defaultValue={meal.slot} className={select}>
+                {SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {labels.slots[slot]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={labels.date} name="onDate" type="date" required defaultValue={meal.onDate} />
+              <Field label={labels.readyBy} name="readyByTime" type="time" required defaultValue={meal.readyByTime} />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor={`cook-${meal.id}`} className="block text-sm font-medium">
+                {labels.cook}
+              </label>
+              <select id={`cook-${meal.id}`} name="cookMemberId" defaultValue={meal.cookMemberId ?? ""} className={select}>
+                <option value="">{labels.nobodyYet}</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Submit label={labels.save} pendingLabel={labels.saving} />
+            <Button
+              type="button"
+              variant="quiet"
+              disabled={removing}
+              className="w-full"
+              onClick={async () => {
+                setRemoving(true);
+                const result = await removeMealAction({ householdId, mealId: meal.id });
+                setRemoving(false);
+                if (result.error) setRemoveError(result.error);
+                else setOpen(false);
+              }}
             >
-              {labels.whichRecipe}
-            </label>
-            <select
-              id={`recipe-${mealId}`}
-              name="recipeId"
-              defaultValue={recipes[0]?.id}
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
-              {recipes.map((recipe) => (
-                <option key={recipe.id} value={recipe.id}>
-                  {recipe.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Submit label={labels.attachSubmit} pendingLabel={labels.attaching} />
-        </form>
+              {removing ? labels.removing : labels.remove}
+            </Button>
+          </form>
+        ) : null}
       </Sheet>
     </>
   );

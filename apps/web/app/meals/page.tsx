@@ -30,7 +30,7 @@ import { AgendaRow } from "../_components/agenda-row";
 import {
   AddPreferenceButton,
   AddRecipeButton,
-  AttachRecipeControl,
+  ChangeMealButton,
   type MealFormLabels,
   PlanMealButton,
   SuggestMealButton,
@@ -300,6 +300,7 @@ export default async function MealsPage({
                               timezone={timezone}
                               householdId={householdId}
                               recipes={recipeOptions}
+                              members={memberOptions}
                               t={t}
                               labels={formLabels}
                               groceries={groceries}
@@ -446,6 +447,7 @@ function MealCard({
   timezone,
   householdId,
   recipes,
+  members,
   t,
   labels,
   groceries,
@@ -456,6 +458,7 @@ function MealCard({
   timezone: string;
   householdId: string;
   recipes: { id: string; name: string }[];
+  members: { id: string; displayName: string }[];
   t: Translate;
   labels: MealFormLabels;
   groceries: GroceryItem[];
@@ -511,10 +514,21 @@ function MealCard({
         <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
       </div>
       {missing.length > 0 ? (
-        <p className="mt-2 flex items-center gap-1.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-2.5 py-1.5 text-xs text-[var(--wh-attention)]">
-          <ShoppingBasket aria-hidden className="size-3.5" />{" "}
-          {t("meals.card.missing", { items: missing.map((need) => need.name).join(", ") })}
-        </p>
+        // What is on the list is said to be; what is not is "still to get" —
+        // never "on the shopping list" for something nobody added.
+        <div className="mt-2 space-y-1">
+          {missing.some((need) => need.status !== "shopping") ? (
+            <p className="flex items-center gap-1.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-2.5 py-1.5 text-xs text-[var(--wh-attention)]">
+              <ShoppingBasket aria-hidden className="size-3.5" />{" "}
+              {t("meals.card.stillNeeded", { items: missing.filter((need) => need.status !== "shopping").map((need) => need.name).join(", ") })}
+            </p>
+          ) : null}
+          {missing.some((need) => need.status === "shopping") ? (
+            <p className="text-xs text-[var(--wh-foreground-muted)]">
+              {t("meals.card.missing", { items: missing.filter((need) => need.status === "shopping").map((need) => need.name).join(", ") })}
+            </p>
+          ) : null}
+        </div>
       ) : meal.ingredients.length > 0 ? (
         <p className="mt-2 text-xs text-[var(--wh-handled)]">
           {t("meals.card.allIn", { count: meal.ingredients.length })}
@@ -530,14 +544,7 @@ function MealCard({
           <PillLink href="/meals?tab=recipes" tone="quiet">
             {t("meals.card.viewRecipe")}
           </PillLink>
-        ) : (
-          <AttachRecipeControl
-            householdId={householdId}
-            mealId={meal.id}
-            recipes={recipes}
-            labels={labels}
-          />
-        )}
+        ) : null}
         <MealIngredientsSheet
           householdId={householdId}
           mealId={meal.id}
@@ -547,6 +554,7 @@ function MealCard({
             return item ? [item] : [];
           })}
           recipeServes={meal.recipe?.serves ?? null}
+          recipes={recipes}
           servings={meal.servings ?? null}
           words={{ language: words.language, unitWords: words.unitWords }}
           labels={{
@@ -569,14 +577,34 @@ function MealCard({
             failed: t("grocery.meal.failed"),
             addAll: pluralTemplates(t, "grocery.meal.addAll", words.language),
             added: pluralTemplates(t, "grocery.meal.added", words.language),
+            empty: {
+              lede: labels.noIngredientsYet,
+              write: labels.writeIngredients,
+              hint: labels.writeHint,
+              placeholder: labels.writePlaceholder,
+              save: labels.saveIngredients,
+              saving: labels.saving,
+              orRecipe: labels.orRecipe,
+              noRecipe: labels.noRecipe,
+              useRecipe: labels.useRecipe,
+            },
           }}
         />
-        <PillLink
-          href={`/ai?q=${encodeURIComponent(`Change ${meal.slot} on ${meal.onDate}`)}`}
-          tone="quiet"
-        >
-          {t("meals.card.changeMeal")}
-        </PillLink>
+        <ChangeMealButton
+          householdId={householdId}
+          meal={{
+            id: meal.id,
+            name: meal.name,
+            slot: meal.slot,
+            onDate: meal.onDate,
+            readyByTime: new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(meal.readyBy),
+            cookMemberId: meal.cookMemberId,
+            recipeId: meal.recipe?.id ?? null,
+          }}
+          members={members}
+          recipes={recipes}
+          labels={labels}
+        />
       </div>
     </Card>
   );

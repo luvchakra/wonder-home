@@ -1,6 +1,7 @@
 "use client";
 
 import { ShoppingBasket } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import type { GroceryItem } from "@wonderhome/core/commerce/inventory";
@@ -13,7 +14,7 @@ import { Pill, PillLink } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import { addMealShortfallsAction } from "../(auth)/meal-actions";
+import { addMealIngredientsAction, addMealShortfallsAction, attachRecipeToMealAction } from "../(auth)/meal-actions";
 import type { GroceryWords } from "../_lib/grocery-words";
 import { fill, newKey, pluralOf, sayAmount } from "../groceries/_components/amounts";
 
@@ -37,6 +38,18 @@ export type MealIngredientsLabels = {
   failed: string;
   addAll: Record<string, string>;
   added: Record<string, string>;
+  /** A meal with no ingredients: write them here, or use a recipe (never a dead end). */
+  empty: {
+    lede: string;
+    write: string;
+    hint: string;
+    placeholder: string;
+    save: string;
+    saving: string;
+    orRecipe: string;
+    noRecipe: string;
+    useRecipe: string;
+  };
 };
 
 /**
@@ -55,9 +68,12 @@ export function MealIngredientsSheet({
   servings,
   words,
   labels,
+  recipes = [],
 }: {
   householdId: string;
   mealId: string;
+  /** The household's recipes, offered when the meal has no ingredients yet. */
+  recipes?: { id: string; name: string }[];
   ingredients: IngredientNeed[];
   groceries: GroceryItem[];
   recipeServes: number | null;
@@ -120,7 +136,7 @@ export function MealIngredientsSheet({
           ) : null}
 
           {ingredients.length === 0 ? (
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.noIngredients}</p>
+            <NoIngredientsYet householdId={householdId} mealId={mealId} recipes={recipes} labels={labels.empty} />
           ) : plan.short.length === 0 ? (
             <p className="text-sm text-[var(--wh-handled)]">{labels.none}</p>
           ) : (
@@ -163,5 +179,82 @@ export function MealIngredientsSheet({
         </div>
       </Sheet>
     </>
+  );
+}
+
+/**
+ * A meal planned without a recipe has nothing to check yet. Rather than
+ * saying "pick a recipe" with nowhere to pick one, the sheet lets the person
+ * write what it needs, one line each ("500 g rajma"), or use one of their
+ * recipes, right here.
+ */
+function NoIngredientsYet({
+  householdId,
+  mealId,
+  recipes,
+  labels,
+}: {
+  householdId: string;
+  mealId: string;
+  recipes: { id: string; name: string }[];
+  labels: MealIngredientsLabels["empty"];
+}) {
+  const router = useRouter();
+  const [text, setText] = useState("");
+  const [recipeId, setRecipeId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const saveLines = () =>
+    startTransition(async () => {
+      const done = await addMealIngredientsAction({ householdId, mealId, text });
+      if (done.error) setError(done.error);
+      else router.refresh();
+    });
+  const useRecipe = () =>
+    startTransition(async () => {
+      const form = new FormData();
+      form.set("householdId", householdId);
+      form.set("mealId", mealId);
+      form.set("recipeId", recipeId);
+      const done = await attachRecipeToMealAction({}, form);
+      if (done.error) setError(done.error);
+      else router.refresh();
+    });
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.lede}</p>
+      {error ? <Alert>{error}</Alert> : null}
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium">{labels.write}</span>
+        <textarea
+          rows={4}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          placeholder={labels.placeholder}
+          className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
+        />
+        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{labels.hint}</span>
+      </label>
+      <Button type="button" className="w-full" disabled={pending || !text.trim()} onClick={saveLines}>
+        {pending ? labels.saving : labels.save}
+      </Button>
+      {recipes.length > 0 ? (
+        <div className="space-y-2 border-t border-[var(--wh-border)] pt-3">
+          <Select label={labels.orRecipe} name="recipeId" value={recipeId} onChange={(event) => setRecipeId(event.target.value)}>
+            <option value="">{labels.noRecipe}</option>
+            {recipes.map((recipe) => (
+              <option key={recipe.id} value={recipe.id}>
+                {recipe.name}
+              </option>
+            ))}
+          </Select>
+          <Button type="button" variant="secondary" className="w-full" disabled={pending || !recipeId} onClick={useRecipe}>
+            {labels.useRecipe}
+          </Button>
+        </div>
+      ) : null}
+    </div>
   );
 }

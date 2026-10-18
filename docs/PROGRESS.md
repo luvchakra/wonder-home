@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**242 of 256 stories done — 94.5%**
+**243 of 257 stories done — 94.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 242 |
+| Done | 243 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 10 |
@@ -35,7 +35,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
 | 08 Kids & School Intelligence | `██████████` | 9 | 9 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 8 | 8 | — |
+| 10 Meals & Cooking | `██████████` | 9 | 9 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
@@ -246,7 +246,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -258,6 +258,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-006` Recipe intelligence | P1 | Done | every recommendation names a next action: cook, shop, substitute or defer |
 | `10-007` Advanced nutrition | P2 | Done | preference scope and source kept so a dislike never becomes a house rule |
 | `10-008` Cooking automation hooks | P2 | Done | readiness accepts an observed source, so an appliance signal has somewhere to land |
+| `10-009` A meal card that does what it says: change in place, ingredients without a recipe, the right time | P0 | Done | The owner, 2026-10-18 (PR #227). **Change meal** opened HomeTalk with a sentence to retype (rule 13), and a meal could not be changed or removed at all (rule 12): it is now a sheet on the card (name, recipe, slot, day, ready by, cook; `updateMeal`, with a new recipe's ingredients replacing only those still waiting) with **Remove from the plan** (`removeMeal`, a meal still to come; what it put on the list stays). **Ingredients** on a meal with no recipe said "pick a recipe" with nowhere to pick one: it now takes the ingredients written one per line (`addMealIngredients`, amounts read as HomeTalk reads them, none said is "not measured") or one of the household's recipes. The card said "Missing … on the shopping list" for things nobody added: it now says "Still to get" for those. And a meal planned on the Meals screen was timed on the server's clock (an 8 pm dinner saved as 1:30 am): times are on the household's clock (`atLocal`). Browser-checked at 360px and 1280px |
 
 ### 11 — Bills, Fees & Finance
 
