@@ -76,7 +76,8 @@ export type BrainReading = {
  */
 const CONNECTED: Partial<Record<ContextDomain, readonly ContextDomain[]>> = {
   meals: ["groceries", "preferences"],
-  school: ["calendar", "groceries"],
+  // What school needs from the shop is reached by "need"/"bring" (NEED_WORDS), not by every school question.
+  school: ["calendar"],
   health: ["calendar"],
   calendar: ["absences"],
   groceries: ["orders"],
@@ -134,7 +135,8 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
   if (previous && isFollowUp(question, own)) {
     followUp = true;
     if (ownPeople.length > 0) {
-      const earlier = namedPeople(readQuestion(previous, items).mentioned);
+      // Every word the earlier person goes by — "Thatha" as much as "Venkat".
+      const earlier = readQuestion(previous, items).mentioned.filter((item) => item.entityType === "member").flatMap((item) => namesOf(item));
       // The new person replaces whoever — or whichever "the kid" — was asked about before.
       text = `${question} ${stripPersonPhrases(stripNames(previous, earlier))}`;
     } else {
@@ -173,7 +175,14 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     if (item.entityType === "school_item") domains.add("school");
   }
 
-  const said = new Set(normalizeText(retrievalText).split(" ").filter(Boolean));
+  // School fees are a bill, not schoolwork: "school" there names whose bill
+  // it is, and must not pull in what a school day needs from the shop.
+  if (/\bschool fees?\b/i.test(text) && !/\b(?:homework|worksheet|project|exam|test|notice)\b/i.test(text)) {
+    domains.delete("school");
+    domains.add("bills");
+  }
+
+  const said = new Set(normalizeText(retrievalText.replace(/\bschool (fees?)\b/gi, "$1")).split(" ").filter(Boolean));
   const focus = new Set<ContextDomain>();
   for (const [domain, words] of Object.entries(DOMAIN_WORDS) as [ContextDomain, readonly string[]][]) {
     if (words.some((word) => !WEAK_WORDS.has(word) && said.has(word))) focus.add(domain);
@@ -181,8 +190,13 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
   for (const domain of domains) if (!read.domains.has(domain)) focus.add(domain);
 
   const wantsConflicts = CONFLICT_WORDS.test(text);
+  // What a question connects to starts from what it is unmistakably about:
+  // "which bills are due this week?" reaches the calendar only through
+  // "week", a word too common to set the focus, so it is not a question
+  // about the week's events or the school work that falls in it.
+  const about = focus.size > 0 ? focus : domains;
   const connected = new Set<ContextDomain>();
-  for (const domain of domains) for (const next of CONNECTED[domain] ?? []) if (!domains.has(next)) connected.add(next);
+  for (const domain of about) for (const next of CONNECTED[domain] ?? []) if (!domains.has(next)) connected.add(next);
   if (NEED_WORDS.test(text) && (people.length > 0 || timeWindow(text, options))) {
     for (const next of ["school", "calendar", "groceries"] as const) if (!domains.has(next)) connected.add(next);
     // "What do we need today?" includes what today's meals still need.
@@ -191,7 +205,7 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
   if (MEAL_TIME_WORDS.test(text) && /\b(?:make|cook|have)\b/i.test(text) && !domains.has("groceries")) connected.add("groceries");
   // "What's on tomorrow?" is a household's day, and school work due that day
   // is part of it — the date window still keeps next week's project out.
-  if (domains.has("calendar") && timeWindow(text, options) && !domains.has("school")) connected.add("school");
+  if (about.has("calendar") && timeWindow(text, options) && !domains.has("school")) connected.add("school");
   if (wantsConflicts) {
     for (const next of ["calendar", "absences"] as const) if (!domains.has(next)) connected.add(next);
   }
@@ -236,6 +250,13 @@ export function timeWindow(text: string, options: { timezone: string; now: Date 
     const [year, month] = today.split("-").map(Number) as [number, number];
     const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
     return { label: "this month", from: today, to: `${today.slice(0, 8)}${String(last).padStart(2, "0")}` };
+  }
+  if (/\bnext month\b/.test(t)) {
+    const [year, month] = today.split("-").map(Number) as [number, number];
+    const [nextYear, next] = month === 12 ? [year + 1, 1] : [year, month + 1];
+    const last = new Date(Date.UTC(nextYear, next, 0)).getUTCDate();
+    const prefix = `${nextYear}-${String(next).padStart(2, "0")}`;
+    return { label: "next month", from: `${prefix}-01`, to: `${prefix}-${String(last).padStart(2, "0")}` };
   }
   for (const word of t.split(" ")) {
     if (word.length < 3 || !/^(?:mon|tue|wed|thu|fri|sat|sun)/.test(word)) continue;
@@ -288,13 +309,18 @@ function isFollowUp(question: string, own: ReturnType<typeof readQuestion>): boo
   return FOLLOW_UP_PRONOUNS.test(question) && !namesSomething && own.domains.size <= 1;
 }
 
-function stripNames(text: string, people: readonly PersonRef[]): string {
+/** A member's name, first name and every alias the household gave them (nickname, relationship). */
+function namesOf(item: HouseholdContextItem): string[] {
+  const displayName = String(item.attributes.displayName ?? "");
+  return [displayName, displayName.split(/\s+/)[0] ?? "", ...item.aliases];
+}
+
+function stripNames(text: string, names: readonly string[]): string {
   let out = text;
-  for (const person of people) {
-    for (const name of [person.displayName, person.displayName.split(/\s+/)[0] ?? ""]) {
-      if (name.length < 2) continue;
-      out = out.replace(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:'s)?\\b`, "gi"), " ");
-    }
+  // Longest first, so "Venkat Iyer" goes before "Venkat" leaves "Iyer" behind.
+  for (const name of [...new Set(names)].sort((a, b) => b.length - a.length)) {
+    if (name.length < 2) continue;
+    out = out.replace(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:'s)?\\b`, "gi"), " ");
   }
   return out.replace(/\s+/g, " ").trim();
 }

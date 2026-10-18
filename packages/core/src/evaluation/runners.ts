@@ -1,20 +1,26 @@
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { DEFAULT_DATA_USE } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
-import { converse, type Understanding } from "../conversation/engine";
+import { asksTheCalendar, calendarSpanReply } from "../calendar/answer";
+import type { PendingClarification } from "../conversation/clarify";
+import { converse, pendingFrom, type ConversationTurn, type Understanding } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
 import { localDateTime, pendingWords, roleWords } from "../conversation/moment";
-import { isConsequential, type HouseholdIntent } from "../conversation/intent";
-import { answerWithHomeBrain } from "../homebrain/turn";
+import { isConsequential, type HouseholdIntent, type PendingProposal } from "../conversation/intent";
+import { focusFromProposal, readFocus, type FocusEntity } from "../conversation/references";
+import { composeRoster } from "../conversation/roster";
+import { resolveCalendarSpan } from "../conversation/temporal";
+import { focusFromAnswer } from "../homebrain/focus";
+import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { compareStages } from "./compare";
-import { contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
-import type { CaseResult, EvalCase, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation } from "./types";
+import { calendarFor, contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
+import type { CaseResult, EvalCase, Expectation, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation } from "./types";
 
 /**
  * The runners (Wave 5 §2, §5–§7): each drives the real production pipeline
@@ -77,35 +83,89 @@ function failingUnderstanding(kind: "provider_error" | "unparseable"): Understan
   });
 }
 
+/** What one turn of a conversation leaves for the next, as the route carries it. */
+type Carried = {
+  pending: PendingProposal | null;
+  clarifying: PendingClarification | null;
+  history: ConversationTurn[];
+  focus: FocusEntity[];
+  /** The last thing the member asked, for HomeBrain's "and Manan?". */
+  previousQuestion: string | null;
+};
+
+const FRESH: Carried = { pending: null, clarifying: null, history: [], focus: [], previousQuestion: null };
+
 export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Promise<Observation> {
+  return (await talkTurn(c, c.utterance, FRESH, models)).observed;
+}
+
+/** Every turn of a conversation case, in order, each with what the one before it left behind. */
+export async function observeConversation(c: HomeTalkCase, models: Models = {}): Promise<Observation[]> {
+  const observed: Observation[] = [];
+  let carried = FRESH;
+  for (const utterance of [c.utterance, ...(c.followUps ?? []).map((turn) => turn.utterance)]) {
+    const turn = await talkTurn(c, utterance, carried, models);
+    observed.push(turn.observed);
+    carried = turn.next;
+  }
+  return observed;
+}
+
+async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, models: Models): Promise<{ observed: Observation; next: Carried }> {
   const household = GOLDEN_HOUSEHOLDS[c.household];
   const who = memberOf(household, c.actor);
+  const first = carried === FRESH;
+  const references = first ? c.references : undefined;
   const result = await converse({
-    utterance: c.utterance,
+    utterance,
     channel: c.channel ?? "text",
-    ...(c.transcriptConfidence !== undefined ? { transcriptConfidence: c.transcriptConfidence } : {}),
+    ...(c.transcriptConfidence !== undefined && first ? { transcriptConfidence: c.transcriptConfidence } : {}),
     actor: { memberId: who.id, roles: who.roles, memberType: who.memberType },
-    pending: null,
+    pending: carried.pending,
+    clarifying: carried.clarifying,
+    history: carried.history,
     autonomyFor: () => c.autonomy ?? "approve",
     entitledFor: () => true,
     executable: canExecute,
     sessionId: `eval-${c.id}`,
     now: household.now,
-    ground: (intent) => groundIntent(intent, groundingEnvFor(household, who.id, c.references)),
+    ground: (intent) =>
+      groundIntent(
+        intent,
+        groundingEnvFor(household, who.id, references, {
+          clarification: readFocus(carried.clarifying?.parameters.candidates),
+          ...(carried.pending ? { proposal: carried.focus } : {}),
+          conversation: carried.focus,
+        }),
+      ),
     // The moment exactly as the conversation route tells it to a model.
     runtime: {
       role: roleWords(who),
       localDateTime: localDateTime(household.now, household.timezone),
-      pending: pendingWords(c.references?.proposal?.[0] ? { summary: c.references.proposal[0].label } : null),
-      recent: [...new Set([...(c.references?.conversation ?? []), ...(c.references?.homesend ?? [])].map((spec) => spec.label))].slice(0, 5),
+      pending: pendingWords(carried.pending ? { summary: carried.pending.summary } : references?.proposal?.[0] ? { summary: references.proposal[0].label } : null),
+      recent: [...new Set([...carried.focus.map((focus) => focus.label), ...[...(references?.conversation ?? []), ...(references?.homesend ?? [])].map((spec) => spec.label)])].slice(0, 5),
     },
-    ...(c.simulate ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: models.understand } : {}),
+    ...(c.simulate && first ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: models.understand } : {}),
   });
 
+  const history: ConversationTurn[] = [...carried.history, { role: "member", text: utterance }];
   if (result.kind !== "reply") {
-    return { ...EMPTY, action: result.kind, answer: result.text };
+    // A yes or a no settles what was waiting; nothing is waiting after it.
+    return {
+      observed: { ...EMPTY, action: result.kind, answer: result.text },
+      next: { ...carried, pending: null, clarifying: null, history: [...history, { role: "assistant", text: result.text }] },
+    };
   }
   const intent = result.intent;
+  const composed = await composedAnswer(c, utterance, result, carried.previousQuestion, models);
+  const answer = composed?.text ?? result.text;
+  // What this turn was about, exactly as the route persists it for the next turn.
+  const at = household.now.toISOString();
+  const focus: FocusEntity[] = [
+    ...(result.focus ?? []),
+    ...(result.record ? focusFromProposal({ actionType: intent.action, parameters: intent.parameters, targetReference: intent.target.reference ?? null, at }) : []),
+    ...(composed?.brain ? focusFromAnswer(composed.brain, contextItemsFor(household, c.actor), at) : []),
+  ];
   const awaiting = intent.parameters.awaiting;
   const entity =
     result.proposal.kind === "clarify" && awaiting === "member"
@@ -113,7 +173,7 @@ export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Pro
       : typeof intent.parameters.memberId === "string"
         ? intent.parameters.memberId
         : null;
-  return {
+  const observed: Observation = {
     ...EMPTY,
     interpretation: intent.action,
     date: groundedDay(intent),
@@ -125,10 +185,96 @@ export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Pro
       refused: result.proposal.kind === "refused",
       injectionFlagged: false,
     },
-    answer: result.text,
+    answer,
     confidence: intent.confidence,
     providerFailure: intent.understanding?.failure ?? null,
   };
+  const asked = intent.action === "ask_status" || intent.action === "unknown";
+  return {
+    observed,
+    next: {
+      // A proposal waiting for a yes is written down and carried, as the route records it;
+      // one that already ran, or was refused, waits for nothing.
+      pending: result.record && result.proposal.kind === "needs_approval" ? pendingFrom({ id: `eval-${c.id}-${history.length}`, summary: result.text, createdAt: household.now }) : null,
+      clarifying: result.clarification ?? null,
+      history: [...history, { role: "assistant", text: answer }],
+      focus: [...focus, ...carried.focus],
+      previousQuestion: asked ? utterance : carried.previousQuestion,
+    },
+  };
+}
+
+/**
+ * The answer to a question, composed exactly as the conversation route
+ * composes it (`apps/web/app/_lib/hometalk-turn.ts`): who is in the family
+ * from the whole member list, a month-sized span from the calendar, anything
+ * else from HomeBrain over the facts this member may see — and a request the
+ * engine did not know, from HomeBrain when it reads as a question. Null when
+ * the route keeps the engine's own words.
+ */
+async function composedAnswer(
+  c: HomeTalkCase,
+  utterance: string,
+  result: Extract<Awaited<ReturnType<typeof converse>>, { kind: "reply" }>,
+  previousQuestion: string | null,
+  models: Models,
+): Promise<{ text: string; brain?: HomeBrainAnswer } | null> {
+  const household = GOLDEN_HOUSEHOLDS[c.household];
+  const who = memberOf(household, c.actor);
+  const { intent, proposal } = result;
+  if (intent.action === "ask_status" && proposal.kind === "answer") {
+    if (intent.parameters.scope === "people") {
+      return { text: composeRoster(household.members.filter((m) => m.status === "active"), {
+        viewerMemberId: who.id,
+        householdName: household.name,
+        pets: (household.records.pets ?? []).filter((pet) => pet.active).map((pet) => ({ name: pet.name, species: pet.species })),
+      }) };
+    }
+    const when = intent.parameters.when;
+    const span = typeof when === "string" && when.trim() && asksTheCalendar(utterance) ? resolveCalendarSpan(when, { timezone: household.timezone, now: household.now }) : null;
+    if (span) {
+      const entries = calendarFor(household, who.id, { from: span.from, to: span.to });
+      return { text: calendarSpanReply({ span, entries, failedSources: [], timeZone: household.timezone }) };
+    }
+    // "Why?" is answered from recorded evidence the route reads at the time; not composed here.
+    if (typeof intent.parameters.explain === "string") return null;
+    const answered = await brainAnswer(c, utterance, previousQuestion, models);
+    // With no sentence of its own, the route shows the agenda summary; the facts stand in for it here.
+    return { text: answered.text ?? answered.facts.map((fact) => fact.statement).join("\n"), brain: answered };
+  }
+  if (intent.action === "unknown" && proposal.kind === "clarify" && !intent.understanding?.failure && typeof intent.parameters.clarify !== "string") {
+    const answered = await brainAnswer(c, utterance, previousQuestion, models);
+    const usable =
+      answered.text &&
+      (((answered.source === "model" || answered.source === "model_regenerated") && answered.mode === "answer") || answered.reading.followUp || looksLikeQuestion(utterance));
+    return usable && answered.text ? { text: answered.text, brain: answered } : null;
+  }
+  return null;
+}
+
+function brainAnswer(c: { household: HomeTalkCase["household"]; actor: string }, question: string, previousQuestion: string | null, models: Models) {
+  const household = GOLDEN_HOUSEHOLDS[c.household];
+  const who = memberOf(household, c.actor);
+  return answerWithHomeBrain({
+    question,
+    sentQuestion: question,
+    previousQuestion,
+    sentHistory: [],
+    items: contextItemsFor(household, c.actor),
+    viewer: { memberId: who.id, roleLabel: who.memberType === "child" ? "Child" : who.memberType === "helper" ? "Househelper" : "Adult", guardianOf: viewerFor(household, who.id).guardianOf },
+    timezone: household.timezone,
+    now: household.now,
+    policy: DEFAULT_DATA_USE,
+    people: peopleOf(household),
+    compose: models.compose ?? null,
+    factBudget: 12,
+  });
+}
+
+/** Whether an utterance is asking something — the route's own test, kept in step with it. */
+function looksLikeQuestion(utterance: string): boolean {
+  const text = utterance.trim().toLowerCase();
+  return text.endsWith("?") || /^(?:what|which|who|whom|whose|when|where|why|how|is|are|am|was|were|do|does|did|can|could|will|would|should|have|has|any|anything)\b/.test(text);
 }
 
 // --- HomeSend -----------------------------------------------------------------
@@ -234,22 +380,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
 // --- HomeBrain ----------------------------------------------------------------
 
 export async function observeHomeBrain(c: HomeBrainCase, models: Models = {}): Promise<Observation> {
-  const household = GOLDEN_HOUSEHOLDS[c.household];
-  const who = memberOf(household, c.actor);
-  const answer = await answerWithHomeBrain({
-    question: c.question,
-    sentQuestion: c.question,
-    previousQuestion: c.previousQuestion ?? null,
-    sentHistory: [],
-    items: contextItemsFor(household, c.actor),
-    viewer: { memberId: who.id, roleLabel: who.memberType === "child" ? "Child" : who.memberType === "helper" ? "Househelper" : "Adult", guardianOf: viewerFor(household, who.id).guardianOf },
-    timezone: household.timezone,
-    now: household.now,
-    policy: DEFAULT_DATA_USE,
-    people: peopleOf(household),
-    compose: models.compose ?? null,
-    factBudget: 12,
-  });
+  const answer = await brainAnswer(c, c.question, c.previousQuestion ?? null, models);
   // A whole-home question can come back without a sentence of its own (the
   // route then shows its summary); the facts HomeBrain chose are the answer.
   const text = answer.text ?? answer.facts.map((fact) => fact.statement).join("\n");
@@ -269,21 +400,26 @@ export async function observeHomeBrain(c: HomeBrainCase, models: Models = {}): P
 
 export async function runCase(c: EvalCase, models: Models = {}): Promise<CaseResult> {
   const started = performance.now();
-  const observed =
-    c.surface === "hometalk" ? await observeHomeTalk(c, models) : c.surface === "homesend" ? await observeHomeSend(c, models) : await observeHomeBrain(c, models);
+  // A conversation is every turn of it: each turn's expectation compared
+  // against what that turn produced, and the case passes only if all do.
+  const turns: { expected: Expectation; observed: Observation }[] =
+    c.surface === "hometalk"
+      ? (await observeConversation(c, models)).map((observed, index) => ({ expected: index === 0 ? c.expected : c.followUps![index - 1]!.expected, observed }))
+      : [{ expected: c.expected, observed: c.surface === "homesend" ? await observeHomeSend(c, models) : await observeHomeBrain(c, models) }];
   // A simulated outage is the point of the case, not a failure of it: what
   // is scored is what the household got despite it.
-  const scored = c.surface === "hometalk" && c.simulate ? { ...observed, providerFailure: null } : observed;
-  const comparison = compareStages(c.expected, scored, c.category);
+  const comparisons = turns.map(({ expected, observed }, index) =>
+    compareStages(expected, c.surface === "hometalk" && c.simulate && index === 0 ? { ...observed, providerFailure: null } : observed, c.category),
+  );
   return {
     caseId: c.id,
     surface: c.surface,
     household: c.household,
     category: c.category,
-    pass: comparison.pass,
-    stages: comparison.stages,
-    errors: comparison.errors,
-    consequential: c.expected.safety?.consequential ?? observed.safety.consequential,
+    pass: comparisons.every((comparison) => comparison.pass),
+    stages: comparisons.flatMap((comparison) => comparison.stages),
+    errors: [...new Set(comparisons.flatMap((comparison) => comparison.errors))],
+    consequential: turns.some(({ expected, observed }) => expected.safety?.consequential ?? observed.safety.consequential),
     latencyMs: Math.round(performance.now() - started),
     tokens: null,
   };

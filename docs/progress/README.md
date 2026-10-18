@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeTalk across the home: 48 golden cases and multi-turn conversations, and the defects they found](2026-10-18-hometalk-cross-module-evaluation.md) |
 | 2026-10-18 | [What's new on Home, and HomeTalk answers from the Calendar](2026-10-18-whats-new-and-calendar-answers.md) |
 | 2026-10-18 | [Family Calendar C1: the foundation (story 12-009)](2026-10-18-family-calendar-c1.md) |
 | 2026-10-18 | [HomePlaces: school hours, office hours, and the place book](2026-10-18-homeplaces-hours-and-place-book.md) |

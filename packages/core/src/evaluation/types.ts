@@ -125,7 +125,18 @@ export type HomeTalkCase = CaseBase & {
    * household must still get.
    */
   simulate?: "provider_error" | "unparseable";
+  /**
+   * Later turns of the same conversation, in order. Each is spoken after the
+   * one before it with what that turn left behind — the question it asked,
+   * the proposal waiting for a yes, what it was about, the words so far — as
+   * the conversation route carries them. Every turn's expectation is
+   * compared; the case passes only if all of them do.
+   */
+  followUps?: readonly HomeTalkTurn[];
 };
+
+/** One later turn of a HomeTalk conversation. */
+export type HomeTalkTurn = { utterance: string; expected: Expectation };
 
 export type HomeSendCase = CaseBase & {
   surface: "homesend";
