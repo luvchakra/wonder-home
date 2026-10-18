@@ -57,14 +57,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const isChild = view.tone === "child";
 
   return (
-    <AppShell active="today" viewer={viewer} secondary={secondary} pathname="/today">
+    <AppShell active="calendar" viewer={viewer} secondary={secondary} pathname="/today">
       <div className="space-y-5">
         <header className="wh-rise flex items-end justify-between gap-3">
           <div>
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("today.title")}</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{formatToday(timezone, now)}</p>
           </div>
-          <PillLink href="/family" tone="quiet">
+          <PillLink href="/calendar" tone="quiet">
             <CalendarHeart aria-hidden className="size-3.5" /> {t("today.calendar")}
           </PillLink>
         </header>

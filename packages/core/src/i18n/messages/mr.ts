@@ -9,6 +9,7 @@ import { householdMr } from "./areas/household/mr";
 import { entryMr } from "./areas/entry/mr";
 import { installMr } from "./areas/install/mr";
 import { eventsMr } from "./areas/events/mr";
+import { calendarMr } from "./areas/calendar/mr";
 import { groceryMr } from "./areas/grocery/mr";
 import { welcomeMr } from "./areas/welcome/mr";
 
@@ -29,6 +30,7 @@ export const mr: Catalog = {
 
   "nav.home": "होम",
   "nav.today": "आज",
+  "nav.calendar": "दिनदर्शिका",
   "nav.ai": "HomeTalk",
   "nav.family": "कुटुंब",
   "nav.more": "अधिक",
@@ -678,6 +680,7 @@ export const mr: Catalog = {
   ...entryMr,
   ...installMr,
   ...eventsMr,
+  ...calendarMr,
   ...groceryMr,
   ...welcomeMr,
 };

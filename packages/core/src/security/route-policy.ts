@@ -11,6 +11,7 @@
 /** Surfaces that require an authenticated member. */
 const AUTHENTICATED_PREFIXES = [
   "/today",
+  "/calendar",
   "/ai",
   "/family",
   "/more",

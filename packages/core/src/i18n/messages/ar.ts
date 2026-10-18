@@ -9,6 +9,7 @@ import { householdAr } from "./areas/household/ar";
 import { entryAr } from "./areas/entry/ar";
 import { installAr } from "./areas/install/ar";
 import { eventsAr } from "./areas/events/ar";
+import { calendarAr } from "./areas/calendar/ar";
 import { groceryAr } from "./areas/grocery/ar";
 import { welcomeAr } from "./areas/welcome/ar";
 
@@ -29,6 +30,7 @@ export const ar: Catalog = {
 
   "nav.home": "الرئيسية",
   "nav.today": "اليوم",
+  "nav.calendar": "التقويم",
   "nav.ai": "HomeTalk",
   "nav.family": "العائلة",
   "nav.more": "المزيد",
@@ -696,6 +698,7 @@ export const ar: Catalog = {
   ...entryAr,
   ...installAr,
   ...eventsAr,
+  ...calendarAr,
   ...groceryAr,
   ...welcomeAr,
 };

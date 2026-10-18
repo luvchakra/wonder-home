@@ -18,6 +18,7 @@ import { householdEn } from "./areas/household/en";
 import { entryEn } from "./areas/entry/en";
 import { installEn } from "./areas/install/en";
 import { eventsEn } from "./areas/events/en";
+import { calendarEn } from "./areas/calendar/en";
 import { groceryEn } from "./areas/grocery/en";
 import { welcomeEn } from "./areas/welcome/en";
 
@@ -39,6 +40,7 @@ export const en = {
 
   "nav.home": "Home",
   "nav.today": "Today",
+  "nav.calendar": "Calendar",
   "nav.ai": "HomeTalk",
   "nav.family": "Family",
   "nav.more": "More",
@@ -688,6 +690,7 @@ export const en = {
   ...entryEn,
   ...installEn,
   ...eventsEn,
+  ...calendarEn,
   ...groceryEn,
   ...welcomeEn,
 } as const;

@@ -9,6 +9,7 @@ import { householdDe } from "./areas/household/de";
 import { entryDe } from "./areas/entry/de";
 import { installDe } from "./areas/install/de";
 import { eventsDe } from "./areas/events/de";
+import { calendarDe } from "./areas/calendar/de";
 import { groceryDe } from "./areas/grocery/de";
 import { welcomeDe } from "./areas/welcome/de";
 
@@ -29,6 +30,7 @@ export const de: Catalog = {
 
   "nav.home": "Start",
   "nav.today": "Heute",
+  "nav.calendar": "Kalender",
   "nav.ai": "HomeTalk",
   "nav.family": "Familie",
   "nav.more": "Mehr",
@@ -678,6 +680,7 @@ export const de: Catalog = {
   ...entryDe,
   ...installDe,
   ...eventsDe,
+  ...calendarDe,
   ...groceryDe,
   ...welcomeDe,
 };

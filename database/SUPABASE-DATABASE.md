@@ -80,6 +80,21 @@ server-ingested, because evidence a member can write is not evidence.
 `next_action_by` is the column that makes an open service request actionable
 rather than informational, and a settled request is constrained to hold none.
 
+### Family Calendar (module 12, story 12-009)
+- `family_events` gains `all_day`, `timezone`, `category`, `visibility`
+  (`household` / `participants` / `private`) and `recurrence` (a validated
+  subset, `wh.valid_recurrence`)
+- `event_exceptions`: one occurrence of a repeating event, cancelled or changed
+- `public_holidays`: a sourced, read-only list seeded by migration (no
+  `household_id`; the same for every household)
+- `calendar_preferences`: one member's view, filters and holiday region
+
+The calendar is a projection: there is no calendar table, and occurrences of a
+repeating event are expanded per range, never stored. Visibility is RLS:
+`wh.may_see_event` is the one rule that participants, invite links, guests and
+exceptions all reuse, and an Admin does not bypass `private`. Free/busy
+(`wh.busy_windows`) still reports a private event as busy, never what it is.
+
 ## Reliability (Wave 5 §14–§16)
 - `rate_limit_counters`: fixed-window counters (bucket, subject, window start, hits). Not a tenant table. Deny-all RLS; only the server reaches it, through the service-role-only `public.rate_limit_hit`. Swept daily after a day.
 - `homesend_email_events`: forwarded-email telemetry in closed words only (a kind, an optional latency and count, the household). Nothing from an email is ever stored here. Deny-all RLS, platform-read through the admin client, swept after 90 days.

@@ -144,12 +144,20 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.summary": "Was dich jetzt braucht, und wie der Tag aussieht.",
   "help.guide.today-and-home.body.1":
     "Die Startseite beginnt mit dem, was einen Menschen braucht, dann folgt, was WonderHome still erledigt hat. Die Zahl der erledigten Dinge sind Dinge, die es geprüft und in Ordnung gefunden hat – die Zahl ist echt, keine Dekoration. Jede Karte öffnet sich zu den Einträgen hinter ihrer Zahl.",
-  "help.guide.today-and-home.body.2":
-    "Heute zeigt den Tag als Zeitleiste in drei Ansichten: dein Tag, der der Familie und der des Haushalts. Die Einträge sind Verpflichtungen und Fristen – ein Essen, das fertig sein muss, eine fällige Rechnung, ein Kurs –, nie Aufgaben zum Abhaken. Die Haushaltsansicht schaut außerdem zwei Wochen voraus, was wahrscheinlich ausgeht oder fällig wird.",
+  "help.guide.today-and-home.body.2": "Der Plan für heute zeigt den Tag als Zeitleiste in drei Ansichten: dein Tag, der der Familie und der des Haushalts. Öffne ihn über die Tagesansicht von heute im Kalender. Die Einträge sind Verpflichtungen und Fristen – ein Essen, das fertig sein muss, eine fällige Rechnung, ein Kurs –, nie Aufgaben zum Abhaken. Die Haushaltsansicht schaut außerdem zwei Wochen voraus, was wahrscheinlich ausgeht oder fällig wird.",
   "help.guide.today-and-home.body.3": "„Etwas planen“ auf Start und Heute fügt ein Familienereignis hinzu, ohne den Bildschirm zu verlassen.",
-  "help.guide.today-and-home.body.4": "Auf dem Handy wischst du nach links oder rechts, um zwischen Start, Heute, HomeTalk, Familie und Mehr zu wechseln.",
+  "help.guide.today-and-home.body.4": "Auf dem Handy wischst du nach links oder rechts, um zwischen Start, Kalender, HomeTalk, Familie und Mehr zu wechseln.",
   "help.guide.today-and-home.body.5":
     "Unter dem Familienstatus zeigt Home eure Haustiere, falls ihr welche habt. Jedes öffnet dieselben Angaben wie auf der Familienseite; ändern kannst du sie unter Familie.",
+
+  // Calendar
+  "help.guide.calendar.title": "Kalender",
+  "help.guide.calendar.summary": "Alles, was die Familie vorhat – nach Monat, Woche, Tag oder Jahr.",
+  "help.guide.calendar.body.1": "Kalender ist der zweite Tab. Er öffnet mit dem Monat: Jeder Tag zeigt für jeden Termin einen farbigen Punkt (auf einem breiteren Bildschirm die ersten Titel), und ein Tipp auf einen Tag listet ihn darunter auf. Woche, Tag und Jahr sind einen Tipp entfernt. Auf dem Handy kannst du auch mit zwei Fingern zoomen: Finger auseinander führt von Jahr zu Monat, Woche und Tag, zusammen wieder zurück. Wisch auf dem Kalender nach links oder rechts, um zum nächsten oder vorherigen Monat, zur Woche oder zum Tag zu wechseln.",
+  "help.guide.calendar.body.2": "Er zeigt Familientermine, die Geburtstage und besonderen Tage aus den Profilen und gesetzliche Feiertage. Die Feiertage stammen aus der veröffentlichten Liste der indischen Regierung für Behörden der Zentralregierung, jeweils mit dieser Quelle; wähle unter Filter landesweit oder Delhi, oder schalte sie aus. Jeder Eintrag öffnet den Bildschirm, zu dem er gehört – ein Termin öffnet seine eigene Seite, auf der er geändert wird.",
+  "help.guide.calendar.body.3": "Hinzufügen trägt einen Plan in den Kalender ein: was, wann (oder ganztägig), wer mitkommt und eine Kategorie. Unter Weitere Optionen kannst du ihn wiederholen lassen, festlegen, wer ihn sieht – alle, nur wer mitkommt, oder nur du – und Notizen hinzufügen. Bevor er eingetragen wird, prüft WonderHome Überschneidungen und sagt dir, womit; wer mit etwas beschäftigt ist, das du nicht sehen kannst, erscheint nur als beschäftigt. Du kannst ihn trotzdem hinzufügen.",
+  "help.guide.calendar.body.4": "Öffne einen Tag eines wiederkehrenden Termins, und wer ihn plant, kann nur diesen Tag auslassen oder zurückholen; die anderen finden weiter statt. Ein vorgeschlagener Plan hat einen gestrichelten Rand und trägt den Hinweis „Vorgeschlagen“.",
+  "help.guide.calendar.body.5": "Filter ändern nur, was du siehst: Kategorien, Personen, nur, woran du beteiligt bist, nur bestätigte Pläne, Feiertage und die Ansicht, mit der der Kalender öffnet. Der Plan für heute – Essen, Rechnungen, Schule und was dich braucht – ist einen Tipp vom heutigen Tag entfernt.",
 
   "help.guide.notifications.title": "Erinnerungen und Benachrichtigungen",
   "help.guide.notifications.summary": "Zu echten Dingen, an eine Person, wenn es ihr passt – und still, sobald es erledigt ist.",
@@ -351,6 +359,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.faq.google-calendar.q": "Warum kann ich meinen Google Calendar noch nicht verbinden?",
   "help.faq.google-calendar.a":
     "Einstellungen → Verbundene Konten zeigt, welche Verbindungen für dein WonderHome verfügbar sind. Wo eine noch nicht verfügbar ist, sagt es das, statt eine Schaltfläche anzubieten, die nirgendwohin führt.",
+  "help.faq.calendar-private.q": "Können andere meine privaten Termine sehen?",
+  "help.faq.calendar-private.a": "Nein. Einen Termin mit „Nur ich“ siehst nur du – nicht einmal ein Admin kann ihn öffnen –, und einen mit „Nur wer mitkommt“ siehst du und die Eingeladenen. Plant jemand zur selben Zeit etwas mit dir, kann WonderHome ihm sagen, dass du dann beschäftigt bist, aber nie womit.",
   "help.faq.own-ai-account.q": "Kann ich mein eigenes Konto bei einem KI-Anbieter nutzen?",
   "help.faq.own-ai-account.a":
     "Ja. Ein Admin kann den eigenen Schlüssel deines Haushalts unter Einstellungen → KI-Assistent hinzufügen, und er hat Vorrang vor dem von WonderHome.",

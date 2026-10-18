@@ -9,6 +9,7 @@ import { householdZh } from "./areas/household/zh";
 import { entryZh } from "./areas/entry/zh";
 import { installZh } from "./areas/install/zh";
 import { eventsZh } from "./areas/events/zh";
+import { calendarZh } from "./areas/calendar/zh";
 import { groceryZh } from "./areas/grocery/zh";
 import { welcomeZh } from "./areas/welcome/zh";
 
@@ -29,6 +30,7 @@ export const zh: Catalog = {
 
   "nav.home": "首页",
   "nav.today": "今天",
+  "nav.calendar": "日历",
   "nav.ai": "HomeTalk",
   "nav.family": "家人",
   "nav.more": "更多",
@@ -678,6 +680,7 @@ export const zh: Catalog = {
   ...entryZh,
   ...installZh,
   ...eventsZh,
+  ...calendarZh,
   ...groceryZh,
   ...welcomeZh,
 };

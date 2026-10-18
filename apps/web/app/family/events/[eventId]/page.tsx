@@ -1,6 +1,8 @@
 import { CalendarHeart, Link2, MapPin, MessageCircle, NotebookPen, Trash2, Users } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { atLocal, isDateKey, localMoment } from "@wonderhome/core/calendar/dates";
+import { isOccurrenceCancelled } from "@wonderhome/core/calendar/repository";
 import { loadEvent, planningGaps, type PlanningGap } from "@wonderhome/core/family/event-detail";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { localTimeValue, schoolDateValue } from "@wonderhome/core/school/times";
@@ -21,7 +23,8 @@ import {
   setEventCancelledAction,
   setEventInviteesAction,
 } from "../../../(auth)/event-actions";
-import { EventActionButton, EventEditForm, EventInviteesForm, EventLinkShare, type EventEditLabels } from "../../../_components/event-controls";
+import { setOccurrenceCancelledAction } from "../../../(auth)/calendar-actions";
+import { EventActionButton, EventEditForm, EventInviteesForm, EventLinkShare, type EventEditInitial, type EventEditLabels } from "../../../_components/event-controls";
 import { eventFormLabels } from "../../../_lib/event-form-labels";
 import { formatDate, formatTime, requireSession } from "../../../_lib/session";
 
@@ -38,8 +41,8 @@ const GAP_ICON: Record<PlanningGap, typeof MapPin> = { where: MapPin, who: Users
  * owner, or anyone for an unowned event, or an Admin), checked again on the
  * server.
  */
-export default async function EventPage({ params }: { params: Promise<{ eventId: string }> }) {
-  const { eventId } = await params;
+export default async function EventPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ on?: string }> }) {
+  const [{ eventId }, { on }] = await Promise.all([params, searchParams]);
   const session = await requireSession(`/family/events/${eventId}`);
   const { supabase, membership, viewer, secondary } = session;
   const { t } = session.locale;
@@ -47,9 +50,13 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
   const timezone = membership.household.timezone;
   if (!/^[0-9a-f-]{36}$/i.test(eventId)) notFound();
 
-  const [event, members] = await Promise.all([
+  // Opened from the calendar: the day it was tapped on, which for a repeating
+  // event is the occurrence, and the day to go back to.
+  const day = isDateKey(on) ? on : null;
+  const [event, members, occurrenceSkipped] = await Promise.all([
     loadEvent(supabase, householdId, eventId).catch(() => null),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    day ? isOccurrenceCancelled(supabase, { householdId, eventId, occurrenceDate: day }).catch(() => false) : Promise.resolve(false),
   ]);
   if (!event) notFound();
 
@@ -77,14 +84,41 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
     notesPlaceholder: t("events.notesPlaceholder"),
     save: t("events.save"),
     saving: t("events.saving"),
+    calendar: formWords.calendar,
+    clash: t("calendar.form.clashMove"),
+    saveAnyway: t("calendar.form.saveAnyway"),
   };
   const local = (at: Date) => `${schoolDateValue({ dueAt: at, dueTimeKnown: true }, timezone)}T${localTimeValue(at, timezone)}`;
-  const initial = { title: event.title, kind: event.kind, startsAt: local(event.startsAt), endsAt: local(event.endsAt), location: event.location ?? "", notes: event.notes ?? "" };
-  const when = `${formatDate(timezone, event.startsAt, "long")} · ${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}`;
+  const firstDay = localMoment(event.startsAt, timezone).dateKey;
+  const lastDay = localMoment(new Date(event.endsAt.getTime() - 1), timezone).dateKey;
+  const initial: EventEditInitial = {
+    title: event.title,
+    kind: event.kind,
+    startsAt: local(event.startsAt),
+    endsAt: local(event.endsAt),
+    location: event.location ?? "",
+    notes: event.notes ?? "",
+    allDay: event.allDay,
+    startDate: firstDay,
+    endDate: lastDay,
+    category: event.category ?? "",
+    repeat: event.recurrence?.freq ?? "none",
+    repeatUntil: event.recurrence?.until ?? "",
+    visibility: event.visibility,
+  };
+  const when = event.allDay
+    ? firstDay === lastDay
+      ? `${formatDate(timezone, event.startsAt, "long")} · ${t("calendar.entry.allDay")}`
+      : `${formatDate(timezone, event.startsAt, "long")} – ${formatDate(timezone, new Date(event.endsAt.getTime() - 1), "long")}`
+    : `${formatDate(timezone, event.startsAt, "long")} · ${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}`;
+  const isOwner = event.ownerMemberId === membership.memberId;
+  const occurrence = day && event.recurrence ? day : null;
+  const occurrenceWords = occurrence ? formatDate(timezone, atLocal(occurrence, 12 * 60, timezone), "long") : null;
+  const back = day ? { href: `/calendar?view=day&date=${day}`, label: t("calendar.event.back") } : { href: "/family", label: t("events.back") };
   const linkPath = event.inviteToken ? `/e/${event.inviteToken}` : null;
 
   return (
-    <AppShell active="family" viewer={viewer} secondary={secondary} pathname="/family" back={{ href: "/family", label: t("events.back") }} title={event.title}>
+    <AppShell active="family" viewer={viewer} secondary={secondary} pathname="/family" back={back} title={event.title}>
       <div className="space-y-6">
         <header className="wh-rise space-y-1">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{event.title}</h1>
@@ -99,19 +133,35 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
               <Fact label={t("events.fact.when")} value={when} />
               <Fact label={t("events.fact.where")} value={event.location} />
               <Fact label={t("events.fact.kind")} value={formWords.kinds[event.kind]} />
+              <Fact label={t("calendar.event.category")} value={event.category ? t(`calendar.category.${event.category}`) : null} />
+              <Fact label={t("calendar.event.repeats")} value={event.recurrence ? t(`calendar.form.repeat.${event.recurrence.freq}`) : null} />
+              <Fact label={t("calendar.event.visibility")} value={event.visibility === "household" ? null : t(`calendar.form.visibility.${event.visibility}`)} />
               <Fact label={t("events.fact.owner")} value={nameOf(event.ownerMemberId)} />
               <Fact label={t("events.fact.notes")} value={event.notes} />
             </dl>
           </div>
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
-              {!cancelled ? <EventEditForm householdId={householdId} eventId={event.id} initial={initial} labels={editLabels} /> : null}
+              {!cancelled ? <EventEditForm householdId={householdId} eventId={event.id} initial={initial} labels={editLabels} canNarrow={isOwner} /> : null}
               <EventActionButton action={setEventCancelledAction} fields={{ ...ids, cancelled: cancelled ? "false" : "true" }}>
                 {cancelled ? t("events.restore") : t("events.cancelEvent")}
               </EventActionButton>
             </div>
           ) : null}
         </Card>
+
+        {occurrence && !cancelled ? (
+          <Card className="flex flex-wrap items-center gap-3 p-4">
+            <p className="min-w-0 flex-1 text-sm">
+              {occurrenceSkipped ? t("calendar.event.skipped", { date: occurrenceWords ?? occurrence }) : t("calendar.event.occurrence", { date: occurrenceWords ?? occurrence })}
+            </p>
+            {canEdit ? (
+              <EventActionButton action={setOccurrenceCancelledAction} fields={{ ...ids, occurrenceDate: occurrence, cancelled: occurrenceSkipped ? "false" : "true" }}>
+                {occurrenceSkipped ? t("calendar.event.restore") : t("calendar.event.skip")}
+              </EventActionButton>
+            ) : null}
+          </Card>
+        ) : null}
 
         {mine && !cancelled && !over ? (
           <section className="space-y-2">
@@ -142,7 +192,7 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
                       title={t(`events.gaps.${gap}`)}
                       action={
                         !canEdit ? undefined : gap === "where" || gap === "notes" ? (
-                          <EventEditForm householdId={householdId} eventId={event.id} initial={initial} labels={editLabels} trigger={t("events.gaps.add")} />
+                          <EventEditForm householdId={householdId} eventId={event.id} initial={initial} labels={editLabels} trigger={t("events.gaps.add")} canNarrow={isOwner} />
                         ) : gap === "share" ? (
                           <EventActionButton action={createInviteLinkAction} fields={ids} tone="soft">
                             {t("events.link.create")}

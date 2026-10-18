@@ -24,3 +24,5 @@
 | 19. Testing, Observability & Production | `backlogs/19-Testing-Observability-and-Production.md` | 8 | 6 | 2 | 0 |
 | 20. Subscriptions, Entitlements & Usage | `backlogs/20-Subscriptions-Entitlements-and-Usage.md` | 8 | 4 | 2 | 2 |
 | 21. Health and Fitness | `backlogs/21-Health-and-Fitness.md` | 8 | 6 | 2 | 0 |
+| 24. HomePlaces | `backlogs/24-HomePlaces.md` | 7 | 1 | 4 | 2 |
+| 25. HomeFood | `backlogs/25-HomeFood.md` | 5 | 2 | 2 | 1 |

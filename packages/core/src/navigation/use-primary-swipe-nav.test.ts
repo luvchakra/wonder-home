@@ -4,7 +4,7 @@ import { resolveSwipeTarget } from "./use-primary-swipe-nav";
 
 describe("resolveSwipeTarget", () => {
   it("moves to the next primary area on a leftward swipe", () => {
-    expect(resolveSwipeTarget({ active: "home", dx: -120, dy: 0, elapsedMs: 200, eligible: true })).toBe("/today");
+    expect(resolveSwipeTarget({ active: "home", dx: -120, dy: 0, elapsedMs: 200, eligible: true })).toBe("/calendar");
   });
 
   it("moves to the previous primary area on a rightward swipe", () => {

@@ -12,7 +12,10 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import { updateEventAction } from "../(auth)/event-actions";
+import type { EventActionState } from "../(auth)/family-actions";
 import type { EventKind } from "../_lib/event-kinds";
+import { Select } from "@wonderhome/core/ui/select";
+import type { EventCalendarLabels } from "./new-event-form";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -67,30 +70,62 @@ export type EventEditLabels = {
   notesPlaceholder: string;
   save: string;
   saving: string;
+  /** The calendar fields (story 12-009), as the add sheet words them. */
+  calendar: EventCalendarLabels;
+  clash: string;
+  saveAnyway: string;
 };
 
-/** Changing an event's details, in a sheet; also opened from a "Still to plan" row with that row's own words. */
+export type EventEditInitial = {
+  title: string;
+  kind: EventKind;
+  startsAt: string;
+  endsAt: string;
+  location: string;
+  notes: string;
+  allDay: boolean;
+  startDate: string;
+  endDate: string;
+  category: string;
+  repeat: string;
+  repeatUntil: string;
+  visibility: string;
+};
+
+/**
+ * Changing an event's details, in a sheet; also opened from a "Still to plan"
+ * row with that row's own words. The same calendar fields as adding one; who
+ * can see it is offered only to the event's owner, the only person RLS lets
+ * narrow it. Moving it checks for clashes first, like adding does.
+ */
 export function EventEditForm({
   householdId,
   eventId,
   initial,
   labels,
   trigger,
+  canNarrow = false,
 }: {
   householdId: string;
   eventId: string;
-  initial: { title: string; kind: EventKind; startsAt: string; endsAt: string; location: string; notes: string };
+  initial: EventEditInitial;
   labels: EventEditLabels;
   /** The opening button's words, when it is not "Edit details". */
   trigger?: string;
+  /** Whether this person owns the event, and so may change who can see it. */
+  canNarrow?: boolean;
 }) {
+  const words = labels.calendar;
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(updateEventAction, {});
+  const [allDay, setAllDay] = useState(initial.allDay);
+  const [state, formAction, pending] = useActionState<EventActionState, FormData>(updateEventAction, {});
   const wasPending = useRef(false);
   useEffect(() => {
-    if (wasPending.current && !pending && !state.error) setOpen(false);
+    if (wasPending.current && !pending && !state.error && !state.clashes?.length) setOpen(false);
     wasPending.current = pending;
   }, [pending, state]);
+  const [editedAfter, setEditedAfter] = useState<EventActionState | null>(null);
+  const clashes = editedAfter === state ? [] : (state.clashes ?? []);
 
   return (
     <>
@@ -98,28 +133,62 @@ export function EventEditForm({
         {trigger ? null : <Pencil aria-hidden className="size-3.5" />} {trigger ?? labels.edit}
       </Pill>
       <Sheet open={open} onOpenChange={setOpen} title={labels.title}>
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} onChange={() => setEditedAfter(state)} className="space-y-4">
           {state.error ? <Alert>{state.error}</Alert> : null}
+          {clashes.length > 0 ? (
+            <Alert>
+              <span className="block font-medium">{labels.clash}</span>
+              <ul className="mt-1 list-disc ps-5">
+                {clashes.map((clash) => (
+                  <li key={clash}>{clash}</li>
+                ))}
+              </ul>
+              <input type="hidden" name="confirmClash" value="on" />
+            </Alert>
+          ) : null}
           <input type="hidden" name="householdId" value={householdId} />
           <input type="hidden" name="eventId" value={eventId} />
           <Field label={labels.what} name="title" required defaultValue={initial.title} autoComplete="off" />
-          <div className="space-y-1.5">
-            <label htmlFor="event-kind" className="block text-sm font-medium">{labels.kind}</label>
-            <select
-              id="event-kind"
-              name="kind"
-              defaultValue={initial.kind}
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
-              {(Object.keys(labels.kinds) as EventKind[]).map((kind) => (
-                <option key={kind} value={kind}>{labels.kinds[kind]}</option>
-              ))}
-            </select>
-          </div>
+          <Select label={labels.kind} name="kind" defaultValue={initial.kind}>
+            {(Object.keys(labels.kinds) as EventKind[]).map((kind) => (
+              <option key={kind} value={kind}>{labels.kinds[kind]}</option>
+            ))}
+          </Select>
+          <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+            <input type="checkbox" name="allDay" checked={allDay} onChange={(event) => setAllDay(event.target.checked)} className="size-4 accent-[var(--wh-primary)]" />
+            {words.allDay}
+          </label>
+          {allDay ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label={words.date} name="startDate" type="date" required defaultValue={initial.startDate} />
+              <Field label={words.endDate} name="endDate" type="date" defaultValue={initial.endDate} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label={labels.starts} name="startsAt" type="datetime-local" required defaultValue={initial.startsAt} />
+              <Field label={labels.ends} name="endsAt" type="datetime-local" required defaultValue={initial.endsAt} />
+            </div>
+          )}
+          <Select label={words.category} name="category" defaultValue={initial.category}>
+            <option value="">{words.categoryFromKind}</option>
+            {words.categories.map((category) => (
+              <option key={category.value} value={category.value}>{category.label}</option>
+            ))}
+          </Select>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label={labels.starts} name="startsAt" type="datetime-local" required defaultValue={initial.startsAt} />
-            <Field label={labels.ends} name="endsAt" type="datetime-local" required defaultValue={initial.endsAt} />
+            <Select label={words.repeat} name="repeat" defaultValue={initial.repeat}>
+              {words.repeats.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Select>
+            <Field label={words.repeatUntil} name="repeatUntil" type="date" defaultValue={initial.repeatUntil} />
           </div>
+          {canNarrow ? (
+            <div className="space-y-1">
+              <ChoiceChips legend={words.visibility} name="visibility" options={words.visibilities} defaultValue={initial.visibility} />
+              <p className="text-xs text-[var(--wh-foreground-muted)]">{words.visibilityHint}</p>
+            </div>
+          ) : null}
           <Field label={labels.where} name="location" defaultValue={initial.location} placeholder={labels.wherePlaceholder} autoComplete="off" />
           <div className="space-y-1.5">
             <label htmlFor="event-notes" className="block text-sm font-medium">{labels.notes}</label>
@@ -134,7 +203,7 @@ export function EventEditForm({
             />
           </div>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? labels.saving : labels.save}
+            {pending ? labels.saving : clashes.length > 0 ? labels.saveAnyway : labels.save}
           </Button>
         </form>
       </Sheet>

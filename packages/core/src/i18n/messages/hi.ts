@@ -9,6 +9,7 @@ import { householdHi } from "./areas/household/hi";
 import { entryHi } from "./areas/entry/hi";
 import { installHi } from "./areas/install/hi";
 import { eventsHi } from "./areas/events/hi";
+import { calendarHi } from "./areas/calendar/hi";
 import { groceryHi } from "./areas/grocery/hi";
 import { welcomeHi } from "./areas/welcome/hi";
 
@@ -29,6 +30,7 @@ export const hi: Catalog = {
 
   "nav.home": "होम",
   "nav.today": "आज",
+  "nav.calendar": "कैलेंडर",
   "nav.ai": "HomeTalk",
   "nav.family": "परिवार",
   "nav.more": "और",
@@ -678,6 +680,7 @@ export const hi: Catalog = {
   ...entryHi,
   ...installHi,
   ...eventsHi,
+  ...calendarHi,
   ...groceryHi,
   ...welcomeHi,
 };

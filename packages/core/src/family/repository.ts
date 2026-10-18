@@ -14,6 +14,8 @@ import {
   type Window,
 } from "./schedule";
 import { invalidatesContext } from "../context/invalidation";
+import type { EventCategory, EventVisibility } from "../calendar/projection";
+import type { RecurrenceRule } from "../calendar/recurrence";
 
 /**
  * Reading the family calendar (module 12).
@@ -107,6 +109,13 @@ export type CreateEventInput = {
   protected?: boolean;
   ownerMemberId?: string | null;
   participantMemberIds?: readonly string[];
+  /** Calendar fields (story 12-009); left out, the column keeps its default. */
+  allDay?: boolean;
+  timeZone?: string | null;
+  category?: EventCategory | null;
+  visibility?: EventVisibility;
+  recurrence?: RecurrenceRule | null;
+  notes?: string | null;
 };
 
 async function createEventImpl(
@@ -124,6 +133,12 @@ async function createEventImpl(
       location: input.location ?? null,
       protected: input.protected ?? false,
       owner_member_id: input.ownerMemberId ?? null,
+      all_day: input.allDay ?? false,
+      timezone: input.timeZone ?? null,
+      category: input.category ?? null,
+      visibility: input.visibility ?? "household",
+      recurrence: input.recurrence ?? null,
+      notes: input.notes?.trim().slice(0, 1000) || null,
     })
     .select("id")
     .single();

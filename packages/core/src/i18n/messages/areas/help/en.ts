@@ -163,14 +163,21 @@ export const helpEn = {
   "help.guide.today-and-home.summary": "What needs you now, and the shape of the day.",
   "help.guide.today-and-home.body.1":
     "Home leads with what needs a person, then what WonderHome handled quietly. The handled count is things it checked and found fine — the number is real, not decorative. Each card opens to the entries behind its count.",
-  "help.guide.today-and-home.body.2":
-    "Today is the day as a timeline, in three views: your day, the family's, and the household's. Items are commitments and deadlines — a meal that has to be ready, a bill due, a class — never chores to tick off. The household view also looks ahead two weeks at what is likely to run out or fall due.",
+  "help.guide.today-and-home.body.2": "Today's plan is the day as a timeline, in three views: your day, the family's, and the household's. Open it from the Calendar's day view for today. Items are commitments and deadlines — a meal that has to be ready, a bill due, a class — never chores to tick off. The household view also looks ahead two weeks at what is likely to run out or fall due.",
   "help.guide.today-and-home.body.3":
     "Plan something, on Home and Today, adds a family event without leaving the screen.",
-  "help.guide.today-and-home.body.4":
-    "On a phone, swipe left or right to move between Home, Today, HomeTalk, Family and More.",
+  "help.guide.today-and-home.body.4": "On a phone, swipe left or right to move between Home, Calendar, HomeTalk, Family and More.",
   "help.guide.today-and-home.body.5":
     "Under Family status, Home shows your pets, if you have any. Each opens to the same details the Family screen shows; to change them, go to Family.",
+
+  // Calendar
+  "help.guide.calendar.title": "Calendar",
+  "help.guide.calendar.summary": "Everything the family has on, by month, week, day or year.",
+  "help.guide.calendar.body.1": "Calendar is the second tab. It opens on the month: each day shows a coloured dot for each thing on (on a wider screen, the first titles), and tapping a day lists it underneath. Week, Day and Year are one tap away. On a phone you can also pinch: spread two fingers to go from Year to Month to Week to Day, and pinch them together to go back. Swipe left or right on the calendar to move to the next or previous month, week or day.",
+  "help.guide.calendar.body.2": "It shows family events, everyone's birthdays and special days from their profile, and public holidays. Holidays come from the Government of India's published list for central government offices, each labelled with that source; choose national or Delhi, or turn them off, in Filters. Each entry opens the screen it belongs to — an event opens its own page, which is where it is changed.",
+  "help.guide.calendar.body.3": "Add puts a plan on the calendar: what, when (or all day), who's going and a category. Under More options you can make it repeat, choose who can see it — everyone, only the people going, or just you — and add notes. Before it is added, WonderHome checks for clashes and tells you what it clashes with; someone busy with something you can't see is shown only as busy. You can still add it anyway.",
+  "help.guide.calendar.body.4": "Open one day of a repeating event and its planner can skip just that day, or bring it back; the rest carry on. A proposed plan has a dashed edge and says \"Proposed\".",
+  "help.guide.calendar.body.5": "Filters only change what you see: categories, people, only things you're part of, only confirmed plans, holidays, and the view the calendar opens on. Today's plan — meals, bills, school and what needs you — is one tap from today's day.",
 
   // Reminders and notifications
   "help.guide.notifications.title": "Reminders and notifications",
@@ -397,6 +404,8 @@ export const helpEn = {
   "help.faq.google-calendar.q": "Why can't I connect my Google Calendar yet?",
   "help.faq.google-calendar.a":
     "Settings → Connected accounts shows which connections are available for your WonderHome. Where one is not available yet, it says so rather than offering a button that goes nowhere.",
+  "help.faq.calendar-private.q": "Can others see my private events?",
+  "help.faq.calendar-private.a": "No. An event set to \"Just me\" is seen only by you — not even an Admin can open it — and one set to \"Only the people going\" is seen by you and the people you asked. If someone plans something at the same time with you in it, WonderHome may tell them you're busy then, never what it is.",
   "help.faq.own-ai-account.q": "Can I use my own AI provider account?",
   "help.faq.own-ai-account.a":
     "Yes. An Admin can add your household's own key in Settings → AI Assistant, and it takes precedence over WonderHome's.",

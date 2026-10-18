@@ -11,10 +11,15 @@ import { answerEvent, createInviteLink, removeGuest, replyThroughLink, revokeInv
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
 import { hashClientIp } from "@wonderhome/core/homesend/rate-limit";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { householdInstant } from "@wonderhome/core/school/times";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 
+import { localMoment } from "@wonderhome/core/calendar/dates";
+import { EVENT_CATEGORIES, EVENT_VISIBILITIES } from "@wonderhome/core/calendar/projection";
+import { parseRecurrence, RECURRENCE_FREQUENCIES } from "@wonderhome/core/calendar/recurrence";
+
+import { clashesFor, eventWindow } from "../_lib/event-window";
 import type { ActionState } from "./actions";
+import type { EventActionState } from "./family-actions";
 
 /**
  * One event, opened: change it, cancel it, ask people to it, share a link,
@@ -29,36 +34,71 @@ function refresh(eventId: string) {
   revalidatePath(`/family/events/${eventId}`);
   revalidatePath("/family");
   revalidatePath("/today");
+  revalidatePath("/calendar");
   revalidatePath("/");
 }
 
 const detailsSchema = ids.extend({
   title: z.string().trim().min(1, { error: "Give it a name." }).max(200),
   kind: z.enum(EVENT_KINDS),
-  startsAt: z.string().min(1, { error: "Pick a start." }),
-  endsAt: z.string().min(1, { error: "Pick an end." }),
+  allDay: z.enum(["on"]).optional(),
+  startsAt: z.string().optional(),
+  endsAt: z.string().optional(),
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional(),
   location: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(1000).optional(),
+  category: z.enum(EVENT_CATEGORIES).optional(),
+  // Sent only to the event's owner; absent, the event keeps who can see it.
+  visibility: z.enum(EVENT_VISIBILITIES).optional(),
+  repeat: z.enum(["none", ...RECURRENCE_FREQUENCIES]).default("none"),
+  repeatUntil: z.iso.date().optional(),
+  confirmClash: z.enum(["on"]).optional(),
 });
 
-export async function updateEventAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = detailsSchema.safeParse(Object.fromEntries(formData));
+/** Changing an event, from its own page: the same fields and the same clash check as adding one. */
+export async function updateEventAction(_previous: EventActionState, formData: FormData): Promise<EventActionState> {
+  const raw = Object.fromEntries([...formData.entries()].filter(([, value]) => value !== ""));
+  const parsed = detailsSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
+  const input = parsed.data;
   try {
     const supabase = await createClient();
-    const membership = await requireMembership(supabase, parsed.data.householdId);
-    const startsAt = householdInstant(parsed.data.startsAt, membership.household.timezone);
-    const endsAt = householdInstant(parsed.data.endsAt, membership.household.timezone);
-    if (!startsAt || !endsAt) return { error: "Those times did not make sense." };
+    const membership = await requireMembership(supabase, input.householdId);
+    const timezone = membership.household.timezone;
+    const when = eventWindow(input, timezone);
+    if ("error" in when) return { error: when.error };
+    const rule = input.repeat === "none" ? null : parseRecurrence({ freq: input.repeat, ...(input.repeatUntil ? { until: input.repeatUntil } : {}) });
+    if (input.repeat !== "none" && !rule) return { error: "That repeat could not be read." };
+    if (rule?.until && rule.until < localMoment(new Date(when.startsAt), timezone).dateKey) return { error: "A repeat has to end after it starts." };
+
+    if (!input.confirmClash && !input.allDay) {
+      const { data: invited } = await supabase.from("event_participants").select("member_id").eq("household_id", input.householdId).eq("event_id", input.eventId);
+      const memberIds = ((invited as { member_id: string }[] | null) ?? []).map((row) => row.member_id);
+      const clashes = await clashesFor(supabase, membership, { start: new Date(when.startsAt), end: new Date(when.endsAt), memberIds, ignoreEventId: input.eventId });
+      if (clashes.length > 0) return { clashes };
+    }
+
     await updateEvent(supabase, {
-      householdId: parsed.data.householdId,
-      eventId: parsed.data.eventId,
-      changes: { title: parsed.data.title, kind: parsed.data.kind, startsAt, endsAt, location: parsed.data.location ?? null, notes: parsed.data.notes ?? null },
+      householdId: input.householdId,
+      eventId: input.eventId,
+      changes: {
+        title: input.title,
+        kind: input.kind,
+        startsAt: when.startsAt,
+        endsAt: when.endsAt,
+        location: input.location ?? null,
+        notes: input.notes ?? null,
+        allDay: input.allDay === "on",
+        category: input.category ?? null,
+        recurrence: rule,
+        ...(input.visibility ? { visibility: input.visibility } : {}),
+      },
     });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "family").body.error.message };
   }
-  refresh(parsed.data.eventId);
+  refresh(input.eventId);
   return { notice: "Saved." };
 }
 
