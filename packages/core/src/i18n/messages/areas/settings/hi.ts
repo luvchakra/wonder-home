@@ -382,6 +382,7 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.condition.consent": "अगर आपकी डेटा-उपयोग सेटिंग्स इसे Google तक पहुँचने दें",
   "settingsPage.voiceAssistants.condition.opt_in": "अगर आप जोड़ते समय इसे चालू करें",
   "settingsPage.voiceAssistants.capability.household_questions": "घर के बारे में सवाल",
+  "settingsPage.voiceAssistants.capability.screens": "बात करते हुए कोई स्क्रीन खोलना",
   "settingsPage.voiceAssistants.capability.todays_agenda": "आज का एजेंडा",
   "settingsPage.voiceAssistants.capability.calendar_read": "योजनाएँ और कार्यक्रम",
   "settingsPage.voiceAssistants.capability.meals": "रात के खाने में क्या है",

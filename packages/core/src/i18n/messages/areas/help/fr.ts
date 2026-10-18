@@ -126,6 +126,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Pendant que WonderHome écoute ou qu'une conversation en direct est en cours, le bouton HomeTalk au centre de la barre d'onglets pulse, entouré d'un anneau : vous voyez depuis n'importe quel écran qu'une conversation est en cours.",
   "help.guide.voice.body.6":
     "La voix Gemini fonctionne toujours chez Google. Si la clé de votre assistant dans Settings → AI Assistant est une clé Google (Gemini), la voix utilise cette même clé. Si votre assistant utilise Anthropic ou OpenAI, un Admin peut ajouter sur la même page une clé vocale Gemini distincte : elle sert uniquement à la voix Gemini, et tout le reste continue d’utiliser la clé de l’assistant.",
+  "help.guide.voice.body.7":
+    "Pendant une conversation en direct, vous pouvez demander à HomeTalk d'ouvrir un écran — « emmène-moi à la liste de courses », « ouvre le calendrier », « reviens à HomeTalk » — et il y va en continuant d'écouter. Ajoutez ou retirez des choses sur cet écran à la voix, passez à un autre, et revenez à la conversation quand vous voulez. Tant qu'elle dure, une barre lumineuse en bas de chaque écran indique s'il écoute, réfléchit ou parle, avec pause, fin et un appui pour revenir à la conversation. Tapés, les mêmes mots ouvrent aussi l'écran. HomeTalk n'ouvre que les écrans que vous pouvez utiliser, et ouvrir un écran ne change rien.",
 
   "help.guide.home-send.title": "HomeSend : envoyer des choses à WonderHome",
   "help.guide.home-send.summary": "Une photo, un PDF, un message vocal, un lien ou un transfert — lu, puis confirmé par vous.",

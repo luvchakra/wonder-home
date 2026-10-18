@@ -396,6 +396,7 @@ export const settingsEn = {
   "settingsPage.voiceAssistants.condition.consent": "if your data-use settings let it reach Google",
   "settingsPage.voiceAssistants.condition.opt_in": "if you turn it on when you link it",
   "settingsPage.voiceAssistants.capability.household_questions": "Questions about the household",
+  "settingsPage.voiceAssistants.capability.screens": "Opening a screen while you talk",
   "settingsPage.voiceAssistants.capability.todays_agenda": "Today's agenda",
   "settingsPage.voiceAssistants.capability.calendar_read": "Plans and events",
   "settingsPage.voiceAssistants.capability.meals": "What's for dinner",

@@ -126,6 +126,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Mientras WonderHome escucha o hay una conversación en directo, el botón de HomeTalk en el centro de la barra de pestañas late con un anillo alrededor, para que veas desde cualquier pantalla que hay una conversación en curso.",
   "help.guide.voice.body.6":
     "La voz de Gemini siempre funciona en Google. Si la clave de tu asistente en Settings → AI Assistant es de Google (Gemini), la voz usa esa misma clave. Si tu asistente usa Anthropic u OpenAI, un Admin puede añadir en la misma página una clave de voz de Gemini aparte: se usa solo para la voz de Gemini, y todo lo demás sigue usando la clave del asistente.",
+  "help.guide.voice.body.7":
+    "En una conversación en vivo puedes pedirle a HomeTalk que abra una pantalla — \"llévame a la lista de la compra\", \"abre el calendario\", \"vuelve a HomeTalk\" — y va allí sin dejar de escuchar. Añade o quita cosas en esa pantalla con la voz, pasa a otra y vuelve a la conversación cuando quieras. Mientras dura, una barra luminosa al pie de cada pantalla muestra si está escuchando, pensando o hablando, con pausa, terminar y un toque para volver a la conversación. Escritas, las mismas palabras también abren la pantalla. HomeTalk solo abre pantallas que puedes usar, y abrir una no cambia nada.",
 
   "help.guide.home-send.title": "HomeSend: enviar cosas a WonderHome",
   "help.guide.home-send.summary": "Una foto, un PDF, una nota de voz, un enlace o un reenvío: se lee y luego lo confirmas tú.",

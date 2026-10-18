@@ -566,6 +566,7 @@ export const ar: Catalog = {
   "hometalk.composer.stepListening": "الاستماع",
   "hometalk.composer.stepTranscribing": "التفريغ",
   "hometalk.composer.stepReady": "جاهز للإرسال",
+  "hometalk.composer.openHomeTalk": "العودة إلى محادثة HomeTalk",
   "hometalk.preview.title": "معاينة الإجراء",
   "hometalk.preview.state.prepared": "مُعدّ، لم يُنفّذ",
   "hometalk.preview.state.needs_approval": "بانتظار موافقتك",

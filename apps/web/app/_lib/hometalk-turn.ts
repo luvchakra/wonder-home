@@ -64,6 +64,8 @@ import { listGroceries } from "@wonderhome/core/commerce/inventory";
 import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
+import { openScreenReply } from "@wonderhome/core/conversation/screens";
+import type { Viewer } from "@wonderhome/core/navigation/secondary-navigation";
 import { placesReply } from "@wonderhome/core/homeplaces/answer";
 import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
@@ -387,7 +389,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // nothing downstream, because the answer comes from the HomeBrain
   // either way. Everything else still goes to the model to be understood.
   const quick = resolveDeterministicIntent(body.utterance, { actorMemberId: membership.memberId, channel: body.channel });
-  const plainQuestion = (quick.action === "ask_status" || quick.action === "greet" || quick.action === "find_places") && quick.confidence >= 0.8;
+  const plainQuestion = (quick.action === "ask_status" || quick.action === "greet" || quick.action === "find_places" || quick.action === "open_screen") && quick.confidence >= 0.8;
   const rulesRead = input.rulesFirst === true && quick.action !== "unknown" && quick.confidence >= 0.8;
 
   // The HomeBrain reads the home while the request is being
@@ -539,7 +541,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // is never the premise for the next.
   if (parts.length > 1) {
     const memberMessageId = await memberMessageWrite;
-    const replies: { id: string; text: string; action: ConversationAction | null; preview: ReturnType<typeof previewOf>; proposal: string; mode: BrainMode }[] = [];
+    const replies: { id: string; text: string; action: ConversationAction | null; preview: ReturnType<typeof previewOf>; proposal: string; mode: BrainMode; navigate?: string }[] = [];
     const earlier: { part: string; outcome: PartOutcome }[] = [];
     const written: FocusEntity[] = [];
 
@@ -584,6 +586,9 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
 
       carry(speaking, replyClassesFor(turn.intent.action));
       let text = turn.text;
+      // "Open the grocery list and add milk": the screen opens, and the add is its own part.
+      const opened = turn.intent.action === "open_screen" ? screenReply(turn.intent, view, source) : null;
+      if (opened) text = opened.text;
       let outcome: { status: "executed" | "failed"; result: Record<string, unknown> } | null = null;
       let partOutcome: PartOutcome =
         turn.proposal.kind === "clarify" ? "asked" : turn.proposal.kind === "answer" ? "answered" : turn.proposal.kind === "executed" ? "done" : turn.proposal.kind === "refused" ? "failed" : "waiting";
@@ -642,7 +647,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
           action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
         }
       }
-      replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode });
+      replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode, ...(opened?.navigate ? { navigate: opened.navigate } : {}) });
       earlier.push({ part, outcome: partOutcome });
       if (partOutcome === "asked") break;
     }
@@ -739,7 +744,16 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   const lastAssistantText = [...history].reverse().find((turn) => turn.role === "assistant")?.text ?? null;
 
   let places: PlaceSuggestion[] | null = null;
-  if (result.kind === "reply" && result.intent.action === "find_places") {
+  let navigate: string | null = null;
+  if (result.kind === "reply" && result.intent.action === "open_screen") {
+    // "Take me to the grocery list": the screen's name and its path, by
+    // rules. The browser goes there and the conversation carries on.
+    const opened = screenReply(result.intent, view, source);
+    composedAt = Date.now();
+    text = opened.text;
+    navigate = opened.navigate;
+    brain = { source: "deterministic", factsSent: 0 };
+  } else if (result.kind === "reply" && result.intent.action === "find_places") {
     // HomePlaces: real places near home or a child's school, open when asked,
     // ranked by the rules and by what the family saved before. The request is
     // read from the person's own words; a model only said it was one.
@@ -929,6 +943,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         : { kind: result.kind }),
       // The places offered, so the cards survive a reload (HomePlaces).
       ...(places && places.length > 0 ? { places } : {}),
+      ...(navigate ? { navigate } : {}),
       // What this turn was about (Wave 4 §16): ids and labels only,
       // never the text around them, for the next turn's "that".
       ...(turnFocus.length > 0 ? { focus: turnFocus.slice(0, 8) } : {}),
@@ -996,6 +1011,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
       mode,
       ...(places && places.length > 0 ? { places } : {}),
+      ...(navigate ? { navigate } : {}),
     },
     /** What, if anything, left this household this turn (15-005). */
     privacy: {
@@ -1651,4 +1667,9 @@ async function recordShown(admin: ReturnType<typeof createAdminClient>, messageI
   const metadata = { ...((data?.metadata as Record<string, unknown> | null) ?? {}), localized: shown };
   const { error } = await admin.from("conversation_messages").update({ metadata }).eq("id", messageId);
   if (error) throw new Error(`recordShown failed: ${error.code ?? "unknown"}`);
+}
+
+/** "Take me to the grocery list" (conversation/screens.ts): what to say, and the screen, when this person is offered it. */
+function screenReply(intent: HouseholdIntent, view: Viewer, source: string): { text: string; navigate: string | null } {
+  return openScreenReply(intent.parameters.screen, { viewer: { permissions: view.permissions, tone: view.tone }, hasScreen: source !== "alexa" });
 }

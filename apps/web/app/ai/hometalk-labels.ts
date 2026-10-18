@@ -63,7 +63,7 @@ export type SuggestionKey = (typeof SUGGESTION_KEYS)[number];
 const COMPOSER_KEYS: (keyof TalkComposerLabels)[] = [
   "messageLabel", "placeholder", "placeholderShort", "attach", "stopTranscribing", "stopListening", "endLive", "speak", "send", "startLive",
   "engineTrigger", "enginePicker", "transcribing", "listening", "paused", "thinking", "speaking", "whoListening",
-  "resumeConversation", "pauseConversation", "resume", "pause", "tapToResume", "tapToPause", "stepListening", "stepTranscribing", "stepReady",
+  "resumeConversation", "pauseConversation", "resume", "pause", "tapToResume", "tapToPause", "stepListening", "stepTranscribing", "stepReady", "openHomeTalk",
 ];
 
 const PREVIEW_STATES = ["prepared", "needs_approval", "approved", "rejected", "executed", "unchanged", "refused"] as const;

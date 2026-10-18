@@ -43,6 +43,8 @@ export function useGeminiLive(input: {
   onTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
   /** A problem worth telling the person (no microphone, no session, the session ended) — never thrown. */
   onError?: (message: string) => void;
+  /** A tool answer that opens a screen ("take me to the grocery list"): the app follows it. */
+  onNavigate?: (href: string) => void;
 }): {
   state: GeminiLiveState;
   active: boolean;
@@ -52,13 +54,13 @@ export function useGeminiLive(input: {
   resume: () => void;
   stop: () => void;
 } {
-  const { householdId, onTranscript, onError } = input;
+  const { householdId, onTranscript, onError, onNavigate } = input;
   const [state, setState] = useState<GeminiLiveState>("idle");
   const [active, setActive] = useState(false);
   const [paused, setPaused] = useState(false);
 
-  const callbacks = useRef({ onTranscript, onError });
-  callbacks.current = { onTranscript, onError };
+  const callbacks = useRef({ onTranscript, onError, onNavigate });
+  callbacks.current = { onTranscript, onError, onNavigate };
 
   const sessionRef = useRef<LiveSession | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -154,7 +156,12 @@ export function useGeminiLive(input: {
               body: JSON.stringify({ sessionId, callId: call.id, name: call.name, args: call.args }),
             });
             const payload = await reply.json().catch(() => null);
-            if (reply.ok && payload && typeof payload.userMessage === "string") response = payload;
+            if (reply.ok && payload && typeof payload.userMessage === "string") {
+              // Where to go is the app's business, not the model's: it is followed here and not passed on.
+              const { navigate, ...rest } = payload as Record<string, unknown>;
+              response = rest;
+              if (typeof navigate === "string" && /^\/(?!\/)[a-z0-9/_-]*$/i.test(navigate)) callbacks.current.onNavigate?.(navigate);
+            }
             else if (payload?.error?.message) response = { ...FAILED_TOOL, userMessage: `${payload.error.message} Nothing was changed.` };
           } catch {
             // The failure answer above: Gemini says nothing changed, never "done".

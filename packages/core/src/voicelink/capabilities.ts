@@ -30,7 +30,9 @@ export type ChannelPolicy =
   /** Never by voice. The answer says so and points to the app, where approval and step-up live. */
   | "app_only"
   /** An exchange as long as the channel's own session allows. */
-  | "session";
+  | "session"
+  /** Only where there is a screen to show it: a speaker says where to find it in the app instead. */
+  | "on_screen";
 
 export type CapabilityCategory = "informational" | "low_risk" | "sensitive" | "conversation";
 
@@ -72,6 +74,15 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     geminiTools: [],
     policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
     note: "Finding places nearby happens in the WonderHome app, where the places can be opened on a map.",
+  },
+  {
+    id: "screens",
+    label: "Opening a screen (\"take me to the grocery list\")",
+    category: "conversation",
+    actions: ["open_screen"],
+    geminiTools: ["open_screen"],
+    policy: { app: "yes", gemini_voice: "yes", alexa: "on_screen" },
+    note: "A speaker has no screen to open, so Alexa says where to find it in the WonderHome app.",
   },
   {
     id: "todays_agenda",

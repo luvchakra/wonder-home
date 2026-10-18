@@ -2,6 +2,7 @@ import { decideAutonomy, type AutonomyMode, type ProposedAction } from "../house
 import { can, type Permission, type PermissionContext } from "../identity/permissions";
 import { WHAT_I_CAN_DO, disposeIntent, isConsequential, type HouseholdIntent } from "./intent";
 import { linkTo } from "./reply-format";
+import { screenFor } from "./screens";
 
 /**
  * From intent to proposal (story 04-004).
@@ -96,6 +97,8 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   set_fitness_goal: "draft",
   // HomePlaces looks places up; nothing in the household changes.
   find_places: "read",
+  // Opening a screen reads nothing and changes nothing.
+  open_screen: "read",
   greet: "read",
   unknown: "read",
 };
@@ -151,6 +154,11 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
 
   if (intent.action === "find_places") {
     return { kind: "answer", summary: "Here are some places that fit." };
+  }
+
+  if (intent.action === "open_screen") {
+    const screen = screenFor(intent.parameters.screen);
+    return { kind: "answer", summary: screen ? `Opening ${screen.label}.` : "Which screen would you like?" };
   }
 
   if (intent.action === "ask_status") {

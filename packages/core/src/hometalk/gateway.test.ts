@@ -98,6 +98,12 @@ describe("identity is resolved before anything is read", () => {
 });
 
 describe("what happened is read from the turn, never invented by the channel", () => {
+  it("a screen the reply opens is carried only as a same-app path", () => {
+    expect(toHomeTalkResponse("r", { text: "Opening Groceries.", proposal: "answer", action: null, navigate: "/groceries" })).toMatchObject({ status: "answered", navigate: "/groceries" });
+    expect(toHomeTalkResponse("r", { text: "Opening.", proposal: "answer", action: null, navigate: "https://example.com" })).not.toHaveProperty("navigate");
+    expect(toHomeTalkResponse("r", { text: "Opening.", proposal: "answer", action: null, navigate: "//example.com" })).not.toHaveProperty("navigate");
+  });
+
   it("an ambiguous person is one question", () => {
     const response = toHomeTalkResponse("r", { text: "Do you mean Asmi or Manan?", proposal: "clarify", action: null });
     expect(response).toMatchObject({ status: "clarification_required", clarification: { question: "Do you mean Asmi or Manan?" } });

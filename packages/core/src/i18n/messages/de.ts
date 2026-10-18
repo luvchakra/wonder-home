@@ -550,6 +550,7 @@ export const de: Catalog = {
   "hometalk.composer.stepListening": "Zuhören",
   "hometalk.composer.stepTranscribing": "Transkribieren",
   "hometalk.composer.stepReady": "Bereit zum Senden",
+  "hometalk.composer.openHomeTalk": "Zurück zum HomeTalk-Gespräch",
   "hometalk.preview.title": "Vorschau der Aktion",
   "hometalk.preview.state.prepared": "Vorbereitet, nicht erledigt",
   "hometalk.preview.state.needs_approval": "Wartet auf dein OK",

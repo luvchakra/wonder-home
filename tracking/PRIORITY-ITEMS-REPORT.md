@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
+Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
 
 ---
 
@@ -58,6 +58,7 @@ Last updated: 2026-10-18 (25-006 grocery catalog and 01-011 member phone numbers
 | USDA nutrition linked to the catalog, in phases | 25-007 | Queued, lower priority |
 | Indian nutrient profiles for Indian foods | 25-009 | Done: IFCT 2017 (ICMR–NIN) for 399 items, credited |
 | Fewer, everyday search results with brands and pictures; natural amounts (1 kg, 1.25 kg; eggs one at a time) | 25-010 | Done |
+| Ask HomeTalk to open screens and keep talking while moving between them, with the glow showing on every screen | 04-018 | Done, #225 (golden HT-84 to HT-87) |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |

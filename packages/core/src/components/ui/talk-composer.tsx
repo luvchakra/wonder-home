@@ -7,8 +7,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEven
 import { cn } from "../../lib/cn";
 import { setTalkActivity } from "../shell/talk-activity";
 import { BrandMark } from "./brand";
-import { useGeminiLive } from "./use-gemini-live";
-import { useLiveVoice } from "./use-live-voice";
+import { useLiveTalk } from "./live-talk";
 import { useSpeechToText, type SpeechToTextState } from "./use-speech-to-text";
 
 /**
@@ -79,6 +78,8 @@ export function talkComposerState(input: {
 export type TalkComposerLabels = {
   /** The text box's accessible name. */
   messageLabel: string;
+  /** The floating live bar on other screens: its way back to the conversation. */
+  openHomeTalk: string;
   placeholder: string;
   placeholderShort: string;
   attach: string;
@@ -137,6 +138,7 @@ export const TALK_COMPOSER_LABELS: TalkComposerLabels = {
   stepListening: "Listening",
   stepTranscribing: "Transcribing",
   stepReady: "Ready to send",
+  openHomeTalk: "Back to the HomeTalk conversation",
 };
 
 const LabelsContext = createContext<TalkComposerLabels>(TALK_COMPOSER_LABELS);
@@ -235,19 +237,46 @@ export function TalkComposer({
     onError,
   });
 
-  const ownLive = useLiveVoice({
-    lang: voiceLanguage,
-    server,
-    onUtterance: onLiveTurn ?? (async () => ""),
-    onError,
-  });
-  const geminiLive = useGeminiLive({ householdId, onTranscript: onLiveTranscript, onError });
+  // The live conversation itself lives at the root of the app (`LiveTalkProvider`),
+  // so it carries on when the person goes to another screen. This composer
+  // configures it, and takes its turns while HomeTalk's page is open.
+  const talk = useLiveTalk();
   const [engine, setEngine] = useLiveEnginePreference(householdId, liveEngine, geminiLiveAvailability.available);
+  const liveBarLabels = useMemo(
+    () => ({
+      listening: labels.listening,
+      thinking: labels.thinking,
+      speaking: labels.speaking,
+      paused: labels.paused,
+      pause: labels.pauseConversation,
+      resume: labels.resumeConversation,
+      end: labels.endLive,
+      open: labels.openHomeTalk,
+    }),
+    [labels.listening, labels.thinking, labels.speaking, labels.paused, labels.pauseConversation, labels.resumeConversation, labels.endLive, labels.openHomeTalk],
+  );
+  useEffect(() => {
+    talk?.configure({ householdId, lang: voiceLanguage, serverVoice, labels: liveBarLabels });
+  }, [talk, householdId, voiceLanguage, serverVoice, liveBarLabels]);
+  const turnHandler = useRef({ onLiveTurn, onLiveTranscript });
+  turnHandler.current = { onLiveTurn, onLiveTranscript };
+  useEffect(
+    () =>
+      talk?.register({
+        onUtterance: (transcript, confidence) => turnHandler.current.onLiveTurn?.(transcript, confidence) ?? Promise.resolve(""),
+        onTranscript: (entry) => turnHandler.current.onLiveTranscript?.(entry),
+      }),
+    [talk],
+  );
   // One live control either way; only what runs behind it differs.
-  const live =
-    engine === "gemini_live"
-      ? { ...geminiLive, state: geminiLive.state === "connecting" ? ("thinking" as const) : geminiLive.state }
-      : ownLive;
+  const shared = talk?.view(engine) ?? { state: "idle" as const, active: false, paused: false };
+  const live = {
+    ...shared,
+    start: () => talk?.start(engine),
+    pause: () => talk?.pause(),
+    resume: () => talk?.resume(),
+    stop: () => talk?.stop(),
+  };
 
   useEffect(() => {
     const element = textareaRef.current;
@@ -264,11 +293,18 @@ export function TalkComposer({
 
   const composing = state === "idle" || state === "typing";
 
-  // The tab bar's raised HomeTalk button shows a conversation in progress.
+  // The tab bar's raised HomeTalk button shows dictation in progress; a live
+  // conversation is the provider's to show, on every screen.
+  const liveActive = live.active;
   useEffect(() => {
-    setTalkActivity(state === "live" ? "live" : state === "paused" ? "paused" : state === "listening" || state === "transcribing" ? "listening" : "idle");
-  }, [state]);
-  useEffect(() => () => setTalkActivity("idle"), []);
+    if (liveActive) return;
+    setTalkActivity(state === "listening" || state === "transcribing" ? "listening" : "idle");
+  }, [state, liveActive]);
+  const liveActiveRef = useRef(liveActive);
+  liveActiveRef.current = liveActive;
+  useEffect(() => () => {
+    if (!liveActiveRef.current) setTalkActivity("idle");
+  }, []);
 
   const onStateChangeRef = useRef(onStateChange);
   onStateChangeRef.current = onStateChange;
@@ -285,9 +321,9 @@ export function TalkComposer({
   }, [value, disabled, spokenConfidence, onSend]);
 
   const endLive = useCallback(() => {
-    live.stop();
+    talk?.stop();
     onLiveEnd?.();
-  }, [live, onLiveEnd]);
+  }, [talk, onLiveEnd]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {

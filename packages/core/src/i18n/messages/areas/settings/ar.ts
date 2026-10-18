@@ -399,6 +399,7 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.condition.consent": "إذا سمحت إعدادات استخدام البيانات لديك بوصوله إلى Google",
   "settingsPage.voiceAssistants.condition.opt_in": "إذا فعّلته عند الربط",
   "settingsPage.voiceAssistants.capability.household_questions": "أسئلة عن الأسرة",
+  "settingsPage.voiceAssistants.capability.screens": "فتح شاشة أثناء حديثك",
   "settingsPage.voiceAssistants.capability.todays_agenda": "جدول اليوم",
   "settingsPage.voiceAssistants.capability.calendar_read": "الخطط والمناسبات",
   "settingsPage.voiceAssistants.capability.meals": "ماذا على العشاء",

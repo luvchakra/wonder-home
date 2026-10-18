@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**240 of 252 stories done — 95.2%**
+**241 of 253 stories done — 95.3%**
 
 | Status | Stories |
 |---|---:|
-| Done | 240 |
+| Done | 241 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 8 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 11 | 11 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 17 | 18 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
@@ -142,7 +142,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-16 of 17 done `█████████░`
+17 of 18 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -163,6 +163,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-015` Alexa as a HomeTalk channel | P1 | Done | Voice phase 4: `/api/v1/voice/alexa` verified as Amazon documents (cert chain, signature, timestamp, skill id), carrier-word interaction model; inert until a person creates the skill and sets `ALEXA_*` (`integrations/alexa/README.md`) |
 | `04-016` Unified voice experience and capability matrix | P0 | Done | Voice phase 5: `voicelink/capabilities.ts` — the spec's matrix as data, every HomeTalk action placed once, every cell held to the real gates by `capabilities.test.ts`, shown to households on `/settings/voice-assistants`; payments/orders stay app-only by voice (stricter than the spec, on purpose). Conversations belong to their surface (`conversation_sessions.surface`: app / alexa, migration `20260926100000`, applied live) — a question the app asked is never answered by Alexa. Everyday domain questions ("what's for dinner?", "do we need milk?", "do the kids have homework?") now read by the rules |
 | `04-017` Voice evaluation, metrics and release gates | P0 | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery Since 2026-10-18 (owner's report: Gemini Live said it could not update a family preference), telling WonderHome what someone likes is available by voice: `family_facts` capability, Gemini tool `remember_family_fact`, `set_preference` needs no voice scope (kept as learned, correctable in HomeBrain Review); eval voice gate 18/18 tool sentences |
+| `04-018` HomeTalk follows you across screens | P0 | Done | The owner's ask, 2026-10-18 (PR #225): "take me to the grocery list", add or remove things there, move on, come back. A live conversation now lives at the app's root (`components/ui/live-talk.tsx`, `LiveTalkProvider`), so changing screens no longer ends it. Intent `open_screen` (`conversation/screens.ts`, a fixed list of screens a model and the rules pick from by key, never a path) read by the rules and the model; the reply carries `navigate` (a same-app path, through `hometalk/contract.ts` and the Gemini tool result) and is followed on any screen. A screen this person is never offered is not opened; Alexa says there is no screen. A glowing bar above the tab bar on every other screen shows listening/thinking/speaking with pause, end and the way back, and pages reserve room for it (`--wh-live-bar-clearance`). Gemini Live tool `open_screen`. Golden HT-84 to HT-87; eval voice gate 23/23. Browser-checked at 360px and desktop with a scripted recogniser: Groceries → added bananas there → Calendar → back to HomeTalk |
 
 ### 05 — Household Certification & Understanding
 

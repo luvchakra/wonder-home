@@ -550,6 +550,7 @@ export const mr: Catalog = {
   "hometalk.composer.stepListening": "ऐकणे",
   "hometalk.composer.stepTranscribing": "लिहिणे",
   "hometalk.composer.stepReady": "पाठवण्यास तयार",
+  "hometalk.composer.openHomeTalk": "HomeTalk संभाषणाकडे परत",
   "hometalk.preview.title": "कृतीचे पूर्वावलोकन",
   "hometalk.preview.state.prepared": "तयार, पण केले नाही",
   "hometalk.preview.state.needs_approval": "तुमच्या होकाराची वाट",

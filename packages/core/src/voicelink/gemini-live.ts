@@ -3,6 +3,7 @@ import { Modality, Type, type FunctionDeclaration, type LiveConnectConfig } from
 import type { KeySource, ModelProvider } from "../ai/model-key";
 import { routeToProvider, type ContentClass, type DataUsePolicy } from "../ai/privacy";
 import { geminiClient } from "../ai/provider-clients";
+import { SCREEN_KEYS, screenFor } from "../conversation/screens";
 import type { HomeTalkResponse } from "../hometalk/contract";
 import { VOICE_SCOPES, type VoiceScope } from "./scopes";
 
@@ -160,6 +161,22 @@ const TOOLS: readonly LiveTool[] = [
     utterance: (args) => said(args.fact, 160),
   },
   {
+    declaration: {
+      name: "open_screen",
+      description: "Open one of WonderHome's screens on the person's phone while you keep talking — Groceries, Calendar, Home, Meals, Family and the rest.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: { screen: { type: Type.STRING, enum: [...SCREEN_KEYS], description: "The screen the person asked for." } },
+        required: ["screen"],
+      },
+    },
+    // Worded for the rules (screens.ts), from the screen's own fixed words — never Gemini's.
+    utterance: (args) => {
+      const screen = screenFor(args.screen);
+      return screen ? `Take me to ${screen.words[0]}` : null;
+    },
+  },
+  {
     declaration: { name: "get_recent_household_activity", description: "What WonderHome has handled for the household today." },
     utterance: () => "What did WonderHome handle today?",
   },
@@ -200,7 +217,14 @@ export function utteranceForToolCall(name: string, args: unknown): { text: strin
 export type LiveToolStatus = "answered" | "completed" | "needs_approval" | "needs_clarification" | "denied" | "failed";
 
 /** What a tool call returns to Gemini: what HomeTalk decided, and the words to say. Success is the executor's, never the model's. */
-export type LiveToolResult = { success: boolean; status: LiveToolStatus; userMessage: string; actionId?: string };
+export type LiveToolResult = {
+  success: boolean;
+  status: LiveToolStatus;
+  userMessage: string;
+  actionId?: string;
+  /** A screen to open, followed by the page and never passed to Gemini (use-gemini-live). */
+  navigate?: string;
+};
 
 export function toolResultFrom(response: HomeTalkResponse): LiveToolResult {
   const status: LiveToolStatus =
@@ -220,6 +244,7 @@ export function toolResultFrom(response: HomeTalkResponse): LiveToolResult {
     status,
     userMessage: response.speech,
     ...(response.action?.actionId ? { actionId: response.action.actionId } : {}),
+    ...(response.navigate ? { navigate: response.navigate } : {}),
   };
 }
 
@@ -230,6 +255,7 @@ export function refusedToolResult(message: string): LiveToolResult {
 export const GEMINI_LIVE_SYSTEM_INSTRUCTION = [
   "You are the voice of WonderHome, a household assistant. You know nothing about this household yourself.",
   "For anything about the household — its people, plans, meals, groceries, school, bills, home, pets, reminders or what WonderHome did — call a tool. Never answer those from memory or guess.",
+  "When the person asks to go to, open or switch to a screen (the grocery list, the calendar, Home), call open_screen and keep talking: the screen opens on their phone.",
   "When the person tells you something about the family — who likes, dislikes or prefers what — call remember_family_fact once for each fact, naming the person rather than saying he or she.",
   "Say the tool's userMessage in your own short words. Never add a name, date, time, amount or fact it does not contain.",
   "Never say something was done unless the tool's status is completed. If the status is needs_approval or needs_clarification, ask exactly that question, then pass the person's answer with answer_pending_question. If it is denied or failed, say so plainly: nothing was changed.",

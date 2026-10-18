@@ -7,6 +7,7 @@ import { parsePreference } from "./memory";
 import { CALENDAR_SPAN_PHRASE, splitTrailingWhen } from "./temporal";
 import { isPlaceQuestion } from "../homeplaces/request";
 import { isRosterQuestion } from "./roster";
+import { readOpenScreen } from "./screens";
 
 /**
  * Rule-based understanding of the ordinary ways people ask (module 04, and
@@ -220,6 +221,18 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:help(?: me)?|what can you do(?: for me)?|what do you do|how do (?:you|i) (?:work|use this)|what can i (?:ask|say)(?: you)?|what are you|who are you)$/i,
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "help" }, confidence: 0.99 }),
+  },
+
+  // --- Opening a screen ---------------------------------------------------------
+  {
+    // "Take me to the grocery list", "open the calendar", "go back to
+    // HomeTalk": only a whole phrase that names one of WonderHome's screens
+    // (screens.ts), so "show me tomorrow's schedule" stays a question.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const screen = readOpenScreen(utterance);
+      return screen ? { action: "open_screen", target: { kind: "unspecified" }, parameters: { screen }, confidence: 0.95 } : null;
+    },
   },
 
   // --- Who is in the household ------------------------------------------------
@@ -860,4 +873,5 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "log_health_issue",
   "set_preference",
   "find_places",
+  "open_screen",
 ];

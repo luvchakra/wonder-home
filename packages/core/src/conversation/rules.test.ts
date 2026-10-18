@@ -212,6 +212,15 @@ describe("what it does not know", () => {
     expect(read("Reticulate the household splines").action).toBe("unknown");
   });
 
+  it("opens a screen when asked, and leaves questions about what is on it alone", () => {
+    expect(read("Take me to the grocery list")).toMatchObject({ action: "open_screen", parameters: { screen: "groceries" } });
+    expect(read("Okay, go back to HomeTalk please")).toMatchObject({ action: "open_screen", parameters: { screen: "hometalk" } });
+    expect(read("can you open the calendar")).toMatchObject({ action: "open_screen", parameters: { screen: "calendar" } });
+    expect(read("show me tomorrow's schedule").action).toBe("ask_status");
+    expect(read("what's on the grocery list").action).not.toBe("open_screen");
+    expect(read("add milk to the grocery list").action).toBe("add_to_list");
+  });
+
   it("hands a place question to HomePlaces, and leaves plans and preferences alone", () => {
     expect(read("Suggest some good places for dinner tonight").action).toBe("find_places");
     expect(read("Where can we hang out near Anya's school after school ends?").action).toBe("find_places");
@@ -260,6 +269,7 @@ describe("what it does not know", () => {
         "My headache is gone",
         "I want to walk three times a week",
         "suggest some good places for dinner tonight",
+        "take me to the grocery list",
         "actually we have 10 eggs in the fridge",
         "used 2 eggs",
         "bought 2 kg potatoes and 1 litre milk",

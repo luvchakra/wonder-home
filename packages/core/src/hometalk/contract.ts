@@ -36,6 +36,8 @@ export type HomeTalkResponse = {
   action?: { proposed: boolean; executed: boolean; actionId?: string };
   clarification?: { question: string };
   approval?: { approvalId: string; expiresAt?: string };
+  /** A screen the reply opens ("take me to the grocery list"): a same-app path, for a surface that has screens. */
+  navigate?: string;
 };
 
 /** The part of a HomeTalk turn's result the contract reads. Nothing else leaves. */
@@ -44,6 +46,7 @@ export type TurnReply = {
   /** What the engine proposed: answer, clarify, confirm_transcript, needs_approval, prepared, executed, refused, summary… */
   proposal: string | null;
   action: { id: string; status: string; unchanged?: boolean; expiresAt?: string | Date | null } | null;
+  navigate?: string;
 };
 
 /**
@@ -58,7 +61,8 @@ export type TurnReply = {
  *   - Everything else is `answered`.
  */
 export function toHomeTalkResponse(requestId: string, reply: TurnReply): HomeTalkResponse {
-  const base = { requestId, displayText: reply.text, speech: speechFrom(reply.text) };
+  const navigate = typeof reply.navigate === "string" && /^\/(?!\/)[a-z0-9/_-]*$/i.test(reply.navigate) ? reply.navigate : null;
+  const base = { requestId, displayText: reply.text, speech: speechFrom(reply.text), ...(navigate ? { navigate } : {}) };
   const action = reply.action;
   switch (reply.proposal) {
     case "clarify":
