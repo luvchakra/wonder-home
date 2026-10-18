@@ -62,7 +62,8 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | Ask HomeTalk to open screens and keep talking while moving between them, with the glow showing on every screen | 04-018 | Done, #225 (golden HT-84 to HT-87) |
 | Compact grocery cards, nutrition on each, pasta counted in grams | 25-012 | Done, #226 |
 | Pictures for the everyday catalog items | 25-010 | Done, #227: 341 of 411 everyday items |
-| Change an item's unit from its card, even pieces to grams | 25-013 | Queued: built, held back with its migration |
+| Change an item's unit from its card, even pieces to grams | 25-013 | Code in #229; the migration is a SQL file for the owner to run (the service-role key cannot run DDL), then verify:live and the browser check |
+| HomeTalk floats over other apps: a picture-in-picture window while the voice conversation carries on | 04-020 | Done, #229 — real-phone microphone check is the owner's |
 | One HomePlaces screen with every place (home, schools, offices, saved) and tags for what each is for | 24 | Next |
 | Meal card: Change meal in place; Ingredients with no recipe lets you add one | 10-009 | Done, #227 (also: meal times on the household's clock) |
 | Gemini Live in the app never says "use the WonderHome app"; trip ideas answered | 04-019 | Done, #228 |

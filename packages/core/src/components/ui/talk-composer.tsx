@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, AudioLines, ChevronDown, ChevronRight, Mic, Plus, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, ChevronDown, ChevronRight, Maximize2, Mic, PictureInPicture2, Plus, Square, X } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, createContext, useContext } from "react";
 
@@ -80,6 +80,13 @@ export type TalkComposerLabels = {
   messageLabel: string;
   /** The floating live bar on other screens: its way back to the conversation. */
   openHomeTalk: string;
+  /** Float HomeTalk as a small window over other apps (04-020); `unfloat` brings it back. */
+  floatLive: string;
+  unfloat: string;
+  /** The phone would not open the window; the conversation is still here. */
+  floatFailed: string;
+  /** The floating window's label over what the person said. */
+  you: string;
   placeholder: string;
   placeholderShort: string;
   attach: string;
@@ -139,6 +146,10 @@ export const TALK_COMPOSER_LABELS: TalkComposerLabels = {
   stepTranscribing: "Transcribing",
   stepReady: "Ready to send",
   openHomeTalk: "Back to the HomeTalk conversation",
+  floatLive: "Float HomeTalk over other apps — it keeps listening while you do something else",
+  unfloat: "Bring HomeTalk back",
+  floatFailed: "Your phone couldn't open the floating window. The conversation is still going here.",
+  you: "You",
 };
 
 const LabelsContext = createContext<TalkComposerLabels>(TALK_COMPOSER_LABELS);
@@ -252,8 +263,25 @@ export function TalkComposer({
       resume: labels.resumeConversation,
       end: labels.endLive,
       open: labels.openHomeTalk,
+      float: labels.floatLive,
+      unfloat: labels.unfloat,
+      floatFailed: labels.floatFailed,
+      you: labels.you,
     }),
-    [labels.listening, labels.thinking, labels.speaking, labels.paused, labels.pauseConversation, labels.resumeConversation, labels.endLive, labels.openHomeTalk],
+    [
+      labels.listening,
+      labels.thinking,
+      labels.speaking,
+      labels.paused,
+      labels.pauseConversation,
+      labels.resumeConversation,
+      labels.endLive,
+      labels.openHomeTalk,
+      labels.floatLive,
+      labels.unfloat,
+      labels.floatFailed,
+      labels.you,
+    ],
   );
   useEffect(() => {
     talk?.configure({ householdId, lang: voiceLanguage, serverVoice, labels: liveBarLabels });
@@ -374,6 +402,7 @@ export function TalkComposer({
               speaking={live.state === "speaking"}
               thinking={live.state === "thinking"}
               engine={engine}
+              notice={talk?.notice ?? null}
               onToggle={() => (live.paused ? live.resume() : live.pause())}
             />
           ) : (
@@ -445,9 +474,18 @@ export function TalkComposer({
               <Square className="size-4" fill="currentColor" />
             </RoundButton>
           ) : inLive ? (
-            <RoundButton tone="danger" label={labels.endLive} onClick={endLive}>
-              <X className="size-5" />
-            </RoundButton>
+            <>
+              {/* Float (04-020): the same conversation as a small window over
+                  other apps. Only where the phone can actually do it (rule 10). */}
+              {talk?.floatable ? (
+                <RoundButton tone="soft" label={talk.floating ? labels.unfloat : labels.floatLive} onClick={talk.floating ? talk.unfloat : talk.float}>
+                  {talk.floating ? <Maximize2 className="size-5" /> : <PictureInPicture2 className="size-5" />}
+                </RoundButton>
+              ) : null}
+              <RoundButton tone="danger" label={labels.endLive} onClick={endLive}>
+                <X className="size-5" />
+              </RoundButton>
+            </>
           ) : (
             <>
               {speech.available ? (
@@ -659,18 +697,20 @@ function ListeningField({ transcribing }: { transcribing: boolean }) {
   );
 }
 
-/** The field during a live conversation, and the tap target that pauses it. */
+/** The field during a live conversation, and the tap target that pauses it. A notice (a window that would not open) takes the hint's line. */
 function LiveField({
   paused,
   speaking,
   thinking,
   engine,
+  notice,
   onToggle,
 }: {
   paused: boolean;
   speaking: boolean;
   thinking: boolean;
   engine: LiveEngineChoice;
+  notice: string | null;
   onToggle: () => void;
 }) {
   const labels = useContext(LabelsContext);
@@ -688,7 +728,7 @@ function LiveField({
       <Bars active={!paused} tone="primary" tall />
       <span className="min-w-0">
         <span className="block text-[0.9375rem] font-semibold text-[var(--wh-primary)]">{status}</span>
-        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{paused ? labels.tapToResume : labels.tapToPause}</span>
+        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{notice ?? (paused ? labels.tapToResume : labels.tapToPause)}</span>
       </span>
     </button>
   );

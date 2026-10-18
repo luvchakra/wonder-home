@@ -1,20 +1,24 @@
 "use client";
 
 import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import {
+  compatible,
   displayAmount,
+  normalizeUnit,
   parseQuantity,
   roundQuantity,
   toBase,
+  UNIT_CHOICES,
   unitInfo,
 } from "@wonderhome/core/commerce/units";
 import { stepAlong, type Ladder } from "@wonderhome/core/commerce/buying-sizes";
 import { Button } from "@wonderhome/core/ui/button";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import { adjustListAction } from "../../(auth)/grocery-actions";
+import { adjustListAction, changeUnitAction } from "../../(auth)/grocery-actions";
 import type { GroceryWords } from "../../_lib/grocery-words";
 import { fill, newKey, sayAmount, shownUnit, unitsFor } from "./amounts";
 
@@ -204,6 +208,7 @@ export function ToBuyStepper({
         item={item}
         current={{ quantity, unit: base }}
         words={words}
+        unitChange={{ householdId }}
         onSave={async (kind, amount) => {
           if (timer.current) {
             clearTimeout(timer.current);
@@ -238,6 +243,7 @@ export function AmountSheet({
   title,
   onSave,
   allowRemove = true,
+  unitChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -248,6 +254,8 @@ export function AmountSheet({
     "language" | "unitWords" | "unitNames" | "amountSheet"
   >;
   title?: string;
+  /** Offers "Counted in" (25-012): how the item is counted everywhere, changed from here. */
+  unitChange?: { householdId: string };
   onSave: (
     kind: "set" | "remove",
     amount?: { quantity: number; unit: string },
@@ -268,6 +276,14 @@ export function AmountSheet({
           words={words}
           onSave={onSave}
           allowRemove={allowRemove}
+          onDone={() => onOpenChange(false)}
+        />
+      ) : null}
+      {open && unitChange ? (
+        <CountedIn
+          householdId={unitChange.householdId}
+          item={item}
+          words={words}
           onDone={() => onOpenChange(false)}
         />
       ) : null}
@@ -380,5 +396,100 @@ function AmountForm({
         </Button>
       ) : null}
     </form>
+  );
+}
+
+/**
+ * How the item is counted everywhere — the list, what is at home and
+ * HomeTalk (25-012). A unit that converts (g to kg) changes the item only.
+ * One that does not (pieces to grams) is said plainly before it is saved:
+ * what is at home needs counting again, and the list starts again at the
+ * usual amount. A unit nobody listed can be typed (rule 20).
+ */
+function CountedIn({
+  householdId,
+  item,
+  words,
+  onDone,
+}: {
+  householdId: string;
+  item: StepperItem;
+  words: Pick<GroceryWords, "unitNames" | "amountSheet">;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const current = unitInfo(item.unit).key;
+  const choices = [...new Set<string>([...UNIT_CHOICES, current])];
+  const [picked, setPicked] = useState(current);
+  const [own, setOwn] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const OTHER = "__other__";
+  const chosen = picked === OTHER ? normalizeUnit(own) : picked;
+  const unitName = (unit: string) => words.unitNames[unit] ?? unit;
+  const changed = chosen !== null && chosen !== current;
+  const converts = chosen !== null && compatible(chosen, item.unit);
+
+  const save = async () => {
+    if (!chosen) return;
+    setBusy(true);
+    const result = await changeUnitAction({ householdId, itemId: item.id, unit: chosen, key: newKey("unit") });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    onDone();
+    router.refresh();
+  };
+
+  return (
+    <div className="mt-5 space-y-2 border-t border-[var(--wh-border)] pt-4">
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium">{words.amountSheet.countedIn}</span>
+        <select
+          value={picked}
+          onChange={(event) => {
+            setPicked(event.target.value);
+            setError(null);
+          }}
+          className="block h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base focus-visible:border-[var(--wh-primary)] focus-visible:outline-none"
+        >
+          {choices.map((choice) => (
+            <option key={choice} value={choice}>
+              {unitName(choice)}
+            </option>
+          ))}
+          <option value={OTHER}>{words.amountSheet.otherUnit}</option>
+        </select>
+      </label>
+      {picked === OTHER ? (
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium">{words.amountSheet.otherUnitLabel}</span>
+          <input
+            value={own}
+            maxLength={20}
+            onChange={(event) => setOwn(event.target.value)}
+            placeholder={words.amountSheet.otherUnitPlaceholder}
+            className="block h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base focus-visible:border-[var(--wh-primary)] focus-visible:outline-none"
+          />
+        </label>
+      ) : null}
+      <p className="text-xs text-[var(--wh-foreground-muted)]">
+        {changed && !converts
+          ? fill(words.amountSheet.recount, { name: item.name, unit: unitName(chosen) })
+          : fill(words.amountSheet.countedInHint, { name: item.name })}
+      </p>
+      {error ? (
+        <p role="alert" className="text-sm text-[var(--wh-risk)]">
+          {error}
+        </p>
+      ) : null}
+      {changed ? (
+        <Button type="button" variant="secondary" disabled={busy} className="w-full" onClick={() => void save()}>
+          {fill(words.amountSheet.changeUnit, { unit: unitName(chosen) })}
+        </Button>
+      ) : null}
+    </div>
   );
 }

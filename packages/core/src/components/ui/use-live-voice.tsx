@@ -33,6 +33,15 @@ import { recognitionConstructor, type RecognitionLike } from "../../voice/recogn
 
 export type LiveVoiceState = "idle" | "listening" | "thinking" | "speaking" | "denied" | "unsupported";
 
+/**
+ * How long to wait before listening again after the recogniser gave up on
+ * its own (silence, a dropped network, a phone that put the page in the
+ * background with a floating HomeTalk window over another app). Long enough
+ * that a recogniser refusing over and over is not a hot loop, short enough
+ * that nobody notices a gap.
+ */
+const RELISTEN_DELAY_MS = 400;
+
 const MALE_NAME = /\b(male|david|daniel|alex|fred|george|mark|james|oliver|arthur|guy|ryan|rishi|aaron)\b/i;
 const FEMALE_NAME = /\b(female|samantha|victoria|zira|susan|karen|moira|tessa|fiona|kate|amelia|salli|joanna|veena)\b/i;
 
@@ -89,6 +98,8 @@ export function useLiveVoice(input: {
    */
   const pausedRef = useRef(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
+  /** A listen scheduled after the recogniser gave up, so pause and stop can take it back. */
+  const relistenRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const onUtteranceRef = useRef(onUtterance);
@@ -245,9 +256,16 @@ export function useLiveVoice(input: {
         return;
       }
       // Silence ("no-speech") and our own abort() are ordinary pauses in a
-      // hands-free conversation, not failures — just listen again.
-      if (activeRef.current && !pausedRef.current) listenHere();
-      else if (!activeRef.current) setState("idle");
+      // hands-free conversation, not failures — just listen again, after a
+      // breath, so a recogniser that keeps refusing (a page sent to the
+      // background behind the floating window) never spins.
+      if (activeRef.current && !pausedRef.current) {
+        if (relistenRef.current) clearTimeout(relistenRef.current);
+        relistenRef.current = setTimeout(() => {
+          relistenRef.current = null;
+          if (activeRef.current && !pausedRef.current && !recognitionRef.current) listenHere();
+        }, RELISTEN_DELAY_MS);
+      } else if (!activeRef.current) setState("idle");
     };
     recognition.onend = () => {
       recognitionRef.current = null;
@@ -332,6 +350,8 @@ export function useLiveVoice(input: {
     if (!activeRef.current) return;
     pausedRef.current = true;
     setPaused(true);
+    if (relistenRef.current) clearTimeout(relistenRef.current);
+    relistenRef.current = null;
     abortRef.current?.abort();
     abortRef.current = null;
     recognitionRef.current?.abort();
@@ -353,6 +373,8 @@ export function useLiveVoice(input: {
     pausedRef.current = false;
     setActive(false);
     setPaused(false);
+    if (relistenRef.current) clearTimeout(relistenRef.current);
+    relistenRef.current = null;
     abortRef.current?.abort();
     abortRef.current = null;
     recognitionRef.current?.abort();
@@ -361,9 +383,26 @@ export function useLiveVoice(input: {
     setState("idle");
   }, []);
 
+  // Back from another app (the floating HomeTalk window, story 04-020): a
+  // browser that let the recogniser lapse while the page was hidden is asked
+  // to listen again the moment the page is seen, if the conversation is
+  // still on and nothing else is in flight.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (householdId || !activeRef.current || pausedRef.current || recognitionRef.current || relistenRef.current) return;
+      if (!("speechSynthesis" in window) || window.speechSynthesis.speaking) return;
+      listenHere();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [householdId, listenHere]);
+
   useEffect(
     () => () => {
       activeRef.current = false;
+      if (relistenRef.current) clearTimeout(relistenRef.current);
       abortRef.current?.abort();
       recognitionRef.current?.abort();
       if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
