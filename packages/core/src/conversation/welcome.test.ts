@@ -58,7 +58,7 @@ describe("an answer", () => {
   it("to the last question ends the welcome", () => {
     const step = answerWelcome({ topic: "pets", answer: "Bruno eats twice a day", sessionId: "s1", household }, { t, language: "en", english: t });
     expect(step.topic).toBeNull();
-    expect(step.reply).toContain("HomeBrain Review");
+    expect(step.reply).toContain("under HomeBrain");
   });
 
   it("of skip ends the welcome without keeping anything", () => {

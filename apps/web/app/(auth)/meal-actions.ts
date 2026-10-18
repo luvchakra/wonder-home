@@ -15,6 +15,7 @@ import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/invent
 import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
 import { compatible } from "@wonderhome/core/commerce/units";
+import { ingredientLinesFrom, ingredientRowsOf, MAX_INGREDIENT_ROWS, type IngredientRowsInput } from "@wonderhome/core/meals/ingredient-lines";
 import { mealShortfalls, servingScale } from "@wonderhome/core/meals/shortfall";
 import {
   listMeals,
@@ -30,7 +31,6 @@ import {
   suggestMeal,
   updateMeal,
 } from "@wonderhome/core/meals/repository";
-import { readItemAmount } from "@wonderhome/core/conversation/quantity";
 import { atLocal } from "@wonderhome/core/notifications/timing";
 
 import type { ActionState } from "./actions";
@@ -171,21 +171,14 @@ export async function removeMealAction(input: { householdId: string; mealId: str
  * line each, read the way HomeTalk reads an amount ("500 g rajma", "2
  * onions", "rice").
  */
-export async function addMealIngredientsAction(input: { householdId: string; mealId: string; text: string }): Promise<ActionState> {
-  const parsed = z.object({ householdId: z.uuid(), mealId: z.uuid(), text: z.string().max(4000) }).safeParse(input);
+export async function addMealIngredientsAction(input: { householdId: string; mealId: string; rows: IngredientRowsInput }): Promise<ActionState> {
+  const list = z.array(z.string().max(120)).max(MAX_INGREDIENT_ROWS);
+  const parsed = z
+    .object({ householdId: z.uuid(), mealId: z.uuid(), rows: z.object({ names: list, quantities: list, units: list }) })
+    .safeParse(input);
   if (!parsed.success) return { error: "Please try again." };
-  const lines = parsed.data.text
-    .split(/\n|,/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const read = readItemAmount(line);
-      const name = (read.item || line).trim();
-      const amount = read.amount && read.amount.quantity > 0 ? read.amount : null;
-      // No amount said: "unit", the recipes' own placeholder, so the shortfall says how much is not known rather than "1 pc".
-      return { name: name.charAt(0).toUpperCase() + name.slice(1), quantity: amount?.quantity ?? 1, unit: amount ? (amount.unit ?? "pcs") : "unit" };
-    });
-  if (lines.length === 0) return { error: "Write at least one ingredient." };
+  const lines = ingredientLinesFrom(parsed.data.rows);
+  if (lines.length === 0) return { error: "Name at least one ingredient." };
   try {
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
@@ -268,17 +261,19 @@ const recipeSchema = z.object({
   fatGrams: z
     .union([z.coerce.number().int().min(0).max(500), z.literal("")])
     .optional(),
-  essentialIngredients: listField,
   optionalIngredients: listField,
 });
 
 /**
  * A recipe typed in by hand, so it appears the next time a meal is planned.
  */
+/** A recipe's add form also learns the new recipe, so a meal's sheet can pick it straight away. */
+export type RecipeActionState = ActionState & { recipeId?: string; recipeName?: string };
+
 export async function createRecipeAction(
-  _previous: ActionState,
+  _previous: RecipeActionState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<RecipeActionState> {
   const parsed = recipeSchema.safeParse({
     householdId: formData.get("householdId"),
     name: formData.get("name"),
@@ -292,7 +287,6 @@ export async function createRecipeAction(
     proteinGrams: formData.get("proteinGrams") || undefined,
     carbsGrams: formData.get("carbsGrams") || undefined,
     fatGrams: formData.get("fatGrams") || undefined,
-    essentialIngredients: formData.get("essentialIngredients") ?? "",
     optionalIngredients: formData.get("optionalIngredients") ?? "",
   });
   if (!parsed.success) {
@@ -309,7 +303,7 @@ export async function createRecipeAction(
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
 
-    await createRecipe(supabase, {
+    const created = await createRecipe(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
       cuisine: parsed.data.cuisine || null,
@@ -336,13 +330,15 @@ export async function createRecipeAction(
         parsed.data.fatGrams === "" || parsed.data.fatGrams === undefined
           ? null
           : parsed.data.fatGrams,
-      essentialIngredients: parsed.data.essentialIngredients,
+      essentialIngredients: ingredientLinesFrom(ingredientRowsOf(formData, "essential")),
       optionalIngredients: parsed.data.optionalIngredients,
     });
 
     revalidatePath("/meals");
     return {
       notice: "Added. It'll be there to pick next time you plan a meal.",
+      recipeId: created.id,
+      recipeName: parsed.data.name,
     };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "meals").body.error.message };

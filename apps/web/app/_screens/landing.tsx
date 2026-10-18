@@ -281,7 +281,7 @@ export async function Landing() {
               { icon: HandHeart, tone: "people", title: "Househelper", description: "Support that keeps home running." },
               { icon: HeartPulse, tone: "health", title: "Health & Fitness", description: "Check-ups and routines, kept private." },
               { icon: Paperclip, tone: "primary", title: "HomeSend", description: "Snap it, send it, sorted." },
-              { icon: BadgeCheck, tone: "ai", title: "HomeBrain Review", description: "Your home, understood." },
+              { icon: BadgeCheck, tone: "ai", title: "HomeBrain", description: "Your home, understood." },
               { icon: CalendarHeart, tone: "people", title: "Family time", description: "Protected time, planned around." },
               { icon: Wrench, tone: "home", title: "Home & Upkeep", description: "Repairs, laundry and pets, remembered." },
               { icon: BellRing, tone: "attention", title: "Reminders", description: "One nudge, at the right time." },

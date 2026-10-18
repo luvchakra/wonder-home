@@ -36,6 +36,39 @@ The card took the first upcoming event that was protected, family time or an out
 - `packages/core/src/components/ui/calendar-item.tsx`
 - The eight `packages/core/src/i18n/messages/{lang}.ts` catalogs and `areas/household/{lang}.ts`
 
+## Also in this PR: HomeTalk floats on its own (04-022)
+
+The owner asked for HomeTalk to float by itself when someone switches to another app mid-conversation.
+- **What changed.** While a live conversation runs and isn't paused (`shouldArmFloat` in `components/ui/live-float.ts`), `LiveTalkProvider` keeps the floating window's hidden video armed and playing, with `autopictureinpicture` set. Leaving the app floats it where the phone allows: Safari does it by itself, Chrome through the media session's `enterpictureinpicture` action, and a hidden page asks once more, quietly.
+- **What stays the same.** A refusal shows no notice. Closing the window keeps it armed, ending the conversation tears it down, and Float is still the manual way.
+- **Verified.** Typecheck, lint and component tests pass. In the browser at 360px and 1280px:
+  - the video was armed before any tap;
+  - a hidden page floated with no notice;
+  - Float, Bring back and End still worked;
+  - there were no errors.
+- **Still open.** A check on a real phone, which only the owner can do.
+
+## Also in this PR: ingredients with amounts (25-014), HomePlaces and HomeBrain (24-009)
+
+- **The ask.** The owner asked for three things:
+  - raw items with a quantity each, in place of the ingredients text box;
+  - a small Add a recipe link when a meal has no recipe;
+  - recipes that keep their items and amounts properly.
+- **Ingredient rows.** `IngredientRows` (kit) replaces the text boxes in three places: a meal's Ingredients, Add recipe, and Plan a meal's quick recipe. On the server, `meals/ingredient-lines.ts` reads the rows (`ingredientLinesFrom`, 14 tests).
+  - **Recipes keep amounts.** `createRecipe` stores each line's amount and unit; before this, every ingredient was saved as 1 "unit".
+  - **Add a recipe from a meal.** In Change meal, the link opens `AddRecipeSheet` outside the meal's form. The new recipe is then picked for that meal (`createRecipeAction` returns its id).
+- **A fix along the way.** `mealShortfalls` read the "unit" placeholder as one piece, because `normalizeUnit` maps "unit" to pcs. Ingredients with no amount now say the amount isn't known (regression test in `shortfall.test.ts`).
+- **The nav.**
+  - Places is HomePlaces, listed under AI & Smart Tools after HomeSend.
+  - HomeBrain Review is HomeBrain.
+  - Renamed everywhere: nav labels, page titles, the landing page, HomeTalk's replies and screen words ("take me to HomePlaces"), and the help guide, all in eight languages.
+- **Verified.** Typecheck, lint and help links pass, and the core and web tests pass. In the browser at 360px and 1280px on the live project:
+  - rows saved 500 g, 2 pcs, 1.5 kg (typed as 1,5), and an item with no amount;
+  - Add a recipe made 250 g rajma and 3 pcs tomato, picked the recipe, and the meal took both amounts;
+  - units fit at half width;
+  - there were no errors.
+- **Still open.** 25-015: editing or removing a recipe. A recipe saved before this change keeps "amount not known" ingredients until it is added again.
+
 ## QA cleanup
 
 Recorded after the merge.

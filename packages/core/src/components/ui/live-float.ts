@@ -45,6 +45,16 @@ export function floatSupport(env: FloatEnvironment): FloatMode | null {
   return null;
 }
 
+/**
+ * Whether HomeTalk should keep its floating video ready so that leaving the
+ * app floats it (story 04-022): only while a conversation is live and
+ * listening, and only where this browser can float at all. A paused
+ * conversation is not followed into another app.
+ */
+export function shouldArmFloat(input: { floatable: boolean; active: boolean; paused: boolean }): boolean {
+  return input.floatable && input.active && !input.paused;
+}
+
 type VideoPrototype = { requestPictureInPicture?: unknown; webkitSetPresentationMode?: unknown };
 
 /** The real browser's answers, for `floatSupport`. */

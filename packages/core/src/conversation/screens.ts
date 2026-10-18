@@ -67,7 +67,7 @@ export const SCREENS: readonly Screen[] = [
   fromSecondary("househelper", "househelper", ["househelper", "househelpers", "house helper", "house helpers", "helper", "helpers", "help at home"]),
   fromSecondary("responsibilities", "responsibilities", ["responsibilities", "responsibility", "roles", "who does what", "chores"]),
   fromSecondary("upkeep", "upkeep", ["upkeep", "home and upkeep", "home & upkeep", "home upkeep", "maintenance", "appliances", "repairs"]),
-  fromSecondary("places", "places", ["places", "place book", "saved places", "our places"]),
+  fromSecondary("places", "places", ["homeplaces", "home places", "places", "place book", "saved places", "our places"]),
   fromSecondary("health", "health", ["health", "fitness", "health and fitness", "health & fitness"]),
   fromSecondary("review", "certification", ["homebrain review", "homebrain", "review", "certification"]),
   fromSecondary("homesend", "homesend", ["homesend", "home send", "homesend inbox", "uploads"]),

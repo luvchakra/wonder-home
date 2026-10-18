@@ -18,7 +18,7 @@ export const welcomeZh: AreaCatalog<typeof welcomeEn> = {
   "welcome.q.noPets": "家里有宠物吗，或者打算养一只？",
   "welcome.ack": "好的，我记住了。",
   "welcome.ackNone": "好，这个没什么要记的。",
-  "welcome.done": "谢谢！这些我都放在了“HomeBrain 核对”里，你随时可以修改。你想先做什么？",
+  "welcome.done": "谢谢！这些我都放在了“HomeBrain”里，你随时可以修改。你想先做什么？",
   "welcome.skipped": "没关系，我们下次再聊。你想先做什么？",
   "welcome.listen": "听欢迎语",
 };

@@ -73,8 +73,10 @@ export function itemFor(need: Pick<IngredientNeed, "name" | "consumableId">, gro
 
 /** A recipe amount someone can measure: a real unit, not the default "unit" placeholder. */
 function measured(need: Pick<IngredientNeed, "quantity" | "unit">): Amount | null {
+  // Checked before normalizing: `normalizeUnit` reads "unit" as pieces, which made every unmeasured line "1 pc".
+  if (need.unit.trim().toLowerCase() === "unit") return null;
   const unit = normalizeUnit(need.unit);
-  if (!unit || unit === "unit" || !(need.quantity > 0)) return null;
+  if (!unit || !(need.quantity > 0)) return null;
   return { quantity: need.quantity, unit };
 }
 

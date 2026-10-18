@@ -774,6 +774,6 @@ describe("Corrections and current truth (§8, §9)", () => {
     expect(text).toContain("The children are in bed by 9pm on school nights (confirmed).");
     const why = readWhyQuestion("Where did that come from?")!;
     const answer = explain({ ...why, items, viewerMemberId: "kunal", timezone: TZ, now: NOW, lastAssistantText: "The children are in bed by 9pm on school nights.", lastAction: null, clarifying: null });
-    expect(answer.text).toContain("Something the household told WonderHome in HomeBrain Review, and confirmed.");
+    expect(answer.text).toContain("Something the household told WonderHome in HomeBrain, and confirmed.");
   });
 });

@@ -26,7 +26,7 @@ import { AddBeliefButton, CertificationControls } from "../_components/certifica
 import { certificationControlLabels, certificationItemLabels, reviewCategoryWords, reviewReason } from "../_lib/review-labels";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
-export const metadata = { title: "HomeBrain Review" };
+export const metadata = { title: "HomeBrain" };
 export const dynamic = "force-dynamic";
 
 /** The alert's one-word action, as the badge — so "Needs review" says which kind of look. */

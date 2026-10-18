@@ -22,7 +22,7 @@ export const welcomeEn = {
   "welcome.q.noPets": "Any pets at home, or one on the way?",
   "welcome.ack": "Got it, I'll remember that.",
   "welcome.ackNone": "Okay, nothing to note there.",
-  "welcome.done": "Thank you! I've kept all of that under HomeBrain Review, where you can change it any time. What would you like to do first?",
+  "welcome.done": "Thank you! I've kept all of that under HomeBrain, where you can change it any time. What would you like to do first?",
   "welcome.skipped": "No problem, we can do this another time. What would you like to do first?",
   "welcome.listen": "Hear the welcome",
 } as const;

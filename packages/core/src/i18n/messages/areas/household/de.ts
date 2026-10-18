@@ -393,7 +393,7 @@ export const householdDe: AreaCatalog<typeof householdEn> = {
   "manage.weather.use": "Dieses Gebiet verwenden",
   "manage.weather.cancel": "Abbrechen",
 
-  // HomeBrain-Überprüfung
+  // HomeBrain
   "review.lede": "Was WonderHome über dein Zuhause versteht – und woher jede Annahme stammt.",
   "review.category.family_roles": "Familie & Rollen",
   "review.category.home_routines": "Routinen im Haushalt",

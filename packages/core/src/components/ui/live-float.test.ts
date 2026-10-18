@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FALLBACK_PALETTE, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, wrapLines, type Painter } from "./live-float";
+import { FALLBACK_PALETTE, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, shouldArmFloat, wrapLines, type Painter } from "./live-float";
 
 describe("whether a browser can float HomeTalk (04-020)", () => {
   it("uses the standard picture-in-picture API where the document allows it", () => {
@@ -38,6 +38,15 @@ describe("whether a browser can float HomeTalk (04-020)", () => {
     };
     expect(floatSupport(readFloatEnvironment(iphone))).toBe("webkit");
     expect(floatSupport(readFloatEnvironment({}))).toBeNull();
+  });
+});
+
+describe("floating on its own when the person leaves (04-022)", () => {
+  it("keeps the window ready only while a conversation is live and listening, where the browser can float", () => {
+    expect(shouldArmFloat({ floatable: true, active: true, paused: false })).toBe(true);
+    expect(shouldArmFloat({ floatable: true, active: true, paused: true })).toBe(false);
+    expect(shouldArmFloat({ floatable: true, active: false, paused: false })).toBe(false);
+    expect(shouldArmFloat({ floatable: false, active: true, paused: false })).toBe(false);
   });
 });
 

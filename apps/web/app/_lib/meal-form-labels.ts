@@ -5,8 +5,8 @@ import type { MealFormLabels } from "../_components/meal-forms";
 /** Placeholders the sheets fill in on the client with a recipe's or an ingredient's own words. */
 const KEEP = { name: "{name}", minutes: "{minutes}", serves: "{serves}", items: "{items}" };
 
-/** Every meal sheet's words in the viewer's language (story 22-004). */
-export function mealFormLabels(t: Translate): MealFormLabels {
+/** Every meal sheet's words in the viewer's language (story 22-004); `unitNames` are the grocery words' own. */
+export function mealFormLabels(t: Translate, unitNames: Record<string, string>): MealFormLabels {
   return {
     slots: {
       breakfast: t("reminder.meal.slot.breakfast"),
@@ -55,8 +55,19 @@ export function mealFormLabels(t: Translate): MealFormLabels {
     removing: t("mealForm.removing"),
     noRecipe: t("mealForm.noRecipe"),
     writeIngredients: t("mealForm.writeIngredients"),
-    writeHint: t("mealForm.writeHint"),
-    writePlaceholder: t("mealForm.writePlaceholder"),
+    rows: {
+      item: t("mealForm.rows.item"),
+      itemPlaceholder: t("mealForm.essentialPlaceholder"),
+      amount: t("mealForm.rows.amount"),
+      unit: t("mealForm.rows.unit"),
+      hint: t("mealForm.rows.hint"),
+      addRow: t("mealForm.rows.addRow"),
+      removeRow: t("mealForm.rows.removeRow", KEEP),
+      thisItem: t("mealForm.rows.thisItem"),
+      addNewUnit: t("grocery.picker.addNew"),
+      chooseUnit: t("grocery.picker.chooseExisting"),
+    },
+    unitNames,
     saveIngredients: t("mealForm.saveIngredients"),
     orRecipe: t("mealForm.orRecipe"),
     useRecipe: t("mealForm.useRecipe"),

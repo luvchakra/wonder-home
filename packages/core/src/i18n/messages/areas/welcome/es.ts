@@ -18,7 +18,7 @@ export const welcomeEs: AreaCatalog<typeof welcomeEn> = {
   "welcome.q.noPets": "¿Tenéis mascotas en casa, o alguna en camino?",
   "welcome.ack": "Entendido, lo recordaré.",
   "welcome.ackNone": "Vale, no hay nada que anotar.",
-  "welcome.done": "¡Gracias! He guardado todo eso en «Revisión de HomeBrain», donde puedes cambiarlo cuando quieras. ¿Qué te gustaría hacer primero?",
+  "welcome.done": "¡Gracias! He guardado todo eso en «HomeBrain», donde puedes cambiarlo cuando quieras. ¿Qué te gustaría hacer primero?",
   "welcome.skipped": "No pasa nada, lo hacemos en otro momento. ¿Qué te gustaría hacer primero?",
   "welcome.listen": "Escuchar la bienvenida",
 };

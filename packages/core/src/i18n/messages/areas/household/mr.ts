@@ -393,7 +393,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "manage.weather.use": "हा भाग वापरा",
   "manage.weather.cancel": "रद्द करा",
 
-  // HomeBrain पुनरावलोकन
+  // HomeBrain
   "review.lede": "WonderHome ला तुमच्या घराबद्दल काय समजते — आणि प्रत्येक समजूत कुठून आली.",
   "review.category.family_roles": "कुटुंब आणि भूमिका",
   "review.category.home_routines": "घराचा दिनक्रम",

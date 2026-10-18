@@ -391,7 +391,7 @@ export const householdEn = {
   "manage.weather.use": "Use this area",
   "manage.weather.cancel": "Cancel",
 
-  // HomeBrain Review
+  // HomeBrain
   "review.lede": "What WonderHome understands about your home — and where each belief came from.",
   "review.category.family_roles": "Family & roles",
   "review.category.home_routines": "Home routines",

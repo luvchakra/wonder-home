@@ -22,7 +22,7 @@ export const welcomeAr: AreaCatalog<typeof welcomeEn> = {
   "welcome.q.noPets": "هل في البيت حيوانات أليفة، أو هناك واحد في الطريق؟",
   "welcome.ack": "حسنًا، سأتذكّر ذلك.",
   "welcome.ackNone": "حسنًا، لا شيء يُسجَّل هنا.",
-  "welcome.done": "شكرًا! حفظتُ كل ذلك في «مراجعة HomeBrain»، ويمكنك تغييره في أي وقت. ماذا تريد أن تفعل أولًا؟",
+  "welcome.done": "شكرًا! حفظتُ كل ذلك في «HomeBrain»، ويمكنك تغييره في أي وقت. ماذا تريد أن تفعل أولًا؟",
   "welcome.skipped": "لا مشكلة، نكمل هذا في وقت آخر. ماذا تريد أن تفعل أولًا؟",
   "welcome.listen": "استمع إلى الترحيب",
 };
