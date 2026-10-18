@@ -1,10 +1,14 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Eye } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
+import { isInviteTemplate, type InviteTemplate } from "@wonderhome/core/family/invite-templates";
+import { InvitationCard, type InvitationCardWords } from "@wonderhome/core/ui/invitation-card";
+import { Pill } from "@wonderhome/core/ui/pill";
+import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 
@@ -24,6 +28,17 @@ export type InviteDesignLabels = {
   save: string;
   saving: string;
   saved: string;
+  preview: string;
+  previewTitle: string;
+  previewLede: string;
+};
+
+/** What the preview needs: the event's own words, and each design's kind line. */
+export type InvitePreview = {
+  /** The design "auto" stands for. */
+  suggested: InviteTemplate;
+  words: Omit<InvitationCardWords, "kindLine" | "message">;
+  kindLines: Record<InviteTemplate, string>;
 };
 
 /**
@@ -41,6 +56,7 @@ export function InviteDesignForm({
   selected,
   message,
   labels,
+  preview,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
@@ -50,9 +66,15 @@ export function InviteDesignForm({
   selected: string;
   message: string;
   labels: InviteDesignLabels;
+  preview: InvitePreview;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, {});
   const [choice, setChoice] = useState(selected);
+  const [line, setLine] = useState(message);
+  const [previewing, setPreviewing] = useState(false);
+  // The preview shows what is picked and typed now, saved or not.
+  const shown: InviteTemplate = isInviteTemplate(choice) ? choice : preview.suggested;
+  const previewLine = line.trim() ? line.trim().slice(0, 300) : null;
 
   return (
     <form action={formAction} className="space-y-3">
@@ -87,7 +109,8 @@ export function InviteDesignForm({
         <textarea
           id={`invite-message-${eventId}`}
           name="message"
-          defaultValue={message}
+          value={line}
+          onChange={(event) => setLine(event.target.value)}
           maxLength={300}
           rows={2}
           aria-describedby={`invite-message-hint-${eventId}`}
@@ -101,9 +124,17 @@ export function InviteDesignForm({
           <Check aria-hidden className="size-3.5" /> {labels.saved}
         </p>
       ) : null}
-      <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? labels.saving : labels.save}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {pending ? labels.saving : labels.save}
+        </Button>
+        <Pill type="button" tone="soft" onClick={() => setPreviewing(true)}>
+          <Eye aria-hidden className="size-3.5" /> {labels.preview}
+        </Pill>
+      </div>
+      <Sheet open={previewing} onOpenChange={setPreviewing} title={labels.previewTitle} description={labels.previewLede}>
+        <InvitationCard template={shown} words={{ ...preview.words, kindLine: preview.kindLines[shown], message: previewLine }} />
+      </Sheet>
     </form>
   );
 }

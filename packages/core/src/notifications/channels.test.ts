@@ -179,7 +179,8 @@ describe("dispatchToChannels", () => {
       "UTC",
       { ...CHANNEL_ADAPTERS, push: stub },
     );
-    expect(attempts).toEqual([{ channel: "push", result: { ok: true } }]);
+    // Each attempt names the address it went to (one device, for push), so its outcome can be recorded against it.
+    expect(attempts).toEqual([{ channel: "push", target: "sub-abc", result: { ok: true } }]);
   });
 });
 

@@ -93,6 +93,7 @@ const SHIPPED_TABLES = [
   "member_work_places",
   "school_teachers",
   "child_activities",
+  "push_subscriptions",
   "child_activity_notes",
   "schedule_conflicts",
   "gift_plans",
@@ -922,6 +923,12 @@ async function main() {
   check("migration landed: family_events.invite_template", !invitationProbe.error, invitationProbe.error?.code ?? "ok");
   const utcOccasions = await admin.from("family_events").select("id", { count: "exact", head: true }).like("external_id", "member_%").eq("all_day", false);
   check("member occasions are all-day", !utcOccasions.error && (utcOccasions.count ?? 0) === 0, utcOccasions.error?.code ?? `${utcOccasions.count ?? 0} timed`);
+
+  // Story 23-015: push notifications.
+  const pushProbe = await admin.from("push_subscriptions").select("id, member_id, endpoint, last_sent_at").limit(1);
+  check("migration landed: push_subscriptions", !pushProbe.error, pushProbe.error?.code ?? "ok");
+  const anonPush = await anon.from("push_subscriptions").select("id").limit(1);
+  check("anonymous cannot read push_subscriptions", Boolean(anonPush.error) || (anonPush.data ?? []).length === 0, anonPush.error?.code ?? "no rows");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

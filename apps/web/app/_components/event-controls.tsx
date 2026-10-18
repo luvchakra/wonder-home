@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Pencil, Share2 } from "lucide-react";
+import { Check, Copy, ImageIcon, Pencil, Share2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -244,17 +244,51 @@ export function EventInviteesForm({
 const noSubscription = () => () => undefined;
 
 /** The live link: shown in full, copied in one tap, or handed to the phone's own share sheet. */
-export function EventLinkShare({ path, title, labels }: { path: string; title: string; labels: { copy: string; copied: string; share: string; shareText: string } }) {
+export function EventLinkShare({
+  path,
+  title,
+  labels,
+}: {
+  path: string;
+  title: string;
+  labels: { copy: string; copied: string; share: string; shareText: string; shareCard: string; saveCard: string };
+}) {
   // The origin and the share sheet exist only in the browser; the server renders the bare path.
   const origin = useSyncExternalStore(noSubscription, () => window.location.origin, () => "");
   const canShare = useSyncExternalStore(noSubscription, () => typeof navigator.share === "function", () => false);
   const url = `${origin}${path}`;
   const [copied, setCopied] = useState(false);
+  const [sharingCard, setSharingCard] = useState(false);
+  const text = labels.shareText.replace("{title}", title);
+
+  // The invitation itself, as a tall picture with the link beside it: a chat
+  // app shows it whole, the way a printed card is passed round. Where a
+  // device cannot share a picture, the picture opens to save instead.
+  const shareCard = async () => {
+    setSharingCard(true);
+    try {
+      const response = await fetch(`${path}/card`);
+      const blob = await response.blob();
+      const file = new File([blob], "invitation.png", { type: "image/png" });
+      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: text, text: `${text}\n${url}` }).catch(() => undefined);
+      } else {
+        window.open(`${path}/card`, "_blank", "noopener");
+      }
+    } catch {
+      window.open(`${path}/card`, "_blank", "noopener");
+    } finally {
+      setSharingCard(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
       <p className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-3 py-2 font-mono text-xs break-all">{url}</p>
       <div className="flex flex-wrap gap-2">
+        <Pill type="button" tone="primary" disabled={sharingCard} onClick={() => void shareCard()}>
+          <ImageIcon aria-hidden className="size-3.5" /> {canShare ? labels.shareCard : labels.saveCard}
+        </Pill>
         <Pill
           type="button"
           tone="soft"
@@ -271,7 +305,7 @@ export function EventLinkShare({ path, title, labels }: { path: string; title: s
           {copied ? <Check aria-hidden className="size-3.5" /> : <Copy aria-hidden className="size-3.5" />} {copied ? labels.copied : labels.copy}
         </Pill>
         {canShare ? (
-          <Pill type="button" tone="soft" onClick={() => void navigator.share({ title: labels.shareText.replace("{title}", title), url }).catch(() => undefined)}>
+          <Pill type="button" tone="soft" onClick={() => void navigator.share({ title: text, url }).catch(() => undefined)}>
             <Share2 aria-hidden className="size-3.5" /> {labels.share}
           </Pill>
         ) : null}

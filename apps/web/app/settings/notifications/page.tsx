@@ -6,6 +6,7 @@ import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { channelAdaptersFromEnv } from "@wonderhome/core/notifications/channels";
+import { webPushPublicKey } from "@wonderhome/core/notifications/web-push";
 import { loadChannelPreferences, loadSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
 import { REMINDER_POLICIES } from "@wonderhome/core/notifications/policies";
 import { loadReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
@@ -18,6 +19,7 @@ import {
   saveSmartRemindersAction,
 } from "../../(auth)/notification-preferences-actions";
 import { ChannelPreferenceCard } from "../../_components/notification-preferences-form";
+import { PushDeviceCard } from "../../_components/push-device-card";
 import { QuietHoursCard, ReminderPreferencesCard, SmartRemindersCard } from "../../_components/reminder-settings-form";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
@@ -40,7 +42,7 @@ export default async function NotificationSettingsPage() {
   const session = await requireSession("/settings/notifications");
   const { supabase, membership, viewer, secondary } = session;
 
-  const [preferences, reminderPreferences, smart, { data: responsibilityData }] = await Promise.all([
+  const [preferences, reminderPreferences, smart, { data: responsibilityData }, { data: deviceRows }] = await Promise.all([
     loadChannelPreferences(supabase, membership.memberId),
     loadReminderPreferences(supabase, membership.memberId),
     loadSmartReminderChoices(supabase, membership.memberId),
@@ -48,7 +50,9 @@ export default async function NotificationSettingsPage() {
       .from("responsibilities")
       .select("outcome_key, primary_member_id, backup_member_id, playbook_items(name)")
       .eq("household_id", membership.household.id),
+    supabase.from("push_subscriptions").select("endpoint").eq("member_id", membership.memberId),
   ]);
+  const myEndpoints = ((deviceRows ?? []) as { endpoint: string }[]).map((row) => row.endpoint);
   // What routes reminders to this person (story 23-009): the responsibilities
   // they hold, first or as backup — the same ones the engine reads.
   const routing = ((responsibilityData ?? []) as { outcome_key: string; primary_member_id: string | null; backup_member_id: string | null; playbook_items: { name: string } | { name: string }[] | null }[])
@@ -145,6 +149,30 @@ export default async function NotificationSettingsPage() {
             {t("settingsPage.notifications.routing.change")}
           </Link>
         </Card>
+
+        {/* Push on this phone first: it is what reaches someone in time (story 23-015). */}
+        <PushDeviceCard
+          householdId={membership.household.id}
+          publicKey={webPushPublicKey()}
+          myEndpoints={myEndpoints}
+          labels={{
+            title: t("push.device.title"),
+            lede: t("push.device.lede"),
+            on: t("push.device.on"),
+            off: t("push.device.off"),
+            turnOn: t("push.device.turnOn"),
+            turnOff: t("push.device.turnOff"),
+            test: t("push.device.test"),
+            testTitle: t("push.device.testTitle"),
+            testBody: t("push.device.testBody"),
+            testSent: t("push.device.testSent"),
+            working: t("push.device.working"),
+            notConfigured: t("push.device.notConfigured"),
+            unsupported: t("push.device.unsupported"),
+            blocked: t("push.device.blocked"),
+            otherDevices: t("push.device.otherDevices", { count: "{count}" }),
+          }}
+        />
 
         <h2 className="pt-2 text-base font-semibold">{t("settingsPage.notifications.channels")}</h2>
         <div className="space-y-4">

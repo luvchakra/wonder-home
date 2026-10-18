@@ -5,7 +5,9 @@ import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "
 import { translatorFor } from "../i18n/translate";
 import { log } from "../observability/logger";
 import { renderCopy, type NotificationCopy } from "./message";
-import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type ChannelNotification, type ChannelPreference, type DeliveryChannel } from "./channels";
+import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type ChannelAttempt, type ChannelNotification, type ChannelPreference, type DeliveryChannel } from "./channels";
+import { parsePushTarget } from "./web-push";
+import { pushWorthSending, type PushReason } from "./push-gate";
 
 /**
  * Sending a notification beyond the app (stories 06-008, 17-006).
@@ -30,13 +32,15 @@ export async function deliverNotification(
     notification: ChannelNotification;
     /** The reminder as a message, when it has one: sent in the recipient's own language (story 22-006). */
     copy?: NotificationCopy | null;
+    /** A reminder timed for this person, or an alert about something that happened (decides whether it may buzz). */
+    reason?: PushReason;
     now?: Date;
   },
   adapters: Record<DeliveryChannel, ChannelAdapter> = channelAdaptersFromEnv(),
 ): Promise<{ sent: DeliveryChannel[]; failed: DeliveryChannel[] }> {
   const now = input.now ?? new Date();
   try {
-    const [{ data }, { data: household }, { data: member }] = await Promise.all([
+    const [{ data }, { data: household }, { data: member }, { data: devices }] = await Promise.all([
       admin
         .from("notification_preferences")
         .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
@@ -46,6 +50,9 @@ export async function deliverNotification(
       input.copy
         ? admin.from("household_members").select("language, date_format, time_format, measurement_system").eq("id", input.recipientMemberId).maybeSingle()
         : Promise.resolve({ data: null }),
+      adapters.push?.live
+        ? admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", input.recipientMemberId)
+        : Promise.resolve({ data: [] }),
     ]);
     // Quiet hours are the household's own clock, never the server's.
     const timeZone = ((household as { timezone?: string } | null)?.timezone ?? "Asia/Kolkata") as string;
@@ -58,13 +65,32 @@ export async function deliverNotification(
       quietUntilMinute: (row.quiet_until_minute as number | null) ?? 0,
       target: (row.target as string | null) ?? null,
     }));
+    // Push reaches each device the person turned it on for (story 23-015),
+    // with their push preference's quiet hours, and only when it is worth
+    // the interruption (`pushWorthSending`).
+    const subscriptions = ((devices ?? []) as { id: string; endpoint: string; p256dh: string; auth: string }[]);
+    const pushPreference = preferences.find((preference) => preference.channel === "push");
+    let pushTargets: ChannelPreference[] = [];
+    if (subscriptions.length > 0 && pushPreference?.enabled !== false) {
+      const sentToday = await pushesInLastDay(admin, input.recipientMemberId, now);
+      if (pushWorthSending({ priority: input.notification.priority, reason: input.reason ?? "alert", sentToday })) {
+        pushTargets = subscriptions.map((device) => ({
+          ...(pushPreference ?? { channel: "push" as const, enabled: true, quietFrom: null, quietUntil: null }),
+          channel: "push" as const,
+          enabled: true,
+          target: JSON.stringify({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }),
+        }));
+      }
+    }
     // Only channels that can actually reach someone; a fixture's "not
     // configured" is not an attempt.
-    const live = preferences.filter((preference) => adapters[preference.channel]?.live);
+    const live = [...preferences.filter((preference) => preference.channel !== "push" && adapters[preference.channel]?.live), ...pushTargets];
     if (live.length === 0) return { sent: [], failed: [] };
 
-    const notification = input.copy ? await inRecipientLanguage(input.notification, input.copy, household, member) : input.notification;
+    const translated = input.copy ? await inRecipientLanguage(input.notification, input.copy, household, member) : input.notification;
+    const notification: ChannelNotification = { url: "/notifications", tag: input.notificationId, ...translated };
     const attempts = await dispatchToChannels(live, notification, now, timeZone, adapters);
+    await recordPushOutcomes(admin, attempts, subscriptions, now);
     const rows = attempts.map((attempt) => ({
       household_id: input.householdId,
       notification_id: input.notificationId,
@@ -105,4 +131,37 @@ async function inRecipientLanguage(
   } catch {
     return notification;
   }
+}
+
+/** How many pushes reached this person in the last day (the push gate's ceiling counts these). */
+async function pushesInLastDay(admin: SupabaseClient, memberId: string, now: Date): Promise<number> {
+  const { count } = await admin
+    .from("notification_events")
+    .select("id, notifications!inner(recipient_member_id)", { count: "exact", head: true })
+    .eq("channel", "push")
+    .eq("event_type", "sent")
+    .eq("notifications.recipient_member_id", memberId)
+    .gte("created_at", new Date(now.getTime() - 86_400_000).toISOString());
+  return count ?? 0;
+}
+
+/** A device that took the push is marked; one its push service says is gone is forgotten. */
+async function recordPushOutcomes(
+  admin: SupabaseClient,
+  attempts: readonly ChannelAttempt[],
+  subscriptions: readonly { id: string; endpoint: string }[],
+  now: Date,
+): Promise<void> {
+  const sentIds: string[] = [];
+  const goneIds: string[] = [];
+  for (const attempt of attempts) {
+    if (attempt.channel !== "push") continue;
+    const endpoint = parsePushTarget(attempt.target ?? null)?.endpoint;
+    const device = subscriptions.find((subscription) => subscription.endpoint === endpoint);
+    if (!device) continue;
+    if (attempt.result.ok) sentIds.push(device.id);
+    else if (attempt.result.error.code === "gone") goneIds.push(device.id);
+  }
+  if (sentIds.length > 0) await admin.from("push_subscriptions").update({ last_sent_at: now.toISOString(), failure_count: 0 }).in("id", sentIds);
+  if (goneIds.length > 0) await admin.from("push_subscriptions").delete().in("id", goneIds);
 }
