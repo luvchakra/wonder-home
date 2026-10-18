@@ -4,6 +4,7 @@ import type { HouseholdMember } from "@wonderhome/core/identity/households";
 
 import { hoursLabel, type DayHours } from "@wonderhome/core/household/day-hours";
 import { WORK_ARRANGEMENTS } from "@wonderhome/core/identity/households";
+import type { WorkPlace } from "@wonderhome/core/household/work-place";
 import { requestFormatIn, requestT } from "@wonderhome/core/i18n/request";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { UserRoundPen } from "lucide-react";
@@ -14,6 +15,7 @@ import { HELPER_ROLES } from "../_lib/helper-roles";
 import { MemberAvatarControl } from "./member-avatar-control";
 import { MemberInviteControl } from "./member-invite-control";
 import { MemberProfileForm } from "./member-profile-form";
+import { officeField } from "../_lib/office-field";
 import { RemoveMemberControl } from "./remove-member-control";
 
 /** One label/value pair, skipped entirely when there is nothing to say (design principle 9: never a placeholder for what is not known). */
@@ -47,6 +49,7 @@ export function MemberDetail({
   school,
   email,
   invite,
+  workPlace,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -64,6 +67,8 @@ export function MemberDetail({
   email?: string | null;
   /** Who is inviting, into which household: the Invite control's message. Set for Admins. */
   invite?: { householdName: string; inviterName: string } | null;
+  /** An adult's picked office, when this viewer may see it (adults and Admins, and the person). */
+  workPlace?: WorkPlace | null;
 }) {
   const t = requestT();
   const clockTime = requestFormatIn("UTC").time;
@@ -97,6 +102,8 @@ export function MemberDetail({
         <Fact label={t("family.fact.gender")} value={member.gender} />
         <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
         <Fact label={t("family.fact.schoolOrWork")} value={member.schoolOrWorkLocation} />
+        <Fact label={t("family.fact.workArrangement")} value={member.memberType === "adult" && member.workArrangement ? t(`setupWizard.work.${member.workArrangement}`) : null} />
+        <Fact label={t("family.fact.office")} value={member.memberType === "adult" && workPlace ? workPlace.name : null} />
         <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
         <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />
         <Fact label={t("family.fact.specialOccasion")} value={occasion} />
@@ -138,6 +145,7 @@ export function MemberDetail({
               ...(email !== undefined ? { email } : {}),
             }}
             workOptions={member.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
+            office={member.memberType === "adult" ? officeField(workPlace ?? null) : undefined}
             helperRoles={
               member.memberType === "helper"
                 ? {

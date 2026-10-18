@@ -12,6 +12,8 @@ export const whatsNewAr: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#many": "اعرض {count} أخرى",
   "whatsNew.showAll#other": "اعرض {count} أخرى",
   "whatsNew.showLess": "اعرض أقل",
+  "whatsNew.officePlaces.title": "أماكن قرب المكتب، واكتشافاتك الخاصة",
+  "whatsNew.officePlaces.body": "اختر مكتبك في الإعدادات لتسأل عن أماكن قريبة منه، وأضف أماكن إلى دفترك من الأماكن.",
   "whatsNew.memberSignIn.title": "الجميع يسجّلون الدخول",
   "whatsNew.memberSignIn.body": "أضف بريد كل شخص في العائلة، أو أرسل رابط دعوة. يدخلون المنزل مباشرة.",
   "whatsNew.calendarAnswers.title": "اسأل HomeTalk عمّا لديك",

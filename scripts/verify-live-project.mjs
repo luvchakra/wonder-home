@@ -90,6 +90,7 @@ const SHIPPED_TABLES = [
   "public_holidays",
   "calendar_preferences",
   "household_member_emails",
+  "member_work_places",
   "schedule_conflicts",
   "gift_plans",
   "step_up_verifications",
@@ -800,6 +801,8 @@ async function main() {
     Boolean(anonEmails.error) || (Array.isArray(anonEmails.data) && anonEmails.data.length === 0),
     anonEmails.error ? anonEmails.error.code : `${anonEmails.data?.length ?? "?"} rows`,
   );
+  const offices = await admin.from("member_work_places").select("member_id, place_id, latitude, longitude").limit(1);
+  check("migration landed: member_work_places", !offices.error, offices.error?.code ?? "ok");
   const placeBook = await admin.from("household_places").select("place_id, status, maps_uri").limit(1);
   check("migration landed: household_places", !placeBook.error, placeBook.error?.code ?? "ok");
   const anonPlaces = await anon.from("household_places").select("place_id").limit(1);

@@ -8,6 +8,8 @@ export const whatsNewHi: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "{count} और दिखाएँ",
   "whatsNew.showAll#other": "{count} और दिखाएँ",
   "whatsNew.showLess": "कम दिखाएँ",
+  "whatsNew.officePlaces.title": "दफ़्तर के पास की जगहें, और आपकी अपनी खोज",
+  "whatsNew.officePlaces.body": "सेटिंग्स में अपना दफ़्तर चुनें ताकि उसके पास की जगहें पूछ सकें, और जगहें में अपनी सूची में जगहें जोड़ें।",
   "whatsNew.memberSignIn.title": "सब ख़ुद साइन इन करें",
   "whatsNew.memberSignIn.body": "परिवार में हर व्यक्ति का ईमेल जोड़ें, या आमंत्रण लिंक भेजें। वे सीधे घर में आ जाते हैं।",
   "whatsNew.calendarAnswers.title": "HomeTalk से पूछें क्या है",

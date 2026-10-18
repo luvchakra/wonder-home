@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Loader2, MapPin, Pencil, School, Search } from "lucide-react";
+import { Briefcase, ExternalLink, Loader2, MapPin, Pencil, School, Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import type { PlaceSearchKind } from "@wonderhome/core/places/provider";
@@ -33,8 +33,8 @@ function mapsHref(text: string, detail: string | null, placeId: string | null): 
 }
 
 /**
- * Search a real place — the home address, or a school near home — and pick
- * it (rule 20: picked, not typed).
+ * Search a real place — the home address, a school near home, or an adult's
+ * office — and pick it (rule 20: picked, not typed).
  *
  * Typing asks our own server (`searchPlacesAction`), which asks Google Maps
  * with the deployment's key; a school search leans toward the saved home and
@@ -140,7 +140,7 @@ export function PlaceSearchField({
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  const Icon = kind === "school" ? School : MapPin;
+  const Icon = kind === "school" ? School : kind === "office" ? Briefcase : MapPin;
 
   return (
     <div className="space-y-1.5">
@@ -153,7 +153,7 @@ export function PlaceSearchField({
         <>
           <input type="hidden" name={textName} value={picked.text} />
           <div className="flex items-start gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3">
-            <IconTile icon={Icon} tone={kind === "school" ? "school" : "home"} size="sm" />
+            <IconTile icon={Icon} tone={kind === "school" ? "school" : kind === "office" ? "primary" : "home"} size="sm" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium break-words">{picked.text}</p>
               {picked.detail ? <p className="text-xs break-words text-[var(--wh-foreground-muted)]">{picked.detail}</p> : null}

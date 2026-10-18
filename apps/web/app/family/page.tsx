@@ -25,6 +25,7 @@ import { ActionRow } from "@wonderhome/core/ui/action-row";
 
 import { presentationFor } from "../_components/agenda-row";
 import { FamilyNeedAction, SettleEventPill, type FamilyNeedLabels } from "../_components/family-need-action";
+import { listWorkPlaces } from "@wonderhome/core/household/work-place";
 import { MemberDetail } from "../_components/member-detail";
 import { NewEventForm } from "../_components/new-event-form";
 import { PetDetail } from "../_components/pet-detail";
@@ -48,7 +49,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, integrations, pets, enrolments, emails] = await Promise.all([
+  const [members, entitlement, integrations, pets, enrolments, emails, offices] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     listIntegrations(supabase, householdId).catch(() => []),
@@ -56,7 +57,10 @@ export default async function FamilyPage() {
     listEnrolments(supabase, householdId).catch(() => []),
     // Sign-in emails this viewer may read: every member's for an Admin, their own otherwise.
     readMemberEmails(supabase, householdId).catch(() => new Map<string, string>()),
+    // Adults' picked offices; RLS returns only what this viewer may see.
+    listWorkPlaces(supabase, householdId).catch(() => []),
   ]);
+  const officeOf = (memberId: string) => offices.find((office) => office.memberId === memberId) ?? null;
   // Each child's current school and its day, read beside their other details.
   const schoolOf = (memberId: string) => {
     const enrolment = enrolments.find((entry) => entry.childMemberId === memberId);
@@ -190,6 +194,7 @@ export default async function FamilyPage() {
                         school={member.memberType === "child" ? schoolOf(member.id) : null}
                         email={emails.get(member.id) ?? null}
                         invite={invite}
+                        workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
                       />
                       {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
                       {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (

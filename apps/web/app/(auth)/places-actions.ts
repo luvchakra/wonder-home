@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { toErrorBody } from "@wonderhome/core/api/errors";
+import { ApiError, toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { loadHouseholdAddress, removeHouseholdAddress } from "@wonderhome/core/household/address";
 import { DEFAULT_PREFERENCES, resolvePreferences } from "@wonderhome/core/i18n/preferences";
-import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { distanceLabel, PlacesUnavailableError, type PlaceSearchKind } from "@wonderhome/core/places/provider";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
@@ -19,10 +19,12 @@ import type { ActionState } from "./actions";
 /**
  * Place search for the home address and for schools near home.
  *
- * The browser asks here, never Google: the key stays on the server, every
- * search is an Admin's and is rate limited per member, and a school search
- * leans toward the household's saved home, read here from the database
- * rather than taken from the browser.
+ * The browser asks here, never Google: the key stays on the server, and
+ * every search is rate limited per member. The home address and schools are
+ * an Admin's to search; an office is any adult's, since people pick their own
+ * (story 24-005), and so is a place for the place book (24-006). School,
+ * office and place searches lean toward the household's
+ * saved home, read here from the database rather than taken from the browser.
  */
 
 export type PlaceOption = { placeId: string; primary: string; secondary: string; distance: string | null };
@@ -31,7 +33,7 @@ export type PlaceSearchResult = { options?: PlaceOption[]; error?: string };
 const searchSchema = z.object({
   householdId: z.uuid(),
   query: z.string().trim().min(2).max(120),
-  kind: z.enum(["address", "school"]),
+  kind: z.enum(["address", "school", "office", "place"]),
   sessionToken: z.uuid(),
 });
 
@@ -43,9 +45,10 @@ export async function searchPlacesAction(input: { householdId: string; query: st
 
   try {
     const supabase = await createClient();
-    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const membership =
+      parsed.data.kind === "office" || parsed.data.kind === "place" ? await requireAdult(supabase, parsed.data.householdId) : await requireHouseholdAdmin(supabase, parsed.data.householdId);
     if (!(await hitRateLimit(createAdminClient(), "places.search", membership.memberId))) return { error: rateLimitMessage("places.search") };
-    const near = parsed.data.kind === "school" ? ((await loadHouseholdAddress(supabase, parsed.data.householdId).catch(() => null))?.location ?? null) : null;
+    const near = parsed.data.kind !== "address" ? ((await loadHouseholdAddress(supabase, parsed.data.householdId).catch(() => null))?.location ?? null) : null;
     const preferences = membership.locale ? resolvePreferences(membership.locale.member, membership.locale.household) : DEFAULT_PREFERENCES;
     const suggestions = await provider.search({
       query: parsed.data.query,
@@ -60,6 +63,13 @@ export async function searchPlacesAction(input: { householdId: string; query: st
     if (thrown instanceof PlacesUnavailableError) return { error: "Search is not answering right now. Type it in instead, or try again in a minute." };
     return { error: toErrorBody(thrown, "household").body.error.message };
   }
+}
+
+/** An adult or an Admin: who may search for an office. */
+async function requireAdult(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string) {
+  const membership = await requireMembership(supabase, householdId);
+  if (!membership.roles.some((role) => role === "head" || role === "administrator" || role === "adult")) throw ApiError.forbidden("Only an adult can do this.");
+  return membership;
 }
 
 const householdSchema = z.uuid();

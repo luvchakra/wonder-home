@@ -104,6 +104,30 @@ describe("suggestPlaces", () => {
     expect(await suggestPlaces(unreadable, provider([place("p1")]), request, context)).toEqual({ kind: "which_child", names: ["Anya Sharma", "Kabir Sharma"] });
   });
 
+  it("searches near the speaker's office, or a named adult's, and says what is missing", async () => {
+    const office = { latitude: school.latitude + 0.004, longitude: school.longitude };
+    const withOffices = {
+      ...context,
+      speakerMemberId: "m1",
+      workPlaces: [
+        { memberId: "m1", personName: "Kunal Sharma", location: office },
+        { memberId: "m2", personName: "Asha Sharma", location: office },
+      ],
+    };
+    const mine = readPlaceRequest("somewhere for lunch near my office")!;
+    expect(await suggestPlaces(unreadable, provider([place("p1")]), mine, withOffices)).toMatchObject({ kind: "found", near: "your office" });
+    const hers = readPlaceRequest("suggest a cafe near Asha's office")!;
+    const found = await suggestPlaces(unreadable, provider([place("p1")]), hers, withOffices);
+    expect(found).toMatchObject({ kind: "found", near: "Asha's office" });
+    expect(placesReply(hers, found)).toContain("near Asha's office");
+
+    const unknownOwn = await suggestPlaces(unreadable, provider([place("p1")]), mine, { ...context, speakerMemberId: "m9" });
+    expect(unknownOwn).toEqual({ kind: "needs_work", personName: null });
+    expect(placesReply(mine, unknownOwn)).toContain("Pick it under your details in Settings");
+    const unknownOther = await suggestPlaces(unreadable, provider([place("p1")]), readPlaceRequest("any good cafes near Ravi's office")!, withOffices);
+    expect(unknownOther).toEqual({ kind: "needs_work", personName: "Ravi" });
+  });
+
   it("is off without a provider that can search nearby", async () => {
     const request = readPlaceRequest("Suggest some good places for dinner tonight")!;
     expect(await suggestPlaces(unreadable, null, request, context)).toEqual({ kind: "off" });

@@ -33,6 +33,10 @@ export function placesReply(request: PlaceRequest, outcome: PlacesOutcome): stri
       return outcome.childName
         ? `I don't know where ${outcome.childName}'s school is yet. Pick the school from the search in household setup, and I can look near it.`
         : "I don't know where the school is yet. Pick each child's school from the search in household setup, and I can look near it.";
+    case "needs_work":
+      return outcome.personName
+        ? `I don't know where ${outcome.personName}'s office is yet. ${outcome.personName} can pick it under their details in Settings, or an Admin can in Family, and then I can look near it.`
+        : "I don't know where your office is yet. Pick it under your details in Settings, and I can look near it.";
     case "which_child":
       return `Near whose school: ${outcome.names.join(" or ")}?`;
     case "off":

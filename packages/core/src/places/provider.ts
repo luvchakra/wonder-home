@@ -13,7 +13,9 @@
  */
 
 /** What a search is for. A school search is limited to schools and leans toward home. */
-export type PlaceSearchKind = "address" | "school";
+/** What a picker searches for: the home address, a school near home, or an adult's office (any place, leaning toward home). */
+/** "place": anything at all, for the place book (HomePlaces 24-006). */
+export type PlaceSearchKind = "address" | "school" | "office" | "place";
 
 export type PlaceSuggestion = {
   placeId: string;

@@ -2,6 +2,7 @@ import { MapPin, Trees, UtensilsCrossed } from "lucide-react";
 
 import { listHouseholdPlaces, type HouseholdPlace } from "@wonderhome/core/homeplaces/repository";
 import { mapsLink } from "@wonderhome/core/places/provider";
+import { rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
@@ -9,7 +10,10 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState, ErrorState } from "@wonderhome/core/ui/states";
 
+import { placeSearchLabels } from "../_lib/place-labels";
+import { placeSearchAvailable } from "../_lib/places";
 import { requireSession } from "../_lib/session";
+import { AddPlaceForm } from "./add-place-form";
 import { PlaceBookActions, type PlaceBookLabels } from "./place-book-actions";
 
 export const metadata = { title: "Places" };
@@ -26,8 +30,8 @@ function tileFor(kind: string | null) {
  * The household's place book (HomePlaces): what the family saved from a
  * HomeTalk answer, and what they said is "not for us". Every member reads
  * it; an adult changes it — keeps a note, removes a saved place, or lets a
- * turned-down place be suggested again. Places are added from HomeTalk's
- * answers, where they were found; this screen never searches on its own.
+ * turned-down place be suggested again. Places come from HomeTalk's answers,
+ * or an adult adds one here by picking it from a search (24-006).
  */
 export default async function PlacesPage() {
   const session = await requireSession("/places");
@@ -99,6 +103,29 @@ export default async function PlacesPage() {
           <p className="text-[0.9375rem] text-[var(--wh-foreground-muted)]">{t("placeBook.lede", { name: firstName })}</p>
           {!canChange ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("placeBook.readOnly")}</p> : null}
         </header>
+
+        {canChange && placeSearchAvailable() ? (
+          <section className="space-y-2">
+            <SectionHeader title={t("placeBook.add.title")} />
+            <Card className="space-y-3 p-4">
+              <p className="text-sm text-[var(--wh-foreground-muted)]">{t("placeBook.add.lede")}</p>
+              <AddPlaceForm
+                householdId={householdId}
+                labels={{
+                  label: t("placeBook.add.label"),
+                  note: t("placeBook.add.note"),
+                  save: t("placeBook.add.save"),
+                  saving: t("common.saving"),
+                  saved: t("placeBook.add.saved"),
+                  pick: t("placeBook.add.pick"),
+                  failed: t("placeBook.add.failed"),
+                  busy: rateLimitMessage("places.find"),
+                  search: placeSearchLabels(t, "place"),
+                }}
+              />
+            </Card>
+          </section>
+        ) : null}
 
         {places.length === 0 ? (
           <EmptyState icon={MapPin} tone="home" title={t("placeBook.emptyTitle")} description={t("placeBook.emptyLede")} />

@@ -378,6 +378,8 @@ function textOrNull(value: string): string | null {
  * birthday) — editable afterwards, the way CLAUDE.md's "every entity can be
  * added, updated and removed" already expects of everything else.
  */
+const OFFICE_TYPED = "Pick the office from the search, so HomeTalk knows where it is. Clear the field to leave it out.";
+
 export async function updateMemberProfileAction(
   _previous: ActionState,
   formData: FormData,
@@ -429,6 +431,12 @@ export async function updateMemberProfileAction(
     schoolHours = { hours: hours.hours };
   }
 
+  // An office typed but never picked has no point to search near: refused
+  // before anything is written, so the rest of the form is not half-saved.
+  if (formData.get("officeField") === "1" && !String(formData.get("office_place_id") ?? "").trim() && String(formData.get("office_name") ?? "").trim()) {
+    return { error: OFFICE_TYPED };
+  }
+
   const supabase = await createClient();
 
   try {
@@ -461,7 +469,13 @@ export async function updateMemberProfileAction(
       const { setSchoolHours } = await import("@wonderhome/core/school/enrolments");
       await setSchoolHours(supabase, { householdId: parsed.data.householdId, childMemberId: parsed.data.memberId, hours: schoolHours.hours });
     }
+    // An adult's office, picked from the search (story 24-005).
+    const { saveWorkPlaceFromForm } = await import("../_lib/places");
+    const office = await saveWorkPlaceFromForm(supabase, actor, parsed.data.memberId, formData);
+    if (office === "typed") return { error: OFFICE_TYPED };
   } catch (error) {
+    const { PlacesUnavailableError } = await import("@wonderhome/core/places/provider");
+    if (error instanceof PlacesUnavailableError) return { error: "That office could not be read just now. Try picking it again in a minute." };
     const { toErrorBody } = await import("@wonderhome/core/api/errors");
     return { error: toErrorBody(error, "household").body.error.message };
   }

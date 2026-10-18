@@ -22,10 +22,12 @@ import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
 import { whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
+import { loadWorkPlace } from "@wonderhome/core/household/work-place";
 
 import { signOut } from "../(auth)/actions";
 import { MemberAvatarControl } from "../_components/member-avatar-control";
 import { MemberProfileForm } from "../_components/member-profile-form";
+import { officeField } from "../_lib/office-field";
 import { requireSession, roleWords } from "../_lib/session";
 
 export const metadata = { title: "Settings & Profile" };
@@ -73,7 +75,7 @@ export default async function SettingsPage() {
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
   const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
-  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
@@ -82,6 +84,8 @@ export default async function SettingsPage() {
     loadSubscription(supabase, householdId).catch(() => null),
     listPlans(supabase).catch(() => []),
     whatsappReady ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    // Their own picked office (HomePlaces 24-005), edited here like the rest of their profile.
+    loadWorkPlace(supabase, householdId, membership.memberId).catch(() => null),
   ]);
   const me = members.find((member) => member.id === membership.memberId) ?? null;
 
@@ -169,6 +173,7 @@ export default async function SettingsPage() {
                   workHours: me.workHours ?? null,
                 }}
                 workOptions={me.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
+                office={me.memberType === "adult" ? officeField(myOffice) : undefined}
               />
             ) : (
               <UserRound aria-hidden className="size-5 shrink-0 text-[var(--wh-foreground-subtle)]" />

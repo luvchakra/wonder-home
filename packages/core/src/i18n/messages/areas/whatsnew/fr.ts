@@ -8,6 +8,8 @@ export const whatsNewFr: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "Voir {count} de plus",
   "whatsNew.showAll#other": "Voir {count} de plus",
   "whatsNew.showLess": "Voir moins",
+  "whatsNew.officePlaces.title": "Des lieux près du bureau, et vos propres trouvailles",
+  "whatsNew.officePlaces.body": "Choisissez votre bureau dans Réglages pour demander des lieux à proximité, et ajoutez des lieux à votre carnet depuis Lieux.",
   "whatsNew.memberSignIn.title": "Chacun se connecte",
   "whatsNew.memberSignIn.body": "Ajoutez l’e-mail de chacun dans Famille, ou envoyez un lien d’invitation. Ils entrent directement dans le foyer.",
   "whatsNew.calendarAnswers.title": "Demandez à HomeTalk ce qui est prévu",

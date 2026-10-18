@@ -5,7 +5,7 @@
  * "Suggest some good places for dinner tonight" and "where can we hang out
  * near Anya's school after school ends" are read into a `PlaceRequest`:
  * - what kind of place (somewhere to eat, or somewhere to go);
- * - near what (home, or a child's school);
+ * - near what (home, a child's school, or someone's office);
  * - for when (now, a meal time today, after school, or after work).
  *
  * The model, when there is one, only decides that the sentence is a place
@@ -13,7 +13,11 @@
  * is decided here and in `service.ts`, where it can be tested.
  */
 
-export type PlaceAnchor = { kind: "home" } | { kind: "school"; childName: string | null };
+export type PlaceAnchor =
+  | { kind: "home" }
+  | { kind: "school"; childName: string | null }
+  /** Someone's office: the speaker's own unless a name is said ("near Kunal's office"). */
+  | { kind: "work"; personName: string | null };
 
 export type PlaceWhen =
   | { kind: "now" }
@@ -86,11 +90,16 @@ export function readPlaceRequest(utterance: string): PlaceRequest | null {
     forChildren,
     anchor,
     when: whenFrom(lower, meal),
-    radiusMeters: anchor.kind === "school" ? 4_000 : 6_000,
+    radiusMeters: anchor.kind === "school" || anchor.kind === "work" ? 4_000 : 6_000,
   };
 }
 
+const WORK = /\b(?:near|around|by|close to)\s+(?:to\s+)?(?:(\p{Lu}[\p{L}'-]*?)(?:'s|s')|my|our|the|his|her|their)?\s*(?:office|work(?:place)?)\b/iu;
+
 function anchorFrom(said: string): PlaceAnchor {
+  // "Near my office", "around Kunal's office", "close to work".
+  const work = WORK.exec(said);
+  if (work) return { kind: "work", personName: work[1] ?? null };
   const school = /\bnear (?:to )?(?:(\p{Lu}[\p{L}'-]*?)(?:'s|s')|her|his|their|the|our|my|the kids'?|the children's)?\s*school\b/iu.exec(said);
   if (school || /\bafter school\b/i.test(said) && !/\bnear (?:home|the house|us|our (?:home|house))\b/i.test(said)) {
     const name = school?.[1] ?? /\b(\p{Lu}[\p{L}-]+)(?:'s|s') school\b/u.exec(said)?.[1] ?? null;

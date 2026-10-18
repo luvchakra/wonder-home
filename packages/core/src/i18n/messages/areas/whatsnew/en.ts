@@ -9,6 +9,8 @@ export const whatsNewEn = {
   "whatsNew.showAll#one": "Show {count} more",
   "whatsNew.showAll#other": "Show {count} more",
   "whatsNew.showLess": "Show fewer",
+  "whatsNew.officePlaces.title": "Places near the office, and your own finds",
+  "whatsNew.officePlaces.body": "Pick your office in Settings to ask for places near it, and add places to your book from Places.",
   "whatsNew.memberSignIn.title": "Everyone signs in",
   "whatsNew.memberSignIn.body": "Add each person's email in Family, or send an invite link. They come straight into the household.",
   "whatsNew.calendarAnswers.title": "Ask HomeTalk what's on",
