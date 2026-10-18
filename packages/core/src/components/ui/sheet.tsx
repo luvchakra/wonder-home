@@ -2,7 +2,7 @@
 
 import { Dialog } from "radix-ui";
 import { X } from "lucide-react";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
 import { Button } from "./button";
@@ -24,21 +24,34 @@ export type SheetProps = {
 };
 
 /**
- * How much of the layout the on-screen keyboard covers, in px. A phone browser
- * shrinks only the visual viewport when the keyboard opens, so a sheet fixed
- * to the bottom would sit behind it; the sheet rises by this much instead, and
- * its height is held to what is still visible.
+ * How much of the layout the on-screen keyboard covers, in px. Android
+ * Chrome resizes the layout for the keyboard itself (the root layout's
+ * `interactiveWidget: "resizes-content"`), so this stays 0 there and the
+ * sheet rises with the keyboard in one native motion. iOS shrinks only the
+ * visual viewport, so a sheet fixed to the bottom would sit behind it: the
+ * sheet rises by this much instead, measured once per frame and only when it
+ * moves by more than a few pixels, with no CSS transition of its own — two
+ * animations chasing each other is what made opening a field flicker.
  */
 function useKeyboardInset(active: boolean): number {
   const [inset, setInset] = useState(0);
   useEffect(() => {
     const viewport = typeof window === "undefined" ? undefined : window.visualViewport;
     if (!active || !viewport) return;
-    const update = () => setInset(Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)));
-    update();
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const next = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
+      setInset((current) => (Math.abs(current - next) < 8 ? current : next));
+    };
+    const update = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
     viewport.addEventListener("resize", update);
     viewport.addEventListener("scroll", update);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       viewport.removeEventListener("resize", update);
       viewport.removeEventListener("scroll", update);
       setInset(0);
@@ -47,8 +60,32 @@ function useKeyboardInset(active: boolean): number {
   return inset;
 }
 
+/** A phone or tablet, where focusing a field opens the on-screen keyboard. */
+function touchFirst(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+}
+
+const FIELD = "input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, select, [contenteditable=true]";
+
+/** Brings the field being typed in to the middle of what is still visible, once the keyboard has settled. */
+function revealField(element: Element | null) {
+  if (!(element instanceof HTMLElement) || !element.matches(FIELD)) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  element.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+}
+
 export function Sheet({ open, onOpenChange, title, description, children, className }: SheetProps) {
   const keyboard = useKeyboardInset(open);
+  const contentRef = useRef<HTMLDivElement>(null);
+  // When the keyboard finishes opening (or the sheet finishes rising to it), the field in use is brought into view.
+  useEffect(() => {
+    if (!open || keyboard === 0) return;
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active && contentRef.current?.contains(active)) revealField(active);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, keyboard]);
   // Only on a phone, where the sheet is anchored to the bottom (sm: centres it).
   const lifted: CSSProperties | undefined =
     keyboard > 0 ? ({ "--wh-keyboard": `${keyboard}px` } as CSSProperties) : undefined;
@@ -57,10 +94,25 @@ export function Sheet({ open, onOpenChange, title, description, children, classN
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[oklch(0.27_0.05_255/0.35)] backdrop-blur-[2px] data-[state=open]:animate-[wh-rise_var(--wh-duration)_var(--wh-ease)]" />
         <Dialog.Content
+          ref={contentRef}
           style={lifted}
+          // On a phone the sheet opens without focusing a field, so the keyboard waits for a tap instead of
+          // rising with the sheet; focus goes to the sheet itself, which a screen reader announces.
+          onOpenAutoFocus={(event) => {
+            if (!touchFirst()) return;
+            event.preventDefault();
+            contentRef.current?.focus();
+          }}
+          // A field tapped while the keyboard is already up, or on Android where the layout resizes, is
+          // brought into view once the keyboard has had time to settle.
+          onFocusCapture={(event) => {
+            if (!touchFirst()) return;
+            const target = event.target;
+            window.setTimeout(() => revealField(target), 320);
+          }}
           className={cn(
             "fixed z-50 flex max-h-[calc(92dvh-var(--wh-keyboard,0px))] flex-col bg-[var(--wh-surface)] shadow-[var(--wh-shadow-float)] outline-none",
-            "inset-x-0 bottom-[var(--wh-keyboard,0px)] rounded-t-[var(--wh-radius-lg)] pb-[env(safe-area-inset-bottom)] transition-[bottom] duration-150 motion-reduce:transition-none",
+            "inset-x-0 bottom-[var(--wh-keyboard,0px)] rounded-t-[var(--wh-radius-lg)] pb-[env(safe-area-inset-bottom)]",
             "sm:inset-auto sm:max-h-[92dvh] sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--wh-radius-lg)]",
             "data-[state=open]:animate-[wh-rise_var(--wh-duration)_var(--wh-ease)]",
             className,

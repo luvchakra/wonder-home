@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**254 of 274 stories done — 92.7%**
+**256 of 276 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 254 |
+| Done | 256 |
 | In Progress | 6 |
 | Blocked | 0 |
 | Not Started | 13 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 11 | 11 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 21 | 22 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 22 | 23 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
-| 25 HomeFood | `█████░░░░░` | 8 | 15 | 1 in progress, 6 not started |
+| 25 HomeFood | `█████░░░░░` | 9 | 16 | 1 in progress, 6 not started |
 | 26 HomeEvents | `██░░░░░░░░` | 2 | 7 | 1 in progress, 4 not started |
 
 ## What is left
@@ -150,7 +150,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-21 of 22 done `█████████░`
+22 of 23 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -176,6 +176,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-020` HomeTalk floats over other apps | P0 | Done | The owner's ask, 2026-10-18 (PR #229): use other apps on the phone while talking to HomeTalk, with WonderHome as a picture-in-picture window and the voice still going. A web app cannot float itself, but a phone floats a video: the live session is painted onto a canvas (`components/ui/live-float.ts` — the orb, listening/thinking/speaking/paused, the last thing heard and said, in the theme's own tokens, text shrinking before it is cut), streamed as a video and floated by the browser (`LiveTalkProvider`'s `float`/`unfloat`: `requestPictureInPicture`, or Safari's presentation mode). The engines never move; the window is a view of the one session at the app's root. Float sits beside End in the composer and on the live bar, only where the browser can do it; the phone's media controls pause, resume and end the same session; a recogniser that lapses in the background relistens after a breath and on return. Help: Voice ¶8 in eight languages. `live-float.test.ts` 17. Browser-checked at 360px and 1280px: headless Chromium really entered picture-in-picture (video 480×360), the frame showed the exchange, Groceries opened while floating, End closed the window. The microphone behind another app on a real phone is the owner's check |
 | `04-021` Wait to speak until HomeTalk can hear | P0 | Done | The owner's report, 2026-10-18 (PR #230): Gemini Live takes a few seconds to open its session and only then listens, but the composer looked ready the moment it was tapped, so people spoke into nothing. A live session now has its own `connecting` state, kept apart from thinking and listening, in `LiveTalkProvider`, the live bar and the floating window. The composer shows "Getting ready… don't speak yet" in amber with a turning ring and "{who} is connecting. Start speaking when it says it's listening." (assertive live region), then "Ready — speak now" in green for three seconds, then the usual "… is listening". WonderHome's own voice does the same on a session's first listen, until the recogniser says it has started (`onstart`) or the microphone is recording (`captureUtterance`'s `onReady`), with a 2.5 s fallback. Labels in eight languages; help Voice ¶2. Browser-checked at 360px and 1280px with a recogniser that takes 2 s to start: 0.5 s "Getting ready", 2.5 s "Ready — speak now", 6 s "HomeTalk is listening…", no errors |
 | `04-022` HomeTalk floats on its own when you leave the app | P0 | Done | The owner's ask, 2026-10-18 (PR #232): switching to another app in the middle of a live conversation should float HomeTalk without anyone remembering Float. While a live conversation runs and isn't paused (`shouldArmFloat`), the floating window's hidden video is armed and playing with `autopictureinpicture`, so Safari floats it as the page goes to the background, Chrome floats it through the media session's `enterpictureinpicture` action, and a `visibilitychange` to hidden asks once more, quietly (no notice if the browser refuses). Closing the window keeps it armed; ending the conversation tears it down. Float stays as the manual way. Help Voice ¶8 in eight languages. Browser-checked at 360px and 1280px: armed before any tap, leaving the page floated it with no notice, Float/Bring back/End unchanged, no errors |
+| `04-023` The chat shows what was really said in Gemini Live | P0 | Done | The owner's report, 2026-10-18 (PR #234): Gemini heard them clearly and answered well, but the chat line had different, misspelt words. The line came from the Live API's `inputTranscription`, a light side transcriber that guesses the language unaided; the conversation model's own understanding is never exposed as text, and the documented transcription hints (`languageCodes`, `customVocabulary`) are for Google's separate transcribe model, so they were not put into the locked session. Now the page keeps each turn's microphone audio (the same audio already sent; at most a minute) and, once the person's line is shown, `POST /voice/gemini/transcribe` writes it down word for word with a full Gemini model (`voicelink/live-transcribe.ts`), told the member's listening language and the household's names; the chat line, and the floating window, are replaced with it. Same gate as the session (flag, plan, Google key, data-use agreement), its own rate limit (`voice.transcribe`), nothing stored; on any failure Gemini's line stands. Help Voice ¶2 in eight languages. Checked: unit tests for the WAV header, vocabulary, instruction and cleaning; the route refuses without Gemini voice (403), a bad body (400) and signed out (401). A real Gemini Live run needs the owner's phone |
 
 ### 05 — Household Certification & Understanding
 
@@ -509,7 +510,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-8 of 15 done `█████░░░░░`
+9 of 16 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -527,6 +528,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-013` Change how an item is counted, even pieces to grams | P1 | Done | Migration `20261018240000` run by the owner in the SQL editor on 2026-10-18 (the service-role key cannot run DDL), `verify:live` 278/278; browser-checked at 360px and 1280px against the live project: an item in pieces with 3 at home and 2 on the list, "Counted in" → grams (g) said what would happen, then counted in grams, stock back to not counted with the 3 pieces kept on the change's record, the list reopened at 50 g, no errors. Code shipped in PR #229 (`commerce/unit-change.ts`, "Counted in" in the amount sheet, history rows, `verify:live` probes), inert until the migration `20261018240000_grocery_unit_change.sql` runs: the service-role key cannot run DDL (Management API 401, no SQL RPC), so the file was handed to the owner for the SQL editor. Then `npm run verify:live` and the pieces → grams browser check, then Done. The owner asked to change an item's unit from its card (pasta kept in pieces). The item page's unit picker already changes units that convert; one that does not (pcs to g) is refused while anything is at home or on the list. Built and DB-tested but held back at the owner's choice on 2026-10-18 because its migration could not be applied: `public.change_consumable_unit` + `consumable_unit_changes` (stock back to not counted and recorded, list restarts at the usual buy), a "Counted in" picker in the amount sheet with an own-unit option. Pick up from the saved work, apply the migration live, browser-check |
 | `25-014` Ingredients as raw items with amounts, and a recipe added from a meal | P0 | Done | The owner, 2026-10-18 (PR #232). The ingredient text boxes are gone: a meal's Ingredients, Add recipe and Plan a meal's quick recipe take one row per raw item, each with how much and a unit picked from the grocery list's units, with its own way to add a unit (`ui/ingredient-rows.tsx`; read on the server by `meals/ingredient-lines.ts`: decimals with a comma or a point, the same item twice in one unit added together, no amount kept as "not known"). A recipe now stores what it needs (it used to store 1 "unit" of everything), so a meal planned from it gets real amounts. Change meal shows a small **Add a recipe** link under the recipe picker when there is none, and the new recipe is picked for the meal. Fixed on the way: an ingredient with no amount was read as "1 pc" (`normalizeUnit` turns "unit" into pieces); it now says the amount isn't known. Help Meals ¶10 in eight languages. Browser-checked at 360px and desktop on the live project |
 | `25-015` Change or remove a recipe and its ingredients | P1 | Not Started | Left open by 25-014: a recipe can be added but not edited or removed (rule 12), so a recipe saved before 25-014 keeps its "amount not known" ingredients until it is added again |
+| `25-016` Every sheet opens calmly with the keyboard, and the field stays in view | P0 | Done | The owner's report, 2026-10-18 (PR #234): a sheet and the keyboard opened together and flickered while they settled, and the keyboard could hide the field to fill in. On a phone a sheet now opens with focus on the sheet itself, so the keyboard waits for a tap (Add an item's search still takes focus at once on a desktop); Android Chrome lifts the sheet with the keyboard natively (`interactiveWidget: "resizes-content"`); iOS's keyboard is measured once per frame with no competing transition; and the tapped field is scrolled to the middle of what is visible once the keyboard has settled. Kit change (`ui/sheet.tsx`), so every sheet gets it. Checked in Chromium emulating a phone and on a desktop: no field focused on open on the phone, the search focused on desktop, a field below the fold scrolled into view on tap. A real phone keyboard needs the owner's phone |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents

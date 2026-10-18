@@ -9,6 +9,9 @@
  * saying the session is about to end.
  */
 
+/** At most a minute of one turn's 16 kHz 16-bit audio kept for writing the person's line down (`live-transcribe.ts`). */
+export const LIVE_TRANSCRIBE_MAX_BYTES = 16_000 * 2 * 60;
+
 export type LiveToolCall = { id: string; name: string; args: Record<string, unknown> };
 
 export type LiveMessageReading = {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { base64ToBytes, bytesToBase64, downsample, floatToPcm16, LIVE_INPUT_RATE, LIVE_OUTPUT_RATE, pcm16ToFloat } from "../../voice/pcm";
-import { LiveTranscript, readLiveMessage, type LiveToolCall } from "../../voicelink/live-messages";
+import { LIVE_TRANSCRIBE_MAX_BYTES, LiveTranscript, readLiveMessage, type LiveToolCall } from "../../voicelink/live-messages";
 
 /**
  * Live conversation through Gemini Live (voice integration phase 3): the
@@ -40,7 +40,13 @@ const FAILED_TOOL = { success: false, status: "failed", userMessage: "I couldn't
 export function useGeminiLive(input: {
   householdId: string;
   /** What was said on each side, once per utterance, for the on-screen record. */
-  onTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
+  onTranscript?: (entry: { role: "member" | "assistant"; text: string; id: string }) => void;
+  /**
+   * The person's line, written down again from the turn's own audio by
+   * `/voice/gemini/transcribe` (the Live API's side transcriber misspells):
+   * the page replaces the line with this id. Never sent when nothing better came back.
+   */
+  onTranscriptRevised?: (entry: { id: string; text: string }) => void;
   /** A problem worth telling the person (no microphone, no session, the session ended) — never thrown. */
   onError?: (message: string) => void;
   /** A tool answer that opens a screen ("take me to the grocery list"): the app follows it. */
@@ -54,13 +60,15 @@ export function useGeminiLive(input: {
   resume: () => void;
   stop: () => void;
 } {
-  const { householdId, onTranscript, onError, onNavigate } = input;
+  const { householdId, onTranscript, onTranscriptRevised, onError, onNavigate } = input;
   const [state, setState] = useState<GeminiLiveState>("idle");
   const [active, setActive] = useState(false);
   const [paused, setPaused] = useState(false);
 
-  const callbacks = useRef({ onTranscript, onError, onNavigate });
-  callbacks.current = { onTranscript, onError, onNavigate };
+  const callbacks = useRef({ onTranscript, onTranscriptRevised, onError, onNavigate });
+  callbacks.current = { onTranscript, onTranscriptRevised, onError, onNavigate };
+  /** The microphone audio sent since the person's last line, kept so that line can be written down properly. */
+  const turnAudioRef = useRef<{ chunks: Uint8Array[]; bytes: number }>({ chunks: [], bytes: 0 });
 
   const sessionRef = useRef<LiveSession | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -180,6 +188,47 @@ export function useGeminiLive(input: {
     [householdId, settle],
   );
 
+  /** Keeps the last minute of what the microphone sent, for the person's next line. */
+  const keepTurnAudio = useCallback((pcm: Uint8Array) => {
+    const turn = turnAudioRef.current;
+    turn.chunks.push(pcm);
+    turn.bytes += pcm.byteLength;
+    while (turn.bytes > LIVE_TRANSCRIBE_MAX_BYTES && turn.chunks.length > 1) turn.bytes -= turn.chunks.shift()!.byteLength;
+  }, []);
+
+  /**
+   * The person's line, written down again from the audio of their turn.
+   * Gemini's own line stays on screen until this answers, and stays for good
+   * when it fails, finds no words or finds the same words.
+   */
+  const reviseLine = useCallback(
+    async (id: string, heard: string) => {
+      const turn = turnAudioRef.current;
+      turnAudioRef.current = { chunks: [], bytes: 0 };
+      if (turn.bytes === 0) return;
+      const audio = new Uint8Array(turn.bytes);
+      let offset = 0;
+      for (const chunk of turn.chunks) {
+        audio.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      try {
+        const response = await fetch(`/api/v1/households/${householdId}/voice/gemini/transcribe`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ audio: bytesToBase64(audio) }),
+        });
+        if (!response.ok) return;
+        const payload = (await response.json().catch(() => null)) as { transcript?: string | null } | null;
+        const text = payload?.transcript?.trim();
+        if (text && text !== heard) callbacks.current.onTranscriptRevised?.({ id, text });
+      } catch {
+        // Gemini's line stands.
+      }
+    },
+    [householdId],
+  );
+
   const start = useCallback(async () => {
     if (sessionRef.current || state === "connecting") return;
     if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === "undefined") {
@@ -211,7 +260,13 @@ export function useGeminiLive(input: {
       const outputContext = new AudioContext({ sampleRate: LIVE_OUTPUT_RATE });
       inputContextRef.current = inputContext;
       outputContextRef.current = outputContext;
-      transcriptRef.current = new LiveTranscript((entry) => callbacks.current.onTranscript?.(entry));
+      let lines = 0;
+      turnAudioRef.current = { chunks: [], bytes: 0 };
+      transcriptRef.current = new LiveTranscript((entry) => {
+        const id = `live-${attempt}-${(lines += 1)}`;
+        callbacks.current.onTranscript?.({ ...entry, id });
+        if (entry.role === "member") void reviseLine(id, entry.text);
+      });
 
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey: minted.token as string, httpOptions: { apiVersion: "v1alpha" } });
@@ -270,6 +325,7 @@ export function useGeminiLive(input: {
       processor.onaudioprocess = (event) => {
         if (!sendingRef.current || !sessionRef.current) return;
         const pcm = floatToPcm16(downsample(event.inputBuffer.getChannelData(0), inputContext.sampleRate, LIVE_INPUT_RATE));
+        keepTurnAudio(pcm);
         try {
           sessionRef.current.sendRealtimeInput({ audio: { data: bytesToBase64(pcm), mimeType: `audio/pcm;rate=${LIVE_INPUT_RATE}` } });
         } catch {
@@ -291,7 +347,7 @@ export function useGeminiLive(input: {
         denied ? "WonderHome needs the microphone for a live conversation. Allow it in the browser's settings and try again." : caught instanceof Error ? caught.message : "Gemini voice could not start just now.",
       );
     }
-  }, [answerTools, householdId, play, settle, silence, state, teardown]);
+  }, [answerTools, householdId, keepTurnAudio, play, reviseLine, settle, silence, state, teardown]);
 
   const pause = useCallback(() => {
     if (!sessionRef.current) return;

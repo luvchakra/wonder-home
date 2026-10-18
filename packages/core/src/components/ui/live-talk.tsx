@@ -68,7 +68,9 @@ export type LiveTalkConfig = {
 
 export type LiveTurnHandler = {
   onUtterance: (transcript: string, confidence: number) => Promise<string>;
-  onTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
+  onTranscript?: (entry: { role: "member" | "assistant"; text: string; id?: string }) => void;
+  /** A line already shown, written down properly afterwards (Gemini Live): replace the one with this id. */
+  onTranscriptRevised?: (entry: { id: string; text: string }) => void;
 };
 
 type LiveView = {
@@ -356,10 +358,20 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
 
   // Gemini Live speaks for itself; its transcript is what the window shows.
   const onTranscript = useCallback(
-    (entry: { role: "member" | "assistant"; text: string }) => {
+    (entry: { role: "member" | "assistant"; text: string; id?: string }) => {
       exchangeRef.current = entry.role === "member" ? { heard: entry.text, said: null } : { heard: exchangeRef.current.heard, said: entry.text };
       paint();
       handlerRef.current?.onTranscript?.(entry);
+    },
+    [paint],
+  );
+  const onTranscriptRevised = useCallback(
+    (entry: { id: string; text: string }) => {
+      if (exchangeRef.current.heard !== null && exchangeRef.current.said === null) {
+        exchangeRef.current = { heard: entry.text, said: null };
+        paint();
+      }
+      handlerRef.current?.onTranscriptRevised?.(entry);
     },
     [paint],
   );
@@ -367,7 +379,7 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
 
   const server = useMemo(() => (config?.serverVoice ? { householdId: config.householdId } : null), [config?.serverVoice, config?.householdId]);
   const own = useLiveVoice({ lang: config?.lang ?? "en-IN", server, onUtterance, onError });
-  const gemini = useGeminiLive({ householdId: config?.householdId ?? "", onTranscript, onError, onNavigate: navigate });
+  const gemini = useGeminiLive({ householdId: config?.householdId ?? "", onTranscript, onTranscriptRevised, onError, onNavigate: navigate });
 
   const engineOf = useCallback((name: LiveEngineName) => (name === "gemini_live" ? gemini : own), [gemini, own]);
   const view = useCallback(

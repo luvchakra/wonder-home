@@ -187,6 +187,7 @@ export function TalkComposer({
   liveEngine = "wonderhome",
   geminiLive: geminiLiveAvailability = { available: false },
   onLiveTranscript,
+  onLiveTranscriptRevised,
   className,
 }: {
   /** The composer's words in the viewer's language; English when absent. */
@@ -231,7 +232,9 @@ export function TalkComposer({
   /** `fix` links to where an Admin can make Gemini Live available, and comes back. */
   geminiLive?: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   /** Gemini Live only: each side's words, once per utterance, for the conversation on screen. */
-  onLiveTranscript?: (entry: { role: "member" | "assistant"; text: string }) => void;
+  onLiveTranscript?: (entry: { role: "member" | "assistant"; text: string; id?: string }) => void;
+  /** A live line written down properly afterwards: replace the shown line with this id. */
+  onLiveTranscriptRevised?: (entry: { id: string; text: string }) => void;
   className?: string;
 }) {
   const labels: TalkComposerLabels = { ...TALK_COMPOSER_LABELS, ...labelOverrides };
@@ -297,13 +300,14 @@ export function TalkComposer({
   useEffect(() => {
     talk?.configure({ householdId, lang: voiceLanguage, serverVoice, labels: liveBarLabels });
   }, [talk, householdId, voiceLanguage, serverVoice, liveBarLabels]);
-  const turnHandler = useRef({ onLiveTurn, onLiveTranscript });
-  turnHandler.current = { onLiveTurn, onLiveTranscript };
+  const turnHandler = useRef({ onLiveTurn, onLiveTranscript, onLiveTranscriptRevised });
+  turnHandler.current = { onLiveTurn, onLiveTranscript, onLiveTranscriptRevised };
   useEffect(
     () =>
       talk?.register({
         onUtterance: (transcript, confidence) => turnHandler.current.onLiveTurn?.(transcript, confidence) ?? Promise.resolve(""),
         onTranscript: (entry) => turnHandler.current.onLiveTranscript?.(entry),
+        onTranscriptRevised: (entry) => turnHandler.current.onLiveTranscriptRevised?.(entry),
       }),
     [talk],
   );
