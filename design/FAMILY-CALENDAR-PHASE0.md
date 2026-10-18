@@ -1,6 +1,6 @@
 # Family Calendar — Phase 0 design
 
-**Status:** Approved by the product owner on 2026-10-18: D1–D7 as recommended in §9. Phases are stories 12-009 (C1) to 12-014 (C6).
+**Status:** Approved by the product owner on 2026-10-18: D1–D7 as recommended in §9. Phases are the HomeEvents stories 26-001 (C1) to 26-006 (C6), formerly 12-009 to 12-014.
 **Implements:** *WonderHome Family Calendar — Claude Code Implementation Requirements* (the "spec", §1–§13) and its four-screen mockup (Month, Day, Year, Event detail).
 **Date:** 2026-10-18
 

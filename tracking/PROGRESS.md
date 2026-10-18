@@ -37,7 +37,7 @@ disagree again.)
 | 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done (grocery pantry stories moved to 25 HomeFood) |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
-| 12 | Family Time & Social Activities | 14 | 5 | 6 | 3 | 8 | In Progress |
+| 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
 | 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 19 | Done |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
@@ -51,6 +51,7 @@ disagree again.)
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 7 | 1 | 4 | 2 | 4 | In Progress |
 | 25 | HomeFood | 5 | 2 | 2 | 1 | 2 | In Progress |
+| 26 | HomeEvents | 6 | 2 | 2 | 2 | 0 | In Progress |
 
 ## Execution Log
 
