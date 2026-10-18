@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, AudioLines, ChevronDown, ChevronRight, Maximize2, Mic, PictureInPicture2, Plus, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, ChevronDown, ChevronRight, LoaderCircle, Maximize2, Mic, PictureInPicture2, Plus, Square, X } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, createContext, useContext } from "react";
 
@@ -87,6 +87,12 @@ export type TalkComposerLabels = {
   floatFailed: string;
   /** The floating window's label over what the person said. */
   you: string;
+  /** A live session still opening (Gemini Live takes a few seconds): do not speak yet. */
+  getReady: string;
+  /** `{who}` is HomeTalk or Gemini Live. */
+  getReadyHint: string;
+  /** Said once the session can hear, for a moment. */
+  speakNow: string;
   placeholder: string;
   placeholderShort: string;
   attach: string;
@@ -150,6 +156,9 @@ export const TALK_COMPOSER_LABELS: TalkComposerLabels = {
   unfloat: "Bring HomeTalk back",
   floatFailed: "Your phone couldn't open the floating window. The conversation is still going here.",
   you: "You",
+  getReady: "Getting ready… don't speak yet",
+  getReadyHint: "{who} is connecting. Start speaking when it says it's listening.",
+  speakNow: "Ready — speak now",
 };
 
 const LabelsContext = createContext<TalkComposerLabels>(TALK_COMPOSER_LABELS);
@@ -255,6 +264,7 @@ export function TalkComposer({
   const [engine, setEngine] = useLiveEnginePreference(householdId, liveEngine, geminiLiveAvailability.available);
   const liveBarLabels = useMemo(
     () => ({
+      connecting: labels.getReady,
       listening: labels.listening,
       thinking: labels.thinking,
       speaking: labels.speaking,
@@ -269,6 +279,7 @@ export function TalkComposer({
       you: labels.you,
     }),
     [
+      labels.getReady,
       labels.listening,
       labels.thinking,
       labels.speaking,
@@ -399,6 +410,7 @@ export function TalkComposer({
           ) : inLive ? (
             <LiveField
               paused={state === "paused"}
+              connecting={live.state === "connecting"}
               speaking={live.state === "speaking"}
               thinking={live.state === "thinking"}
               engine={engine}
@@ -697,9 +709,19 @@ function ListeningField({ transcribing }: { transcribing: boolean }) {
   );
 }
 
-/** The field during a live conversation, and the tap target that pauses it. A notice (a window that would not open) takes the hint's line. */
+/**
+ * The field during a live conversation, and the tap target that pauses it.
+ * A notice (a window that would not open) takes the hint's line.
+ *
+ * While the session is still opening — Gemini Live takes a few seconds to
+ * reach Google — the field says so in amber, with a turning ring and no
+ * moving bars, so nobody starts talking to a microphone that cannot hear
+ * yet (the owner, 2026-10-18). The moment it can, it says "speak now" in
+ * green for a few seconds, then settles into the usual listening line.
+ */
 function LiveField({
   paused,
+  connecting,
   speaking,
   thinking,
   engine,
@@ -707,6 +729,7 @@ function LiveField({
   onToggle,
 }: {
   paused: boolean;
+  connecting: boolean;
   speaking: boolean;
   thinking: boolean;
   engine: LiveEngineChoice;
@@ -715,19 +738,49 @@ function LiveField({
 }) {
   const labels = useContext(LabelsContext);
   const who = engine === "gemini_live" ? "Gemini Live" : "HomeTalk";
-  const status = paused ? labels.paused : thinking ? labels.thinking : speaking ? labels.speaking : fill(labels.whoListening, { who });
+  const [justReady, setJustReady] = useState(false);
+  const wasConnecting = useRef(connecting);
+  useEffect(() => {
+    if (wasConnecting.current && !connecting && !paused) {
+      setJustReady(true);
+      const timer = setTimeout(() => setJustReady(false), 3000);
+      wasConnecting.current = connecting;
+      return () => clearTimeout(timer);
+    }
+    wasConnecting.current = connecting;
+  }, [connecting, paused]);
 
+  if (connecting) {
+    return (
+      <div
+        role="status"
+        aria-live="assertive"
+        className="flex min-h-11 min-w-0 flex-1 items-center gap-3 self-center rounded-[1.25rem] bg-[var(--wh-attention-soft)] px-3.5 py-2"
+      >
+        <LoaderCircle aria-hidden className="size-6 shrink-0 text-[var(--wh-attention)] motion-safe:animate-spin" />
+        <span className="min-w-0">
+          <span className="block text-[0.9375rem] font-semibold text-[var(--wh-foreground)]">{labels.getReady}</span>
+          <span className="block text-xs text-[var(--wh-foreground-muted)]">{fill(labels.getReadyHint, { who })}</span>
+        </span>
+      </div>
+    );
+  }
+
+  const status = paused ? labels.paused : thinking ? labels.thinking : speaking ? labels.speaking : justReady ? labels.speakNow : fill(labels.whoListening, { who });
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-label={paused ? labels.resumeConversation : labels.pauseConversation}
       title={paused ? labels.resume : labels.pause}
-      className="flex min-h-11 min-w-0 flex-1 items-center gap-3 self-center rounded-full px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+      className={cn(
+        "flex min-h-11 min-w-0 flex-1 items-center gap-3 self-center rounded-full px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]",
+        justReady && "bg-[var(--wh-handled-soft)] px-3",
+      )}
     >
       <Bars active={!paused} tone="primary" tall />
-      <span className="min-w-0">
-        <span className="block text-[0.9375rem] font-semibold text-[var(--wh-primary)]">{status}</span>
+      <span className="min-w-0" role="status" aria-live="polite">
+        <span className={cn("block text-[0.9375rem] font-semibold", justReady ? "text-[var(--wh-handled)]" : "text-[var(--wh-primary)]")}>{status}</span>
         <span className="block text-xs text-[var(--wh-foreground-subtle)]">{notice ?? (paused ? labels.tapToResume : labels.tapToPause)}</span>
       </span>
     </button>

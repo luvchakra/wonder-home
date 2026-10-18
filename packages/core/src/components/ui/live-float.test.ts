@@ -41,13 +41,17 @@ describe("whether a browser can float HomeTalk (04-020)", () => {
   });
 });
 
-const WORDS = { listening: "Listening…", thinking: "Thinking…", speaking: "Speaking…", paused: "Paused", you: "You" };
+const WORDS = { connecting: "Getting ready… don't speak yet", listening: "Listening…", thinking: "Thinking…", speaking: "Speaking…", paused: "Paused", you: "You" };
 
 describe("the frame's words", () => {
   it("says what HomeTalk is doing in the composer's own words", () => {
     expect(liveFrame({ state: "listening", paused: false }, { heard: null, said: null }, WORDS).status).toBe("Listening…");
     expect(liveFrame({ state: "thinking", paused: false }, { heard: null, said: null }, WORDS).status).toBe("Thinking…");
     expect(liveFrame({ state: "speaking", paused: false }, { heard: null, said: null }, WORDS).status).toBe("Speaking…");
+  });
+
+  it("tells the person to wait while the session is still opening", () => {
+    expect(liveFrame({ state: "connecting", paused: false }, { heard: null, said: null }, WORDS).status).toBe("Getting ready… don't speak yet");
   });
 
   it("paused outranks every state and stops the pulse", () => {

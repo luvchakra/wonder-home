@@ -88,6 +88,13 @@ const HOLIDAY = /\b(?:public |bank |national |government )?holidays?\b/i;
 const BIRTHDAY = /\bbirthdays?\b/i;
 const AHEAD = /\b(?:next|upcoming|coming(?: up)?|soon|nearest|after this)\b/i;
 const ON_THE_CALENDAR = /\b(?:events?|plans?|happening|scheduled|calendar|on)\b/i;
+/**
+ * Who is coming to one event — its guests, their replies — is that event's
+ * detail, HomeBrain's to answer from the event itself. "A few people are
+ * coming" is not "coming up" (the owner's report, 2026-10-18: Asmi's party
+ * with guests was answered with the family's dates of birth).
+ */
+const ATTENDANCE = /\b(?:who(?:'s|\s+is|\s+are|\s+all)?\s+(?:coming|invited|attending|joining)|guests?|invit(?:e|es|ed|ation|ations)|rsvps?|replied|attending|(?:people|friends|kids|families|they|few)\s+(?:are\s+|is\s+)?(?:coming|joining))\b/i;
 
 /**
  * Whether a question asks what comes next on the calendar, read by rules.
@@ -99,6 +106,7 @@ const ON_THE_CALENDAR = /\b(?:events?|plans?|happening|scheduled|calendar|on)\b/
  */
 export function readLookAhead(utterance: string): LookAhead | null {
   if (!asksTheCalendar(utterance)) return null;
+  if (ATTENDANCE.test(utterance)) return null;
   if (HOLIDAY.test(utterance)) return { only: "holiday" };
   if (!AHEAD.test(utterance)) return null;
   if (BIRTHDAY.test(utterance)) return { only: "birthday" };

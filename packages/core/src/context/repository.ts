@@ -10,7 +10,9 @@ import { listIssues } from "../health/issues";
 import { listRecords } from "../health/records";
 import { listVitals } from "../health/vitals";
 import { listAssets, listLaundryNeeds, listPetCareNeeds, listPets, listServiceRequests } from "../home/repository";
+import { listHouseholdPlaces } from "../homeplaces/repository";
 import { listHomeSendChanges } from "../homesend/changes";
+import { loadHouseholdAddress } from "../household/address";
 import type { HomeSendChange } from "../homesend/items";
 import { listHomeSendItems } from "../homesend/repository";
 import { listResponsibilities } from "../household/configuration-repository";
@@ -29,6 +31,8 @@ import {
   type AgentRunRecord,
   type ContextRecords,
   type BeliefRecord,
+  type EventGuestRecord,
+  type FoodPreferenceRecord,
   type MemoryRecord,
   type NotificationRecord,
   type OutcomeRecord,
@@ -100,16 +104,34 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
   { domain: "responsibilities", label: "responsibilities", permitted: anyone, read: async (supabase, scope) => ({ responsibilities: await listResponsibilities(supabase, scope.householdId) }) },
   { domain: "outcomes", label: "outcomes", permitted: notChild, read: async (supabase, scope) => ({ outcomes: await listOpenOutcomes(supabase, scope) }) },
   { domain: "preferences", label: "what the household has said", permitted: anyone, read: async (supabase, scope) => {
-      const [memories, beliefs] = await Promise.all([listMemories(supabase, scope.householdId), listBeliefs(supabase, scope.householdId)]);
-      return { memories, beliefs };
+      const [memories, beliefs, foodPreferences] = await Promise.all([
+        listMemories(supabase, scope.householdId),
+        listBeliefs(supabase, scope.householdId),
+        listFoodPreferences(supabase, scope.householdId).catch(() => []),
+      ]);
+      return { memories, beliefs, foodPreferences };
     } },
+  {
+    // Home and the place book (HomePlaces): where the family is, and the places it saved or turned down.
+    domain: "places",
+    label: "places",
+    permitted: anyone,
+    read: async (supabase, scope) => {
+      const [places, address] = await Promise.all([listHouseholdPlaces(supabase, scope.householdId), loadHouseholdAddress(supabase, scope.householdId)]);
+      return { places, address };
+    },
+  },
   {
     domain: "calendar",
     label: "the calendar",
     permitted: anyone,
     read: async (supabase, scope) => {
       const window = horizon(scope);
-      return { events: await listEvents(supabase, scope.householdId, { from: window.from, to: window.to }) };
+      const [events, eventGuests] = await Promise.all([
+        listEvents(supabase, scope.householdId, { from: window.from, to: window.to }),
+        listEventGuests(supabase, scope.householdId).catch(() => []),
+      ]);
+      return { events, eventGuests };
     },
   },
   {
@@ -214,6 +236,33 @@ export type GatherOptions = {
   domains?: readonly ContextDomain[];
 };
 
+/**
+ * The Household Context Store's way in (HomeBrain 3.0 phase A): when one is
+ * registered (`context/store.ts`'s `enableContextStore`), `loadHouseholdContext`
+ * asks it first and reads the domains itself only when the store answers
+ * null. Nothing here imports the store, so the engine stays usable — and
+ * testable — without a service role or a database.
+ */
+export type ContextStoreReader = (supabase: Supabase, scope: ContextScope, options: GatherOptions) => Promise<ContextSnapshot | null>;
+
+/**
+ * Kept on `globalThis`, not in a module variable: Next bundles
+ * `instrumentation.ts` (where the store is switched on) separately from the
+ * route handlers, so each has its own copy of this module, and a module
+ * variable set in one is never seen by the other. Every bundle in the
+ * process shares `globalThis`.
+ */
+const STORE_READER = Symbol.for("wonderhome.contextStoreReader");
+type WithReader = typeof globalThis & { [STORE_READER]?: ContextStoreReader | null };
+
+export function setContextStoreReader(reader: ContextStoreReader | null): void {
+  (globalThis as WithReader)[STORE_READER] = reader;
+}
+
+function contextStoreReader(): ContextStoreReader | null {
+  return (globalThis as WithReader)[STORE_READER] ?? null;
+}
+
 /** Reads every domain this member may see and turns it into canonical items. */
 export async function gatherHouseholdContext(supabase: Supabase, scope: ContextScope, options: GatherOptions = {}): Promise<ContextSnapshot> {
   const wanted = options.domains ? new Set<ContextDomain>(["people", ...options.domains]) : null;
@@ -263,8 +312,13 @@ export async function gatherHouseholdContext(supabase: Supabase, scope: ContextS
   return { scope: effectiveScope, items, unavailable: [...(options.agenda?.unavailable ?? []), ...unavailable], withheld, heldForAdults, gatheredAt: scope.now };
 }
 
-/** The same read, kept briefly per viewer and forgotten the moment the household changes. */
-export function loadHouseholdContext(supabase: Supabase, scope: ContextScope, options: GatherOptions = {}): Promise<ContextSnapshot> {
+/** The same read, kept briefly per viewer and forgotten the moment the household changes — through the store where there is one. */
+export async function loadHouseholdContext(supabase: Supabase, scope: ContextScope, options: GatherOptions = {}): Promise<ContextSnapshot> {
+  const storeReader = contextStoreReader();
+  if (storeReader) {
+    const fromStore = await storeReader(supabase, scope, options).catch(() => null);
+    if (fromStore) return fromStore;
+  }
   const key = `context:${scope.viewer.memberId}${options.domains ? `:${[...options.domains].sort().join(",")}` : ""}`;
   return householdMemory(scope.householdId, key, () => gatherHouseholdContext(supabase, scope, options));
 }
@@ -275,14 +329,14 @@ export function loadHouseholdContext(supabase: Supabase, scope: ContextScope, op
 
 type Row = Record<string, unknown>;
 
-export async function listMemories(supabase: Supabase, householdId: string): Promise<MemoryRecord[]> {
+export async function listMemories(supabase: Supabase, householdId: string, options: { limit?: number } = {}): Promise<MemoryRecord[]> {
   const { data, error } = await supabase
     .from("memories")
     .select("id, scope, member_id, category, key, value, status, confidence, source_type, source_id, created_at, updated_at")
     .eq("household_id", householdId)
     .in("status", ["learned", "confirmed"])
     .order("created_at", { ascending: false })
-    .limit(60);
+    .limit(options.limit ?? 60);
   if (error) throw new Error(`listMemories failed: ${error.code ?? "unknown"}`);
   return ((data as Row[] | null) ?? []).map((row) => ({
     id: row.id as string,
@@ -305,7 +359,7 @@ export async function listMemories(supabase: Supabase, householdId: string): Pro
  * what the household added or corrected there. Memory-linked items are
  * already read as memories, so they are not read twice.
  */
-export async function listBeliefs(supabase: Supabase, householdId: string): Promise<BeliefRecord[]> {
+export async function listBeliefs(supabase: Supabase, householdId: string, options: { limit?: number } = {}): Promise<BeliefRecord[]> {
   const { data, error } = await supabase
     .from("certification_items")
     .select("id, category, claim, scope, member_id, source_type, source_detail, status, created_at, last_reviewed_at")
@@ -313,7 +367,7 @@ export async function listBeliefs(supabase: Supabase, householdId: string): Prom
     .is("memory_id", null)
     .in("status", ["learned", "confirmed", "needs_review"])
     .order("created_at", { ascending: false })
-    .limit(60);
+    .limit(options.limit ?? 60);
   if (error) throw new Error(`listBeliefs failed: ${error.code ?? "unknown"}`);
   return ((data as Row[] | null) ?? []).map((row) => ({
     id: row.id as string,
@@ -326,6 +380,31 @@ export async function listBeliefs(supabase: Supabase, householdId: string): Prom
     status: row.status as string,
     createdAt: row.created_at as string,
     reviewedAt: (row.last_reviewed_at as string | null) ?? null,
+  }));
+}
+
+/** Guests' replies to the household's event invite links. */
+export async function listEventGuests(supabase: Supabase, householdId: string): Promise<EventGuestRecord[]> {
+  const { data, error } = await supabase.from("event_guests").select("event_id, name, response, party_size, note").eq("household_id", householdId).order("updated_at", { ascending: true });
+  if (error) throw new Error(`listEventGuests failed: ${error.code ?? "unknown"}`);
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    eventId: row.event_id as string,
+    name: row.name as string,
+    response: row.response as EventGuestRecord["response"],
+    partySize: Number(row.party_size ?? 1),
+    note: (row.note as string | null) ?? null,
+  }));
+}
+
+/** The Meals screen's food preferences; a null member is the whole household. */
+export async function listFoodPreferences(supabase: Supabase, householdId: string): Promise<FoodPreferenceRecord[]> {
+  const { data, error } = await supabase.from("food_preferences").select("id, member_id, kind, subject").eq("household_id", householdId).order("created_at", { ascending: true });
+  if (error) throw new Error(`listFoodPreferences failed: ${error.code ?? "unknown"}`);
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    memberId: (row.member_id as string | null) ?? null,
+    kind: row.kind as FoodPreferenceRecord["kind"],
+    subject: row.subject as string,
   }));
 }
 

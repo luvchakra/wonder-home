@@ -899,6 +899,11 @@ async function main() {
   check("anonymous cannot claim a member by phone", Boolean(anonPhoneClaim.error), anonPhoneClaim.error?.code ?? "allowed!");
   const anonUsda = await anon.from("usda_foods").select("fdc_id").limit(1);
   check("anonymous cannot read USDA foods", Boolean(anonUsda.error) || (anonUsda.data ?? []).length === 0, anonUsda.error?.code ?? "no rows");
+  // HomeBrain 3.0 phase A: the Household Context Store is the server's alone.
+  const contextStore = await admin.from("household_context").select("household_id, version, stale_since, built_at, size_bytes").limit(1);
+  check("migration landed: household_context", !contextStore.error, contextStore.error?.code ?? "ok");
+  const anonContext = await anon.from("household_context").select("household_id").limit(1);
+  check("anonymous cannot read household_context", Boolean(anonContext.error) || (anonContext.data ?? []).length === 0, anonContext.error?.code ?? "no rows");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

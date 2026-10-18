@@ -32,6 +32,7 @@ export const CONTEXT_DOMAINS = [
   "hometalk",
   "agents",
   "integrations",
+  "places",
   "attention",
 ] as const;
 export type ContextDomain = (typeof CONTEXT_DOMAINS)[number];

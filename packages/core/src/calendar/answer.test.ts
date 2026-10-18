@@ -81,6 +81,16 @@ describe("looking ahead", () => {
     expect(readLookAhead("Who is in the family?")).toBeNull();
   });
 
+  it("leaves who is coming to an event to the event itself (the owner's report, 2026-10-18)", () => {
+    expect(readLookAhead("Check Asmi's birthday event, a few people are coming. Do you know?")).toBeNull();
+    expect(readLookAhead("Who is coming to Asmi's birthday party?")).toBeNull();
+    expect(readLookAhead("Which guests replied for the next birthday party?")).toBeNull();
+    expect(readLookAhead("Who's invited to the upcoming party?")).toBeNull();
+    // Still the look-ahead: nothing about who is coming.
+    expect(readLookAhead("Any birthdays coming up?")).toEqual({ only: "birthday" });
+    expect(readLookAhead("What events are coming up?")).toEqual({ only: null });
+  });
+
   it("says the next one and the two after it, from now on, never what has passed", () => {
     const span = lookAheadSpan(now, TZ);
     expect(span).toMatchObject({ from: "2026-09-23", to: "2027-09-23" });

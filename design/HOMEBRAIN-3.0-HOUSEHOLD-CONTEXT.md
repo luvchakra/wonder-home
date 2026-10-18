@@ -1,6 +1,11 @@
 # WonderHome Wave 6 — HomeBrain 3.0: one warm household context, answered in one pass
 
-**Status:** Design for the owner's review (2026-10-18). Nothing in it is built yet; §6 is the build order.
+**Status:** Approved by the owner on 2026-10-18 ("implement the design"). Phase A is built (story 14-020); B–D are 14-021 to 14-023.
+
+**As built in phase A, where it differs from the text below:**
+- The store is `packages/core/src/homebrain/context-store.ts`, not `context/store.ts`: the context engine's guard says no file under `context/` holds a service-role client, and the store is the server-only layer above it.
+- A write sets `stale_since` and the rebuild runs right after that response (Next's `after()`), not as a `context.rebuild` job: the job queue drains daily, so a queued rebuild would never be prompt. The row is current only while no write is later than when its build began reading. The table has `stale_since` and `unavailable` instead of `people` and `policy`; people and policy are still read per turn.
+- A turn reads one row plus the viewer's own live reads (people, notifications, proposals, health, agenda).
 **Prerequisites:** Wave 1 (context engine), Wave 2 (HomeBrain 2.0), Wave 5 (evaluation).
 **Primary outcome:** HomeTalk answers any question about the household from everything the household has told it, in about two seconds, through a model that reads the whole picture at once — without a model ever touching a table, and without loosening a single gate.
 

@@ -18,7 +18,7 @@ export { contentClassFor, filterForViewer, toCandidates } from "./privacy";
 export { CONSEQUENTIAL_AT, RESOLVE_AT, canonicalRelation, mentionedItems, resolveEntity, resolvePerson, resolvePet, resolveReference, type ReferenceContext } from "./resolution";
 export { describeMatch, findPotentialMatches, matchIncoming, needsReconciliation } from "./matching";
 export { findPotentialConflicts } from "./conflicts";
-export { CONTEXT_ADAPTERS, gatherHouseholdContext, loadHouseholdContext, type ContextSnapshot, type GatherOptions } from "./repository";
+export { CONTEXT_ADAPTERS, gatherHouseholdContext, loadHouseholdContext, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "./repository";
 export {
   bindContextEngine,
   contextScopeFor,

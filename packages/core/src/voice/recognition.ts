@@ -21,6 +21,8 @@ export type RecognitionLike = {
   onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string; confidence: number }>> }) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
+  /** The service has started hearing — what a live conversation waits for before saying "speak now". */
+  onstart?: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;

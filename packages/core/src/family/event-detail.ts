@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
-import { invalidatesContext } from "../context/invalidation";
+import { invalidateHouseholdContext, invalidatesContext } from "../context/invalidation";
 import { generateInvitationToken } from "../identity/invitations";
 import type { EventCategory, EventVisibility } from "../calendar/projection";
 import { parseRecurrence, type RecurrenceRule } from "../calendar/recurrence";
@@ -302,5 +302,9 @@ export async function replyThroughLink(
     ? await admin.from("event_guests").update(reply).eq("id", id)
     : await admin.from("event_guests").insert({ household_id: invited.householdId, event_id: invited.eventId, name, ...reply });
   if (error) throw new Error(`replyThroughLink failed: ${error.code ?? "unknown"}`);
+  // A guest's reply comes in without a member's session, so it is not one of
+  // the wrapped repository writes: the household (from the link, never the
+  // caller) is told here, so HomeTalk's stored context hears who is coming.
+  invalidateHouseholdContext(invited.householdId);
   return { ok: true, invited };
 }

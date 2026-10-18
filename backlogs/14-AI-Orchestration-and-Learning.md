@@ -23,6 +23,10 @@
 | 17 | P0 | 14-017 | Deep document understanding — whole-document reader & change plan | Done | Spec: `design/HOMESEND-DEEP-DOCUMENT-UNDERSTANDING-2.0.md` (mockup `design/HomeSend-Deep-Document-Understanding-Mockup.png`), phases A–C. The classifier reads the whole document into every household-relevant record across its pages (`records[]`: each event, each date of a series, each fee, each thing to buy), each with page, section and quote as evidence, plus pages read/unreadable and the day the document is dated (`issuedOn`). Deterministic backstop per record (no ids, no field a domain does not own); each record's day and time grounded by WonderHome, never the model. `homesend/document.ts` keeps the reading on the understanding (older readings derive records from the headline and needs); `homesend/plan.ts` reconciles every record on its own — create / update (field by field, before → after) / cancel / no change / conflict (a newer record wins, §28) / needs your answer (one question, §29) — with a series of dates read as occurrences, one record on file answering for one thing, a same-amount-same-day bill recognised, and school/class enrichment from the household's records marked as such (§30). Matcher fixes: a part of an occasion (rehearsal, fee, registration) is never the occasion; equal matches ordered by name. Golden scenarios 1–3 (§46–48) are permanent tests |
 | 18 | P0 | 14-018 | Deep document understanding — review, apply and receipt | Done | Phases D–E. A document with two or more records is reviewed as its plan in HomeSend and in the HomeTalk paperclip sheet (`_components/home-send-plan.tsx`): Found N items, grouped Updates / New / Already on record / Conflicts / Needs your answer, each row opening to its fields, before → after, household-record enrichment and source page, with per-record include, edit and "who is it for"; "Review and apply (N)". `applyDocumentPlanAction` rebuilds the plan on the server from the stored reading (the browser sends only choices), writes each included record through its domain service (writes moved to the server-only `home-send-writes.ts`), verifies updates by reading them back, records each change with its plan key, field-level before/after and evidence (migration `20261005090000_homesend_document_plan_receipt.sql`, applied live), and keeps the exact plan and receipt on the item. `homesend/apply.ts` makes the receipt: created / updated / cancelled / unchanged / skipped / needs_clarification / failed, partial never reported as done, "Nothing new found. No records changed." as a success; a second apply returns the stored receipt. "Undo all" reverses every change of a document; history names each change. A document with a plan never applies on its own |
 | 19 | P0 | 14-019 | Deep document understanding — HomeTalk attachments & certification | Done | Phases F–G. The paperclip in HomeTalk opens the same HomeSend sheet, pipeline, plan and apply — no second parser — and once a plan is applied HomeTalk posts what it did into the conversation from the stored receipt (`documentReceipt` turn, `homesend/talk.ts` `documentReplyText`: "I read the 2-page school notice and found 7 things… Done. Updated: • Annual Day — 12 Oct → 15 Oct …"). "What did the school notice change?" is answered by rules from the receipt and the change rows (`readDocumentChangeQuestion` / `answerDocumentChanges`), never from the model's reading: undone changes are said to be undone, and a question no applied document fits goes on to HomeBrain; not over a voice link, whose content limits the HomeBrain path applies. Golden scenario 4 (same reading → same plan whichever door) in `talk.test.ts`; eval HS-16 (a part of an occasion is not the occasion, 50/50); §50 counts in HomeSend metrics (`documents`: applied, outcomes, changes standing, correct household changes per document). A receipt with a question still open says so ("1 change applied, 1 waiting on your answer") |
+| 20 | P0 | 14-020 | HomeBrain 3.0 phase A — the Household Context Store | Done | Live on 2026-10-18 after the owner ran `20261018250000`: `verify:live` 280/280; on the live project HomeTalk answered "Who is coming to the QA birthday party?" (9 December, two months out) with "Riya Shah (3 people) said yes; Dev Kapoor said maybe — 3 coming so far", where the live path had said "nothing on the calendar for the next 7 days"; the row was built on the first turn (10.8 KB), and a HomeTalk write ("add bananas") marked it behind and rebuilt it after the response (version 1 → 3, built after the write). Two fixes found live: the store's reader and write listener are kept on `globalThis` (instrumentation and the routes are separate bundles, so a module variable set at startup was never seen by a turn), and an invite-link reply, written without a member's session, now marks its household changed. Spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` §3.1–§3.2; the owner's reports of 2026-10-18 (Asmi's party with guests "not known", a preference remembered then forgotten, slow replies). PR #230: `household_context` (one row per household, deny-all RLS, migration `20261018250000`, waiting on the owner's SQL run); `homebrain/context-store.ts` builds every record whole (no seven-day horizon, no twelve-to-a-list cap, `limitLists: false`), a month back and 400 days ahead, with event guests and their replies, every memory, the Meals screen's food preferences, the place book and the home address; a domain write sets `stale_since` and rebuilds after that response (`after()`), a turn that finds it behind rebuilds once; a turn reads one row plus the viewer's own live reads (people, notifications, proposals, health, agenda), held to the same domain gates and `filterForViewer`. Falls back to live reads without the table. Live reads now carry guests, food preferences and places too (new `places` domain). A calendar look-ahead no longer answers "who is coming" with the family's birthdays (`calendar/answer.ts`). Golden HT-89, HT-90; eval 120/120 |
+| 21 | P0 | 14-021 | HomeBrain 3.0 phase B — retrieval and one pass | Not Started | Spec §3.3–§3.5: question-sized retrieval (`homebrain/retrieve.ts`: lexical index, connected records, a token budget), one structured model call with a cached household prefix, streaming, timings `store`/`retrieve`/`firstToken`; typed p95 to first token 2.5 s |
+| 22 | P0 | 14-022 | HomeBrain 3.0 phase C — one answer source | Not Started | Spec §3.6: deterministic answers read the store; the agenda summary only for broad questions; the "said not on record while on record" gate and count |
+| 23 | P1 | 14-023 | HomeBrain 3.0 phase D — keep-warm hardening | Not Started | Spec §3.2/§3.1: DB-trigger safety net for writes that bypass a service, an hourly rebuild of dated sections (until then a store older than an hour rebuilds on the next turn), the store's lag on the AI quality page |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -35,6 +39,7 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - **Epic 14-E06 — Learning, Multi-Agent Coordination & Prediction:** stories 14-006 through 14-008.
 - **Epic 14-E09 — Household Context & Grounding:** story 14-009.
 - **Epic 14-E17 — Deep Document Understanding 2.0:** stories 14-017 through 14-019.
+- **Epic 14-E20 — HomeBrain 3.0, one warm household context (`design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`):** stories 14-020 through 14-023.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -435,6 +440,32 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - The same file through HomeTalk and HomeSend produces the same understanding, matches, proposals, writes and provenance; only the presentation differs.
 - HomeTalk shows the plan and the receipt in the conversation, and answers "what did it change?" from stored changes, never from the model's reading.
 - The spec's golden scenarios and §45 coverage run in the evaluation; §50 counts are observable.
+
+### Story 14-020 — HomeBrain 3.0 phase A: the Household Context Store
+**Epic:** HomeBrain 3.0
+**Priority:** P0
+**Goal:** HomeTalk answers from the whole household — an event two months out and its guests, every preference it was told — read from one stored row rather than twenty reads per turn.
+
+**Acceptance criteria**
+- One server-only row per household holds every active record as context items, with no horizon and no per-list cap; no session can read or write it.
+- A domain write leaves the row behind and it is rebuilt after that response; a turn never answers from a row older than the last write.
+- A turn reads the row and the viewer's own records, and is held to the same domain gates and viewer filter as a live read.
+- "Check Asmi's birthday event, a few people are coming" is answered with the guests' names (golden HT-89, HT-90), and every other golden case still passes.
+
+### Story 14-021 — HomeBrain 3.0 phase B: retrieval and one pass
+**Epic:** HomeBrain 3.0
+**Priority:** P0
+**Goal:** A question is answered by one model call over question-sized facts with a cached household prefix, streamed, at a typed p95 of 2.5 s to the first token.
+
+### Story 14-022 — HomeBrain 3.0 phase C: one answer source
+**Epic:** HomeBrain 3.0
+**Priority:** P0
+**Goal:** A rule and a model answering the same question read the same facts, and "not on record" while it is on record is a blocking gate.
+
+### Story 14-023 — HomeBrain 3.0 phase D: keep-warm hardening
+**Epic:** HomeBrain 3.0
+**Priority:** P1
+**Goal:** The store stays right when a write bypasses a service and when time alone changes a fact, and its lag is visible.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
