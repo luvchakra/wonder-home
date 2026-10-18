@@ -45,7 +45,7 @@
   it now names who is going from the event's own list, gives the title the full
   width and puts the action beside who is going. Every event list says when the
   same way (`_lib/event-when.ts`: "All day", never midnight), with its place;
-  Today's rows wear the event's own kind and no longer truncate.
+  Today's rows wear the event's own kind and no longer truncate. Every event row (`CalendarItem`) tucks its kind tile under the date leaf, so the content takes the width.
 
 ## Verified
 
