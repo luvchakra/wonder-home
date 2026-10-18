@@ -247,6 +247,17 @@ export const homesendEn = {
   "homesend.receipt.addsTo": "Adds to {name}'s purchase history.",
   "homesend.receipt.startsTracking": "Starts tracking {name}, with this as its first purchase.",
   "homesend.receipt.thisItem": "this item",
+  "homesend.receipt.stockNote": "Each kept line is added to what's at home, and comes off the list if it's waiting there. Untick anything that didn't arrive.",
+  "homesend.receipt.stockAdd": "Add to what's at home",
+  "homesend.receipt.stockChange": "At home: {before} → {after}",
+  "homesend.receipt.stockNone": "not recorded",
+  "homesend.receipt.stockCountedAfter": "Counted on {date}, after this receipt, so it isn't added twice unless you tick it.",
+  "homesend.receipt.stockCantConvert": "Bought in {unit}, which doesn't convert to how this is kept, so nothing is added at home.",
+  "homesend.receipt.listClear": "Take it off the list",
+  "homesend.receipt.listChange": "On the list: {before} → {after}",
+  "homesend.receipt.listNothing": "nothing left",
+  "homesend.receipt.duplicate": "This looks like a receipt already recorded on {date}, with the same shop, day and total.",
+  "homesend.receipt.duplicateConfirm": "Record it again",
 
   // A document's change plan.
   "homesend.plan.found#one": "Found {count} item",

@@ -7,6 +7,8 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { cancelObligation, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { createConsumable, listConsumables, recordPurchase, removePurchase, retireConsumable } from "@wonderhome/core/commerce/repository";
+import { adjustListEntry, changeStock, listGroceries, recordedChange, type GroceryItem } from "@wonderhome/core/commerce/inventory";
+import { duplicateReceipt, receiptStockLine } from "@wonderhome/core/commerce/receipt-stock";
 import { currencyCode, unitCostMinor } from "@wonderhome/core/commerce/receipts";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
@@ -19,7 +21,7 @@ import { type HomeSendChange, type HomeSendExtraction, type HomeSendItem, type H
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
-import { dismissHomeSendItem, getHomeSendItem, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { dismissHomeSendItem, getHomeSendItem, listRecordedReceipts, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
@@ -297,6 +299,10 @@ const receiptSchema = z.object({
         lineTotal: z.union([z.coerce.number().min(0).max(10_000_000), z.literal("")]),
         /** A tracked consumable's id, "new" to start tracking it, or "skip" to leave the line out. */
         match: z.union([z.uuid(), z.literal("new"), z.literal("skip")]),
+        /** Add what was bought to what is at home (25-003b). */
+        stock: z.boolean(),
+        /** Take what was bought off the item's list entry (25-003b). */
+        clear: z.boolean(),
       }),
     )
     .max(40),
@@ -309,6 +315,14 @@ const receiptSchema = z.object({
  * it. Every write is its own `homesend_changes` row, so each line (and each
  * item it started tracking) can be undone on its own. Nothing is paid and
  * nothing is ordered: a receipt is evidence, never a bill.
+ *
+ * Since 25-003b each kept line can also add what was bought to what is at
+ * home and take it off the list. Both are worked out again here from what is
+ * on record (`receiptStockLine`), never taken from the browser, and written
+ * through the inventory service with keys tied to the purchase — so undoing
+ * the line reverses exactly those two changes. The same receipt sent twice
+ * (same shop, day and total as one already recorded) is refused until the
+ * person says to record it again.
  */
 async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
   const column = (name: string) => formData.getAll(name).map((value) => (typeof value === "string" ? value : ""));
@@ -317,13 +331,23 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
   const units = column("lineUnit");
   const totals = column("lineTotal");
   const matches = column("lineMatch");
+  const stocks = column("lineStock");
+  const clears = column("lineClear");
   const parsed = receiptSchema.safeParse({
     householdId: formData.get("householdId"),
     itemId: formData.get("itemId"),
     merchant: formData.get("merchant") || undefined,
     purchasedOn: formData.get("purchasedOn"),
     currency: formData.get("currency") || undefined,
-    lines: names.map((name, index) => ({ name, quantity: quantities[index] ?? "", unit: units[index] ?? "", lineTotal: totals[index] ?? "", match: matches[index] || "skip" })),
+    lines: names.map((name, index) => ({
+      name,
+      quantity: quantities[index] ?? "",
+      unit: units[index] ?? "",
+      lineTotal: totals[index] ?? "",
+      match: matches[index] || "skip",
+      stock: stocks[index] === "1",
+      clear: clears[index] === "1",
+    })),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the lines above." };
   const input = parsed.data;
@@ -334,7 +358,19 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, input.householdId);
     const intake = await getHomeSendItem(supabase, input.householdId, input.itemId).catch(() => null);
+
+    // Judged on what was read, exactly as the review showed it, so the warning
+    // the person saw and the check here are the same check.
+    const read = intake?.extracted;
+    const duplicate = read
+      ? duplicateReceipt({ id: input.itemId, merchant: read.merchant ?? null, purchasedOn: read.documentDate ?? null, total: read.amount ?? null }, await listRecordedReceipts(supabase, input.householdId))
+      : null;
+    if (duplicate && formData.get("confirmDuplicate") !== "1") {
+      return { error: `This looks like a receipt already recorded on ${duplicate.recordedAt.slice(0, 10)}, with the same shop, day and total. If it really is a second one, tick "Record it again".` };
+    }
+
     const tracked = await listConsumables(supabase, input.householdId);
+    const groceries = new Map<string, GroceryItem>((await listGroceries(supabase, input.householdId)).map((item) => [item.id, item]));
     const byId = new Map(tracked.map((consumable) => [consumable.id, consumable]));
     const byName = new Map<string, { id: string }>(tracked.map((consumable) => [consumable.name.trim().toLowerCase(), { id: consumable.id }]));
     const currency = currencyCode(input.currency);
@@ -343,6 +379,8 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
 
     let firstPurchase: string | null = null;
     let started = 0;
+    let stocked = 0;
+    let cleared = 0;
     for (const line of kept) {
       const quantity = line.quantity === "" ? 1 : line.quantity;
       let consumableId: string;
@@ -380,11 +418,30 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
       });
       firstPurchase ??= purchase.id;
       await change("purchase", purchase.id);
+
+      // At home and on the list, from what is on record now — a new item starts at what was bought.
+      const plan = receiptStockLine({ quantity, unit: line.unit || null }, groceries.get(consumableId) ?? null, input.purchasedOn);
+      if (line.stock && plan.bought && plan.addable) {
+        await changeStock(supabase, {
+          householdId: input.householdId,
+          itemId: consumableId,
+          kind: "add",
+          amount: plan.bought,
+          source: "receipt",
+          idempotencyKey: `hsr:${purchase.id}`,
+          sourceRef: { purchaseId: purchase.id, homeSendItemId: input.itemId },
+        });
+        stocked += 1;
+      }
+      if (line.clear && plan.bought && plan.clearable) {
+        await adjustListEntry(supabase, { householdId: input.householdId, itemId: consumableId, kind: "subtract", amount: plan.bought, source: "receipt", idempotencyKey: `hsl:${purchase.id}` });
+        cleared += 1;
+      }
     }
 
-    const read = intake?.extracted?.lines ?? [];
+    const readLines = read?.lines ?? [];
     const corrected = intake?.extracted
-      ? kept.length !== read.length || kept.some((line, index) => line.name.trim().toLowerCase() !== (read[index]?.name ?? "").trim().toLowerCase())
+      ? kept.length !== readLines.length || kept.some((line, index) => line.name.trim().toLowerCase() !== (readLines[index]?.name ?? "").trim().toLowerCase())
       : null;
     await routeHomeSendItem(supabase, input.householdId, input.itemId, {
       routedTable: "consumable_purchases",
@@ -395,7 +452,9 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
     revalidateDomains();
     const where = input.merchant ? ` from ${input.merchant}` : "";
     const lines = kept.length === 1 ? "one purchase" : `${kept.length} purchases`;
-    return { notice: `Recorded ${lines}${where}. Groceries learns from them.${started > 0 ? ` ${started === 1 ? "One new item is" : `${started} new items are`} now tracked.` : ""}` };
+    const home = stocked > 0 ? ` ${stocked === 1 ? "One is" : `${stocked} are`} added to what is at home.` : "";
+    const list = cleared > 0 ? ` ${cleared === 1 ? "One comes" : `${cleared} come`} off the list.` : "";
+    return { notice: `Recorded ${lines}${where}.${home}${list}${started > 0 ? ` ${started === 1 ? "One new item is" : `${started} new items are`} now tracked.` : ""}` };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }
@@ -631,13 +690,36 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
   } else if (change.domain === "school_item") {
     await cancelSchoolItem(supabase, householdId, change.entityId);
   } else if (change.domain === "purchase") {
-    // A recorded purchase goes, and the item's history is what the
-    // remaining purchases say (09-009).
+    // What the line added at home and took off the list comes back out
+    // first — exactly those changes, found by the keys they were written
+    // with (25-003b) — then the purchase goes, and the item's history is what
+    // the remaining purchases say (09-009).
+    await reverseReceiptLine(supabase, householdId, change.entityId);
     await removePurchase(supabase, { householdId, purchaseId: change.entityId });
   } else if (change.domain === "health_document") {
     await archiveRecord(supabase, { householdId, memberId: memberId }, change.entityId);
   } else {
     await retireConsumable(supabase, { id: change.entityId, householdId });
+  }
+}
+
+/**
+ * Takes back what one receipt line did at home and on the list. An item no
+ * longer tracked has no stock or list to put right, so a reversal that cannot
+ * apply is logged and passed over rather than blocking the undo.
+ */
+async function reverseReceiptLine(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string, purchaseId: string): Promise<void> {
+  const stock = await recordedChange(supabase, householdId, "inventory_events", `hsr:${purchaseId}`);
+  if (stock && stock.delta > 0) {
+    await changeStock(supabase, { householdId, itemId: stock.itemId, kind: "use", amount: { quantity: stock.delta, unit: stock.unit }, source: "undo", idempotencyKey: `hsr-undo:${purchaseId}` }).catch((thrown) =>
+      log.warn("receipt stock undo skipped", { reason: thrown instanceof Error ? thrown.name : "unknown" }),
+    );
+  }
+  const list = await recordedChange(supabase, householdId, "shopping_list_events", `hsl:${purchaseId}`);
+  if (list && list.delta < 0) {
+    await adjustListEntry(supabase, { householdId, itemId: list.itemId, kind: "add", amount: { quantity: -list.delta, unit: list.unit }, source: "receipt", idempotencyKey: `hsl-undo:${purchaseId}` }).catch((thrown) =>
+      log.warn("receipt list undo skipped", { reason: thrown instanceof Error ? thrown.name : "unknown" }),
+    );
   }
 }
 
@@ -715,11 +797,20 @@ export async function undoHomeSendDocumentAction(_previous: RouteHomeItemState, 
 export type { HomeSendItem };
 
 /** What a receipt's lines can be matched to (09-009): the household's own tracked items, names only. */
-export async function trackedItemsAction(householdId: string): Promise<{ id: string; name: string }[]> {
+export type ReceiptContext = {
+  /** What the household tracks, with what is at home and on the list, for each line's before → after. */
+  items: GroceryItem[];
+  /** A receipt already recorded with the same shop, day and total, if any. */
+  duplicateOf: { merchant: string | null; recordedOn: string } | null;
+};
+
+/** What a receipt's review needs to show before anything is written (09-009, 25-003b). Reads only. */
+export async function receiptContextAction(householdId: string, read: { merchant: string | null; purchasedOn: string | null; total: number | null }): Promise<ReceiptContext> {
   const parsed = z.uuid().safeParse(householdId);
-  if (!parsed.success) return [];
+  if (!parsed.success) return { items: [], duplicateOf: null };
   const supabase = await createClient();
   await requireMembership(supabase, parsed.data);
-  const items = await listConsumables(supabase, parsed.data);
-  return items.map((item) => ({ id: item.id, name: item.name }));
+  const [items, recorded] = await Promise.all([listGroceries(supabase, parsed.data), listRecordedReceipts(supabase, parsed.data).catch(() => [])]);
+  const duplicate = duplicateReceipt({ id: "", merchant: read.merchant, purchasedOn: read.purchasedOn, total: read.total }, recorded);
+  return { items, duplicateOf: duplicate ? { merchant: duplicate.merchant, recordedOn: duplicate.recordedAt.slice(0, 10) } : null };
 }

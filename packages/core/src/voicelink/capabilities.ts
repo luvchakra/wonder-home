@@ -206,10 +206,22 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     note: "Changing the plan happens in the WonderHome app, where you can see what else it moves.",
   },
   {
+    // "Manan likes home-cooked food": what a person tells WonderHome about the
+    // family. It is kept as learned, never as a certified fact, and can be
+    // corrected or removed in HomeBrain Review, so it is as safe by voice as
+    // it is typed. Changing who does what stays app-only, below.
+    id: "family_facts",
+    label: "Remembering what you tell it about the family",
+    category: "low_risk",
+    actions: ["set_preference"],
+    geminiTools: ["remember_family_fact"],
+    policy: everywhere,
+  },
+  {
     id: "household_admin",
     label: "Responsibilities, preferences and the household's agents",
     category: "sensitive",
-    actions: ["assign_responsibility", "set_preference", "check_agents"],
+    actions: ["assign_responsibility", "check_agents"],
     geminiTools: [],
     policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
     note: "Changing who does what, and running WonderHome's checks, happen in the app.",

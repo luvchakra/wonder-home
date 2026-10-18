@@ -4,6 +4,8 @@ import type { PlanAction, PlanGroup } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import type { Translate, TranslationKey, TranslationParams } from "@wonderhome/core/i18n/translate";
 
+import { groceryWords } from "./grocery-words";
+
 /**
  * HomeSend's words in the viewer's language (story 22-004).
  *
@@ -215,6 +217,20 @@ export type HomeSendReviewLabels = {
     thisItem: string;
     addNew: string;
     chooseExisting: string;
+    /** For saying amounts in the reader's language: the language and its count words. */
+    language: string;
+    unitWords: Record<string, Record<string, string>>;
+    stockNote: string;
+    stockAdd: string;
+    stockChange: string;
+    stockNone: string;
+    stockCountedAfter: string;
+    stockCantConvert: string;
+    listClear: string;
+    listChange: string;
+    listNothing: string;
+    duplicate: string;
+    duplicateConfirm: string;
   };
   plan: {
     found: CountedWords;
@@ -547,6 +563,19 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       thisItem: t("homesend.receipt.thisItem"),
       addNew: t("common.addNew"),
       chooseExisting: t("common.chooseExisting"),
+      language,
+      unitWords: groceryWords(t, language).unitWords,
+      stockNote: t("homesend.receipt.stockNote"),
+      stockAdd: t("homesend.receipt.stockAdd"),
+      stockChange: t("homesend.receipt.stockChange", keep("before", "after")),
+      stockNone: t("homesend.receipt.stockNone"),
+      stockCountedAfter: t("homesend.receipt.stockCountedAfter", keep("date")),
+      stockCantConvert: t("homesend.receipt.stockCantConvert", keep("unit")),
+      listClear: t("homesend.receipt.listClear"),
+      listChange: t("homesend.receipt.listChange", keep("before", "after")),
+      listNothing: t("homesend.receipt.listNothing"),
+      duplicate: t("homesend.receipt.duplicate", keep("date")),
+      duplicateConfirm: t("homesend.receipt.duplicateConfirm"),
     },
     plan: {
       found: counted(t, "homesend.plan.found", {}, language),

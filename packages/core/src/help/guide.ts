@@ -99,7 +99,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "voice",
     group: "Everyday use",
-    updated: "2026-10-17",
+    updated: "2026-10-18",
     keywords: ["voice", "speech", "microphone", "hands-free", "live", "listen", "gemini live", "alexa", "speak out loud", "pause"],
   },
   {

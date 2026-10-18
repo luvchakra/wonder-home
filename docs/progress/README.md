@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeFood: receipts into stock (25-003b), and family facts by voice](2026-10-18-homefood-receipts-into-stock.md) |
 | 2026-10-18 | [Owner's decisions: invite email, a child's own appointment, the dashboard policy, Maps check](2026-10-18-owner-decisions-invite-email-child-health.md) |
 | 2026-10-18 | [HomeFood: what a meal still needs (25-003a)](2026-10-18-homefood-meal-shortfalls.md) |
 | 2026-10-18 | [Browser QA: member sign-in, invites, scrolling bars, Calendar, work facts](2026-10-18-browser-qa-sign-in-calendar.md) |

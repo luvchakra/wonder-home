@@ -85,6 +85,10 @@ const ACTION_SCOPE: Partial<Record<IntentAction, VoiceScope | "none">> = {
   add_to_list: "groceries.write",
   remove_from_list: "groceries.write",
   set_reminder: "notifications.create",
+  // Something a person tells WonderHome about the family is kept as learned,
+  // never certified, and is theirs to correct in the app: no scope beyond
+  // being the linked member, like a question.
+  set_preference: "none",
   raise_service_request: "home.write",
   record_health_appointment: "health.write",
   log_health_issue: "health.write",

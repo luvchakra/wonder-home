@@ -41,6 +41,9 @@ export const GEMINI_GOLDEN: readonly VoiceGolden[] = [
   { name: "add_grocery_item", args: { item: "milk", quantity: "2 litres" }, action: "add_to_list" },
   { name: "create_reminder", args: { what: "call the plumber", when: "tomorrow at 9am" }, action: "set_reminder", parameters: { what: "call the plumber", when: "tomorrow", time: "9am" } },
   { name: "create_reminder", args: { what: "buy milk", when: "tomorrow" }, action: "set_reminder", parameters: { what: "buy milk", when: "tomorrow" } },
+  { name: "remember_family_fact", args: { fact: "Manan likes home-cooked food" }, action: "set_preference" },
+  { name: "remember_family_fact", args: { fact: "Upasana likes cooking a lot" }, action: "set_preference" },
+  { name: "remember_family_fact", args: { fact: "Asmi doesn't like mushrooms" }, action: "set_preference" },
 ];
 
 export const ALEXA_GOLDEN: readonly { intent: string; slot: string; action: IntentAction }[] = [

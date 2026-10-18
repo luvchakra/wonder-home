@@ -532,6 +532,29 @@ export const markBought = invalidatesContext(
   (_supabase, change) => change.householdId,
 );
 
+/**
+ * The one stock or list change a write made, found by the idempotency key it
+ * was written with — so undoing a receipt line reverses exactly that change
+ * and nothing anyone did since (HomeFood 25-003b). Null when it never happened.
+ */
+export async function recordedChange(
+  supabase: SupabaseClient,
+  householdId: string,
+  table: "inventory_events" | "shopping_list_events",
+  idempotencyKey: string,
+): Promise<{ itemId: string; delta: number; unit: string } | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("consumable_id, delta, unit")
+    .eq("household_id", householdId)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+  if (error) throw new Error(`recordedChange failed: ${error.code ?? "unknown"}`);
+  if (!data) return null;
+  const row = data as Row;
+  return { itemId: row.consumable_id as string, delta: Number(row.delta ?? 0), unit: String(row.unit) };
+}
+
 /** Where an item's photo lives in the private avatars bucket. */
 export function groceryPhotoPath(householdId: string, itemId: string): string {
   return `${householdId}/groceries/${itemId}`;

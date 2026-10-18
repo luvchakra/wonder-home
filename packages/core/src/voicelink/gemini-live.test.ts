@@ -43,6 +43,7 @@ describe("Gemini gets narrow, domain-specific tools and nothing else", () => {
         "get_school_items",
         "get_today_agenda",
         "get_upcoming_events",
+        "remember_family_fact",
       ].sort(),
     );
     expect(geminiLiveFunctionDeclarations().map((tool) => tool.name)).toEqual(GEMINI_LIVE_TOOL_NAMES);
