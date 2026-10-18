@@ -46,7 +46,7 @@ C1 builds the calendar as a **projection**, never a copy:
 
 ## Still open
 
-- **The migration is not on the live project.** `apply_migration` from this session timed out (as did the earlier QA delete), and the live project is still at `20261017233807`. **This PR must not merge before the migration is live**: `createEvent` now writes the new columns, so adding any event would fail in production without it. The owner applies `supabase/migrations/20261018120000_family_calendar.sql` in the Supabase SQL editor, then `npm run verify:live`, which now checks the three new tables and four new columns.
+- **The migration is live (2026-10-18).** `apply_migration` from this session timed out, so the owner ran `20261018120000_family_calendar.sql` in the Supabase SQL editor, in four parts. A query from this session confirmed it landed: 3 new tables, 5 new `family_events` columns, 34 holidays, the 5 new policies with the old select policy gone, 4 `wh` functions, and family events on every plan. Because it ran in the editor, it is not recorded in `supabase_migrations.schema_migrations`, so `list_migrations` does not show it, but the schema is complete. `npm run verify:live` could not run here, because there are no credentials in this container.
 - **Signed-in browser QA at 360px and 1280px has not been run.** It needs the live migration, plus credentials in `apps/web/.env.local`, which this container does not have.
 - **Not in C1, by design:**
   - Module adapters, "Busy" for health and dedupe across sources (C2).
