@@ -78,3 +78,33 @@ export function voiceQuality(voice: { name: string; localService?: boolean }): n
   if (ROBOTIC_VOICE.test(voice.name)) score -= 5;
   return score;
 }
+
+/**
+ * A spoken reply in the pieces it is synthesised in, in order: the first
+ * sentence on its own, so it can start playing while the rest is still being
+ * made, then the rest in a few pieces of whole sentences. A sentence is never
+ * split, and a piece too short to be worth a request of its own joins the one
+ * after it. Text with one sentence comes back as itself.
+ */
+export function speechChunks(text: string, options: { first?: number; rest?: number } = {}): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const sentences = clean.match(/[^.!?]+(?:[.!?]+["')\]]*|$)\s*/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [clean];
+  const firstMin = options.first ?? 24;
+  const restMax = options.rest ?? 320;
+  const chunks: string[] = [];
+  let index = 0;
+  let first = "";
+  while (index < sentences.length && (first.length < firstMin || first === "")) first = `${first} ${sentences[index++]}`.trim();
+  chunks.push(first);
+  let piece = "";
+  for (; index < sentences.length; index += 1) {
+    const next = sentences[index]!;
+    if (piece && piece.length + next.length + 1 > restMax) {
+      chunks.push(piece);
+      piece = next;
+    } else piece = `${piece} ${next}`.trim();
+  }
+  if (piece) chunks.push(piece);
+  return chunks;
+}

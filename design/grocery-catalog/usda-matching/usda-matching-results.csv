@@ -1,0 +1,201 @@
+item,category,route,label_match_type,label_fdc_ids,label_description,m4_top1_fdc_id,m4_top1_description,m4_top1_correct,m4_top3,energy_kcal_per_100g,protein_g,carbohydrate_g,fat_g,fibre_g
+Onion,Vegetables,USDA generic,exact,170000 1104962,"Onions, raw",170000,"Onions, raw",yes,"170000:Onions, raw | 1104962:Onions, white, raw | 790646:Onions, yellow, raw",40.0,1.1,9.34,0.1,1.7
+Tomato,Vegetables,USDA generic,exact,170457 1999634,"Tomatoes, red, ripe, raw, year round average",170457,"Tomatoes, red, ripe, raw, year round average",yes,"170457:Tomatoes, red, ripe, raw, year round average | 170050:Tomatoes, red, ripe, cooked | 333281:Tomatoes, canned, red, ripe, diced",18.0,0.88,3.89,0.2,1.2
+Potato,Vegetables,USDA generic,exact,170026 170029,"Potatoes, flesh and skin, raw",170026,"Potatoes, flesh and skin, raw",yes,"170026:Potatoes, flesh and skin, raw | 170029:Potatoes, red, flesh and skin, raw | 170028:Potatoes, white, flesh and skin, raw",77.0,2.05,17.5,0.09,2.1
+Green chilli,Vegetables,USDA generic,exact,170497,"Peppers, hot chili, green, raw",170497,"Peppers, hot chili, green, raw",yes,"170497:Peppers, hot chili, green, raw | 170106:Peppers, hot chili, red, raw | 168577:Peppers, chili, green, canned",40.0,2.0,9.46,0.2,1.5
+Ginger,Vegetables,USDA generic,exact,169231,"Ginger root, raw",169231,"Ginger root, raw",yes,"169231:Ginger root, raw | 169765:Ginger root, pickled, canned, with artificial sweetener",80.0,1.82,17.8,0.75,2.0
+Garlic,Vegetables,USDA generic,exact,169230 1104647,"Garlic, raw",1104647,"Garlic, raw",yes,"1104647:Garlic, raw | 169230:Garlic, raw | 167939:Garlic bread, frozen",149,6.36,33.1,0.5,2.1
+Coriander leaves,Vegetables,USDA generic,exact,169997,"Coriander (cilantro) leaves, raw",169997,"Coriander (cilantro) leaves, raw",yes,"169997:Coriander (cilantro) leaves, raw",23.0,2.13,3.67,0.52,2.8
+Curry leaves,Vegetables,no USDA equivalent,none,,,,,yes,,,,,,
+Spinach,Vegetables,USDA generic,exact,168462,"Spinach, raw",168462,"Spinach, raw",yes,"168462:Spinach, raw | 168440:New Zealand spinach, raw | 168438:Mustard spinach, (tendergreen), raw",23.0,2.86,3.63,0.39,2.2
+Methi leaves,Vegetables,no USDA equivalent,none,,,,,yes,,,,,,
+Cauliflower,Vegetables,USDA generic,exact,169986 2685573,"Cauliflower, raw",2685573,"Cauliflower, raw",yes,"2685573:Cauliflower, raw | 169986:Cauliflower, raw | 169389:Cauliflower, green, raw",25.0,1.92,4.97,0.28,2.0
+Cabbage,Vegetables,USDA generic,exact,169975,"Cabbage, raw",169975,"Cabbage, raw",yes,"169975:Cabbage, raw | 2346408:Cabbage, red, raw | 2346407:Cabbage, green, raw",25.0,1.28,5.8,0.1,2.5
+Brinjal,Vegetables,USDA generic,exact,169228 2685577,"Eggplant, raw",2685577,"Eggplant, raw",yes,"2685577:Eggplant, raw | 169228:Eggplant, raw | 169892:Eggplant, pickled",25.0,0.98,5.88,0.18,3.0
+Okra (bhindi),Vegetables,USDA generic,exact,169260,"Okra, raw",169260,"Okra, raw",yes,"169260:Okra, raw | 169262:Okra, frozen, unprepared | 170098:Okra, cooked, boiled, drained, with salt",33.0,1.93,7.45,0.19,3.2
+Bottle gourd,Vegetables,USDA generic,exact,169232,"Gourd, white-flowered (calabash), raw",169232,"Gourd, white-flowered (calabash), raw",yes,"169232:Gourd, white-flowered (calabash), raw | 169353:Gourd, white-flowered (calabash), cooked, boiled, drained, with salt | 169233:Gourd, white-flowered (calabash), cooked, boiled, drained, without salt",14.0,0.62,3.39,0.02,0.5
+Bitter gourd,Vegetables,USDA generic,exact,168393,"Balsam-pear (bitter gourd), pods, raw",168393,"Balsam-pear (bitter gourd), pods, raw",yes,"168393:Balsam-pear (bitter gourd), pods, raw | 168391:Balsam-pear (bitter gourd), leafy tips, raw | 168496:Balsam-pear (bitter gourd), pods, cooked, boiled, drained, with salt",17.0,1.0,3.7,0.17,2.8
+Ridge gourd,Vegetables,USDA generic,close,168414,"Gourd, dishcloth (towelgourd), raw",168414,"Gourd, dishcloth (towelgourd), raw",yes,"168414:Gourd, dishcloth (towelgourd), raw | 168530:Gourd, dishcloth (towelgourd), cooked, boiled, drained, with salt | 168415:Gourd, dishcloth (towelgourd), cooked, boiled, drained, without salt",20.0,1.2,4.35,0.2,1.1
+Carrot,Vegetables,USDA generic,exact,170393,"Carrots, raw",170393,"Carrots, raw",yes,"170393:Carrots, raw | 2258587:Carrots, baby, raw | 2258586:Carrots, mature, raw",41.0,0.93,9.58,0.24,2.8
+Cucumber,Vegetables,USDA generic,exact,168409 169225 2346406,"Cucumber, with peel, raw",2346406,"Cucumber, with peel, raw",yes,"2346406:Cucumber, with peel, raw | 168409:Cucumber, with peel, raw | 169225:Cucumber, peeled, raw",15.0,0.65,3.63,0.11,0.5
+Capsicum,Vegetables,USDA generic,exact,170427,"Peppers, sweet, green, raw",170427,"Peppers, sweet, green, raw",yes,"170427:Peppers, sweet, green, raw | 170024:Peppers, sweet, green, sauteed | 2258588:Peppers, bell, green, raw",20.0,0.86,4.64,0.17,1.7
+Green peas,Vegetables,USDA generic,exact,170419,"Peas, green, raw",170419,"Peas, green, raw",yes,"170419:Peas, green, raw | 172428:Peas, green, split, mature seeds, raw | 170010:Peas, edible-podded, raw",81.0,5.42,14.4,0.4,5.7
+French beans,Vegetables,USDA generic,exact,169961 2346400,"Beans, snap, green, raw",2346400,"Beans, snap, green, raw",yes,"2346400:Beans, snap, green, raw | 169961:Beans, snap, green, raw | 169320:Beans, snap, yellow, raw",31.0,1.83,6.97,0.22,2.7
+Beetroot,Vegetables,USDA generic,exact,169145 2685576,"Beets, raw",2685576,"Beets, raw",yes,"2685576:Beets, raw | 169145:Beets, raw | 170479:Beets, harvard, canned, solids and liquids",43.0,1.61,9.56,0.17,2.8
+Radish,Vegetables,USDA generic,exact,169276 2747665,"Radishes, raw",169276,"Radishes, raw",yes,"169276:Radishes, raw | 2747665:Radishes, red, raw | 168451:Radishes, oriental, raw",16.0,0.68,3.4,0.1,1.6
+Pumpkin,Vegetables,USDA generic,exact,168448,"Pumpkin, raw",168448,"Pumpkin, raw",yes,"168448:Pumpkin, raw | 169270:Pumpkin flowers, raw | 169272:Pumpkin leaves, raw",26.0,1.0,6.5,0.1,0.5
+Sweet potato,Vegetables,USDA generic,exact,168482,"Sweet potato, raw, unprepared (Includes foods for USDA's Food Distribution Program)",169303,"Sweet potato leaves, raw",no,"169303:Sweet potato leaves, raw | 169305:Sweet potato, canned, mashed | 168485:Sweet potato, canned, vacuum pack",86.0,1.57,20.1,0.05,3.0
+Drumstick,Vegetables,USDA generic,exact,170483,"Drumstick pods, raw",170483,"Drumstick pods, raw",yes,"170483:Drumstick pods, raw | 168416:Drumstick leaves, raw | 168532:Drumstick pods, cooked, boiled, drained, with salt",37.0,2.1,8.53,0.2,3.2
+Mint leaves,Vegetables,USDA generic,close,173475,"Spearmint, fresh",173475,"Spearmint, fresh",yes,"173475:Spearmint, fresh | 172239:Spearmint, dried",44.0,3.29,8.41,0.73,6.8
+Lemon,Vegetables,USDA generic,close,167746,"Lemons, raw, without peel",167746,"Lemons, raw, without peel",yes,"167746:Lemons, raw, without peel | 167749:Lemon peel, raw | 168573:Lemon grass (citronella), raw",29.0,1.1,9.32,0.3,2.8
+Mushroom,Vegetables,USDA generic,exact,169251 1999629,"Mushrooms, white, raw",169251,"Mushrooms, white, raw",yes,"169251:Mushrooms, white, raw | 1999629:Mushrooms, white button | 169403:Mushrooms, maitake, raw",22.0,3.09,3.26,0.34,1.0
+Banana,Fruits,USDA generic,exact,173944,"Bananas, raw",173944,"Bananas, raw",yes,"173944:Bananas, raw | 1105073:Bananas, overripe, raw | 1105314:Bananas, ripe and slightly ripe, raw",89.0,1.09,22.8,0.33,2.6
+Apple,Fruits,USDA generic,exact,167793 168201 168202 171688 1750341 1750343,"Apples, raw, fuji, with skin (Includes foods for USDA's Food Distribution Program)",1750343,"Apples, honeycrisp, with skin, raw",yes,"1750343:Apples, honeycrisp, with skin, raw | 1750341:Apples, gala, with skin, raw | 1750340:Apples, fuji, with skin, raw",63.0,0.2,15.2,0.18,2.1
+Mango,Fruits,USDA generic,exact,169910,"Mangos, raw",169910,"Mangos, raw",yes,"169910:Mangos, raw | 2710834:Mango, Ataulfo, peeled, raw | 2710833:Mango, Tommy Atkins, peeled, raw",60.0,0.82,15.0,0.38,1.6
+Orange,Fruits,USDA generic,exact,169097 746771,"Oranges, raw, all commercial varieties",169097,"Oranges, raw, all commercial varieties",yes,"169097:Oranges, raw, all commercial varieties | 746771:Oranges, raw, navels | 169919:Oranges, raw, with peel",47.0,0.94,11.8,0.12,2.4
+Papaya,Fruits,USDA generic,exact,169926,"Papayas, raw",169926,"Papayas, raw",yes,"169926:Papayas, raw | 169107:Papaya nectar, canned | 169927:Papaya, canned, heavy syrup, drained",43.0,0.47,10.8,0.26,1.7
+Grapes,Fruits,USDA generic,exact,174683 2346412 2346413,"Grapes, red or green (European type, such as Thompson seedless), raw",2346413,"Grapes, green, seedless, raw",yes,"2346413:Grapes, green, seedless, raw | 2346412:Grapes, red, seedless, raw | 174683:Grapes, red or green (European type, such as Thompson seedless), raw",69.0,0.72,18.1,0.16,0.9
+Pomegranate,Fruits,USDA generic,exact,169134,"Pomegranates, raw",169134,"Pomegranates, raw",yes,"169134:Pomegranates, raw | 167787:Pomegranate juice, bottled",83.0,1.67,18.7,1.17,4.0
+Guava,Fruits,USDA generic,exact,173044,"Guavas, common, raw",173044,"Guavas, common, raw",yes,"173044:Guavas, common, raw | 173045:Guavas, strawberry, raw | 174686:Guava sauce, cooked",68.0,2.55,14.3,0.95,5.4
+Watermelon,Fruits,USDA generic,exact,167765,"Watermelon, raw",167765,"Watermelon, raw",yes,"167765:Watermelon, raw | 2747676:Watermelon, seedless, rind only, raw | 2747675:Watermelon, seedless, flesh only, raw",30.0,0.61,7.55,0.15,0.4
+Pineapple,Fruits,USDA generic,exact,168193 169124 2346398,"Pineapple, raw, traditional varieties",169124,"Pineapple, raw, all varieties",yes,"169124:Pineapple, raw, all varieties | 168193:Pineapple, raw, traditional varieties | 2346398:Pineapple, raw",45.0,0.55,11.8,0.13,
+Chikoo (sapota),Fruits,USDA generic,exact,167759,"Sapodilla, raw",167759,"Sapodilla, raw",yes,"167759:Sapodilla, raw",83.0,0.44,20.0,1.1,5.3
+Sweet lime (mosambi),Fruits,no USDA equivalent,none,,,,,yes,,,,,,
+Muskmelon,Fruits,USDA generic,approximate,169092 746770,"Melons, cantaloupe, raw",746770,"Melons, cantaloupe, raw",yes,"746770:Melons, cantaloupe, raw | 169092:Melons, cantaloupe, raw | 2710816:Melons, honeydew, raw",34.0,0.84,8.16,0.19,0.9
+Pear,Fruits,USDA generic,exact,169118 746773,"Pears, raw",169118,"Pears, raw",yes,"169118:Pears, raw | 746773:Pears, raw, bartlett | 168177:Pears, asian, raw",57.0,0.36,15.2,0.14,3.1
+Coconut,Fruits,USDA generic,exact,170169,"Nuts, coconut meat, raw",170169,"Nuts, coconut meat, raw",yes,"170169:Nuts, coconut meat, raw | 170580:Nuts, coconut cream, raw (liquid expressed from grated meat) | 170172:Nuts, coconut milk, raw (liquid expressed from grated meat and water)",354,3.33,15.2,33.5,9.0
+Dates,Fruits,USDA generic,close,168191 171726,"Dates, medjool",168191,"Dates, medjool",yes,"168191:Dates, medjool | 171726:Dates, deglet noor",277,1.81,75.0,0.15,6.7
+Raisins,Fruits,USDA generic,close,168164 168165 168166,"Raisins, golden, seedless",168164,"Raisins, golden, seedless",yes,"168164:Raisins, golden, seedless | 168166:Raisins, seeded",301,3.28,80.0,0.2,3.3
+Almonds,Fruits,USDA generic,exact,170567,"Nuts, almonds",170567,"Nuts, almonds",yes,"170567:Nuts, almonds | 170568:Nuts, almonds, blanched | 2346393:Nuts, almonds, whole, raw",579,21.2,21.6,49.9,12.5
+Toor dal,Dals & pulses,USDA generic,close,172436,"Pigeon peas (red gram), mature seeds, raw",172436,"Pigeon peas (red gram), mature seeds, raw",yes,"172436:Pigeon peas (red gram), mature seeds, raw | 172472:Pigeon peas (red gram), mature seeds, cooked, boiled, with salt | 172437:Pigeon peas (red gram), mature seeds, cooked, boiled, without salt",343,21.7,62.8,1.49,15.0
+Moong dal,Dals & pulses,USDA generic,close,174256,"Mung beans, mature seeds, raw",174256,"Mung beans, mature seeds, raw",yes,"174256:Mung beans, mature seeds, raw | 169957:Mung beans, mature seeds, sprouted, raw | 175255:Mung beans, mature seeds, cooked, boiled, with salt",347,23.9,62.6,1.15,16.3
+Urad dal,Dals & pulses,USDA generic,close,174259,"Mungo beans, mature seeds, raw",174259,"Mungo beans, mature seeds, raw",yes,"174259:Mungo beans, mature seeds, raw | 175256:Mungo beans, mature seeds, cooked, boiled, with salt | 172427:Mungo beans, mature seeds, cooked, boiled, without salt",341,25.2,59.0,1.64,18.3
+Chana dal,Dals & pulses,USDA generic,close,173756 2644282,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",173756,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",yes,"173756:Chickpeas (garbanzo beans, bengal gram), mature seeds, raw | 2644282:Chickpeas, (garbanzo beans, bengal gram), dry | 175206:Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, solids and liquids",378,20.5,63.0,6.04,12.2
+Masoor dal,Dals & pulses,USDA generic,close,172420,"Lentils, raw",172420,"Lentils, raw",yes,"172420:Lentils, raw | 174284:Lentils, pink or red, raw | 175254:Lentils, mature seeds, cooked, boiled, with salt",352,24.6,63.4,1.06,10.7
+Kabuli chana,Dals & pulses,USDA generic,exact,173756 2644282,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",173756,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",yes,"173756:Chickpeas (garbanzo beans, bengal gram), mature seeds, raw | 2644282:Chickpeas, (garbanzo beans, bengal gram), dry | 175206:Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, solids and liquids",378,20.5,63.0,6.04,12.2
+Rajma,Dals & pulses,USDA generic,exact,173744 175193 747438 747440,"Beans, kidney, red, mature seeds, raw",175193,"Beans, kidney, all types, mature seeds, raw",yes,"175193:Beans, kidney, all types, mature seeds, raw | 173744:Beans, kidney, red, mature seeds, raw | 175196:Beans, kidney, royal red, mature seeds, raw",337,22.5,61.3,1.06,15.2
+Kala chana,Dals & pulses,USDA generic,approximate,173756 2644282,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",173756,"Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",yes,"173756:Chickpeas (garbanzo beans, bengal gram), mature seeds, raw | 2644282:Chickpeas, (garbanzo beans, bengal gram), dry | 175206:Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, solids and liquids",378,20.5,63.0,6.04,12.2
+Lobia,Dals & pulses,USDA generic,exact,173758,"Cowpeas, common (blackeyes, crowder, southern), mature seeds, raw",173758,"Cowpeas, common (blackeyes, crowder, southern), mature seeds, raw",yes,"173758:Cowpeas, common (blackeyes, crowder, southern), mature seeds, raw | 173761:Cowpeas, common (blackeyes, crowder, southern), mature seeds, canned with pork | 173760:Cowpeas, common (blackeyes, crowder, southern), mature seeds, canned, plain",336,23.5,60.0,1.26,10.6
+Whole moong,Dals & pulses,USDA generic,exact,174256,"Mung beans, mature seeds, raw",174256,"Mung beans, mature seeds, raw",yes,"174256:Mung beans, mature seeds, raw | 169957:Mung beans, mature seeds, sprouted, raw | 175255:Mung beans, mature seeds, cooked, boiled, with salt",347,23.9,62.6,1.15,16.3
+Soya chunks,Dals & pulses,USDA generic,approximate,174275 1104705,"Soy flour, defatted",174276,Soy protein isolate,no,"174276:Soy protein isolate | 174302:Soy protein isolate, potassium type | 174301:Soy protein concentrate, produced by acid wash",327,51.5,33.9,1.22,17.5
+Horse gram,Dals & pulses,no USDA equivalent,none,,,,,yes,,,,,,
+Moth beans,Dals & pulses,USDA generic,exact,172425,"Mothbeans, mature seeds, raw",,,no,,343,22.9,61.5,1.61,
+Roasted chana,Dals & pulses,no USDA equivalent,none,,,,,yes,,,,,,
+Wheat atta,Atta & flours,USDA generic,close,168893 168944,"Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",168944,"Wheat flour, whole-grain, soft wheat",yes,"168944:Wheat flour, whole-grain, soft wheat | 169761:Wheat flour, white, all-purpose, unenriched | 169723:Wheat flour, white, cake, enriched",340,13.2,72.0,2.5,10.7
+Maida,Atta & flours,USDA generic,close,168894 168936,"Wheat flour, white, all-purpose, enriched, bleached",168894,"Wheat flour, white, all-purpose, enriched, bleached",yes,"168894:Wheat flour, white, all-purpose, enriched, bleached | 168936:Wheat flour, white, all-purpose, enriched, unbleached | 169754:Wheat flour, white, all-purpose, enriched, calcium-fortified",364,10.3,76.3,0.98,2.7
+Besan,Atta & flours,USDA generic,exact,174288,Chickpea flour (besan),174288,Chickpea flour (besan),yes,"174288:Chickpea flour (besan) | 2644282:Chickpeas, (garbanzo beans, bengal gram), dry | 173756:Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",387,22.4,57.8,6.69,10.8
+Sooji / rava,Atta & flours,USDA generic,exact,168933 169715 2003588 2003589,"Semolina, unenriched",169715,"Semolina, enriched",yes,"169715:Semolina, enriched | 168933:Semolina, unenriched",360,12.7,72.8,1.05,3.9
+Rice flour,Atta & flours,USDA generic,exact,169714,"Rice flour, white, unenriched",169714,"Rice flour, white, unenriched",yes,"169714:Rice flour, white, unenriched | 168883:Rice, white, glutinous, unenriched, uncooked | 2512381:Rice, white, long grain, unenriched, raw",366,5.95,80.1,1.42,2.4
+Ragi flour,Atta & flours,no USDA equivalent,none,,,,,yes,,,,,,
+Corn flour,Atta & flours,USDA generic,exact,169698,Cornstarch,169698,Cornstarch,yes,169698:Cornstarch,381,0.26,91.3,0.05,0.9
+Bajra flour,Atta & flours,USDA generic,close,172023,Millet flour,172023,Millet flour,yes,"172023:Millet flour | 2512379:Millet, whole grain | 169702:Millet, raw",382,10.8,75.1,4.25,3.5
+Basmati rice,Rice & grains,USDA generic,close,169756 2512381,"Rice, white, long-grain, regular, raw, unenriched",169756,"Rice, white, long-grain, regular, raw, unenriched",yes,"169756:Rice, white, long-grain, regular, raw, unenriched | 2512381:Rice, white, long grain, unenriched, raw | 168877:Rice, white, long-grain, regular, raw, enriched",365,7.13,80.0,0.66,1.3
+Sona masoori rice,Rice & grains,USDA generic,close,169760,"Rice, white, medium-grain, raw, unenriched",169760,"Rice, white, medium-grain, raw, unenriched",yes,"169760:Rice, white, medium-grain, raw, unenriched | 168930:Rice, white, medium-grain, cooked, unenriched | 168879:Rice, white, medium-grain, raw, enriched",360,6.61,79.3,0.58,
+Poha,Rice & grains,no USDA equivalent,none,,,,,yes,,,,,,
+Brown rice,Rice & grains,USDA generic,exact,169703 2512380,"Rice, brown, long-grain, raw (Includes foods for USDA's Food Distribution Program)",2512380,"Rice, brown, long grain, unenriched, raw",yes,"2512380:Rice, brown, long grain, unenriched, raw | 2512381:Rice, white, long grain, unenriched, raw | 169756:Rice, white, long-grain, regular, raw, unenriched",367,7.54,76.2,3.2,3.6
+Oats,Rice & grains,USDA generic,exact,169705 2346396 2346397,Oats (Includes foods for USDA's Food Distribution Program),2346397,"Oats, whole grain, steel cut",yes,"2346397:Oats, whole grain, steel cut | 2346396:Oats, whole grain, rolled, old fashioned | 2257046:Oat milk, unsweetened, plain, refrigerated",389,16.9,66.3,6.9,10.6
+Jowar,Rice & grains,USDA generic,exact,169716,Sorghum grain,169716,Sorghum grain,yes,"169716:Sorghum grain | 2710842:Sorghum, whole grain, white, dry, raw | 2710841:Sorghum grain, white, pearled, unenriched, dry, raw",329,10.6,72.1,3.46,6.7
+Sabudana,Rice & grains,USDA generic,exact,169717,"Tapioca, pearl, dry",169717,"Tapioca, pearl, dry",yes,"169717:Tapioca, pearl, dry",358,0.19,88.7,0.02,0.9
+Dalia (broken wheat),Rice & grains,USDA generic,close,170688 2710820,"Bulgur, dry",170688,"Bulgur, dry",yes,"170688:Bulgur, dry | 2710820:Bulgur, dry, raw | 170287:Bulgur, cooked",342,12.3,75.9,1.33,12.5
+Turmeric powder,Spices,USDA generic,exact,172231,"Spices, turmeric, ground",172231,"Spices, turmeric, ground",yes,"172231:Spices, turmeric, ground | 171326:Spices, nutmeg, ground | 171321:Spices, cloves, ground",312,9.68,67.1,3.25,22.7
+Red chilli powder,Spices,USDA generic,close,170932,"Spices, pepper, red or cayenne",171319,"Spices, chili powder",no,"171319:Spices, chili powder | 171327:Spices, onion powder | 171325:Spices, garlic powder",318,12.0,56.6,17.3,27.2
+Coriander powder,Spices,USDA generic,exact,170922,"Spices, coriander seed",170922,"Spices, coriander seed",yes,"170922:Spices, coriander seed | 171330:Spices, poppy seed | 171324:Spices, fenugreek seed",298,12.4,55.0,17.8,41.9
+Cumin seeds,Spices,USDA generic,exact,170923,"Spices, cumin seed",170923,"Spices, cumin seed",yes,"170923:Spices, cumin seed | 171330:Spices, poppy seed | 171324:Spices, fenugreek seed",375,17.8,44.2,22.3,10.5
+Mustard seeds,Spices,USDA generic,close,170929,"Spices, mustard seed, ground",170929,"Spices, mustard seed, ground",yes,"170929:Spices, mustard seed, ground | 171330:Spices, poppy seed | 171324:Spices, fenugreek seed",508,26.1,28.1,36.2,12.2
+Garam masala,Spices,no USDA equivalent,none,,,,,yes,,,,,,
+Black pepper,Spices,USDA generic,exact,170931,"Spices, pepper, black",170931,"Spices, pepper, black",yes,"170931:Spices, pepper, black | 170933:Spices, pepper, white | 170932:Spices, pepper, red or cayenne",251,10.4,64.0,3.26,25.3
+Green cardamom,Spices,USDA generic,exact,170919,"Spices, cardamom",170919,"Spices, cardamom",yes,"170919:Spices, cardamom | 171329:Spices, paprika | 170934:Spices, saffron",311,10.8,68.5,6.7,28.0
+Cloves,Spices,USDA generic,exact,171321,"Spices, cloves, ground",171321,"Spices, cloves, ground",yes,"171321:Spices, cloves, ground | 172231:Spices, turmeric, ground | 171326:Spices, nutmeg, ground",274,5.97,65.5,13.0,33.9
+Cinnamon,Spices,USDA generic,exact,171320,"Spices, cinnamon, ground",171320,"Spices, cinnamon, ground",yes,"171320:Spices, cinnamon, ground | 172231:Spices, turmeric, ground | 171326:Spices, nutmeg, ground",247,3.99,80.6,1.24,53.1
+Bay leaf,Spices,USDA generic,close,170917,"Spices, bay leaf",170917,"Spices, bay leaf",yes,"170917:Spices, bay leaf | 170921:Spices, coriander leaf, dried | 171329:Spices, paprika",313,7.61,75.0,8.36,26.3
+Asafoetida (hing),Spices,no USDA equivalent,none,,,,,yes,,,,,,
+Fenugreek seeds,Spices,USDA generic,exact,171324,"Spices, fenugreek seed",171324,"Spices, fenugreek seed",yes,"171324:Spices, fenugreek seed | 171330:Spices, poppy seed | 171323:Spices, fennel seed",323,23.0,58.4,6.41,24.6
+Ajwain,Spices,no USDA equivalent,none,,,,,yes,,,,,,
+Fennel seeds,Spices,USDA generic,exact,171323,"Spices, fennel seed",171323,"Spices, fennel seed",yes,"171323:Spices, fennel seed | 171330:Spices, poppy seed | 171324:Spices, fenugreek seed",345,15.8,52.3,14.9,39.8
+Kasuri methi,Spices,no USDA equivalent,none,,,,,yes,,,,,,
+Salt,Spices,USDA generic,exact,173468 746775,"Salt, table",173468,"Salt, table",yes,"173468:Salt, table | 746775:Salt, table, iodized",0.0,0.0,0.0,0.0,0.0
+Black salt,Spices,no USDA equivalent,none,,,,,yes,,,,,,
+Tamarind,Spices,USDA generic,exact,167763,"Tamarinds, raw",167763,"Tamarinds, raw",yes,"167763:Tamarinds, raw | 167786:Tamarind nectar, canned",239,2.8,62.5,0.6,5.1
+Chaat masala,Spices,no USDA equivalent,none,,,,,yes,,,,,,
+Sunflower oil,Oils & ghee,USDA generic,exact,1750349,"Oil, sunflower",1750349,"Oil, sunflower",yes,"1750349:Oil, sunflower | 172357:Oil, industrial, mid-oleic, sunflower | 172328:Oil, sunflower, linoleic, (partially hydrogenated)",,,,,
+Mustard oil,Oils & ghee,USDA generic,exact,172337,"Oil, mustard",172337,"Oil, mustard",yes,"172337:Oil, mustard | 1750350:Oil, safflower | 1750349:Oil, sunflower",884,0.0,0.0,100,0.0
+Groundnut oil,Oils & ghee,USDA generic,exact,171410,"Oil, peanut, salad or cooking",171410,"Oil, peanut, salad or cooking",yes,"171410:Oil, peanut, salad or cooking | 171413:Oil, olive, salad or cooking | 171411:Oil, soybean, salad or cooking",884,0.0,0.0,100,0.0
+Rice bran oil,Oils & ghee,USDA generic,exact,171013,"Oil, rice bran",171013,"Oil, rice bran",yes,"171013:Oil, rice bran | 1750350:Oil, safflower | 1750349:Oil, sunflower",884,0.0,0.0,100,0.0
+Coconut oil,Oils & ghee,USDA generic,exact,171412 330458,"Oil, coconut",330458,"Oil, coconut",yes,"330458:Oil, coconut | 171412:Oil, coconut | 173595:Oil, industrial, coconut, principal uses candy coatings, oil sprays, roasting nuts",892,0.0,0.0,99.1,0.0
+Ghee,Oils & ghee,USDA generic,exact,171314,"Butter, Clarified butter (ghee)",173412,"Butter oil, anhydrous",no,"173412:Butter oil, anhydrous | 171314:Butter, Clarified butter (ghee) | 2262074:Almond butter, creamy",900,0.0,0.0,100,0.0
+Sesame oil,Oils & ghee,USDA generic,exact,171016,"Oil, sesame, salad or cooking",171016,"Oil, sesame, salad or cooking",yes,"171016:Oil, sesame, salad or cooking | 171413:Oil, olive, salad or cooking | 171411:Oil, soybean, salad or cooking",884,0.0,0.0,100,0.0
+Vanaspati,Oils & ghee,USDA generic,approximate,171011,"Shortening, household, soybean (partially hydrogenated)-cottonseed (partially hydrogenated)",171422,"Vegetable oil, palm kernel",no,"171422:Vegetable oil, palm kernel | 174279:Soy sauce made from hydrolyzed vegetable protein | 167691:Vegetable oil-butter spread, reduced calorie",884,0.0,0.0,100,0.0
+Milk (toned),Dairy,USDA generic,approximate,171267 746778,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",746778,"Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D",yes,"746778:Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D | 171267:Milk, reduced fat, fluid, 2% milkfat, with added vitamin A and vitamin D | 172205:Milk, reduced fat, fluid, 2% milkfat, without added vitamin A and vitamin D",50.0,3.3,4.8,1.98,0.0
+Curd / dahi,Dairy,USDA generic,close,171284 2259793,"Yogurt, plain, whole milk",2259793,"Yogurt, plain, whole milk",yes,"2259793:Yogurt, plain, whole milk | 171284:Yogurt, plain, whole milk | 2259794:Yogurt, Greek, plain, whole milk",61.0,3.47,4.66,3.25,0.0
+Paneer,Dairy,no USDA equivalent,none,,,,,yes,,,,,,
+Butter,Dairy,USDA generic,exact,173410 790508,"Butter, salted",173410,"Butter, salted",yes,"173410:Butter, salted | 790508:Butter, stick, salted | 171314:Butter, Clarified butter (ghee)",717,0.85,0.06,81.1,0.0
+Cheese slices,Dairy,USDA generic,close,2647439,"Cheese, pasteurized process cheese food or product, American, singles",2647439,"Cheese, pasteurized process cheese food or product, American, singles",yes,"2647439:Cheese, pasteurized process cheese food or product, American, singles | 325198:Cheese, pasteurized process, American, vitamin D fortified | 171254:Cheese spread, pasteurized process, American",308,15.6,8.19,23.9,
+Buttermilk,Dairy,USDA generic,close,170874 2259792,"Milk, buttermilk, fluid, cultured, lowfat",170874,"Milk, buttermilk, fluid, cultured, lowfat",yes,"170874:Milk, buttermilk, fluid, cultured, lowfat | 167697:Milk, buttermilk, fluid, cultured, reduced fat | 172225:Milk, buttermilk, fluid, whole",40.0,3.31,4.79,1.07,0.0
+Fresh cream,Dairy,USDA generic,approximate,170858 170859,"Cream, fluid, light whipping",170859,"Cream, fluid, heavy whipping",yes,"170859:Cream, fluid, heavy whipping | 170858:Cream, fluid, light whipping | 2346386:Cream, heavy",292,2.17,2.96,30.9,0.0
+Khoa,Dairy,no USDA equivalent,none,,,,,yes,,,,,,
+Lassi,Dairy,no USDA equivalent,none,,,,,yes,,,,,,
+Milk powder,Dairy,USDA generic,exact,170876 173454,"Milk, dry, whole, with added vitamin D",170876,"Milk, dry, whole, with added vitamin D",yes,"170876:Milk, dry, whole, with added vitamin D | 173454:Milk, dry, whole, without added vitamin D | 172225:Milk, buttermilk, fluid, whole",496,26.3,38.4,26.7,0.0
+Condensed milk,Dairy,USDA generic,exact,171275,"Milk, canned, condensed, sweetened",171275,"Milk, canned, condensed, sweetened",yes,"171275:Milk, canned, condensed, sweetened | 2257044:Soy milk, sweetened, plain, refrigerated | 172194:Milk, canned, evaporated, with added vitamin A",321,7.91,54.4,8.7,0.0
+Ice cream,Dairy,USDA generic,close,167575,"Ice creams, vanilla",167575,"Ice creams, vanilla",yes,"167575:Ice creams, vanilla | 167573:Ice creams, vanilla, rich | 167572:Ice creams, vanilla, light",207,3.5,23.6,11.0,0.7
+Eggs,Eggs,USDA generic,exact,171287 748967,"Egg, whole, raw, fresh",171287,"Egg, whole, raw, fresh",yes,"171287:Egg, whole, raw, fresh | 172192:Egg, turkey, whole, fresh, raw | 172191:Egg, quail, whole, fresh, raw",143,12.6,0.72,9.51,0.0
+Brown eggs (country),Eggs,USDA generic,close,171287 748967,"Egg, whole, raw, fresh",171287,"Egg, whole, raw, fresh",yes,"171287:Egg, whole, raw, fresh | 172192:Egg, turkey, whole, fresh, raw | 172191:Egg, quail, whole, fresh, raw",143,12.6,0.72,9.51,0.0
+Chicken,Meat & fish,USDA generic,exact,171447,"Chicken, broilers or fryers, meat and skin, raw",171447,"Chicken, broilers or fryers, meat and skin, raw",yes,"171447:Chicken, broilers or fryers, meat and skin, raw | 172390:Chicken, broilers or fryers, wing, meat and skin, raw | 172385:Chicken, broilers or fryers, thigh, meat and skin, raw",215,18.6,0.0,15.1,0.0
+Mutton (goat),Meat & fish,USDA generic,exact,175303,"Game meat, goat, raw",175303,"Game meat, goat, raw",yes,"175303:Game meat, goat, raw | 175304:Game meat, goat, cooked, roasted | 175301:Game meat, elk, raw",109,20.6,0.0,2.31,0.0
+Rohu fish,Meat & fish,USDA generic,approximate,171952,"Fish, carp, raw",,,no,,127,17.8,0.0,5.6,0.0
+Prawns,Meat & fish,USDA generic,exact,175179 2684443,"Crustaceans, shrimp, raw",175179,"Crustaceans, shrimp, raw",yes,"175179:Crustaceans, shrimp, raw | 2684443:Crustaceans, shrimp, farm raised, raw | 175180:Crustaceans, shrimp, cooked",85.0,20.1,0.0,0.51,
+Pomfret,Meat & fish,USDA generic,none,,,173682,"Fish, pompano, florida, raw",no,"173682:Fish, pompano, florida, raw | 173683:Fish, pompano, florida, cooked, dry heat | 333476:Fish, pollock, raw",,,,,
+Surmai (seer fish),Meat & fish,USDA generic,approximate,175122,"Fish, mackerel, king, raw",175122,"Fish, mackerel, king, raw",yes,"175122:Fish, mackerel, king, raw | 175119:Fish, mackerel, Atlantic, raw | 173673:Fish, mackerel, spanish, raw",105,20.3,0.0,2.0,0.0
+Sardine,Meat & fish,USDA generic,approximate,175139,"Fish, sardine, Atlantic, canned in oil, drained solids with bone",173578,"Fish oil, sardine",no,"173578:Fish oil, sardine | 175162:Fish, wolffish, Atlantic, raw | 175129:Fish, pollock, Atlantic, raw",208,24.6,0.0,11.4,0.0
+Chicken sausages,Meat & fish,USDA generic,approximate,173880,"Sausage, chicken or turkey, Italian style,  lower sodium",172953,"Sausage, Polish, beef with chicken, hot",no,"172953:Sausage, Polish, beef with chicken, hot | 174605:Sausage, chicken, beef, pork, skinless, smoked | 174584:Sausage, smoked link sausage, pork",183,21.4,14.2,4.46,0.0
+Biscuits (Parle-G type),Snacks,product label (Open Food Facts),none,,,,,yes,,,,,,
+Potato chips,Snacks,product label (Open Food Facts),close,169677,"Snacks, potato chips, plain, salted",,,no,,532,6.39,53.8,34.0,3.1
+Namkeen / bhujia,Snacks,product label (Open Food Facts),none,,,,,yes,,,,,,
+Instant noodles,Snacks,product label (Open Food Facts),close,171177,"Soup, ramen noodle, any flavor, dry",,,no,,440,10.2,60.3,17.6,2.9
+Peanuts,Snacks,USDA generic,exact,172430 2515376,"Peanuts, all types, raw",2515376,"Peanuts, raw",yes,"2515376:Peanuts, raw | 172430:Peanuts, all types, raw | 174263:Peanuts, spanish, raw",567,25.8,16.1,49.2,8.5
+Cashew nuts,Snacks,USDA generic,exact,170162 2515374,"Nuts, cashew nuts, raw",2515374,"Nuts, cashew nuts, raw",yes,"2515374:Nuts, cashew nuts, raw | 170162:Nuts, cashew nuts, raw | 169421:Nuts, cashew nuts, dry roasted, with salt added",553,18.2,30.2,43.8,3.3
+Makhana,Snacks,product label (Open Food Facts),none,,,,,yes,,,,,,
+Chocolate,Snacks,product label (Open Food Facts),close,167587,"Candies, milk chocolate",,,no,,535,7.65,59.4,29.7,3.4
+Papad,Snacks,product label (Open Food Facts),exact,168106,Papad,,,no,,371,25.6,59.9,3.25,18.6
+Pickle (achar),Snacks,product label (Open Food Facts),none,,,,,yes,,,,,,
+Tomato ketchup,Snacks,product label (Open Food Facts),exact,168556,Catsup,,,no,,101,1.04,27.4,0.1,0.3
+Cornflakes,Snacks,product label (Open Food Facts),none,,,,,yes,,,,,,
+Khakhra,Snacks,product label (Open Food Facts),none,,,,,yes,,,,,,
+Popcorn,Snacks,USDA generic,close,167959 170246,"Snacks, popcorn, air-popped",167959,"Snacks, popcorn, air-popped",yes,"167959:Snacks, popcorn, air-popped | 170246:Snacks, popcorn, air-popped (Unsalted) | 170247:Snacks, popcorn, oil-popped, white popcorn, salt added",387,12.9,77.8,4.54,14.5
+Tea leaves,Beverages,product label (Open Food Facts),none,,,,,yes,,,,,,
+Coffee powder,Beverages,USDA generic,exact,171893,"Beverages, coffee, instant, regular, powder",171893,"Beverages, coffee, instant, regular, powder",yes,"171893:Beverages, coffee, instant, regular, powder | 174133:Beverages, coffee, instant, decaffeinated, powder | 174126:Beverages, coffee, instant, regular, half the caffeine",353,12.2,75.4,0.5,0.0
+Green tea,Beverages,product label (Open Food Facts),none,,,,,yes,,,,,,
+Malted drink (Horlicks/Bournvita),Beverages,product label (Open Food Facts),approximate,173220 174866,"Beverages, Malted drink mix, natural, powder, dairy based.",,,no,,428,14.3,71.2,9.52,0.1
+Fruit juice (packaged),Beverages,product label (Open Food Facts),none,,,,,yes,,,,,,
+Soft drink / cola,Beverages,product label (Open Food Facts),close,174852,"Beverages, carbonated, cola, regular",,,no,,42.0,0.0,10.4,0.25,0.0
+Packaged drinking water,Beverages,product label (Open Food Facts),approximate,173647,"Beverages, water, tap, drinking",,,no,,0.0,0.0,0.0,0.0,0.0
+Coconut water,Beverages,USDA generic,exact,170174,"Nuts, coconut water (liquid from coconuts)",170174,"Nuts, coconut water (liquid from coconuts)",yes,"170174:Nuts, coconut water (liquid from coconuts) | 170172:Nuts, coconut milk, raw (liquid expressed from grated meat and water) | 170173:Nuts, coconut milk, canned (liquid expressed from grated meat and water)",19.0,0.72,3.71,0.2,1.1
+Squash / sharbat,Beverages,product label (Open Food Facts),none,,,,,yes,,,,,,
+Energy/sports drink,Beverages,product label (Open Food Facts),none,,,,,yes,,,,,,
+White bread,Bakery,product label (Open Food Facts),close,174924,"Bread, white, commercially prepared (includes soft bread crumbs)",,,no,,266,8.85,49.4,3.33,2.7
+Brown bread,Bakery,product label (Open Food Facts),approximate,172688,"Bread, whole-wheat, commercially prepared",,,no,,252,12.4,42.7,3.5,6.0
+Pav,Bakery,product label (Open Food Facts),close,172793,"Rolls, dinner, plain, commercially prepared (includes brown-and-serve)",,,no,,310,10.9,52.0,6.47,2.0
+Rusk,Bakery,product label (Open Food Facts),close,174981,"Crackers, rusk toast",,,no,,407,13.5,72.3,7.2,
+Cake,Bakery,product label (Open Food Facts),none,,,,,yes,,,,,,
+Cookies,Bakery,product label (Open Food Facts),approximate,172819 174950,"Cookies, butter, commercially prepared, unenriched",,,no,,467,6.1,68.9,18.8,0.8
+Vermicelli (seviyan),Bakery,product label (Open Food Facts),none,,,,,yes,,,,,,
+Pasta / macaroni,Bakery,USDA generic,exact,168927 169736,"Pasta, dry, unenriched",169736,"Pasta, dry, enriched",yes,"169736:Pasta, dry, enriched | 168927:Pasta, dry, unenriched | 168899:Pasta, gluten-free, corn, dry",371,13.0,74.7,1.51,3.2
+Sugar,Sweeteners & staples,USDA generic,exact,169655 746784,"Sugars, granulated",746784,"Sugars, granulated",yes,"746784:Sugars, granulated | 169655:Sugars, granulated | 169658:Sugars, maple",387,0.0,100,0.0,0.0
+Jaggery,Sweeteners & staples,no USDA equivalent,none,,,,,yes,,,,,,
+Honey,Sweeteners & staples,USDA generic,exact,169640,Honey,169640,Honey,yes,"169640:Honey | 172943:Honey roll sausage, beef",304,0.3,82.4,0.0,0.2
+Rock sugar (mishri),Sweeteners & staples,USDA generic,approximate,169655 746784,"Sugars, granulated",746784,"Sugars, granulated",yes,"746784:Sugars, granulated | 169655:Sugars, granulated | 169658:Sugars, maple",387,0.0,100,0.0,0.0
+Sesame seeds (til),Sweeteners & staples,USDA generic,exact,170150,"Seeds, sesame seeds, whole, dried",170150,"Seeds, sesame seeds, whole, dried",yes,"170150:Seeds, sesame seeds, whole, dried | 169412:Seeds, sesame seed kernels, dried (decorticated) | 168587:Seeds, sisymbrium sp. seeds, whole, dried",573,17.7,23.4,49.7,11.8
+Peanut butter,Sweeteners & staples,USDA generic,exact,172470 2262072,"Peanut butter, smooth style, without salt",172470,"Peanut butter, smooth style, without salt",yes,"172470:Peanut butter, smooth style, without salt | 172459:Peanut butter, smooth, vitamin and mineral fortified | 172458:Peanut butter, smooth, reduced fat",598,22.2,22.3,51.4,5.0
+Jam,Sweeteners & staples,USDA generic,close,169641,Jams and preserves,169641,Jams and preserves,yes,"169641:Jams and preserves | 170645:Jams and preserves, apricot | 167706:Jams, preserves, marmalade, reduced sugar",278,0.37,68.9,0.07,1.1
+Vinegar,Sweeteners & staples,USDA generic,exact,172237,"Vinegar, distilled",172237,"Vinegar, distilled",yes,"172237:Vinegar, distilled | 173469:Vinegar, cider | 172241:Vinegar, balsamic",18.0,0.0,0.04,0.0,0.0
+Baking soda,Sweeteners & staples,USDA generic,exact,175040,"Leavening agents, baking soda",175040,"Leavening agents, baking soda",yes,"175040:Leavening agents, baking soda | 175041:Leavening agents, cream of tartar | 172804:Leavening agents, baking powder, double-acting, straight phosphate",0.0,0.0,0.0,0.0,0.0
+Dry coconut (copra),Sweeteners & staples,USDA generic,close,170170,"Nuts, coconut meat, dried (desiccated), not sweetened",168585,"Nuts, coconut meat, dried (desiccated), creamed",no,"168585:Nuts, coconut meat, dried (desiccated), creamed | 170579:Nuts, coconut meat, dried (desiccated), toasted | 170170:Nuts, coconut meat, dried (desiccated), not sweetened",660,6.88,23.6,64.5,16.3
+Dishwash bar,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Dishwash liquid,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Detergent powder,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Liquid detergent,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Floor cleaner,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Toilet cleaner,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Glass cleaner,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Phenyl,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Scrub pad,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Garbage bags,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Mosquito repellent,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Fabric softener,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Naphthalene balls,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Kitchen towel / tissue,Cleaning,non-food: no nutrition,,,,,,,,,,,,
+Bath soap,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Shampoo,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Toothpaste,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Toothbrush,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Hair oil (coconut),Personal care,non-food: no nutrition,,,,,,,,,,,,
+Body lotion,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Face wash,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Handwash,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Sanitary pads,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Diapers,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Shaving cream,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Razor,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Deodorant,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Talcum powder,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Hand sanitizer,Personal care,non-food: no nutrition,,,,,,,,,,,,
+Toilet paper,Personal care,non-food: no nutrition,,,,,,,,,,,,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { pickVoice } from "../components/ui/use-live-voice";
-import { speakable, voiceQuality } from "./speech";
+import { speakable, speechChunks, voiceQuality } from "./speech";
 
 describe("a reply said out loud", () => {
   it("gives directions through screens instead of reading the arrow", () => {
@@ -38,5 +38,28 @@ describe("choosing a browser voice", () => {
     ];
     expect(pickVoice(voices, "en-IN")?.name).toBe("Microsoft Neerja Online (Natural) - English (India)");
     expect(voiceQuality({ name: "eSpeak" })).toBeLessThan(0);
+  });
+});
+
+describe("speechChunks", () => {
+  it("speaks the first sentence on its own, then the rest in whole sentences", () => {
+    const reply = "You have three things today. Asmi has a maths test at 10 am. The electricity bill is due. Dinner is pasta.";
+    expect(speechChunks(reply)).toEqual(["You have three things today.", "Asmi has a maths test at 10 am. The electricity bill is due. Dinner is pasta."]);
+  });
+
+  it("joins a first sentence too short to be worth a request with the next one", () => {
+    expect(speechChunks("Done. Milk is on the list. Anything else?")).toEqual(["Done. Milk is on the list.", "Anything else?"]);
+  });
+
+  it("never splits a sentence, and keeps long replies to a few pieces", () => {
+    const long = Array.from({ length: 12 }, (_, i) => `This is sentence number ${i + 1} of a long answer.`).join(" ");
+    const chunks = speechChunks(long, { rest: 120 });
+    expect(chunks.join(" ")).toBe(long);
+    for (const chunk of chunks) expect(chunk).toMatch(/\.$/);
+  });
+
+  it("returns one piece for one sentence, and none for nothing", () => {
+    expect(speechChunks("Nothing is due today")).toEqual(["Nothing is due today"]);
+    expect(speechChunks("   ")).toEqual([]);
   });
 });

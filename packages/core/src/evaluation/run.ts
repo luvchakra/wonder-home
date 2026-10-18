@@ -1,5 +1,5 @@
 import { classifyIntake } from "../ai/classify-intake";
-import { CLAUDE_MODEL, createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, GEMINI_MODEL, OPENAI_MODEL } from "../ai/model-client";
+import { CLAUDE_ANSWER_MODEL, CLAUDE_MODEL, CLAUDE_UNDERSTANDING_MODEL, createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, GEMINI_MODEL, OPENAI_MODEL } from "../ai/model-client";
 import type { ModelKey } from "../ai/model-key";
 import { GOLDEN_CASES } from "./cases";
 import { runCase, type Models } from "./runners";
@@ -24,7 +24,13 @@ export function modelsFor(target: RunTarget): { models: Models; model: string } 
       : target.provider === "google"
         ? createGeminiUnderstanding(target.key)
         : createOpenAIUnderstanding(target.key);
-  const model = target.provider === "anthropic" ? CLAUDE_MODEL : target.provider === "google" ? GEMINI_MODEL : OPENAI_MODEL;
+  // Anthropic turns run on tiered models (understanding, answers) and HomeSend on the main one: the record names all three.
+  const model =
+    target.provider === "anthropic"
+      ? `understand ${CLAUDE_UNDERSTANDING_MODEL}, answer ${CLAUDE_ANSWER_MODEL}, documents ${CLAUDE_MODEL}`
+      : target.provider === "google"
+        ? GEMINI_MODEL
+        : OPENAI_MODEL;
   return {
     model,
     models: {
