@@ -125,6 +125,20 @@ function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading):
 }
 
 /** What to say when nothing on record answers the question. Honest, specific, and never padded. */
+/**
+ * A health question from someone who may not read health (a child), whose own
+ * appointment is on record: they hear that it is there and who can see it,
+ * never what it is. The owner's decision, 2026-10-18. Only ever about the
+ * asker's own appointments — another person's stay unmentioned.
+ */
+export function heldForAdultsAnswer(reading: BrainReading, viewerMemberId: string, count: number): string | null {
+  if (count <= 0) return null;
+  if (!reading.focus.has("health") && !reading.domains.has("health")) return null;
+  if (reading.people.some((person) => person.memberId !== viewerMemberId)) return null;
+  const what = count === 1 ? "a health appointment" : `${count} health appointments`;
+  return `You have ${what} coming up. The adults in your family can see the details, so ask one of them.`;
+}
+
 export function unknownAnswer(reading: BrainReading): string {
   const who = reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
   const about = [who ? `for ${who}` : "", reading.time ? reading.time.label : ""].filter(Boolean).join(" ");

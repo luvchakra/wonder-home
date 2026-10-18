@@ -21,4 +21,13 @@ export const memberInviteHi: AreaCatalog<typeof memberInviteEn> = {
   "memberInvite.message": "{inviter} ने आपको WonderHome पर {household} से जुड़ने के लिए आमंत्रित किया है। अंदर आने के लिए यह लिंक खोलें:",
   "memberInvite.factEmail": "साइन-इन ईमेल",
   "memberInvite.signsIn": "साइन इन करते हैं",
+  "memberInvite.emailTo": "{email} पर आमंत्रण ईमेल करें",
+  "memberInvite.emailing": "भेजा जा रहा है…",
+  "memberInvite.emailed": "{email} पर भेज दिया गया। उनसे इनबॉक्स देखने को कहें, और न मिले तो स्पैम में।",
+  "memberInvite.emailFailed": "ईमेल नहीं भेजा जा सका। नीचे दिया लिंक अब भी काम करता है, इसे किसी और तरीके से भेजें।",
+  "memberInvite.linkOnly": "इसके बजाय लिंक बनाएँ",
+  "memberInvite.emailGreeting": "नमस्ते {name},",
+  "memberInvite.emailAction": "{household} से जुड़ें",
+  "memberInvite.emailExpiry": "यह लिंक एक बार काम करता है और 7 दिन बाद बंद हो जाता है।",
+  "memberInvite.emailFooter": "अगर आपको इसकी उम्मीद नहीं थी, तो इस ईमेल को अनदेखा कर सकते हैं।",
 } as const;

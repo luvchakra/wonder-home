@@ -37,6 +37,7 @@
     "./ai/*": "./src/ai/*.ts",
     "./voice/*": "./src/voice/*.ts",
     "./identity/*": "./src/identity/*.ts",
+    "./email/*": "./src/email/*.ts",
     "./db/*": "./src/db/*.ts",
     "./observability/*": "./src/observability/*.ts",
     "./platform/*": "./src/platform/*.ts",
@@ -63,6 +64,7 @@
     "@supabase/supabase-js": "^2.115.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
+    "nodemailer": "^10.1.2",
     "openai": "^7.20.0",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
@@ -71,6 +73,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5.9.3",

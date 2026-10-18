@@ -22,4 +22,13 @@ export const memberInviteEn = {
   "memberInvite.message": "{inviter} invited you to join {household} on WonderHome. Open this link to come in:",
   "memberInvite.factEmail": "Sign-in email",
   "memberInvite.signsIn": "Signs in",
+  "memberInvite.emailTo": "Email the invite to {email}",
+  "memberInvite.emailing": "Sending…",
+  "memberInvite.emailed": "Sent to {email}. Ask them to look in their inbox, and in spam if it isn't there.",
+  "memberInvite.emailFailed": "The email could not be sent. The link below still works, so share it another way.",
+  "memberInvite.linkOnly": "Create a link instead",
+  "memberInvite.emailGreeting": "Hi {name},",
+  "memberInvite.emailAction": "Join {household}",
+  "memberInvite.emailExpiry": "The link works once and stops working after 7 days.",
+  "memberInvite.emailFooter": "If you weren't expecting this, you can ignore this email.",
 } as const;

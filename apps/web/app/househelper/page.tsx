@@ -41,6 +41,7 @@ import {
   ArrangeCoverButton,
   BackupServiceRowControls,
 } from "../_components/backup-service-forms";
+import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 
 import { MemberDetail } from "../_components/member-detail";
@@ -172,7 +173,7 @@ export default async function HousehelperPage({
   const todayDow = now.getDay();
   const admin = isHouseholdAdmin(membership);
   // Admins invite a helper the household keeps without an account to sign in as themselves.
-  const invite = admin ? { householdName: membership.household.name, inviterName: membership.displayName } : null;
+  const invite = admin ? { householdName: membership.household.name, inviterName: membership.displayName, canEmail: platformMailConfig() !== null } : null;
   const emails = await readMemberEmails(supabase, membership.household.id).catch(() => new Map<string, string>());
   const helperOptions = helpers.map((helper) => ({
     id: helper.id,

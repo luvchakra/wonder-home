@@ -4,7 +4,7 @@ import { describeLocalNow } from "../context/format";
 import { isoDay } from "../context/normalize";
 import type { HouseholdContextItem } from "../context/types";
 import type { ConversationTurn } from "../conversation/engine";
-import { answeringFacts, composeFromFacts, composeGrounded, unknownAnswer } from "./answer";
+import { answeringFacts, composeFromFacts, composeGrounded, heldForAdultsAnswer, unknownAnswer } from "./answer";
 import { gateCandidates, groundFacts, type GroundedFact } from "./grounding";
 import { readBrainQuestion, type BrainReading } from "./question";
 import type { ViolationKind } from "./validate";
@@ -48,6 +48,8 @@ export type HomeBrainTurn = {
   compose: AnswerComposer | null;
   /** Most facts that may go in one answer. */
   factBudget: number;
+  /** The asker's own upcoming appointments they may not read (a child's): a count, never a detail. */
+  heldForAdults?: number;
 };
 
 export type HomeBrainAnswer = {
@@ -75,6 +77,11 @@ export async function answerWithHomeBrain(turn: HomeBrainTurn): Promise<HomeBrai
 
   // A person who cannot be resolved is asked about, never guessed (§17: ambiguity creates focused clarification).
   if (reading.clarification) return { ...base, text: reading.clarification, mode: "clarify", source: "clarify" };
+
+  // A child asking about their own appointment is told it is there and that
+  // the adults can see it — no model, no detail, nothing else to ground.
+  const held = heldForAdultsAnswer(reading, turn.viewer.memberId, turn.heldForAdults ?? 0);
+  if (held) return { ...base, text: held, mode: "answer", source: "deterministic" };
 
   const facts = groundFacts(turn.items, reading);
   const validation = { attempts: 0, rejected: [] as ViolationKind[] };

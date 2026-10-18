@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Mail, Share2, UserPlus } from "lucide-react";
+import { Check, Copy, Mail, Send, Share2, UserPlus } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -8,7 +8,7 @@ import { Button } from "@wonderhome/core/ui/button";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import { inviteMemberToSignInAction } from "../(auth)/household-actions";
+import { emailMemberInviteAction, inviteMemberToSignInAction } from "../(auth)/household-actions";
 
 export type MemberInviteLabels = {
   button: string;
@@ -29,6 +29,11 @@ export type MemberInviteLabels = {
   subject: string;
   /** The message before the link, in the inviter's language. */
   message: string;
+  emailTo: string;
+  emailing: string;
+  emailed: string;
+  emailFailed: string;
+  linkOnly: string;
 };
 
 /**
@@ -37,35 +42,60 @@ export type MemberInviteLabels = {
  *
  * The link is made on request rather than when the sheet opens, because a
  * new link stops the earlier one and an Admin only looking should not undo a
- * link already sent. Then three ways to pass it on: the Admin's own email app
- * (WonderHome has no mail provider, so it never claims to send anything), the
- * phone's share sheet — WhatsApp and the rest — where the browser has one, and
- * a copy.
+ * link already sent.
+ *
+ * When the deployment can send mail and the member has an email on record,
+ * the first choice is WonderHome emailing the link itself (from
+ * connect@wonderapps.biz, to the address on record — the server reads it, the
+ * browser never names it). Otherwise, or after, three ways to pass the link
+ * on: the Admin's own email app (only when WonderHome did not send it, so
+ * there is never a second "send email"), the phone's share sheet — WhatsApp
+ * and the rest — where the browser has one, and a copy.
  */
 export function MemberInviteControl({
   householdId,
   memberId,
   email,
+  canEmail,
   labels,
 }: {
   householdId: string;
   memberId: string;
   email: string | null;
+  /** Whether the deployment has mail set up; WonderHome sends only to an email on record. */
+  canEmail: boolean;
   labels: MemberInviteLabels;
 }) {
   const [open, setOpen] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [mailed, setMailed] = useState<"sent" | "failed" | null>(null);
+  const [mode, setMode] = useState<"email" | "link" | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
+  const willEmail = canEmail && Boolean(email);
+
   const create = () => {
     setFailed(false);
+    setMode("link");
     startTransition(async () => {
       const result = await inviteMemberToSignInAction(householdId, memberId);
       if ("path" in result) setLink(`${window.location.origin}${result.path}`);
       else setFailed(true);
+    });
+  };
+
+  const sendEmail = () => {
+    setFailed(false);
+    setMode("email");
+    startTransition(async () => {
+      const result = await emailMemberInviteAction(householdId, memberId);
+      if ("path" in result) {
+        setLink(`${window.location.origin}${result.path}`);
+        setMailed(result.sent ? "sent" : "failed");
+      } else setFailed(true);
     });
   };
 
@@ -83,17 +113,27 @@ export function MemberInviteControl({
           {failed ? <Alert>{labels.failed}</Alert> : null}
           {link ? (
             <div className="space-y-3">
-              <p className="text-sm font-medium" role="status">
-                {labels.ready}
-              </p>
+              {mailed === "sent" ? (
+                <p className="text-sm font-medium text-[var(--wh-handled)]" role="status">
+                  {labels.emailed}
+                </p>
+              ) : mailed === "failed" ? (
+                <Alert tone="attention">{labels.emailFailed}</Alert>
+              ) : (
+                <p className="text-sm font-medium" role="status">
+                  {labels.ready}
+                </p>
+              )}
               <p className="rounded-[var(--wh-radius-xs)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs break-all">{link}</p>
               <div className="grid gap-2 sm:grid-cols-3">
-                <a
-                  href={mailto}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary)] px-4 text-sm font-medium text-[var(--wh-primary-foreground)] hover:bg-[var(--wh-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-                >
-                  <Mail aria-hidden className="size-4" /> {labels.sendEmail}
-                </a>
+                {mailed === "sent" ? null : (
+                  <a
+                    href={mailto}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary)] px-4 text-sm font-medium text-[var(--wh-primary-foreground)] hover:bg-[var(--wh-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                  >
+                    <Mail aria-hidden className="size-4" /> {labels.sendEmail}
+                  </a>
+                )}
                 {canShare ? (
                   <Button
                     type="button"
@@ -119,6 +159,15 @@ export function MemberInviteControl({
                 </Button>
               </div>
               <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.newLinkNote}</p>
+            </div>
+          ) : willEmail ? (
+            <div className="space-y-2">
+              <Button type="button" className="w-full" onClick={sendEmail} disabled={pending}>
+                <Send aria-hidden className="size-4" /> {pending && mode === "email" ? labels.emailing : labels.emailTo}
+              </Button>
+              <Button type="button" variant="secondary" className="w-full" onClick={create} disabled={pending}>
+                {pending && mode === "link" ? labels.creating : labels.linkOnly}
+              </Button>
             </div>
           ) : (
             <Button type="button" className="w-full" onClick={create} disabled={pending}>

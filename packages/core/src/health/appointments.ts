@@ -117,6 +117,25 @@ export async function listAppointments(
   return (data ?? []).map((row) => toAppointment(row as Row));
 }
 
+/**
+ * How many of a member's own appointments are still to come — the count only,
+ * never a detail. For a member who may not read health (a child): their own
+ * rows are theirs under RLS (`wh.may_see_health`), and the owner decided on
+ * 2026-10-18 that a child is told one is on record and that the adults in the
+ * family can see the details, rather than told nothing is there.
+ */
+export async function countUpcomingAppointments(supabase: SupabaseClient, householdId: string, memberId: string, now: Date): Promise<number> {
+  const { count, error } = await supabase
+    .from("health_appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("household_id", householdId)
+    .eq("member_id", memberId)
+    .in("status", ["proposed", "confirmed"])
+    .gte("starts_at", now.toISOString());
+  if (error) throw new Error(`countUpcomingAppointments failed: ${error.code ?? "unknown"}`);
+  return count ?? 0;
+}
+
 export async function getAppointment(supabase: SupabaseClient, householdId: string, id: string): Promise<HealthAppointment | null> {
   const { data, error } = await supabase.from("health_appointments").select(SELECT).eq("household_id", householdId).eq("id", id).maybeSingle();
   if (error) throw new Error(`getAppointment failed: ${error.code ?? "unknown"}`);
