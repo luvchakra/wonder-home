@@ -5,7 +5,7 @@
  * Mobile renders them as a bottom tab bar, desktop as a left sidebar, but the
  * set and order are the same on both. Do not invent a different nav model.
  */
-export type PrimaryNavKey = "home" | "today" | "ai" | "family" | "more";
+export type PrimaryNavKey = "home" | "calendar" | "ai" | "family" | "more";
 
 export type PrimaryNavItem = {
   key: PrimaryNavKey;
@@ -15,6 +15,8 @@ export type PrimaryNavItem = {
   icon: "house" | "calendar-check" | "mic" | "users" | "grid";
   /** Short description of what the area answers, used for a11y and empty states. */
   purpose: string;
+  /** Other paths that belong to this area, so the tab stays lit on them. */
+  also?: readonly string[];
 };
 
 export const PRIMARY_NAVIGATION: readonly PrimaryNavItem[] = [
@@ -26,11 +28,14 @@ export const PRIMARY_NAVIGATION: readonly PrimaryNavItem[] = [
     purpose: "What needs attention and what WonderHome handled",
   },
   {
-    key: "today",
-    label: "Today",
-    href: "/today",
+    // D1 (design/FAMILY-CALENDAR-PHASE0.md): the Today tab became Calendar.
+    // Today's plan is still one tap away from the Calendar's day view.
+    key: "calendar",
+    label: "Calendar",
+    href: "/calendar",
     icon: "calendar-check",
-    purpose: "Your actionable plan for today",
+    purpose: "The family calendar, and your plan for today",
+    also: ["/today"],
   },
   {
     key: "ai",
@@ -64,10 +69,14 @@ export function activeNavKey(pathname: string): PrimaryNavKey {
   if (normalized === "/") return "home";
 
   let active: PrimaryNavItem | undefined;
+  let depth = 0;
   for (const item of PRIMARY_NAVIGATION) {
     if (item.href === "/") continue;
-    if (normalized === item.href || normalized.startsWith(`${item.href}/`)) {
-      if (!active || item.href.length > active.href.length) active = item;
+    for (const href of [item.href, ...(item.also ?? [])]) {
+      if ((normalized === href || normalized.startsWith(`${href}/`)) && href.length > depth) {
+        active = item;
+        depth = href.length;
+      }
     }
   }
   return active?.key ?? "home";

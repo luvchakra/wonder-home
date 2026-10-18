@@ -133,12 +133,20 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.summary": "现在需要你的事，以及这一天的样子。",
   "help.guide.today-and-home.body.1":
     "首页先显示需要人来处理的事，然后是 WonderHome 悄悄处理好的事。已处理的数量是它检查过并确认没问题的事——这个数字是真实的，不是装饰。每张卡片都能展开，看到数字背后的条目。",
-  "help.guide.today-and-home.body.2":
-    "“今天”把一天显示成时间线，有三种视图：你的一天、家人的一天和整个家的一天。上面的条目是承诺和截止时间——一顿必须做好的饭、一张到期的账单、一节课——从来不是要打勾的家务。家庭视图还会向前看两周，看哪些东西可能用完或到期。",
+  "help.guide.today-and-home.body.2": "“今天的计划”把一天显示成时间线，有三种视图：你的一天、家人的一天和整个家的一天。从日历中今天的日视图打开它。上面的条目是承诺和截止时间——一顿必须做好的饭、一张到期的账单、一节课——从来不是要打勾的家务。家庭视图还会向前看两周，看哪些东西可能用完或到期。",
   "help.guide.today-and-home.body.3": "首页和“今天”上的“安排点什么”，不用离开页面就能添加一个家庭活动。",
-  "help.guide.today-and-home.body.4": "在手机上，向左或向右滑动，就能在首页、今天、HomeTalk、家人和更多之间切换。",
+  "help.guide.today-and-home.body.4": "在手机上，向左或向右滑动，就能在首页、日历、HomeTalk、家人和更多之间切换。",
   "help.guide.today-and-home.body.5":
     "在家庭状态下方，首页会显示你家的宠物（如果有的话）。每只都会展开和家庭页面相同的信息；要修改，请到家庭页面。",
+
+  // Calendar
+  "help.guide.calendar.title": "日历",
+  "help.guide.calendar.summary": "家里的所有安排，按月、周、日或年查看。",
+  "help.guide.calendar.body.1": "日历是第二个标签页。它默认显示月视图：每一天用彩色圆点表示每项安排（在较宽的屏幕上会显示前几个标题），点一下某一天，下方就会列出当天的安排。周、日和年视图点一下就能切换。在手机上你还可以双指缩放：张开两指从年视图依次进入月、周、日视图，捏合两指则返回。在日历上向左或向右滑动，可以切换到下一个或上一个月、周或日。",
+  "help.guide.calendar.body.2": "它会显示家庭活动、每个人资料里的生日和特别日子，以及公共假日。假日来自印度政府为中央政府机关公布的假日名单，每一项都注明了这个来源；在“筛选”中可以选择全国或德里，也可以关闭。每个条目都会打开它所属的页面——活动会打开它自己的页面，在那里修改。",
+  "help.guide.calendar.body.3": "“添加”会把一个计划放进日历：做什么、什么时候（或全天）、谁参加，以及类别。在“更多选项”里，你可以设置重复，选择谁能看到——所有人、仅参加的人或仅你自己——并添加备注。添加之前，WonderHome 会检查时间冲突并告诉你与什么冲突；如果有人在忙你看不到的事，只会显示为“有事”。你仍然可以照样添加。",
+  "help.guide.calendar.body.4": "打开重复活动中的某一天，它的安排人可以只跳过这一天，或者恢复它；其余的照常进行。提议中的计划有虚线边框，并标着“提议中”。",
+  "help.guide.calendar.body.5": "筛选只改变你自己看到的内容：类别、成员、只看与你有关的、只看已确认的计划、假日，以及日历打开时显示的视图。今天的计划——饭菜、账单、学校和需要你的事——在今天这一天点一下就能打开。",
 
   "help.guide.notifications.title": "提醒和通知",
   "help.guide.notifications.summary": "关于真实的事，发给一个人，在合适的时候——处理完就安静。",
@@ -305,6 +313,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.faq.health-visibility.a": "只有你，除非你分享。你可以分享给自己选择的人，或者只把实用的部分分享给全家，并且随时可以收回。监护人始终可以看到自己孩子的信息。",
   "help.faq.google-calendar.q": "为什么我还不能连接我的 Google Calendar？",
   "help.faq.google-calendar.a": "“设置 → 已连接的账户”显示哪些连接对你的 WonderHome 可用。某项暂不可用时，它会直说，而不是给出一个点了没去处的按钮。",
+  "help.faq.calendar-private.q": "别人能看到我的私人活动吗？",
+  "help.faq.calendar-private.a": "不能。设为“仅我自己”的活动只有你能看到——连管理员也打不开——设为“仅参加的人”的活动只有你和你邀请的人能看到。如果有人在同一时间安排了有你参加的事，WonderHome 可能会告诉对方你那时有事，但永远不会说是什么事。",
   "help.faq.own-ai-account.q": "我可以用自己的 AI 服务商账户吗？",
   "help.faq.own-ai-account.a": "可以。管理员可以在“设置 → AI 助手”中添加你家自己的密钥，它会优先于 WonderHome 的密钥使用。",
   "help.faq.prepared-not-done.q": "为什么 WonderHome 说“已准备”而不是“已完成”？",

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { householdInstant } from "@wonderhome/core/school/times";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
@@ -9,60 +8,106 @@ import { may } from "@wonderhome/core/billing/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { advanceGift, createEvent, GIFT_STEPS, resolveConflict, settleEventAction as settleEvent } from "@wonderhome/core/family/repository";
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
+import { localMoment } from "@wonderhome/core/calendar/dates";
+import { EVENT_CATEGORIES, EVENT_VISIBILITIES } from "@wonderhome/core/calendar/projection";
+import { parseRecurrence, RECURRENCE_FREQUENCIES } from "@wonderhome/core/calendar/recurrence";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 
+import { clashesFor, eventWindow } from "../_lib/event-window";
 import type { ActionState } from "./actions";
 
 /**
- * Putting something in the family calendar from the Family screen.
+ * Putting something in the family calendar, from Family, Today, Home or the
+ * Calendar (story 12-009) — one form, one action.
  *
  * The same rules as the API: membership, then entitlement, then the domain
- * service. Protected time is created here and never moved here.
+ * service. Protected time is created here and never moved here. Before a
+ * timed event is written, clashes with what this person can see — and, for
+ * the people going, "busy" from free/busy, which never says why — are said in
+ * words; the form then offers "Add anyway".
  */
+export type EventActionState = ActionState & { clashes?: string[] };
+
 const eventSchema = z.object({
   householdId: z.uuid(),
   title: z.string().trim().min(1, { error: "Give it a name." }).max(200),
   kind: z.enum(EVENT_KINDS).default("family_time"),
-  startsAt: z.string().min(1, { error: "Pick a start." }),
-  endsAt: z.string().min(1, { error: "Pick an end." }),
+  allDay: z.enum(["on"]).optional(),
+  startsAt: z.string().optional(),
+  endsAt: z.string().optional(),
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional(),
   protected: z.enum(["on"]).optional(),
   location: z.string().trim().max(200).optional(),
+  memberIds: z.array(z.uuid()).max(30).default([]),
+  category: z.enum(EVENT_CATEGORIES).optional(),
+  visibility: z.enum(EVENT_VISIBILITIES).default("household"),
+  repeat: z.enum(["none", ...RECURRENCE_FREQUENCIES]).default("none"),
+  repeatUntil: z.iso.date().optional(),
+  notes: z.string().trim().max(1000).optional(),
+  confirmClash: z.enum(["on"]).optional(),
 });
 
-export async function createEventAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+const optional = (value: FormDataEntryValue | null) => (value === null || value === "" ? undefined : value);
+
+export async function createEventAction(_previous: EventActionState, formData: FormData): Promise<EventActionState> {
   const parsed = eventSchema.safeParse({
     householdId: formData.get("householdId"),
     title: formData.get("title"),
-    kind: formData.get("kind") || undefined,
-    startsAt: formData.get("startsAt"),
-    endsAt: formData.get("endsAt"),
-    protected: formData.get("protected") || undefined,
-    location: formData.get("location") || undefined,
+    kind: optional(formData.get("kind")),
+    allDay: optional(formData.get("allDay")),
+    startsAt: optional(formData.get("startsAt")),
+    endsAt: optional(formData.get("endsAt")),
+    startDate: optional(formData.get("startDate")),
+    endDate: optional(formData.get("endDate")),
+    protected: optional(formData.get("protected")),
+    location: optional(formData.get("location")),
+    memberIds: formData.getAll("memberIds"),
+    category: optional(formData.get("category")),
+    visibility: optional(formData.get("visibility")),
+    repeat: optional(formData.get("repeat")),
+    repeatUntil: optional(formData.get("repeatUntil")),
+    notes: optional(formData.get("notes")),
+    confirmClash: optional(formData.get("confirmClash")),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
+  const input = parsed.data;
 
   const supabase = await createClient();
   try {
-    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, input.householdId);
+    const timezone = membership.household.timezone;
     // The form's times are the household's wall clock, not the server's.
-    const startsAt = householdInstant(parsed.data.startsAt, membership.household.timezone);
-    const endsAt = householdInstant(parsed.data.endsAt, membership.household.timezone);
-    if (!startsAt || !endsAt) return { error: "Those times did not make sense." };
-    if (endsAt <= startsAt) return { error: "An event has to end after it starts." };
-    const entitlement = await may(supabase, parsed.data.householdId, "family.events");
+    const when = eventWindow(input, timezone);
+    if ("error" in when) return { error: when.error };
+    const entitlement = await may(supabase, input.householdId, "family.events");
     if (!entitlement.allowed) return { error: entitlement.reason };
 
+    const rule = input.repeat === "none" ? null : parseRecurrence({ freq: input.repeat, ...(input.repeatUntil ? { until: input.repeatUntil } : {}) });
+    if (input.repeat !== "none" && !rule) return { error: "That repeat could not be read." };
+    if (rule?.until && rule.until < localMoment(new Date(when.startsAt), timezone).dateKey) return { error: "A repeat has to end after it starts." };
+
+    if (!input.confirmClash && !input.allDay) {
+      const clashes = await clashesFor(supabase, membership, { start: new Date(when.startsAt), end: new Date(when.endsAt), memberIds: input.memberIds });
+      if (clashes.length > 0) return { clashes };
+    }
+
     await createEvent(supabase, {
-      householdId: parsed.data.householdId,
-      title: parsed.data.title,
-      kind: parsed.data.kind,
-      startsAt,
-      endsAt,
-      location: parsed.data.location ?? null,
-      protected: parsed.data.protected === "on",
+      householdId: input.householdId,
+      title: input.title,
+      kind: input.kind,
+      startsAt: when.startsAt,
+      endsAt: when.endsAt,
+      location: input.location ?? null,
+      protected: input.protected === "on",
       ownerMemberId: membership.memberId,
-      participantMemberIds: [],
+      participantMemberIds: input.memberIds,
+      allDay: input.allDay === "on",
+      category: input.category ?? null,
+      visibility: input.visibility,
+      recurrence: rule,
+      notes: input.notes ?? null,
     });
   } catch (error) {
     log.warn("event creation failed", { reason: error instanceof Error ? error.name : "unknown" });
@@ -71,6 +116,7 @@ export async function createEventAction(_previous: ActionState, formData: FormDa
 
   revalidatePath("/family");
   revalidatePath("/today");
+  revalidatePath("/calendar");
   revalidatePath("/");
   return {};
 }

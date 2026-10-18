@@ -59,7 +59,10 @@ work, and hold new work against these:
    signed-out frame, the landing hero and the closing section — faint, behind
    the content, never over anything readable.
 6. **Five primary areas at every size, with the assistant raised in the middle**
-   of the phone tab bar. Domains live in the desktop sidebar and behind More.
+   of the phone tab bar: Home, Calendar, HomeTalk, Family, More (the Today tab
+   became Calendar on 2026-10-18, D1 of `design/FAMILY-CALENDAR-PHASE0.md`;
+   Today's plan is one tap from the Calendar's day view). Domains live in the
+   desktop sidebar and behind More.
 7. **A human sentence opens every screen and a warm one closes it.** A greeting
    with the person's name, a plain-language lede, and no bare table dropped on
    the page.
@@ -129,7 +132,7 @@ work, and hold new work against these:
     closing `QuoteCard`, a last list row) never sits half behind it. When
     you add or resize any fixed element, re-check what the page's own
     padding assumes about its size.
-16. **A swipe moves between the five primary areas.** Home, Today, AI,
+16. **A swipe moves between the five primary areas.** Home, Calendar, AI,
     Family, More (`PRIMARY_NAVIGATION`, rule 6's order) are a sequence, not
     just five taps — a full-width horizontal swipe on a primary screen
     moves to the next or previous one in that order, the same motion a

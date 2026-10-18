@@ -144,12 +144,20 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.summary": "Ce qui a besoin de vous maintenant, et l’allure de la journée.",
   "help.guide.today-and-home.body.1":
     "L’Accueil commence par ce qui a besoin d’une personne, puis ce que WonderHome a traité discrètement. Le nombre d’éléments traités correspond à ce qu’il a vérifié et trouvé en ordre — ce chiffre est réel, pas décoratif. Chaque carte s’ouvre sur les entrées derrière son décompte.",
-  "help.guide.today-and-home.body.2":
-    "Aujourd’hui présente la journée comme une frise, en trois vues : votre journée, celle de la famille et celle du foyer. Les éléments sont des engagements et des échéances — un repas qui doit être prêt, une facture à payer, un cours — jamais des corvées à cocher. La vue du foyer regarde aussi deux semaines à l’avance ce qui risque de manquer ou d’arriver à échéance.",
+  "help.guide.today-and-home.body.2": "Le programme du jour présente la journée comme une frise, en trois vues : votre journée, celle de la famille et celle du foyer. Ouvrez-le depuis la vue Jour d’aujourd’hui dans le Calendrier. Les éléments sont des engagements et des échéances — un repas qui doit être prêt, une facture à payer, un cours — jamais des corvées à cocher. La vue du foyer regarde aussi deux semaines à l’avance ce qui risque de manquer ou d’arriver à échéance.",
   "help.guide.today-and-home.body.3": "« Prévoir quelque chose », sur l’Accueil et Aujourd’hui, ajoute un événement familial sans quitter l’écran.",
-  "help.guide.today-and-home.body.4": "Sur un téléphone, balayez vers la gauche ou la droite pour passer d’Accueil à Aujourd’hui, HomeTalk, Famille et Plus.",
+  "help.guide.today-and-home.body.4": "Sur un téléphone, balayez vers la gauche ou la droite pour passer d’Accueil à Calendrier, HomeTalk, Famille et Plus.",
   "help.guide.today-and-home.body.5":
     "Sous l'état de la famille, l'accueil affiche vos animaux, si vous en avez. Chacun ouvre les mêmes informations que l'écran Famille ; pour les modifier, allez dans Famille.",
+
+  // Calendar
+  "help.guide.calendar.title": "Calendrier",
+  "help.guide.calendar.summary": "Tout ce que la famille a de prévu, par mois, semaine, jour ou année.",
+  "help.guide.calendar.body.1": "Calendrier est le deuxième onglet. Il s’ouvre sur le mois : chaque jour affiche un point de couleur par chose prévue (sur un écran plus large, les premiers titres), et toucher un jour en affiche la liste en dessous. Semaine, Jour et Année sont à un geste. Sur un téléphone, vous pouvez aussi pincer : écartez deux doigts pour passer d’Année à Mois, Semaine et Jour, et rapprochez-les pour revenir. Balayez vers la gauche ou la droite sur le calendrier pour passer au mois, à la semaine ou au jour suivant ou précédent.",
+  "help.guide.calendar.body.2": "Il montre les événements de la famille, les anniversaires et jours spéciaux de chaque profil, et les jours fériés. Les jours fériés viennent de la liste publiée par le gouvernement indien pour les bureaux de l’administration centrale, chacun avec cette source ; choisissez national ou Delhi, ou désactivez-les, dans Filtres. Chaque élément ouvre l’écran auquel il appartient : un événement ouvre sa propre page, où on le modifie.",
+  "help.guide.calendar.body.3": "Ajouter place un projet dans le calendrier : quoi, quand (ou toute la journée), qui vient et une catégorie. Sous Plus d’options, vous pouvez le faire se répéter, choisir qui peut le voir — tout le monde, seulement ceux qui viennent, ou vous seul — et ajouter des notes. Avant de l’ajouter, WonderHome vérifie les chevauchements et vous dit avec quoi ; quelqu’un d’occupé par quelque chose que vous ne pouvez pas voir apparaît seulement comme occupé. Vous pouvez quand même l’ajouter.",
+  "help.guide.calendar.body.4": "Ouvrez un jour d’un événement répété et son organisateur peut sauter seulement ce jour-là, ou le rétablir ; les autres ont toujours lieu. Un projet proposé a un bord en pointillés et indique « Proposé ».",
+  "help.guide.calendar.body.5": "Les filtres ne changent que ce que vous voyez : catégories, personnes, seulement ce qui vous concerne, seulement les projets confirmés, jours fériés, et la vue sur laquelle le calendrier s’ouvre. Le programme du jour — repas, factures, école et ce qui vous attend — est à un geste de la journée d’aujourd’hui.",
 
   "help.guide.notifications.title": "Rappels et notifications",
   "help.guide.notifications.summary": "À propos de choses réelles, pour une seule personne, au bon moment — et silencieux une fois réglés.",
@@ -351,6 +359,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.faq.google-calendar.q": "Pourquoi ne puis-je pas encore connecter mon Google Calendar ?",
   "help.faq.google-calendar.a":
     "Paramètres → Comptes connectés montre quelles connexions sont disponibles pour votre WonderHome. Là où l’une ne l’est pas encore, il le dit plutôt que de proposer un bouton qui ne mène nulle part.",
+  "help.faq.calendar-private.q": "Les autres peuvent-ils voir mes événements privés ?",
+  "help.faq.calendar-private.a": "Non. Un événement réglé sur « Moi seulement » n’est vu que par vous — même un administrateur ne peut pas l’ouvrir — et un événement réglé sur « Seulement ceux qui viennent » est vu par vous et les personnes invitées. Si quelqu’un prévoit quelque chose au même moment avec vous, WonderHome peut lui dire que vous êtes occupé, jamais de quoi il s’agit.",
   "help.faq.own-ai-account.q": "Puis-je utiliser mon propre compte chez un fournisseur d’IA ?",
   "help.faq.own-ai-account.a":
     "Oui. Un Admin peut ajouter la clé propre à votre foyer dans Paramètres → Assistant IA, et elle a la priorité sur celle de WonderHome.",

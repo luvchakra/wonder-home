@@ -10,6 +10,7 @@ import { expect, test } from "@playwright/test";
  */
 const GATED_AREAS = [
   "/today",
+  "/calendar",
   "/ai",
   "/family",
   "/more",

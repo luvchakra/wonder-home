@@ -55,6 +55,8 @@ export function wantsTheGestureItself(target: EventTarget | null, boundary: HTML
   while (node && node !== boundary) {
     if (node instanceof HTMLElement) {
       if (node.tagName === "FORM" || node.isContentEditable) return true;
+      // A surface that swipes itself (the calendar grid moves a month) says so.
+      if (node.dataset.swipe === "own") return true;
       if (node.tagName === "INPUT" || node.tagName === "TEXTAREA" || node.tagName === "SELECT") return true;
       if (node.scrollWidth > node.clientWidth + 1) {
         const overflowX = getComputedStyle(node).overflowX;

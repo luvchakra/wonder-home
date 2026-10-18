@@ -144,12 +144,20 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.summary": "Lo que te necesita ahora y la forma del día.",
   "help.guide.today-and-home.body.1":
     "Inicio empieza por lo que necesita a una persona y luego lo que WonderHome gestionó en silencio. El recuento de gestionados son cosas que comprobó y encontró bien: el número es real, no decorativo. Cada tarjeta se abre a las entradas que hay detrás de su recuento.",
-  "help.guide.today-and-home.body.2":
-    "Hoy es el día como una línea de tiempo, en tres vistas: tu día, el de la familia y el del hogar. Los elementos son compromisos y plazos —una comida que tiene que estar lista, una factura que vence, una clase—, nunca tareas que marcar. La vista del hogar también mira dos semanas adelante lo que probablemente se acabe o venza.",
+  "help.guide.today-and-home.body.2": "El plan de hoy es el día como una línea de tiempo, en tres vistas: tu día, el de la familia y el del hogar. Ábrelo desde la vista de día de hoy en el Calendario. Los elementos son compromisos y plazos —una comida que tiene que estar lista, una factura que vence, una clase—, nunca tareas que marcar. La vista del hogar también mira dos semanas adelante lo que probablemente se acabe o venza.",
   "help.guide.today-and-home.body.3": "Planear algo, en Inicio y en Hoy, añade un evento familiar sin salir de la pantalla.",
-  "help.guide.today-and-home.body.4": "En el teléfono, desliza a izquierda o derecha para moverte entre Inicio, Hoy, HomeTalk, Familia y Más.",
+  "help.guide.today-and-home.body.4": "En el teléfono, desliza a izquierda o derecha para moverte entre Inicio, Calendario, HomeTalk, Familia y Más.",
   "help.guide.today-and-home.body.5":
     "Debajo del estado de la familia, Inicio muestra tus mascotas, si tienes. Cada una abre los mismos datos que la pantalla Familia; para cambiarlos, ve a Familia.",
+
+  // Calendar
+  "help.guide.calendar.title": "Calendario",
+  "help.guide.calendar.summary": "Todo lo que tiene la familia, por mes, semana, día o año.",
+  "help.guide.calendar.body.1": "Calendario es la segunda pestaña. Se abre en el mes: cada día muestra un punto de color por cada cosa prevista (en una pantalla más ancha, los primeros títulos), y al tocar un día aparece su lista debajo. Semana, Día y Año están a un toque. En el teléfono también puedes pellizcar: separa dos dedos para pasar de Año a Mes, Semana y Día, y júntalos para volver. Desliza a izquierda o derecha sobre el calendario para ir al mes, semana o día siguiente o anterior.",
+  "help.guide.calendar.body.2": "Muestra los eventos de la familia, los cumpleaños y días especiales de cada perfil y los festivos oficiales. Los festivos vienen de la lista publicada por el Gobierno de la India para las oficinas del gobierno central, cada uno con esa fuente; elige nacionales o Delhi, o desactívalos, en Filtros. Cada elemento abre la pantalla a la que pertenece: un evento abre su propia página, que es donde se cambia.",
+  "help.guide.calendar.body.3": "Añadir pone un plan en el calendario: qué, cuándo (o todo el día), quién va y una categoría. En Más opciones puedes hacer que se repita, elegir quién puede verlo —todos, solo quienes van o solo tú— y añadir notas. Antes de añadirlo, WonderHome comprueba si coincide con algo y te dice con qué; alguien ocupado en algo que tú no puedes ver aparece solo como ocupado. Aun así puedes añadirlo.",
+  "help.guide.calendar.body.4": "Abre un día de un evento que se repite y quien lo organiza puede saltar solo ese día o recuperarlo; los demás siguen igual. Un plan propuesto tiene el borde discontinuo y dice «Propuesto».",
+  "help.guide.calendar.body.5": "Los filtros solo cambian lo que ves tú: categorías, personas, solo lo tuyo, solo planes confirmados, festivos y la vista en la que se abre el calendario. El plan de hoy —comidas, facturas, colegio y lo que te necesita— está a un toque desde el día de hoy.",
 
   "help.guide.notifications.title": "Recordatorios y notificaciones",
   "help.guide.notifications.summary": "Sobre cosas reales, para una persona, cuando le viene bien, y en silencio una vez resuelto.",
@@ -351,6 +359,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.faq.google-calendar.q": "¿Por qué todavía no puedo conectar mi Google Calendar?",
   "help.faq.google-calendar.a":
     "Ajustes → Cuentas conectadas muestra qué conexiones están disponibles para tu WonderHome. Donde una todavía no lo está, lo dice en lugar de ofrecer un botón que no lleva a ninguna parte.",
+  "help.faq.calendar-private.q": "¿Pueden otros ver mis eventos privados?",
+  "help.faq.calendar-private.a": "No. Un evento con «Solo yo» solo lo ves tú —ni siquiera un administrador puede abrirlo— y uno con «Solo quienes van» lo ves tú y las personas a las que invitaste. Si alguien planea algo a la misma hora contando contigo, WonderHome puede decirle que estás ocupado, nunca de qué se trata.",
   "help.faq.own-ai-account.q": "¿Puedo usar mi propia cuenta de un proveedor de IA?",
   "help.faq.own-ai-account.a":
     "Sí. Un Admin puede añadir la clave propia de tu hogar en Ajustes → Asistente de IA, y tiene prioridad sobre la de WonderHome.",

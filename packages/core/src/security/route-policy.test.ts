@@ -5,6 +5,7 @@ import { redirectFor, routeRequirement } from "./route-policy";
 describe("route policy", () => {
   it("treats household surfaces as authenticated", () => {
     expect(routeRequirement("/today")).toBe("authenticated");
+    expect(routeRequirement("/calendar")).toBe("authenticated");
     expect(routeRequirement("/family/anaya")).toBe("authenticated");
     expect(routeRequirement("/more/bills")).toBe("authenticated");
   });

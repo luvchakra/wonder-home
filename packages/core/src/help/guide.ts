@@ -111,8 +111,14 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "today-and-home",
     group: "Everyday use",
-    updated: "2026-10-17",
+    updated: "2026-10-18",
     keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe", "pets"],
+  },
+  {
+    id: "calendar",
+    group: "Everyday use",
+    updated: "2026-10-18",
+    keywords: ["calendar", "month", "week", "day", "year", "pinch", "holiday", "public holiday", "birthday", "repeat", "recurring", "private", "just me", "clash", "conflict", "filter", "skip"],
   },
   {
     id: "notifications",
@@ -260,6 +266,7 @@ const FAQ_SHAPE: readonly Pick<FaqEntry, "id" | "section">[] = [
   { id: "reminder-timing", section: "notifications" },
   { id: "health-visibility", section: "health" },
   { id: "google-calendar", section: "connections" },
+  { id: "calendar-private", section: "calendar" },
   { id: "own-ai-account", section: "ai-key" },
   { id: "prepared-not-done", section: "talk-to-wonderhome" },
   { id: "wrong-name", section: "talk-to-wonderhome" },

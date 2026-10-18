@@ -6,7 +6,7 @@ describe("primary navigation", () => {
   it("exposes the five information areas from the UI spec, in order", () => {
     expect(PRIMARY_NAVIGATION.map((item) => item.key)).toEqual([
       "home",
-      "today",
+      "calendar",
       "ai",
       "family",
       "more",
@@ -21,7 +21,12 @@ describe("primary navigation", () => {
   it("keeps a nested route inside its own area rather than falling back to Home", () => {
     expect(activeNavKey("/more/bills")).toBe("more");
     expect(activeNavKey("/family/anaya")).toBe("family");
-    expect(activeNavKey("/today/")).toBe("today");
+    expect(activeNavKey("/calendar/")).toBe("calendar");
+  });
+
+  it("keeps Today's plan under the Calendar tab (D1)", () => {
+    expect(activeNavKey("/today")).toBe("calendar");
+    expect(activeNavKey("/calendar")).toBe("calendar");
   });
 
   it("does not match a prefix that is only a partial segment", () => {

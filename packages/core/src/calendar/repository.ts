@@ -265,3 +265,16 @@ async function setOccurrenceCancelledImpl(
 }
 
 export const setOccurrenceCancelled = invalidatesContext(setOccurrenceCancelledImpl, (_s, input) => input.householdId);
+
+/** Whether one occurrence of a repeating event is skipped. */
+export async function isOccurrenceCancelled(supabase: SupabaseClient, input: { householdId: string; eventId: string; occurrenceDate: string }): Promise<boolean> {
+  if (!isDateKey(input.occurrenceDate)) return false;
+  const { data } = await supabase
+    .from("event_exceptions")
+    .select("cancelled")
+    .eq("household_id", input.householdId)
+    .eq("event_id", input.eventId)
+    .eq("occurrence_date", input.occurrenceDate)
+    .maybeSingle();
+  return (data as Row | null)?.cancelled === true;
+}
