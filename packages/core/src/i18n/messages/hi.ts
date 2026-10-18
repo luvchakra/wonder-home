@@ -335,7 +335,7 @@ export const hi: Catalog = {
 
   "hometalk.ui.greeting": "नमस्ते {name}!",
   "hometalk.ui.helpQuestion": "आज मैं आपकी क्या मदद करूँ?",
-  "hometalk.ui.intro": "अपने शब्दों में पूछिए। मैं घर की जानकारी देखूँगा, बताऊँगा कि मैं क्या करूँगा, और किसी भी ज़रूरी काम से पहले आपकी मंज़ूरी का इंतज़ार करूँगा।",
+  "hometalk.ui.intro": "अपने शब्दों में पूछें। मैं घर की जानकारी देखकर आपका कहा काम कर दूँगा, और बताऊँगा कि उसे कैसे वापस लें। भुगतान और पहुँच में बदलाव हमेशा आपकी मंज़ूरी का इंतज़ार करते हैं।",
   "hometalk.ui.suggestionsHeading": "आप ये चीज़ें पूछ सकते हैं",
   "hometalk.ui.suggestion.outing": "इस हफ़्ते परिवार के साथ घूमने की योजना बनाओ",
   "hometalk.ui.suggestion.coriander": "किराने की सूची में धनिया जोड़ो",
@@ -393,7 +393,7 @@ export const hi: Catalog = {
   "hometalk.ui.jumpLatest": "सबसे नए संदेश पर जाएँ",
   "hometalk.ui.editing": "आपका संदेश बदला जा रहा है",
   "hometalk.ui.cancelEditing": "बदलना रद्द करें",
-  "hometalk.ui.footer": "WonderHome सुझाव देता है और आपकी मंज़ूरी से ही कुछ करता है। भुगतान और पहुँच के बदलाव हमेशा पूछे जाते हैं।",
+  "hometalk.ui.footer": "WonderHome वही करता है जो आप कहते हैं और बताता है कि उसे कैसे वापस लें। भुगतान और पहुँच में बदलाव हमेशा पूछते हैं।",
   "hometalk.ui.error.answer": "WonderHome अभी जवाब नहीं दे सका।",
   "hometalk.ui.error.document": "यह नहीं बताया जा सका कि उस दस्तावेज़ से क्या हुआ।",
   "hometalk.ui.error.summary": "उस बातचीत का सारांश नहीं बन सका।",

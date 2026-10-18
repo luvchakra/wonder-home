@@ -1,3 +1,4 @@
+import { inAppVoiceAllows } from "./capabilities";
 import type { ContentClass } from "../ai/privacy";
 import { contentClassFor } from "../context/privacy";
 import type { ContextDomain, HouseholdContextItem } from "../context/types";
@@ -160,6 +161,9 @@ const IN_APP_BY_CLASS: Partial<Record<IntentAction, ContentClass>> = {
 /** Whether this channel may ask for this action: its scopes, and in the app, what the household's agreement opens. */
 export function channelAllowsAction(action: IntentAction, limits: ChannelLimits): boolean {
   if (voiceAllowsAction(action, limits.scopes)) return true;
+  // Inside HomeTalk's own screen, voice is typing by mouth: what the matrix
+  // places "in_app" goes through the same gates a typed request does.
+  if (limits.inApp && inAppVoiceAllows(action)) return true;
   const needs = limits.inApp ? IN_APP_BY_CLASS[action] : undefined;
   return needs !== undefined && (limits.classes ?? []).includes(needs);
 }
@@ -170,7 +174,7 @@ export function channelAllowsAction(action: IntentAction, limits: ChannelLimits)
  * screen. Never "use the WonderHome app".
  */
 export const IN_APP_VOICE_NOT_ALLOWED =
-  "That needs your OK on screen, which I can't give by voice. Type it here in HomeTalk and I'll set it up for you to confirm.";
+  "Paying and placing orders always need your own tap on screen, so I can't do that by voice here in HomeTalk. You'll find it under Bills or Groceries, ready for you.";
 
 export function channelRefusal(limits: ChannelLimits): string {
   return limits.inApp ? IN_APP_VOICE_NOT_ALLOWED : VOICE_NOT_ALLOWED;

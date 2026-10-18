@@ -127,6 +127,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     clarifying: carried.clarifying,
     history: carried.history,
     autonomyFor: () => c.autonomy ?? "approve",
+    confirmRequestedChanges: c.confirmRequestedChanges === true,
     entitledFor: () => true,
     executable: canExecute,
     sessionId: `eval-${c.id}`,

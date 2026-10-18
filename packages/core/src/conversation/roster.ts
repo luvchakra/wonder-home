@@ -21,8 +21,24 @@ export type RosterPet = { name: string; species: string | null };
 export const ROSTER_QUESTION =
   /^(?:(?:can you |could you |please )?(?:tell me |list |name )?(?:who(?:'s| is| are) (?:in|part of) (?:my|our|the|this) (?:family|household|home|house)|who (?:all )?(?:lives|stays) (?:here|with us|in (?:my|our|the|this) (?:house|home|flat))|who are (?:all )?(?:the |my |our )?(?:family )?members(?: of (?:my|our|the|this) (?:family|household))?|who are (?:the |my |our )?(?:family|household)(?: members)?|(?:the |my |our )?(?:family|household) members|(?:about )?(?:the |my |our )?(?:family|household) members)|how many (?:people|members) (?:are )?(?:there )?in (?:my|our|the|this) (?:family|household|home|house))\??$/i;
 
+/** Other ways people ask who the household is (HomeBrain 4.0 §3.1, the owner's report 2026-10-18). */
+const ROSTER_ALSO: readonly RegExp[] = [
+  // "who all live in this house", "who lives at home", "who is living here"
+  /^who(?: all)? (?:is |are )?(?:lives?|living|stays?|staying)(?: (?:here|(?:in|at) (?:this|my|our|the) (?:house|home|household|flat)|at home|with (?:me|us)))?$/i,
+  // "list (all) the family members", "name everyone in the family", "show me the household members"
+  /^(?:list|name|show)(?: me)? (?:all )?(?:(?:of )?the |my |our )?(?:family|household) members$/i,
+  /^(?:list|name)(?: me)? every(?:one|body) in (?:the|my|our|this) (?:family|household|home|house)$/i,
+  // "who all are in the family", "who all is there in our family"
+  /^who all (?:are |is )?(?:there )?(?:in|part of) (?:the|my|our|this) (?:family|household|home|house)$/i,
+];
+
+/** A trailing "in this household", which says nothing the question had not. */
+const WHERE_TAIL = /\s+(?:in|of|at|from) (?:this|my|our|the) (?:household|home|house|family|flat)$/i;
+
 export function isRosterQuestion(utterance: string): boolean {
-  return ROSTER_QUESTION.test(utterance.trim().replace(/[.!]+$/, ""));
+  const said = utterance.trim().replace(/[.!?]+$/, "").trim();
+  const shorter = said.replace(WHERE_TAIL, "");
+  return [said, shorter].some((text) => ROSTER_QUESTION.test(text) || ROSTER_ALSO.some((pattern) => pattern.test(text)));
 }
 
 export function composeRoster(people: readonly RosterPerson[], options: { viewerMemberId: string; householdName: string; pets?: readonly RosterPet[] }): string {

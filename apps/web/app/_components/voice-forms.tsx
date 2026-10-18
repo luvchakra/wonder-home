@@ -271,6 +271,31 @@ export function VoiceSettingsForm({
         {previewError ? <Alert>{previewError}</Alert> : null}
 
         <section className="space-y-4">
+          <SectionHeader title={labels.live} />
+          <Select
+            label={labels.liveEngine}
+            name="liveEngine"
+            defaultValue={settings.liveEngine}
+            hint={
+              geminiLive.available
+                ? `${labels.engines.gemini_live.detail} ${labels.geminiHears}`
+                : `${labels.engines.wonderhome.detail}${geminiLive.reason ? ` ${labels.geminiUnavailable.replace("{reason}", geminiLive.reason)}` : ""}`
+            }
+          >
+            <option value="wonderhome">{labels.engines.wonderhome.name}</option>
+            <option value="gemini_live" disabled={!geminiLive.available}>
+              {labels.engines.gemini_live.name}
+              {geminiLive.available ? "" : ` ${labels.notAvailable}`}
+            </option>
+          </Select>
+          {!geminiLive.available && geminiLive.fix ? (
+            <a href={geminiLive.fix.href} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+              {geminiLive.fix.label}
+            </a>
+          ) : null}
+        </section>
+
+        <section className="space-y-4">
           <SectionHeader title={labels.who} />
 
           <Card className="space-y-1 bg-[var(--wh-surface-muted)]/60 p-3">
@@ -304,36 +329,17 @@ export function VoiceSettingsForm({
           </Select>
         </section>
 
-        <section className="space-y-4">
-          <SectionHeader title={labels.live} />
-          <Select
-            label={labels.liveEngine}
-            name="liveEngine"
-            defaultValue={settings.liveEngine}
-            hint={
-              geminiLive.available
-                ? `${labels.engines.gemini_live.detail} ${labels.geminiHears}`
-                : `${labels.engines.wonderhome.detail}${geminiLive.reason ? ` ${labels.geminiUnavailable.replace("{reason}", geminiLive.reason)}` : ""}`
-            }
-          >
-            <option value="wonderhome">{labels.engines.wonderhome.name}</option>
-            <option value="gemini_live" disabled={!geminiLive.available}>
-              {labels.engines.gemini_live.name}
-              {geminiLive.available ? "" : ` ${labels.notAvailable}`}
-            </option>
-          </Select>
-          {!geminiLive.available && geminiLive.fix ? (
-            <a href={geminiLive.fix.href} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
-              {geminiLive.fix.label}
-            </a>
-          ) : null}
-        </section>
 
-        <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>
+        <section className="space-y-4">
           <SectionHeader title={labels.sounds} />
           <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
             {usingGoogle ? labels.soundsGoogle : labels.soundsBrowser}
           </p>
+
+          {/* Google's own voice controls only show when Google is the one
+              speaking (rule 10). Hidden rather than removed, so saving the
+              form never resets what was chosen for later. */}
+          <div className={usingGoogle ? "space-y-4" : "hidden"}>
 
           <Select
             label={labels.language}
@@ -440,6 +446,8 @@ export function VoiceSettingsForm({
               </option>
             ))}
           </Select>
+
+          </div>
 
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input

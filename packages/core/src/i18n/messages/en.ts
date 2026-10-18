@@ -345,7 +345,7 @@ export const en = {
 
   "hometalk.ui.greeting": "Hi {name}!",
   "hometalk.ui.helpQuestion": "How can I help you today?",
-  "hometalk.ui.intro": "Ask in your own words. I will check the household, propose what I would do, and wait for your OK before anything that matters.",
+  "hometalk.ui.intro": "Ask in your own words. I'll check the household and do what you ask, and tell you how to undo it. Payments and access changes always wait for your OK.",
   "hometalk.ui.suggestionsHeading": "Here are some things you can ask",
   "hometalk.ui.suggestion.outing": "Plan a family outing this weekend",
   "hometalk.ui.suggestion.coriander": "Add coriander to the grocery list",
@@ -403,7 +403,7 @@ export const en = {
   "hometalk.ui.jumpLatest": "Jump to the latest message",
   "hometalk.ui.editing": "Editing your message",
   "hometalk.ui.cancelEditing": "Cancel editing",
-  "hometalk.ui.footer": "WonderHome proposes and, only with your OK, acts. Payments and access changes always ask.",
+  "hometalk.ui.footer": "WonderHome does what you ask and tells you how to undo it. Payments and access changes always ask.",
   "hometalk.ui.error.answer": "WonderHome could not answer just now.",
   "hometalk.ui.error.document": "Could not say what that document did.",
   "hometalk.ui.error.summary": "Could not summarise that conversation.",

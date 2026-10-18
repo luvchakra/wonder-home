@@ -117,9 +117,27 @@ describe("the matrix as a household reads it", () => {
   it("the app can do everything; voice channels send the sensitive changes to the app", () => {
     expect(channelSummary("app").appOnly).toEqual([]);
     const gemini = channelSummary("gemini_voice");
-    expect(gemini.appOnly.map((capability) => capability.id)).toEqual(expect.arrayContaining(["payments", "orders", "household_admin"]));
-    expect(gemini.available.map((capability) => capability.id)).toEqual(expect.arrayContaining(["household_questions", "groceries_write", "reminders"]));
+    expect(gemini.appOnly.map((capability) => capability.id)).toEqual(expect.arrayContaining(["payments", "orders"]));
+    // In the app, voice is typing by mouth (HomeBrain 4.0 §3.9, the owner 2026-10-18).
+    expect(gemini.available.map((capability) => capability.id)).toEqual(expect.arrayContaining(["household_questions", "groceries_write", "reminders", "planning_changes", "pantry_changes", "household_admin"]));
+    expect(channelSummary("alexa").appOnly.map((capability) => capability.id)).toEqual(expect.arrayContaining(["planning_changes", "pantry_changes", "household_admin"]));
     expect(channelSummary("alexa").conditional.map((capability) => capability.id)).toEqual(expect.arrayContaining(["school", "health", "financial_status"]));
+  });
+});
+
+describe("voice inside the app does what typing does (HomeBrain 4.0 §3.9)", () => {
+  it("every in_app cell is allowed in the app and refused on a speaker", () => {
+    for (const capability of VOICE_CAPABILITIES) {
+      if (capability.policy.gemini_voice !== "in_app") continue;
+      for (const action of capability.actions) {
+        expect(channelAllowsAction(action, { scopes: [], inApp: true }), `${capability.id}/${action} in the app`).toBe(true);
+        expect(channelAllowsAction(action, { scopes: ALL_SCOPES }), `${capability.id}/${action} on a speaker`).toBe(false);
+      }
+    }
+  });
+
+  it("paying and ordering stay off voice, even in the app", () => {
+    for (const action of ["make_payment", "order_items"] as const) expect(channelAllowsAction(action, { scopes: ALL_SCOPES, inApp: true })).toBe(false);
   });
 });
 

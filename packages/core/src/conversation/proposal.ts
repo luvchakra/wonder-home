@@ -1,6 +1,7 @@
 import { decideAutonomy, type AutonomyMode, type ProposedAction } from "../household/autonomy";
 import { can, type Permission, type PermissionContext } from "../identity/permissions";
 import { WHAT_I_CAN_DO, disposeIntent, isConsequential, type HouseholdIntent } from "./intent";
+import { consentTier, decideForRequest } from "./consent";
 import { linkTo } from "./reply-format";
 import { screenFor } from "./screens";
 
@@ -22,6 +23,14 @@ export type ProposalContext = {
   autonomy: AutonomyMode;
   /** Whether the household's plan includes the feature the intent needs. */
   entitled: boolean;
+  /**
+   * Who is asking for it (HomeBrain 4.0 §3.9). A person's own request in the
+   * conversation is consented to by asking (`consent.ts`); anything else —
+   * and anything absent this — follows the autonomy setting alone.
+   */
+  requestedBy?: "person" | "agent";
+  /** "Ask before acting on what I say" (Settings → AI Assistant): every act becomes a question first. */
+  confirmRequested?: boolean;
 };
 
 export type ActionPreview = {
@@ -171,7 +180,10 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
     reversible: isReversible(intent),
   };
 
-  const decision = decideAutonomy(context.autonomy, action);
+  const decision =
+    context.requestedBy === "person"
+      ? decideForRequest({ tier: consentTier(intent, context.actor), mode: context.autonomy, action, confirmRequested: context.confirmRequested === true })
+      : decideAutonomy(context.autonomy, action);
   const preview = buildPreview(intent, decision.reason, action.reversible);
 
   switch (decision.outcome) {
@@ -256,7 +268,12 @@ function summarize(intent: HouseholdIntent): string {
       if (typeof intent.parameters.what === "string" && intent.parameters.protected === true) {
         return `Keep ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "that time")} free for ${intent.parameters.what}`;
       }
-      return `Plan something for ${intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "the family")}`;
+      {
+        const when = intent.parameters.windowResolved ? groundedWhen(intent, "window").replace(/^on /, "") : String(intent.parameters.window ?? "the family");
+        const what = typeof intent.parameters.what === "string" && intent.parameters.what.trim() ? intent.parameters.what.trim().replace(/^(?:a|an|some)\s+/i, "") : null;
+        const guests = Array.isArray(intent.parameters.guests) && intent.parameters.guests.length > 0 ? ` and invite ${joinWords((intent.parameters.guests as unknown[]).map(String))}` : "";
+        return what ? `Put ${what} on the calendar for ${when}${guests}` : `Plan something for ${when}${guests}`;
+      }
     case "adjust_schedule":
       if (typeof intent.parameters.schoolItemId === "string") {
         return `Move ${typeof intent.parameters.childName === "string" ? `${intent.parameters.childName}'s ` : ""}${String(intent.parameters.title ?? "that")} to ${intent.parameters.toResolved ? groundedWhen(intent, "to").replace(/^on /, "") : String(intent.parameters.to ?? "a new day")}`;

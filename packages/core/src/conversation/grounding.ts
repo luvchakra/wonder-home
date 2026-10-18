@@ -313,7 +313,10 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
   }
 
   // --- A plan that is a meal (§11): "plan pasta for tonight" ---------------
-  if (grounded.action === "plan_event" && typeof grounded.parameters.what === "string") {
+  // A gathering is an event, whatever it eats: "a dinner party with the
+  // Sharmas" has guests and a time, not a recipe (HomeBrain 4.0 §3.9).
+  const gathering = (Array.isArray(grounded.parameters.guests) && grounded.parameters.guests.length > 0) || /\b(?:party|night|get-?together|celebration|sleepover|picnic)\b/i.test(String(grounded.parameters.what ?? ""));
+  if (grounded.action === "plan_event" && typeof grounded.parameters.what === "string" && !gathering) {
     const meal = await asMeal(grounded.parameters.what, env);
     if (meal) {
       grounded = {

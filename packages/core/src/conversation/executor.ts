@@ -8,8 +8,9 @@ import { createAppointment, type AppointmentType } from "../health/appointments"
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { createEvent } from "../family/repository";
+import { setEventCancelled } from "../family/event-detail";
 import { createServiceRequest } from "../home/repository";
-import { attachIngredients, createMeal } from "../meals/repository";
+import { attachIngredients, createMeal, removeMeal } from "../meals/repository";
 import { completeSchoolItem, updateSchoolItem } from "../school/repository";
 import { movedSchoolWhen } from "../school/times";
 import type { MealSlot } from "../meals/meals";
@@ -273,9 +274,32 @@ async function undoForCorrection(
       await recordAvailabilityException(context.supabase, { householdId: context.householdId, memberId: result.memberId, onDate: result.onDate, available: true, reason: null });
       return { ok: true, text: `**${String(result.memberName ?? "They")}** is no longer marked away on ${describeDate(result.onDate, "", context.timezone)}.` };
     }
+    case "plan_event": {
+      if (typeof result.eventId !== "string") return { ok: false, reason: "I could not find the plan I put on the calendar, so I left it as it was." };
+      // Cancelled, as the event's own screen cancels it — never deleted, so its guests and history stay.
+      await setEventCancelled(context.supabase, { householdId: context.householdId, eventId: result.eventId, cancelled: true });
+      return { ok: true, text: `Took **${String(result.title ?? "that plan")}** off the ${linkTo("/calendar", "calendar")}.` };
+    }
+    case "plan_meal": {
+      if (typeof result.mealId !== "string") return { ok: false, reason: "I could not find the meal I planned, so I left it as it was." };
+      await removeMeal(context.supabase, { householdId: context.householdId, mealId: result.mealId });
+      return { ok: true, text: `Took **${String(result.name ?? "that meal")}** off the ${linkTo("/meals", "meal plan")}.` };
+    }
     default:
       return { ok: false, reason: "I cannot change that one from here yet, so I left it as it was. You can change it on its own screen." };
   }
+}
+
+/**
+ * "Undo" (HomeBrain 4.0 §3.9): everything an earlier HomeTalk action wrote,
+ * taken back through the same domain service a correction or a manual
+ * remove uses. A change it cannot take back is said so and left alone.
+ */
+export async function undoExecuted(record: CorrectsRecordShape, context: ExecutionContext): Promise<{ ok: true; text: string } | { ok: false; reason: string }> {
+  const nothing: HouseholdIntent = { action: "unknown", actorMemberId: context.actorMemberId, target: { kind: "unspecified" }, parameters: {}, confidence: 1, channel: "text", utterance: "undo" };
+  const undone = await undoForCorrection(record, nothing, context);
+  if (!undone.ok) return undone;
+  return { ok: true, text: undone.text || "Done — taken back." };
 }
 
 async function runAgentCheck(context: ExecutionContext): Promise<ExecutionResult> {

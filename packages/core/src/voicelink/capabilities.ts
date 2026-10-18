@@ -32,7 +32,14 @@ export type ChannelPolicy =
   /** An exchange as long as the channel's own session allows. */
   | "session"
   /** Only where there is a screen to show it: a speaker says where to find it in the app instead. */
-  | "on_screen";
+  | "on_screen"
+  /**
+   * Gemini Voice inside WonderHome's own HomeTalk screen (HomeBrain 4.0 §3.9):
+   * the same as typing it there, because the person is holding the screen —
+   * done when asked, or asked once in the conversation, exactly as typed.
+   * A speaker elsewhere (Alexa) keeps "app_only".
+   */
+  | "in_app";
 
 export type CapabilityCategory = "informational" | "low_risk" | "sensitive" | "conversation";
 
@@ -137,7 +144,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["set_stock", "use_stock", "mark_bought"],
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
     note: "Counts of what is at home are changed in the WonderHome app, where you can see the amount before it is saved.",
   },
   {
@@ -215,7 +222,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["record_absence", "plan_event", "plan_meal", "adjust_schedule", "complete_school_item", "set_fitness_goal"],
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
     note: "Changing the plan happens in the WonderHome app, where you can see what else it moves.",
   },
   {
@@ -236,7 +243,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["assign_responsibility", "check_agents"],
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "app_only", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
     note: "Changing who does what, and running WonderHome's checks, happen in the app.",
   },
   {
@@ -250,6 +257,11 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
 ];
 
 /** The capability an action belongs to. Every HomeTalk action has one. */
+/** Whether Gemini Voice in the app may do this, the same as typing it (HomeBrain 4.0 §3.9). */
+export function inAppVoiceAllows(action: IntentAction): boolean {
+  return capabilityForAction(action)?.policy.gemini_voice === "in_app";
+}
+
 export function capabilityForAction(action: IntentAction): Capability | undefined {
   return VOICE_CAPABILITIES.find((capability) => capability.actions.includes(action));
 }
@@ -261,7 +273,7 @@ export function channelSummary(channel: CapabilityChannel): { available: Capabil
   const appOnly: Capability[] = [];
   for (const capability of VOICE_CAPABILITIES) {
     const policy = capability.policy[channel];
-    if (policy === "yes" || policy === "session") available.push(capability);
+    if (policy === "yes" || policy === "session" || policy === "in_app") available.push(capability);
     else if (policy === "consent" || policy === "opt_in" || policy === "approval") conditional.push(capability);
     else appOnly.push(capability);
   }
