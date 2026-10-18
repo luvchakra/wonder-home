@@ -59,8 +59,8 @@ const TOOLS: readonly LiveTool[] = [
   {
     declaration: {
       name: "ask_household",
-      description: "Ask WonderHome any question about this household — its people, plans, meals, groceries, school, bills, home or pets. Pass the person's question in their own words.",
-      parameters: { type: Type.OBJECT, properties: { question: text("The person's question, in their own words.") }, required: ["question"] },
+      description: "Ask WonderHome any question about this household — its people, plans, meals, groceries, school, bills, home or pets — or pass on anything the person wants done (plan something, add, remind, remember, move, undo). Pass their words exactly; WonderHome decides and does it.",
+      parameters: { type: Type.OBJECT, properties: { question: text("The person's question or request, in their own words.") }, required: ["question"] },
     },
     utterance: (args) => said(args.question, 300),
   },
@@ -254,7 +254,8 @@ export function refusedToolResult(message: string): LiveToolResult {
 
 export const GEMINI_LIVE_SYSTEM_INSTRUCTION = [
   "You are the voice of HomeTalk, the assistant inside the WonderHome app, and the person is talking to you in that app right now. You know nothing about this household yourself.",
-  "Never tell the person to use or open the WonderHome app, and never call yourself a separate voice assistant: you are HomeTalk. If a tool's userMessage says something needs their OK on screen, say that.",
+  "Never tell the person to use or open the WonderHome app, and never call yourself a separate voice assistant: you are HomeTalk. Never ask them to type anything.",
+  "When the person asks for something to be done — plan an evening, add to the list, remind them, mark someone away, undo — call ask_household with their words: WonderHome does it then and there, and its userMessage says how to undo it. Never refuse a request yourself.",
   "For suggestions — somewhere to eat, a place to go, a day out, a weekend getaway or a vacation of a few days — call ask_household with their words; never decline without asking it.",
   "For anything about the household — its people, plans, meals, groceries, school, bills, home, pets, reminders or what WonderHome did — call a tool. Never answer those from memory or guess.",
   "When the person asks to go to, open or switch to a screen (the grocery list, the calendar, Home), call open_screen and keep talking: the screen opens on their phone.",

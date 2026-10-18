@@ -47,6 +47,9 @@ export const DOMAIN_WORDS: Partial<Record<ContextDomain, readonly string[]>> = {
   absences: ["away", "off", "leave", "available", "holiday", "travel", "travelling", "traveling", "around", "here"],
   health: ["health", "doctor", "dentist", "appointment", "appointments", "checkup", "medicine", "sick", "unwell", "bp", "blood", "pressure", "weight", "vital", "fitness", "exercise", "walk", "headache", "fever"],
   pets: ["pet", "pets", "dog", "cat", "vet"],
+  // Words that only mean "the people of this household" (HomeBrain 4.0 §3.2):
+  // a question about the members is answered by the members.
+  people: ["members", "member", "everyone", "everybody", "relatives"],
   pet_care: ["vet", "grooming", "litter", "pet", "walk", "dog", "cat"],
   home: ["repair", "service", "ac", "fridge", "plumber", "electrician", "maintenance", "warranty", "appliance", "broken", "fix"],
   laundry: ["laundry", "uniform", "clothes", "wash", "washing", "ironing"],

@@ -335,7 +335,7 @@ export const de: Catalog = {
 
   "hometalk.ui.greeting": "Hallo {name}!",
   "hometalk.ui.helpQuestion": "Wie kann ich dir heute helfen?",
-  "hometalk.ui.intro": "Frag mit deinen eigenen Worten. Ich schaue im Haushalt nach, schlage vor, was ich tun würde, und warte auf dein OK, bevor etwas Wichtiges passiert.",
+  "hometalk.ui.intro": "Fragen Sie in Ihren eigenen Worten. Ich prüfe den Haushalt, erledige, worum Sie bitten, und sage Ihnen, wie Sie es rückgängig machen. Zahlungen und Zugriffsänderungen warten immer auf Ihr OK.",
   "hometalk.ui.suggestionsHeading": "Das kannst du zum Beispiel fragen",
   "hometalk.ui.suggestion.outing": "Plane einen Familienausflug an diesem Wochenende",
   "hometalk.ui.suggestion.coriander": "Setz Koriander auf die Einkaufsliste",
@@ -393,7 +393,7 @@ export const de: Catalog = {
   "hometalk.ui.jumpLatest": "Zur neuesten Nachricht springen",
   "hometalk.ui.editing": "Du bearbeitest deine Nachricht",
   "hometalk.ui.cancelEditing": "Bearbeiten abbrechen",
-  "hometalk.ui.footer": "WonderHome schlägt vor und handelt nur mit deinem OK. Zahlungen und Zugriffsänderungen fragen immer nach.",
+  "hometalk.ui.footer": "WonderHome tut, worum Sie bitten, und sagt Ihnen, wie Sie es rückgängig machen. Zahlungen und Zugriffsänderungen fragen immer.",
   "hometalk.ui.error.answer": "WonderHome konnte gerade nicht antworten.",
   "hometalk.ui.error.document": "Es ließ sich nicht sagen, was dieses Dokument bewirkt hat.",
   "hometalk.ui.error.summary": "Dieses Gespräch ließ sich nicht zusammenfassen.",

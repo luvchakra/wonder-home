@@ -11,7 +11,9 @@ import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type RuntimeContext, type Understanding } from "@wonderhome/core/conversation/engine";
-import { canExecute, executeIntent, notYetDoable, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { canExecute, executeIntent, notYetDoable, undoExecuted, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { isUndo } from "@wonderhome/core/conversation/consent";
+import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { approvalRefusal } from "@wonderhome/core/conversation/approval";
 import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
 import { heldBecause, leansOnEarlier, partialSummary, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
@@ -44,6 +46,7 @@ import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readF
 import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
+import { normaliseUtterance } from "@wonderhome/core/conversation/normalise";
 import { contentClassFor } from "@wonderhome/core/context/privacy";
 import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { preferencesOf } from "@wonderhome/core/i18n/preferences";
@@ -156,6 +159,10 @@ const FEATURE_FOR_ACTION: Partial<
 
 export type HomeTalkBody = z.infer<typeof bodySchema>;
 
+/** What "undo" can take back (`undoExecuted`), so the reply offers it only where it works. */
+const UNDOABLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "set_reminder", "record_absence", "plan_event", "plan_meal"]);
+const UNDO_LINE = "Say **undo** to take it back.";
+
 /** What one HomeTalk turn is given. */
 export type HomeTalkInput = {
   supabase: Supabase;
@@ -206,7 +213,12 @@ export async function homeTalkTurn(input: HomeTalkInput) {
 }
 
 async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
-  const { supabase, householdId, body, limits } = input;
+  const { supabase, householdId, limits } = input;
+  // What the person said is what is recorded and shown; what they meant —
+  // spoken lead-ins and wrappers taken off (HomeBrain 4.0 §3.1) — is what
+  // every reader below works from.
+  const said = "utterance" in input.body ? input.body.utterance : null;
+  const body: HomeTalkBody = "utterance" in input.body ? { ...input.body, utterance: normaliseUtterance(input.body.utterance).canonical } : input.body;
   const source = input.source ?? "web";
   const membership = await requireMembership(supabase, householdId);
   speaking.membership = membership;
@@ -292,11 +304,12 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // per member, before anything is read, written or sent anywhere.
   if (!(await hitRateLimit(admin, "hometalk.turn", membership.memberId))) throw new ApiError("rate_limited", rateLimitMessage("hometalk.turn"));
 
-  const [entitled, sessionId, autonomyFor, people] = await Promise.all([
+  const [entitled, sessionId, autonomyFor, people, confirmRequestedChanges] = await Promise.all([
     consequentialEntitlements(supabase, householdId),
     openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel, surface: surfaceForChannel(source) }),
     autonomyLookup(supabase, householdId),
     listPeople(supabase, householdId),
+    loadConfirmRequested(supabase, householdId),
   ]);
   speaking.people = people;
 
@@ -319,7 +332,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         membership,
         sessionId,
         topic: welcomeTopic,
-        answer: body.utterance,
+        answer: said ?? body.utterance,
         channel: body.channel,
         transcriptConfidence: body.transcriptConfidence,
       });
@@ -360,7 +373,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     householdId,
     sessionId,
     role: "member",
-    content: body.utterance,
+    content: said ?? body.utterance,
     transcriptConfidence: body.transcriptConfidence,
     metadata: { channel: body.channel },
   });
@@ -498,6 +511,25 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     admin,
   };
 
+  // "Undo" (HomeBrain 4.0 §3.9): what HomeTalk did because it was asked is
+  // taken back through the same service a manual remove uses, and only the
+  // last thing it did in this conversation in the last half hour. Nothing
+  // older, and nothing anyone else asked for.
+  if (isUndo(body.utterance)) {
+    const done = await recentExecutedActions(admin, { sessionId, since: new Date(Date.now() - 30 * 60_000) }).catch(() => []);
+    const last = done.find((entry) => !entry.result.undoneAt);
+    const memberMessageId = await memberMessageWrite;
+    const undone = last
+      ? await undoExecuted({ actionId: last.id, actionType: last.actionType, result: last.result }, execution).catch(() => ({ ok: false as const, reason: "I couldn't take that back, so I left it as it was." }))
+      : { ok: false as const, reason: "There's nothing I've done in this conversation to take back." };
+    if (undone.ok && last) {
+      await markActionResult(admin, { actionId: last.id, status: "executed", result: { ...last.result, undoneAt: new Date().toISOString() } });
+    }
+    const text = undone.ok ? undone.text : undone.reason;
+    const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { proposal: undone.ok ? "executed" : "refused", intent: "undo", mode: "answer", provider: routing.code, ...(last ? { undid: last.id } : {}) } });
+    return { sessionId, memberMessageId, reply: { id, text, action: null, preview: null, proposal: undone.ok ? "executed" : "refused", mode: "answer" }, privacy: { provider: routing.code, disclosure: routing.disclosure } };
+  }
+
   // Several proposals waiting at once — from a request with several parts
   // — and a bare "yes" or "no": which one is not ours to guess. "Yes to
   // both" settles them all, each through its own governed write.
@@ -573,6 +605,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
           return needed ? entitled[needed] : true;
         },
         executable: canExecute,
+        confirmRequestedChanges,
         sessionId,
         understand: routing.understandPart?.(part),
         history: routing.history,
@@ -683,6 +716,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       return needed ? entitled[needed] : true;
     },
     executable: canExecute,
+    confirmRequestedChanges,
     sessionId,
     understand: corrected ? () => corrected : plainQuestion || rulesRead ? undefined : routing.understand,
     history: routing.history,
@@ -926,6 +960,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     // what the next turn's "it" means.
     if (done.ok) turnFocus.push(...focusFromResult(result.intent.action, done.result, new Date().toISOString()));
     if (done.ok) forgetHouseholdContext(householdId);
+    // Done because it was asked: said with how to take it back (HomeBrain 4.0 §3.9).
+    if (done.ok && UNDOABLE.has(result.intent.action) && !unchangedResult(done.result)) text = `${text} ${UNDO_LINE}`;
   } else if (result.kind === "reply" && result.memory) {
     await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
     forgetHouseholdContext(householdId);

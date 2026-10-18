@@ -335,7 +335,7 @@ export const zh: Catalog = {
 
   "hometalk.ui.greeting": "{name}，你好！",
   "hometalk.ui.helpQuestion": "今天我能帮你做些什么？",
-  "hometalk.ui.intro": "用你自己的话问就好。我会查看家里的情况，告诉你我打算怎么做，重要的事都会先等你同意。",
+  "hometalk.ui.intro": "用你自己的话问。我会查看家里的情况，按你说的去做，并告诉你如何撤销。付款和权限变更始终等你确认。",
   "hometalk.ui.suggestionsHeading": "你可以这样问我",
   "hometalk.ui.suggestion.outing": "计划一次周末家庭出游",
   "hometalk.ui.suggestion.coriander": "把香菜加到购物清单",
@@ -393,7 +393,7 @@ export const zh: Catalog = {
   "hometalk.ui.jumpLatest": "跳到最新消息",
   "hometalk.ui.editing": "正在编辑你的消息",
   "hometalk.ui.cancelEditing": "取消编辑",
-  "hometalk.ui.footer": "WonderHome 先提出建议，只有经你同意才会行动。付款和权限变更总会先问你。",
+  "hometalk.ui.footer": "WonderHome 按你说的去做，并告诉你如何撤销。付款和权限变更始终会先问你。",
   "hometalk.ui.error.answer": "WonderHome 暂时无法回答。",
   "hometalk.ui.error.document": "无法说明该文件做了哪些更改。",
   "hometalk.ui.error.summary": "无法总结这段对话。",

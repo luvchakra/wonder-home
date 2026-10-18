@@ -117,6 +117,8 @@ export type HomeTalkCase = CaseBase & {
   transcriptConfidence?: number;
   /** The household's autonomy for the outcome the turn touches; "approve" when unset. */
   autonomy?: "observe" | "prepare" | "approve" | "execute";
+  /** The household turned on "Ask before acting on what I say" (HomeBrain 4.0 §3.9). */
+  confirmRequestedChanges?: boolean;
   /** What the conversation was just about, for "it", "that" and "the same one". */
   references?: import("./households").ReferenceSpec;
   /**

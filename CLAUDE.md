@@ -280,7 +280,21 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   is split (`conversation/decompose.ts`) and each part runs through the
   same engine on its own; a part that leans on an earlier one ("remind me
   to buy *them*") only goes ahead when that earlier part actually
-  happened. A reminder is a real notification to the speaker alone, held
+  happened. Every utterance is first cleaned into one canonical sentence
+  (`conversation/normalise.ts`: spoken lead-ins, wrappers, repeats, "I am
+  planning X" as "plan X"); the rules, retrieval and the model read that, and
+  the person's own words are what is recorded. A clear request is its own
+  consent (HomeBrain 4.0 §3.9, `conversation/consent.ts`): an adult's
+  everyday, undoable change — the list, a reminder, a plan, a meal, being
+  away, what is at home — is done at once and the reply says "Say undo to
+  take it back" (`undoExecuted`, the same service a correction uses). A
+  change that touches someone else (guests, another person's duty or day, a
+  name resolved at medium confidence) is asked once in the conversation, and
+  paying and ordering always wait for a tap on screen. A child's or helper's
+  request, and anything an agent does on its own, still follows autonomy. An
+  Admin's "Ask before acting on what I say" (`policies`, `ai_autonomy`,
+  `conversation/consent-repository.ts`) makes every act a question first.
+  A reminder is a real notification to the speaker alone, held
   until its `scheduled_for`; the inbox and badge only ever show what is
   due. An add where nothing was new shows "Nothing to change", never
   "Done". The understanding model is given the moment as facts — role,
@@ -511,7 +525,10 @@ voice only) if one is set, otherwise the assistant's key when that is
 Google's, so an assistant on Anthropic can still talk through Gemini. No key
 table ever lets a session read `api_key` back. Each one grants SELECT on
 every column except the key, so key writes are an insert, then an update by
-household (`ai/key-row.ts`), never an upsert. What each
+household (`ai/key-row.ts`), never an upsert. Gemini Voice runs only inside HomeTalk's own screen, so a capability may
+be `in_app` for it: the same as typing it there (plans, what is at home, who
+does what), while Alexa keeps `app_only`. Paying and ordering are never by
+voice. What each
 channel may do is `voicelink/capabilities.ts` — every HomeTalk action is
 placed in it exactly once and its tests hold each cell to the real gates, so
 a new action forces a decision about voice. A conversation belongs to its

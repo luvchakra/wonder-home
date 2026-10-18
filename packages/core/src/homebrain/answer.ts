@@ -116,7 +116,10 @@ export function answeringFacts(facts: readonly GroundedFact[], reading: BrainRea
 function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading): GroundedFact[] {
   return facts.filter((fact) => {
     if (!fact.relevant || fact.score < 0.5) return false;
-    if (fact.domain !== "conflict" && BACKGROUND.has(fact.domain)) return false;
+    // The household, its people and its pets are background to most answers
+    // — but a question about them ("who are the members?", "what pets do we
+    // have?") is answered by them (HomeBrain 4.0 §3.2).
+    if (fact.domain !== "conflict" && BACKGROUND.has(fact.domain) && !reading.focus.has(fact.domain)) return false;
     // A question about a day is answered with what falls on it: an undated
     // standing fact is never presented as "tomorrow".
     if (reading.time && !(fact.date && inWindow(fact.date, reading.time))) return false;

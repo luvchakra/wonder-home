@@ -1,3 +1,4 @@
+import { normaliseUtterance } from "./normalise";
 import { readWhyQuestion } from "../homebrain/why";
 import type { AutonomyMode } from "../household/autonomy";
 import type { PermissionContext } from "../identity/permissions";
@@ -135,6 +136,8 @@ export type TurnInput = {
    * through. Absent, the channel is the household's own app.
    */
   channelLimits?: { allows: (intent: HouseholdIntent) => boolean; refusal: string };
+  /** The household turned on "Ask before acting on what I say" (Settings → AI Assistant, §3.9). */
+  confirmRequestedChanges?: boolean;
   now?: Date;
 };
 
@@ -156,7 +159,11 @@ export type TurnResult =
       focus?: FocusEntity[];
     };
 
-export async function converse(input: TurnInput): Promise<TurnResult> {
+export async function converse(raw: TurnInput): Promise<TurnResult> {
+  // Everything below reads what was meant, not how it was said: spoken
+  // lead-ins and wrappers are taken off first (HomeBrain 4.0 §3.1,
+  // `normalise.ts`). The caller records the person's own words.
+  const input: TurnInput = { ...raw, utterance: normaliseUtterance(raw.utterance).canonical };
   const now = input.now ?? new Date();
 
   // "Yes", "no" and "do it" only mean something against what was just proposed.
@@ -277,8 +284,8 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
   ) {
     return {
       kind: "confirm_transcript",
-      heard: input.utterance,
-      text: `I heard "${input.utterance}" but I am not certain. Could you say that again, or type it?`,
+      heard: raw.utterance,
+      text: `I heard "${raw.utterance}" but I am not certain. Could you say that again, or type it?`,
     };
   }
 
@@ -315,6 +322,9 @@ export async function converse(input: TurnInput): Promise<TurnResult> {
     actor: input.actor,
     autonomy: input.autonomyFor(intent.target.reference ?? null),
     entitled: input.entitledFor(intent),
+    // A turn is always a person speaking for themselves (HomeBrain 4.0 §3.9).
+    requestedBy: "person",
+    confirmRequested: input.confirmRequestedChanges === true,
   });
   const proposal: Proposal =
     proposed.kind === "executed" && !(input.executable?.(intent) ?? false)

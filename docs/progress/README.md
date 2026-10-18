@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeBrain 4.0: hearing it right, doing what was asked; the Voice page (14-024, 14-025)](2026-10-18-homebrain-4-hear-and-act.md) |
 | 2026-10-18 | [HomeBrain 4.0 designed; push keys live (14-024 to 14-031)](2026-10-18-homebrain-4-design.md) |
 | 2026-10-18 | [Plan a meal starts from the recipe (25-019)](2026-10-18-plan-a-meal-recipe-first.md) |
 | 2026-10-18 | [Push notifications that arrive in time; a tall invitation with a preview (23-013, 26-012, 04-024)](2026-10-18-push-notifications.md) |

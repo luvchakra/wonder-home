@@ -566,15 +566,16 @@ const RULES: readonly Rule[] = [
 
   // --- Planning and schedule --------------------------------------------------
   {
-    pattern: new RegExp(`^plan (?:a |an |some |something )?(.*?)(?:\\s+(?:for|on))?\\s*(${WHEN_WORDS})?$`, "i"),
+    pattern: /^plan (?:a |an |some |something )?(.+)$/i,
     read: (match) => {
-      const what = match[1]?.trim() ?? "";
-      const window = match[2]?.trim();
-      if (!what && !window) return null;
+      const plan = readPlan(match[1] ?? "");
+      if (!plan.what && !plan.window) return null;
+      const parameters: Record<string, unknown> = withWhen(plan.what ? { what: plan.what } : {}, plan.window ?? undefined, "window");
+      if (plan.guests.length > 0) parameters.guests = plan.guests;
       return {
         action: "plan_event",
-        target: { kind: "event", reference: what ? slug(what) : "family_time" },
-        parameters: withWhen(what ? { what } : {}, window, "window"),
+        target: { kind: "event", reference: plan.what ? slug(plan.what) : "family_time" },
+        parameters,
         confidence: 0.86,
       };
     },
@@ -789,6 +790,41 @@ function describeDay(raw: string | undefined): string {
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * What a plan says (HomeBrain 4.0 §3.9): what it is, when, and who else is
+ * asked. "A movie night on Friday this week" is a movie night on Friday
+ * evening — the name says the time of day when the sentence does not — and
+ * "a dinner party Saturday and invite the Sharmas" is a dinner party on
+ * Saturday with guests, never an event called "dinner party Saturday and
+ * invite the Sharmas".
+ */
+export function readPlan(text: string): { what: string; window: string | null; guests: string[] } {
+  let rest = text.trim().replace(/[.!?]+$/, "");
+  const guests: string[] = [];
+  const invite = rest.match(/\s*(?:,\s*)?(?:and\s+)?(?:invite|inviting|with|ask|asking)\s+(?:the\s+)?(.+)$/i);
+  if (invite && invite.index !== undefined && /^(?:invite|inviting|ask|asking)\b/i.test(invite[0].trim().replace(/^(?:,\s*)?and\s+/i, ""))) {
+    guests.push(...invite[1]!.split(/\s*(?:,|\band\b)\s*/i).map((name) => name.trim()).filter(Boolean));
+    rest = rest.slice(0, invite.index);
+  }
+  const WEEKDAY = "(?:mon|tues|wednes|thurs|fri|satur|sun)day";
+  rest = ` ${rest}`;
+  const when = rest.match(new RegExp(`(?:\\s+(?:for|on|this|next))?\\s+((?:this |next )?${WEEKDAY}(?: (?:this|next) week)?(?: (?:morning|afternoon|evening|night))?|today|tonight|tomorrow(?: (?:morning|afternoon|evening|night))?|this (?:week|weekend|month|morning|afternoon|evening)|next (?:week|weekend|month))$`, "i"));
+  let window: string | null = null;
+  if (when && when.index !== undefined) {
+    window = when[1]!.toLowerCase();
+    rest = rest.slice(0, when.index);
+  }
+  // "Friday this week" is this Friday.
+  if (window) window = window.replace(new RegExp(`^(${WEEKDAY}) this week`), "this $1").replace(new RegExp(`^(${WEEKDAY}) next week`), "next $1");
+  const what = rest.trim().replace(/\s*\b(?:for|on)$/i, "").trim();
+  // A day with no time: the event's own name says when ("movie night", "dinner party").
+  if (window && new RegExp(`^(?:(?:this|next) )?${WEEKDAY}$|^tomorrow$|^today$`).test(window)) {
+    const part = /\bnight\b|\bmovie|\bparty\b|\bdinner\b|\bsleepover\b/i.test(what) ? "night" : /\bbreakfast\b|\bbrunch\b|\bmorning\b/i.test(what) ? "morning" : /\blunch\b|\bpicnic\b/i.test(what) ? "afternoon" : null;
+    if (part) window = window === "today" ? (part === "night" ? "tonight" : `this ${part}`) : `${window} ${part}`;
+  }
+  return { what, window, guests };
+}
 
 function withWhen(parameters: Record<string, unknown>, when: string | undefined, key = "when"): Record<string, unknown> {
   if (!when) return parameters;

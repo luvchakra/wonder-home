@@ -3,6 +3,7 @@ import { Bot, Mic, ShieldCheck } from "lucide-react";
 import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -15,6 +16,7 @@ import { saveDataUseAction } from "../../(auth)/privacy-actions";
 import { AiKeyForm } from "../../_components/ai-key-form";
 import { ReturnLink, returnLabelKey } from "../../_components/return-link";
 import { safeReturnTo } from "../../_lib/return-to";
+import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-switch";
 import { DataUseForm } from "../../_components/data-use-form";
 import { formatDate, requireSession } from "../../_lib/session";
 import { aiKeyFormLabels, dataUseFormLabels, dataUseLines, keySourceWords } from "../../_lib/settings-labels";
@@ -34,10 +36,11 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
+    loadConfirmRequested(supabase, householdId),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -64,6 +67,25 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.lede", { household: membership.household.name })}</p>
         </header>
         {returnTo ? <ReturnLink href={returnTo} label={t(returnLabelKey(returnTo))} /> : null}
+
+        {/* What HomeTalk does with a request (HomeBrain 4.0 §3.9): first, because it is what a person meets every day. */}
+        <section id="acting">
+          <SectionHeader title={t("settingsPage.ai.section.acting")} />
+          <Card className="p-4">
+            <ConfirmRequestedSwitch
+              householdId={householdId}
+              confirm={confirmRequested}
+              manages={manages}
+              labels={{
+                title: t("settingsPage.ai.confirmRequested.title"),
+                on: t("settingsPage.ai.confirmRequested.on"),
+                off: t("settingsPage.ai.confirmRequested.off"),
+                adminDecides: t("settingsPage.adminDecides"),
+              }}
+            />
+          </Card>
+        </section>
+
 
         <section>
           <SectionHeader title={t("settingsPage.ai.section.key")} />

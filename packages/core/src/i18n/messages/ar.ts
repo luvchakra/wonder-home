@@ -347,7 +347,7 @@ export const ar: Catalog = {
 
   "hometalk.ui.greeting": "مرحبًا {name}!",
   "hometalk.ui.helpQuestion": "كيف يمكنني مساعدتك اليوم؟",
-  "hometalk.ui.intro": "اسأل بكلماتك. سأتحقق من المنزل، وأقترح ما سأفعله، وأنتظر موافقتك قبل أي أمر مهم.",
+  "hometalk.ui.intro": "اسأل بكلماتك. سأتحقق من شؤون المنزل وأنفّذ ما تطلبه وأخبرك كيف تتراجع عنه. الدفع وتغييرات الوصول تنتظر موافقتك دائمًا.",
   "hometalk.ui.suggestionsHeading": "إليك بعض ما يمكنك سؤاله",
   "hometalk.ui.suggestion.outing": "خطّط لنزهة عائلية في عطلة نهاية الأسبوع",
   "hometalk.ui.suggestion.coriander": "أضف الكزبرة إلى قائمة البقالة",
@@ -405,7 +405,7 @@ export const ar: Catalog = {
   "hometalk.ui.jumpLatest": "انتقل إلى أحدث رسالة",
   "hometalk.ui.editing": "جارٍ تعديل رسالتك",
   "hometalk.ui.cancelEditing": "إلغاء التعديل",
-  "hometalk.ui.footer": "يقترح WonderHome ولا يتصرف إلا بموافقتك. المدفوعات وتغييرات الوصول تطلب الإذن دائمًا.",
+  "hometalk.ui.footer": "يفعل WonderHome ما تطلبه ويخبرك كيف تتراجع عنه. الدفع وتغييرات الوصول تسأل دائمًا.",
   "hometalk.ui.error.answer": "تعذّر على WonderHome الرد الآن.",
   "hometalk.ui.error.document": "تعذّر توضيح ما فعله ذلك المستند.",
   "hometalk.ui.error.summary": "تعذّر تلخيص تلك المحادثة.",
