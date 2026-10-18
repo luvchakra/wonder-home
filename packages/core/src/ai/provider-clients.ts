@@ -28,6 +28,8 @@ export const MODEL_TIMEOUT_MS = {
   translate: 8_000,
   /** Minting a short-lived Live API token (Gemini Voice): one small request. */
   live_token: 10_000,
+  /** Writing down one Gemini Live turn word for word (the chat line): a minute of audio at most. */
+  transcribe: 15_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

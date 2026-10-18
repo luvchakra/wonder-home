@@ -21,12 +21,13 @@ import { schoolField } from "../_lib/school-field";
 import { RemoveMemberControl } from "./remove-member-control";
 
 /** One label/value pair, skipped entirely when there is nothing to say (design principle 9: never a placeholder for what is not known). */
-function Fact({ label, value }: { label: string; value: string | null }) {
+/** One fact. A long one (an email, an address-like place) takes the row; any value wraps rather than running off the card (rule 15). */
+function Fact({ label, value, wide = false }: { label: string; value: string | null; wide?: boolean }) {
   if (!value) return null;
   return (
-    <div>
+    <div className={wide ? "col-span-2" : undefined}>
       <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{label}</dt>
-      <dd className="text-sm">{value}</dd>
+      <dd className="text-sm [overflow-wrap:anywhere]">{value}</dd>
     </div>
   );
 }
@@ -101,23 +102,27 @@ export function MemberDetail({
         <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
       ) : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        {/* Who they are, in pairs. */}
         <Fact label={t("family.fact.role")} value={describeRoles(member.roles, member.isOwner)} />
         <Fact label={t("family.fact.status")} value={statusLabel ?? null} />
         <Fact label={t("family.fact.nickname")} value={member.nickname} />
         <Fact label={t("family.fact.familyCallsMe")} value={member.relationship} />
-        <Fact label={t("memberInvite.factEmail")} value={email ?? null} />
-        <Fact label={t("memberInvite.factPhone")} value={phone ? formatPhone(phone) : null} />
         <Fact label={t("family.fact.age")} value={age} />
         <Fact label={t("family.fact.dateOfBirth")} value={born} />
         <Fact label={t("family.fact.gender")} value={member.gender} />
         <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
+        {/* How to reach them: whole rows, since an email or a number is long. */}
+        <Fact wide label={t("memberInvite.factEmail")} value={email ?? null} />
+        <Fact wide label={t("memberInvite.factPhone")} value={phone ? formatPhone(phone) : null} />
+        {/* Their day. */}
         <Fact label={t("family.fact.schoolOrWork")} value={member.memberType === "child" && school ? school.schoolName : member.memberType === "adult" && workPlace ? null : member.schoolOrWorkLocation} />
+        <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />
         <Fact label={t("family.fact.workArrangement")} value={member.memberType === "adult" && member.workArrangement ? t(`setupWizard.work.${member.workArrangement}`) : null} />
         <Fact label={t("family.fact.office")} value={member.memberType === "adult" && workPlace ? workPlace.name : null} />
         <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
-        <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />
-        <Fact label={t("family.fact.specialOccasion")} value={occasion} />
+        {/* Family. */}
         <Fact label={t("family.fact.siblings")} value={siblings} />
+        <Fact label={t("family.fact.specialOccasion")} value={occasion} />
       </dl>
       {member.notes ? (
         <div>

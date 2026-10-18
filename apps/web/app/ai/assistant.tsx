@@ -292,10 +292,10 @@ export function Assistant({
    * spoken around them, shown so the conversation reads on screen too.
    */
   const handleLiveTranscript = useCallback(
-    (entry: { role: "member" | "assistant"; text: string }) => {
+    (entry: { role: "member" | "assistant"; text: string; id?: string }) => {
       setMessages((current) =>
         current.concat({
-          id: `live-${Date.now()}-${current.length}`,
+          id: entry.id ?? `live-${Date.now()}-${current.length}`,
           role: entry.role,
           text: entry.text,
           speaker: entry.role === "member" ? firstName : "WonderHome",
@@ -305,6 +305,11 @@ export function Assistant({
     },
     [firstName],
   );
+
+  // Gemini Live's own transcriber misspells; the same turn written down from its audio replaces the line.
+  const handleLiveTranscriptRevised = useCallback((entry: { id: string; text: string }) => {
+    setMessages((current) => current.map((message) => (message.id === entry.id ? { ...message, text: entry.text } : message)));
+  }, []);
 
   /**
    * A document applied from the paperclip (DDU 2.0 §32): HomeTalk says what
@@ -608,6 +613,7 @@ export function Assistant({
           liveEngine={liveEngine}
           geminiLive={geminiLive}
           onLiveTranscript={handleLiveTranscript}
+          onLiveTranscriptRevised={handleLiveTranscriptRevised}
         />
         <p className="mt-1.5 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
           {labels.footer}

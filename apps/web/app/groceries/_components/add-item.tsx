@@ -2,7 +2,7 @@
 
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { startAmount, stepAlong } from "@wonderhome/core/commerce/buying-sizes";
@@ -73,6 +73,14 @@ export function AddItemButton({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Ready to type at once with a keyboard; on a phone the keyboard waits for a tap rather than rising with the sheet.
+  useEffect(() => {
+    if (!open || window.matchMedia?.("(pointer: coarse)").matches) return;
+    // A frame later, so the sheet's own first focus has already happened.
+    const frame = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
   const [creating, setCreating] = useState(false);
   const [added, setAdded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -191,8 +199,8 @@ export function AddItemButton({
             <label className="block">
               <span className="sr-only">{words.add.search}</span>
               <input
+                ref={searchRef}
                 type="search"
-                autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={words.add.search}

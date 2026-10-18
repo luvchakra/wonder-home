@@ -4,6 +4,7 @@ import { ExternalLink, Pencil } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
+import { Field } from "@wonderhome/core/ui/field";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -13,6 +14,11 @@ import { SubmitButton } from "../_components/submit-pill";
 
 export type ChildSchoolLabels = {
   field: string;
+  gradeField: string;
+  gradePlaceholder: string;
+  starts: string;
+  ends: string;
+  hoursHint: string;
   /** `{name}` is the child's name. */
   edit: string;
   title: string;
@@ -44,7 +50,7 @@ export function ChildSchoolActions({
 }: {
   householdId: string;
   child: { id: string; name: string };
-  school: { name: string; address: string | null; placeId: string | null; mapsUri: string } | null;
+  school: { name: string; address: string | null; placeId: string | null; mapsUri: string; grade?: string | null; hours?: { starts: string; ends: string } | null } | null;
   canChange: boolean;
   available: boolean;
   labels: ChildSchoolLabels;
@@ -87,6 +93,14 @@ export function ChildSchoolActions({
               available={available}
               labels={labels.search}
             />
+            <Field label={labels.gradeField} name="grade" defaultValue={school?.grade ?? ""} placeholder={labels.gradePlaceholder} autoComplete="off" maxLength={40} />
+            {/* The school day: the same record and save as the child's details in Family. */}
+            <input type="hidden" name="schoolHoursField" value="1" />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={labels.starts} name="schoolStarts" type="time" defaultValue={school?.hours?.starts ?? ""} />
+              <Field label={labels.ends} name="schoolEnds" type="time" defaultValue={school?.hours?.ends ?? ""} />
+            </div>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.hoursHint}</p>
             <SubmitButton className="w-full" pendingLabel={labels.saving}>
               {labels.save}
             </SubmitButton>

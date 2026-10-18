@@ -118,6 +118,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Android Chrome resizes the page for the on-screen keyboard, so a sheet or the composer fixed to the
+  // bottom rises with the keyboard natively instead of being covered by it (iOS is handled in Sheet).
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
