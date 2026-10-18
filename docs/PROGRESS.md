@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**260 of 277 stories done — 93.9%**
+**262 of 279 stories done — 93.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 260 |
+| Done | 262 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 13 |
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
-| 08 Kids & School Intelligence | `██████████` | 12 | 12 | — |
+| 08 Kids & School Intelligence | `██████████` | 13 | 13 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 9 | 9 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
 | 25 HomeFood | `█████░░░░░` | 9 | 16 | 1 in progress, 6 not started |
-| 26 HomeEvents | `██░░░░░░░░` | 2 | 7 | 1 in progress, 4 not started |
+| 26 HomeEvents | `███░░░░░░░` | 3 | 8 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -223,7 +223,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-12 of 12 done `██████████`
+13 of 13 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -239,6 +239,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-010` Each child's school details: class, class teacher, subject teachers | P0 | Done | The owner, 2026-10-18 (PR #234). Each child has a card on Kids & School: the school (Google Maps, 24-010) with its class and section and its start and end times, which are the same record the child's details in Family edit (`setSchoolHours`); the class teacher and each subject teacher (subject picked from a list with its own add, rule 20), each changed or removed with icons (`school_teachers`, migration `20261018260000`, run by the owner 2026-10-18; verify:live 287/287). Child, guardians and Admins read; guardians and Admins write (`wh.may_change_child`), `scripts/test-child-activities-rls.mjs` 7/7. Browser-checked at 360px and 1280px on the live project |
 | `08-011` Activities and classes outside school, folded | P0 | Done | PR #234. Folded rows (`ExpandableRow`) show the class, a short description and its days and times ("Every day" for all seven); opened: teacher, where (Google Maps, re-read on the server), from–until, notes, competitions coming up and medals, awards and notes, each addable and removable; a class is changed or stopped (`child_activities`, `child_activity_notes`, `school/activities.ts`). Nothing hard-deleted: a removed award was kept with `active = false`. Browser-checked: Piano, every day 5–6 pm, at TheMusicsCool picked from Maps, a December festival and a Grade 1 distinction |
 | `08-012` Today's classes on the calendar by default | P0 | Done | PR #234. A new `activity` source in `calendarRange` (`activityEntries`, `sessionDates`): each class's sessions on the days it meets, at its times on the household's clock, for that child, opening on Kids & School; stopping a class takes it off. Checked: the Calendar's day view showed "Piano · 5:00 pm – 6:00 pm · Anya QA" today with nothing added by hand |
+| `08-013` A child's classes in their details in Family too | P0 | Done | The owner, 2026-10-18 (PR #235): the classes outside school appear in the child's opened details in Family, folded with days and times and opening onto every detail, added and changed there (`_components/child-classes.tsx`, one component for Family and Kids & School, rendered outside the details form so its sheets keep their own forms). Browser-checked at 360px: a class changed from Family (Sunday dropped) read back everywhere |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -531,7 +532,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-2 of 7 done `██░░░░░░░░`
+3 of 8 done `███░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -542,5 +543,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-005` Calendar notices over WhatsApp | P2 | Not Started | Formerly 12-013. C5: only if wanted; the official template, shared with Groceries' Send to Cook |
 | `26-006` Google and Outlook calendars | P2 | Not Started | Formerly 12-014. C6: only after a separate approval |
 | `26-007` Home's next event says what kind it is | P1 | Done | The owner's report, 2026-10-18 (PR #232): a school trip came up on Home as a "Family moment" with a heart and "Plan together". The card now takes the next family-kind event (family time, outing, birthday, gathering, travel, special occasion), and only when there is none the next event of any kind, said as what it is: "School event" with the school tile and "Open event" to that event's page, "Appointment" likewise, "Family moment" with "Plan together" for the rest. `CalendarItem` gives school events and appointments the calendar's own tiles, and its Protected badge wraps under a short title instead of being cut. Words in eight languages. Browser-checked at 360px and 1280px: a protected school trip alone reads School event / Open event (the event page opens); with a family picnic three days later the card is the picnic, Family moment / Plan together; no horizontal scroll |
+| `26-008` Today with nothing booked doesn't call itself a free day | P1 | Done | The owner's report, 2026-10-18 (PR #235): the day view said "Nothing planned — a free day" right above Today's plan of meals, bills and school. Today with no events is now one card, "Nothing on the calendar today.", holding the Today's plan link; another empty day reads "No events — nothing is on the calendar for this day." Eight languages. Checked at 360px |
 
 _Generated 2026-10-18 from 27 backlog files._
