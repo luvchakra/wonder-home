@@ -400,32 +400,7 @@ async function reconcile(
 
   // 4. What has come due is delivered — in the app always, and on the
   //    person's other live channels when it is still fresh.
-  const { data: due } = await admin
-    .from("notifications")
-    .update({ status: "delivered", delivered_at: now.toISOString() })
-    .eq("household_id", householdId)
-    .eq("status", "generated")
-    .lte("scheduled_for", now.toISOString())
-    .select("id, recipient_member_id, title, body, message, priority, scheduled_for, source_type");
-  for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; message: unknown; priority: string; scheduled_for: string; source_type: string | null }[]) {
-    result.delivered += 1;
-    const fresh = now.getTime() - new Date(row.scheduled_for).getTime() <= FRESH_DELIVERY_MINUTES * 60_000;
-    const ownDelivery = row.source_type === "reminder" || (row.source_type !== null && managed.has(row.source_type));
-    if (fresh && ownDelivery) {
-      await deliverNotification(
-        admin,
-        {
-          householdId,
-          notificationId: row.id,
-          recipientMemberId: row.recipient_member_id,
-          notification: { title: row.title, body: row.body, priority: row.priority === "high" ? "high" : row.priority === "low" ? "low" : "normal" },
-          copy: parseCopy(row.message),
-          now,
-        },
-        adapters,
-      );
-    }
-  }
+  result.delivered += await deliverDueNotifications(admin, householdId, now, adapters);
 
   return result;
 }
@@ -470,6 +445,54 @@ export function batchSchoolDays(
 
 /** How long a person's past actions are looked at to learn their timing. */
 const LEARNING_WINDOW_DAYS = 60;
+
+/**
+ * Everything of this household's that has come due: marked delivered (the
+ * inbox), and sent on the recipient's other live channels while it is still
+ * fresh — a reminder pushed two hours late is noise, so it waits in the app.
+ * Run by every reconcile and, every five minutes, by the dispatch clock
+ * (`/api/v1/notifications/dispatch`), so a reminder lands at its time.
+ * Returns how many came due.
+ */
+export async function deliverDueNotifications(
+  admin: SupabaseClient,
+  householdId: string,
+  now: Date,
+  adapters?: Record<DeliveryChannel, ChannelAdapter>,
+): Promise<number> {
+  const managed = new Set<string>(RECONCILED_SOURCE_TYPES);
+  let delivered = 0;
+  const { data: due } = await admin
+    .from("notifications")
+    .update({ status: "delivered", delivered_at: now.toISOString() })
+    .eq("household_id", householdId)
+    .eq("status", "generated")
+    .lte("scheduled_for", now.toISOString())
+    .select("id, recipient_member_id, title, body, message, priority, scheduled_for, source_type");
+  for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; message: unknown; priority: string; scheduled_for: string; source_type: string | null }[]) {
+    delivered += 1;
+    const fresh = now.getTime() - new Date(row.scheduled_for).getTime() <= FRESH_DELIVERY_MINUTES * 60_000;
+    const ownDelivery = row.source_type === "reminder" || (row.source_type !== null && managed.has(row.source_type));
+    if (fresh && ownDelivery) {
+      await deliverNotification(
+        admin,
+        {
+          householdId,
+          notificationId: row.id,
+          recipientMemberId: row.recipient_member_id,
+          notification: { title: row.title, body: row.body, priority: row.priority === "critical" || row.priority === "high" || row.priority === "low" ? row.priority : "normal" },
+          copy: parseCopy(row.message),
+          // Only reminders from a record (a bill, school work, a meal) reach here: each was timed for this person.
+          reason: "reminder",
+          now,
+        },
+        adapters,
+      );
+    }
+  }
+
+  return delivered;
+}
 
 /**
  * When each learning member usually acts on each kind of reminder, from the

@@ -165,6 +165,8 @@ type FloatSession = {
   video: HTMLVideoElement;
   timer: number;
   startedAt: number;
+  /** Whether Gemini's voice is playing through this video (story 04-024). */
+  voice?: boolean;
 };
 
 /** The media-session actions a phone's lock screen or floating window can press. */
@@ -185,6 +187,8 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const [floatable, setFloatable] = useState(false);
   const [floating, setFloating] = useState(false);
   const floatRef = useRef<FloatSession | null>(null);
+  /** Gemini's voice, for the floating video to carry; filled in once the engines exist (below). */
+  const voiceRef = useRef<{ take: () => MediaStream | null; release: () => void }>({ take: () => null, release: () => undefined });
   const paletteRef = useRef<FloatPalette | null>(null);
   const viewRef = useRef<LiveView>({ state: "idle", active: false, paused: false });
   const exchangeRef = useRef<{ heard: string | null; said: string | null }>({ heard: null, said: null });
@@ -213,6 +217,8 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     const session = floatRef.current;
     if (!session) return;
     floatRef.current = null;
+    // The voice goes back to the speaker before the video that carried it goes.
+    voiceRef.current.release();
     window.clearInterval(session.timer);
     try {
       if (document.pictureInPictureElement === session.video) void document.exitPictureInPicture().catch(() => undefined);
@@ -292,6 +298,33 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     session.timer = window.setInterval(paint, 1000 / FRAME_RATE);
     return session;
   }, [disarmFloat, paint]);
+
+  /**
+   * Gemini's voice into the ready floating video (story 04-024), as soon as
+   * there is a voice to carry: a browser floats on its own only media that
+   * is audibly playing, and a silent picture is not. Where sound may not
+   * play here, the picture stays muted and the voice goes back to the
+   * speaker, exactly as before — the person hears it either way, once.
+   */
+  const attachVoice = useCallback(async () => {
+    const session = floatRef.current;
+    if (!session || session.voice || !(session.video.srcObject instanceof MediaStream)) return;
+    const tracks = voiceRef.current.take()?.getAudioTracks() ?? [];
+    if (tracks.length === 0) return;
+    const stream = session.video.srcObject;
+    for (const track of tracks) stream.addTrack(track);
+    session.video.muted = false;
+    session.voice = true;
+    try {
+      await session.video.play();
+    } catch {
+      for (const track of tracks) stream.removeTrack(track);
+      session.video.muted = true;
+      session.voice = false;
+      voiceRef.current.release();
+      void session.video.play().catch(() => undefined);
+    }
+  }, []);
 
   /**
    * Opens the floating window. From a tap it always may; from leaving the app
@@ -380,6 +413,12 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const server = useMemo(() => (config?.serverVoice ? { householdId: config.householdId } : null), [config?.serverVoice, config?.householdId]);
   const own = useLiveVoice({ lang: config?.lang ?? "en-IN", server, onUtterance, onError });
   const gemini = useGeminiLive({ householdId: config?.householdId ?? "", onTranscript, onTranscriptRevised, onError, onNavigate: navigate });
+  // The floating video takes Gemini's voice only while Gemini is the one talking.
+  const geminiVoice = gemini.voiceStream;
+  const geminiRelease = gemini.releaseVoice;
+  useEffect(() => {
+    voiceRef.current = { take: () => (running === "gemini_live" ? geminiVoice() : null), release: geminiRelease };
+  }, [geminiRelease, geminiVoice, running]);
 
   const engineOf = useCallback((name: LiveEngineName) => (name === "gemini_live" ? gemini : own), [gemini, own]);
   const view = useCallback(
@@ -481,13 +520,17 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const autoFloat = shouldArmFloat({ floatable, active: liveActive, paused: livePaused });
   useEffect(() => {
     if (!autoFloat) return;
-    void armFloat();
+    void armFloat().then(() => attachVoice());
     const onHidden = () => {
       if (document.visibilityState === "hidden") void floatNow(true);
     };
     document.addEventListener("visibilitychange", onHidden);
     return () => document.removeEventListener("visibilitychange", onHidden);
-  }, [armFloat, autoFloat, floatNow]);
+  }, [armFloat, attachVoice, autoFloat, floatNow]);
+  // The voice arrives a moment after the conversation starts; it joins the ready video when it does.
+  useEffect(() => {
+    if (autoFloat && liveState !== "connecting") void attachVoice();
+  }, [attachVoice, autoFloat, liveState]);
 
   // The phone's own media controls — on its lock screen, in the floating
   // window — pause, resume and end this conversation; where the browser

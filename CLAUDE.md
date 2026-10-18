@@ -748,8 +748,8 @@ authorization channel:
 It all stays inert until a deployment sets `WHATSAPP_ACCESS_TOKEN`,
 `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_NAME`,
 `WHATSAPP_APP_SECRET` and `WHATSAPP_VERIFY_TOKEN`. The app offers
-connecting only once `WHATSAPP_BUSINESS_NUMBER` is set too. Scheduled
-(future-dated) notifications are not yet sent beyond the app.
+connecting only once `WHATSAPP_BUSINESS_NUMBER` is set too. Scheduled notifications go out at their time through the delivery clock
+(see Push under Smart notifications).
 
 Partner keys (story 18-008, `packages/core/src/developer/`) let an app a
 household trusts use a narrow API (`/api/v1/partner/*`). An Admin creates a
@@ -781,6 +781,19 @@ reminders about real records, never lines of text fired and forgotten.
 - **Actions.** Acting on the thing itself goes through the domain's own
   service. The reminder resolves because its source changed, not because a
   notification wrote to a domain table.
+- **Push** (story 23-015, `notifications/web-push.ts`, `push-gate.ts`). A
+  member turns push on per device in Settings → Notifications
+  (`push_subscriptions`, their own rows only; `public/sw.js` shows it). A
+  push goes to the one recipient's devices only when it earns the buzz
+  (`pushWorthSending`): critical always, high and timed reminders within a
+  daily ceiling, low never; quiet hours hold except for critical. Every five
+  minutes pg_cron calls `/api/v1/notifications/dispatch`
+  (`deliverDueNotifications`), so a reminder lands at its time. It is inert
+  until a deployment sets `WONDERHOME_VAPID_PUBLIC_KEY` and
+  `WONDERHOME_VAPID_PRIVATE_KEY` (optionally `WONDERHOME_VAPID_SUBJECT`) and
+  the database holds the cron secret in Vault as `cron_secret`. A device the
+  push service calls gone is forgotten. Never push from anywhere but
+  `deliverNotification`.
 - **Fewer interruptions.** A child's school things due the same day are one
   reminder (`school_day`, `batchSchoolDays`), as urgent as the most urgent
   item in it. A policy that escalates tells the responsibility's backup

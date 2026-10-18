@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**269 of 290 stories done — 92.8%**
+**272 of 293 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 269 |
+| Done | 272 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 17 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 12 | 12 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 22 | 23 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 23 | 24 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 9 | 9 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
@@ -48,10 +48,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
-| 23 Smart Notifications | `██████████` | 12 | 12 | — |
+| 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
 | 25 HomeFood | `████░░░░░░` | 9 | 19 | 1 in progress, 9 not started |
-| 26 HomeEvents | `█████░░░░░` | 6 | 11 | 1 in progress, 4 not started |
+| 26 HomeEvents | `█████░░░░░` | 7 | 12 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -152,7 +152,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-22 of 23 done `█████████░`
+23 of 24 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -179,6 +179,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-021` Wait to speak until HomeTalk can hear | P0 | Done | The owner's report, 2026-10-18 (PR #230): Gemini Live takes a few seconds to open its session and only then listens, but the composer looked ready the moment it was tapped, so people spoke into nothing. A live session now has its own `connecting` state, kept apart from thinking and listening, in `LiveTalkProvider`, the live bar and the floating window. The composer shows "Getting ready… don't speak yet" in amber with a turning ring and "{who} is connecting. Start speaking when it says it's listening." (assertive live region), then "Ready — speak now" in green for three seconds, then the usual "… is listening". WonderHome's own voice does the same on a session's first listen, until the recogniser says it has started (`onstart`) or the microphone is recording (`captureUtterance`'s `onReady`), with a 2.5 s fallback. Labels in eight languages; help Voice ¶2. Browser-checked at 360px and 1280px with a recogniser that takes 2 s to start: 0.5 s "Getting ready", 2.5 s "Ready — speak now", 6 s "HomeTalk is listening…", no errors |
 | `04-022` HomeTalk floats on its own when you leave the app | P0 | Done | The owner's ask, 2026-10-18 (PR #232): switching to another app in the middle of a live conversation should float HomeTalk without anyone remembering Float. While a live conversation runs and isn't paused (`shouldArmFloat`), the floating window's hidden video is armed and playing with `autopictureinpicture`, so Safari floats it as the page goes to the background, Chrome floats it through the media session's `enterpictureinpicture` action, and a `visibilitychange` to hidden asks once more, quietly (no notice if the browser refuses). Closing the window keeps it armed; ending the conversation tears it down. Float stays as the manual way. Help Voice ¶8 in eight languages. Browser-checked at 360px and 1280px: armed before any tap, leaving the page floated it with no notice, Float/Bring back/End unchanged, no errors |
 | `04-023` The chat shows what was really said in Gemini Live | P0 | Done | The owner's report, 2026-10-18 (PR #234): Gemini heard them clearly and answered well, but the chat line had different, misspelt words. The line came from the Live API's `inputTranscription`, a light side transcriber that guesses the language unaided; the conversation model's own understanding is never exposed as text, and the documented transcription hints (`languageCodes`, `customVocabulary`) are for Google's separate transcribe model, so they were not put into the locked session. Now the page keeps each turn's microphone audio (the same audio already sent; at most a minute) and, once the person's line is shown, `POST /voice/gemini/transcribe` writes it down word for word with a full Gemini model (`voicelink/live-transcribe.ts`), told the member's listening language and the household's names; the chat line, and the floating window, are replaced with it. Same gate as the session (flag, plan, Google key, data-use agreement), its own rate limit (`voice.transcribe`), nothing stored; on any failure Gemini's line stands. Help Voice ¶2 in eight languages. Checked: unit tests for the WAV header, vocabulary, instruction and cleaning; the route refuses without Gemini voice (403), a bad body (400) and signed out (401). A real Gemini Live run needs the owner's phone |
+| `04-024` Gemini's voice plays through the floating window, so leaving the app floats it | P1 | Done | The owner's yes, 2026-10-18 (PR #237): Chrome floats on its own only media that is audibly playing, and the armed window was a silent picture, so it never floated by itself. Gemini's voice now passes through one node (`use-gemini-live.tsx`, `voiceStream`/`releaseVoice`) that plays into the armed video's stream instead of the speaker (`live-talk.tsx`, `attachVoice`), heard once either way; where sound may not play, the video stays muted and the voice returns to the speaker. Checked in Chromium: an audio track added to the playing picture after a tap plays unmuted. A real-phone check of the automatic float is the owner's |
 
 ### 05 — Household Certification & Understanding
 
@@ -482,7 +483,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 23 — Smart Notifications
 
-12 of 12 done `██████████`
+13 of 13 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -498,6 +499,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `23-010` Escalation | P1 | Done | A reminder moves through its policy's stages (bounded; `maxRemindersFor` = stages + one backup). When the policy escalates (bills after 3 h, school after 1 h, pets after 2 h) and the responsible person's last reminder has gone unanswered that long, the responsibility's backup hears once, naming who has not answered, under their own quiet hours and settings. Never again once they dismiss it; recorded as `escalated` on the unanswered reminder |
 | `23-011` HomeBrain smart digest | P1 | Done | "HomeBrain summary · Today" above the list: today's reminders, in the order they come, built from the same rows — a summary, never a second source. On unless the person turns it off (`notification_preferences.daily_digest`) |
 | `23-012` Timing learned from behaviour | P1 | Done | Off unless the person turns it on (`learn_timing`). Evidence is only them acting on a reminder itself (`acted` events, 60 days); five or more, with the middle half within two hours, moves the first reminder of that kind to their median time, on the quarter hour. Never over a timing they chose, never a "before" reminder, never past the next stage; quiet hours still apply, and the row says so only when a learned time actually moved it |
+| `23-013` Push notifications that arrive in time and only when they matter | P0 | Done | The owner, 2026-10-18 (PR #237): Web Push with VAPID (`notifications/web-push.ts`), a device per row in `push_subscriptions` (own rows only), `public/sw.js` to show it and open the right screen, and "Push on this phone" in Settings → Notifications (turn on, send a test, turn off). A push goes only to the recipient's devices, in their language, when `pushWorthSending` says it earns the interruption: critical always, high and timed reminders within a daily ceiling, low never; quiet hours hold except for critical; a newer word on the same thread replaces the older on the phone. pg_cron calls `/api/v1/notifications/dispatch` every five minutes (`deliverDueNotifications`), so a reminder lands at its time. Migration `20261018280000` live. Checked locally with a QA key pair: Chromium subscribed through Google's push service, the test push and a normal bill reminder were sent, a low one stayed in the app. Production waits on the owner: the VAPID keys on Vercel and `cron_secret` in Vault |
 
 ### 24 — HomePlaces
 
@@ -544,7 +546,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-6 of 11 done `█████░░░░░`
+7 of 12 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -559,5 +561,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-009` Decorated invitations, and a big postcard on WhatsApp | P1 | Done | The owner, 2026-10-18 (PR #236): an event's invite link wears one of nine designs (birthday, anniversary, wedding, festival, puja, housewarming, baby, get-together, classic), chosen from the event's kind and title by rules (`family/invite-templates.ts`, `suggestTemplate`) until the household picks one on the event page, with an optional line for guests (never the notes). The guest page is the decorated `InvitationCard`; `e/[token]/opengraph-image.tsx` draws the same design as a 1200×630 postcard that WhatsApp shows large, in the household's language (Devanagari and other scripts through Noto for just the characters used). Migration `20261018270000` live (`invite_template`, `invite_message`). Checked: all nine postcards rendered; the guest page at 360px and desktop; picking Festival and a line on the event page showed on the page |
 | `26-010` A member's birthday is the whole day, not 5:30 am to 5:30 am | P1 | Done | The owner's report, 2026-10-18 (PR #236): the member-occasion trigger wrote a birthday as UTC midnight to midnight, so in India the event read "5:30 am – 5:30 am". It now writes the household's local day as an all-day event, and the rows already written were moved onto that day (same migration). DB test; `verify:live` checks no timed member occasion is left |
 | `26-011` Event cards say who is going, and use their width | P1 | Done | The owner's report, 2026-10-18 (PR #236): Home's event card showed every family member's avatar although only Asmi was going, and squeezed the title and time beside a second kind tile and the button. Now every event list (Home's card, Today's focus, Family's Upcoming, a child's Home) says when the same way — "All day" for an all-day event, never a midnight time (`_lib/event-when.ts`) — and its place; Home's card and Family's list name who is going from the event's own list ("With Asmi", or on Home "Nobody from the family is asked yet" with a button to ask), and the card gives the title the full width with the action beside who is going. Today's rows wear the event's kind, not always a heart, and no longer cut the time. Every event row tucks its kind's tile under the date leaf, so the title, time and place take the row's width and a time no longer wraps. Checked at 360px and 1280px: a school trip only Asmi goes to reads "With Asmi QA"; a birthday reads "All day" |
+| `26-012` A tall, phone-shaped invitation, and a preview before saving | P1 | Done | The owner, 2026-10-18 (PR #237): Share invitation sends the invitation as a 1080×1350 picture with the link (`e/[token]/card`, one renderer with the link preview, `render-invitation.tsx`), so it shows whole in a chat; the wide picture stays as the link preview, since a chat only shows a wide one large. Preview in the design picker shows the invitation with the design and line picked, before saving. Checked: three designs drawn tall; the wedding preview at 360px; Share invitation opened the picture where the browser can't share files |
 
 _Generated 2026-10-18 from 27 backlog files._

@@ -16,6 +16,7 @@
  */
 
 import { inQuietHours, quietHoursFrom } from "./timing";
+import { createWebPushAdapter, webPushConfigFromEnv } from "./web-push";
 import { createWhatsAppAdapter, whatsappConfigFromEnv } from "./whatsapp";
 
 export const DELIVERY_CHANNELS = ["in_app", "push", "email", "whatsapp"] as const;
@@ -38,10 +39,14 @@ export type ChannelNotification = {
   title: string;
   body: string;
   priority: "low" | "normal" | "high" | "critical";
+  /** Where opening it goes (push). */
+  url?: string;
+  /** One thread, one notification on the device: a newer word replaces the older (push). */
+  tag?: string;
 };
 
 export type ChannelError = {
-  code: "no_target" | "not_configured" | "unavailable";
+  code: "no_target" | "not_configured" | "unavailable" | "gone";
   retryable: boolean;
   message: string;
 };
@@ -119,11 +124,17 @@ export const CHANNEL_ADAPTERS: Record<DeliveryChannel, ChannelAdapter> = {
 
 /**
  * The adapters this deployment actually has: WhatsApp's Cloud API once it
- * is configured (story 17-006), the fixtures otherwise.
+ * is configured (story 17-006), Web Push once its key pair is set (story
+ * 23-015), the fixtures otherwise.
  */
 export function channelAdaptersFromEnv(env: Record<string, string | undefined> = process.env): Record<DeliveryChannel, ChannelAdapter> {
   const whatsapp = whatsappConfigFromEnv(env);
-  return whatsapp ? { ...CHANNEL_ADAPTERS, whatsapp: createWhatsAppAdapter(whatsapp.adapter) } : CHANNEL_ADAPTERS;
+  const push = webPushConfigFromEnv(env);
+  return {
+    ...CHANNEL_ADAPTERS,
+    ...(whatsapp ? { whatsapp: createWhatsAppAdapter(whatsapp.adapter) } : {}),
+    ...(push ? { push: createWebPushAdapter(push) } : {}),
+  };
 }
 
 /**
@@ -155,6 +166,8 @@ export function selectChannels(
 
 export type ChannelAttempt = {
   channel: DeliveryChannel;
+  /** The address it was tried at (one device, for push). */
+  target?: string | null;
   result: ChannelSendResult;
 };
 
@@ -175,6 +188,7 @@ export async function dispatchToChannels(
   return Promise.all(
     selected.map(async (preference) => ({
       channel: preference.channel,
+      target: preference.target,
       result: await adapters[preference.channel].send(notification, preference.target),
     })),
   );

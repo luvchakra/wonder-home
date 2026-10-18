@@ -122,7 +122,8 @@ function svg(width: number, height: number, body: string): string {
 
 /** An SVG string as an image source, for `<img>` on the page and in the share card alike. */
 export function svgDataUri(markup: string): string {
-  return `data:image/svg+xml;base64,${Buffer.from(markup, "utf8").toString("base64")}`;
+  // The drawings are plain ASCII, so `btoa` works the same on the server and in a browser.
+  return `data:image/svg+xml;base64,${btoa(markup)}`;
 }
 
 // --- Garlands across the top --------------------------------------------------

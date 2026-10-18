@@ -59,6 +59,10 @@ export function useGeminiLive(input: {
   pause: () => void;
   resume: () => void;
   stop: () => void;
+  /** Gemini's voice as a stream, for the floating window to play (story 04-024); null with no session. */
+  voiceStream: () => MediaStream | null;
+  /** The voice back to the speaker, as before the floating window took it. */
+  releaseVoice: () => void;
 } {
   const { householdId, onTranscript, onTranscriptRevised, onError, onNavigate } = input;
   const [state, setState] = useState<GeminiLiveState>("idle");
@@ -74,6 +78,15 @@ export function useGeminiLive(input: {
   const streamRef = useRef<MediaStream | null>(null);
   const inputContextRef = useRef<AudioContext | null>(null);
   const outputContextRef = useRef<AudioContext | null>(null);
+  /**
+   * Everything Gemini says passes through this one node (story 04-024). It
+   * plays to the speaker; while the floating video is ready it plays into a
+   * stream that video carries instead, so the browser sees media that is
+   * really playing sound — the one kind it floats on its own when the person
+   * leaves the app. Never both at once: the voice is heard once.
+   */
+  const voiceBusRef = useRef<GainNode | null>(null);
+  const voiceOutRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const playingRef = useRef(new Set<AudioBufferSourceNode>());
   const playAtRef = useRef(0);
   const sendingRef = useRef(false);
@@ -120,6 +133,8 @@ export function useGeminiLive(input: {
     void outputContextRef.current?.close().catch(() => undefined);
     inputContextRef.current = null;
     outputContextRef.current = null;
+    voiceBusRef.current = null;
+    voiceOutRef.current = null;
     pendingToolsRef.current = 0;
     setActive(false);
     setPaused(false);
@@ -136,7 +151,7 @@ export function useGeminiLive(input: {
       buffer.copyToChannel(samples, 0);
       const source = context.createBufferSource();
       source.buffer = buffer;
-      source.connect(context.destination);
+      source.connect(voiceBusRef.current ?? context.destination);
       const at = Math.max(context.currentTime, playAtRef.current);
       source.start(at);
       playAtRef.current = at + buffer.duration;
@@ -260,6 +275,10 @@ export function useGeminiLive(input: {
       const outputContext = new AudioContext({ sampleRate: LIVE_OUTPUT_RATE });
       inputContextRef.current = inputContext;
       outputContextRef.current = outputContext;
+      const voiceBus = outputContext.createGain();
+      voiceBus.connect(outputContext.destination);
+      voiceBusRef.current = voiceBus;
+      voiceOutRef.current = null;
       let lines = 0;
       turnAudioRef.current = { chunks: [], bytes: 0 };
       transcriptRef.current = new LiveTranscript((entry) => {
@@ -376,5 +395,24 @@ export function useGeminiLive(input: {
     [teardown],
   );
 
-  return { state, active, paused, start: () => void start(), pause, resume, stop };
+  const voiceStream = useCallback((): MediaStream | null => {
+    const context = outputContextRef.current;
+    const bus = voiceBusRef.current;
+    if (!context || !bus || typeof context.createMediaStreamDestination !== "function") return null;
+    const out = voiceOutRef.current ?? context.createMediaStreamDestination();
+    voiceOutRef.current = out;
+    bus.disconnect();
+    bus.connect(out);
+    return out.stream;
+  }, []);
+
+  const releaseVoice = useCallback(() => {
+    const context = outputContextRef.current;
+    const bus = voiceBusRef.current;
+    if (!context || !bus || !voiceOutRef.current) return;
+    bus.disconnect();
+    bus.connect(context.destination);
+  }, []);
+
+  return { state, active, paused, start: () => void start(), pause, resume, stop, voiceStream, releaseVoice };
 }

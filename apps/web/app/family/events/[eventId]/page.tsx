@@ -28,7 +28,8 @@ import {
 } from "../../../(auth)/event-actions";
 import { setOccurrenceCancelledAction } from "../../../(auth)/calendar-actions";
 import { EventActionButton, EventEditForm, EventInviteesForm, EventLinkShare, type EventEditInitial, type EventEditLabels } from "../../../_components/event-controls";
-import { InviteDesignForm, type InviteDesignOption } from "../../../_components/invite-design-form";
+import { InviteDesignForm, type InviteDesignOption, type InvitePreview } from "../../../_components/invite-design-form";
+import { invitationWords } from "../../../_lib/invitation-words";
 import { eventFormLabels } from "../../../_lib/event-form-labels";
 import { formatDate, formatTime, requireSession } from "../../../_lib/session";
 
@@ -126,6 +127,32 @@ export default async function EventPage({ params, searchParams }: { params: Prom
     return { key, name, image: svgDataUri(corner), paper: palette.paper, accent: palette.accent };
   };
   const suggested = suggestTemplate(event);
+  // The preview's words: the event as a guest would read it, in the viewer's language.
+  const prefs = session.locale.preferences;
+  const guestWords = invitationWords(t, prefs.language, {
+    linkId: "",
+    householdId,
+    eventId: event.id,
+    householdName: membership.household.name,
+    timezone,
+    language: prefs.language,
+    region: prefs.region,
+    title: event.title,
+    kind: event.kind,
+    startsAt: event.startsAt,
+    endsAt: event.endsAt,
+    location: event.location,
+    allDay: event.allDay,
+    template: suggested,
+    message: null,
+    cancelled,
+    over,
+  });
+  const invitePreview: InvitePreview = {
+    suggested,
+    words: { invited: guestWords.invited, title: guestWords.title, day: guestWords.day, time: guestWords.time, place: guestWords.place, hosted: guestWords.hosted },
+    kindLines: Object.fromEntries(INVITE_TEMPLATES.map((key) => [key, t(`invite.card.kind.${key}`)])) as InvitePreview["kindLines"],
+  };
   const designOptions: InviteDesignOption[] = [
     { ...option(suggested, t("events.invite.auto", { design: t(`invite.template.${suggested}`) })), key: "auto" },
     ...INVITE_TEMPLATES.map((key) => option(key, t(`invite.template.${key}`))),
@@ -265,7 +292,8 @@ export default async function EventPage({ params, searchParams }: { params: Prom
                     options={designOptions}
                     selected={event.inviteTemplate ?? "auto"}
                     message={event.inviteMessage ?? ""}
-                    labels={{ design: t("events.invite.title"), message: t("events.invite.message"), messageHint: t("events.invite.messageHint"), save: t("events.invite.save"), saving: t("events.invite.saving"), saved: t("events.invite.saved") }}
+                    labels={{ design: t("events.invite.title"), message: t("events.invite.message"), messageHint: t("events.invite.messageHint"), save: t("events.invite.save"), saving: t("events.invite.saving"), saved: t("events.invite.saved"), preview: t("events.invite.previewDesign"), previewTitle: t("events.invite.previewTitle"), previewLede: t("events.invite.previewLede") }}
+                    preview={invitePreview}
                   />
                 </div>
               ) : null}
@@ -274,7 +302,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
                   <Link href={linkPath} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
                     <Eye aria-hidden className="size-4" /> {t("events.invite.preview")}
                   </Link>
-                  <EventLinkShare path={linkPath} title={event.title} labels={{ copy: t("events.link.copy"), copied: t("events.link.copied"), share: t("events.link.share"), shareText: t("events.link.shareText", { title: "{title}" }) }} />
+                  <EventLinkShare path={linkPath} title={event.title} labels={{ copy: t("events.link.copy"), copied: t("events.link.copied"), share: t("events.link.share"), shareText: t("events.link.shareText", { title: "{title}" }), shareCard: t("events.link.shareCard"), saveCard: t("events.link.saveCard") }} />
                   <div className="flex flex-wrap gap-2">
                     <EventActionButton action={createInviteLinkAction} fields={ids}>{t("events.link.new")}</EventActionButton>
                     <EventActionButton action={revokeInviteLinkAction} fields={ids} className="text-[var(--wh-risk)]">{t("events.link.off")}</EventActionButton>
