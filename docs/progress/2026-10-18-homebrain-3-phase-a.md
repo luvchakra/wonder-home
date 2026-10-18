@@ -1,6 +1,6 @@
 # HomeBrain 3.0 phase A: the Household Context Store (14-020), wait to speak until HomeTalk can hear (04-021), and pieces to grams live (25-013)
 
-**Date:** 2026-10-18 · **Stories:** 14-020 (In Progress until its table is live), 04-021 (Done), 25-013 (Done) · **Design:** `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`
+**Date:** 2026-10-18 · **Stories:** 14-020 (Done, live), 04-021 (Done), 25-013 (Done) · **Design:** `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`
 
 ## Why
 
@@ -58,11 +58,19 @@ The owner ran `20261018240000` in the SQL editor. The service-role key cannot ru
   - the list reopened at 50 g;
   - no errors and no horizontal scroll.
 - **Browser, 04-021**, at 360px and 1280px, with a scripted recogniser that takes 2 s to start hearing: at 0.5 s "Getting ready… don't speak yet", at 2.5 s "Ready — speak now", at 6 s "HomeTalk is listening…". No errors and no horizontal scroll. The Gemini Live path uses the same state. It was not run here, because the QA household has no Google key and none was added.
-- **HomeTalk on the live fallback path** (table not yet run). For a party seeded on 9 December with two guests, both questions came back "Nothing is on the family calendar for the next 7 days" in 5–7 s. That is the report reproduced live. The check with the store follows the SQL run.
+- **HomeTalk with the store, on the live project**, after the owner ran `20261018250000`:
+  - `verify:live` passed 280/280.
+  - "Who is coming to the QA birthday party?" and "Check the QA birthday party, a few people are coming. Do you know?" both answered "QA birthday party (birthday) is on Wed 9 Dec at 5:00pm. Guests: Riya Shah (3 people) said yes; Dev Kapoor said maybe — 3 coming so far."
+  - The first turn built the row (10.8 KB, 11 s); the next took 5.5 s, which is now the model calls (phase B's work).
+  - "Add bananas to the grocery list" marked the row behind, and it was rebuilt after that response: version 1 → 3, built after the write, 11.7 KB.
+- **Two fixes the live check found.**
+  - The first live run still said "nothing on the calendar", and the row stayed empty. Next bundles `instrumentation.ts` apart from the route handlers, so the store's reader, set in a module variable at startup, was never seen by a turn. The reader and the write listener now live on `globalThis`, which every bundle shares.
+  - A guest's reply through an invite link is written without a member's session, so it was not one of the wrapped writes. It now marks its household changed (`replyThroughLink`), and HomeTalk hears new replies.
+- **HomeTalk on the live fallback path, before the table existed.** For a party seeded on 9 December with two guests, both questions came back "Nothing is on the family calendar for the next 7 days" in 5–7 s. That is the report reproduced live. The check with the store follows the SQL run.
 
 ## Needs a person
 
-- Run `20261018250000` in the SQL editor (the "SQL to run" page). Then `npm run verify:live`, and the same two questions against the store.
+- Nothing for phase A. Phase B (one model call over question-sized facts, streamed) is the speed; its own story is 14-021.
 
 ## Where the code lives
 

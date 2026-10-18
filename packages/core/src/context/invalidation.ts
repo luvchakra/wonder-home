@@ -24,10 +24,12 @@ const cache = new Map<string, CacheEntry>();
  * nothing here imports it, so a repository that writes still drags no
  * reads in. Never awaited by a write, and never allowed to throw into one.
  */
-let onWrite: ((householdId: string) => void) | null = null;
+const WRITE_LISTENER = Symbol.for("wonderhome.contextWriteListener");
+type WithListener = typeof globalThis & { [WRITE_LISTENER]?: ((householdId: string) => void) | null };
 
+/** On `globalThis` for the same reason as the store's reader (`repository.ts`): instrumentation and routes are separate bundles. */
 export function setContextWriteListener(listener: ((householdId: string) => void) | null): void {
-  onWrite = listener;
+  (globalThis as WithListener)[WRITE_LISTENER] = listener;
 }
 
 /** Forgets everything read about this household. Call after any successful write. */
@@ -35,7 +37,7 @@ export function invalidateHouseholdContext(householdId: string): void {
   const prefix = `${householdId}:`;
   for (const key of cache.keys()) if (key.startsWith(prefix)) cache.delete(key);
   try {
-    onWrite?.(householdId);
+    (globalThis as WithListener)[WRITE_LISTENER]?.(householdId);
   } catch {
     // The store's problem, never the write's.
   }

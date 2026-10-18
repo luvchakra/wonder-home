@@ -244,10 +244,23 @@ export type GatherOptions = {
  * testable — without a service role or a database.
  */
 export type ContextStoreReader = (supabase: Supabase, scope: ContextScope, options: GatherOptions) => Promise<ContextSnapshot | null>;
-let storeReader: ContextStoreReader | null = null;
+
+/**
+ * Kept on `globalThis`, not in a module variable: Next bundles
+ * `instrumentation.ts` (where the store is switched on) separately from the
+ * route handlers, so each has its own copy of this module, and a module
+ * variable set in one is never seen by the other. Every bundle in the
+ * process shares `globalThis`.
+ */
+const STORE_READER = Symbol.for("wonderhome.contextStoreReader");
+type WithReader = typeof globalThis & { [STORE_READER]?: ContextStoreReader | null };
 
 export function setContextStoreReader(reader: ContextStoreReader | null): void {
-  storeReader = reader;
+  (globalThis as WithReader)[STORE_READER] = reader;
+}
+
+function contextStoreReader(): ContextStoreReader | null {
+  return (globalThis as WithReader)[STORE_READER] ?? null;
 }
 
 /** Reads every domain this member may see and turns it into canonical items. */
@@ -301,6 +314,7 @@ export async function gatherHouseholdContext(supabase: Supabase, scope: ContextS
 
 /** The same read, kept briefly per viewer and forgotten the moment the household changes — through the store where there is one. */
 export async function loadHouseholdContext(supabase: Supabase, scope: ContextScope, options: GatherOptions = {}): Promise<ContextSnapshot> {
+  const storeReader = contextStoreReader();
   if (storeReader) {
     const fromStore = await storeReader(supabase, scope, options).catch(() => null);
     if (fromStore) return fromStore;
