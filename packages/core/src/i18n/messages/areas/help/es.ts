@@ -169,6 +169,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.5": "Los filtros solo cambian lo que ves tú: categorías, personas, solo lo tuyo, solo planes confirmados, festivos y la vista en la que se abre el calendario. El plan de hoy —comidas, facturas, colegio y lo que te necesita— está a un toque desde el día de hoy.",
   "help.guide.calendar.body.6": "Pregunta a HomeTalk qué hay en un mes o más —«¿hay eventos en diciembre?», «¿qué viene en los próximos meses?»— y te enumera por fecha los eventos, cumpleaños y festivos del Calendario que puedes ver. Lee el propio Calendario, así que nunca menciona nada privado de otra persona.",
   "help.guide.calendar.body.7": "Pregunta qué viene después —«¿cuál es el próximo evento?», «¿cuándo es el próximo festivo?», «¿algún cumpleaños pronto?»— y HomeTalk nombra el siguiente del Calendario y los dos posteriores, mirando hasta un año adelante, solo con lo que puedes ver.",
+  "help.guide.calendar.body.8": "El enlace de invitación de un evento tiene un diseño: cumpleaños, aniversario, boda, fiesta, puja, casa nueva, bebé, reunión o clásico. Mientras no elijas uno, el diseño sigue al evento: «Diwali at ours» lleva farolillos y diyas. Puedes añadir un mensaje para tus invitados; lo ven en la invitación, pero nunca tus notas. Al enviar el enlace por WhatsApp, el chat muestra la invitación como una imagen grande con qué, cuándo y dónde; «Ver invitación» te enseña la página que abrirán tus invitados.",
 
   "help.guide.notifications.title": "Recordatorios y notificaciones",
   "help.guide.notifications.summary": "Sobre cosas reales, para una persona, cuando le viene bien, y en silencio una vez resuelto.",
@@ -276,8 +277,9 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.househelp.body.1":
     "Ayuda doméstica registra quién ayuda en casa —de forma habitual, ocasional o como servicio a domicilio— y sus días y horarios habituales.",
   "help.guide.househelp.body.2":
-    "Registra un día de ausencia o un día extra, y WonderHome comprueba de qué se ocupa normalmente ese día y muestra lo que necesita cobertura, con una forma de organizarla.",
+    "Registra un permiso con el primer día libre y el número de días; el último día se rellena solo (o elige el último día y el número se ajusta). WonderHome revisa lo que suele encargarse de hacer esos días y muestra qué necesita cobertura, con una forma de organizarla.",
   "help.guide.househelp.body.3": "A la ayuda doméstica nunca se le pide que marque tareas, y no hay puntuaciones de productividad.",
+  "help.guide.househelp.body.4": "En la tarjeta de cada ayudante, «Se encarga de» muestra los resultados a su cargo. Un administrador añade otro con «Añadir responsabilidad», que empieza con esa persona como responsable, y toca uno para cambiar quién se encarga o quién le cubre, o para quitarlo. Es la misma lista que Gestionar hogar → Responsabilidades.",
 
   "help.guide.outcomes.title": "Resultados, responsabilidades y el manual",
   "help.guide.outcomes.summary": "Describe el hogar que quieres, no los pasos para llegar a él.",

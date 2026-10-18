@@ -169,6 +169,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.5": "Filter ändern nur, was du siehst: Kategorien, Personen, nur, woran du beteiligt bist, nur bestätigte Pläne, Feiertage und die Ansicht, mit der der Kalender öffnet. Der Plan für heute – Essen, Rechnungen, Schule und was dich braucht – ist einen Tipp vom heutigen Tag entfernt.",
   "help.guide.calendar.body.6": "Frag HomeTalk, was in einem Monat oder länger ansteht – „gibt es Termine im Dezember?“, „was kommt in den nächsten Monaten?“ –, und es listet nach Datum die Termine, Geburtstage und Feiertage im Kalender auf, die du sehen darfst. Es liest den Kalender selbst, daher wird nie etwas Privates von jemand anderem erwähnt.",
   "help.guide.calendar.body.7": "Frag, was als Nächstes kommt – „was ist der nächste Termin?“, „wann ist der nächste Feiertag?“, „stehen Geburtstage an?“ – und HomeTalk nennt den nächsten im Kalender und die zwei danach, bis zu einem Jahr voraus, nur mit dem, was du sehen darfst.",
+  "help.guide.calendar.body.8": "Der Einladungslink eines Termins hat ein Design: Geburtstag, Jubiläum, Hochzeit, Fest, Puja, Einweihung, Baby, Treffen oder klassisch. Bis ihr eines wählt, richtet sich das Design nach dem Termin – „Diwali at ours“ bekommt Laternen und Diyas. Ihr könnt eine Zeile für eure Gäste schreiben; sie sehen sie auf der Einladung, eure Notizen nie. Wenn ihr den Link über WhatsApp schickt, zeigt der Chat die Einladung als großes Bild mit was, wann und wo; „Einladung ansehen“ zeigt euch die Seite, die eure Gäste öffnen.",
 
   "help.guide.notifications.title": "Erinnerungen und Benachrichtigungen",
   "help.guide.notifications.summary": "Zu echten Dingen, an eine Person, wenn es ihr passt – und still, sobald es erledigt ist.",
@@ -276,8 +277,9 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.househelp.body.1":
     "„Haushaltshilfe“ hält fest, wer im Haushalt hilft – regelmäßig, gelegentlich oder als Dienst, der vorbeikommt – und die üblichen Tage und Zeiten.",
   "help.guide.househelp.body.2":
-    "Trag einen freien Tag oder einen zusätzlichen Tag ein, und WonderHome prüft, was die Person an diesem Tag normalerweise übernimmt, und zeigt, wofür Ersatz nötig ist, mit einer Möglichkeit, ihn zu organisieren.",
+    "Tragt Urlaub mit dem ersten freien Tag und der Anzahl der Tage ein; der letzte Tag füllt sich selbst aus (oder wählt den letzten Tag, dann passt sich die Anzahl an). WonderHome prüft, was an diesen Tagen normalerweise übernommen wird, und zeigt, was Vertretung braucht – mit einer Möglichkeit, sie zu regeln.",
   "help.guide.househelp.body.3": "Haushaltshilfen werden nie gebeten, Aufgaben abzuhaken, und es gibt keine Produktivitätswerte.",
+  "help.guide.househelp.body.4": "Auf der Karte jeder Hilfe zeigt „Kümmert sich um“ die Ergebnisse, für die sie zuständig ist. Ein Admin fügt mit „Verantwortung hinzufügen“ eine weitere hinzu – mit dieser Hilfe als Zuständiger – und tippt auf eine, um zu ändern, wer zuständig ist oder vertritt, oder um sie zu entfernen. Es ist dieselbe Liste wie unter Haushalt verwalten → Verantwortungen.",
 
   "help.guide.outcomes.title": "Ergebnisse, Zuständigkeiten und das Playbook",
   "help.guide.outcomes.summary": "Beschreib das Zuhause, das du willst, nicht die Schritte dorthin.",

@@ -102,6 +102,57 @@ export function ExpandableMetricGrid({
   );
 }
 
+/**
+ * Three counts side by side on every screen size (the owner's call for Kids &
+ * School, 2026-10-18 — rule 19's one written exception). Each tile stacks its
+ * icon, number and label so the label has the tile's whole width and wraps
+ * rather than being cut (rule 15). Opening a tile shows its entries in one
+ * full-width panel under the row, so a list is never squeezed into a third of
+ * a phone; one tile is open at a time.
+ */
+export function ExpandableMetricRow({ metrics, className }: { metrics: readonly ExpandableMetric[]; className?: string }) {
+  const [openLabel, setOpenLabel] = useState<string | null>(null);
+  const panelId = useId();
+  const open = metrics.find((metric) => metric.label === openLabel) ?? null;
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      <ul className="grid grid-cols-3 gap-2">
+        {metrics.map((metric) => {
+          const selected = metric.label === openLabel;
+          return (
+            <li key={metric.label} className="min-w-0">
+              <button
+                type="button"
+                onClick={() => setOpenLabel(selected ? null : metric.label)}
+                aria-expanded={selected}
+                aria-controls={panelId}
+                className={cn(
+                  "flex h-full w-full flex-col items-center gap-1.5 rounded-[var(--wh-radius)] border bg-[var(--wh-surface)] px-2 pt-3 pb-2 text-center shadow-[var(--wh-shadow-card)] transition-colors hover:bg-[var(--wh-primary-soft)]/20 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--wh-primary)]",
+                  selected ? "border-[var(--wh-primary)]" : "border-[var(--wh-border)]",
+                )}
+              >
+                {metric.icon}
+                <span className="block text-xl leading-none font-semibold tracking-tight">{metric.value}</span>
+                <span className="block text-[0.6875rem] leading-tight font-medium [overflow-wrap:anywhere] text-[var(--wh-foreground-muted)]">{metric.label}</span>
+                <ChevronDown
+                  aria-hidden
+                  className={cn("mt-auto size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform duration-200 motion-reduce:transition-none", selected && "rotate-180")}
+                />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div id={panelId} role="region" aria-label={open?.label} hidden={!open}>
+        {open ? (
+          <div className="rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]">{open.details}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /** An open metric panel's own list of real entries, one compact row each. */
 export function MetricDetailList({ children }: { children: ReactNode }) {
   return <ul className="space-y-2.5">{children}</ul>;

@@ -83,6 +83,16 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | A long email ran off a child's details in Family | 01-012 | Done in #234 |
 | Add and change a child's extracurricular classes in their Family details, folded with days and timings | 08-013 | Done in #235 |
 | The calendar said "Nothing planned — a free day" above Today's plan | 26-008 | Done in #235 |
+| Decorated invitations, with a big postcard when shared on WhatsApp, and designs for the major event types | 26-009 | Done in #236: nine designs, picked from the event or by the household, a line for guests, the postcard in the household's language |
+| A birthday read "5:30 am – 5:30 am" | 26-010 | Done in #236 |
+| Kids & School counts: one row of three cards | 08-014 | Done in #236 |
+| The header tagline broke onto two lines | — | Done in #236: one line at any text size |
+| Add more entries under a helper's Looks after | 07-009 | Done in #236 |
+| Leave: no "Which way"; a number of days that fills the end date | 07-010 | Done in #236 |
+| School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Next |
+| Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Next |
+| Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Next |
+| Plan a meal: recipe first, fills the rest; change for this meal, save to the recipe, or save as a new one | 25-019 | Next |
 | Gemini Live hears well, but the chat writes different, misspelt words: write what was actually said | 04-023 | Done in #234: each turn written down again from its audio with the listening language and family names |
 | A sheet and the keyboard open together and flicker; the keyboard hides the field | 25-016 | Done in #234: the keyboard waits for a tap, rises natively on Android, the field is kept in view |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |

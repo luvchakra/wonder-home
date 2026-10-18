@@ -70,3 +70,16 @@ test("nobody writes a guest reply from a session; members read and remove replie
   asProfile(OWNER, `delete from public.event_guests where id = '${guest}';`, options);
   assert.equal(psql(`select count(*) from public.event_guests;`, options), "0");
 });
+
+test("the event's owner picks its invitation's design and line for guests; another member cannot", () => {
+  asProfile(ADULT, `update public.family_events set invite_template = 'festival', invite_message = 'Come early for the rangoli!' where id = '${ownedByAdult}';`, options);
+  assert.equal(psql(`select invite_template || '|' || invite_message from public.family_events where id = '${ownedByAdult}';`, options), "festival|Come early for the rangoli!");
+  const other = psql(`insert into public.family_events (household_id, title, kind, starts_at, ends_at, owner_member_id) values ('${household}', 'Kunal''s dinner', 'gathering', now() + interval '4 days', now() + interval '4 days 2 hours', '${ownerMember}') returning id;`, options);
+  asProfile(ADULT, `update public.family_events set invite_template = 'wedding' where id = '${other}';`, options);
+  assert.equal(psql(`select coalesce(invite_template, 'none') from public.family_events where id = '${other}';`, options), "none");
+});
+
+test("an invitation's design is one of the known ones and its line stays short", () => {
+  assert.throws(() => psql(`update public.family_events set invite_template = 'neon' where id = '${ownedByAdult}';`, options), /check/);
+  assert.throws(() => psql(`update public.family_events set invite_message = repeat('x', 301) where id = '${ownedByAdult}';`, options), /check/);
+});

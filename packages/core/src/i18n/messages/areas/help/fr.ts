@@ -169,6 +169,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.5": "Les filtres ne changent que ce que vous voyez : catégories, personnes, seulement ce qui vous concerne, seulement les projets confirmés, jours fériés, et la vue sur laquelle le calendrier s’ouvre. Le programme du jour — repas, factures, école et ce qui vous attend — est à un geste de la journée d’aujourd’hui.",
   "help.guide.calendar.body.6": "Demandez à HomeTalk ce qui est prévu sur un mois ou plus — « des événements en décembre ? », « qu’est-ce qui arrive dans les prochains mois ? » — et il liste, par date, les événements, anniversaires et jours fériés du Calendrier que vous pouvez voir. Il lit le Calendrier lui-même, donc rien de privé d’une autre personne n’est mentionné.",
   "help.guide.calendar.body.7": "Demandez ce qui vient ensuite — « quel est le prochain événement ? », « quand est le prochain jour férié ? », « des anniversaires bientôt ? » — et HomeTalk donne le prochain du Calendrier et les deux suivants, jusqu’à un an à l’avance, avec seulement ce que vous pouvez voir.",
+  "help.guide.calendar.body.8": "Le lien d’invitation d’un événement a un style : anniversaire, anniversaire de mariage, mariage, fête, puja, crémaillère, bébé, réunion ou classique. Tant que vous n’en choisissez pas, le style suit l’événement : « Diwali at ours » reçoit lanternes et diyas. Vous pouvez ajouter un mot pour vos invités ; ils le voient sur l’invitation, jamais vos notes. Quand vous envoyez le lien sur WhatsApp, la conversation montre l’invitation en grande image avec quoi, quand et où ; « Voir l’invitation » vous montre la page que vos invités ouvriront.",
 
   "help.guide.notifications.title": "Rappels et notifications",
   "help.guide.notifications.summary": "À propos de choses réelles, pour une seule personne, au bon moment — et silencieux une fois réglés.",
@@ -276,8 +277,9 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.househelp.body.1":
     "Aide à domicile enregistre qui aide à la maison — régulièrement, occasionnellement ou en tant que service qui passe — et ses jours et horaires habituels.",
   "help.guide.househelp.body.2":
-    "Enregistrez un jour d’absence ou un jour supplémentaire, et WonderHome vérifie ce dont la personne s’occupe normalement ce jour-là et montre ce qui doit être pris en charge, avec un moyen de l’organiser.",
+    "Enregistrez un congé avec le premier jour et le nombre de jours ; le dernier jour se remplit seul (ou choisissez le dernier jour et le nombre suit). WonderHome vérifie ce dont la personne s’occupe habituellement ces jours-là et montre ce qui doit être couvert, avec un moyen de l’organiser.",
   "help.guide.househelp.body.3": "L’aide à domicile n’a jamais à cocher des tâches, et il n’y a aucun score de productivité.",
+  "help.guide.househelp.body.4": "Sur la carte de chaque aide, « S’occupe de » liste les résultats qui lui sont confiés. Un administrateur en ajoute un avec « Ajouter une responsabilité », qui commence avec cette aide comme responsable, et touche l’un d’eux pour changer qui s’en charge ou le remplace, ou pour le retirer. C’est la même liste que Gérer le foyer → Responsabilités.",
 
   "help.guide.outcomes.title": "Résultats, responsabilités et le guide de la maison",
   "help.guide.outcomes.summary": "Décrivez la maison que vous voulez, pas les étapes pour y arriver.",

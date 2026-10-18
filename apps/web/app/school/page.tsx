@@ -21,7 +21,7 @@ import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { Card } from "@wonderhome/core/ui/card";
 import {
-  ExpandableMetricGrid,
+  ExpandableMetricRow,
   MetricDetailEmpty,
   MetricDetailList,
   MetricDetailRow,
@@ -296,7 +296,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
 
         {active === "overview" ? (
           <>
-            <ExpandableMetricGrid metrics={metrics} />
+            <ExpandableMetricRow metrics={metrics} />
             {shownChildren.map((kid) => {
               const school = schoolOf(kid.id);
               const enrolment = enrolments.find((entry) => entry.childMemberId === kid.id);

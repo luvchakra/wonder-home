@@ -158,6 +158,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.5": "筛选只改变你自己看到的内容：类别、成员、只看与你有关的、只看已确认的计划、假日，以及日历打开时显示的视图。今天的计划——饭菜、账单、学校和需要你的事——在今天这一天点一下就能打开。",
   "help.guide.calendar.body.6": "问 HomeTalk 一个月或更长时间内有什么安排——“十二月有活动吗？”“接下来几个月有什么？”——它会按日期列出日历上你能看到的活动、生日和假日。它直接读取日历，所以绝不会提到别人的私人内容。",
   "help.guide.calendar.body.7": "问接下来有什么——“下一个活动是什么？”“下一个公共假日是什么时候？”“最近有人过生日吗？”——HomeTalk 会说出日历上的下一个以及之后的两个，最多看一年以内，只包含你能看到的内容。",
+  "help.guide.calendar.body.8": "活动的邀请链接有一种样式：生日、周年纪念、婚礼、节日、祈福、乔迁、宝宝、聚会或经典。在你选择之前，样式随活动而定——「Diwali at ours」会配上灯笼和油灯。你可以写一句给客人的话；他们会在邀请函上看到，但绝不会看到你的备注。在 WhatsApp 上发送链接时，聊天里会以大图显示邀请函，写明内容、时间和地点；「预览邀请函」会显示客人打开的页面。",
 
   "help.guide.notifications.title": "提醒和通知",
   "help.guide.notifications.summary": "关于真实的事，发给一个人，在合适的时候——处理完就安静。",
@@ -250,8 +251,9 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.househelp.title": "家政帮手",
   "help.guide.househelp.summary": "谁在家里帮忙、什么时候来，以及他们不在时由谁顶上。",
   "help.guide.househelp.body.1": "“家政帮手”记录谁在家里帮忙——固定的、偶尔的，或上门服务——以及他们通常的日子和时间。",
-  "help.guide.househelp.body.2": "记录一天请假或额外来一天，WonderHome 会查看他们那天通常负责什么，并显示需要找人顶替的事，同时提供安排的方式。",
+  "help.guide.househelp.body.2": "记录休假：填写休假第一天和天数，最后一天会自动填好（或选好最后一天，天数随之更新）。WonderHome 会检查他们那些天通常负责的事，并显示哪些需要有人顶上，以及安排的办法。",
   "help.guide.househelp.body.3": "家政帮手从不会被要求为家务打勾，也没有工作效率评分。",
+  "help.guide.househelp.body.4": "每位帮手卡片上的「负责」列出他们负责的结果。管理员可以用「添加职责」再加一项——负责人默认就是这位帮手——点一下某项，可以更改负责人或替补，或将其移除。这和「管理家庭 → 职责」是同一份列表。",
 
   "help.guide.outcomes.title": "结果、职责和家庭手册",
   "help.guide.outcomes.summary": "描述你想要的家，而不是达到它的步骤。",

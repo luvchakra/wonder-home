@@ -350,11 +350,22 @@ test("changing the birthday date moves the same event rather than adding a secon
   );
   assert.equal(
     psql(
-      `select extract(month from starts_at)::int || '-' || extract(day from starts_at)::int
-       from public.family_events where owner_member_id = '${adultMember}' and kind = 'birthday';`,
+      `select extract(month from e.starts_at at time zone h.timezone)::int || '-' || extract(day from e.starts_at at time zone h.timezone)::int
+       from public.family_events e join public.households h on h.id = e.household_id where e.owner_member_id = '${adultMember}' and e.kind = 'birthday';`,
       options,
     ),
     "3-15",
+  );
+});
+
+test("a birthday is the whole local day, all day, never a UTC midnight that reads as 5:30 am", () => {
+  assert.equal(
+    psql(
+      `select e.all_day || '|' || to_char(e.starts_at at time zone h.timezone, 'HH24:MI') || '|' || extract(epoch from e.ends_at - e.starts_at)::int
+       from public.family_events e join public.households h on h.id = e.household_id where e.owner_member_id = '${adultMember}' and e.kind = 'birthday';`,
+      options,
+    ),
+    "true|00:00|86400",
   );
 });
 

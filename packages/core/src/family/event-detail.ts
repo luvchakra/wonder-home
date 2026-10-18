@@ -5,6 +5,7 @@ import { invalidateHouseholdContext, invalidatesContext } from "../context/inval
 import { generateInvitationToken } from "../identity/invitations";
 import type { EventCategory, EventVisibility } from "../calendar/projection";
 import { parseRecurrence, type RecurrenceRule } from "../calendar/recurrence";
+import { cleanInviteMessage, templateFor, type InviteTemplate } from "./invite-templates";
 import type { EventKind, FamilyEvent } from "./schedule";
 
 /**
@@ -36,13 +37,17 @@ export type EventDetail = FamilyEvent & {
   category: EventCategory | null;
   visibility: EventVisibility;
   recurrence: RecurrenceRule | null;
+  /** The invitation's design as chosen; null means it follows the event (`templateFor`). */
+  inviteTemplate: InviteTemplate | null;
+  /** The line guests see on the invitation; notes never are. */
+  inviteMessage: string | null;
 };
 
 export async function loadEvent(supabase: SupabaseClient, householdId: string, eventId: string): Promise<EventDetail | null> {
   const [{ data, error }, { data: guests }, { data: links }] = await Promise.all([
     supabase
       .from("family_events")
-      .select("id, title, kind, starts_at, ends_at, location, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, event_participants(member_id, response, required)")
+      .select("id, title, kind, starts_at, ends_at, location, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, invite_template, invite_message, event_participants(member_id, response, required)")
       .eq("household_id", householdId)
       .eq("id", eventId)
       .maybeSingle(),
@@ -83,6 +88,8 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
     category: (row.category as EventCategory | null) ?? null,
     visibility: ((row.visibility as EventVisibility | null) ?? "household"),
     recurrence: parseRecurrence(row.recurrence),
+    inviteTemplate: (row.invite_template as InviteTemplate | null) ?? null,
+    inviteMessage: (row.invite_message as string | null) ?? null,
   };
 }
 
@@ -208,6 +215,23 @@ async function revokeInviteLinkImpl(supabase: SupabaseClient, input: { household
   if (error) throw new Error(`revokeInviteLink failed: ${error.code ?? "unknown"}`);
 }
 
+/**
+ * The invitation's design and its line for guests. Null design means "follow
+ * the event", so an event renamed from a lunch to a puja changes with it.
+ * Same rule as any change to the event: its owner, anyone for an unowned
+ * event, or an Admin (RLS decides; nothing changed means refused).
+ */
+async function setInviteDesignImpl(supabase: SupabaseClient, input: { householdId: string; eventId: string; template: InviteTemplate | null; message: string | null }): Promise<void> {
+  const { data, error } = await supabase
+    .from("family_events")
+    .update({ invite_template: input.template, invite_message: cleanInviteMessage(input.message) })
+    .eq("household_id", input.householdId)
+    .eq("id", input.eventId)
+    .select("id");
+  if (error) throw new Error(`setInviteDesign failed: ${error.code ?? "unknown"}`);
+  if (!data || data.length === 0) throw ApiError.forbidden("Only the event's owner or an Admin can change its invitation.");
+}
+
 /** Remove a guest's reply (a mistake, a duplicate, someone not actually invited). */
 async function removeGuestImpl(supabase: SupabaseClient, input: { householdId: string; guestId: string }): Promise<void> {
   const { error } = await supabase.from("event_guests").delete().eq("household_id", input.householdId).eq("id", input.guestId);
@@ -220,6 +244,7 @@ export const setEventInvitees = invalidatesContext(setEventInviteesImpl, (_s, in
 export const answerEvent = invalidatesContext(answerEventImpl, (_s, input) => input.householdId);
 export const createInviteLink = invalidatesContext(createInviteLinkImpl, (_s, input) => input.householdId);
 export const revokeInviteLink = invalidatesContext(revokeInviteLinkImpl, (_s, input) => input.householdId);
+export const setInviteDesign = invalidatesContext(setInviteDesignImpl, (_s, input) => input.householdId);
 export const removeGuest = invalidatesContext(removeGuestImpl, (_s, input) => input.householdId);
 
 // ---------------------------------------------------------------------------
@@ -235,11 +260,18 @@ export type InvitedEvent = {
   timezone: string;
   /** The household's own language, which the invite page speaks; English when unset. */
   language: string;
+  /** The household's region (ISO country), for how its dates are written; null when unset. */
+  region: string | null;
   title: string;
   kind: EventKind;
   startsAt: Date;
   endsAt: Date;
   location: string | null;
+  allDay: boolean;
+  /** The invitation's design in force (the household's pick, else the event's own). */
+  template: InviteTemplate;
+  /** The household's line for guests, if they wrote one. */
+  message: string | null;
   cancelled: boolean;
   over: boolean;
 };
@@ -250,7 +282,7 @@ export async function readInviteLink(admin: SupabaseClient, token: string, now: 
   if (!TOKEN.test(token)) return null;
   const { data, error } = await admin
     .from("event_invite_links")
-    .select("id, household_id, event_id, revoked_at, family_events(title, kind, starts_at, ends_at, location, status), households(name, timezone, default_language)")
+    .select("id, household_id, event_id, revoked_at, family_events(title, kind, starts_at, ends_at, location, status, all_day, invite_template, invite_message), households(name, timezone, default_language, region)")
     .eq("token", token)
     .maybeSingle();
   if (error || !data) return null;
@@ -267,11 +299,15 @@ export async function readInviteLink(admin: SupabaseClient, token: string, now: 
     householdName: household.name as string,
     timezone: (household.timezone as string) || "UTC",
     language: (household.default_language as string | null) || "en",
+    region: (household.region as string | null) || null,
     title: event.title as string,
     kind: event.kind as EventKind,
     startsAt: new Date(event.starts_at as string),
     endsAt,
     location: (event.location as string | null) ?? null,
+    allDay: event.all_day === true,
+    template: templateFor({ inviteTemplate: (event.invite_template as string | null) ?? null, kind: event.kind as EventKind, title: event.title as string }),
+    message: (event.invite_message as string | null) ?? null,
     cancelled: event.status === "cancelled",
     over: endsAt.getTime() < now.getTime(),
   };
