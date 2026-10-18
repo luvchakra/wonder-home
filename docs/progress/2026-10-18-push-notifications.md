@@ -32,4 +32,4 @@
 - **Production keys.** Production push needs the VAPID key pair on Vercel (`WONDERHOME_VAPID_PUBLIC_KEY`, `WONDERHOME_VAPID_PRIVATE_KEY`, optionally `WONDERHOME_VAPID_SUBJECT`).
 - **Cron secret.** The database needs the cron secret in Vault: `select vault.create_secret('<the CRON_SECRET value>', 'cron_secret');`.
 - **Real phones.** Whether Chrome on Android now floats a Gemini Live conversation by itself is a real-phone check; A real-phone check on Android and an iPhone with WonderHome on the Home Screen is the owner's.
-- **QA cleanup.** Recorded after the merge.
+- **QA cleanup.** Checked on 2026-10-18 after the later merges (through #237): no `wonderhome-qa-verify.internal` account remains on the live project and no QA household this work created is left; the count was taken with `select … from auth.users where email like '%wonderhome-qa-verify.internal'`. Two older QA households from 2026-10-17 (`QA Welcome Home` b942c154…, `QA Hours Home` 7ab6da76…) could not be proven to be this work's and were left in place. The QA-only VAPID keys and local `CRON_SECRET` were removed from `.env.local`.

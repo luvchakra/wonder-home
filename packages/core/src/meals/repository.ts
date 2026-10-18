@@ -429,6 +429,80 @@ async function createRecipeImpl(
   return { id: recipeId };
 }
 
+/**
+ * A recipe's essentials, replaced with what was written when planning a meal
+ * from it and choosing "Save to the recipe" (25-019). An item keeps its
+ * grocery link when it is still there by name; nice-to-have items stay as
+ * they were, unless one is now an essential.
+ */
+async function replaceRecipeEssentialsImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; recipeId: string; lines: IngredientLine[] },
+): Promise<void> {
+  const { data, error } = await supabase.from("recipe_ingredients").select("name, consumable_id, essential").eq("household_id", input.householdId).eq("recipe_id", input.recipeId);
+  if (error) throw new Error(`replaceRecipeEssentials failed: ${error.code ?? "unknown"}`);
+  const before = (data ?? []) as Row[];
+  const linkOf = new Map(before.map((row) => [String(row.name).toLowerCase(), (row.consumable_id as string | null) ?? null]));
+  const keep = new Set(input.lines.map((line) => line.name.toLowerCase()));
+  const drop = before.filter((row) => row.essential === true || keep.has(String(row.name).toLowerCase())).map((row) => row.name as string);
+  if (drop.length > 0) {
+    const { error: deleteError } = await supabase.from("recipe_ingredients").delete().eq("household_id", input.householdId).eq("recipe_id", input.recipeId).in("name", drop);
+    if (deleteError) throw new Error(`replaceRecipeEssentials failed: ${deleteError.code ?? "unknown"}`);
+  }
+  if (input.lines.length === 0) return;
+  const { error: insertError } = await supabase.from("recipe_ingredients").insert(
+    input.lines.map((line) => ({
+      household_id: input.householdId,
+      recipe_id: input.recipeId,
+      consumable_id: linkOf.get(line.name.toLowerCase()) ?? null,
+      name: line.name,
+      quantity: line.quantity,
+      unit: line.unit,
+      essential: true,
+    })),
+  );
+  if (insertError) throw new Error(`replaceRecipeEssentials failed: ${insertError.code ?? "unknown"}`);
+}
+
+/**
+ * A planned meal's essentials, made exactly what was written for it (25-019:
+ * "just for this meal"): an item no longer listed is dropped from what the
+ * meal needs, a changed amount is the new amount, and a new item is added.
+ * An item that was already on its way (on the list, substituted) keeps that
+ * state; nice-to-have items are left alone. The recipe is not touched.
+ */
+async function setMealEssentialsImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; mealId: string; lines: IngredientLine[] },
+): Promise<void> {
+  const { data, error } = await supabase.from("meal_ingredient_needs").select("name, consumable_id, essential, status").eq("household_id", input.householdId).eq("meal_id", input.mealId);
+  if (error) throw new Error(`setMealEssentials failed: ${error.code ?? "unknown"}`);
+  const before = (data ?? []) as Row[];
+  const keep = new Set(input.lines.map((line) => line.name.toLowerCase()));
+  const gone = before.filter((row) => row.essential === true && !keep.has(String(row.name).toLowerCase())).map((row) => row.name as string);
+  if (gone.length > 0) {
+    const { error: deleteError } = await supabase.from("meal_ingredient_needs").delete().eq("household_id", input.householdId).eq("meal_id", input.mealId).in("name", gone);
+    if (deleteError) throw new Error(`setMealEssentials failed: ${deleteError.code ?? "unknown"}`);
+  }
+  if (input.lines.length === 0) return;
+  const existing = new Map(before.map((row) => [String(row.name).toLowerCase(), row]));
+  const rows = input.lines.slice(0, 40).map((line) => {
+    const was = existing.get(line.name.toLowerCase());
+    return {
+      household_id: input.householdId,
+      meal_id: input.mealId,
+      consumable_id: (was?.consumable_id as string | null | undefined) ?? null,
+      name: (was?.name as string | undefined) ?? line.name,
+      quantity: line.quantity,
+      unit: line.unit,
+      essential: true,
+      status: (was?.status as string | undefined) ?? "needed",
+    };
+  });
+  const { error: upsertError } = await supabase.from("meal_ingredient_needs").upsert(rows, { onConflict: "meal_id,name" });
+  if (upsertError) throw new Error(`setMealEssentials failed: ${upsertError.code ?? "unknown"}`);
+}
+
 export type CreatePreferenceInput = {
   householdId: string;
   memberId: string | null;
@@ -482,6 +556,8 @@ type RecipeWithIngredients = {
     name: string;
     consumableId: string | null;
     essential: boolean;
+    quantity: number;
+    unit: string;
   }[];
 };
 
@@ -492,7 +568,7 @@ async function recipesWithIngredients(
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, name, active_minutes, total_minutes, serves, recipe_ingredients(name, consumable_id, essential)",
+      "id, name, active_minutes, total_minutes, serves, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
     )
     .eq("household_id", householdId);
 
@@ -514,6 +590,8 @@ async function recipesWithIngredients(
         name: ingredient.name as string,
         consumableId: (ingredient.consumable_id as string | null) ?? null,
         essential: ingredient.essential as boolean,
+        quantity: Number(ingredient.quantity ?? 1),
+        unit: (ingredient.unit as string | null) ?? "unit",
       }),
     ),
   }));
@@ -526,6 +604,8 @@ export type RecipeChoice = {
   serves: number;
   /** Every essential ingredient that's linked to a consumable is in stock. */
   available: boolean;
+  /** What it needs, essentials only, with amounts: what "Plan a meal" fills in when the recipe is picked (25-019). */
+  ingredients: IngredientLine[];
 };
 
 /**
@@ -557,6 +637,7 @@ export async function listRecipeChoices(
       totalMinutes: recipe.totalMinutes,
       serves: recipe.serves,
       available: !missingEssential,
+      ingredients: ingredients.filter((ingredient) => ingredient.essential).map((ingredient) => ({ name: ingredient.name, quantity: ingredient.quantity, unit: ingredient.unit })),
     };
   });
 
@@ -789,6 +870,8 @@ export const attachIngredients = invalidatesContext(attachIngredientsImpl, (_sup
 export const attachRecipeToMeal = invalidatesContext(attachRecipeToMealImpl, (_supabase, householdId) => householdId);
 export const updateMeal = invalidatesContext(updateMealImpl, (_supabase, input) => input.householdId);
 export const removeMeal = invalidatesContext(removeMealImpl, (_supabase, input) => input.householdId);
+export const replaceRecipeEssentials = invalidatesContext(replaceRecipeEssentialsImpl, (_supabase, input) => input.householdId);
+export const setMealEssentials = invalidatesContext(setMealEssentialsImpl, (_supabase, input) => input.householdId);
 export const addMealIngredients = invalidatesContext(addMealIngredientsImpl, (_supabase, input) => input.householdId);
 /** The ingredients just put on the list for a meal are "shopping" — on the list, not yet bought. */
 async function markNeedsOnListImpl(supabase: SupabaseClient, input: { householdId: string; mealId: string; names: string[] }): Promise<void> {

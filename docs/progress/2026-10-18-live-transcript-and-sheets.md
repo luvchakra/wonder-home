@@ -43,4 +43,4 @@ A real phone is needed for two checks: a Gemini Live conversation (the transcrib
 
 ## QA cleanup
 
-Recorded after the merge, together with the Kids & School work in the same PR.
+Checked on 2026-10-18 after the later merges (through #237): no `wonderhome-qa-verify.internal` account remains on the live project and no QA household this work created is left; the count was taken with `select … from auth.users where email like '%wonderhome-qa-verify.internal'`. Two older QA households from 2026-10-17 (`QA Welcome Home` b942c154…, `QA Hours Home` 7ab6da76…) could not be proven to be this work's and were left in place.

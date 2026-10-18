@@ -97,7 +97,7 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Next |
 | Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Next |
 | Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Next |
-| Plan a meal: recipe first, fills the rest; change for this meal, save to the recipe, or save as a new one | 25-019 | Next |
+| Plan a meal: recipe first, fills the rest; change for this meal, save to the recipe, or save as a new one | 25-019 | Done (#238) |
 | Gemini Live hears well, but the chat writes different, misspelt words: write what was actually said | 04-023 | Done in #234: each turn written down again from its audio with the listening language and family names |
 | A sheet and the keyboard open together and flicker; the keyboard hides the field | 25-016 | Done in #234: the keyboard waits for a tap, rises natively on Android, the field is kept in view |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |

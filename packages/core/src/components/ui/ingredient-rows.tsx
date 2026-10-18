@@ -24,7 +24,7 @@ export type IngredientRowsLabels = {
   chooseUnit: string;
 };
 
-type Row = { key: number; name: string };
+type Row = { key: number; name: string; quantity?: string; unit?: string };
 
 /** Metric units by their symbol: a half-width picker has no room for "kilograms (kg)" (rule 15). */
 const SYMBOLS: Readonly<Record<string, string>> = { g: "g", kg: "kg", ml: "ml", l: "L" };
@@ -45,6 +45,7 @@ export function IngredientRows({
   labels,
   unitLabels,
   initialRows = 2,
+  initial,
   className,
 }: {
   prefix: string;
@@ -52,12 +53,18 @@ export function IngredientRows({
   /** The words shown for each unit in the viewer's language; the value submitted is the unit key. */
   unitLabels?: Readonly<Record<string, string>>;
   initialRows?: number;
+  /** Rows to start from (a recipe's items when a meal is planned from it); the form reads them like any typed row. Give the component a new `key` to start again. */
+  initial?: readonly { name: string; quantity: number | null; unit: string }[];
   className?: string;
 }) {
   const id = useId();
   const unitWords = { ...unitLabels, ...SYMBOLS };
-  const [next, setNext] = useState(initialRows);
-  const [rows, setRows] = useState<Row[]>(() => Array.from({ length: initialRows }, (_, key) => ({ key, name: "" })));
+  const start: Row[] =
+    initial && initial.length > 0
+      ? initial.map((row, key) => ({ key, name: row.name, quantity: row.quantity === null ? "" : String(row.quantity), unit: row.unit }))
+      : Array.from({ length: initialRows }, (_, key) => ({ key, name: "" }));
+  const [next, setNext] = useState(start.length);
+  const [rows, setRows] = useState<Row[]>(() => start);
 
   const add = () => {
     setRows((current) => [...current, { key: next, name: "" }]);
@@ -106,14 +113,14 @@ export function IngredientRows({
                   <label htmlFor={amountId} className="block text-xs font-medium text-[var(--wh-foreground-muted)]">
                     {labels.amount}
                   </label>
-                  <input id={amountId} name={`${prefix}Quantity`} inputMode="decimal" autoComplete="off" className={INPUT} />
+                  <input id={amountId} name={`${prefix}Quantity`} inputMode="decimal" autoComplete="off" defaultValue={row.quantity ?? ""} className={INPUT} />
                 </div>
                 <ComboboxField
                   label={labels.unit}
                   name={`${prefix}Unit`}
                   options={[...UNIT_CHOICES]}
                   optionLabels={unitWords}
-                  defaultValue="g"
+                  defaultValue={row.unit ?? "g"}
                   addNewLabel={labels.addNewUnit}
                   chooseExistingLabel={labels.chooseUnit}
                   className="[&>label]:text-xs [&>label]:text-[var(--wh-foreground-muted)]"

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**272 of 293 stories done — 92.8%**
+**273 of 293 stories done — 93.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 272 |
+| Done | 273 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 17 |
+| Not Started | 16 |
 | Deferred | 1 |
 
 ## By module
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
-| 25 HomeFood | `████░░░░░░` | 9 | 19 | 1 in progress, 9 not started |
+| 25 HomeFood | `█████░░░░░` | 10 | 19 | 1 in progress, 8 not started |
 | 26 HomeEvents | `█████░░░░░` | 7 | 12 | 1 in progress, 4 not started |
 
 ## What is left
@@ -71,7 +71,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-015` Change or remove a recipe and its ingredients | 25 HomeFood | P1 | Not Started |
 | `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | 25 HomeFood | P0 | Not Started |
 | `25-018` Suggest a meal from what is at home, and save it as a recipe | 25 HomeFood | P1 | Not Started |
-| `25-019` Plan a meal starts from the recipe | 25 HomeFood | P0 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -520,7 +519,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-9 of 19 done `████░░░░░░`
+10 of 19 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -541,7 +540,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-016` Every sheet opens calmly with the keyboard, and the field stays in view | P0 | Done | The owner's report, 2026-10-18 (PR #234): a sheet and the keyboard opened together and flickered while they settled, and the keyboard could hide the field to fill in. On a phone a sheet now opens with focus on the sheet itself, so the keyboard waits for a tap (Add an item's search still takes focus at once on a desktop); Android Chrome lifts the sheet with the keyboard natively (`interactiveWidget: "resizes-content"`); iOS's keyboard is measured once per frame with no competing transition; and the tapped field is scrolled to the middle of what is visible once the keyboard has settled. Kit change (`ui/sheet.tsx`), so every sheet gets it. Checked in Chromium emulating a phone and on a desktop: no field focused on open on the phone, the search focused on desktop, a field below the fold scrolled into view on tap. A real phone keyboard needs the owner's phone |
 | `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | P0 | Not Started | The owner, 2026-10-18: the ingredient row searches the catalog (a new item can still be added inline), and calories, protein, carbs and fat per serving fill in from the picked items and amounts |
 | `25-018` Suggest a meal from what is at home, and save it as a recipe | P1 | Not Started | The owner, 2026-10-18: with no recipes yet (or none that fit), WonderHome suggests dishes from the items at home and the family's preferences, using only what is on record, and a suggestion can be planned and saved as a new recipe |
-| `25-019` Plan a meal starts from the recipe | P0 | Not Started | The owner, 2026-10-18: the recipe picker comes first; picking it fills the meal and its ingredients, which can be changed for this meal only, saved back to the recipe, or saved as a new recipe |
+| `25-019` Plan a meal starts from the recipe | P0 | Done | PR #238. The owner, 2026-10-18: the recipe picker comes first; picking it fills the meal's name and its essential ingredients with amounts (`IngredientRows` `initial`), and "Where these ingredients apply" offers Just for this meal (`setMealEssentials`), Save to the recipe as well (`replaceRecipeEssentials`, nice-to-haves kept) or Save as a new recipe (named, then the meal is planned from it). The meal is created first, so a taken slot changes no recipe |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents
