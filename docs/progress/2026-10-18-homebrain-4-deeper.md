@@ -68,4 +68,12 @@ The owner asked for `design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md` to be 
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #241 merged (recorded in the next PR):
+- QA user `1e0540e0-dc57-4cd3-b3fd-aaa925ca331e` was deleted with `qa-test-user.mjs delete`. A first QA user, `87b8928b-7486-4abf-8ead-38353572a6b7`, was created and deleted before it was used.
+- Household `51cfb4f5-ad7a-481b-8a60-ebf9f82a7861` ("QA Pantry Home") was deleted with a scoped service-role script. That removed:
+  - its hand-inserted Max subscription;
+  - the QA family event;
+  - its three recipes and their catalog-linked items.
+- SQL counts of households, family_events, recipes, consumables, household_subscriptions, household_context and homebrain_misses for it are all 0. Neither user is left in `auth.users`.
+- Nothing was uploaded to Storage.
+- The scratch screenshots and the QA scripts are removed, and the dev server is stopped.
