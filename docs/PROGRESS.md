@@ -37,7 +37,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 8 | 8 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
-| 12 Family Time & Social Activities | `█████░░░░░` | 8 | 14 | 1 in progress, 5 not started |
+| 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `██████████` | 19 | 19 | — |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
@@ -51,18 +51,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `█████░░░░░` | 4 | 7 | 3 not started |
 | 25 HomeFood | `████░░░░░░` | 2 | 5 | 3 not started |
+| 26 HomeEvents | `░░░░░░░░░░` | 0 | 6 | 1 in progress, 5 not started |
 
 ## What is left
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `12-009` Family Calendar foundation | 12 Family Time & Social Activities | P0 | In Progress |
-| `12-010` Calendar module adapters | 12 Family Time & Social Activities | P0 | Not Started |
-| `12-011` HomeTalk plans with the calendar | 12 Family Time & Social Activities | P1 | Not Started |
-| `12-012` Calendar reminders and holiday region | 12 Family Time & Social Activities | P1 | Not Started |
-| `12-013` Calendar notices over WhatsApp | 12 Family Time & Social Activities | P2 | Not Started |
-| `12-014` Google and Outlook calendars | 12 Family Time & Social Activities | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `24-005` Places near the office | 24 HomePlaces | P1 | Not Started |
 | `24-006` Search for places from the Places screen | 24 HomePlaces | P2 | Not Started |
@@ -70,6 +65,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | Not Started |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
+| `26-001` Family Calendar foundation | 26 HomeEvents | P0 | In Progress |
+| `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
+| `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | Not Started |
+| `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
+| `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
+| `26-006` Google and Outlook calendars | 26 HomeEvents | P2 | Not Started |
 
 ## Every story
 
@@ -271,7 +272,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 12 — Family Time & Social Activities
 
-8 of 14 done `█████░░░░░`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -283,12 +284,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `12-006` Gift planning | P1 | Done | gifts planned against an explicit occasion, never guessed from a date |
 | `12-007` Conflict detection | P1 | Done | both sides named and a proposal made; never a silent move |
 | `12-008` End-to-end outing | P2 | Done | outing planning composes availability, conflicts and gifts already built |
-| `12-009` Family Calendar foundation | P0 | In Progress | C1 (design/FAMILY-CALENDAR-PHASE0.md, D1–D7 approved 2026-10-18) built: migration `20261018120000` (visibility, all-day, repeat rules, exceptions, DoP&T holidays, preferences, family events on every plan), `packages/core/src/calendar/`, `/calendar` Month/Week/Day/Year, the Today tab is Calendar. Migration live 2026-10-18 (applied by the owner in the SQL editor, verified by query). Waiting on: signed-in browser QA at 360px and 1280px |
-| `12-010` Calendar module adapters | P0 | Not Started | C2: school, meals, bills, health, helpers, upkeep, outcomes and orders on the calendar, each through its own visibility rules; "Busy" for health; dedupe by source |
-| `12-011` HomeTalk plans with the calendar | P1 | Not Started | C3: plan_event with participants and conflicts, find_free_time, moving and cancelling events, answers read from the projection |
-| `12-012` Calendar reminders and holiday region | P1 | Not Started | C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |
-| `12-013` Calendar notices over WhatsApp | P2 | Not Started | C5: only if wanted; the official template, shared with Groceries' Send to Cook |
-| `12-014` Google and Outlook calendars | P2 | Not Started | C6: only after a separate approval |
 
 ### 13 — Maintenance, Laundry & Pet Care
 
@@ -499,4 +494,17 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-004` Send to Cook over WhatsApp | P1 | Not Started | Formerly 09-013. Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
-_Generated 2026-10-18 from 26 backlog files._
+### 26 — HomeEvents
+
+0 of 6 done `░░░░░░░░░░`
+
+| Story | Priority | Status | Notes |
+|---|---|---|---|
+| `26-001` Family Calendar foundation | P0 | In Progress | Formerly 12-009. C1 (design/FAMILY-CALENDAR-PHASE0.md, D1–D7 approved 2026-10-18) built: migration `20261018120000` (visibility, all-day, repeat rules, exceptions, DoP&T holidays, preferences, family events on every plan), `packages/core/src/calendar/`, `/calendar` Month/Week/Day/Year, the Today tab is Calendar. Migration live 2026-10-18 (applied by the owner in the SQL editor, verified by query). Waiting on: signed-in browser QA at 360px and 1280px |
+| `26-002` Calendar module adapters | P0 | Not Started | Formerly 12-010. C2: school, meals, bills, health, helpers, upkeep, outcomes and orders on the calendar, each through its own visibility rules; "Busy" for health; dedupe by source |
+| `26-003` HomeTalk plans with the calendar | P1 | Not Started | Formerly 12-011. C3: plan_event with participants and conflicts, find_free_time, moving and cancelling events, answers read from the projection |
+| `26-004` Calendar reminders and holiday region | P1 | Not Started | Formerly 12-012. C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |
+| `26-005` Calendar notices over WhatsApp | P2 | Not Started | Formerly 12-013. C5: only if wanted; the official template, shared with Groceries' Send to Cook |
+| `26-006` Google and Outlook calendars | P2 | Not Started | Formerly 12-014. C6: only after a separate approval |
+
+_Generated 2026-10-18 from 27 backlog files._

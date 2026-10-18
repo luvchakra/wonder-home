@@ -26,3 +26,4 @@
 | 21. Health and Fitness | `backlogs/21-Health-and-Fitness.md` | 8 | 6 | 2 | 0 |
 | 24. HomePlaces | `backlogs/24-HomePlaces.md` | 7 | 1 | 4 | 2 |
 | 25. HomeFood | `backlogs/25-HomeFood.md` | 5 | 2 | 2 | 1 |
+| 26. HomeEvents | `backlogs/26-HomeEvents.md` | 6 | 2 | 2 | 2 |
