@@ -5,6 +5,9 @@ import { contentClassFor } from "../context/privacy";
 import { sourcesOf } from "../context/provenance";
 import { findRelevantFacts } from "../context/retrieval";
 import type { ContextDomain, ContextTier, HouseholdContextItem, PrivacyClass } from "../context/types";
+import { hopsFor } from "./goal";
+import { buildHouseholdGraph, neighbours, type EdgeKind } from "./graph";
+import { householdInsights } from "./insights";
 import { inWindow, type BrainReading } from "./question";
 
 /**
@@ -29,9 +32,11 @@ export type GroundedFact = {
   /** Whether this question needs it. The rest still go to the gate, marked not relevant, so it can say what was held back. */
   relevant: boolean;
   score: number;
-  /** The context item it states, or null for a derived fact (a clash between two items). */
+  /** The context item it states, or null for a derived fact (a clash between two items, an inference). */
   itemId: string | null;
-  domain: ContextDomain | "conflict";
+  domain: ContextDomain | "conflict" | "insight";
+  /** An inference's evidence: the `contextId`s of the facts it rests on, every one of them sent with it (§3.5). */
+  evidence?: string[];
   subjectMemberIds: string[];
   /** The day it is about, when it is about one. */
   date: string | null;
@@ -51,6 +56,35 @@ const DATED_DOMAINS: ReadonlySet<ContextDomain> = new Set(["school", "calendar",
 export type GroundingOptions = {
   /** Most facts to mark relevant. The consent gate still applies its own budget. */
   budget?: number;
+  /** And at most about this many tokens of them (HomeBrain 4.0 §3.4 step 5): a few long facts never crowd out the rest unseen. */
+  tokenBudget?: number;
+  /** The household's zone and today in it, for the inferences (§3.5). Without them, no inferences are drawn. */
+  timezone?: string;
+  today?: string;
+};
+
+/**
+ * What a fact one link away from a seed scores (HomeBrain 4.0 §3.4, story
+ * 14-028): enough to be offered to a model, below the 0.5 a deterministic
+ * answer is made of — so "Asmi's party is on Saturday" brings along the
+ * day's other plans and the meal it needs, without a rules answer to "when
+ * is the party?" listing them as if they were asked about.
+ */
+export const LINKED_SCORE = 0.45;
+/** About 8k tokens of facts (§3.4), estimated at four characters a token. */
+export const FACT_TOKEN_BUDGET = 8000;
+/** Only a fact this sure of itself pulls its neighbours in. */
+const SEED_SCORE = 0.6;
+/** The links worth following. A person's own row is background, so nothing is followed out of it. */
+const FOLLOWED: ReadonlySet<EdgeKind> = new Set(["about_person", "same_day", "needs", "responsible_for", "routed_from"]);
+/** A plan or a decision goes one link further, only along what changes a plan: the day's other things, what a meal needs. */
+const SECOND_HOP: ReadonlySet<EdgeKind> = new Set(["same_day", "needs"]);
+const LINK_WORDS: Record<EdgeKind, string> = {
+  about_person: "about someone in",
+  same_day: "on the same day as",
+  needs: "needed for",
+  responsible_for: "looked after for",
+  routed_from: "came in with",
 };
 
 /**
@@ -190,20 +224,86 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
     }
   }
 
+  followLinks(drafts, items, hopsFor(reading.goal));
+  const evidenceOf = new Map<Omit<GroundedFact, "contextId">, string[]>();
+  if (options.timezone && options.today) drawInferences(drafts, items, evidenceOf, { timezone: options.timezone, today: options.today, question: reading.retrievalText });
+
   drafts.sort((a, b) => b.score - a.score);
+  const tokenBudget = options.tokenBudget ?? FACT_TOKEN_BUDGET;
   let kept = 0;
+  let tokens = 0;
   for (const draft of drafts) {
     if (!draft.relevant) continue;
     kept += 1;
-    if (kept > budget) {
+    tokens += Math.ceil(draft.statement.length / 4);
+    // The first fact always goes, however long: an answer needs something to stand on.
+    if (kept > budget || (kept > 1 && tokens > tokenBudget)) {
       draft.relevant = false;
       draft.score = 0;
       draft.reasons = ["less relevant than the facts already chosen"];
     }
   }
 
-  return drafts.map((draft, index) => ({ ...draft, contextId: `F${index + 1}` }));
+  const contextIdOf = new Map(drafts.map((draft, index) => [draft.itemId, `F${index + 1}`]));
+  return drafts.map((draft, index) => {
+    const evidence = evidenceOf.get(draft);
+    return { ...draft, contextId: `F${index + 1}`, ...(evidence ? { evidence: evidence.map((itemId) => contextIdOf.get(itemId)).filter((id): id is string => Boolean(id)) } : {}) };
+  });
 }
+
+/**
+ * Inferences as facts (§3.5): one is relevant when what it rests on is — a
+ * little above its strongest evidence, so "Friday's movie night is the night
+ * before Asmi's exam" leads an answer about Friday — and then all of its
+ * evidence goes with it. One resting on a fact this reading ruled out (about
+ * someone else, outside the part of the home asked about) is not drawn.
+ */
+function drawInferences(
+  drafts: Omit<GroundedFact, "contextId">[],
+  items: readonly HouseholdContextItem[],
+  evidenceOf: Map<Omit<GroundedFact, "contextId">, string[]>,
+  options: { timezone: string; today: string; question: string },
+): void {
+  const byItem = new Map(drafts.filter((draft) => draft.itemId).map((draft) => [draft.itemId as string, draft]));
+  for (const insight of householdInsights(items, options)) {
+    const evidence = insight.evidence.map((id) => byItem.get(id));
+    if (evidence.some((draft) => !draft || RULED_OUT.some((reason) => draft.reasons.includes(reason)))) continue;
+    const strongest = Math.max(...evidence.map((draft) => (draft!.relevant ? draft!.score : 0)));
+    if (strongest < LINKED_SCORE) continue;
+    const score = strongest >= 0.5 ? Math.min(1, strongest + 0.05) : LINKED_SCORE;
+    for (const draft of evidence) {
+      if (draft!.score < LINKED_SCORE) {
+        draft!.score = LINKED_SCORE;
+        draft!.relevant = true;
+        draft!.reasons.push("evidence for an inference");
+      }
+    }
+    const draft: Omit<GroundedFact, "contextId"> = {
+      statement: insight.statement,
+      sourceIds: evidence.flatMap((entry) => entry!.sourceIds),
+      confidence: Math.min(...evidence.map((entry) => entry!.confidence)),
+      privacyClass: insight.privacyClass,
+      relevant: true,
+      score,
+      itemId: null,
+      domain: "insight",
+      subjectMemberIds: insight.subjectMemberIds,
+      date: insight.date,
+      tier: 2,
+      confirmed: false,
+      need: "what two records mean together",
+      reasons: [
+        `inference (${insight.rule}) from ${insight.evidence.length === 1 ? "one record" : `${insight.evidence.length} records`}`,
+        // Resting on what the question named, it answers the question too.
+        ...(evidence.some((entry) => entry!.reasons.includes("named in the question")) ? ["named in the question"] : []),
+      ],
+    };
+    drafts.push(draft);
+    evidenceOf.set(draft, insight.evidence);
+  }
+}
+
+const RULED_OUT = ["about someone the question did not ask about", "not in the part of the home the question is about"];
 
 /** The consent gate's candidates: the fact's own id, so what the model cites is what the gate let through. */
 export function gateCandidates(facts: readonly GroundedFact[]): ContextCandidate[] {
@@ -220,6 +320,37 @@ export function gateCandidates(facts: readonly GroundedFact[]): ContextCandidate
 /** Relevant facts only, most relevant first. */
 export function relevantFacts(facts: readonly GroundedFact[]): GroundedFact[] {
   return facts.filter((fact) => fact.relevant);
+}
+
+/**
+ * One hop out from the facts the question is plainly about, along the
+ * household graph. A fact already ruled out for this question — about
+ * someone it did not ask about, or outside the part of the home it names —
+ * stays out: a link never overrules the person or the scope a reading set.
+ */
+function followLinks(drafts: Omit<GroundedFact, "contextId">[], items: readonly HouseholdContextItem[], hops: 1 | 2): void {
+  const byItem = new Map(drafts.filter((draft) => draft.itemId).map((draft) => [draft.itemId as string, draft]));
+  const kindOf = new Map(items.map((item) => [item.id, item.entityType]));
+  let seeds = drafts.filter((draft) => draft.itemId && draft.relevant && draft.score >= SEED_SCORE && kindOf.get(draft.itemId) !== "member").map((draft) => draft.itemId as string);
+  if (seeds.length === 0) return;
+  const graph = buildHouseholdGraph(items);
+  const visited = new Set(seeds);
+  for (let hop = 1; hop <= hops && seeds.length > 0; hop += 1) {
+    const lifted: string[] = [];
+    for (const [itemId, link] of neighbours(graph, seeds, hop === 1 ? FOLLOWED : SECOND_HOP)) {
+      if (visited.has(itemId)) continue;
+      visited.add(itemId);
+      const draft = byItem.get(itemId);
+      if (!draft || draft.score >= LINKED_SCORE) continue;
+      if (RULED_OUT.some((reason) => draft.reasons.includes(reason))) continue;
+      const seed = byItem.get(link.from);
+      draft.score = LINKED_SCORE;
+      draft.relevant = true;
+      draft.reasons.push(`${LINK_WORDS[link.kind]} ${seed ? `"${seed.statement.split(/[.;]/)[0]}"` : "what the question is about"}`);
+      if (kindOf.get(itemId) !== "member") lifted.push(itemId);
+    }
+    seeds = lifted;
+  }
 }
 
 function statementOf(item: HouseholdContextItem): string {

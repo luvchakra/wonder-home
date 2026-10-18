@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 
 import { UNIT_CHOICES } from "../../commerce/units";
 import { cn } from "../../lib/cn";
+import { CatalogItemField } from "./catalog-item-field";
 import { ComboboxField } from "./combobox-field";
 
 export type IngredientRowsLabels = {
@@ -24,7 +25,37 @@ export type IngredientRowsLabels = {
   chooseUnit: string;
 };
 
-type Row = { key: number; name: string; quantity?: string; unit?: string };
+type Row = { key: number; name: string; quantity?: string; unit?: string; ref?: string };
+
+/** One thing an item field offers (25-017): the household's own grocery item, or a catalog entry. */
+export type IngredientChoice = {
+  /** `item:<id>` or `catalog:<id>` — all the row submits; the server resolves it again. */
+  ref: string;
+  name: string;
+  /** A brand or pack, when it tells two entries apart. */
+  detail: string | null;
+  unit: string;
+  imageUrl: string | null;
+  /** Already one of the household's items. */
+  own: boolean;
+};
+
+export type IngredientSearch = (query: string) => Promise<{ ok: true; choices: IngredientChoice[] } | { ok: false }>;
+
+export type IngredientSearchLabels = {
+  /** "Use “{name}” as a new item": a name the catalog does not have is still yours to add (rule 20). */
+  useTyped: string;
+  searching: string;
+  /** Beside the household's own items. */
+  atHome: string;
+};
+
+/**
+ * A catalog item is bought by the kilo or the litre; a recipe uses it by the
+ * gram or the millilitre. A pick starts the row in the recipe's unit, so
+ * "200" under tomatoes is 200 g, never 200 kg.
+ */
+const RECIPE_UNIT: Readonly<Record<string, string>> = { kg: "g", l: "ml" };
 
 /** Metric units by their symbol: a half-width picker has no room for "kilograms (kg)" (rule 15). */
 const SYMBOLS: Readonly<Record<string, string>> = { g: "g", kg: "kg", ml: "ml", l: "L" };
@@ -46,6 +77,9 @@ export function IngredientRows({
   unitLabels,
   initialRows = 2,
   initial,
+  search,
+  searchLabels,
+  namesOnly = false,
   className,
 }: {
   prefix: string;
@@ -55,6 +89,15 @@ export function IngredientRows({
   initialRows?: number;
   /** Rows to start from (a recipe's items when a meal is planned from it); the form reads them like any typed row. Give the component a new `key` to start again. */
   initial?: readonly { name: string; quantity: number | null; unit: string }[];
+  /**
+   * The grocery catalog and the household's own items (25-017): with it, the
+   * item field searches them as the person types, and a pick links the row to
+   * that item. Without it the field is plain text, as before.
+   */
+  search?: IngredientSearch;
+  searchLabels?: IngredientSearchLabels;
+  /** Items by name only, with no amount (a recipe's nice-to-haves never become a shopping need). Each row still submits an empty amount, in position. */
+  namesOnly?: boolean;
   className?: string;
 }) {
   const id = useId();
@@ -72,7 +115,10 @@ export function IngredientRows({
   };
   const remove = (key: number) =>
     setRows((current) => (current.length > 1 ? current.filter((row) => row.key !== key) : [{ key: next, name: "" }]));
-  const rename = (key: number, name: string) => setRows((current) => current.map((row) => (row.key === key ? { ...row, name } : row)));
+  // Typing over a pick unlinks it: the row is then a name, not that item.
+  const rename = (key: number, name: string) => setRows((current) => current.map((row) => (row.key === key ? { ...row, name, ref: undefined } : row)));
+  const pick = (key: number, choice: IngredientChoice) =>
+    setRows((current) => current.map((row) => (row.key === key ? { ...row, name: choice.name, ref: choice.ref, unit: recipeUnit(choice.unit) ?? row.unit } : row)));
 
   return (
     <fieldset className={cn("space-y-2", className)}>
@@ -88,16 +134,31 @@ export function IngredientRows({
                   <label htmlFor={nameId} className="block text-xs font-medium text-[var(--wh-foreground-muted)]">
                     {labels.item}
                   </label>
-                  <input
-                    id={nameId}
-                    name={`${prefix}Name`}
-                    value={row.name}
-                    onChange={(event) => rename(row.key, event.target.value)}
-                    placeholder={index === 0 ? labels.itemPlaceholder : undefined}
-                    autoComplete="off"
-                    maxLength={120}
-                    className={INPUT}
-                  />
+                  <input type="hidden" name={`${prefix}Ref`} value={row.ref ?? ""} />
+                  {search && searchLabels ? (
+                    <CatalogItemField
+                      id={nameId}
+                      name={`${prefix}Name`}
+                      value={row.name}
+                      linked={Boolean(row.ref)}
+                      onType={(value) => rename(row.key, value)}
+                      onPick={(choice) => pick(row.key, choice)}
+                      search={search}
+                      labels={searchLabels}
+                      placeholder={index === 0 ? labels.itemPlaceholder : undefined}
+                    />
+                  ) : (
+                    <input
+                      id={nameId}
+                      name={`${prefix}Name`}
+                      value={row.name}
+                      onChange={(event) => rename(row.key, event.target.value)}
+                      placeholder={index === 0 ? labels.itemPlaceholder : undefined}
+                      autoComplete="off"
+                      maxLength={120}
+                      className={INPUT}
+                    />
+                  )}
                 </div>
                 <button
                   type="button"
@@ -108,6 +169,12 @@ export function IngredientRows({
                   <X aria-hidden className="size-4" />
                 </button>
               </div>
+              {namesOnly ? (
+                <>
+                  <input type="hidden" name={`${prefix}Quantity`} value="" />
+                  <input type="hidden" name={`${prefix}Unit`} value="unit" />
+                </>
+              ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label htmlFor={amountId} className="block text-xs font-medium text-[var(--wh-foreground-muted)]">
@@ -116,6 +183,7 @@ export function IngredientRows({
                   <input id={amountId} name={`${prefix}Quantity`} inputMode="decimal" autoComplete="off" defaultValue={row.quantity ?? ""} className={INPUT} />
                 </div>
                 <ComboboxField
+                  key={`${row.key}-${row.unit ?? "g"}`}
                   label={labels.unit}
                   name={`${prefix}Unit`}
                   options={[...UNIT_CHOICES]}
@@ -126,11 +194,12 @@ export function IngredientRows({
                   className="[&>label]:text-xs [&>label]:text-[var(--wh-foreground-muted)]"
                 />
               </div>
+              )}
             </li>
           );
         })}
       </ul>
-      <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.hint}</p>
+      {namesOnly ? null : <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.hint}</p>}
       <button
         type="button"
         onClick={add}
@@ -143,3 +212,8 @@ export function IngredientRows({
   );
 }
 
+/** The unit a picked item starts its row in: the recipe-sized one for a bulk unit, its own otherwise, nothing when it is not one of the picker's. */
+function recipeUnit(unit: string): string | null {
+  const wanted = RECIPE_UNIT[unit] ?? unit;
+  return (UNIT_CHOICES as readonly string[]).includes(wanted) ? wanted : null;
+}

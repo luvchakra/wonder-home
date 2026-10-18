@@ -1,4 +1,5 @@
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { keepStoresWarm } from "@wonderhome/core/homebrain/context-store";
 import { deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
 import { log } from "@wonderhome/core/observability/logger";
 
@@ -12,7 +13,8 @@ import { log } from "@wonderhome/core/observability/logger";
  * Authorised like every platform job, by `Authorization: Bearer $CRON_SECRET`,
  * refusing everything when no secret is set. Only households with something
  * actually due are touched, at most 200 a run; the rest wait five minutes.
- * Vercel Cron sends GET, the database sends POST; both are accepted.
+ * Vercel Cron sends GET, the database sends POST; both are accepted. The
+ * same tick keeps a few of HomeBrain's stored contexts warm (`keepStoresWarm`).
  */
 const MAX_HOUSEHOLDS = 200;
 
@@ -45,7 +47,15 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("dispatch failed for a household", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   }
-  return Response.json({ ok: true, households: households.length, delivered }, { headers: { "cache-control": "no-store" } });
+  // The same clock keeps HomeBrain's stored household contexts whole (14-031):
+  // a few that are behind or over an hour old are rebuilt per tick.
+  let warmed = 0;
+  try {
+    warmed = await keepStoresWarm(admin, now);
+  } catch (thrown) {
+    log.warn("context keep-warm failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
+  return Response.json({ ok: true, households: households.length, delivered, warmed }, { headers: { "cache-control": "no-store" } });
 }
 
 export const POST = dispatch;

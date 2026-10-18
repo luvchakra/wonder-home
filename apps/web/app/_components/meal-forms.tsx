@@ -7,7 +7,7 @@ import { useFormStatus } from "react-dom";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
-import { IngredientRows, type IngredientRowsLabels } from "@wonderhome/core/ui/ingredient-rows";
+import { IngredientRows, type IngredientRowsLabels, type IngredientSearchLabels } from "@wonderhome/core/ui/ingredient-rows";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
@@ -21,8 +21,7 @@ import {
   createRecipeAction,
   suggestMealAction,
   type RecipeActionState,
-  type SuggestMealState,
-} from "../(auth)/meal-actions";
+  type SuggestMealState, searchIngredientChoicesAction } from "../(auth)/meal-actions";
 
 const SLOTS = ["breakfast", "lunch", "snack", "dinner"] as const;
 
@@ -76,7 +75,7 @@ export type MealFormLabels = {
   noRecipe: string;
   writeIngredients: string;
   /** The ingredient rows' words; the legend is the form's own question. */
-  rows: Omit<IngredientRowsLabels, "legend">;
+  rows: Omit<IngredientRowsLabels, "legend"> & { search: IngredientSearchLabels };
   /** Each unit key's name in the viewer's language (the grocery list's own words). */
   unitNames: Record<string, string>;
   saveIngredients: string;
@@ -267,6 +266,8 @@ export function PlanMealButton({
             initial={recipe?.ingredients}
             labels={{ ...labels.rows, legend: labels.essential }}
             unitLabels={labels.unitNames}
+            search={(query) => searchIngredientChoicesAction(householdId, query)}
+            searchLabels={labels.rows.search}
           />
           <fieldset className="space-y-1.5">
             <legend className="mb-1 text-sm font-medium">{labels.ingredientsFor}</legend>
@@ -578,22 +579,22 @@ export function AddRecipeSheet({
             defaultValue={4}
           />
         </div>
-        <IngredientRows prefix="essential" labels={{ ...labels.rows, legend: labels.essential }} unitLabels={labels.unitNames} />
-        <div className="space-y-1.5">
-          <label
-            htmlFor="optionalIngredients"
-            className="block text-sm font-medium"
-          >
-            {labels.optional}
-          </label>
-          <textarea
-            id="optionalIngredients"
-            name="optionalIngredients"
-            rows={2}
-            placeholder={labels.optionalPlaceholder}
-            className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
-          />
-        </div>
+        <IngredientRows
+          prefix="essential"
+          labels={{ ...labels.rows, legend: labels.essential }}
+          unitLabels={labels.unitNames}
+          search={(query) => searchIngredientChoicesAction(householdId, query)}
+          searchLabels={labels.rows.search}
+        />
+        <IngredientRows
+          prefix="optional"
+          namesOnly
+          initialRows={1}
+          labels={{ ...labels.rows, legend: labels.optional, itemPlaceholder: labels.optionalPlaceholder }}
+          unitLabels={labels.unitNames}
+          search={(query) => searchIngredientChoicesAction(householdId, query)}
+          searchLabels={labels.rows.search}
+        />
         <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
           {labels.nutrients}
         </p>

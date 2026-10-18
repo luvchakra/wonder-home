@@ -1,3 +1,4 @@
+import { readGoal, type Goal } from "./goal";
 import { daysBetween, isoDay, normalizeText, weekdayIndex } from "../context/normalize";
 import { resolvePerson } from "../context/resolution";
 import { DOMAIN_WORDS, readQuestion } from "../context/retrieval";
@@ -65,6 +66,8 @@ export type BrainReading = {
    * their children's plans. Never used for health — "my checkup" is mine.
    */
   dependants: string[];
+  /** What the person is trying to do with the answer (HomeBrain 4.0 §3.10): its shape, and how far retrieval follows links. */
+  goal: Goal;
 };
 
 /**
@@ -222,6 +225,8 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     broad: read.broad && people.length === 0,
     clarification,
     dependants,
+    // The goal is the question's own: "and on Friday?" after "should we…?" is a plain question.
+    goal: readGoal(question),
   };
 }
 

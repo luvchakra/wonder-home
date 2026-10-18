@@ -12,11 +12,16 @@ import {
   type PlanChoice,
 } from "@wonderhome/core/meals/meals";
 import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
+import { searchCatalog } from "@wonderhome/core/commerce/catalog";
+import type { IngredientChoice } from "@wonderhome/core/ui/ingredient-rows";
 import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
 import { compatible } from "@wonderhome/core/commerce/units";
 import { ingredientLinesFrom, ingredientRowsOf, MAX_INGREDIENT_ROWS, type IngredientRowsInput } from "@wonderhome/core/meals/ingredient-lines";
 import { mealShortfalls, servingScale } from "@wonderhome/core/meals/shortfall";
+import { linkIngredients } from "@wonderhome/core/meals/ingredient-links";
+import { nutritionPerServing, type ServingNutrition } from "@wonderhome/core/meals/ingredient-nutrition";
+import { publicEnv } from "@wonderhome/core/config/env";
 import {
   listMeals,
   markNeedsOnList,
@@ -79,7 +84,7 @@ export async function createMealAction(
         parsed.error.issues[0]?.message ?? "Please check the details above.",
     };
   }
-  const lines = ingredientLinesFrom(ingredientRowsOf(formData, "essential"));
+  const typed = ingredientLinesFrom(ingredientRowsOf(formData, "essential"));
   const scope = parsed.data.ingredientsFor === "recipe" && !parsed.data.recipeId ? "meal" : parsed.data.ingredientsFor;
   if (scope === "new" && !parsed.data.newRecipeName) {
     return { error: "Name the new recipe." };
@@ -88,6 +93,8 @@ export async function createMealAction(
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
+    // Each row is the household's own grocery item where it was picked (25-017).
+    const { lines, entries } = await linkIngredients(supabase, { householdId: parsed.data.householdId, lines: typed, supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL });
 
     // The meal first, so a slot that is already taken changes no recipe.
     const created = await createMeal(supabase, {
@@ -112,6 +119,8 @@ export async function createMealAction(
         serves: 4,
         essentialIngredients: lines,
         optionalIngredients: [],
+        // Worked out from what it is made of, where the catalog knows (25-017).
+        ...nutritionFields(nutritionPerServing(lines, entries, 4)),
       });
       await attachRecipeToMeal(supabase, householdId, created.id, recipe.id);
     } else if (parsed.data.recipeId) {
@@ -135,6 +144,11 @@ export async function createMealAction(
   } catch (thrown) {
     return { error: toErrorBody(thrown, "meals").body.error.message };
   }
+}
+
+/** A worked-out nutrition, as the fields a recipe keeps. */
+function nutritionFields(worked: ServingNutrition | null) {
+  return worked ? { caloriesPerServing: worked.caloriesPerServing, proteinGrams: worked.proteinGrams, carbsGrams: worked.carbsGrams, fatGrams: worked.fatGrams } : {};
 }
 
 /**
@@ -207,14 +221,16 @@ export async function removeMealAction(input: { householdId: string; mealId: str
 export async function addMealIngredientsAction(input: { householdId: string; mealId: string; rows: IngredientRowsInput }): Promise<ActionState> {
   const list = z.array(z.string().max(120)).max(MAX_INGREDIENT_ROWS);
   const parsed = z
-    .object({ householdId: z.uuid(), mealId: z.uuid(), rows: z.object({ names: list, quantities: list, units: list }) })
+    .object({ householdId: z.uuid(), mealId: z.uuid(), rows: z.object({ names: list, quantities: list, units: list, refs: list.optional() }) })
     .safeParse(input);
   if (!parsed.success) return { error: "Please try again." };
-  const lines = ingredientLinesFrom(parsed.data.rows);
-  if (lines.length === 0) return { error: "Name at least one ingredient." };
+  const typed = ingredientLinesFrom(parsed.data.rows);
+  if (typed.length === 0) return { error: "Name at least one ingredient." };
   try {
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
+    // Each row is the household's own grocery item where it was picked (25-017).
+    const { lines } = await linkIngredients(supabase, { householdId: parsed.data.householdId, lines: typed, supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL });
     await addMealIngredients(supabase, { householdId: parsed.data.householdId, mealId: parsed.data.mealId, lines });
     revalidatePath("/meals");
     return { notice: "Saved." };
@@ -262,13 +278,6 @@ export async function attachRecipeToMealAction(
   }
 }
 
-const listField = z.string().transform((value) =>
-  value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean),
-);
-
 const recipeSchema = z.object({
   householdId: z.uuid(),
   name: z
@@ -294,7 +303,6 @@ const recipeSchema = z.object({
   fatGrams: z
     .union([z.coerce.number().int().min(0).max(500), z.literal("")])
     .optional(),
-  optionalIngredients: listField,
 });
 
 /**
@@ -320,7 +328,6 @@ export async function createRecipeAction(
     proteinGrams: formData.get("proteinGrams") || undefined,
     carbsGrams: formData.get("carbsGrams") || undefined,
     fatGrams: formData.get("fatGrams") || undefined,
-    optionalIngredients: formData.get("optionalIngredients") ?? "",
   });
   if (!parsed.success) {
     return {
@@ -336,6 +343,22 @@ export async function createRecipeAction(
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
 
+    // Each ingredient is the household's own grocery item where it was picked,
+    // and what was left empty of the nutrients is worked out from them (25-017).
+    const { lines: essentials, entries } = await linkIngredients(supabase, {
+      householdId: parsed.data.householdId,
+      lines: ingredientLinesFrom(ingredientRowsOf(formData, "essential")),
+      supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL,
+    });
+    // Nice-to-haves are picked the same way, and named only.
+    const { lines: optional } = await linkIngredients(supabase, {
+      householdId: parsed.data.householdId,
+      lines: ingredientLinesFrom(ingredientRowsOf(formData, "optional")),
+      supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL,
+    });
+    const worked = nutritionPerServing(essentials, entries, parsed.data.serves);
+    const given = (value: number | "" | undefined) => (value === "" || value === undefined ? null : value);
+
     const created = await createRecipe(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
@@ -345,31 +368,20 @@ export async function createRecipeAction(
       serves: parsed.data.serves,
       method: parsed.data.method || null,
       source: parsed.data.source || null,
-      caloriesPerServing:
-        parsed.data.caloriesPerServing === "" ||
-        parsed.data.caloriesPerServing === undefined
-          ? null
-          : parsed.data.caloriesPerServing,
-      proteinGrams:
-        parsed.data.proteinGrams === "" ||
-        parsed.data.proteinGrams === undefined
-          ? null
-          : parsed.data.proteinGrams,
-      carbsGrams:
-        parsed.data.carbsGrams === "" || parsed.data.carbsGrams === undefined
-          ? null
-          : parsed.data.carbsGrams,
-      fatGrams:
-        parsed.data.fatGrams === "" || parsed.data.fatGrams === undefined
-          ? null
-          : parsed.data.fatGrams,
-      essentialIngredients: ingredientLinesFrom(ingredientRowsOf(formData, "essential")),
-      optionalIngredients: parsed.data.optionalIngredients,
+      // What the person typed stands; only what they left empty is worked out.
+      caloriesPerServing: given(parsed.data.caloriesPerServing) ?? worked?.caloriesPerServing ?? null,
+      proteinGrams: given(parsed.data.proteinGrams) ?? worked?.proteinGrams ?? null,
+      carbsGrams: given(parsed.data.carbsGrams) ?? worked?.carbsGrams ?? null,
+      fatGrams: given(parsed.data.fatGrams) ?? worked?.fatGrams ?? null,
+      essentialIngredients: essentials,
+      optionalIngredients: optional.map((line) => ({ name: line.name, consumableId: line.consumableId ?? null })),
     });
 
     revalidatePath("/meals");
     return {
-      notice: "Added. It'll be there to pick next time you plan a meal.",
+      notice: worked
+        ? `Added, with nutrients worked out from ${worked.counted} of ${worked.total} ingredients. It'll be there to pick next time you plan a meal.`
+        : "Added. It'll be there to pick next time you plan a meal.",
       recipeId: created.id,
       recipeName: parsed.data.name,
     };
@@ -582,5 +594,40 @@ export async function addMealShortfallsAction(input: z.input<typeof shortfallSch
     return { added };
   } catch {
     return { error: "failed" };
+  }
+}
+
+/** One choice for an ingredient row's item (25-017): the household's own item, or a catalog entry. */
+export type IngredientChoiceResult = { ok: true; choices: IngredientChoice[] } | { ok: false };
+
+/**
+ * What an ingredient row offers as the person types (25-017): the household's
+ * own grocery items first — what the pantry already tracks — then the shared
+ * grocery catalog that Groceries' Add item searches, never the same entry
+ * twice. The row submits only the choice's ref; the server resolves it again.
+ */
+export async function searchIngredientChoicesAction(householdId: string, query: string): Promise<IngredientChoiceResult> {
+  const parsed = z.object({ householdId: z.uuid(), query: z.string().trim().min(2).max(60) }).safeParse({ householdId, query });
+  if (!parsed.success) return { ok: true, choices: [] };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const needle = parsed.data.query.toLowerCase();
+    const [own, catalog] = await Promise.all([
+      listGroceries(supabase, parsed.data.householdId).catch(() => []),
+      searchCatalog(supabase, parsed.data.query, { supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL }).catch(() => []),
+    ]);
+    const mine = own.filter((item) => [item.name, ...item.aliases].some((name) => name.toLowerCase().includes(needle))).slice(0, 4);
+    const tracked = new Set(own.map((item) => item.catalog?.id).filter(Boolean));
+    const choices: IngredientChoice[] = [
+      ...mine.map((item) => ({ ref: `item:${item.id}`, name: item.name, detail: null, unit: item.unit, imageUrl: item.imageUrl ?? item.catalog?.imageUrl ?? null, own: true })),
+      ...catalog
+        .filter((entry) => !tracked.has(entry.id))
+        .slice(0, 6)
+        .map((entry) => ({ ref: `catalog:${entry.id}`, name: entry.name, detail: entry.brand, unit: entry.unit, imageUrl: entry.imageUrl, own: false })),
+    ];
+    return { ok: true, choices };
+  } catch {
+    return { ok: false };
   }
 }

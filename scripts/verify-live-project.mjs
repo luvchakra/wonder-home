@@ -908,6 +908,11 @@ async function main() {
   check("migration landed: household_context", !contextStore.error, contextStore.error?.code ?? "ok");
   const anonContext = await anon.from("household_context").select("household_id").limit(1);
   check("anonymous cannot read household_context", Boolean(anonContext.error) || (anonContext.data ?? []).length === 0, anonContext.error?.code ?? "no rows");
+  // HomeBrain 4.0 (14-026): each deeper look leaves one content-free row, the server's alone.
+  const missesProbe = await admin.from("homebrain_misses").select("id, household_id, domains, trigger, found, latency_ms").limit(1);
+  check("migration landed: homebrain_misses", !missesProbe.error, missesProbe.error?.code ?? "ok");
+  const anonMisses = await anon.from("homebrain_misses").select("id").limit(1);
+  check("anonymous cannot read homebrain_misses", Boolean(anonMisses.error) || (anonMisses.data ?? []).length === 0, anonMisses.error?.code ?? "no rows");
   // A child's teachers and classes outside school (08-010 to 08-012).
   const teachersProbe = await admin.from("school_teachers").select("id, child_member_id, role, subject, name, active").limit(1);
   check("migration landed: school_teachers", !teachersProbe.error, teachersProbe.error?.code ?? "ok");

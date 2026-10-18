@@ -242,7 +242,7 @@ async function removeMealImpl(supabase: SupabaseClient, input: { householdId: st
  */
 async function addMealIngredientsImpl(
   supabase: SupabaseClient,
-  input: { householdId: string; mealId: string; lines: { name: string; quantity: number; unit: string }[] },
+  input: { householdId: string; mealId: string; lines: IngredientLine[] },
 ): Promise<{ added: number }> {
   const rows = input.lines
     .filter((line) => line.name.trim())
@@ -250,7 +250,7 @@ async function addMealIngredientsImpl(
     .map((line) => ({
       household_id: input.householdId,
       meal_id: input.mealId,
-      consumable_id: null,
+      consumable_id: line.consumableId ?? null,
       name: line.name.trim().slice(0, 120),
       quantity: line.quantity,
       unit: line.unit,
@@ -357,8 +357,8 @@ export type CreateRecipeInput = {
   fatGrams?: number | null;
   /** Each raw item with how much the recipe needs (`meals/ingredient-lines.ts`); "unit" where the amount is not known. */
   essentialIngredients: IngredientLine[];
-  /** Nice to have, by name only: they never become a shopping need, so no amount is kept. */
-  optionalIngredients: string[];
+  /** Nice to have, by name only: they never become a shopping need, so no amount is kept. Linked to the household's item where one was picked (25-017). */
+  optionalIngredients: readonly (string | { name: string; consumableId?: string | null })[];
 };
 
 /**
@@ -402,14 +402,16 @@ async function createRecipeImpl(
 
   const essentialNames = new Set(input.essentialIngredients.map((line) => line.name.toLowerCase()));
   const ingredientRows = [
-    ...input.essentialIngredients.map((line) => ({ ...line, essential: true })),
+    ...input.essentialIngredients.map((line) => ({ name: line.name, quantity: line.quantity, unit: line.unit, consumableId: line.consumableId ?? null, essential: true })),
     // An optional item already listed as essential is the same row (unique per recipe and name).
     ...input.optionalIngredients
-      .filter((name) => !essentialNames.has(name.toLowerCase()))
-      .map((name) => ({ name, quantity: 1, unit: "unit", essential: false })),
+      .map((entry) => (typeof entry === "string" ? { name: entry, consumableId: null } : entry))
+      .filter((entry) => !essentialNames.has(entry.name.toLowerCase()))
+      .map((entry) => ({ name: entry.name, quantity: 1, unit: "unit", consumableId: entry.consumableId ?? null, essential: false })),
   ].map((ingredient) => ({
     household_id: input.householdId,
     recipe_id: recipeId,
+    consumable_id: ingredient.consumableId,
     name: ingredient.name,
     quantity: ingredient.quantity,
     unit: ingredient.unit,
@@ -454,7 +456,7 @@ async function replaceRecipeEssentialsImpl(
     input.lines.map((line) => ({
       household_id: input.householdId,
       recipe_id: input.recipeId,
-      consumable_id: linkOf.get(line.name.toLowerCase()) ?? null,
+      consumable_id: line.consumableId ?? linkOf.get(line.name.toLowerCase()) ?? null,
       name: line.name,
       quantity: line.quantity,
       unit: line.unit,
@@ -491,7 +493,7 @@ async function setMealEssentialsImpl(
     return {
       household_id: input.householdId,
       meal_id: input.mealId,
-      consumable_id: (was?.consumable_id as string | null | undefined) ?? null,
+      consumable_id: line.consumableId ?? (was?.consumable_id as string | null | undefined) ?? null,
       name: (was?.name as string | undefined) ?? line.name,
       quantity: line.quantity,
       unit: line.unit,

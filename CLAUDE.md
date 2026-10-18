@@ -345,6 +345,22 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   reads and holds it to the same domain gates and `filterForViewer`. Never
   read the row from a session, and never let a turn answer from a row older
   than the last write. Without the table, reads fall back to the live path.
+  Since HomeBrain 4.0 (spec `design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`):
+  - **Look deeper.** Before "not on record", a turn reads the question's
+    domains again, live, through the viewer's own session
+    (`homebrain/deep-read.ts`, at most 3 domains and 1.5 s). A find marks the
+    store stale; each look leaves one content-free `homebrain_misses` row. A
+    database trigger marks the store stale for any write that went round a
+    service, and the delivery clock keeps stores warm (`keepStoresWarm`).
+  - **Follow links.** `homebrain/graph.ts` links the viewer's own items
+    (person, same day, a meal's needs, a duty's owners, a HomeSend source);
+    retrieval follows them at a score below what a rules answer uses.
+  - **Inferences are rules.** `homebrain/insights.ts` draws each one from
+    records, sent with its evidence. A model's own "because" is refused
+    (`unsupported_inference`) unless it cites one. A new rule is a function
+    with a golden test.
+  - **The goal shapes the answer** (`homebrain/goal.ts`): what decides comes
+    first for "should we…?", the fact first for "when is…?".
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the

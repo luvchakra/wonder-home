@@ -613,6 +613,17 @@ export type AnswerInput = {
   localNow: string;
   /** On a regeneration: what the previous draft said that no fact supports. */
   problems?: readonly string[];
+  /** What the person is trying to do with the answer (HomeBrain 4.0 §3.10), read by rules. */
+  goal?: "find_out" | "plan" | "decide" | "check" | "remember" | "do";
+};
+
+const GOAL_WORDS: Record<NonNullable<AnswerInput["goal"]>, string> = {
+  find_out: "to find something out: give the fact first, in one line, then anything else useful",
+  plan: "to plan: say what the plan touches — what else is on that day, what it needs",
+  decide: "to decide: lay out the two or three facts that decide it; never decide money or health for them",
+  check: "to check: answer yes or no first when a fact settles it, then the evidence",
+  remember: "for WonderHome to remember something",
+  do: "for something to be done",
 };
 
 export type AnswerComposer = (input: AnswerInput) => Promise<ModelDraft | null>;
@@ -656,6 +667,8 @@ You are given FACTS, one per line, each with an id like [F3]. These rules are ab
 - When facts disagree or a fact is marked as possibly out of date, say which one you are relying on and why (for example, that it was confirmed or is more recent).
 - When one missing detail decides the answer (which child, which day), ask one short, specific question instead of answering — set mode to "clarify".
 
+Some facts are what WonderHome's own rules noticed by putting records side by side ("… is the night before …", "… is due on a day … is away"). They are as true as the records they come from. Only draw a connection between facts — "because", "which means", "so you'll" — when one of these facts says it; otherwise state each fact on its own.
+
 Connect facts across parts of the home when the question needs it: "can we make tonight's dinner?" is about the meal plan and the groceries; "what does Child A need for Saturday?" can be school work, the calendar and supplies together.
 
 People appear as placeholders such as "Adult A", "Child B" or "Helper A". Use the placeholders exactly as written; the household's own system replaces them with names afterwards.
@@ -672,7 +685,8 @@ function answerMessages(input: AnswerInput): { role: "user" | "assistant"; conte
     input.problems && input.problems.length > 0
       ? `\n\nYOUR PREVIOUS ANSWER WAS NOT USED, because it said things the facts do not support:\n${input.problems.map((problem) => `- ${problem}`).join("\n")}\nAnswer again using only the facts below. If they do not answer the question, set mode to "unknown".`
       : "";
-  const briefing = `Now: ${input.localNow}.\nAsking: ${input.viewer}.${problems}\n\nFACTS:\n${facts}`;
+  const wanting = input.goal ? `\nWanting: ${GOAL_WORDS[input.goal]}.` : "";
+  const briefing = `Now: ${input.localNow}.\nAsking: ${input.viewer}.${wanting}${problems}\n\nFACTS:\n${facts}`;
   const turns = conversationMessages(input.history, input.question);
   const last = turns[turns.length - 1]!;
   return [...turns.slice(0, -1), { role: "user", content: `${briefing}\n\nQUESTION: ${last.content}` }];

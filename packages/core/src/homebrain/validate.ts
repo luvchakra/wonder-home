@@ -17,7 +17,10 @@
  *  - a connected service ("synced with your Google Calendar") that is not on
  *    record as connected;
  *  - a claim to have done something. An answer is composed with no execution
- *    result behind it, so "I've added it" is never true here (§11).
+ *    result behind it, so "I've added it" is never true here (§11);
+ *  - a correlation it drew itself: "because", "which means", "so you'll…"
+ *    joining two facts is supported only by an inference that says it
+ *    (HomeBrain 4.0 §3.5) — the rules notice, a model only relays.
  *
  * It is deliberately strict: a false alarm costs one regeneration or a plainer
  * deterministic answer; a missed invention costs the household's trust.
@@ -33,6 +36,8 @@ export type ViolationKind =
   | "unsupported_health_claim"
   | "unsupported_integration"
   | "unsupported_action"
+  /** A "because" / "which means" no inference fact backs (HomeBrain 4.0 §3.5). */
+  | "unsupported_inference"
   /** An answer to a question about one part of the home that cites nothing from that part (`turn.ts`). */
   | "unfounded_answer"
   | "unknown_fact";
@@ -56,6 +61,8 @@ export type ValidationContext = {
   localNow: string;
   /** Today in the household's zone, YYYY-MM-DD, so "tomorrow is Thursday" can be checked. */
   today: string;
+  /** Which of the facts are inferences (§3.5): only citing one may an answer join two facts with "because". */
+  inferences?: readonly string[];
 };
 
 export type ValidationResult = { ok: boolean; violations: Violation[] };
@@ -114,6 +121,8 @@ const SYNC_WORDS = /\b(?:synced|syncing|sync(?:ed)? with|connected to|linked to|
 const FIRST_PERSON_DONE = /\bi(?:'ve| have| just| already)?\s+(?:just\s+|already\s+)?(added|paid|ordered|booked|scheduled|sent|created|updated|removed|deleted|cancelled|canceled|set up|marked|moved|rescheduled|reminded|notified|saved|noted|put|placed|confirmed|assigned|changed|told)\b/gi;
 const PASSIVE_DONE = /\b(?:has|have) (?:now |just |already )?been (added|paid|ordered|booked|scheduled|sent|created|updated|removed|deleted|cancelled|canceled|marked|moved|rescheduled|placed|assigned|changed)\b/gi;
 const LEADING_DONE = /^\s*(?:all )?done\b\s*[.!:,—–-]/i;
+/** Words that join two facts into a reason or a consequence. */
+const CAUSAL = /\b(?:because|which means|that means|this means|meaning that|as a result|therefore|that's why|that is why|so (?:you'll|you will|you may|you might|you should|you need|you'd|she'll|he'll|they'll|it will|it'll))\b/gi;
 
 export function validateAnswer(draft: AnswerDraft, context: ValidationContext): ValidationResult {
   const text = plain(draft.text);
@@ -209,6 +218,16 @@ export function validateAnswer(draft: AnswerDraft, context: ValidationContext): 
   }
   if (LEADING_DONE.test(lowered)) flag("unsupported_action", "done");
 
+  // --- Correlations it drew itself ----------------------------------------------
+  const sentIds = new Set(context.facts.map((fact) => fact.id));
+  const citesInference = (context.inferences ?? []).some((id) => sentIds.has(id) && draft.usedFacts.includes(id));
+  if (!citesInference) {
+    for (const match of lowered.matchAll(CAUSAL)) {
+      // Said in a fact or in the question itself, it is theirs, not an invention.
+      if (!corpus.includes(match[0])) flag("unsupported_inference", match[0]);
+    }
+  }
+
   return { ok: violations.length === 0, violations };
 }
 
@@ -235,6 +254,8 @@ export function describeViolations(violations: readonly Violation[]): string[] {
         return `"${value}" describes a connected service no fact records.`;
       case "unsupported_action":
         return `"${value}" claims something was done; nothing has been done in answering a question.`;
+      case "unsupported_inference":
+        return `"${value}" draws a connection between facts that no inference fact makes; say each fact on its own.`;
       case "unfounded_answer":
         return `Nothing on record answers "${value}".`;
       case "unknown_fact":
