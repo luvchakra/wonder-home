@@ -13,6 +13,7 @@
 | 8 | P2 | 25-008 | Catalog follow-ups: pictures for curated items, products linked to their item | Not Started | Curated items show their category icon, not a picture. A product names the item it is (`grocery_catalog.item_id`) only by review. A native speaker should check the regional names the curators flagged |
 | 9 | P0 | 25-009 | Indian nutrition for the catalog, from IFCT 2017 | Done | The owner, 2026-10-18: Indian foods get an Indian nutrient profile, USDA kept for later. `ifct_foods` (migration `20261018220000`, live): ICMR–NIN's Indian Food Composition Tables 2017, 542 foods, per 100 g edible portion, 14 nutrients incl. iron, calcium, folate; loaded by `npm run catalog:ifct` from a pinned, checksummed copy of its MIT digitisation (never kept in the repo); energy computed from proximates, and said so, for the 17 entries the table gives none for or contradicts. 399 curated items link to their IFCT food (`grocery_catalog.ifct_code`, `supabase/seed/grocery-catalog/ifct-links.csv`: 220 exact, 175 close, 4 approximate). The item page shows it with the match said and ICMR–NIN credited. **Rights:** the owner chose to load now and ask NIN for written permission in parallel (draft in the progress note) |
 | 10 | P0 | 25-010 | A search that shows what a household means, and amounts that move naturally | Done | The owner, 2026-10-18. `grocery_catalog.common` (411 everyday items): "eggs" shows white and brown eggs and the brands on sale, one entry per brand and name; a rarer kind when typed by name (`chooseResults`, `search_grocery_catalog_kind`). No amount in the list: tapping an entry opens − / + from the usual buy. Every stepper walks a ladder of natural amounts (`commerce/buying-sizes.ts`): loose produce 250 g, 500 g, 750 g, 1 kg, 1.25 kg…; atta and rice the packs sold (1, 2, 5, 10 kg); dal 500 g–5 kg; spices 50–500 g; oil 500 ml–5 l; milk by the half litre; anything counted one at a time; a packed product one pack at a time; a household's own step still wins. Wikimedia Commons pictures (CC0/PD/CC BY/CC BY-SA, credited) for everyday items only (`npm run catalog:pictures`). The sheet now rises above the phone keyboard |
+| 11 | P1 | 25-011 | Indian nutrition, the rest | Not Started | The owner, 2026-10-18: medium priority, for later; what 25-009 finished is what is used. Left: link the curated Indian items not yet linked to their IFCT food (399 of 1,559 are), in the same rules (same food and state, "close" says what differs, nothing processed); cooked and prepared foods, which IFCT does not hold (INDB 2024 builds them from IFCT, so the same NIN permission covers it); NIN's written permission for IFCT (email drafted in `docs/progress/2026-10-18-ifct-indian-nutrition.md`, needs a person to send); a native speaker's review of the close matches and regional names |
 | 5 | P2 | 25-005 | "Make that 2 litres" corrects an amount | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
@@ -79,6 +80,11 @@ HomeFood is everything about the household's food: what is at home, what to buy,
 **Epic:** HomeFood
 **Priority:** P0
 **Goal:** Typing a word offers the everyday choice and the brands on sale, with pictures, and amounts that move the way people buy.
+### Story 25-011 — Indian nutrition, the rest
+**Epic:** HomeFood
+**Priority:** P1
+**Goal:** Every everyday Indian food in the catalog that IFCT 2017 covers shows its Indian nutrition, and cooked foods follow once their source is cleared. Medium priority, set by the owner on 2026-10-18; nothing in 25-009 waits on it.
+
 ### Story 25-005 — "Make that 2 litres" corrects an amount
 **Epic:** HomeFood
 **Priority:** P2

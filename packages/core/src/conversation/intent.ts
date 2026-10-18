@@ -52,6 +52,8 @@ export const INTENT_ACTIONS = [
   "set_fitness_goal",
   /** "Suggest somewhere for dinner tonight", "where can we hang out near Anya's school after school" — HomePlaces finds real places; read-only. */
   "find_places",
+  /** "Take me to the grocery list", "open the calendar" — opens a screen while the conversation carries on; reads and changes nothing. */
+  "open_screen",
   /** A hello, a thank-you, or "what can you do?" — answered warmly, never as a failure to understand. */
   "greet",
   "unknown",
@@ -143,7 +145,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
     return { kind: "clarify", question: clarifyingQuestionFor(intent) };
   }
 
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 

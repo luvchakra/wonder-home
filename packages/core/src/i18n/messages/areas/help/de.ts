@@ -126,6 +126,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Während WonderHome zuhört oder ein Live-Gespräch läuft, pulsiert die HomeTalk-Taste in der Mitte der Tab-Leiste mit einem Ring darum – so siehst du auf jedem Bildschirm, dass ein Gespräch läuft.",
   "help.guide.voice.body.6":
     "Gemini-Sprache läuft immer bei Google. Ist der Schlüssel deines Assistenten unter Settings → AI Assistant ein Google-(Gemini-)Schlüssel, nutzt die Sprache denselben Schlüssel. Nutzt dein Assistent Anthropic oder OpenAI, kann ein Admin auf derselben Seite einen eigenen Gemini-Sprachschlüssel hinzufügen: Er wird nur für Gemini-Sprache genutzt, alles andere nutzt weiter den Schlüssel des Assistenten.",
+  "help.guide.voice.body.7":
+    "In einem Live-Gespräch können Sie HomeTalk bitten, einen Bildschirm zu öffnen — „bring mich zur Einkaufsliste“, „öffne den Kalender“, „zurück zu HomeTalk“ — und es wechselt dorthin und hört weiter zu. Fügen Sie dort per Sprache etwas hinzu oder entfernen Sie es, wechseln Sie zum nächsten Bildschirm und kehren Sie jederzeit zum Gespräch zurück. Solange es läuft, zeigt eine leuchtende Leiste unten auf jedem Bildschirm, ob es zuhört, nachdenkt oder spricht, mit Pause, Beenden und einem Tipp zurück zum Gespräch. Getippt öffnen dieselben Worte den Bildschirm ebenfalls. HomeTalk öffnet nur Bildschirme, die Sie nutzen können, und das Öffnen ändert nichts.",
 
   "help.guide.home-send.title": "HomeSend: WonderHome Dinge schicken",
   "help.guide.home-send.summary": "Ein Foto, ein PDF, eine Sprachnachricht, ein Link oder eine Weiterleitung – gelesen, dann von dir bestätigt.",

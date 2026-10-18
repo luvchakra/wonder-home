@@ -143,6 +143,8 @@ export const helpEn = {
     "While WonderHome is listening or a live conversation is going, the HomeTalk button in the middle of the tab bar pulses with a ring around it, so you can see from any screen that a conversation is in progress.",
   "help.guide.voice.body.6":
     "Gemini voice always runs on Google. If your assistant's key under Settings → AI Assistant is a Google (Gemini) key, voice uses that same key. If your assistant uses Anthropic or OpenAI, an Admin can add a separate Gemini voice key on the same page: it is used only for Gemini voice, and everything else keeps using the assistant's key.",
+  "help.guide.voice.body.7":
+    "In a live conversation you can ask HomeTalk to open a screen — \"take me to the grocery list\", \"open the calendar\", \"go back to HomeTalk\" — and it goes there and keeps listening. Add or remove things on that screen by voice, move on to another, and come back to the conversation whenever you like. While it runs, a glowing bar at the bottom of every screen shows whether it is listening, thinking or speaking, with pause, end, and a tap back to the conversation. Typed, the same words open the screen too. HomeTalk only opens screens you can use, and opening one changes nothing.",
 
   // HomeSend: sending WonderHome things
   "help.guide.home-send.title": "HomeSend: sending WonderHome things",

@@ -82,6 +82,8 @@ const ACTION_SCOPE: Partial<Record<IntentAction, VoiceScope | "none">> = {
   greet: "none",
   unknown: "none",
   ask_status: "none",
+  // Names a screen and nothing from it; a speaker with no screen says so (screens.ts).
+  open_screen: "none",
   add_to_list: "groceries.write",
   remove_from_list: "groceries.write",
   set_reminder: "notifications.create",

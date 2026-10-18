@@ -28,7 +28,7 @@ vi.mock("../ai/provider-clients", () => ({
 }));
 
 describe("Gemini gets narrow, domain-specific tools and nothing else", () => {
-  it("offers exactly the spec's household tools, plus a way to pass on an answer", () => {
+  it("offers exactly the spec's household tools, plus a way to pass on an answer and to open a screen", () => {
     expect([...GEMINI_LIVE_TOOL_NAMES].sort()).toEqual(
       [
         "add_grocery_item",
@@ -43,6 +43,7 @@ describe("Gemini gets narrow, domain-specific tools and nothing else", () => {
         "get_school_items",
         "get_today_agenda",
         "get_upcoming_events",
+        "open_screen",
         "remember_family_fact",
       ].sort(),
     );
@@ -115,6 +116,12 @@ describe("what Gemini is handed back is HomeTalk's decision, never its own", () 
     expect(toolResultFrom(response("clarification_required"))).toMatchObject({ success: false, status: "needs_clarification" });
     expect(toolResultFrom(response("not_authorized"))).toMatchObject({ success: false, status: "denied" });
     expect(toolResultFrom(response("failed"))).toMatchObject({ success: false, status: "failed", userMessage: "said:failed" });
+  });
+
+  it("a screen to open travels with the result, for the page to follow and never for Gemini to say", () => {
+    expect(toolResultFrom(response("answered", { navigate: "/groceries" }))).toEqual({ success: true, status: "answered", userMessage: "said:answered", navigate: "/groceries" });
+    expect(utteranceForToolCall("open_screen", { screen: "groceries" })).toEqual({ text: "Take me to groceries", structured: true });
+    expect(utteranceForToolCall("open_screen", { screen: "/admin" })).toMatchObject({ refused: expect.any(String) });
   });
 
   it("a refusal is denied, with the words to say", () => {

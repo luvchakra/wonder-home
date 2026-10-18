@@ -89,10 +89,10 @@ export function AppShell({
                 active={active}
                 ariaLabel={activeItem?.purpose}
                 className={cn(
-                  "mx-auto w-full px-4 pt-4 lg:px-8 lg:pt-6 lg:pb-12",
+                  "mx-auto w-full px-4 pt-4 lg:px-8 lg:pt-6 lg:pb-[calc(3rem+var(--wh-live-bar-clearance))]",
                   fill
                     ? "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-overhang))]"
-                    : "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance))]",
+                    : "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance)+var(--wh-live-bar-clearance))]",
                   wide ? "max-w-[var(--wh-content-wide)]" : "max-w-[var(--wh-content-max)]",
                 )}
               >

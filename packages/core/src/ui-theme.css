@@ -158,6 +158,11 @@
      its last line sits just clear of the button rather than floating over an
      empty band. Scrolling pages keep the generous clearance. */
   --wh-tabbar-raised-overhang: 1.25rem;
+  /* While a live HomeTalk conversation runs on another screen, its bar
+     (live-talk.tsx) floats above the tab bar. The provider sets this to the
+     bar's height plus a gap, and the page's bottom padding and toasts add it,
+     so a last row is never left under the bar. 0 when there is no bar. */
+  --wh-live-bar-clearance: 0rem;
   --wh-header-height: 3.5rem;
   --wh-sidebar-width: 16.5rem;
   --wh-content-max: 42rem;
@@ -328,6 +333,17 @@
   50% {
     transform: scale(1.04);
     filter: saturate(1.15);
+  }
+}
+
+/* HomeTalk's live glow (the floating bar on every screen): the light breathes, the bar stays still. */
+@keyframes wh-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--wh-primary-glow), var(--wh-shadow-float);
+  }
+  50% {
+    box-shadow: 0 0 0 7px var(--wh-primary-glow), var(--wh-shadow-float);
   }
 }
 

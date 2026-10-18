@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { ConversationTurn, RuntimeContext, Understanding } from "../conversation/engine";
 import { INTENT_ACTIONS, type HouseholdIntent, type IntentTarget, type UnderstandingTrace } from "../conversation/intent";
+import { SCREEN_KEYS } from "../conversation/screens";
 import { describeReplyFormat } from "../conversation/reply-format";
 import type { ReplyTranslator } from "../conversation/reply-language";
 import type { ModelDraft } from "../homebrain/answer";
@@ -93,6 +94,7 @@ const ModelParametersSchema = z.object({
   asset: text,
   symptom: text,
   protected: z.boolean().nullable(),
+  screen: z.enum(SCREEN_KEYS).nullable(),
 });
 const MODEL_PARAMETER_KEYS = Object.keys(ModelParametersSchema.shape);
 
@@ -146,6 +148,7 @@ const PHRASE_LIMIT = 120;
 const ENUM_PARAMETERS: Record<string, readonly string[]> = {
   slot: ["breakfast", "lunch", "snack", "dinner"],
   timesPer: ["day", "week", "month"],
+  screen: SCREEN_KEYS,
 };
 const NUMBER_PARAMETERS = new Set(["count", "amount"]);
 const BOOLEAN_PARAMETERS = new Set(["corrects", "protected"]);
@@ -266,6 +269,7 @@ For every grocery action, keep any amount the person said inside the item text e
 - order_items: place or prepare an order.
 - assign_responsibility: change who owns an outcome. parameters.outcomeKey is a short dotted key for the outcome ("school.run").
 - find_places: asking for real places to go nearby — somewhere to eat, a cafe, a park, somewhere to hang out with the children ("suggest places for dinner tonight", "where can we go near school after school?"). No parameters are needed; the place search reads the sentence itself.
+- open_screen: asking to go to, open or switch to one of WonderHome's screens ("take me to the grocery list", "open the calendar", "go back to HomeTalk"). parameters.screen is exactly one of: ${SCREEN_KEYS.join(", ")}. A question about what is on a screen ("what's on the grocery list?") is ask_status, not open_screen.
 - greet: a hello, a thank-you, or "what can you do?". parameters.kind is "greeting", "thanks" or "help".
 - unknown: anything that is not clearly one of the above, or is too vague to act on.
 

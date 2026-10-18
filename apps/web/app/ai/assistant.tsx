@@ -20,6 +20,7 @@ import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
 import { AiOrb, ChatDayDivider, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
+import { safeHref, useLiveTalk } from "@wonderhome/core/ui/live-talk";
 import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-composer";
 import { en } from "@wonderhome/core/i18n/messages/en";
 import { translator } from "@wonderhome/core/i18n/translate";
@@ -149,8 +150,12 @@ export function Assistant({
    * positive in some — so the distance is what matters, never the sign.
    */
   const [scrolledBack, setScrolledBack] = useState(false);
-  /** The first member message of the live session in progress, for the recap once it ends. */
-  const liveStartMessageId = useRef<string | null>(null);
+  /**
+   * The first member message of the live session in progress, for the recap
+   * once it ends. Kept by the app-wide live session, so a conversation that
+   * wandered off to the grocery list and came back still recaps from its start.
+   */
+  const talk = useLiveTalk();
 
   /**
    * Nothing scrolls the page here. The message list is its own scroll
@@ -224,14 +229,19 @@ export function Assistant({
           throw new Error(payload?.error?.message ?? errorWords.answer);
         }
 
-        if (live && payload.memberMessageId && !liveStartMessageId.current) {
-          liveStartMessageId.current = payload.memberMessageId;
-        }
+        if (live && payload.memberMessageId) talk?.markStart(payload.memberMessageId);
 
         // A request with several parts comes back as one reply per part,
         // each with its own preview (Wave 4 §10); anything else is one.
-        const replies: { id: string; text: string; action?: AssistantMessage["action"]; preview?: ActionPreviewShape | null; proposal?: string; places?: PlaceSuggestion[] }[] =
-          Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : [payload.reply];
+        const replies: {
+          id: string;
+          text: string;
+          action?: AssistantMessage["action"];
+          preview?: ActionPreviewShape | null;
+          proposal?: string;
+          places?: PlaceSuggestion[];
+          navigate?: string;
+        }[] = Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : [payload.reply];
         setMessages((current) =>
           current
             .filter((message) => message.id !== `${optimisticId}-pending`)
@@ -250,6 +260,10 @@ export function Assistant({
               })),
             ),
         );
+        // "Take me to the grocery list": go there. A live conversation carries
+        // on from that screen; a typed one leaves its answer here to come back to.
+        const href = replies.map((reply) => safeHref(reply.navigate)).find(Boolean);
+        if (href) talk?.navigate(href);
         return replies.map((reply) => reply.text).join("\n\n");
       } catch (caught) {
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
@@ -260,7 +274,7 @@ export function Assistant({
         setBusy(false);
       }
     },
-    [busy, householdId, firstName, errorWords],
+    [busy, householdId, firstName, errorWords, talk],
   );
 
   /** A live turn: send what was heard, and read back what to say (never throws — the hook's own contract). */
@@ -317,8 +331,7 @@ export function Assistant({
 
   /** Ends a live session: fetches the recap for everything said since it began, and posts it as a message. */
   const endLiveSession = useCallback(async () => {
-    const startId = liveStartMessageId.current;
-    liveStartMessageId.current = null;
+    const startId = talk?.takeStart() ?? null;
     if (!startId) return;
     try {
       const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
@@ -332,7 +345,7 @@ export function Assistant({
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : errorWords.summary);
     }
-  }, [householdId, errorWords]);
+  }, [householdId, errorWords, talk]);
 
   /**
    * What the composer is doing. The screen only needs this for one

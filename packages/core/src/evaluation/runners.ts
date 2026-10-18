@@ -10,6 +10,8 @@ import { localDateTime, pendingWords, roleWords } from "../conversation/moment";
 import { isConsequential, type HouseholdIntent, type PendingProposal } from "../conversation/intent";
 import { focusFromProposal, readFocus, type FocusEntity } from "../conversation/references";
 import { composeRoster } from "../conversation/roster";
+import { openScreenReply } from "../conversation/screens";
+import { permissionsFor } from "../identity/permissions";
 import { resolveCalendarSpan } from "../conversation/temporal";
 import { focusFromAnswer } from "../homebrain/focus";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
@@ -222,6 +224,12 @@ async function composedAnswer(
   const household = GOLDEN_HOUSEHOLDS[c.household];
   const who = memberOf(household, c.actor);
   const { intent, proposal } = result;
+  if (intent.action === "open_screen") {
+    // The screen's name and its path, by rules, for what this member is offered.
+    const permissions = [...permissionsFor({ roles: who.roles, memberType: who.memberType })];
+    const tone = who.memberType === "child" ? "child" : who.memberType === "helper" ? "helper" : "adult";
+    return { text: openScreenReply(intent.parameters.screen, { viewer: { permissions, tone }, hasScreen: true }).text };
+  }
   if (intent.action === "ask_status" && proposal.kind === "answer") {
     if (intent.parameters.scope === "people") {
       return { text: composeRoster(household.members.filter((m) => m.status === "active"), {

@@ -388,6 +388,7 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.condition.consent": "si tus ajustes de uso de datos permiten que llegue a Google",
   "settingsPage.voiceAssistants.condition.opt_in": "si lo activas al vincularlo",
   "settingsPage.voiceAssistants.capability.household_questions": "Preguntas sobre el hogar",
+  "settingsPage.voiceAssistants.capability.screens": "Abrir una pantalla mientras hablas",
   "settingsPage.voiceAssistants.capability.todays_agenda": "La agenda de hoy",
   "settingsPage.voiceAssistants.capability.calendar_read": "Planes y eventos",
   "settingsPage.voiceAssistants.capability.meals": "Qué hay de cena",

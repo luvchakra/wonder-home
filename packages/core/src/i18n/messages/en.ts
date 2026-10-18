@@ -560,6 +560,7 @@ export const en = {
   "hometalk.composer.stepListening": "Listening",
   "hometalk.composer.stepTranscribing": "Transcribing",
   "hometalk.composer.stepReady": "Ready to send",
+  "hometalk.composer.openHomeTalk": "Back to the HomeTalk conversation",
   "hometalk.preview.title": "Action preview",
   "hometalk.preview.state.prepared": "Prepared, not done",
   "hometalk.preview.state.needs_approval": "Waiting for your OK",

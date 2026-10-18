@@ -29,7 +29,7 @@ disagree again.)
 | 01 | Identity & Family Accounts | 9 | 5 | 3 | 1 | 9 | Done |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
-| 04 | Conversation, Voice & Text | 17 | 14 | 3 | 0 | 16 | In Progress |
+| 04 | Conversation, Voice & Text | 18 | 15 | 3 | 0 | 17 | In Progress |
 | 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -50,7 +50,7 @@ disagree again.)
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 7 | 1 | 4 | 2 | 4 | In Progress |
-| 25 | HomeFood | 5 | 2 | 2 | 1 | 2 | In Progress |
+| 25 | HomeFood | 11 | 5 | 3 | 3 | 5 | In Progress |
 | 26 | HomeEvents | 6 | 2 | 2 | 2 | 0 | In Progress |
 
 ## Execution Log
@@ -269,3 +269,4 @@ disagree again.)
 | 2026-10-18 | 24, 01, 26 | 24-005, 24-006, 01-010, 26-003 | Done (24-005, 24-006); 01-010 and 26-003 follow-ups | Browser QA with a real Google Maps key against the live project at 360px and 1280px (office picker, Add a place); invite sheet's email path in a local build (failure path; a real send is checked on production after the merge); `email/mailer.test.ts`, `identity/invite-email.test.ts`; eval 113/113 with HT-82, HT-83 | Owner's decisions: WonderHome emails the member invite from connect@wonderapps.biz (SMTP in Vercel only); a child hears his own appointment is on record and that the adults can see it; dashboard policy dropped on `household_ai_credentials` (migration written, not yet live) |
 | 2026-10-18 | 25, 04 | 25-003 (b), 04-017 | In Progress (25-003 c left); 04-017 follow-up | `commerce/receipt-stock.test.ts` 10; commerce 126; voicelink/conversation/hometalk 599; eval 113/113 (voice gate 18/18); browser QA against the live project at 360px and desktop (receipt stock/list before → after, undo, duplicate refused then recorded with Record it again), QA data deleted and counted 0 | Receipts add to stock and come off the list; a duplicate receipt is caught. Telling WonderHome what someone likes now works by voice |
 | 2026-10-18 | 04 | 04-017 | Performance pass | Live `metadata.timings`: turns 4.2–15.6 s, almost all of it two sequential calls to the main model; tiered understanding (Haiku 5.5) and answers (Sonnet 5.5), speech synthesised and played sentence by sentence; tests 903, eval 113/113 | Voice replies were slow; the bottleneck and the fix are in `docs/progress/2026-10-18-hometalk-voice-latency.md` |
+| 2026-10-18 | 04 | 04-018 | Done | `conversation/screens.test.ts` 30, rules/gateway/Gemini tests, all unit tests 3,330; eval 117/117 (voice gate 23/23, 27/27 actions placed); typecheck, lint, build, bundle check; browser QA at 360px and desktop with a scripted recogniser: Groceries → bananas added there → Calendar → back to HomeTalk, bar on every other screen, no horizontal scroll | HomeTalk follows you across screens: `open_screen`, a live conversation that survives navigation, and a glowing bar on every screen (`docs/progress/2026-10-18-hometalk-across-screens.md`) |

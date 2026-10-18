@@ -550,6 +550,7 @@ export const zh: Catalog = {
   "hometalk.composer.stepListening": "聆听",
   "hometalk.composer.stepTranscribing": "转写",
   "hometalk.composer.stepReady": "可以发送",
+  "hometalk.composer.openHomeTalk": "返回 HomeTalk 对话",
   "hometalk.preview.title": "操作预览",
   "hometalk.preview.state.prepared": "已准备，尚未执行",
   "hometalk.preview.state.needs_approval": "等你同意",

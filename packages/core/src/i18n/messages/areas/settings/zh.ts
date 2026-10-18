@@ -361,6 +361,7 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.condition.consent": "前提是你的数据使用设置允许其传送给 Google",
   "settingsPage.voiceAssistants.condition.opt_in": "前提是你在关联时开启",
   "settingsPage.voiceAssistants.capability.household_questions": "关于家庭的问题",
+  "settingsPage.voiceAssistants.capability.screens": "说话时打开某个页面",
   "settingsPage.voiceAssistants.capability.todays_agenda": "今日安排",
   "settingsPage.voiceAssistants.capability.calendar_read": "计划和活动",
   "settingsPage.voiceAssistants.capability.meals": "晚餐吃什么",
