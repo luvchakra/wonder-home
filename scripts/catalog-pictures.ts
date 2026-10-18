@@ -6,7 +6,7 @@
  *   npm run catalog:pictures -- --apply copy each picture into storage and credit it
  *
  * Only the items search actually shows by default (common = true) get one.
- * Each picture is a 256 px thumbnail fetched from upload.wikimedia.org only,
+ * Each picture is a 330 px thumbnail (Commons' own rounding) fetched from upload.wikimedia.org only,
  * copied into WonderHome's `grocery-catalog` bucket (so a household's browser
  * never loads it from a third party) and recorded with its author, licence and
  * file page, which the app shows beside it — CC BY and CC BY-SA require that.

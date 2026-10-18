@@ -166,6 +166,105 @@ async function createMealImpl(
   return { id: (data as Row).id as string };
 }
 
+export type UpdateMealInput = CreateMealInput & { mealId: string };
+
+/**
+ * Changing a planned meal in place (the meal card's "Change meal"): what it
+ * is, when, who cooks and which recipe. A new recipe brings its ingredients
+ * with it; what this meal already put on the shopping list stays as it is,
+ * and the old recipe's needs that were only waiting are replaced.
+ */
+async function updateMealImpl(supabase: SupabaseClient, input: UpdateMealInput): Promise<void> {
+  const { data: before, error: readError } = await supabase
+    .from("meals")
+    .select("recipe_id, status")
+    .eq("household_id", input.householdId)
+    .eq("id", input.mealId)
+    .maybeSingle();
+  if (readError) throw new Error(`updateMeal failed: ${readError.code ?? "unknown"}`);
+  if (!before) throw ApiError.notFound("That meal is no longer on the plan.");
+  const { error } = await supabase
+    .from("meals")
+    .update({
+      name: input.name,
+      slot: input.slot,
+      on_date: input.onDate,
+      ready_by: input.readyBy,
+      recipe_id: input.recipeId ?? null,
+      cook_member_id: input.cookMemberId ?? null,
+    })
+    .eq("household_id", input.householdId)
+    .eq("id", input.mealId);
+  if (error) {
+    if (error.code === "23505") throw ApiError.conflict("That slot already has a meal planned. Change or remove that one first.");
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change this meal.");
+    if (error.code === "23503") throw ApiError.badRequest("That recipe or cook is not part of this household.");
+    throw new Error(`updateMeal failed: ${error.code ?? "unknown"}`);
+  }
+  const recipeId = input.recipeId ?? null;
+  if (recipeId !== ((before as Row).recipe_id ?? null)) {
+    const { error: clearError } = await supabase
+      .from("meal_ingredient_needs")
+      .delete()
+      .eq("household_id", input.householdId)
+      .eq("meal_id", input.mealId)
+      .in("status", ["needed", "missing", "have"]);
+    if (clearError) throw new Error(`updateMeal failed: ${clearError.code ?? "unknown"}`);
+    if (recipeId) await attachIngredientsImpl(supabase, input.householdId, input.mealId, recipeId);
+  }
+}
+
+/**
+ * Taking a meal off the plan. Only a meal still to come can go; one that was
+ * cooked or eaten is the household's record. Anything it already put on the
+ * shopping list stays there, no longer tied to the meal.
+ */
+async function removeMealImpl(supabase: SupabaseClient, input: { householdId: string; mealId: string }): Promise<void> {
+  const { data, error } = await supabase
+    .from("meals")
+    .delete()
+    .eq("household_id", input.householdId)
+    .eq("id", input.mealId)
+    .in("status", ["planned", "at_risk", "replanned"])
+    .select("id");
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change this meal.");
+    throw new Error(`removeMeal failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.conflict("Only a meal still to come can be taken off the plan.");
+}
+
+/**
+ * Writing down what a meal needs when it has no recipe — "500 g rajma",
+ * "rice", "2 onions". Each line is the meal's own ingredient; a recipe is
+ * never invented for it.
+ */
+async function addMealIngredientsImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; mealId: string; lines: { name: string; quantity: number; unit: string }[] },
+): Promise<{ added: number }> {
+  const rows = input.lines
+    .filter((line) => line.name.trim())
+    .slice(0, 40)
+    .map((line) => ({
+      household_id: input.householdId,
+      meal_id: input.mealId,
+      consumable_id: null,
+      name: line.name.trim().slice(0, 120),
+      quantity: line.quantity,
+      unit: line.unit,
+      essential: true,
+      status: "needed",
+    }));
+  if (rows.length === 0) throw ApiError.badRequest("Write at least one ingredient.");
+  const { error } = await supabase.from("meal_ingredient_needs").upsert(rows, { onConflict: "meal_id,name" });
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change this meal.");
+    throw new Error(`addMealIngredients failed: ${error.code ?? "unknown"}`);
+  }
+  return { added: rows.length };
+}
+
 /**
  * Copies a recipe's ingredients onto a planned meal.
  *
@@ -682,6 +781,9 @@ export const createRecipe = invalidatesContext(createRecipeImpl, (_supabase, inp
 export const createFoodPreference = invalidatesContext(createFoodPreferenceImpl, (_supabase, input) => input.householdId);
 export const attachIngredients = invalidatesContext(attachIngredientsImpl, (_supabase, householdId) => householdId);
 export const attachRecipeToMeal = invalidatesContext(attachRecipeToMealImpl, (_supabase, householdId) => householdId);
+export const updateMeal = invalidatesContext(updateMealImpl, (_supabase, input) => input.householdId);
+export const removeMeal = invalidatesContext(removeMealImpl, (_supabase, input) => input.householdId);
+export const addMealIngredients = invalidatesContext(addMealIngredientsImpl, (_supabase, input) => input.householdId);
 /** The ingredients just put on the list for a meal are "shopping" — on the list, not yet bought. */
 async function markNeedsOnListImpl(supabase: SupabaseClient, input: { householdId: string; mealId: string; names: string[] }): Promise<void> {
   if (input.names.length === 0) return;

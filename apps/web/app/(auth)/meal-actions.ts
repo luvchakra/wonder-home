@@ -21,12 +21,17 @@ import {
   markNeedsOnList,
   setMealServings,
   attachIngredients,
+  addMealIngredients,
   attachRecipeToMeal,
   createFoodPreference,
   createMeal,
   createRecipe,
+  removeMeal,
   suggestMeal,
+  updateMeal,
 } from "@wonderhome/core/meals/repository";
+import { readItemAmount } from "@wonderhome/core/conversation/quantity";
+import { atLocal } from "@wonderhome/core/notifications/timing";
 
 import type { ActionState } from "./actions";
 
@@ -69,16 +74,14 @@ export async function createMealAction(
 
   try {
     const supabase = await createClient();
-    await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, parsed.data.householdId);
 
     const created = await createMeal(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
       slot: parsed.data.slot,
       onDate: parsed.data.onDate,
-      readyBy: new Date(
-        `${parsed.data.onDate}T${parsed.data.readyByTime}:00`,
-      ).toISOString(),
+      readyBy: readyByOn(parsed.data.onDate, parsed.data.readyByTime, membership.household.timezone),
       cookMemberId: parsed.data.cookMemberId || null,
       recipeId: parsed.data.recipeId || null,
     });
@@ -96,6 +99,99 @@ export async function createMealAction(
     return {
       notice: "Planned. WonderHome will check the ingredients against it.",
     };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}
+
+/**
+ * "Ready by 20:00" on a date, on the household's own clock. Read on the
+ * server's clock instead, an 8 pm dinner in India was saved as 1:30 am.
+ */
+function readyByOn(onDate: string, time: string, timezone: string): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  return atLocal(onDate, (hours ?? 0) * 60 + (minutes ?? 0), timezone).toISOString();
+}
+
+/** "Change meal" on a meal's card: the same fields as planning one, changed in place. */
+export async function updateMealAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = schema.extend({ mealId: z.uuid() }).safeParse({
+    householdId: formData.get("householdId"),
+    mealId: formData.get("mealId"),
+    name: formData.get("name"),
+    slot: formData.get("slot"),
+    onDate: formData.get("onDate"),
+    readyByTime: formData.get("readyByTime"),
+    cookMemberId: formData.get("cookMemberId") || undefined,
+    recipeId: formData.get("recipeId") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    await updateMeal(supabase, {
+      householdId: parsed.data.householdId,
+      mealId: parsed.data.mealId,
+      name: parsed.data.name,
+      slot: parsed.data.slot,
+      onDate: parsed.data.onDate,
+      readyBy: readyByOn(parsed.data.onDate, parsed.data.readyByTime, membership.household.timezone),
+      cookMemberId: parsed.data.cookMemberId || null,
+      recipeId: parsed.data.recipeId || null,
+    });
+    revalidatePath("/meals");
+    return { notice: "Saved." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}
+
+/** "Remove from the plan" in the same sheet. */
+export async function removeMealAction(input: { householdId: string; mealId: string }): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid(), mealId: z.uuid() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await removeMeal(supabase, parsed.data);
+    revalidatePath("/meals");
+    return { notice: "Removed from the plan." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}
+
+/**
+ * What a meal without a recipe needs, written in its Ingredients sheet: one
+ * line each, read the way HomeTalk reads an amount ("500 g rajma", "2
+ * onions", "rice").
+ */
+export async function addMealIngredientsAction(input: { householdId: string; mealId: string; text: string }): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid(), mealId: z.uuid(), text: z.string().max(4000) }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  const lines = parsed.data.text
+    .split(/\n|,/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const read = readItemAmount(line);
+      const name = (read.item || line).trim();
+      const amount = read.amount && read.amount.quantity > 0 ? read.amount : null;
+      // No amount said: "unit", the recipes' own placeholder, so the shortfall says how much is not known rather than "1 pc".
+      return { name: name.charAt(0).toUpperCase() + name.slice(1), quantity: amount?.quantity ?? 1, unit: amount ? (amount.unit ?? "pcs") : "unit" };
+    });
+  if (lines.length === 0) return { error: "Write at least one ingredient." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await addMealIngredients(supabase, { householdId: parsed.data.householdId, mealId: parsed.data.mealId, lines });
+    revalidatePath("/meals");
+    return { notice: "Saved." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "meals").body.error.message };
   }

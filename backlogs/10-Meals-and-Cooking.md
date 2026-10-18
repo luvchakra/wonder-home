@@ -12,6 +12,7 @@
 | 6 | P1 | 10-006 | Recipe intelligence | Done | every recommendation names a next action: cook, shop, substitute or defer |
 | 7 | P2 | 10-007 | Advanced nutrition | Done | preference scope and source kept so a dislike never becomes a house rule |
 | 8 | P2 | 10-008 | Cooking automation hooks | Done | readiness accepts an observed source, so an appliance signal has somewhere to land |
+| 9 | P0 | 10-009 | A meal card that does what it says: change in place, ingredients without a recipe, the right time | Done | The owner, 2026-10-18 (PR #227). **Change meal** opened HomeTalk with a sentence to retype (rule 13), and a meal could not be changed or removed at all (rule 12): it is now a sheet on the card (name, recipe, slot, day, ready by, cook; `updateMeal`, with a new recipe's ingredients replacing only those still waiting) with **Remove from the plan** (`removeMeal`, a meal still to come; what it put on the list stays). **Ingredients** on a meal with no recipe said "pick a recipe" with nowhere to pick one: it now takes the ingredients written one per line (`addMealIngredients`, amounts read as HomeTalk reads them, none said is "not measured") or one of the household's recipes. The card said "Missing … on the shopping list" for things nobody added: it now says "Still to get" for those. And a meal planned on the Meals screen was timed on the server's clock (an 8 pm dinner saved as 1:30 am): times are on the household's clock (`atLocal`). Browser-checked at 360px and 1280px |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -208,6 +209,11 @@ Implement Meals & Cooking as a first-class WonderHome domain. The module must ex
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 10-009 — A meal card that does what it says
+**Epic:** Meals & Cooking
+**Priority:** P0
+**Goal:** Every control on a meal's card works on that card: change or remove the meal, give it ingredients without a recipe, and read its time on the household's clock.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

@@ -35,7 +35,7 @@ disagree again.)
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 9 | Done |
 | 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done (grocery pantry stories moved to 25 HomeFood) |
-| 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
+| 10 | Meals & Cooking | 9 | 5 | 2 | 2 | 9 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
@@ -271,3 +271,4 @@ disagree again.)
 | 2026-10-18 | 04 | 04-017 | Performance pass | Live `metadata.timings`: turns 4.2–15.6 s, almost all of it two sequential calls to the main model; tiered understanding (Haiku 5.5) and answers (Sonnet 5.5), speech synthesised and played sentence by sentence; tests 903, eval 113/113 | Voice replies were slow; the bottleneck and the fix are in `docs/progress/2026-10-18-hometalk-voice-latency.md` |
 | 2026-10-18 | 04 | 04-018 | Done | `conversation/screens.test.ts` 30, rules/gateway/Gemini tests, all unit tests 3,330; eval 117/117 (voice gate 23/23, 27/27 actions placed); typecheck, lint, build, bundle check; browser QA at 360px and desktop with a scripted recogniser: Groceries → bananas added there → Calendar → back to HomeTalk, bar on every other screen, no horizontal scroll | HomeTalk follows you across screens: `open_screen`, a live conversation that survives navigation, and a glowing bar on every screen (`docs/progress/2026-10-18-hometalk-across-screens.md`) |
 | 2026-10-18 | 25 | 25-012, 25-013 | Done (25-012); 25-013 queued | `commerce/catalog-names.test.ts` 9; commerce/conversation/ai/i18n 914; typecheck, lint; browser QA at 360px and 1280px with a QA household: rows 105px against 128px before, labels on one line, nutrition on catalog items, "Add pasta" through HomeTalk made Pasta under Rice & grains in grams | Compact grocery cards with nutrition; items named in words counted like the catalog. Changing pieces to grams held back with its migration (`docs/progress/2026-10-18-compact-grocery-cards.md`) |
+| 2026-10-18 | 10, 25 | 10-009, 25-010 pictures | Done | typecheck, lint, meals/commerce tests; browser QA at 360px and 1280px with a QA household: planned 8:00 pm reads 8:00 pm, Ingredients took "500 g rajma / 2 onions / rice" and listed the shortfalls, Change meal saved "Rajma Rice" at 8:30 pm in place, Remove from the plan took it off; 341 catalog pictures from Wikimedia Commons copied and credited | A meal card that does what it says, and pictures for the everyday catalog items (`docs/progress/2026-10-18-meal-card-and-pictures.md`) |

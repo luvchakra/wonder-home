@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [A meal card that does what it says, and pictures for everyday catalog items](2026-10-18-meal-card-and-pictures.md) |
 | 2026-10-18 | [HomeFood: compact grocery cards, nutrition on each, items named in words counted like the catalog](2026-10-18-compact-grocery-cards.md) |
 | 2026-10-18 | [HomeTalk follows you across screens](2026-10-18-hometalk-across-screens.md) |
 | 2026-10-18 | [HomeFood: Indian nutrition (IFCT 2017) and a search that shows what a household means](2026-10-18-ifct-indian-nutrition.md) |
