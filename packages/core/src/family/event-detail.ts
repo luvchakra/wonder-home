@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../api/errors";
 import { invalidatesContext } from "../context/invalidation";
 import { generateInvitationToken } from "../identity/invitations";
+import type { EventCategory, EventVisibility } from "../calendar/projection";
+import { parseRecurrence, type RecurrenceRule } from "../calendar/recurrence";
 import type { EventKind, FamilyEvent } from "./schedule";
 
 /**
@@ -30,13 +32,17 @@ export type EventDetail = FamilyEvent & {
   guests: EventGuest[];
   /** The live invite link's token, when there is one. */
   inviteToken: string | null;
+  allDay: boolean;
+  category: EventCategory | null;
+  visibility: EventVisibility;
+  recurrence: RecurrenceRule | null;
 };
 
 export async function loadEvent(supabase: SupabaseClient, householdId: string, eventId: string): Promise<EventDetail | null> {
   const [{ data, error }, { data: guests }, { data: links }] = await Promise.all([
     supabase
       .from("family_events")
-      .select("id, title, kind, starts_at, ends_at, location, notes, protected, owner_member_id, status, action_state, action_due_at, event_participants(member_id, response, required)")
+      .select("id, title, kind, starts_at, ends_at, location, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, event_participants(member_id, response, required)")
       .eq("household_id", householdId)
       .eq("id", eventId)
       .maybeSingle(),
@@ -73,6 +79,10 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
       repliedAt: new Date(guest.updated_at as string),
     })),
     inviteToken: (((links as Row[] | null) ?? [])[0]?.token as string | undefined) ?? null,
+    allDay: row.all_day === true,
+    category: (row.category as EventCategory | null) ?? null,
+    visibility: ((row.visibility as EventVisibility | null) ?? "household"),
+    recurrence: parseRecurrence(row.recurrence),
   };
 }
 
@@ -99,7 +109,19 @@ export function planningGaps(event: Pick<EventDetail, "kind" | "status" | "endsA
   return gaps;
 }
 
-export type EventChanges = { title: string; kind: EventKind; startsAt: string; endsAt: string; location: string | null; notes: string | null };
+export type EventChanges = {
+  title: string;
+  kind: EventKind;
+  startsAt: string;
+  endsAt: string;
+  location: string | null;
+  notes: string | null;
+  /** Calendar fields (story 12-009); left out, the event keeps what it had. */
+  allDay?: boolean;
+  category?: EventCategory | null;
+  visibility?: EventVisibility;
+  recurrence?: RecurrenceRule | null;
+};
 
 async function updateEventImpl(supabase: SupabaseClient, input: { householdId: string; eventId: string; changes: EventChanges }): Promise<void> {
   if (new Date(input.changes.endsAt).getTime() <= new Date(input.changes.startsAt).getTime()) throw ApiError.badRequest("An event has to end after it starts.");
@@ -112,11 +134,19 @@ async function updateEventImpl(supabase: SupabaseClient, input: { householdId: s
       ends_at: input.changes.endsAt,
       location: input.changes.location?.trim().slice(0, 200) || null,
       notes: input.changes.notes?.trim().slice(0, 1000) || null,
+      ...(input.changes.allDay === undefined ? {} : { all_day: input.changes.allDay }),
+      ...(input.changes.category === undefined ? {} : { category: input.changes.category }),
+      ...(input.changes.visibility === undefined ? {} : { visibility: input.changes.visibility }),
+      ...(input.changes.recurrence === undefined ? {} : { recurrence: input.changes.recurrence }),
     })
     .eq("household_id", input.householdId)
     .eq("id", input.eventId)
     .select("id");
-  if (error) throw new Error(`updateEvent failed: ${error.code ?? "unknown"}`);
+  if (error) {
+    // RLS refuses (rather than filters) a change that would hide an event in someone else's name.
+    if (error.code === "42501") throw ApiError.forbidden("Only the event's owner can make it private or just for the people invited.");
+    throw new Error(`updateEvent failed: ${error.code ?? "unknown"}`);
+  }
   if (!data || data.length === 0) throw ApiError.forbidden("Only the event's owner or an Admin can change it.");
 }
 
