@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Pause, Play, X } from "lucide-react";
+import { Maximize2, Mic, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { plainText } from "../../conversation/reply-format";
 import { cn } from "../../lib/cn";
 import { setTalkActivity } from "../shell/talk-activity";
+import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, type FloatMode, type FloatPalette } from "./live-float";
 import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
 
@@ -28,6 +29,12 @@ import { useLiveVoice } from "./use-live-voice";
  * screen exactly as before. Anywhere else, a turn goes to the same HomeTalk
  * endpoint from here, and its reply is spoken. A reply that asks to open a
  * screen (`navigate`) is followed, wherever the person is.
+ *
+ * And it goes beyond the app (story 04-020): `float` asks the phone to show
+ * the conversation as a small picture-in-picture window over whatever else
+ * the person opens, still listening and still speaking from here. The
+ * window is a painted view of this same session (`live-float.ts`), never a
+ * second one.
  */
 
 export type LiveEngineName = "wonderhome" | "gemini_live";
@@ -41,6 +48,13 @@ export type LiveTalkLabels = {
   resume: string;
   end: string;
   open: string;
+  /** Float the conversation as a small window over other apps; `unfloat` brings it back (04-020). */
+  float: string;
+  unfloat: string;
+  /** The phone would not open the window; the conversation is still here. */
+  floatFailed: string;
+  /** The window's label over what the person said. */
+  you: string;
 };
 
 export type LiveTalkConfig = {
@@ -78,6 +92,16 @@ export type LiveTalk = {
   takeStart: () => string | null;
   /** Follow a reply's `navigate`, on any screen. */
   navigate: (href: string) => void;
+  /** Whether this browser can float the conversation over other apps at all; false means no Float button (rule 10). */
+  floatable: boolean;
+  /** The conversation is showing in the phone's floating window now. */
+  floating: boolean;
+  /** Open the floating window — only ever from a tap, which the browser requires. */
+  float: () => void;
+  /** Close it; the conversation carries on here. */
+  unfloat: () => void;
+  /** The latest thing worth a line on screen — a refused microphone, a window that would not open — or null. */
+  notice: string | null;
 };
 
 const LiveTalkContext = createContext<LiveTalk | null>(null);
@@ -123,6 +147,25 @@ function postRecap(householdId: string, since: string) {
   }).catch(() => undefined);
 }
 
+/** Safari's own picture-in-picture, the only kind an iPhone has. */
+type WebkitVideo = HTMLVideoElement & {
+  webkitSupportsPresentationMode?: (mode: string) => boolean;
+  webkitSetPresentationMode?: (mode: string) => void;
+  webkitPresentationMode?: string;
+};
+
+/** The floating window's elements while it is open: the painted canvas, the video the phone floats, and the repaint timer. */
+type FloatSession = {
+  mode: FloatMode;
+  canvas: HTMLCanvasElement;
+  video: HTMLVideoElement;
+  timer: number;
+  startedAt: number;
+};
+
+/** The media-session actions a phone's lock screen or floating window can press. */
+const MEDIA_ACTIONS: MediaSessionAction[] = ["play", "pause", "stop"];
+
 export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -132,6 +175,101 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const [running, setRunning] = useState<LiveEngineName | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const startMessageId = useRef<string | null>(null);
+
+  // The floating window (04-020) and what it paints: the live view and the
+  // last exchange, kept in refs because the repaint timer reads them.
+  const [floatable, setFloatable] = useState(false);
+  const [floating, setFloating] = useState(false);
+  const floatRef = useRef<FloatSession | null>(null);
+  const paletteRef = useRef<FloatPalette | null>(null);
+  const viewRef = useRef<LiveView>({ state: "idle", active: false, paused: false });
+  const exchangeRef = useRef<{ heard: string | null; said: string | null }>({ heard: null, said: null });
+
+  useEffect(() => {
+    setFloatable(floatSupport(readFloatEnvironment(window)) !== null);
+  }, []);
+
+  const paint = useCallback(() => {
+    const session = floatRef.current;
+    const labels = configRef.current?.labels;
+    if (!session || !labels) return;
+    const ctx = session.canvas.getContext("2d");
+    if (!ctx) return;
+    const palette = paletteRef.current ?? readPalette((token) => getComputedStyle(document.documentElement).getPropertyValue(token));
+    paletteRef.current = palette;
+    const phase = ((performance.now() - session.startedAt) % 2400) / 2400;
+    drawLiveFrame(ctx, liveFrame(viewRef.current, exchangeRef.current, labels), palette, phase);
+  }, []);
+
+  /** Closes the window and lets its elements go; the conversation itself is untouched. */
+  const endFloat = useCallback(() => {
+    const session = floatRef.current;
+    if (!session) return;
+    floatRef.current = null;
+    window.clearInterval(session.timer);
+    try {
+      if (document.pictureInPictureElement === session.video) void document.exitPictureInPicture().catch(() => undefined);
+      else if (session.mode === "webkit" && (session.video as WebkitVideo).webkitPresentationMode === "picture-in-picture") {
+        (session.video as WebkitVideo).webkitSetPresentationMode?.("inline");
+      }
+    } catch {
+      // Already closed.
+    }
+    const stream = session.video.srcObject;
+    if (stream instanceof MediaStream) stream.getTracks().forEach((track) => track.stop());
+    session.video.srcObject = null;
+    session.video.remove();
+    setFloating(false);
+  }, []);
+
+  /**
+   * Opens the floating window. Called from a tap, because the browser only
+   * floats a video the person asked for. The canvas is painted first so the
+   * window never opens blank, and the stream from it is what the phone floats.
+   */
+  const floatNow = useCallback(async () => {
+    if (floatRef.current || typeof window === "undefined") return;
+    const mode = floatSupport(readFloatEnvironment(window));
+    if (!mode) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = FRAME_WIDTH;
+    canvas.height = FRAME_HEIGHT;
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("aria-hidden", "true");
+    // Kept in the page (a detached video is never floated) but out of the way of it.
+    video.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none";
+    document.body.appendChild(video);
+    const session: FloatSession = { mode, canvas, video, timer: 0, startedAt: performance.now() };
+    floatRef.current = session;
+    paletteRef.current = null;
+    paint();
+    try {
+      video.srcObject = canvas.captureStream(FRAME_RATE);
+      await video.play();
+      if (floatRef.current !== session) return;
+      if (mode === "standard") {
+        await video.requestPictureInPicture();
+        video.addEventListener("leavepictureinpicture", () => endFloat(), { once: true });
+      } else {
+        const webkit = video as WebkitVideo;
+        if (webkit.webkitSupportsPresentationMode?.("picture-in-picture") === false) throw new Error("not supported");
+        webkit.webkitSetPresentationMode?.("picture-in-picture");
+        video.addEventListener("webkitpresentationmodechanged", () => {
+          if (webkit.webkitPresentationMode !== "picture-in-picture") endFloat();
+        });
+      }
+      if (floatRef.current !== session) return;
+      session.timer = window.setInterval(paint, 1000 / FRAME_RATE);
+      setFloating(true);
+      setNotice(null);
+    } catch {
+      endFloat();
+      setNotice(configRef.current?.labels.floatFailed ?? null);
+    }
+  }, [endFloat, paint]);
 
   const navigate = useCallback(
     (href: string) => {
@@ -143,23 +281,38 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
 
   const onUtterance = useCallback(
     async (transcript: string, confidence: number): Promise<string> => {
+      exchangeRef.current = { heard: transcript, said: null };
+      paint();
+      const said = (text: string) => {
+        exchangeRef.current = { heard: transcript, said: text || null };
+        paint();
+        return text;
+      };
       const handler = handlerRef.current;
-      if (handler) return handler.onUtterance(transcript, confidence);
+      if (handler) return said(await handler.onUtterance(transcript, confidence));
       const current = configRef.current;
       if (!current) return "";
       try {
         const { text, navigate: href, memberMessageId } = await liveTurnHere(current.householdId, transcript, confidence);
         if (memberMessageId && !startMessageId.current) startMessageId.current = memberMessageId;
         if (href) navigate(href);
-        return text ? plainText(text) : "";
+        return said(text ? plainText(text) : "");
       } catch {
-        return "";
+        return said("");
       }
     },
-    [navigate],
+    [navigate, paint],
   );
 
-  const onTranscript = useCallback((entry: { role: "member" | "assistant"; text: string }) => handlerRef.current?.onTranscript?.(entry), []);
+  // Gemini Live speaks for itself; its transcript is what the window shows.
+  const onTranscript = useCallback(
+    (entry: { role: "member" | "assistant"; text: string }) => {
+      exchangeRef.current = entry.role === "member" ? { heard: entry.text, said: null } : { heard: exchangeRef.current.heard, said: entry.text };
+      paint();
+      handlerRef.current?.onTranscript?.(entry);
+    },
+    [paint],
+  );
   const onError = useCallback((message: string) => setNotice(message), []);
 
   const server = useMemo(() => (config?.serverVoice ? { householdId: config.householdId } : null), [config?.serverVoice, config?.householdId]);
@@ -204,6 +357,7 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       running,
       start: (name) => {
         setNotice(null);
+        exchangeRef.current = { heard: null, said: null };
         setRunning(name);
         engineOf(name).start();
       },
@@ -212,6 +366,7 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       stop: () => {
         if (running) engineOf(running).stop();
         setRunning(null);
+        endFloat();
         // On HomeTalk's page the page posts the recap itself (its `onLiveEnd`).
         const since = startMessageId.current;
         if (!handlerRef.current && since && configRef.current) {
@@ -228,8 +383,13 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
         return since;
       },
       navigate,
+      floatable,
+      floating,
+      float: () => void floatNow(),
+      unfloat: endFloat,
+      notice,
     }),
-    [engineOf, navigate, running, view],
+    [endFloat, engineOf, floatNow, floatable, floating, navigate, notice, running, view],
   );
 
   // The tab bar's raised HomeTalk button glows for as long as the conversation runs, on any screen.
@@ -237,6 +397,56 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setTalkActivity(live?.active ? (live.paused ? "paused" : "live") : "idle");
   }, [live?.active, live?.paused]);
+
+  // The window repaints the moment the state changes, not only on its timer; and a conversation that ended takes it down.
+  const liveState = live?.state ?? "idle";
+  const livePaused = live?.paused ?? false;
+  const liveActive = live?.active ?? false;
+  useEffect(() => {
+    viewRef.current = { state: liveState, active: liveActive, paused: livePaused };
+    paint();
+  }, [liveActive, livePaused, liveState, paint]);
+  useEffect(() => {
+    if (!running) endFloat();
+  }, [endFloat, running]);
+  useEffect(() => () => endFloat(), [endFloat]);
+
+  // The phone's own media controls — on its lock screen, in the floating
+  // window — pause, resume and end this conversation; where the browser
+  // offers it, they can float it too. Nothing here is a decision about the
+  // household: the handlers only press the same buttons the bar has.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const session = navigator.mediaSession;
+    const set = (action: MediaSessionAction | "enterpictureinpicture", handler: (() => void) | null) => {
+      try {
+        session.setActionHandler(action as MediaSessionAction, handler);
+      } catch {
+        // An action this browser does not know.
+      }
+    };
+    if (!liveActive) {
+      try {
+        session.metadata = null;
+        session.playbackState = "none";
+      } catch {
+        // Nothing to clear.
+      }
+      for (const action of MEDIA_ACTIONS) set(action, null);
+      set("enterpictureinpicture", null);
+      return;
+    }
+    try {
+      if (typeof MediaMetadata !== "undefined") session.metadata = new MediaMetadata({ title: "HomeTalk", artist: "WonderHome" });
+      session.playbackState = livePaused ? "paused" : "playing";
+    } catch {
+      // Metadata is a nicety.
+    }
+    set("play", value.resume);
+    set("pause", value.pause);
+    set("stop", value.stop);
+    set("enterpictureinpicture", floatable ? value.float : null);
+  }, [floatable, liveActive, livePaused, value]);
 
   // While the bar shows, every page keeps its last row clear of it (rule 15).
   const barShown = Boolean(live?.active && config && !pathname.startsWith("/ai"));
@@ -253,7 +463,18 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     <LiveTalkContext.Provider value={value}>
       {children}
       {barShown && live && config ? (
-        <LiveTalkBar live={live} labels={config.labels} notice={notice} onPause={value.pause} onResume={value.resume} onEnd={value.stop} />
+        <LiveTalkBar
+          live={live}
+          labels={config.labels}
+          notice={notice}
+          floatable={floatable}
+          floating={floating}
+          onPause={value.pause}
+          onResume={value.resume}
+          onFloat={value.float}
+          onUnfloat={value.unfloat}
+          onEnd={value.stop}
+        />
       ) : null}
     </LiveTalkContext.Provider>
   );
@@ -265,27 +486,37 @@ export function useLiveTalk(): LiveTalk | null {
 
 /**
  * HomeTalk's glow, on every screen but HomeTalk's own, while a live
- * conversation runs: what it is doing, pause or resume, end, and the way
- * back to the conversation. Sits above the phone's tab bar and never covers
- * a row's actions (it is short and centred), with the motion off when the
- * person has asked for less.
+ * conversation runs: what it is doing, pause or resume, float or bring back
+ * (where the phone can), end, and the way back to the conversation. Sits
+ * above the phone's tab bar and never covers a row's actions (it is short
+ * and centred), with the motion off when the person has asked for less.
  */
 function LiveTalkBar({
   live,
   labels,
   notice,
+  floatable,
+  floating,
   onPause,
   onResume,
+  onFloat,
+  onUnfloat,
   onEnd,
 }: {
   live: LiveView;
   labels: LiveTalkLabels;
   notice: string | null;
+  floatable: boolean;
+  floating: boolean;
   onPause: () => void;
   onResume: () => void;
+  onFloat: () => void;
+  onUnfloat: () => void;
   onEnd: () => void;
 }) {
   const status = live.paused ? labels.paused : live.state === "thinking" ? labels.thinking : live.state === "speaking" ? labels.speaking : labels.listening;
+  const control =
+    "grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]";
   return (
     <div
       role="region"
@@ -314,20 +545,15 @@ function LiveTalkBar({
             {notice ? <span className="block max-w-[12rem] text-xs break-words text-[var(--wh-foreground-muted)]">{notice}</span> : null}
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={live.paused ? onResume : onPause}
-          aria-label={live.paused ? labels.resume : labels.pause}
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-        >
+        <button type="button" onClick={live.paused ? onResume : onPause} aria-label={live.paused ? labels.resume : labels.pause} className={control}>
           {live.paused ? <Play aria-hidden className="size-4" /> : <Pause aria-hidden className="size-4" />}
         </button>
-        <button
-          type="button"
-          onClick={onEnd}
-          aria-label={labels.end}
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-        >
+        {floatable ? (
+          <button type="button" onClick={floating ? onUnfloat : onFloat} aria-label={floating ? labels.unfloat : labels.float} className={control}>
+            {floating ? <Maximize2 aria-hidden className="size-4" /> : <PictureInPicture2 aria-hidden className="size-4" />}
+          </button>
+        ) : null}
+        <button type="button" onClick={onEnd} aria-label={labels.end} className={control}>
           <X aria-hidden className="size-4" />
         </button>
       </div>

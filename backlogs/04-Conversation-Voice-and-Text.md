@@ -23,6 +23,7 @@
 | 17 | P0 | 04-017 | Voice evaluation, metrics and release gates | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery Since 2026-10-18 (owner's report: Gemini Live said it could not update a family preference), telling WonderHome what someone likes is available by voice: `family_facts` capability, Gemini tool `remember_family_fact`, `set_preference` needs no voice scope (kept as learned, correctable in HomeBrain Review); eval voice gate 18/18 tool sentences |
 | 18 | P0 | 04-018 | HomeTalk follows you across screens | Done | The owner's ask, 2026-10-18 (PR #225): "take me to the grocery list", add or remove things there, move on, come back. A live conversation now lives at the app's root (`components/ui/live-talk.tsx`, `LiveTalkProvider`), so changing screens no longer ends it. Intent `open_screen` (`conversation/screens.ts`, a fixed list of screens a model and the rules pick from by key, never a path) read by the rules and the model; the reply carries `navigate` (a same-app path, through `hometalk/contract.ts` and the Gemini tool result) and is followed on any screen. A screen this person is never offered is not opened; Alexa says there is no screen. A glowing bar above the tab bar on every other screen shows listening/thinking/speaking with pause, end and the way back, and pages reserve room for it (`--wh-live-bar-clearance`). Gemini Live tool `open_screen`. Golden HT-84 to HT-87; eval voice gate 23/23. Browser-checked at 360px and desktop with a scripted recogniser: Groceries → added bananas there → Calendar → back to HomeTalk |
 | 19 | P0 | 04-019 | Voice in the app is HomeTalk; getaways and likes answered from the record | Done | The owner's reports, 2026-10-18 (PR #228). Gemini Live inside HomeTalk said "I can't do that from this voice assistant, use the WonderHome app": the in-app channel now carries `inApp` limits (`channelAllowsAction`, `channelRefusal` in `voicelink/scopes.ts`), its refusal names HomeTalk and the on-screen OK, and Gemini's instructions say it is HomeTalk's own voice inside WonderHome and never to send the person to "the app". A place question is answered by Gemini Live where the household lets location reach Google (capability `places` is `consent` for Gemini, still `app_only` for Alexa). "Can you suggest a two-day vacation plan?" is a HomePlaces getaway (`purpose: "getaway"`, `when: trip`): tourist attractions within a few hours' drive of home, the search kept to that area (`within`, `includedType`), day-trip distances left out, no opening hours checked; real check from Pune gave Mahabaleshwar, Naneghat and the Wai hills. "What does Upasana like in food?" is answered by rules from every record about her — what HomeTalk was told (`memories`) and the Meals screen's preferences — in `conversation/likes.ts`, after the model said "no records" minutes after "Remembered". Golden HT-88. The cause behind the forgetting is a design limit, written up as `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` for the owner |
+| 20 | P0 | 04-020 | HomeTalk floats over other apps | Done | The owner's ask, 2026-10-18 (PR #229): use other apps on the phone while talking to HomeTalk, with WonderHome as a picture-in-picture window and the voice still going. A web app cannot float itself, but a phone floats a video: the live session is painted onto a canvas (`components/ui/live-float.ts` — the orb, listening/thinking/speaking/paused, the last thing heard and said, in the theme's own tokens, text shrinking before it is cut), streamed as a video and floated by the browser (`LiveTalkProvider`'s `float`/`unfloat`: `requestPictureInPicture`, or Safari's presentation mode). The engines never move; the window is a view of the one session at the app's root. Float sits beside End in the composer and on the live bar, only where the browser can do it; the phone's media controls pause, resume and end the same session; a recogniser that lapses in the background relistens after a breath and on return. Help: Voice ¶8 in eight languages. `live-float.test.ts` 17. Browser-checked at 360px and 1280px: headless Chromium really entered picture-in-picture (video 480×360), the frame showed the exchange, Groceries opened while floating, End closed the window. The microphone behind another app on a real phone is the owner's check |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -34,7 +35,7 @@ Implement Conversation, Voice & Text as a first-class WonderHome domain. The mod
 - **Epic 04-E01 — Conversation Understanding & Safe Actions:** stories 04-001 through 04-004.
 - **Epic 04-E05 — Voice & Text Experience:** stories 04-005 through 04-006.
 - **Epic 04-E07 — Memory & Conversational Configuration:** stories 04-007 through 04-008.
-- **Epic 04-E12 — Voice Channels (voice integration, `design/voice-integration/`):** stories 04-012 through 04-019.
+- **Epic 04-E12 — Voice Channels (voice integration, `design/voice-integration/`):** stories 04-012 through 04-020.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -405,6 +406,23 @@ responsibilities .
 - API/OpenAPI and Supabase migrations/RLS are updated where applicable.
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 04-020 — HomeTalk floats over other apps
+**Epic:** Voice Channels
+**Priority:** P0
+**Goal:** While a live conversation runs, a person can shrink HomeTalk to a small window that stays over the other apps on their phone, with HomeTalk still listening and answering out loud.
+
+**Acceptance criteria**
+- During a live conversation, Float (beside End in the composer, and on the live bar) opens the phone's picture-in-picture window showing HomeTalk's orb, what it is doing, the last thing heard and the last thing said. The conversation keeps running from the page underneath, through the same engine and the same gates; the window is a view of it, never a second session.
+- The phone's media controls — the floating window's own pause, the lock screen — pause, resume and end that same session. Closing the window never ends the conversation; ending the conversation closes the window.
+- Float is shown only where the browser can float a window. Where it refuses to open one, the composer says so and the conversation carries on.
+- The window is painted in the theme's own tokens and the composer's own words, in the viewer's language. Nothing is recorded beyond the conversation itself.
+
+**Definition of Done**
+- UI behavior implemented, including the unsupported and failed states.
+- Relevant unit tests pass (`components/ui/live-float.test.ts`).
+- Help content updated in every language.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
 
 ### Story 04-019 — Voice in the app is HomeTalk; getaways and likes answered from the record

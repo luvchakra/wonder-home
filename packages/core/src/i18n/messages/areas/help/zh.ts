@@ -118,6 +118,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "Gemini 语音始终在 Google 上运行。如果 Settings → AI Assistant 中助手的密钥是 Google（Gemini）密钥，语音就使用同一个密钥。如果您的助手使用 Anthropic 或 OpenAI，Admin 可以在同一页面添加一个单独的 Gemini 语音密钥：它只用于 Gemini 语音，其他功能仍使用助手的密钥。",
   "help.guide.voice.body.7":
     "在实时对话中，你可以让 HomeTalk 打开某个页面——“带我去购物清单”“打开日历”“回到 HomeTalk”——它会前往该页面并继续聆听。你可以用语音在那个页面添加或删除东西，再去另一个页面，随时回到对话。对话进行时，每个页面底部都有一条发光的栏，显示它正在聆听、思考还是说话，并提供暂停、结束和返回对话的按钮。打字输入同样的话也会打开页面。HomeTalk 只会打开你能使用的页面，打开页面不会更改任何内容。",
+  "help.guide.voice.body.8":
+    "你也可以把 HomeTalk 带进其他应用。在实时对话中，点按“悬浮”——“结束”旁边的小窗口图标——HomeTalk 就会缩成一个小窗口，停留在你接下来打开的任何内容之上：一条消息、一个浏览器、另一个应用。它继续聆听并出声回答，显示它听到了什么、说了什么，窗口上的暂停按钮会暂停对话。点按窗口即可回到 WonderHome，或者关掉窗口在应用里继续；只有你结束对话，它才会结束。这个按钮只在能够悬浮窗口的手机和浏览器上出现（Android 上的 Chrome 可以；iPhone 上取决于 Safari），也不会额外录制任何内容：这个窗口只是你本来就能看到的对话的一幅画面。",
 
   "help.guide.home-send.title": "HomeSend：把东西发给 WonderHome",
   "help.guide.home-send.summary": "一张照片、一个 PDF、一条语音、一个链接或一条转发——先读取，再由你确认。",

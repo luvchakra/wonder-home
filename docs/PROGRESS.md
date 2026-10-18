@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**245 of 259 stories done — 94.6%**
+**246 of 260 stories done — 94.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 245 |
-| In Progress | 3 |
+| Done | 246 |
+| In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 10 |
+| Not Started | 9 |
 | Deferred | 1 |
 
 ## By module
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 11 | 11 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 18 | 19 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 19 | 20 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 8 | 8 | — |
-| 25 HomeFood | `████░░░░░░` | 6 | 13 | 1 in progress, 6 not started |
+| 25 HomeFood | `████░░░░░░` | 6 | 13 | 2 in progress, 5 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
@@ -64,7 +64,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
-| `25-013` Change how an item is counted, even pieces to grams | 25 HomeFood | P1 | Not Started |
+| `25-013` Change how an item is counted, even pieces to grams | 25 HomeFood | P1 | In Progress |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -144,7 +144,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-18 of 19 done `█████████░`
+19 of 20 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -167,6 +167,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-017` Voice evaluation, metrics and release gates | P0 | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery Since 2026-10-18 (owner's report: Gemini Live said it could not update a family preference), telling WonderHome what someone likes is available by voice: `family_facts` capability, Gemini tool `remember_family_fact`, `set_preference` needs no voice scope (kept as learned, correctable in HomeBrain Review); eval voice gate 18/18 tool sentences |
 | `04-018` HomeTalk follows you across screens | P0 | Done | The owner's ask, 2026-10-18 (PR #225): "take me to the grocery list", add or remove things there, move on, come back. A live conversation now lives at the app's root (`components/ui/live-talk.tsx`, `LiveTalkProvider`), so changing screens no longer ends it. Intent `open_screen` (`conversation/screens.ts`, a fixed list of screens a model and the rules pick from by key, never a path) read by the rules and the model; the reply carries `navigate` (a same-app path, through `hometalk/contract.ts` and the Gemini tool result) and is followed on any screen. A screen this person is never offered is not opened; Alexa says there is no screen. A glowing bar above the tab bar on every other screen shows listening/thinking/speaking with pause, end and the way back, and pages reserve room for it (`--wh-live-bar-clearance`). Gemini Live tool `open_screen`. Golden HT-84 to HT-87; eval voice gate 23/23. Browser-checked at 360px and desktop with a scripted recogniser: Groceries → added bananas there → Calendar → back to HomeTalk |
 | `04-019` Voice in the app is HomeTalk; getaways and likes answered from the record | P0 | Done | The owner's reports, 2026-10-18 (PR #228). Gemini Live inside HomeTalk said "I can't do that from this voice assistant, use the WonderHome app": the in-app channel now carries `inApp` limits (`channelAllowsAction`, `channelRefusal` in `voicelink/scopes.ts`), its refusal names HomeTalk and the on-screen OK, and Gemini's instructions say it is HomeTalk's own voice inside WonderHome and never to send the person to "the app". A place question is answered by Gemini Live where the household lets location reach Google (capability `places` is `consent` for Gemini, still `app_only` for Alexa). "Can you suggest a two-day vacation plan?" is a HomePlaces getaway (`purpose: "getaway"`, `when: trip`): tourist attractions within a few hours' drive of home, the search kept to that area (`within`, `includedType`), day-trip distances left out, no opening hours checked; real check from Pune gave Mahabaleshwar, Naneghat and the Wai hills. "What does Upasana like in food?" is answered by rules from every record about her — what HomeTalk was told (`memories`) and the Meals screen's preferences — in `conversation/likes.ts`, after the model said "no records" minutes after "Remembered". Golden HT-88. The cause behind the forgetting is a design limit, written up as `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` for the owner |
+| `04-020` HomeTalk floats over other apps | P0 | Done | The owner's ask, 2026-10-18 (PR #229): use other apps on the phone while talking to HomeTalk, with WonderHome as a picture-in-picture window and the voice still going. A web app cannot float itself, but a phone floats a video: the live session is painted onto a canvas (`components/ui/live-float.ts` — the orb, listening/thinking/speaking/paused, the last thing heard and said, in the theme's own tokens, text shrinking before it is cut), streamed as a video and floated by the browser (`LiveTalkProvider`'s `float`/`unfloat`: `requestPictureInPicture`, or Safari's presentation mode). The engines never move; the window is a view of the one session at the app's root. Float sits beside End in the composer and on the live bar, only where the browser can do it; the phone's media controls pause, resume and end the same session; a recogniser that lapses in the background relistens after a breath and on return. Help: Voice ¶8 in eight languages. `live-float.test.ts` 17. Browser-checked at 360px and 1280px: headless Chromium really entered picture-in-picture (video 480×360), the frame showed the exchange, Groceries opened while floating, End closed the window. The microphone behind another app on a real phone is the owner's check |
 
 ### 05 — Household Certification & Understanding
 
@@ -506,7 +507,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-010` A search that shows what a household means, and amounts that move naturally | P0 | Done | The owner, 2026-10-18. `grocery_catalog.common` (411 everyday items): "eggs" shows white and brown eggs and the brands on sale, one entry per brand and name; a rarer kind when typed by name (`chooseResults`, `search_grocery_catalog_kind`). No amount in the list: tapping an entry opens − / + from the usual buy. Every stepper walks a ladder of natural amounts (`commerce/buying-sizes.ts`): loose produce 250 g, 500 g, 750 g, 1 kg, 1.25 kg…; atta and rice the packs sold (1, 2, 5, 10 kg); dal 500 g–5 kg; spices 50–500 g; oil 500 ml–5 l; milk by the half litre; anything counted one at a time; a packed product one pack at a time; a household's own step still wins. Wikimedia Commons pictures (CC0/PD/CC BY/CC BY-SA, credited) for everyday items only (`npm run catalog:pictures`). The sheet now rises above the phone keyboard |
 | `25-011` Indian nutrition, the rest | P1 | Not Started | The owner, 2026-10-18: medium priority, for later; what 25-009 finished is what is used. Left: link the curated Indian items not yet linked to their IFCT food (399 of 1,559 are), in the same rules (same food and state, "close" says what differs, nothing processed); cooked and prepared foods, which IFCT does not hold (INDB 2024 builds them from IFCT, so the same NIN permission covers it); NIN's written permission for IFCT (email drafted in `docs/progress/2026-10-18-ifct-indian-nutrition.md`, needs a person to send); a native speaker's review of the close matches and regional names |
 | `25-012` Compact grocery cards with nutrition, and items named in words counted like the catalog | P0 | Done | The owner, 2026-10-18 (PR #226): each row is about a fifth shorter at 360px (picture, name and chevron on one line, in stock and the stepper across the card's full width, 36px steppers), and shows energy and protein per 100 g under the name from the item's credited source (`cardNutrition`: IFCT for a curated item, the label for a product; nothing when neither has it). An item made by name — HomeTalk's "add pasta", an agent's add, a meal's shortfall — takes the catalog's reading (`pickCatalogItem` / `catalogItemFor`): an exact name or alias links to that catalog item; a word only its everyday variants carry ("Pasta, penne", "Pasta, macaroni") takes how they are counted and the pack they share, never a variant picked for the household. So "add pasta" is 500 g of pasta under Rice & grains, not 1 pc. Browser-checked at 360px and 1280px |
-| `25-013` Change how an item is counted, even pieces to grams | P1 | Not Started | The owner asked to change an item's unit from its card (pasta kept in pieces). The item page's unit picker already changes units that convert; one that does not (pcs to g) is refused while anything is at home or on the list. Built and DB-tested but held back at the owner's choice on 2026-10-18 because its migration could not be applied: `public.change_consumable_unit` + `consumable_unit_changes` (stock back to not counted and recorded, list restarts at the usual buy), a "Counted in" picker in the amount sheet with an own-unit option. Pick up from the saved work, apply the migration live, browser-check |
+| `25-013` Change how an item is counted, even pieces to grams | P1 | In Progress | Code shipped in PR #229 (`commerce/unit-change.ts`, "Counted in" in the amount sheet, history rows, `verify:live` probes), inert until the migration `20261018240000_grocery_unit_change.sql` runs: the service-role key cannot run DDL (Management API 401, no SQL RPC), so the file was handed to the owner for the SQL editor. Then `npm run verify:live` and the pieces → grams browser check, then Done. The owner asked to change an item's unit from its card (pasta kept in pieces). The item page's unit picker already changes units that convert; one that does not (pcs to g) is refused while anything is at home or on the list. Built and DB-tested but held back at the owner's choice on 2026-10-18 because its migration could not be applied: `public.change_consumable_unit` + `consumable_unit_changes` (stock back to not counted and recorded, list restarts at the usual buy), a "Counted in" picker in the amount sheet with an own-unit option. Pick up from the saved work, apply the migration live, browser-check |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents
