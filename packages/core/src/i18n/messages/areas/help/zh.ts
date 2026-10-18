@@ -104,6 +104,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.talk-to-wonderhome.body.12": "询问短途旅行——“能推荐一个两天的度假计划吗？”“一家人的周末出游”——HomeTalk 会在离家几小时车程内寻找值得一去、评分高的地方，例如山地度假地、湖泊和古堡，并略过只够一日游的地方。这些地点来自 Google 地点搜索，以卡片显示，你可以在地图上打开、保存或标记为“不适合我们”。预订前请查看路程、天气和住宿。在你家庭的隐私设置允许位置信息发送给 Google 的情况下，Gemini Live 也能回答这些问题；它就是 HomeTalk 自己的声音，所以需要你在屏幕上确认的事情，它会这样告诉你。",
 
   "help.guide.voice.title": "语音和免提对话",
+  "help.guide.talk-to-wonderhome.body.13": "HomeTalk 根据你家记录的所有内容回答，而不只是接下来几天：几个月后的活动、谁回复了邀请以及有多少人会来、你告诉过它的每个人的喜好、Meals 页面上的偏好、你保存的地点和你家的地址。它只读取你能看到的内容，不会更多；你做的修改会出现在它的下一个回答中。",
   "help.guide.voice.summary": "点一下说话再核对，或者免提来回对话。",
   "help.guide.voice.body.1": "点一下麦克风，你说的话就会出现在输入框里，发送前你可以先核对。你不发送，就什么都不会发出去。",
   "help.guide.voice.body.2":

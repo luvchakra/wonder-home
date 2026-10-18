@@ -62,13 +62,13 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | Ask HomeTalk to open screens and keep talking while moving between them, with the glow showing on every screen | 04-018 | Done, #225 (golden HT-84 to HT-87) |
 | Compact grocery cards, nutrition on each, pasta counted in grams | 25-012 | Done, #226 |
 | Pictures for the everyday catalog items | 25-010 | Done, #227: 341 of 411 everyday items |
-| Change an item's unit from its card, even pieces to grams | 25-013 | Code in #229; the migration is a SQL file for the owner to run (the service-role key cannot run DDL), then verify:live and the browser check |
+| Change an item's unit from its card, even pieces to grams | 25-013 | Done, #229 + the owner's SQL run; browser-checked pieces → grams on the live project |
 | HomeTalk floats over other apps: a picture-in-picture window while the voice conversation carries on | 04-020 | Done, #229 — real-phone microphone check is the owner's |
 | One HomePlaces screen with every place (home, schools, offices, saved) and tags for what each is for | 24 | Next |
 | Meal card: Change meal in place; Ingredients with no recipe lets you add one | 10-009 | Done, #227 (also: meal times on the household's clock) |
 | Gemini Live in the app never says "use the WonderHome app"; trip ideas answered | 04-019 | Done, #228 |
 | "What does Upasana like in food?" answered from what was remembered (it said "no records" minutes after "Remembered") | 04-019 | Done, #228 — the rule fix; the cause is a design limit, see below |
-| HomeTalk knows the whole household, fast: guests at an event two months out, no forgetting, replies in ~2 s | HomeBrain 3.0 | **Design written** (`design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`); awaiting the owner's go-ahead, then phases A–D |
+| HomeTalk knows the whole household, fast: guests at an event two months out, no forgetting, replies in ~2 s | 14-020 to 14-023 | Owner said go, 2026-10-18. Phase A (the Household Context Store, 14-020) in #230: whole context, guests, preferences, places; waits on the owner's SQL run of `20261018250000`. **Next:** phase B (retrieval and one pass, the speed), then C, then D |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |

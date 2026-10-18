@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**246 of 260 stories done — 94.6%**
+**247 of 264 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 246 |
+| Done | 247 |
 | In Progress | 4 |
 | Blocked | 0 |
-| Not Started | 9 |
+| Not Started | 12 |
 | Deferred | 1 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `██████████` | 19 | 19 | — |
+| 14 AI Orchestration & Learning | `████████░░` | 19 | 23 | 1 in progress, 3 not started |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 8 | 8 | — |
-| 25 HomeFood | `████░░░░░░` | 6 | 13 | 2 in progress, 5 not started |
+| 25 HomeFood | `█████░░░░░` | 7 | 13 | 1 in progress, 5 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
@@ -58,13 +58,16 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
+| `14-020` HomeBrain 3.0 phase A — the Household Context Store | 14 AI Orchestration & Learning | P0 | In Progress |
+| `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
-| `25-013` Change how an item is counted, even pieces to grams | 25 HomeFood | P1 | In Progress |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -309,7 +312,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-19 of 19 done `██████████`
+19 of 23 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -332,6 +335,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-017` Deep document understanding — whole-document reader & change plan | P0 | Done | Spec: `design/HOMESEND-DEEP-DOCUMENT-UNDERSTANDING-2.0.md` (mockup `design/HomeSend-Deep-Document-Understanding-Mockup.png`), phases A–C. The classifier reads the whole document into every household-relevant record across its pages (`records[]`: each event, each date of a series, each fee, each thing to buy), each with page, section and quote as evidence, plus pages read/unreadable and the day the document is dated (`issuedOn`). Deterministic backstop per record (no ids, no field a domain does not own); each record's day and time grounded by WonderHome, never the model. `homesend/document.ts` keeps the reading on the understanding (older readings derive records from the headline and needs); `homesend/plan.ts` reconciles every record on its own — create / update (field by field, before → after) / cancel / no change / conflict (a newer record wins, §28) / needs your answer (one question, §29) — with a series of dates read as occurrences, one record on file answering for one thing, a same-amount-same-day bill recognised, and school/class enrichment from the household's records marked as such (§30). Matcher fixes: a part of an occasion (rehearsal, fee, registration) is never the occasion; equal matches ordered by name. Golden scenarios 1–3 (§46–48) are permanent tests |
 | `14-018` Deep document understanding — review, apply and receipt | P0 | Done | Phases D–E. A document with two or more records is reviewed as its plan in HomeSend and in the HomeTalk paperclip sheet (`_components/home-send-plan.tsx`): Found N items, grouped Updates / New / Already on record / Conflicts / Needs your answer, each row opening to its fields, before → after, household-record enrichment and source page, with per-record include, edit and "who is it for"; "Review and apply (N)". `applyDocumentPlanAction` rebuilds the plan on the server from the stored reading (the browser sends only choices), writes each included record through its domain service (writes moved to the server-only `home-send-writes.ts`), verifies updates by reading them back, records each change with its plan key, field-level before/after and evidence (migration `20261005090000_homesend_document_plan_receipt.sql`, applied live), and keeps the exact plan and receipt on the item. `homesend/apply.ts` makes the receipt: created / updated / cancelled / unchanged / skipped / needs_clarification / failed, partial never reported as done, "Nothing new found. No records changed." as a success; a second apply returns the stored receipt. "Undo all" reverses every change of a document; history names each change. A document with a plan never applies on its own |
 | `14-019` Deep document understanding — HomeTalk attachments & certification | P0 | Done | Phases F–G. The paperclip in HomeTalk opens the same HomeSend sheet, pipeline, plan and apply — no second parser — and once a plan is applied HomeTalk posts what it did into the conversation from the stored receipt (`documentReceipt` turn, `homesend/talk.ts` `documentReplyText`: "I read the 2-page school notice and found 7 things… Done. Updated: • Annual Day — 12 Oct → 15 Oct …"). "What did the school notice change?" is answered by rules from the receipt and the change rows (`readDocumentChangeQuestion` / `answerDocumentChanges`), never from the model's reading: undone changes are said to be undone, and a question no applied document fits goes on to HomeBrain; not over a voice link, whose content limits the HomeBrain path applies. Golden scenario 4 (same reading → same plan whichever door) in `talk.test.ts`; eval HS-16 (a part of an occasion is not the occasion, 50/50); §50 counts in HomeSend metrics (`documents`: applied, outcomes, changes standing, correct household changes per document). A receipt with a question still open says so ("1 change applied, 1 waiting on your answer") |
+| `14-020` HomeBrain 3.0 phase A — the Household Context Store | P0 | In Progress | Spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` §3.1–§3.2; the owner's reports of 2026-10-18 (Asmi's party with guests "not known", a preference remembered then forgotten, slow replies). PR #230: `household_context` (one row per household, deny-all RLS, migration `20261018250000`, waiting on the owner's SQL run); `homebrain/context-store.ts` builds every record whole (no seven-day horizon, no twelve-to-a-list cap, `limitLists: false`), a month back and 400 days ahead, with event guests and their replies, every memory, the Meals screen's food preferences, the place book and the home address; a domain write sets `stale_since` and rebuilds after that response (`after()`), a turn that finds it behind rebuilds once; a turn reads one row plus the viewer's own live reads (people, notifications, proposals, health, agenda), held to the same domain gates and `filterForViewer`. Falls back to live reads without the table. Live reads now carry guests, food preferences and places too (new `places` domain). A calendar look-ahead no longer answers "who is coming" with the family's birthdays (`calendar/answer.ts`). Golden HT-89, HT-90; eval 120/120 |
+| `14-021` HomeBrain 3.0 phase B — retrieval and one pass | P0 | Not Started | Spec §3.3–§3.5: question-sized retrieval (`homebrain/retrieve.ts`: lexical index, connected records, a token budget), one structured model call with a cached household prefix, streaming, timings `store`/`retrieve`/`firstToken`; typed p95 to first token 2.5 s |
+| `14-022` HomeBrain 3.0 phase C — one answer source | P0 | Not Started | Spec §3.6: deterministic answers read the store; the agenda summary only for broad questions; the "said not on record while on record" gate and count |
+| `14-023` HomeBrain 3.0 phase D — keep-warm hardening | P1 | Not Started | Spec §3.2/§3.1: DB-trigger safety net for writes that bypass a service, an hourly rebuild of dated sections (until then a store older than an hour rebuilds on the next turn), the store's lag on the AI quality page |
 
 ### 15 — Privacy, Security & Governance
 
@@ -492,7 +499,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-6 of 13 done `████░░░░░░`
+7 of 13 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -507,7 +514,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-010` A search that shows what a household means, and amounts that move naturally | P0 | Done | The owner, 2026-10-18. `grocery_catalog.common` (411 everyday items): "eggs" shows white and brown eggs and the brands on sale, one entry per brand and name; a rarer kind when typed by name (`chooseResults`, `search_grocery_catalog_kind`). No amount in the list: tapping an entry opens − / + from the usual buy. Every stepper walks a ladder of natural amounts (`commerce/buying-sizes.ts`): loose produce 250 g, 500 g, 750 g, 1 kg, 1.25 kg…; atta and rice the packs sold (1, 2, 5, 10 kg); dal 500 g–5 kg; spices 50–500 g; oil 500 ml–5 l; milk by the half litre; anything counted one at a time; a packed product one pack at a time; a household's own step still wins. Wikimedia Commons pictures (CC0/PD/CC BY/CC BY-SA, credited) for everyday items only (`npm run catalog:pictures`). The sheet now rises above the phone keyboard |
 | `25-011` Indian nutrition, the rest | P1 | Not Started | The owner, 2026-10-18: medium priority, for later; what 25-009 finished is what is used. Left: link the curated Indian items not yet linked to their IFCT food (399 of 1,559 are), in the same rules (same food and state, "close" says what differs, nothing processed); cooked and prepared foods, which IFCT does not hold (INDB 2024 builds them from IFCT, so the same NIN permission covers it); NIN's written permission for IFCT (email drafted in `docs/progress/2026-10-18-ifct-indian-nutrition.md`, needs a person to send); a native speaker's review of the close matches and regional names |
 | `25-012` Compact grocery cards with nutrition, and items named in words counted like the catalog | P0 | Done | The owner, 2026-10-18 (PR #226): each row is about a fifth shorter at 360px (picture, name and chevron on one line, in stock and the stepper across the card's full width, 36px steppers), and shows energy and protein per 100 g under the name from the item's credited source (`cardNutrition`: IFCT for a curated item, the label for a product; nothing when neither has it). An item made by name — HomeTalk's "add pasta", an agent's add, a meal's shortfall — takes the catalog's reading (`pickCatalogItem` / `catalogItemFor`): an exact name or alias links to that catalog item; a word only its everyday variants carry ("Pasta, penne", "Pasta, macaroni") takes how they are counted and the pack they share, never a variant picked for the household. So "add pasta" is 500 g of pasta under Rice & grains, not 1 pc. Browser-checked at 360px and 1280px |
-| `25-013` Change how an item is counted, even pieces to grams | P1 | In Progress | Code shipped in PR #229 (`commerce/unit-change.ts`, "Counted in" in the amount sheet, history rows, `verify:live` probes), inert until the migration `20261018240000_grocery_unit_change.sql` runs: the service-role key cannot run DDL (Management API 401, no SQL RPC), so the file was handed to the owner for the SQL editor. Then `npm run verify:live` and the pieces → grams browser check, then Done. The owner asked to change an item's unit from its card (pasta kept in pieces). The item page's unit picker already changes units that convert; one that does not (pcs to g) is refused while anything is at home or on the list. Built and DB-tested but held back at the owner's choice on 2026-10-18 because its migration could not be applied: `public.change_consumable_unit` + `consumable_unit_changes` (stock back to not counted and recorded, list restarts at the usual buy), a "Counted in" picker in the amount sheet with an own-unit option. Pick up from the saved work, apply the migration live, browser-check |
+| `25-013` Change how an item is counted, even pieces to grams | P1 | Done | Migration `20261018240000` run by the owner in the SQL editor on 2026-10-18 (the service-role key cannot run DDL), `verify:live` 278/278; browser-checked at 360px and 1280px against the live project: an item in pieces with 3 at home and 2 on the list, "Counted in" → grams (g) said what would happen, then counted in grams, stock back to not counted with the 3 pieces kept on the change's record, the list reopened at 50 g, no errors. Code shipped in PR #229 (`commerce/unit-change.ts`, "Counted in" in the amount sheet, history rows, `verify:live` probes), inert until the migration `20261018240000_grocery_unit_change.sql` runs: the service-role key cannot run DDL (Management API 401, no SQL RPC), so the file was handed to the owner for the SQL editor. Then `npm run verify:live` and the pieces → grams browser check, then Done. The owner asked to change an item's unit from its card (pasta kept in pieces). The item page's unit picker already changes units that convert; one that does not (pcs to g) is refused while anything is at home or on the list. Built and DB-tested but held back at the owner's choice on 2026-10-18 because its migration could not be applied: `public.change_consumable_unit` + `consumable_unit_changes` (stock back to not counted and recorded, list restarts at the usual buy), a "Counted in" picker in the amount sheet with an own-unit option. Pick up from the saved work, apply the migration live, browser-check |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents

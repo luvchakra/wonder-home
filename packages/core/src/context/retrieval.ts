@@ -59,6 +59,8 @@ export const DOMAIN_WORDS: Partial<Record<ContextDomain, readonly string[]>> = {
   agents: ["agent", "agents", "check", "checked", "automatic", "automatically"],
   integrations: ["connected", "connection", "connections", "integration", "sync", "synced", "account"],
   attention: ["attention", "urgent", "pending", "overdue", "late", "problem", "problems", "wrong"],
+  // Only words that name a place. "Go", "where" and "home" ask about everything ("when do the children go to bed?").
+  places: ["place", "places", "restaurant", "restaurants", "cafe", "café", "park", "address", "nearby"],
 };
 
 /** Words that ask about the past, which is what opens Tier 3's history. */

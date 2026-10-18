@@ -14,6 +14,8 @@ import type { LaundryNeed } from "../home/laundry";
 import type { Pet, PetCareNeed } from "../home/pets";
 import type { ServiceRequest } from "../home/services";
 import type { HomeSendItem } from "../homesend/items";
+import type { HouseholdPlace } from "../homeplaces/repository";
+import type { HouseholdAddress } from "../household/address";
 import type { ResponsibilityRow } from "../household/configuration-repository";
 import type { HouseholdMember } from "../identity/households";
 import type { Integration } from "../integrations/repository";
@@ -112,6 +114,12 @@ export type AgentRunRecord = {
   finishedAt: string | null;
 };
 
+/** Someone outside the household who replied to an event's invite link (story 12-00x, `event_guests`). */
+export type EventGuestRecord = { eventId: string; name: string; response: "yes" | "no" | "maybe"; partySize: number; note: string | null };
+
+/** A food preference from the Meals screen (`food_preferences`); null member means the whole household. */
+export type FoodPreferenceRecord = { id: string; memberId: string | null; kind: "allergy" | "medical" | "ethical" | "dislike" | "preference"; subject: string };
+
 export type AgendaInput = {
   needsYou: readonly HomeAssessment[];
   handled: readonly { key: string; title: string; meta?: string }[];
@@ -145,6 +153,8 @@ export type ContextRecords = {
   memories?: readonly MemoryRecord[];
   beliefs?: readonly BeliefRecord[];
   events?: readonly FamilyEvent[];
+  /** Guests' replies to events' invite links; read with the events (HomeBrain 3.0). */
+  eventGuests?: readonly EventGuestRecord[];
   absences?: readonly AbsenceRecord[];
   schoolItems?: readonly SchoolItem[];
   communications?: readonly SchoolCommunication[];
@@ -167,6 +177,10 @@ export type ContextRecords = {
   proposals?: readonly ProposalRecord[];
   agentRuns?: readonly AgentRunRecord[];
   integrations?: readonly Integration[];
+  /** The place book (HomePlaces), and the home address. */
+  places?: readonly HouseholdPlace[];
+  address?: HouseholdAddress | null;
+  foodPreferences?: readonly FoodPreferenceRecord[];
   agenda?: AgendaInput;
 };
 
@@ -176,6 +190,12 @@ export type BuildOptions = {
   timezone: string;
   now: Date;
   viewerMemberId: string;
+  /**
+   * Spell out every record rather than the first `MAX_PER_LIST` of each list
+   * (HomeBrain 3.0: the stored context is whole; the question, not the
+   * builder, sizes what a model sees). Default true, the per-request budget.
+   */
+  limitLists?: boolean;
 };
 
 const DAY_MS = 86_400_000;
@@ -217,6 +237,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   const dateOf = (date: Date) => formatDate(date, options.timezone);
   const timeOf = (date: Date) => formatTime(date, options.timezone);
   const today = isoDateIn(options.now, options.timezone);
+  const cap = <T,>(list: readonly T[], most: number): readonly T[] => (options.limitLists === false ? list : list.slice(0, most));
   let summaries = 0;
 
   const add = (draft: Draft) => {
@@ -333,7 +354,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
 
   // --- Who does what -----------------------------------------------------------
   if (records.responsibilities) {
-    for (const responsibility of records.responsibilities.slice(0, MAX_PER_LIST * 2)) {
+    for (const responsibility of cap(records.responsibilities, MAX_PER_LIST * 2)) {
       const owner = name(responsibility.primaryMemberId) ?? "nobody";
       const backup = name(responsibility.backupMemberId);
       add({
@@ -353,7 +374,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   }
 
   if (records.outcomes) {
-    for (const outcome of records.outcomes.slice(0, MAX_PER_LIST)) {
+    for (const outcome of cap(records.outcomes, MAX_PER_LIST)) {
       const finished = outcome.status === "met" || outcome.status === "missed" || outcome.status === "cancelled";
       add({
         domain: "outcomes",
@@ -412,12 +433,17 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
       const current = upcoming.includes(event);
       const who = event.participants.map((participant) => name(participant.memberId)).filter(Boolean);
       const participants = event.participants.map((participant) => participant.memberId);
+      // Who outside the household replied to the invite link, with their
+      // answer — "a few people are coming" is answered from this.
+      const guests = (records.eventGuests ?? []).filter((guest) => guest.eventId === event.id);
+      const guestWords = guests.map((guest) => `${guest.name}${guest.partySize > 1 ? ` (${guest.partySize} people)` : ""} said ${guest.response}`);
+      const coming = guests.filter((guest) => guest.response === "yes").reduce((sum, guest) => sum + guest.partySize, 0);
       add({
         domain: "calendar",
         entityType: "event",
         entityId: event.id,
         summary: current
-          ? `${event.title} (${words(event.kind)}) is on ${dateOf(event.startsAt)} at ${timeOf(event.startsAt)}${who.length > 0 ? `, with ${who.join(", ")}` : ""}${event.protected ? ", protected family time" : ""}${event.status === "proposed" ? ", not yet confirmed" : ""}${event.actionState && event.actionState !== "ready" ? `; ${words(event.actionState)}` : ""}.`
+          ? `${event.title} (${words(event.kind)}) is on ${dateOf(event.startsAt)} at ${timeOf(event.startsAt)}${who.length > 0 ? `, with ${who.join(", ")}` : ""}${event.protected ? ", protected family time" : ""}${event.status === "proposed" ? ", not yet confirmed" : ""}${event.actionState && event.actionState !== "ready" ? `; ${words(event.actionState)}` : ""}.${guests.length > 0 ? ` Guests: ${guestWords.join("; ")} — ${coming} coming so far.` : ""}`
           : `${event.title} on ${dateOf(event.startsAt)} ${event.status === "cancelled" ? "was cancelled" : "has passed"}.`,
         need: "what is on the calendar",
         privacyClass: event.participants.some((participant) => isChild(participant.memberId)) ? "child" : "general",
@@ -430,19 +456,20 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           endsAt: event.endsAt.toISOString(),
           status: event.status,
           protected: event.protected,
+          ...(guests.length > 0 ? { guests: guests.map((guest) => ({ name: guest.name, response: guest.response, partySize: guest.partySize })), coming } : {}),
         },
         source: { type: "family_events" },
         freshness: current ? "current" : "historical",
         validFrom: event.startsAt.toISOString(),
         validUntil: event.endsAt.toISOString(),
         tier: current ? 2 : 3,
-        aliases: [event.title, words(event.kind)],
+        aliases: [event.title, words(event.kind), ...guests.map((guest) => guest.name)],
         // The same title for the same people on the same day is one event
         // entered twice — only one of them can be the current one.
         identityKey: `event:${tokensKey(event.title)}:${[...participants].sort().join(",")}:${isoDateIn(event.startsAt, options.timezone)}`,
       });
     }
-    if (upcoming.length === 0) state("calendar", "what is on the calendar", `Nothing is on the family calendar for the next ${HORIZON_DAYS} days.`);
+    if (upcoming.length === 0) state("calendar", "what is on the calendar", options.limitLists === false ? "Nothing is on the family calendar from today." : `Nothing is on the family calendar for the next ${HORIZON_DAYS} days.`);
   }
 
   // --- Meals -------------------------------------------------------------------
@@ -475,7 +502,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   // judgement the Groceries screen shows — so "what should I order next" can
   // be answered, or honestly declined, item by item.
   if (records.consumables) {
-    const supplies = records.consumables.slice(0, MAX_PER_LIST * 2);
+    const supplies = cap(records.consumables, MAX_PER_LIST * 2);
     for (const item of records.consumables) {
       const spelled = supplies.includes(item);
       const kind = words(item.category);
@@ -599,7 +626,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     }
   }
   if (records.communications) {
-    for (const note of records.communications.filter((entry) => entry.requiresAction).slice(0, MAX_PER_LIST)) {
+    for (const note of cap(records.communications.filter((entry) => entry.requiresAction), MAX_PER_LIST)) {
       add({
         domain: "school",
         entityType: "school_communication",
@@ -620,7 +647,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
 
   // --- Absences -------------------------------------------------------------------
   if (records.absences) {
-    for (const absence of records.absences.filter((entry) => !entry.available).slice(0, MAX_PER_LIST)) {
+    for (const absence of cap(records.absences.filter((entry) => !entry.available), MAX_PER_LIST)) {
       add({
         domain: "absences",
         entityType: "absence",
@@ -826,7 +853,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     }
   }
   if (records.vitals) {
-    for (const vital of records.vitals.filter((entry) => entry.status === "active").slice(0, MAX_PER_LIST)) {
+    for (const vital of cap(records.vitals.filter((entry) => entry.status === "active"), MAX_PER_LIST)) {
       const reading = vital.secondaryValue != null ? `${vital.value}/${vital.secondaryValue} ${vital.unit}` : `${vital.value} ${vital.unit}`;
       const label = vital.vitalType === "custom" ? (vital.customLabel ?? "a measurement") : words(vital.vitalType);
       add({
@@ -869,7 +896,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
 
   // --- What the household has said ----------------------------------------------
   if (records.memories) {
-    for (const memory of records.memories.slice(0, MAX_PER_LIST * 2)) {
+    for (const memory of cap(records.memories, MAX_PER_LIST * 2)) {
       const about = memory.scope === "member" ? name(memory.memberId) : null;
       const confirmed = memory.status === "confirmed";
       add({
@@ -900,7 +927,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     }
   }
   if (records.beliefs) {
-    for (const belief of records.beliefs.slice(0, MAX_PER_LIST * 2)) {
+    for (const belief of cap(records.beliefs, MAX_PER_LIST * 2)) {
       const confirmed = belief.status === "confirmed";
       add({
         domain: "preferences",
@@ -923,9 +950,70 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     }
   }
 
+  if (records.foodPreferences) {
+    const kindWords: Record<FoodPreferenceRecord["kind"], string> = { preference: "likes", dislike: "doesn't like", allergy: "is allergic to", medical: "avoids for health reasons", ethical: "doesn't eat, by choice" };
+    for (const preference of records.foodPreferences) {
+      const who = preference.memberId ? (name(preference.memberId) ?? "Someone") : "The household";
+      add({
+        domain: "preferences",
+        entityType: "food_preference",
+        entityId: preference.id,
+        summary: `${who} ${kindWords[preference.kind]} ${preference.subject} (from the Meals screen).`,
+        need: "what the household prefers to eat",
+        privacyClass: preference.kind === "allergy" || preference.kind === "medical" ? "health" : preference.memberId && isChild(preference.memberId) ? "child" : "general",
+        subjectMemberIds: [preference.memberId],
+        attributes: { title: preference.subject, kind: preference.kind, memberId: preference.memberId },
+        source: { type: "food_preferences" },
+        tier: 2,
+        aliases: [preference.subject],
+        identityKey: `food_preference:${preference.memberId ?? "household"}:${preference.kind}:${tokensKey(preference.subject)}`,
+      });
+    }
+  }
+
+  // --- Places: home, and the place book -----------------------------------------
+  if (records.address !== undefined) {
+    if (records.address) {
+      add({
+        domain: "places",
+        entityType: "home_address",
+        entityId: options.householdId,
+        summary: `Home is at ${records.address.formattedAddress}.`,
+        need: "where home is",
+        privacyClass: "location",
+        tier: 2,
+        attributes: { title: "Home", address: records.address.formattedAddress, placeId: records.address.placeId },
+        source: { type: "household_addresses" },
+        aliases: ["home", "house", "home address"],
+      });
+    } else {
+      state("places", "where home is", "No home address has been set yet.", "location");
+    }
+  }
+  if (records.places) {
+    for (const place of records.places) {
+      const saved = place.status === "saved";
+      add({
+        domain: "places",
+        entityType: "place",
+        entityId: place.id,
+        summary: saved
+          ? `${place.name}${place.kind ? ` (${words(place.kind)})` : ""} is a place the family saved${place.address ? `, at ${place.address}` : ""}${place.note ? `; note: ${place.note}` : ""}.`
+          : `${place.name}${place.kind ? ` (${words(place.kind)})` : ""} was turned down as not for the family${place.note ? `; note: ${place.note}` : ""}.`,
+        need: saved ? "which places the family likes" : "which places the family turned down",
+        privacyClass: "location",
+        attributes: { title: place.name, kind: place.kind, status: place.status, address: place.address, placeId: place.placeId },
+        source: { type: "household_places", sourceId: place.id },
+        tier: saved ? 2 : 3,
+        aliases: [place.name, place.kind],
+        identityKey: `place:${place.placeId}`,
+      });
+    }
+  }
+
   // --- Notifications, HomeSend, HomeTalk, agents, integrations --------------------
   if (records.notifications) {
-    for (const notice of records.notifications.slice(0, MAX_PER_LIST)) {
+    for (const notice of cap(records.notifications, MAX_PER_LIST)) {
       const open = notice.status !== "acted" && notice.status !== "resolved" && notice.status !== "expired";
       add({
         domain: "notifications",
@@ -945,7 +1033,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     }
   }
   if (records.homeSendItems) {
-    for (const item of records.homeSendItems.slice(0, MAX_PER_LIST)) {
+    for (const item of cap(records.homeSendItems, MAX_PER_LIST)) {
       const title = item.extracted?.title ?? null;
       const kind = item.classifiedKind && item.classifiedKind !== "unknown" ? words(item.classifiedKind) : "something WonderHome could not read";
       // What a waiting item says, date included, so "moved to the 29th" is
@@ -975,7 +1063,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
     }
   }
   if (records.proposals) {
-    for (const proposal of records.proposals.slice(0, MAX_PER_LIST)) {
+    for (const proposal of cap(records.proposals, MAX_PER_LIST)) {
       const waiting = proposal.status === "proposed";
       add({
         domain: "hometalk",

@@ -317,6 +317,15 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   nothing is on record. "Why?" questions are answered from recorded
   evidence in `homebrain/why.ts`, never by a model. Add to the validator
   when a new kind of invention shows up; never route an answer around it.
+  Since HomeBrain 3.0 phase A (spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`,
+  story 14-020) the household's context is kept whole in one server-only
+  row (`household_context`, deny-all RLS, `homebrain/context-store.ts`):
+  every record, no horizon and no per-list cap, event guests, every memory,
+  food preferences and places. A domain write sets `stale_since` and rebuilds
+  it after the response; a turn reads the row plus the viewer's own live
+  reads and holds it to the same domain gates and `filterForViewer`. Never
+  read the row from a session, and never let a turn answer from a row older
+  than the last write. Without the table, reads fall back to the live path.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the

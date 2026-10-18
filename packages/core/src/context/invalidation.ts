@@ -17,10 +17,28 @@ export const CONTEXT_TTL_MS = 45_000;
 type CacheEntry = { at: number; value: Promise<unknown> };
 const cache = new Map<string, CacheEntry>();
 
+/**
+ * The Household Context Store's ear (HomeBrain 3.0 phase A): told the
+ * household id after every successful write, so the stored context is
+ * marked stale and a rebuild queued. Registered by `context/store.ts`;
+ * nothing here imports it, so a repository that writes still drags no
+ * reads in. Never awaited by a write, and never allowed to throw into one.
+ */
+let onWrite: ((householdId: string) => void) | null = null;
+
+export function setContextWriteListener(listener: ((householdId: string) => void) | null): void {
+  onWrite = listener;
+}
+
 /** Forgets everything read about this household. Call after any successful write. */
 export function invalidateHouseholdContext(householdId: string): void {
   const prefix = `${householdId}:`;
   for (const key of cache.keys()) if (key.startsWith(prefix)) cache.delete(key);
+  try {
+    onWrite?.(householdId);
+  } catch {
+    // The store's problem, never the write's.
+  }
 }
 
 /** Forgets everything, for a write that does not say which household it touched. */

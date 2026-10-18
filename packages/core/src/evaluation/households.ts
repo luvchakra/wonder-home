@@ -206,6 +206,13 @@ const HOUSEHOLD_A: GoldenHousehold = {
     events: [
       event("a-e-sports", "Sports Day", ["a-asmi"], "2026-09-26T03:30:00Z"),
       event("a-e-karate", "Karate", ["a-manan"], "2026-09-24T11:30:00Z", { kind: "outing" }),
+      // Two months out, with guests who replied to the invite link (HomeBrain 3.0, the owner's report of 2026-10-18).
+      event("a-e-birthday", "Asmi's birthday party", ["a-asmi", "a-upasana"], "2026-11-22T11:30:00Z", { kind: "birthday", status: "planned", ownerMemberId: "a-upasana" }),
+    ],
+    eventGuests: [
+      { eventId: "a-e-birthday", name: "Riya Shah", response: "yes", partySize: 3, note: null },
+      { eventId: "a-e-birthday", name: "Dev Kapoor", response: "yes", partySize: 2, note: null },
+      { eventId: "a-e-birthday", name: "Meera", response: "maybe", partySize: 1, note: null },
     ],
     consumables: [
       consumable("a-c-milk", "Milk", { unit: "litre", daysPerUnit: 1, lastPurchasedOn: "2026-09-21", lastPurchasedQuantity: 2 }),
@@ -404,11 +411,15 @@ export function heldForAdultsFor(household: GoldenHousehold, memberId: string): 
   ).length;
 }
 
-/** Every fact a member may see, as the viewer-filtered context snapshot production builds. */
+/**
+ * Every fact a member may see, as the viewer-filtered context snapshot
+ * production builds — whole lists, as the Household Context Store keeps
+ * them (HomeBrain 3.0), so a question sizes the facts, not the builder.
+ */
 export function contextItemsFor(household: GoldenHousehold, memberId: string): HouseholdContextItem[] {
   const scope: ContextScope = { householdId: household.id, householdName: household.name, timezone: household.timezone, now: household.now, viewer: viewerFor(household, memberId) };
   const built = applyFreshness(
-    buildContextItems(household.records, { householdId: household.id, householdName: household.name, timezone: household.timezone, now: household.now, viewerMemberId: memberId }),
+    buildContextItems(household.records, { householdId: household.id, householdName: household.name, timezone: household.timezone, now: household.now, viewerMemberId: memberId, limitLists: false }),
     household.now,
   );
   return filterForViewer(built, scope).items;
