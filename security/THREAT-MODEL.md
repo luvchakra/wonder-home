@@ -58,6 +58,10 @@ what the household spends, who is in the house and when.
 | T23 | Data retained past its purpose | Retention policy per data class; deletion that actually deletes | **Planned** — 15-007 |
 | T24 | Household content used to train a model | Provider configuration and consent checked before sensitive content is sent | **Planned** — 15-005 |
 | T25 | Abuse and brute force | Rate limiting on authentication and expensive endpoints | **Planned** — 15-008 |
+| T26 | A private or invite-only family event seen by others, an Admin included | `family_events.visibility` in RLS; participants, invite links, guests and exceptions reuse `wh.may_see_event`, with a restrictive policy on participants because its write policies are FOR ALL; only the owner narrows an event | **Built** — `scripts/test-calendar-rls.mjs` (story 12-009) |
+| T27 | A private event inferred through free/busy or a clash check | `wh.busy_windows` returns times only; the add/edit clash check names visible entries and says only "busy" for anything else | **Built** — `family-actions.ts`/`event-window.ts`; design §6 |
+| T28 | A repeat rule that blows up a read | A validated subset (`wh.valid_recurrence`), expansion bounded to the requested range and 400 occurrences a series | **Built** — `calendar/recurrence.test.ts` |
+| T29 | Holiday data that is wrong or unsourced | Seeded by migration from a named official list, read-only to every session, each row carrying its source and version | **Built** — `scripts/test-calendar-rls.mjs` |
 
 ## Standing decisions
 

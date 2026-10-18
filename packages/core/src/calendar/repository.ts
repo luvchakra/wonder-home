@@ -191,23 +191,20 @@ async function readOccasionMembers(supabase: SupabaseClient, householdId: string
 }
 
 async function readHolidays(supabase: SupabaseClient, region: string, range: { from: string; to: string }): Promise<HolidayRecord[]> {
-  const [country, subdivision] = [region.slice(0, 2), region.length > 2 ? region : null];
-  let query = supabase
-    .from("public_holidays")
-    .select("id, on_date, name, source")
-    .eq("region", country)
-    .gte("on_date", range.from)
-    .lte("on_date", range.to)
-    .order("on_date", { ascending: true });
-  query = subdivision ? query.or(`subregion.is.null,subregion.eq.${subdivision}`) : query.is("subregion", null);
-  const { data, error } = await query;
-  if (error) throw new Error(`calendar holidays failed: ${error.code ?? "unknown"}`);
-  return ((data as Row[] | null) ?? []).map((row) => ({
-    id: row.id as string,
-    onDate: row.on_date as string,
-    name: row.name as string,
-    source: row.source as string,
-  }));
+  const country = region.slice(0, 2);
+  const subdivision = region.length > 2 ? region : null;
+  const base = () =>
+    supabase.from("public_holidays").select("id, on_date, name, source").eq("region", country).gte("on_date", range.from).lte("on_date", range.to);
+  // The whole country's, plus the chosen subdivision's: two plain filters, never an interpolated one.
+  const [national, local] = await Promise.all([
+    base().is("subregion", null),
+    subdivision ? base().eq("subregion", subdivision) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (national.error) throw new Error(`calendar holidays failed: ${national.error.code ?? "unknown"}`);
+  if (local.error) throw new Error(`calendar holidays failed: ${local.error.code ?? "unknown"}`);
+  return [...((national.data as Row[] | null) ?? []), ...((local.data as Row[] | null) ?? [])]
+    .map((row) => ({ id: row.id as string, onDate: row.on_date as string, name: row.name as string, source: row.source as string }))
+    .sort((a, b) => a.onDate.localeCompare(b.onDate));
 }
 
 /** The regions holidays are kept for, to offer in the filter: national first. */
