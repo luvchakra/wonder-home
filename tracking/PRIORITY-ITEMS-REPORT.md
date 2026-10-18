@@ -27,6 +27,7 @@ Last updated: 2026-10-18 (25-006 grocery catalog and 01-011 member phone numbers
 | 1 | HomeFood | 25-003a | Meal shortfalls: each planned meal's ingredients, scaled to servings, minus stock and minus what is already to buy (units-safe). The meal sheet's **Add n to the list** (design §3.5) | Done — 2026-10-18, browser-checked | — |
 | 2 | HomeFood | 25-003b | Receipts into stock: each kept receipt line gets a unit, **add to stock** (on by default) and **clears list entry**. The review shows stock before → after. Duplicate receipts are caught (design §3.8) | Done — 2026-10-18, browser-checked | — |
 | 2a | HomeFood | 25-006 (P0) | The owner's ask: a shared grocery catalog (one platform table for every household) behind **Add an item**, searched like a quick-commerce app, with pictures, pack sizes and nutrients from a licensed source | Done — 2026-10-18, browser-checked | — |
+| 2c | HomeFood | 25-009 / 25-010 (P0) | The owner's asks: Indian nutrition (IFCT 2017) for the catalog; a search of everyday choices with brands and pictures, no amounts until picked, natural amounts on every stepper; the sheet above the keyboard | Done — 2026-10-18, browser-checked | Written permission from ICMR–NIN for IFCT (the owner chose to load first and ask in parallel) |
 | 2b | Family | 01-011 (P0) | The owner's ask: a phone number for every member, helpers included, and sign-in by phone, since a helper may have no email | Done — 2026-10-18, browser-checked | Phone sign-in goes live once a person connects an SMS provider in Supabase Auth and sets `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true` |
 | 3 | HomeFood | 25-003c | Use soon and depletion wording: "Use first" (a known expiry) and "Running low" are never mixed. Wording never claims stock it does not know, and never suggests something past an estimated date (design §3.6) | Not Started | — |
 | 4 | HomeFood | 25-005 | "Make that 2 litres" corrects an amount: wire `readMakeThat` (`conversation/quantity.ts`) into `conversation/corrections.ts` | Not Started | — |
@@ -55,6 +56,9 @@ Last updated: 2026-10-18 (25-006 grocery catalog and 01-011 member phone numbers
 | Gemini Live said it could not update a family preference | 04-017 | Done: telling WonderHome what someone likes works by voice (`remember_family_fact`) |
 | A shared grocery catalog with pictures and nutrients behind Add an item | 25-006 | Done: 1,559 curated items and Open Food Facts India products, searched by any name |
 | USDA nutrition linked to the catalog, in phases | 25-007 | Queued, lower priority |
+| Indian nutrient profiles for Indian foods | 25-009 | Done: IFCT 2017 (ICMR–NIN) for 399 items, credited |
+| Fewer, everyday search results with brands and pictures; natural amounts (1 kg, 1.25 kg; eggs one at a time) | 25-010 | Done |
+| The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |
 | The calendar title squeezed on a phone | — | Done, #212 |

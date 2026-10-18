@@ -1,12 +1,13 @@
 "use client";
 
-import { Plus, RotateCcw } from "lucide-react";
+import { Minus, Plus, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { startAmount, stepAlong } from "@wonderhome/core/commerce/buying-sizes";
 import type { CatalogEntry } from "@wonderhome/core/commerce/catalog";
-import { formatAmount, stepInBase, UNIT_CHOICES } from "@wonderhome/core/commerce/units";
+import { stepInBase, toBase, UNIT_CHOICES } from "@wonderhome/core/commerce/units";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button, ButtonLink } from "@wonderhome/core/ui/button";
 import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
@@ -26,7 +27,7 @@ import {
   type AddItemState,
 } from "../../(auth)/grocery-actions";
 import type { GroceryWords } from "../../_lib/grocery-words";
-import { fill, newKey } from "./amounts";
+import { fill, newKey, sayAmount } from "./amounts";
 
 export type AddCandidate = {
   id: string;
@@ -48,9 +49,12 @@ export type RetiredCandidate = { id: string; name: string; category: string };
  * person says it really is different.
  *
  * Below the household's own, the shared catalog (HomeFood 25-006) answers as
- * a quick-commerce search does: a picture, the name, the brand and the pack,
- * and one tap to put it on the list — linked to the catalog entry, so its
- * picture and nutrients come with it. The catalog is open data and says so.
+ * a quick-commerce search does: a picture, the name and the brand — the
+ * everyday choices only, never a wall of variants (25-010). No amount is
+ * shown until one is picked: then − and + walk the item's natural ladder
+ * (1 kg, 1.25 kg, 1.5 kg; atta's 1, 2, 5, 10 kg packs; eggs one at a time)
+ * from the usual buy, and Add puts that amount on the list, linked to the
+ * catalog entry so its picture and nutrition come with it.
  */
 export function AddItemButton({
   householdId,
@@ -74,6 +78,8 @@ export function AddItemButton({
   const [error, setError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<{ query: string; entries: CatalogEntry[]; failed: boolean } | null>(null);
   const [catalogAdded, setCatalogAdded] = useState<Record<string, boolean>>({});
+  // The catalog entry being sized, and how much of it (in its ladder's unit).
+  const [picked, setPicked] = useState<{ id: string; quantity: number } | null>(null);
 
   const needle = query.trim().toLowerCase();
 
@@ -119,6 +125,7 @@ export function AddItemButton({
     if (!next) {
       setQuery("");
       setCatalog(null);
+      setPicked(null);
       setCreating(false);
       setError(null);
       router.refresh();
@@ -139,17 +146,26 @@ export function AddItemButton({
     else setAdded((current) => ({ ...current, [item.id]: true }));
   };
 
-  const addFromCatalog = async (entry: CatalogEntry) => {
-    setError(null);
-    const result = await addFromCatalogAction({ householdId, catalogId: entry.id, key: newKey("catalog") });
-    if (!result.ok) setError(result.error);
-    else setCatalogAdded((current) => ({ ...current, [entry.id]: true }));
+  const pick = (entry: CatalogEntry) => {
+    const pack = entry.pack ? toBase(entry.pack.quantity, entry.pack.unit) : null;
+    const usual = pack && pack.unit === entry.ladder.unit ? pack.quantity : null;
+    setPicked(picked?.id === entry.id ? null : { id: entry.id, quantity: startAmount(entry.ladder, usual) });
   };
-  const plural = new Intl.PluralRules(words.language);
-  const pack = (entry: CatalogEntry) =>
-    entry.pack
-      ? formatAmount(entry.pack, words.language, (unit, quantity) => words.unitWords[unit]?.[plural.select(quantity)] ?? words.unitWords[unit]?.other ?? unit)
-      : null;
+
+  const addFromCatalog = async (entry: CatalogEntry, quantity: number) => {
+    setError(null);
+    const result = await addFromCatalogAction({
+      householdId,
+      catalogId: entry.id,
+      amount: { quantity, unit: entry.ladder.unit },
+      key: newKey("catalog"),
+    });
+    if (!result.ok) setError(result.error);
+    else {
+      setCatalogAdded((current) => ({ ...current, [entry.id]: true }));
+      setPicked(null);
+    }
+  };
 
   return (
     <>
@@ -247,31 +263,74 @@ export function AddItemButton({
               <section className="space-y-1" aria-label={words.add.catalog}>
                 <h3 className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-muted)] uppercase">{words.add.catalog}</h3>
                 <ul className="divide-y divide-[var(--wh-border)]">
-                  {shownCatalog.entries.map((entry) => (
-                    <li key={entry.id} className="flex items-center gap-3 py-2.5">
-                      {entry.imageUrl ? (
-                        // The catalog's own copy of the source's picture, from WonderHome's storage.
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={entry.imageUrl} alt="" loading="lazy" className="size-12 shrink-0 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)] object-contain ring-1 ring-[var(--wh-border)]" />
-                      ) : (
-                        <IconTile icon={groceryIcon(entry.name, entry.category)} tone="care" size="sm" />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-medium break-words">{entry.name}</span>
-                        <span className="block text-xs break-words text-[var(--wh-foreground-muted)]">{[entry.brand ?? entry.subcategory, pack(entry)].filter(Boolean).join(" · ")}</span>
-                      </span>
-                      {catalogAdded[entry.id] ? (
-                        <Badge tone="handled">{words.add.onList}</Badge>
-                      ) : (
-                        <Pill type="button" tone="soft" onClick={() => void addFromCatalog(entry)} aria-label={fill(words.add.catalogAdd, { name: entry.name })}>
-                          <Plus aria-hidden className="size-3.5" />
-                        </Pill>
-                      )}
-                    </li>
-                  ))}
+                  {shownCatalog.entries.map((entry) => {
+                    const open = picked?.id === entry.id;
+                    return (
+                      <li key={entry.id} className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => !catalogAdded[entry.id] && pick(entry)}
+                          aria-expanded={open}
+                          aria-label={fill(words.add.catalogAdd, { name: entry.name })}
+                          className="flex w-full items-center gap-3 rounded-[var(--wh-radius-sm)] py-1.5 text-left hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                        >
+                          {entry.imageUrl ? (
+                            // The catalog's own copy of the picture, from WonderHome's storage.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entry.imageUrl} alt="" loading="lazy" className="size-14 shrink-0 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)] object-cover ring-1 ring-[var(--wh-border)]" />
+                          ) : (
+                            <IconTile icon={groceryIcon(entry.name, entry.category)} tone="care" size="sm" />
+                          )}
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-medium break-words">{entry.name}</span>
+                            {entry.brand ? <span className="block text-xs break-words text-[var(--wh-foreground-muted)]">{entry.brand}</span> : null}
+                          </span>
+                          {catalogAdded[entry.id] ? (
+                            <Badge tone="handled">{words.add.onList}</Badge>
+                          ) : (
+                            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]">
+                              <Plus className="size-4" />
+                            </span>
+                          )}
+                        </button>
+                        {open && picked ? (
+                          <div className="mt-1 mb-2 flex flex-wrap items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-2.5">
+                            <div role="group" aria-label={fill(words.stepper.amount, { name: entry.name })} className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                aria-label={fill(words.stepper.less, { name: entry.name })}
+                                disabled={stepAlong(entry.ladder, picked.quantity, -1) <= 0}
+                                onClick={() => setPicked({ id: entry.id, quantity: stepAlong(entry.ladder, picked.quantity, -1) })}
+                                className="grid size-11 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)] disabled:opacity-40"
+                              >
+                                <Minus aria-hidden className="size-4" />
+                              </button>
+                              <span aria-live="polite" className="min-w-[5rem] text-center text-base font-semibold whitespace-nowrap tabular-nums">
+                                {sayAmount(words, { quantity: picked.quantity, unit: entry.ladder.unit }, entry.unit)}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={fill(words.stepper.more, { name: entry.name })}
+                                onClick={() => setPicked({ id: entry.id, quantity: stepAlong(entry.ladder, picked.quantity, 1) })}
+                                className="grid size-11 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-primary)]"
+                              >
+                                <Plus aria-hidden className="size-4" />
+                              </button>
+                            </div>
+                            <Button type="button" onClick={() => void addFromCatalog(entry, picked.quantity)}>
+                              {words.add.catalogConfirm}
+                            </Button>
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
                 {shownCatalog.entries.some((entry) => entry.source === "open_food_facts") ? (
                   <p className="text-xs text-[var(--wh-foreground-subtle)]">{words.add.catalogCredit}</p>
+                ) : null}
+                {shownCatalog.entries.some((entry) => entry.imageCredit) ? (
+                  <p className="text-xs text-[var(--wh-foreground-subtle)]">{words.add.picturesCredit}</p>
                 ) : null}
               </section>
             ) : null}

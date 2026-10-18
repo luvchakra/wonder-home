@@ -108,6 +108,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
         <Assistant
           householdId={membership.household.id}
           memberName={viewer.displayName}
+          memberAvatarUrl={viewer.avatarUrl ?? null}
           firstName={viewer.displayName.split(" ")[0] ?? viewer.displayName}
           initialMessages={initialMessages}
           initialQuery={typeof q === "string" && q.trim() ? q.trim().slice(0, 500) : undefined}

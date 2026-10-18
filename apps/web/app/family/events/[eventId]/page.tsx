@@ -62,6 +62,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
 
   const active = members.filter((member) => member.status === "active");
   const nameOf = (id: string | null) => active.find((member) => member.id === id)?.displayName ?? null;
+  const photoOf = (id: string | null) => active.find((member) => member.id === id)?.avatarUrl ?? undefined;
   const canEdit = event.ownerMemberId === null || event.ownerMemberId === membership.memberId || isHouseholdAdmin(membership);
   const now = new Date();
   const over = event.endsAt.getTime() < now.getTime();
@@ -216,7 +217,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
               <ul className="divide-y divide-[var(--wh-border)]">
                 {event.participants.map((participant) => (
                   <li key={participant.memberId} className="flex items-center gap-3 py-2.5">
-                    <Avatar name={nameOf(participant.memberId) ?? "?"} size="sm" />
+                    <Avatar name={nameOf(participant.memberId) ?? "?"} size="sm" imageUrl={photoOf(participant.memberId)} />
                     <span className="min-w-0 flex-1 text-sm font-medium">{nameOf(participant.memberId) ?? "—"}</span>
                     <Badge tone={participant.response === "yes" ? "handled" : participant.response === "no" ? "attention" : "neutral"}>{t(`events.response.${participant.response}`)}</Badge>
                   </li>

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**238 of 250 stories done — 95.2%**
+**240 of 252 stories done — 95.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 238 |
+| Done | 240 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 8 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 7 | 7 | — |
-| 25 HomeFood | `███░░░░░░░` | 3 | 8 | 1 in progress, 4 not started |
+| 25 HomeFood | `█████░░░░░` | 5 | 10 | 1 in progress, 4 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
@@ -485,7 +485,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-3 of 8 done `███░░░░░░░`
+5 of 10 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -496,6 +496,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-006` A shared grocery catalog with quick-commerce search | P0 | Done | 2026-10-18, browser-checked at 360px and desktop. `grocery_catalog` (migrations `20261018190000`, `20261018200000`, live): one platform table every household reads and none writes, each row's `id` its catalog id. **Items:** 1,559 generic things WonderHome curated itself across 29 categories (`supabase/seed/grocery-catalog/items.csv`, loaded by `npm run catalog:seed`), each with its other names (Hindi in both scripts, regional names, spellings). **Products:** packed products from Open Food Facts India (Indian barcode, brand, pack and picture required; no alcohol), pictures copied into WonderHome's own storage, label nutrients as stated, credited (ODbL/CC BY-SA). Search ranks in the database (`public.search_grocery_catalog`). **Add an item** shows the household's own items, then the catalog; picking one creates or reuses the household's item, linked. The item page shows the catalog picture and label nutrition. `usda_foods` holds USDA foods with a `catalog_id` link, empty and linked later (25-007) |
 | `25-007` USDA nutrition for catalog items, linked in phases | P2 | Not Started | The owner, 2026-10-18: lower priority, linking is research done in phases. `usda_foods.catalog_id` is the link (candidate until a person approves). Phase 1 load Foundation + SR Legacy; phase 2 candidates by the structured matcher (`design/grocery-catalog/USDA_NUTRITION_MATCHING_STUDY.md`); phase 3 a review screen; phase 4 approved values shown as "approximate" where they are |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | P2 | Not Started | Curated items show their category icon, not a picture. A product names the item it is (`grocery_catalog.item_id`) only by review. A native speaker should check the regional names the curators flagged |
+| `25-009` Indian nutrition for the catalog, from IFCT 2017 | P0 | Done | The owner, 2026-10-18: Indian foods get an Indian nutrient profile, USDA kept for later. `ifct_foods` (migration `20261018220000`, live): ICMR–NIN's Indian Food Composition Tables 2017, 542 foods, per 100 g edible portion, 14 nutrients incl. iron, calcium, folate; loaded by `npm run catalog:ifct` from a pinned, checksummed copy of its MIT digitisation (never kept in the repo); energy computed from proximates, and said so, for the 17 entries the table gives none for or contradicts. 399 curated items link to their IFCT food (`grocery_catalog.ifct_code`, `supabase/seed/grocery-catalog/ifct-links.csv`: 220 exact, 175 close, 4 approximate). The item page shows it with the match said and ICMR–NIN credited. **Rights:** the owner chose to load now and ask NIN for written permission in parallel (draft in the progress note) |
+| `25-010` A search that shows what a household means, and amounts that move naturally | P0 | Done | The owner, 2026-10-18. `grocery_catalog.common` (411 everyday items): "eggs" shows white and brown eggs and the brands on sale, one entry per brand and name; a rarer kind when typed by name (`chooseResults`, `search_grocery_catalog_kind`). No amount in the list: tapping an entry opens − / + from the usual buy. Every stepper walks a ladder of natural amounts (`commerce/buying-sizes.ts`): loose produce 250 g, 500 g, 750 g, 1 kg, 1.25 kg…; atta and rice the packs sold (1, 2, 5, 10 kg); dal 500 g–5 kg; spices 50–500 g; oil 500 ml–5 l; milk by the half litre; anything counted one at a time; a packed product one pack at a time; a household's own step still wins. Wikimedia Commons pictures (CC0/PD/CC BY/CC BY-SA, credited) for everyday items only (`npm run catalog:pictures`). The sheet now rises above the phone keyboard |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents

@@ -1,0 +1,400 @@
+slug,ifct_code,match_type,note
+ajwain,G029,exact,
+almonds-california,H001,close,"IFCT almond, variety not specified"
+almonds-gurbandi,H001,close,"IFCT almond, variety not specified"
+almonds-mamra,H001,close,"IFCT almond, variety not specified"
+almonds-sliced,H001,close,"IFCT almond, variety not specified; sliced"
+amaranth-green,C002,exact,
+amaranth-red,C003,exact,
+ambemohar-rice,A015,close,Variety not listed; IFCT raw milled rice
+amla,E021,exact,
+apple-fuji,E001,close,"variety not in IFCT; IFCT apple, big"
+apple-green,E002,exact,
+apple-kashmiri,E004,exact,
+apple-pink-lady,E001,close,"variety not in IFCT; IFCT apple, big"
+apple-red-delicious,E001,close,"variety not in IFCT; IFCT apple, big"
+apple-royal-gala,E001,close,"variety not in IFCT; IFCT apple, big"
+apple-shimla,E001,close,"variety not in IFCT; IFCT apple, big"
+apricots-dried,E005,exact,
+apricots-hunza,E005,close,"IFCT dried apricot, variety not specified"
+arbi,F004,exact,
+arborio-rice,A015,close,Short-grain variety not listed; IFCT raw milled rice
+ash-gourd,D001,exact,
+atta-chakki,A019,exact,
+atta-sharbati,A019,close,Sharbati wheat variety; IFCT wheat flour atta
+atta-whole-wheat,A019,exact,
+avocado,E007,exact,
+baby-corn,D042,exact,
+badi-elaichi,G021,exact,
+bael,E008,exact,
+bajra,A003,exact,
+banana-elaichi,E012,close,"variety not in IFCT; IFCT banana, ripe, robusta"
+banana-flower,D062,exact,
+banana-poovan,E010,exact,
+banana-rasthali,E012,close,"variety not in IFCT; IFCT banana, ripe, robusta"
+banana-red,E011,exact,
+banana-robusta,E012,exact,
+banana-stem,D064,exact,
+barley,A004,exact,
+basmati-rice,A015,close,Basmati not listed; IFCT raw milled rice
+basmati-rice-1121,A015,close,Basmati not listed; IFCT raw milled rice
+basmati-rice-dubar,A015,close,Broken basmati; IFCT raw milled rice
+basmati-rice-mogra,A015,close,Broken basmati; IFCT raw milled rice
+basmati-rice-sella,A014,close,Parboiled basmati; IFCT parboiled milled rice
+basmati-rice-tibar,A015,close,Broken basmati; IFCT raw milled rice
+bathua,C008,exact,
+beetroot,F001,exact,
+bell-pepper-red,D034,exact,
+bell-pepper-yellow,D035,exact,
+ber,E068,exact,
+bhindi,D056,exact,
+bhutta,A007,exact,
+black-beans,B018,close,"Black turtle bean = black Phaseolus vulgaris; IFCT Rajmah, black"
+black-pepper-powder,G031,close,ground form of IFCT dried whole spice
+bok-choy,C027,exact,
+brinjal,D031,exact,
+brinjal-bharta,D031,close,IFCT 'Brinjal - all varieties' average; variety not listed separately
+brinjal-green,D031,close,IFCT 'Brinjal - all varieties' average; variety not listed separately
+brinjal-long,D031,close,IFCT 'Brinjal - all varieties' average; variety not listed separately
+brinjal-small,D031,close,IFCT 'Brinjal - all varieties' average; variety not listed separately
+broken-rice,A015,close,Broken raw milled rice
+brown-rice,A013,exact,
+brussels-sprouts,C012,exact,
+byadgi-chilli-powder,G022,close,ground form of IFCT dried whole spice; variety not specified
+cabbage,C015,exact,
+capsicum-green,D033,exact,
+carrot,F002,exact,
+carrot-red,F003,exact,
+cashews-broken,H005,exact,
+cashews-whole,H005,exact,
+cauliflower,D036,exact,
+celery,D037,exact,
+chana-dal,B001,exact,
+cherry,E014,exact,
+chhena,L003,close,IFCT Paneer entry lists Chhena as local name; chhena is moister
+chhuara,E017,exact,
+chicken-breast,N003,exact,
+chicken-curry-cut-skinless,N002,close,Mixed skinless curry pieces; IFCT thigh as middle cut
+chicken-drumsticks,N001,close,"Drumstick; IFCT chicken leg, skinless"
+chicken-gizzard,N006,exact,
+chicken-liver,N005,exact,
+chicken-lollipop,N004,close,"Wing drumette; IFCT wing, skinless"
+chicken-thigh,N002,exact,
+chicken-wings,N004,close,Wings often sold with skin; IFCT wing is skinless
+chikoo,E060,exact,
+chilgoza,H017,exact,
+chinese-cabbage,C013,exact,
+chow-chow,D038,exact,
+clams,R002,close,"Hard clam (tisrya); IFCT Clam, white shell (Meretrix)"
+coconut,H007,exact,
+coconut-oil,T001,exact,
+coconut-oil-virgin,T001,close,Virgin/cold-pressed; IFCT coconut oil
+coconut-water-packaged,K002,close,Packaged; IFCT fresh tender coconut water
+colocasia-leaves,C018,exact,
+coriander-leaves,G009,exact,
+corn-oil,T002,exact,
+cottonseed-oil,T003,exact,
+cucumber,D043,close,"IFCT variety: green, elongate"
+cucumber-english,D043,close,"IFCT variety: green, elongate"
+cucumber-yellow,D045,close,"IFCT variety: orange, round (Tel. dosakaya)"
+curry-leaves,G010,exact,
+custard-apple,E016,exact,
+dalia,A021,close,"Indian dalia is cracked wheat, not parboiled bulgur; IFCT lists it as Wheat, bulgur (H. Dalia)"
+dates,E018,close,"IFCT variety: dry, dark brown (khajur)"
+dates-ajwa,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-fard,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-khudri,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-kimia,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-mabroom,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-medjool,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-safawi,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+dates-seedless,E018,close,"IFCT variety: dry, dark brown; pitted"
+dates-sukkari,E018,close,"variety not in IFCT; IFCT dates, dry, dark brown (khajur)"
+deggi-mirch,G022,close,ground form of IFCT dried whole spice; variety not specified
+dhania-powder,G024,close,ground form of IFCT dried whole spice
+dhania-seeds,G024,exact,
+drumstick,D046,exact,
+drumstick-leaves,C019,exact,
+dry-coconut,H006,exact,
+dry-red-chilli,G022,exact,
+dry-red-chilli-byadgi,G022,close,"IFCT dried red chilli, variety not specified"
+dry-red-chilli-guntur,G022,close,"IFCT dried red chilli, variety not specified"
+dry-red-chilli-kashmiri,G022,close,"IFCT dried red chilli, variety not specified"
+dry-red-chilli-round,G022,close,"IFCT dried red chilli, variety not specified"
+eggs-brown,M001,close,Brown-shelled poultry egg; IFCT poultry egg
+eggs-desi,M008,exact,
+eggs-duck,M012,exact,
+eggs-free-range,M001,close,Free-range hen egg; IFCT poultry egg
+eggs-organic,M001,close,Organic hen egg; IFCT poultry egg
+eggs-quail,M014,exact,
+eggs-white,M001,exact,
+elaichi,G020,exact,
+elaichi-powder,G020,close,ground form of IFCT dried whole spice
+falsa,E052,exact,
+fig-fresh,E020,exact,
+fish-anchovy,P003,exact,
+fish-bangda,P034,exact,
+fish-basa,S005,close,Basa sold in India is mostly Pangasius; IFCT Pangas (P. hypophthalmus)
+fish-bombil,P007,exact,
+fish-hilsa,P017,exact,
+fish-karimeen,P026,exact,
+fish-katla,S002,exact,
+fish-pomfret-black,P055,exact,
+fish-pomfret-white,P057,exact,
+fish-rawas,P022,exact,
+fish-ribbon,P047,close,Ribbon fish species vary; IFCT savalai hairtail
+fish-rohu,S006,exact,
+fish-sardine,P071,exact,
+fish-surmai,P087,exact,
+fish-tilapia,P083,exact,
+fish-tuna,P084,close,Tuna species vary; IFCT mackerel tuna (Mal. Choora)
+flax-seeds,H014,exact,
+foxtail-millet,A017,close,IFCT entry named Varagu/Kodo but scientific name Setaria italica (foxtail) and local names Thinai/Kangni/Korralu
+french-beans,D050,close,IFCT variety: hybrid
+garlic,G011,close,IFCT variety: big clove
+garlic-peeled,G011,close,IFCT variety: big clove; peeled = edible portion
+garlic-single-clove,G013,exact,
+gawar,D039,exact,
+ghee,T013,exact,
+ghee-a2-bilona,T013,close,IFCT ghee does not specify animal or method
+ghee-buffalo,T013,close,IFCT ghee does not specify animal
+ghee-cow,T013,close,IFCT ghee does not specify animal
+gilki,D069,approximate,"IFCT ridge gourd, smooth skin; sponge gourd is a near Luffa relative"
+ginger,G014,exact,
+gobindobhog-rice,A015,close,Variety not listed; IFCT raw milled rice
+gongura,C022,close,"IFCT variety: gogu leaves, green"
+grapes-black,E025,close,"IFCT variety: seedless, oval, black"
+grapes-green,E026,exact,
+grapes-red-globe,E024,close,"IFCT variety: seeded, round, red"
+green-chilli,G008,exact,
+green-chilli-bhavnagri,G008,close,"IFCT 'Chillies, green - all varieties' average"
+green-chilli-birds-eye,G008,close,"IFCT 'Chillies, green - all varieties' average"
+green-peas,D061,exact,
+green-peas-peeled,D061,exact,
+groundnut-oil-cold-pressed,T005,close,Cold-pressed; IFCT groundnut oil processing unspecified
+groundnut-oil-filtered,T005,exact,
+groundnut-oil-refined,T005,close,Refined; IFCT groundnut oil processing unspecified
+guava,E028,exact,
+guava-pink,E029,exact,
+guava-thai,E028,close,IFCT variety: white flesh
+haldi-lakadong,G033,close,"IFCT turmeric powder, variety not specified"
+haldi-powder,G033,exact,
+haldi-whole,G033,close,IFCT turmeric powder; whole dried fingers
+halim-seeds,H008,exact,
+hara-chana,B002,close,Green-seeded desi chickpea variety; IFCT Bengal gram whole
+hing,G019,close,IFCT asafoetida; retail hing is often compounded with flour
+hing-lump,G019,exact,
+ice-apple,E048,exact,
+idli-rice,A014,close,Idli rice is parboiled; IFCT parboiled milled rice
+imli,E064,close,IFCT tamarind pulp; product may include seeds/fibre
+imli-seedless,E064,exact,
+indrayani-rice,A015,close,Variety not listed; IFCT raw milled rice
+jackfruit-ripe,E030,exact,
+jaggery,I001,exact,
+jaggery-powder,I001,close,Powdered cane jaggery
+jaiphal,G028,exact,
+jaiphal-powder,G028,close,ground form of IFCT dried whole spice
+jamun,E031,close,"IFCT jambu fruit (Syzygium cumini, H. jamun); IFCT English name inconsistent"
+jasmine-rice,A015,close,Variety not listed; IFCT raw milled rice
+javitri,G027,exact,
+jeera,G025,exact,
+jeera-powder,G025,close,ground form of IFCT dried whole spice
+jeera-samba-rice,A015,close,Variety not listed; IFCT raw milled rice
+jowar,A005,exact,
+kabuli-chana-large,B002,close,Kabuli type; IFCT Bengal gram whole does not separate desi/kabuli
+kabuli-chana-small,B002,close,Kabuli type; IFCT Bengal gram whole does not separate desi/kabuli
+kala-chana,B002,exact,
+kalanamak-rice,A015,close,Variety not listed; IFCT raw milled rice
+kali-mirch,G031,exact,
+kamal-kakdi,F005,exact,
+karela,D004,close,"IFCT variety: jagged teeth ridges, elongate"
+karonda,E032,exact,
+kashmiri-chilli-powder,G022,close,ground form of IFCT dried whole spice; variety not specified
+khoa,L004,exact,
+khus-khus,G032,exact,
+kinnow,E047,approximate,IFCT orange (santra) pulp; kinnow is a mandarin hybrid
+kishmish,E058,close,"IFCT variety: raisins, golden"
+kohlrabi,D053,exact,
+kolam-rice,A015,close,Variety not listed; IFCT raw milled rice
+kulthi,B012,exact,
+kundru,D055,close,"IFCT variety: kovai, small"
+lamb-chops,O015,exact,
+lamb-curry-cut,O014,close,Mixed sheep curry pieces; IFCT sheep shoulder
+lauki,D007,close,"IFCT variety: elongate, pale green"
+laung,G023,exact,
+lettuce-green-leaf,C025,close,"IFCT lettuce, type not specified"
+lettuce-lollo-rosso,C025,close,"IFCT lettuce, type not specified"
+lettuce-romaine,C025,close,"IFCT lettuce, type not specified"
+litchi,E035,exact,
+little-millet,A016,exact,
+lobia,B006,close,"Black-eyed (white) cowpea; IFCT Cowpea, white"
+lobia-red,B005,close,"Red cowpea; closest IFCT colour is Cowpea, brown"
+maida,A018,exact,
+malabar-spinach,C007,exact,
+malka-masoor,B013,close,Dehusked whole red lentil; IFCT lists dehusked lentil only as dal
+mandarin-imported,E047,approximate,IFCT orange (santra) pulp; imported mandarin
+mango-alphonso,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-banganapalli,E036,exact,
+mango-chausa,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-dasheri,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-fazli,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-ginger,G015,exact,
+mango-himsagar,E038,exact,
+mango-kesar,E039,exact,
+mango-langra,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-mallika,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-neelam,E040,exact,
+mango-pairi,E041,exact,
+mango-sindhura,E036,close,"variety not in IFCT; IFCT ripe mango, banganapalli"
+mango-totapuri,E042,exact,
+mangosteen,E043,exact,
+masoor-dal,B013,exact,
+masoor-dal-chilka,B014,close,Split with husk retained; composition of whole brown lentil
+masoor-whole,B014,exact,
+matar-green-dried,B017,exact,
+matar-white-dried,B017,close,"White/yellow dried pea variety; IFCT Peas, dry not split by colour"
+methi-leaves,C020,exact,
+methi-leaves-small,C020,close,"IFCT fenugreek leaves, regular methi"
+methi-powder,G026,close,ground form of IFCT dried whole spice
+methi-seeds,G026,exact,
+milk-a2,L002,close,A2 desi cow milk; IFCT whole cow milk
+milk-buffalo,L001,exact,
+milk-cow,L002,exact,
+mint,G016,exact,
+mooli,F010,close,"IFCT variety: elongate, white skin"
+moong-dal-chilka,B011,close,Split with husk retained; composition of whole green gram
+moong-dal-yellow,B010,exact,
+moong-whole,B011,exact,
+mosambi,E034,exact,
+moth-beans,B016,exact,
+munakka,E057,close,"IFCT variety: raisins, black"
+murmura,A012,exact,
+mushroom-button,J001,exact,
+mushroom-cremini,J001,close,IFCT button mushroom (lists portobello); brown strain
+mushroom-portobello,J001,close,IFCT button mushroom (lists portobello); mature cap
+mushroom-shiitake,J003,exact,
+muskmelon,E045,close,IFCT variety: orange flesh
+mussels,R001,exact,
+mustard-oil,T006,exact,
+mustard-oil-refined,T006,close,Refined; IFCT mustard oil
+mutton-biryani-cut,O001,close,Mixed large goat pieces; IFCT goat shoulder
+mutton-boneless,O003,close,Boneless goat usually from leg; IFCT goat legs
+mutton-chops,O002,exact,
+mutton-curry-cut,O001,close,Mixed goat curry pieces; IFCT goat shoulder
+mutton-liver,O008,exact,
+nectarine,E050,close,IFCT peach (lists nectarine)
+onion,G017,exact,
+onion-white,G017,close,"IFCT onion, big; colour not specified"
+orange-nagpur,E047,close,"IFCT orange (santra) pulp, variety not specified"
+palm-oil,T007,exact,
+paneer,L003,exact,
+paneer-frozen,L003,close,Frozen paneer; IFCT fresh paneer
+paneer-malai,L003,close,Soft high-fat paneer; IFCT paneer
+papaya,E049,exact,
+parboiled-rice,A014,exact,
+parsley,C028,exact,
+parwal,D060,exact,
+peach,E050,exact,
+peanuts-inshell,H012,exact,
+peanuts-raw,H012,exact,
+pear-imported,E051,close,"IFCT pear, variety not specified"
+pear-nashpati,E051,exact,
+pine-nuts,H017,close,IFCT chilgoza (Pinus gerardiana); species may differ
+pineapple,E053,exact,
+pippali,G030,exact,
+pistachio-kernels,H018,exact,
+pistachio-slivers,H018,close,IFCT pistachio; slivered
+plum,E054,exact,
+poha-medium,A011,exact,
+poha-red,A011,close,Red rice flakes; IFCT rice flakes not specified by rice colour
+poha-thick,A011,exact,
+poha-thin,A011,exact,
+pomegranate,E055,close,IFCT variety: maroon seeds
+pomegranate-arils,E055,close,IFCT variety: maroon seeds; arils = edible portion
+pomelo,E056,exact,
+ponnanganni,C029,exact,
+ponni-rice-boiled,A014,close,Parboiled Ponni; IFCT parboiled milled rice
+ponni-rice-raw,A015,close,Variety not listed; IFCT raw milled rice
+pork-curry-cut,O048,close,Mixed pork pieces; IFCT pork shoulder
+potato,F006,close,"IFCT variety: brown skin, big"
+potato-baby,F007,close,"IFCT variety: brown skin, small"
+potato-new,F007,close,"IFCT variety: brown skin, small"
+prawns-small,S009,close,IFCT small prawns are freshwater Macrobrachium
+prawns-tiger,Q008,exact,
+pumpkin,D066,close,"IFCT variety: orange, round"
+quinoa,A009,exact,
+radish-leaves,C031,exact,
+radish-red,F011,close,"IFCT variety: round, red skin"
+ragi,A010,exact,
+rai,H013,exact,
+rai-kuria,H013,close,IFCT whole mustard seeds; split
+raisins-black,E057,exact,
+raisins-golden,E058,exact,
+rajgira,A002,close,Pale amaranth seed; IFCT species A. cruentus
+rajma-chitra,B019,close,"Speckled pink rajma; IFCT Rajmah, brown (G. Phansi gulabi)"
+rajma-jammu,B020,close,Small red rajma variety
+rajma-red,B020,exact,
+rambutan,E059,exact,
+rava-bansi,A022,close,Bansi wheat semolina; IFCT wheat semolina
+rava-bombay,A022,exact,
+rava-chiroti,A022,exact,
+rava-upma,A022,exact,
+raw-banana,D063,exact,
+raw-jackfruit,D051,exact,
+raw-mango,D057,exact,
+raw-papaya,D059,exact,
+raw-rice,A015,exact,
+red-cabbage,C016,exact,
+red-chilli-powder,G022,close,ground form of IFCT dried whole spice
+rice-bran-oil,T008,exact,
+safflower-oil,T009,exact,
+sarson-saag,C026,exact,
+sem,D047,close,"IFCT field beans, tender, broad (H. sem)"
+sesame-black,H009,exact,
+sesame-oil,T004,exact,
+sesame-oil-cold-pressed,T004,close,Cold-pressed; IFCT gingelly oil
+sesame-oil-toasted,T004,close,Oil from toasted seeds; IFCT gingelly oil
+sesame-white,H011,exact,
+shallots,G018,exact,
+snake-gourd,D070,close,"IFCT variety: long, pale green"
+sona-masoori-rice,A015,close,Variety not listed; IFCT raw milled rice
+soybean,B025,close,"Common yellow/white soybean; IFCT Soya bean, white"
+soybean-oil,T011,exact,
+spinach,C033,exact,
+spinach-baby,C033,close,"IFCT spinach, mature leaves"
+spring-onion,D058,exact,
+squid,R007,close,Squid species vary; IFCT Indian squid
+star-fruit,E062,exact,
+strawberry,E063,exact,
+sunflower-oil,T012,exact,
+sunflower-seeds,H020,exact,
+suran,F017,exact,
+surti-papdi,D047,approximate,"IFCT field beans, tender, broad (G. valpapdi); Surti papdi is a lablab type"
+sushi-rice,A015,close,Short-grain variety not listed; IFCT raw milled rice
+sweet-corn,A008,exact,
+sweet-corn-kernels,A008,close,IFCT tender sweet corn; kernels only
+sweet-potato,F014,close,IFCT variety: pink skin
+tapioca,F015,exact,
+tinda,D073,exact,
+tomato,D075,close,"IFCT variety: ripe, hybrid"
+tomato-desi,D076,exact,
+tomato-green,D074,exact,
+toor-dal,B021,exact,
+toor-dal-oily,B021,close,Oil-coated toor dal; IFCT value is plain dal
+toor-dal-unpolished,B021,close,Unpolished toor dal; IFCT does not specify polishing
+turai,D068,exact,
+tuvar-fresh,D067,exact,
+urad-dal-chilka,B004,close,Split with husk retained; IFCT whole black gram (H. chhilke wali urad)
+urad-dal-gota,B003,close,Whole dehusked urad; same composition as dehusked dal
+urad-dal-white,B003,exact,
+urad-whole,B004,exact,
+vanaspati,T014,exact,
+vermicelli,A023,exact,
+walnut-kernels,H021,exact,
+walnuts-inshell,H021,exact,
+water-chestnut,F016,close,IFCT local names singhara; IFCT scientific name given as Eleocharis dulcis
+watermelon,E065,close,IFCT variety: dark green (sugar baby)
+wheat-grain,A020,exact,
+wood-apple,E067,exact,
+zucchini-green,D077,exact,
+zucchini-yellow,D078,exact,

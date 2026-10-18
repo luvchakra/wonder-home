@@ -40,6 +40,7 @@ const NON_TENANT_TABLES = new Set([
   "billing_reconciliation_runs", // one reconciliation pass per provider across every household; its findings carry household_id
   "grocery_catalog", // the shared grocery catalog (HomeFood 25-006): every household reads it, none writes it
   "usda_foods", // USDA FoodData Central reference foods, linked to the catalog by review; service role only
+  "ifct_foods", // IFCT 2017 (ICMR-NIN) Indian reference foods, linked from the catalog; every member reads
 ]);
 
 const ALICE = "11111111-1111-4111-8111-111111111111";

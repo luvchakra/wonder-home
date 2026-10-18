@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cleanNutrients, fromOpenFoodFacts, parsePack, toCatalogEntry } from "./catalog";
+import { chooseResults, cleanNutrients, fromOpenFoodFacts, parsePack, toCatalogEntry, type CatalogEntry } from "./catalog";
 import { isCatalogQuality } from "./catalog-import";
 
 const product = (over: Record<string, unknown> = {}) => ({
@@ -49,5 +49,50 @@ describe("the shared grocery catalog", () => {
       "https://x.supabase.co",
     );
     expect(entry).toMatchObject({ kind: "item", subcategory: "Split dals", pack: { quantity: 1, unit: "kg" }, imageUrl: null, source: "wonderhome" });
+  });
+});
+
+describe("what the quick search shows (25-010)", () => {
+  const entry = (over: Partial<CatalogEntry>): CatalogEntry => ({
+    id: over.name ?? "x",
+    kind: "item",
+    common: false,
+    name: "x",
+    brand: null,
+    category: "Eggs",
+    subcategory: null,
+    pack: null,
+    unit: "pcs",
+    ladder: { unit: "pcs", sizes: [1] },
+    imageUrl: null,
+    imageCredit: null,
+    nutrients: {},
+    nutrientBasis: null,
+    source: "wonderhome",
+    licence: "",
+    attribution: "",
+    sourceUrl: null,
+    ifct: null,
+    ...over,
+  });
+
+  it("offers the everyday eggs and the brands, not every variant", () => {
+    const items = [
+      entry({ name: "Eggs, Duck" }),
+      entry({ name: "Eggs, White", common: true }),
+      entry({ name: "Eggs, Quail" }),
+      entry({ name: "Eggs, Brown", common: true }),
+    ];
+    const products = [
+      entry({ kind: "product", name: "Farm Eggs", brand: "Natural Farms", imageUrl: "https://x/1.jpg", source: "open_food_facts" }),
+      entry({ kind: "product", name: "Farm eggs", brand: "Natural farms", imageUrl: "https://x/2.jpg", source: "open_food_facts" }),
+      entry({ kind: "product", name: "Eggs", brand: null, imageUrl: "https://x/3.jpg", source: "open_food_facts" }),
+      entry({ kind: "product", name: "Eggs 10", brand: "Eggoz", imageUrl: null, source: "open_food_facts" }),
+    ];
+    expect(chooseResults(items, products).map((shown) => shown.name)).toEqual(["Eggs, White", "Eggs, Brown", "Farm Eggs"]);
+  });
+
+  it("shows a less common item when only it answers the words", () => {
+    expect(chooseResults([entry({ name: "Eggs, Duck" })], []).map((shown) => shown.name)).toEqual(["Eggs, Duck"]);
   });
 });

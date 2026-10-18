@@ -55,6 +55,8 @@ const NON_TENANT_TABLES = new Set([
   "grocery_catalog",
   // USDA FoodData Central foods, linked to the catalog by review (25-006): public-domain reference data, service role only.
   "usda_foods",
+  // IFCT 2017 (ICMR-NIN) Indian foods, linked from the catalog (25-009): reference data every household reads.
+  "ifct_foods",
 ]);
 
 export function lintMigrationSource(filename, sql) {

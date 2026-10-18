@@ -27,6 +27,8 @@ import { ViewerMenu } from "./viewer-menu";
  */
 export type ShellViewer = {
   displayName: string;
+  /** Their photo from Family, signed; their initials when there is none. */
+  avatarUrl?: string | null;
   roleLabel: string;
   householdName: string;
   /** Unread notifications, shown as a dot rather than a count — sparse, never a tally. */

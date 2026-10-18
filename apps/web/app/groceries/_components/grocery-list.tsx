@@ -8,6 +8,7 @@ import {
   type GroceryStatus,
 } from "@wonderhome/core/ui/grocery-row";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import type { Ladder } from "@wonderhome/core/commerce/buying-sizes";
 
 import type { GroceryWords } from "../../_lib/grocery-words";
 import { fill } from "./amounts";
@@ -21,6 +22,9 @@ export type ListItem = {
   category: string;
   unit: string;
   step: number | null;
+  /** What + and − step through, and where the cart button starts (25-010). */
+  ladder: Ladder;
+  start: number;
   imageUrl: string | null;
   status: GroceryStatus;
   stockText: string;

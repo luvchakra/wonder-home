@@ -7,10 +7,10 @@ import {
   displayAmount,
   parseQuantity,
   roundQuantity,
-  stepInBase,
   toBase,
   unitInfo,
 } from "@wonderhome/core/commerce/units";
+import { stepAlong, type Ladder } from "@wonderhome/core/commerce/buying-sizes";
 import { Button } from "@wonderhome/core/ui/button";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
@@ -26,6 +26,10 @@ export type StepperItem = {
   name: string;
   unit: string;
   step: number | null;
+  /** The amounts + and − step through, in the base unit (`householdLadder`): never a dozen eggs at a time. */
+  ladder: Ladder;
+  /** Where the cart button starts, on the ladder: the usual buy. */
+  start: number;
 };
 
 /**
@@ -59,7 +63,6 @@ export function ToBuyStepper({
   onChange?: (quantity: number) => void;
 }) {
   const base = unitInfo(item.unit).base;
-  const step = stepInBase(item.unit, item.step);
   const [quantity, setQuantity] = useState(initial?.quantity ?? 0);
   const saved = useRef(initial?.quantity ?? 0);
   const pendingDelta = useRef(0);
@@ -120,11 +123,12 @@ export function ToBuyStepper({
     settle(result.after);
   };
 
+  // One rung of the item's ladder: 1 kg → 1.25 kg, 12 eggs → 13, atta 2 kg → 5 kg.
   const nudge = (direction: 1 | -1) => {
-    const next = Math.max(
-      0,
-      roundQuantity(quantity + direction * step.quantity),
-    );
+    const next =
+      quantity <= 0 && direction === 1
+        ? item.start
+        : Math.max(0, roundQuantity(stepAlong(item.ladder, quantity, direction)));
     if (next === quantity) return;
     pendingDelta.current += next - quantity;
     setQuantity(next);

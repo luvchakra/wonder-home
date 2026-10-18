@@ -21,11 +21,11 @@ describe("curated catalog items", () => {
   });
 
   it("turns a row into a catalog item searchable by every name", () => {
-    const { rows, problems } = curatedRows(`${HEADER}\ntoor-dal,Toor dal,Dals & pulses,Split dals,true,kg,1,kg,arhar dal|tuvar dal|अरहर दाल|Toor dal\n`);
+    const { rows, problems } = curatedRows(`${HEADER}\ntoor-dal,Toor dal,Dals & pulses,Split dals,true,kg,1,kg,arhar dal|tuvar dal|अरहर दाल|Toor dal,true\n`);
     expect(problems).toEqual([]);
     expect(rows).toHaveLength(1);
     const [row] = rows;
-    expect(row).toMatchObject({ source: "wonderhome", source_id: "toor-dal", kind: "item", name: "Toor dal", unit: "kg", pack_quantity: 1, pack_unit: "kg", is_food: true });
+    expect(row).toMatchObject({ source: "wonderhome", source_id: "toor-dal", kind: "item", name: "Toor dal", common: true, unit: "kg", pack_quantity: 1, pack_unit: "kg", is_food: true });
     // The name itself is not repeated as another name.
     expect(row!.aliases).toEqual(["arhar dal", "tuvar dal", "अरहर दाल"]);
     expect(row!.search_text.startsWith("toor dal")).toBe(true);
@@ -36,12 +36,12 @@ describe("curated catalog items", () => {
     const { rows, problems } = curatedRows(
       [
         HEADER,
-        "onion,Onion,Vegetables,,true,kg,1,kg,pyaz",
-        "onion,Onion red,Vegetables,,true,kg,1,kg,",
-        "onion-2,ONION,Vegetables,,true,kg,1,kg,",
-        "salt,Salt,Spices & masalas,,true,sack,1,kg,",
-        "sugar,Sugar,Sugar & sweeteners,,true,kg,1,,",
-        "Bad Slug,Thing,Other,,true,kg,,,",
+        "onion,Onion,Vegetables,,true,kg,1,kg,pyaz,false",
+        "onion,Onion red,Vegetables,,true,kg,1,kg,,false",
+        "onion-2,ONION,Vegetables,,true,kg,1,kg,,false",
+        "salt,Salt,Spices & masalas,,true,sack,1,kg,,false",
+        "sugar,Sugar,Sugar & sweeteners,,true,kg,1,,,false",
+        "Bad Slug,Thing,Other,,true,kg,,,,false",
       ].join("\n"),
     );
     expect(rows.map((row) => row.source_id)).toEqual(["onion"]);
