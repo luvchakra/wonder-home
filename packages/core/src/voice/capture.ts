@@ -49,6 +49,8 @@ export function microphoneAvailable(): boolean {
  */
 export async function captureUtterance(input: {
   onSpeechStart?: () => void;
+  /** The microphone is open and recording: from here, what is said is heard. */
+  onReady?: () => void;
   signal?: AbortSignal;
   silenceMs?: number;
   maxMs?: number;
@@ -89,6 +91,7 @@ export async function captureUtterance(input: {
 
   input.signal?.addEventListener("abort", stop, { once: true });
   recorder.start();
+  input.onReady?.();
 
   // A 50ms poll is well under the shortest pause a person leaves, and
   // cheaper than an animation frame loop that a backgrounded tab throttles

@@ -70,6 +70,7 @@ export const FRAME_RATE = 8;
 
 /** The words the picture needs, in the viewer's language. */
 export type FloatWords = {
+  connecting: string;
   listening: string;
   thinking: string;
   speaking: string;
@@ -92,11 +93,19 @@ export type LiveFrame = {
 
 /** The frame's words from the live view and the last exchange — the same words the composer shows. */
 export function liveFrame(
-  view: { state: "idle" | "listening" | "thinking" | "speaking" | "denied" | "unsupported"; paused: boolean },
+  view: { state: "idle" | "connecting" | "listening" | "thinking" | "speaking" | "denied" | "unsupported"; paused: boolean },
   exchange: { heard: string | null; said: string | null },
   words: FloatWords,
 ): LiveFrame {
-  const status = view.paused ? words.paused : view.state === "thinking" ? words.thinking : view.state === "speaking" ? words.speaking : words.listening;
+  const status = view.paused
+    ? words.paused
+    : view.state === "connecting"
+      ? words.connecting
+      : view.state === "thinking"
+        ? words.thinking
+        : view.state === "speaking"
+          ? words.speaking
+          : words.listening;
   return { status, heard: exchange.heard, said: exchange.said, busy: !view.paused, you: words.you };
 }
 

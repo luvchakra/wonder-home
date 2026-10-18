@@ -1,6 +1,6 @@
-# HomeBrain 3.0 phase A: the Household Context Store (14-020), and pieces to grams live (25-013)
+# HomeBrain 3.0 phase A: the Household Context Store (14-020), wait to speak until HomeTalk can hear (04-021), and pieces to grams live (25-013)
 
-**Date:** 2026-10-18 · **Stories:** 14-020 (In Progress until its table is live), 25-013 (Done) · **Design:** `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`
+**Date:** 2026-10-18 · **Stories:** 14-020 (In Progress until its table is live), 04-021 (Done), 25-013 (Done) · **Design:** `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md`
 
 ## Why
 
@@ -29,6 +29,16 @@ Each turn rebuilt the household's context from about twenty reads, only seven da
 - **Live reads carry the new records too.** The live calendar read includes guests, the preferences read includes food preferences, and a new `places` domain reads the place book and home.
 - **Narrow place words.** The place domain's words are only words that name a place. "Go" had pulled "when do the children go to bed?" away from the bedtime belief.
 
+### 04-021: wait to speak until HomeTalk can hear
+
+The owner reported that Gemini Live takes a few seconds to start listening, but HomeTalk looked ready the moment it was tapped, so people spoke into nothing.
+
+- **Its own state.** A live session now has a `connecting` state, kept apart from thinking and listening. Before, Gemini's "connecting" was shown as "thinking".
+- **The composer.** While connecting it shows "Getting ready… don't speak yet" in amber, with a turning ring and no moving bars, and "{who} is connecting. Start speaking when it says it's listening." in an assertive live region. Once the session can hear, it shows "Ready — speak now" in green for three seconds, then the usual "… is listening".
+- **Elsewhere.** The live bar on other screens shows a turning ring instead of the microphone, and the floating window says the same words.
+- **WonderHome's own voice** does the same on a session's first listen. It waits until the recogniser says it has started (`onstart`), or until the microphone is recording (`captureUtterance`'s new `onReady`). After 2.5 s it is taken as ready, so it never sticks.
+- **Words and help.** The labels are in eight languages, and help Voice paragraph 2 says to wait for "Ready — speak now".
+
 ### 25-013, live
 
 The owner ran `20261018240000` in the SQL editor. The service-role key cannot run DDL: the Management API answered 401 and there is no SQL RPC. `npm run verify:live` passed 278/278.
@@ -47,6 +57,7 @@ The owner ran `20261018240000` in the SQL editor. The service-role key cannot ru
   - stock went back to not counted, with the 3 pieces kept on the change's record;
   - the list reopened at 50 g;
   - no errors and no horizontal scroll.
+- **Browser, 04-021**, at 360px and 1280px, with a scripted recogniser that takes 2 s to start hearing: at 0.5 s "Getting ready… don't speak yet", at 2.5 s "Ready — speak now", at 6 s "HomeTalk is listening…". No errors and no horizontal scroll. The Gemini Live path uses the same state. It was not run here, because the QA household has no Google key and none was added.
 - **HomeTalk on the live fallback path** (table not yet run). For a party seeded on 9 December with two guests, both questions came back "Nothing is on the family calendar for the next 7 days" in 5–7 s. That is the report reproduced live. The check with the store follows the SQL run.
 
 ## Needs a person
@@ -60,9 +71,10 @@ The owner ran `20261018240000` in the SQL editor. The service-role key cannot ru
 - `packages/core/src/context/{builders,repository,invalidation,retrieval,types}.ts`
 - `packages/core/src/calendar/answer.ts`
 - `apps/web/instrumentation.ts`
+- 04-021: `packages/core/src/components/ui/{talk-composer,live-talk,live-float,use-live-voice}.tsx`, `packages/core/src/voice/{recognition,capture}.ts`, `hometalk.composer.getReady`/`getReadyHint`/`speakNow` in eight catalogs
 - Golden cases: `packages/core/src/evaluation/{cases,households}.ts`
 - DB test: `scripts/test-household-context-rls.mjs`; probes: `scripts/verify-live-project.mjs`
-- Help: HomeTalk, paragraph 13, in eight languages.
+- Help: HomeTalk paragraph 13 and Voice paragraph 2, in eight languages.
 
 ## QA cleanup
 

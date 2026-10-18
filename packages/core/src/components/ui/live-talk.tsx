@@ -1,6 +1,6 @@
 "use client";
 
-import { Maximize2, Mic, Pause, PictureInPicture2, Play, X } from "lucide-react";
+import { LoaderCircle, Maximize2, Mic, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -40,6 +40,8 @@ import { useLiveVoice } from "./use-live-voice";
 export type LiveEngineName = "wonderhome" | "gemini_live";
 
 export type LiveTalkLabels = {
+  /** Gemini Live is still opening its session: do not speak yet. */
+  connecting: string;
   listening: string;
   thinking: string;
   speaking: string;
@@ -70,7 +72,7 @@ export type LiveTurnHandler = {
 };
 
 type LiveView = {
-  state: "idle" | "listening" | "thinking" | "speaking" | "denied" | "unsupported";
+  state: "idle" | "connecting" | "listening" | "thinking" | "speaking" | "denied" | "unsupported";
   active: boolean;
   paused: boolean;
 };
@@ -323,8 +325,9 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const view = useCallback(
     (name: LiveEngineName): LiveView => {
       const engine = engineOf(running ?? name);
-      const state = engine.state === "connecting" ? "thinking" : engine.state;
-      return { state, active: engine.active, paused: engine.paused };
+      // "Connecting" stays its own state: until the session can hear, the
+      // person is told to wait rather than shown "thinking" or "listening".
+      return { state: engine.state, active: engine.active, paused: engine.paused };
     },
     [engineOf, running],
   );
@@ -514,7 +517,15 @@ function LiveTalkBar({
   onUnfloat: () => void;
   onEnd: () => void;
 }) {
-  const status = live.paused ? labels.paused : live.state === "thinking" ? labels.thinking : live.state === "speaking" ? labels.speaking : labels.listening;
+  const status = live.paused
+    ? labels.paused
+    : live.state === "connecting"
+      ? labels.connecting
+      : live.state === "thinking"
+        ? labels.thinking
+        : live.state === "speaking"
+          ? labels.speaking
+          : labels.listening;
   const control =
     "grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]";
   return (
@@ -535,8 +546,9 @@ function LiveTalkBar({
           className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-2 pl-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
         >
           <span aria-hidden className="relative grid size-9 shrink-0 place-items-center rounded-full bg-[image:var(--wh-gradient-orb)] text-white">
-            {!live.paused ? <span className="absolute inset-0 rounded-full bg-[var(--wh-primary)] opacity-40 motion-safe:animate-ping" /> : null}
-            <Mic className="relative size-4" />
+            {!live.paused && live.state !== "connecting" ? <span className="absolute inset-0 rounded-full bg-[var(--wh-primary)] opacity-40 motion-safe:animate-ping" /> : null}
+            {/* Not ready yet: a turning ring, never the microphone that says "speak". */}
+            {live.state === "connecting" ? <LoaderCircle className="relative size-4 motion-safe:animate-spin" /> : <Mic className="relative size-4" />}
           </span>
           <span className="min-w-0">
             <span className="block text-sm font-semibold" aria-live="polite">

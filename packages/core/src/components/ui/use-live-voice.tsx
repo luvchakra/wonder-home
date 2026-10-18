@@ -31,7 +31,10 @@ import { recognitionConstructor, type RecognitionLike } from "../../voice/recogn
  * cycle around it.
  */
 
-export type LiveVoiceState = "idle" | "listening" | "thinking" | "speaking" | "denied" | "unsupported";
+export type LiveVoiceState = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "denied" | "unsupported";
+
+/** How long "getting ready" may last before it is taken as ready, for a browser that never says it started hearing. */
+const READY_FALLBACK_MS = 2500;
 
 /**
  * How long to wait before listening again after the recogniser gave up on
@@ -98,6 +101,13 @@ export function useLiveVoice(input: {
    */
   const pausedRef = useRef(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
+  /**
+   * Whether this session has heard its first listen start. Until it has,
+   * the state is "connecting" — the browser can take a moment (longer the
+   * first time it asks for the microphone) — so nobody speaks to a
+   * microphone that is not yet open. Later listens are "listening" at once.
+   */
+  const readyRef = useRef(false);
   /** A listen scheduled after the recogniser gave up, so pause and stop can take it back. */
   const relistenRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -195,8 +205,14 @@ export function useLiveVoice(input: {
     };
 
     while (activeRef.current && !pausedRef.current) {
-      setState("listening");
-      const heard = await captureUtterance({ signal: abortRef.current?.signal });
+      setState(readyRef.current ? "listening" : "connecting");
+      const heard = await captureUtterance({
+        signal: abortRef.current?.signal,
+        onReady: () => {
+          readyRef.current = true;
+          if (activeRef.current && !pausedRef.current) setState("listening");
+        },
+      });
       if (!activeRef.current) break;
       // Nothing was said. Listen again rather than send silence to a
       // provider that would charge for it.
@@ -272,7 +288,19 @@ export function useLiveVoice(input: {
     };
 
     recognitionRef.current = recognition;
-    setState("listening");
+    const ready = () => {
+      readyRef.current = true;
+      if (activeRef.current && !pausedRef.current && recognitionRef.current === recognition) setState("listening");
+    };
+    if (readyRef.current) {
+      setState("listening");
+    } else {
+      setState("connecting");
+      recognition.onstart = ready;
+      setTimeout(() => {
+        if (!readyRef.current) ready();
+      }, READY_FALLBACK_MS);
+    }
     try {
       recognition.start();
     } catch {
@@ -315,6 +343,7 @@ export function useLiveVoice(input: {
   const start = useCallback(() => {
     if (typeof window === "undefined") return;
     pausedRef.current = false;
+    readyRef.current = false;
     setPaused(false);
 
     if (householdId) {

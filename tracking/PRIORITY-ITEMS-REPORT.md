@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
+Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
 
 ---
 
@@ -33,6 +33,10 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | 4 | HomeFood | 25-005 | "Make that 2 litres" corrects an amount: wire `readMakeThat` (`conversation/quantity.ts`) into `conversation/corrections.ts` | Not Started | — |
 | 5 | HomeFood | 25-004 | Send to Cook over WhatsApp: an approved meal plan goes to a consenting helper through the official template. Built inert | Not Started | The template stays inert until a person registers it with Meta (`WHATSAPP_COOK_TEMPLATE_NAME`) |
 | 5a | HomeFood | 25-011 (P1) | Indian nutrition, the rest: link the remaining Indian items to IFCT, cooked foods once cleared, a native speaker's review. Medium priority, for later (the owner, 2026-10-18); the 399 linked items are what is used | Later | NIN's written permission for cooked foods (INDB) |
+| 5b | HomeTalk | 14-020 (P0) | HomeBrain 3.0 phase A, the Household Context Store: one server-only row per household with the whole context (no seven-day horizon, no twelve-to-a-list cap), event guests and their replies, every memory, food preferences, places; rebuilt after every write; a turn reads one row. Spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` | In Progress — #230, code and tests done, eval 120/120 | The owner's SQL run of `20261018250000` (the "SQL to run" page), then `verify:live` and the HomeTalk check against the store |
+| 5c | HomeTalk | 14-021 (P0) | HomeBrain 3.0 phase B, retrieval and one pass: question-sized facts (lexical index, connected records, a token budget), one model call with a cached household prefix, streamed; typed p95 2.5 s to the first token. This is where the speed comes from | Next | 14-020 merged |
+| 5d | HomeTalk | 14-022 (P0) | HomeBrain 3.0 phase C, one answer source: deterministic answers read the store, the agenda summary only for broad questions, a blocking gate on "not on record" while it is on record | Not Started | 14-021 |
+| 5e | HomeTalk | 14-023 (P1) | HomeBrain 3.0 phase D, keep-warm hardening: a database safety net for writes that bypass a service, an hourly rebuild of dated sections, the store's lag on the AI quality page | Not Started | 14-020 |
 | 6 | HomeTalk | H-1 | "How much do I owe this month?": a total of the bills in the window, as arithmetic from the records (rule 9), with each bill listed | Not Started | — |
 | 7 | HomeTalk | H-2 | Corrections in the golden runner: replay "actually, make that Friday" and "not bread, eggs" against the executed action, as the route does, so `npm run eval` covers them | Not Started | — |
 | 7a | HomeTalk | H-4 | A typed paragraph of several family facts ("Manan likes home-cooked food. He doesn't like outside food and Upasana likes cooking") is split into one fact each, with "he/she" resolved to the person just named. Gemini Live already does this per tool call | Not Started | — |
@@ -69,6 +73,7 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | Gemini Live in the app never says "use the WonderHome app"; trip ideas answered | 04-019 | Done, #228 |
 | "What does Upasana like in food?" answered from what was remembered (it said "no records" minutes after "Remembered") | 04-019 | Done, #228 — the rule fix; the cause is a design limit, see below |
 | HomeTalk knows the whole household, fast: guests at an event two months out, no forgetting, replies in ~2 s | 14-020 to 14-023 | Owner said go, 2026-10-18. Phase A (the Household Context Store, 14-020) in #230: whole context, guests, preferences, places; waits on the owner's SQL run of `20261018250000`. **Next:** phase B (retrieval and one pass, the speed), then C, then D |
+| Gemini Live takes a few seconds to start listening, but looked ready at once: show the wait prominently until it can hear | 04-021 | Done in #230: "Getting ready… don't speak yet" in amber with a turning ring, then "Ready — speak now" in green; the same for WonderHome's own voice, on the live bar and in the floating window; browser-checked at 360px and desktop |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |
