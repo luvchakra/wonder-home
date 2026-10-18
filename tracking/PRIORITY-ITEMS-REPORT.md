@@ -24,8 +24,8 @@ Last updated: 2026-10-18 (after #216 and the browser checks).
 
 | # | Module | Story | What it is | Status | Needs |
 |---|---|---|---|---|---|
-| 1 | HomeFood | 25-003a | Meal shortfalls: each planned meal's ingredients, scaled to servings, minus stock and minus what is already to buy (units-safe). The meal sheet's **Add n to the list** (design §3.5) | **Next** | — |
-| 2 | HomeFood | 25-003b | Receipts into stock: each kept receipt line gets a unit, **add to stock** (on by default) and **clears list entry**. The review shows stock before → after. Duplicate receipts are caught (design §3.8) | Not Started | — |
+| 1 | HomeFood | 25-003a | Meal shortfalls: each planned meal's ingredients, scaled to servings, minus stock and minus what is already to buy (units-safe). The meal sheet's **Add n to the list** (design §3.5) | Done — 2026-10-18, browser-checked | — |
+| 2 | HomeFood | 25-003b | Receipts into stock: each kept receipt line gets a unit, **add to stock** (on by default) and **clears list entry**. The review shows stock before → after. Duplicate receipts are caught (design §3.8) | **Next** | — |
 | 3 | HomeFood | 25-003c | Use soon and depletion wording: "Use first" (a known expiry) and "Running low" are never mixed. Wording never claims stock it does not know, and never suggests something past an estimated date (design §3.6) | Not Started | — |
 | 4 | HomeFood | 25-005 | "Make that 2 litres" corrects an amount: wire `readMakeThat` (`conversation/quantity.ts`) into `conversation/corrections.ts` | Not Started | — |
 | 5 | HomeFood | 25-004 | Send to Cook over WhatsApp: an approved meal plan goes to a consenting helper through the official template. Built inert | Not Started | The template stays inert until a person registers it with Meta (`WHATSAPP_COOK_TEMPLATE_NAME`) |

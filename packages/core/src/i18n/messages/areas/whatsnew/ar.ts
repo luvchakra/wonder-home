@@ -12,6 +12,8 @@ export const whatsNewAr: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#many": "اعرض {count} أخرى",
   "whatsNew.showAll#other": "اعرض {count} أخرى",
   "whatsNew.showLess": "اعرض أقل",
+  "whatsNew.mealShortfall.title": "ما ينقص الوجبة",
+  "whatsNew.mealShortfall.body": "افتح مكونات الوجبة لترى فقط ما ينقص لعدد حصصك، وأضفه إلى القائمة بلمسة واحدة.",
   "whatsNew.officePlaces.title": "أماكن قرب المكتب، واكتشافاتك الخاصة",
   "whatsNew.officePlaces.body": "اختر مكتبك في الإعدادات لتسأل عن أماكن قريبة منه، وأضف أماكن إلى دفترك من الأماكن.",
   "whatsNew.memberSignIn.title": "الجميع يسجّلون الدخول",

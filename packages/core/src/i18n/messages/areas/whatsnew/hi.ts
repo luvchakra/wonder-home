@@ -8,6 +8,8 @@ export const whatsNewHi: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "{count} और दिखाएँ",
   "whatsNew.showAll#other": "{count} और दिखाएँ",
   "whatsNew.showLess": "कम दिखाएँ",
+  "whatsNew.mealShortfall.title": "खाने में अभी क्या कम है",
+  "whatsNew.mealShortfall.body": "किसी खाने की सामग्री खोलें, तो आपके लोगों के हिसाब से सिर्फ़ कमी दिखेगी, और एक टैप में सूची में जुड़ जाएगी।",
   "whatsNew.officePlaces.title": "दफ़्तर के पास की जगहें, और आपकी अपनी खोज",
   "whatsNew.officePlaces.body": "सेटिंग्स में अपना दफ़्तर चुनें ताकि उसके पास की जगहें पूछ सकें, और जगहें में अपनी सूची में जगहें जोड़ें।",
   "whatsNew.memberSignIn.title": "सब ख़ुद साइन इन करें",

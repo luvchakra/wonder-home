@@ -28,6 +28,7 @@ export type WhatsNewEntry = {
 /** Newest first. An entry is never shown before its `at`. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // Dated a little after its expected merge: an entry stays hidden until its time, so it can be late but never missed.
+  { id: "mealShortfall", at: "2026-10-18T08:30:00Z", icon: "groceries", href: "/meals" },
   { id: "officePlaces", at: "2026-10-18T06:30:00Z", icon: "places", href: "/places" },
   { id: "memberSignIn", at: "2026-10-18T05:30:00Z", icon: "invite", href: "/family", audience: "admin" },
   { id: "calendarAnswers", at: "2026-10-18T02:30:00Z", icon: "talk", href: "/ai" },

@@ -240,6 +240,7 @@ export const helpEn = {
     "Preferences record whose they are — a dislike, an allergy, a medical or ethical choice — so one person's dislike never quietly becomes a house rule. An allergy always wins.",
   "help.guide.meals-and-shopping.body.6":
     "You can also tell HomeTalk amounts in your own words: \"add 6 more eggs\", \"take 500 g rice off the list\", \"we have 10 eggs\", \"we used half a kilo of rice\", \"I bought 2 kg potatoes\". Asking to add something already on the list, with no amount, changes nothing; with an amount, it adds to what's there. Taking something off the list never stops tracking it. Changes to what's at home are proposed first and wait for your yes, unless your household lets WonderHome act on groceries on its own.",
+  "help.guide.meals-and-shopping.body.7": "On a planned meal, Ingredients shows only what the meal is short of: what it needs for the servings you pick, less what is at home and what is already on the list. Change the servings and the amounts change with them. When nobody has said how much is at home it says the amount is an estimate, and when the recipe gives no amount it offers one usual pack. Add to the list puts just those on the list; nothing is bought twice, and an ingredient you don't track yet is added as a new item.",
 
   // Health and fitness
   "help.guide.health.title": "Health and fitness",

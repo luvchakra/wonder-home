@@ -801,6 +801,8 @@ async function main() {
     Boolean(anonEmails.error) || (Array.isArray(anonEmails.data) && anonEmails.data.length === 0),
     anonEmails.error ? anonEmails.error.code : `${anonEmails.data?.length ?? "?"} rows`,
   );
+  const servings = await admin.from("meals").select("servings").limit(1);
+  check("a meal can say how many it is for", !servings.error, servings.error?.code ?? "ok");
   const offices = await admin.from("member_work_places").select("member_id, place_id, latitude, longitude").limit(1);
   check("migration landed: member_work_places", !offices.error, offices.error?.code ?? "ok");
   const placeBook = await admin.from("household_places").select("place_id, status, maps_uri").limit(1);

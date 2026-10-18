@@ -214,6 +214,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Las preferencias registran de quién son —algo que no gusta, una alergia, una elección médica o ética—, para que lo que no le gusta a una persona nunca se convierta en silencio en una norma de la casa. Una alergia siempre gana.",
   "help.guide.meals-and-shopping.body.6":
     "También puedes decirle cantidades a HomeTalk con tus propias palabras: «añade 6 huevos más», «quita 500 g de arroz de la lista», «tenemos 10 huevos», «hemos usado medio kilo de arroz», «he comprado 2 kg de patatas». Pedir que añada algo que ya está en la lista, sin cantidad, no cambia nada; con una cantidad, se suma a lo que ya hay. Quitar algo de la lista nunca deja de seguirlo. Los cambios en lo que hay en casa se proponen primero y esperan tu sí, salvo que tu hogar deje que WonderHome actúe solo con la compra.",
+  "help.guide.meals-and-shopping.body.7": "En una comida planificada, Ingredientes muestra solo lo que le falta: lo que necesita para las raciones que elijas, menos lo que hay en casa y lo que ya está en la lista. Si cambias las raciones, cambian las cantidades. Cuando nadie ha dicho cuánto hay en casa, indica que la cantidad es una estimación, y cuando la receta no da cantidad, ofrece un paquete normal. Añadir a la lista pone solo eso en la lista; nada se compra dos veces, y un ingrediente que aún no sigues se añade como artículo nuevo.",
 
   "help.guide.health.title": "Salud y actividad",
   "help.guide.health.summary": "Historiales, constantes y rutinas, privados para cada persona salvo que los comparta.",
