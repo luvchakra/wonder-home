@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (after #214, #215; #216 open).
+Last updated: 2026-10-18 (after #216 and the browser checks).
 
 ---
 
@@ -43,24 +43,21 @@ Last updated: 2026-10-18 (after #214, #215; #216 open).
 
 | Ask | Story | Status |
 |---|---|---|
-| Every family member logs in as themselves, matched by the email in their details, with any login method, and lands in the household with their role's menus | 01-010 | Built, #215. In Progress — browser check |
-| An Invite button on each member: send an email, and a shareable link through WhatsApp and other apps | 01-010 | Built, #215. In Progress — browser check |
-| Hide the top and then the bottom bar while scrolling | 00-012 | Built, #215. In Progress — browser check |
+| Every family member logs in as themselves, matched by the email in their details, with any login method, and lands in the household with their role's menus | 01-010 | Done — #215, browser-checked 2026-10-18 |
+| An Invite button on each member: send an email, and a shareable link through WhatsApp and other apps | 01-010 | Done — #215, browser-checked 2026-10-18 |
+| Hide the top and then the bottom bar while scrolling | 00-012 | Done — browser-checked; tab bar now waits until 280px so the top goes visibly first |
 | HomeTalk answers "next event" and "public holiday" from the calendar | 26-003 | Done, #215 (golden HT-76 to HT-80) |
 | Detailed cross-module HomeTalk test cases | — | Done, #214 (HT-28 to HT-75) |
 | What's new section on Home | — | Done, #213 |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |
 | The calendar title squeezed on a phone | — | Done, #212 |
-| HomePlaces office, Add a place, work facts | 24-005, 24-006, 24-007 | Built, #216. In Progress — browser check |
+| HomePlaces office, Add a place, work facts | 24-005, 24-006, 24-007 | #216 merged. 24-007 Done; 24-005 and 24-006 need a browser check with a Google Maps key |
 
 ## C. Waiting only on a browser check
 
-These are code-complete and tested, but no session has had QA credentials. A session that has them runs `node scripts/qa-test-user.mjs create "Name"` and checks each story at 360px and on desktop. It then marks the story Done here and in its backlog, and deletes the QA user. Credentials are `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as environment variables, or `apps/web/.env.local`.
+QA credentials now work in a session that has `apps/web/.env.local` (or `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` as environment variables). Checked and Done on 2026-10-18: 26-001, 01-010, 00-012, 24-007.
 
-- **26-001** Family Calendar foundation: Month, Week, Day and Year, filters, add and edit, pinch.
-- **01-010** Member sign-in by email: the email field, the Invite sheet (Send email, Share, Copy), and a second account signing in.
-- **00-012** The bars step aside on scroll.
-- **24-005, 24-006, 24-007** The office picker in Settings and Family, Add a place on `/places`, and the Family facts.
+- **24-005, 24-006** The office picker and Add a place need `GOOGLE_MAPS_API_KEY` in the build that is checked; without it they are hidden by design. Check them on a build with the key.
 
 ## D. Decisions waiting on the owner
 

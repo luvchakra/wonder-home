@@ -15,7 +15,7 @@
 | 9 | P1 | 00-009 | Create observability foundation | Done | Redacting structured logs; reporter seam |
 | 10 | P1 | 00-010 | Create feature configuration | Done | Flags + fail-fast startup validation |
 | 11 | P1 | 00-011 | Offer to install the app on phones and tablets | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
-| 12 | P1 | 00-012 | Bars step aside while reading on a phone | In Progress | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser check at 360px still to do |
+| 12 | P1 | 00-012 | Bars step aside while reading on a phone | Done | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): the header hides after about 40px, the tab bar only after 280px (raised from 120 so the two are visibly staged), and a 20px scroll up brings both back |
 
 ## Purpose
 This is the mandatory greenfield bootstrap for the WonderHome repository. The project is a new repository and will use the WonderArk/founder-collab technical stack as its baseline.

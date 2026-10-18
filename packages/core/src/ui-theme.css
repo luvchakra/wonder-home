@@ -582,7 +582,7 @@
 @media (max-width: 1023.98px) {
   .wh-chrome-top,
   .wh-chrome-bottom {
-    transition: transform 220ms ease;
+    transition: transform 300ms ease-out;
   }
   :root[data-wh-chrome="top-hidden"] .wh-chrome-top,
   :root[data-wh-chrome="all-hidden"] .wh-chrome-top {
