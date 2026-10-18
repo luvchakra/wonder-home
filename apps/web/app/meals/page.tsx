@@ -13,7 +13,10 @@ import {
 } from "@wonderhome/core/identity/households";
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
+import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
 import { listMeals, listRecipeChoices, mealAgenda } from "@wonderhome/core/meals/repository";
+import { itemFor } from "@wonderhome/core/meals/shortfall";
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
@@ -32,7 +35,9 @@ import {
   PlanMealButton,
   SuggestMealButton,
 } from "../_components/meal-forms";
+import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
 import { mealFormLabels } from "../_lib/meal-form-labels";
+import { MealIngredientsSheet } from "./meal-ingredients-sheet";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Meals & Cooking" };
@@ -109,7 +114,7 @@ export default async function MealsPage({
     );
   }
 
-  const [meals, agenda, members, recipeRows, preferenceRows, recipeChoices] =
+  const [meals, agenda, members, recipeRows, preferenceRows, recipeChoices, groceries] =
     await Promise.all([
       listMeals(supabase, householdId, { from: today, to: weekEnd }).catch(
         () => [],
@@ -134,7 +139,10 @@ export default async function MealsPage({
         .eq("household_id", householdId)
         .order("kind"),
       listRecipeChoices(supabase, householdId).catch(() => []),
+      // What is at home and on the list, for each meal's shortfall (25-003a).
+      listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
     ]);
+  const words = groceryWords(t, viewer.language);
 
   const recipes = (recipeRows.data as RecipeRow[] | null) ?? [];
   const preferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
@@ -294,6 +302,8 @@ export default async function MealsPage({
                               recipes={recipeOptions}
                               t={t}
                               labels={formLabels}
+                              groceries={groceries}
+                              words={words}
                             />
                           ))}
                         </div>
@@ -438,6 +448,8 @@ function MealCard({
   recipes,
   t,
   labels,
+  groceries,
+  words,
 }: {
   meal: Meal;
   cook: string | null;
@@ -446,6 +458,8 @@ function MealCard({
   recipes: { id: string; name: string }[];
   t: Translate;
   labels: MealFormLabels;
+  groceries: GroceryItem[];
+  words: GroceryWords;
 }) {
   const missing = meal.ingredients.filter(
     (need) =>
@@ -524,9 +538,39 @@ function MealCard({
             labels={labels}
           />
         )}
-        <PillLink href="/groceries?tab=list" tone="quiet">
-          {t("meals.card.ingredients")}
-        </PillLink>
+        <MealIngredientsSheet
+          householdId={householdId}
+          mealId={meal.id}
+          ingredients={meal.ingredients}
+          groceries={meal.ingredients.flatMap((need) => {
+            const item = itemFor(need, groceries);
+            return item ? [item] : [];
+          })}
+          recipeServes={meal.recipe?.serves ?? null}
+          servings={meal.servings ?? null}
+          words={{ language: words.language, unitWords: words.unitWords }}
+          labels={{
+            trigger: t("meals.card.ingredients"),
+            title: t("grocery.meal.title", { name: meal.name }),
+            lede: t("grocery.meal.lede"),
+            servings: t("grocery.meal.servings"),
+            servingsHint: t("grocery.meal.servingsHint", { count: "{count}" }),
+            needs: t("grocery.meal.needs", { amount: "{amount}" }),
+            have: t("grocery.meal.have", { amount: "{amount}" }),
+            haveUnknown: t("grocery.meal.haveUnknown"),
+            onList: t("grocery.meal.onList", { amount: "{amount}" }),
+            add: t("grocery.meal.add", { amount: "{amount}" }),
+            estimate: t("grocery.meal.estimate"),
+            unmeasured: t("grocery.meal.unmeasured"),
+            covered: t("grocery.meal.covered", { names: "{names}" }),
+            none: t("grocery.meal.none"),
+            noIngredients: t("grocery.meal.noIngredients"),
+            open: t("grocery.meal.open"),
+            failed: t("grocery.meal.failed"),
+            addAll: pluralTemplates(t, "grocery.meal.addAll", words.language),
+            added: pluralTemplates(t, "grocery.meal.added", words.language),
+          }}
+        />
         <PillLink
           href={`/ai?q=${encodeURIComponent(`Change ${meal.slot} on ${meal.onDate}`)}`}
           tone="quiet"
@@ -536,4 +580,15 @@ function MealCard({
       </div>
     </Card>
   );
+}
+
+/** `{category: template}` for one plural key in this language, `{count}` kept for the browser to fill. */
+function pluralTemplates(t: Translate, key: string, language: string): Record<string, string> {
+  const plural = new Intl.PluralRules(language);
+  const table: Record<string, string> = {};
+  for (const sample of [0, 1, 2, 3, 5, 11, 21, 100]) {
+    const category = plural.select(sample);
+    if (!table[category]) table[category] = t(key as TranslationKey, { count: sample }).replace(String(sample), "{count}");
+  }
+  return table;
 }

@@ -8,6 +8,8 @@ export const whatsNewZh: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "再显示 {count} 项",
   "whatsNew.showAll#other": "再显示 {count} 项",
   "whatsNew.showLess": "收起",
+  "whatsNew.mealShortfall.title": "一顿饭还缺什么",
+  "whatsNew.mealShortfall.body": "打开一顿饭的“食材”，只看按你的份数还缺的，一键加入清单。",
   "whatsNew.officePlaces.title": "办公室附近的地点，以及你自己找到的地方",
   "whatsNew.officePlaces.body": "在“设置”中选择办公室即可询问附近的地点，也可以在“地点”中把地方加入地点簿。",
   "whatsNew.memberSignIn.title": "每个人都能登录",

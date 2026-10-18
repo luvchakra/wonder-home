@@ -8,6 +8,8 @@ export const whatsNewFr: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "Voir {count} de plus",
   "whatsNew.showAll#other": "Voir {count} de plus",
   "whatsNew.showLess": "Voir moins",
+  "whatsNew.mealShortfall.title": "Ce qui manque à un repas",
+  "whatsNew.mealShortfall.body": "Ouvrez les Ingrédients d’un repas pour ne voir que ce qui manque pour vos portions, et ajoutez-le à la liste d’un geste.",
   "whatsNew.officePlaces.title": "Des lieux près du bureau, et vos propres trouvailles",
   "whatsNew.officePlaces.body": "Choisissez votre bureau dans Réglages pour demander des lieux à proximité, et ajoutez des lieux à votre carnet depuis Lieux.",
   "whatsNew.memberSignIn.title": "Chacun se connecte",

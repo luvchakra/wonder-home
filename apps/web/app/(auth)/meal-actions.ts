@@ -11,7 +11,13 @@ import {
   PREFERENCE_KINDS,
   type PlanChoice,
 } from "@wonderhome/core/meals/meals";
+import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
+import { createConsumable } from "@wonderhome/core/commerce/repository";
+import { mealShortfalls, servingScale } from "@wonderhome/core/meals/shortfall";
 import {
+  listMeals,
+  markNeedsOnList,
+  setMealServings,
   attachIngredients,
   attachRecipeToMeal,
   createFoodPreference,
@@ -387,5 +393,56 @@ export async function addSuggestedMealAction(
     return { notice: "Added to the plan." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}
+
+const shortfallSchema = z.object({
+  householdId: z.uuid(),
+  mealId: z.uuid(),
+  servings: z.number().int().min(1).max(50).nullable(),
+  key: z.string().regex(/^[A-Za-z0-9:_-]{8,120}$/),
+});
+
+export type MealShortfallResult = { added: number } | { error: "failed" };
+
+/**
+ * Adds what a meal is short of to the list (HomeFood 25-003a).
+ *
+ * The browser sends the meal, the servings picked and an idempotency key —
+ * never an amount. The meal, its recipe, what is at home and what is on the
+ * list are read again here and the shortfall worked out again
+ * (`meal/shortfall.ts`), so only the real gap is added, through the same list
+ * service every screen and HomeTalk use, with the meal as its source. A second
+ * tap finds the list already covering it and adds nothing. An ingredient the
+ * household does not track yet becomes a grocery item first.
+ */
+export async function addMealShortfallsAction(input: z.input<typeof shortfallSchema>): Promise<MealShortfallResult> {
+  const parsed = shortfallSchema.safeParse(input);
+  if (!parsed.success) return { error: "failed" };
+  const { householdId, mealId, servings, key } = parsed.data;
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, householdId);
+    const meal = (await listMeals(supabase, householdId)).find((entry) => entry.id === mealId);
+    if (!meal) return { error: "failed" };
+    if (meal.recipe && servings !== (meal.servings ?? null)) await setMealServings(supabase, { householdId, mealId, servings });
+
+    const groceries = await listGroceries(supabase, householdId);
+    const plan = mealShortfalls({ ingredients: meal.ingredients, scale: servingScale(servings ?? meal.servings, meal.recipe?.serves), groceries });
+    let added = 0;
+    for (const [index, line] of plan.short.entries()) {
+      if (!line.short) continue;
+      const itemId =
+        line.itemId ??
+        (await createConsumable(supabase, { householdId, name: line.name, category: "grocery", unit: line.short.unit, typicalQuantity: 1 })).id;
+      await adjustListEntry(supabase, { householdId, itemId, kind: "add", amount: line.short, source: "meal", mealId, idempotencyKey: `${key}:${index}` });
+      added += 1;
+    }
+    if (added > 0) await markNeedsOnList(supabase, { householdId, mealId, names: plan.short.map((line) => line.name) });
+    revalidatePath("/meals");
+    revalidatePath("/groceries");
+    return { added };
+  } catch {
+    return { error: "failed" };
   }
 }

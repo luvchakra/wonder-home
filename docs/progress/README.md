@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeFood: what a meal still needs (25-003a)](2026-10-18-homefood-meal-shortfalls.md) |
 | 2026-10-18 | [Browser QA: member sign-in, invites, scrolling bars, Calendar, work facts](2026-10-18-browser-qa-sign-in-calendar.md) |
 | 2026-10-18 | [HomePlaces: places near the office, Add a place, and work facts in Family](2026-10-18-homeplaces-office-and-add-place.md) |
 | 2026-10-18 | [Every member signs in as themselves; the bars step aside; HomeTalk looks ahead](2026-10-18-member-sign-in-and-look-ahead.md) |

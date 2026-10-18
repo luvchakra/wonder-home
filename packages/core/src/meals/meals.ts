@@ -64,6 +64,8 @@ export type Meal = {
   readyAt: Date | null;
   recipe: Recipe | null;
   ingredients: IngredientNeed[];
+  /** How many it is planned for; null means as many as the recipe serves (25-003a). */
+  servings?: number | null;
 };
 
 /** When cooking has to start for this to be ready in time. */

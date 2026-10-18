@@ -39,7 +39,7 @@ export async function listMeals(
   let query = supabase
     .from("meals")
     .select(
-      "id, name, slot, on_date, ready_by, cook_member_id, status, ready_at, recipes(id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, carbs_grams, fat_grams), meal_ingredient_needs(name, consumable_id, quantity, unit, essential, status, substitute_name)",
+      "id, name, slot, on_date, ready_by, cook_member_id, status, ready_at, servings, recipes(id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, carbs_grams, fat_grams), meal_ingredient_needs(name, consumable_id, quantity, unit, essential, status, substitute_name)",
     )
     .eq("household_id", householdId)
     .order("ready_by", { ascending: true });
@@ -109,8 +109,17 @@ export async function listMeals(
       readyAt: row.ready_at ? new Date(row.ready_at as string) : null,
       recipe,
       ingredients,
+      servings: row.servings === null || row.servings === undefined ? null : Number(row.servings),
     };
   });
+}
+
+/** How many a meal is for (25-003a): 1–50, or null for as many as the recipe serves. */
+async function setMealServingsImpl(supabase: SupabaseClient, input: { householdId: string; mealId: string; servings: number | null }): Promise<void> {
+  const servings = input.servings === null ? null : Math.round(input.servings);
+  if (servings !== null && (servings < 1 || servings > 50)) throw ApiError.badRequest("Servings are between 1 and 50.");
+  const { error } = await supabase.from("meals").update({ servings }).eq("household_id", input.householdId).eq("id", input.mealId);
+  if (error) throw new Error(`setMealServings failed: ${error.code ?? "unknown"}`);
 }
 
 export type CreateMealInput = {
@@ -673,4 +682,19 @@ export const createRecipe = invalidatesContext(createRecipeImpl, (_supabase, inp
 export const createFoodPreference = invalidatesContext(createFoodPreferenceImpl, (_supabase, input) => input.householdId);
 export const attachIngredients = invalidatesContext(attachIngredientsImpl, (_supabase, householdId) => householdId);
 export const attachRecipeToMeal = invalidatesContext(attachRecipeToMealImpl, (_supabase, householdId) => householdId);
+/** The ingredients just put on the list for a meal are "shopping" — on the list, not yet bought. */
+async function markNeedsOnListImpl(supabase: SupabaseClient, input: { householdId: string; mealId: string; names: string[] }): Promise<void> {
+  if (input.names.length === 0) return;
+  const { error } = await supabase
+    .from("meal_ingredient_needs")
+    .update({ status: "shopping" })
+    .eq("household_id", input.householdId)
+    .eq("meal_id", input.mealId)
+    .in("name", input.names)
+    .in("status", ["needed", "missing"]);
+  if (error) throw new Error(`markNeedsOnList failed: ${error.code ?? "unknown"}`);
+}
+
+export const markNeedsOnList = invalidatesContext(markNeedsOnListImpl, (_supabase, input) => input.householdId);
+export const setMealServings = invalidatesContext(setMealServingsImpl, (_supabase, input) => input.householdId);
 export const bridgeToShopping = invalidatesContext(bridgeToShoppingImpl, (_supabase, householdId) => householdId);

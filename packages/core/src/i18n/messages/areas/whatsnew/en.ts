@@ -9,6 +9,8 @@ export const whatsNewEn = {
   "whatsNew.showAll#one": "Show {count} more",
   "whatsNew.showAll#other": "Show {count} more",
   "whatsNew.showLess": "Show fewer",
+  "whatsNew.mealShortfall.title": "What a meal still needs",
+  "whatsNew.mealShortfall.body": "Open a meal's Ingredients to see only what's short for your servings, and add it to the list in one tap.",
   "whatsNew.officePlaces.title": "Places near the office, and your own finds",
   "whatsNew.officePlaces.body": "Pick your office in Settings to ask for places near it, and add places to your book from Places.",
   "whatsNew.memberSignIn.title": "Everyone signs in",

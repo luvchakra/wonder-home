@@ -16,9 +16,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Status | Stories |
 |---|---:|
 | Done | 234 |
-| In Progress | 4 |
+| In Progress | 5 |
 | Blocked | 0 |
-| Not Started | 7 |
+| Not Started | 6 |
 | Deferred | 1 |
 
 ## By module
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `███████░░░` | 5 | 7 | 2 in progress |
-| 25 HomeFood | `████░░░░░░` | 2 | 5 | 3 not started |
+| 25 HomeFood | `████░░░░░░` | 2 | 5 | 1 in progress, 2 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
@@ -61,7 +61,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `24-005` Places near the office | 24 HomePlaces | P1 | In Progress |
 | `24-006` Search for places from the Places screen | 24 HomePlaces | P2 | In Progress |
-| `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | Not Started |
+| `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
@@ -490,7 +490,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `25-001` One Groceries list: what's at home and what to buy | P0 | Done | Formerly 09-010. #207, Phase 1 (design/GROCERIES-PANTRY-HOMETALK-PHASE0.md, approved 2026-10-17): stock and to-buy are separate amounts with unit-safe arithmetic, written only through three database functions; item page, add-item search, mark bought, use soon; groceries on every plan |
 | `25-002` HomeTalk manages groceries | P0 | Done | Formerly 09-011. #209, Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens (`conversation/quantity.ts`, `conversation/grocery-actions.ts`; actions `set_stock`, `use_stock`, `mark_bought`); dialogues A–H as evaluation cases |
-| `25-003` Meals, receipts and use-soon reconcile with stock | P1 | Not Started | Formerly 09-012. Phase 3: meal shortfalls by servings and units, receipts add to stock and close list entries, depletion wording never claims stock |
+| `25-003` Meals, receipts and use-soon reconcile with stock | P1 | In Progress | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. Still to do: **b** receipts add to stock and close list entries, duplicate receipts; **c** use-soon and depletion wording never claims stock |
 | `25-004` Send to Cook over WhatsApp | P1 | Not Started | Formerly 09-013. Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
