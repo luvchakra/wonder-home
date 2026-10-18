@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**262 of 279 stories done — 93.9%**
+**269 of 290 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 262 |
+| Done | 269 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 13 |
+| Not Started | 17 |
 | Deferred | 1 |
 
 ## By module
@@ -30,10 +30,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 22 | 23 | 1 in progress |
-| 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
+| 05 Household Certification & Understanding | `██████████` | 9 | 9 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
-| 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
-| 08 Kids & School Intelligence | `██████████` | 13 | 13 | — |
+| 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
+| 08 Kids & School Intelligence | `█████████░` | 14 | 15 | 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 9 | 9 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
@@ -50,14 +50,15 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
-| 25 HomeFood | `█████░░░░░` | 9 | 16 | 1 in progress, 6 not started |
-| 26 HomeEvents | `███░░░░░░░` | 3 | 8 | 1 in progress, 4 not started |
+| 25 HomeFood | `████░░░░░░` | 9 | 19 | 1 in progress, 9 not started |
+| 26 HomeEvents | `█████░░░░░` | 6 | 11 | 1 in progress, 4 not started |
 
 ## What is left
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
+| `08-015` School timetable and exams | 08 Kids & School Intelligence | P0 | Not Started |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Not Started |
@@ -68,6 +69,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
 | `25-015` Change or remove a recipe and its ingredients | 25 HomeFood | P1 | Not Started |
+| `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | 25 HomeFood | P0 | Not Started |
+| `25-018` Suggest a meal from what is at home, and save it as a recipe | 25 HomeFood | P1 | Not Started |
+| `25-019` Plan a meal starts from the recipe | 25 HomeFood | P0 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -178,7 +182,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 05 — Household Certification & Understanding
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -190,6 +194,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-006` Actionable certification alerts | P0 | Done | Source on every claim; coverage counted, never estimated |
 | `05-007` Certification history | P1 | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
 | `05-008` Certification health | P2 | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
+| `05-009` Review many at once | P1 | Done | The owner, 2026-10-18 (PR #236): HomeBrain's list has Select; ticked items (or Select all) are confirmed, removed (after asking) or left for later together. Each goes through the same `reviewItem` path as one item's own buttons, so History, the memory HomeBrain reads and correction evidence are as if decided one by one; a correction stays one at a time. Checked at 360px: two confirmed, then the rest removed, and the review trail showed four decisions |
 
 ### 06 — Actionable Notification Engine
 
@@ -208,7 +213,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 07 — Househelper & Home Operations
 
-8 of 8 done `██████████`
+10 of 10 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -220,10 +225,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `07-006` Optional daily summary | P1 | Done | `buildDailySummary`: one digest of what was unusual, built only from exceptions `handleHelperException` already routed to `tell_household` and an absence left uncovered — a handled exception or a fully-covered absence stays silent, matching the module's own rule that normal work needs no update. Opt-in by construction: nothing depends on anyone reading it, and a quiet day says so in one line rather than nothing |
 | `07-007` Pattern learning | P1 | Done | Normal timing is already covered by reusing 03-007's `findTimingPattern` directly — it operates on any `Outcome[]`, helper-owned outcomes included. New: `findMissPattern`/`proposeMissPattern` call a recurring miss only when the same exception kind keeps recurring for one outcome (≥3 occurrences, ≥0.6 concentration), and never propose anything once the household has confirmed a fact about it — the same confirmed-rule gate 03-007 uses |
 | `07-008` Service marketplace | P2 | Done | `backup_services` (Admin-only, retired never deleted) names the outside services a household can call and the outcomes each covers; `planBackupCoverage` turns the next fortnight's helper absences into only the outcomes left uncovered — a member's backup is handled and silent — each `arranged`, `service_available` or `nobody`; one tap arranges cover as an ordinary 13-006 service request (provider, contact, household's next move), one open cover per outcome and day by unique index. Nothing is booked on anyone's behalf: no marketplace/booking provider is connected. Househelper Overview leads with "While they're away"; Tasks keeps the services (add/edit/retire/restore); `/households/{id}/backup-services` and `/backup-services/cover` |
+| `07-009` Add, change and remove what a helper looks after, on their card | P1 | Done | The owner, 2026-10-18 (PR #236): "Looks after" on a helper's card has Add responsibility (that helper starts as owner) and each outcome opens to change its owner or backup or remove it — the same form and actions as Manage Household → Responsibilities (`HelperLooksAfter`). A starter outcome reads by its name, never its key. Checked at 360px |
+| `07-010` Leave over several days, with the last day filled in | P1 | Done | The owner, 2026-10-18 (PR #236): Record leave asks for the first day off and the number of days; the last day fills itself in, and picking a last day sets the number. "Which way" (away or extra day) is gone. Every day is written in one change (`recordLeave`, `leaveDates`, at most 60). Checked: 4 days from 30 Oct showed 2 Nov; picking 5 Nov made it 7, and 7 days were recorded |
 
 ### 08 — Kids & School Intelligence
 
-13 of 13 done `██████████`
+14 of 15 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -240,6 +247,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-011` Activities and classes outside school, folded | P0 | Done | PR #234. Folded rows (`ExpandableRow`) show the class, a short description and its days and times ("Every day" for all seven); opened: teacher, where (Google Maps, re-read on the server), from–until, notes, competitions coming up and medals, awards and notes, each addable and removable; a class is changed or stopped (`child_activities`, `child_activity_notes`, `school/activities.ts`). Nothing hard-deleted: a removed award was kept with `active = false`. Browser-checked: Piano, every day 5–6 pm, at TheMusicsCool picked from Maps, a December festival and a Grade 1 distinction |
 | `08-012` Today's classes on the calendar by default | P0 | Done | PR #234. A new `activity` source in `calendarRange` (`activityEntries`, `sessionDates`): each class's sessions on the days it meets, at its times on the household's clock, for that child, opening on Kids & School; stopping a class takes it off. Checked: the Calendar's day view showed "Piano · 5:00 pm – 6:00 pm · Anya QA" today with nothing added by hand |
 | `08-013` A child's classes in their details in Family too | P0 | Done | The owner, 2026-10-18 (PR #235): the classes outside school appear in the child's opened details in Family, folded with days and times and opening onto every detail, added and changed there (`_components/child-classes.tsx`, one component for Family and Kids & School, rendered outside the details form so its sheets keep their own forms). Browser-checked at 360px: a class changed from Family (Sunday dropped) read back everywhere |
+| `08-014` Kids & School's three counts side by side | P1 | Done | The owner, 2026-10-18 (PR #236): Need you, Live work and Checked sit three across as `ExpandableMetricRow` (stacked tiles, labels wrap, one full-width panel below for the open one) — CLAUDE.md rule 19's one written exception. Checked at 360px and 1280px, no sideways scroll |
+| `08-015` School timetable and exams | P0 | Not Started | The owner, 2026-10-18: a weekly timetable per child, and an Exams section where the household creates exam types (unit test, mid-term, finals, their own), each exam with subjects, date, time, syllabus and links to material; on the calendar |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -509,7 +518,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-9 of 16 done `█████░░░░░`
+9 of 19 done `████░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -528,11 +537,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-014` Ingredients as raw items with amounts, and a recipe added from a meal | P0 | Done | The owner, 2026-10-18 (PR #232). The ingredient text boxes are gone: a meal's Ingredients, Add recipe and Plan a meal's quick recipe take one row per raw item, each with how much and a unit picked from the grocery list's units, with its own way to add a unit (`ui/ingredient-rows.tsx`; read on the server by `meals/ingredient-lines.ts`: decimals with a comma or a point, the same item twice in one unit added together, no amount kept as "not known"). A recipe now stores what it needs (it used to store 1 "unit" of everything), so a meal planned from it gets real amounts. Change meal shows a small **Add a recipe** link under the recipe picker when there is none, and the new recipe is picked for the meal. Fixed on the way: an ingredient with no amount was read as "1 pc" (`normalizeUnit` turns "unit" into pieces); it now says the amount isn't known. Help Meals ¶10 in eight languages. Browser-checked at 360px and desktop on the live project |
 | `25-015` Change or remove a recipe and its ingredients | P1 | Not Started | Left open by 25-014: a recipe can be added but not edited or removed (rule 12), so a recipe saved before 25-014 keeps its "amount not known" ingredients until it is added again |
 | `25-016` Every sheet opens calmly with the keyboard, and the field stays in view | P0 | Done | The owner's report, 2026-10-18 (PR #234): a sheet and the keyboard opened together and flickered while they settled, and the keyboard could hide the field to fill in. On a phone a sheet now opens with focus on the sheet itself, so the keyboard waits for a tap (Add an item's search still takes focus at once on a desktop); Android Chrome lifts the sheet with the keyboard natively (`interactiveWidget: "resizes-content"`); iOS's keyboard is measured once per frame with no competing transition; and the tapped field is scrolled to the middle of what is visible once the keyboard has settled. Kit change (`ui/sheet.tsx`), so every sheet gets it. Checked in Chromium emulating a phone and on a desktop: no field focused on open on the phone, the search focused on desktop, a field below the fold scrolled into view on tap. A real phone keyboard needs the owner's phone |
+| `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | P0 | Not Started | The owner, 2026-10-18: the ingredient row searches the catalog (a new item can still be added inline), and calories, protein, carbs and fat per serving fill in from the picked items and amounts |
+| `25-018` Suggest a meal from what is at home, and save it as a recipe | P1 | Not Started | The owner, 2026-10-18: with no recipes yet (or none that fit), WonderHome suggests dishes from the items at home and the family's preferences, using only what is on record, and a suggestion can be planned and saved as a new recipe |
+| `25-019` Plan a meal starts from the recipe | P0 | Not Started | The owner, 2026-10-18: the recipe picker comes first; picking it fills the meal and its ingredients, which can be changed for this meal only, saved back to the recipe, or saved as a new recipe |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents
 
-3 of 8 done `███░░░░░░░`
+6 of 11 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -544,5 +556,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-006` Google and Outlook calendars | P2 | Not Started | Formerly 12-014. C6: only after a separate approval |
 | `26-007` Home's next event says what kind it is | P1 | Done | The owner's report, 2026-10-18 (PR #232): a school trip came up on Home as a "Family moment" with a heart and "Plan together". The card now takes the next family-kind event (family time, outing, birthday, gathering, travel, special occasion), and only when there is none the next event of any kind, said as what it is: "School event" with the school tile and "Open event" to that event's page, "Appointment" likewise, "Family moment" with "Plan together" for the rest. `CalendarItem` gives school events and appointments the calendar's own tiles, and its Protected badge wraps under a short title instead of being cut. Words in eight languages. Browser-checked at 360px and 1280px: a protected school trip alone reads School event / Open event (the event page opens); with a family picnic three days later the card is the picnic, Family moment / Plan together; no horizontal scroll |
 | `26-008` Today with nothing booked doesn't call itself a free day | P1 | Done | The owner's report, 2026-10-18 (PR #235): the day view said "Nothing planned — a free day" right above Today's plan of meals, bills and school. Today with no events is now one card, "Nothing on the calendar today.", holding the Today's plan link; another empty day reads "No events — nothing is on the calendar for this day." Eight languages. Checked at 360px |
+| `26-009` Decorated invitations, and a big postcard on WhatsApp | P1 | Done | The owner, 2026-10-18 (PR #236): an event's invite link wears one of nine designs (birthday, anniversary, wedding, festival, puja, housewarming, baby, get-together, classic), chosen from the event's kind and title by rules (`family/invite-templates.ts`, `suggestTemplate`) until the household picks one on the event page, with an optional line for guests (never the notes). The guest page is the decorated `InvitationCard`; `e/[token]/opengraph-image.tsx` draws the same design as a 1200×630 postcard that WhatsApp shows large, in the household's language (Devanagari and other scripts through Noto for just the characters used). Migration `20261018270000` live (`invite_template`, `invite_message`). Checked: all nine postcards rendered; the guest page at 360px and desktop; picking Festival and a line on the event page showed on the page |
+| `26-010` A member's birthday is the whole day, not 5:30 am to 5:30 am | P1 | Done | The owner's report, 2026-10-18 (PR #236): the member-occasion trigger wrote a birthday as UTC midnight to midnight, so in India the event read "5:30 am – 5:30 am". It now writes the household's local day as an all-day event, and the rows already written were moved onto that day (same migration). DB test; `verify:live` checks no timed member occasion is left |
+| `26-011` Event cards say who is going, and use their width | P1 | Done | The owner's report, 2026-10-18 (PR #236): Home's event card showed every family member's avatar although only Asmi was going, and squeezed the title and time beside a second kind tile and the button. Now every event list (Home's card, Today's focus, Family's Upcoming, a child's Home) says when the same way — "All day" for an all-day event, never a midnight time (`_lib/event-when.ts`) — and its place; Home's card and Family's list name who is going from the event's own list ("With Asmi", or on Home "Nobody from the family is asked yet" with a button to ask), and the card gives the title the full width with the action beside who is going. Today's rows wear the event's kind, not always a heart, and no longer cut the time. Every event row tucks its kind's tile under the date leaf, so the title, time and place take the row's width and a time no longer wraps. Checked at 360px and 1280px: a school trip only Asmi goes to reads "With Asmi QA"; a birthday reads "All day" |
 
 _Generated 2026-10-18 from 27 backlog files._

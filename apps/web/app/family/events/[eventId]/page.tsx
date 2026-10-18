@@ -1,9 +1,11 @@
-import { CalendarHeart, Link2, MapPin, MessageCircle, NotebookPen, Trash2, Users } from "lucide-react";
+import { CalendarHeart, Eye, Link2, MapPin, MessageCircle, NotebookPen, Trash2, Users } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { atLocal, isDateKey, localMoment } from "@wonderhome/core/calendar/dates";
 import { isOccurrenceCancelled } from "@wonderhome/core/calendar/repository";
 import { loadEvent, planningGaps, type PlanningGap } from "@wonderhome/core/family/event-detail";
+import { INVITE_TEMPLATES, inviteDesign, suggestTemplate, svgDataUri } from "@wonderhome/core/family/invite-templates";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { localTimeValue, schoolDateValue } from "@wonderhome/core/school/times";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -22,9 +24,11 @@ import {
   revokeInviteLinkAction,
   setEventCancelledAction,
   setEventInviteesAction,
+  setInviteDesignAction,
 } from "../../../(auth)/event-actions";
 import { setOccurrenceCancelledAction } from "../../../(auth)/calendar-actions";
 import { EventActionButton, EventEditForm, EventInviteesForm, EventLinkShare, type EventEditInitial, type EventEditLabels } from "../../../_components/event-controls";
+import { InviteDesignForm, type InviteDesignOption } from "../../../_components/invite-design-form";
 import { eventFormLabels } from "../../../_lib/event-form-labels";
 import { formatDate, formatTime, requireSession } from "../../../_lib/session";
 
@@ -117,6 +121,15 @@ export default async function EventPage({ params, searchParams }: { params: Prom
   const occurrenceWords = occurrence ? formatDate(timezone, atLocal(occurrence, 12 * 60, timezone), "long") : null;
   const back = day ? { href: `/calendar?view=day&date=${day}`, label: t("calendar.event.back") } : { href: "/family", label: t("events.back") };
   const linkPath = event.inviteToken ? `/e/${event.inviteToken}` : null;
+  const option = (key: (typeof INVITE_TEMPLATES)[number], name: string): InviteDesignOption => {
+    const { palette, corner } = inviteDesign(key);
+    return { key, name, image: svgDataUri(corner), paper: palette.paper, accent: palette.accent };
+  };
+  const suggested = suggestTemplate(event);
+  const designOptions: InviteDesignOption[] = [
+    { ...option(suggested, t("events.invite.auto", { design: t(`invite.template.${suggested}`) })), key: "auto" },
+    ...INVITE_TEMPLATES.map((key) => option(key, t(`invite.template.${key}`))),
+  ];
 
   return (
     <AppShell active="family" viewer={viewer} secondary={secondary} pathname="/family" back={back} title={event.title}>
@@ -242,8 +255,25 @@ export default async function EventPage({ params, searchParams }: { params: Prom
             <SectionHeader title={t("events.link.title")} />
             <Card className="space-y-3 p-4">
               <p className="text-xs text-[var(--wh-foreground-muted)]">{t("events.link.lede")}</p>
+              {canEdit ? (
+                <div className="space-y-2 border-b border-[var(--wh-border)] pb-4">
+                  <p className="text-xs text-[var(--wh-foreground-muted)]">{t("events.invite.lede")}</p>
+                  <InviteDesignForm
+                    action={setInviteDesignAction}
+                    householdId={householdId}
+                    eventId={event.id}
+                    options={designOptions}
+                    selected={event.inviteTemplate ?? "auto"}
+                    message={event.inviteMessage ?? ""}
+                    labels={{ design: t("events.invite.title"), message: t("events.invite.message"), messageHint: t("events.invite.messageHint"), save: t("events.invite.save"), saving: t("events.invite.saving"), saved: t("events.invite.saved") }}
+                  />
+                </div>
+              ) : null}
               {linkPath ? (
                 <>
+                  <Link href={linkPath} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                    <Eye aria-hidden className="size-4" /> {t("events.invite.preview")}
+                  </Link>
                   <EventLinkShare path={linkPath} title={event.title} labels={{ copy: t("events.link.copy"), copied: t("events.link.copied"), share: t("events.link.share"), shareText: t("events.link.shareText", { title: "{title}" }) }} />
                   <div className="flex flex-wrap gap-2">
                     <EventActionButton action={createInviteLinkAction} fields={ids}>{t("events.link.new")}</EventActionButton>

@@ -5,6 +5,8 @@ import { securityHeaders } from "@wonderhome/core/security/headers";
 const nextConfig: NextConfig = {
   transpilePackages: ["@wonderhome/core"],
   poweredByHeader: false,
+  // The invitation postcard reads its fonts from disk at request time.
+  outputFileTracingIncludes: { "/e/[token]/opengraph-image": ["./assets/invite/**"] },
   // Icon and primitive libraries are imported by name; this keeps each route's
   // bundle to the handful it actually renders.
   experimental: {

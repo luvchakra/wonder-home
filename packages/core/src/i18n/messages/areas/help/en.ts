@@ -189,6 +189,7 @@ export const helpEn = {
   "help.guide.calendar.body.5": "Filters only change what you see: categories, people, only things you're part of, only confirmed plans, holidays, and the view the calendar opens on. Today's plan — meals, bills, school and what needs you — is one tap from today's day.",
   "help.guide.calendar.body.6": "Ask HomeTalk what's on for a month or more — \"any events in December?\", \"what's coming up in the next few months?\" — and it lists, by date, the events, birthdays and holidays on the Calendar that you can see. It reads the Calendar itself, so nothing private of someone else's is mentioned.",
   "help.guide.calendar.body.7": "Ask what comes next — \"what's the next upcoming event?\", \"when is the next public holiday?\", \"any birthdays coming up?\" — and HomeTalk names the next one on the Calendar and the two after it, looking up to a year ahead, with only what you can see.",
+  "help.guide.calendar.body.8": "An event's invite link has a design: birthday, anniversary, wedding, festival, puja, housewarming, baby, get-together or classic. Until you choose one, the design follows the event — a \"Diwali at ours\" gets lanterns and diyas. You can add a line for your guests; they see it on the invitation, but never your notes. When you send the link on WhatsApp, the chat shows the invitation as a large picture with what, when and where; Preview invitation shows you the page your guests open.",
 
   // Reminders and notifications
   "help.guide.notifications.title": "Reminders and notifications",
@@ -309,9 +310,10 @@ export const helpEn = {
   "help.guide.househelp.body.1":
     "Househelper records who helps at home — regularly, occasionally, or as a visiting service — and their usual days and hours.",
   "help.guide.househelp.body.2":
-    "Record a day away or an extra day, and WonderHome checks what they normally handle that day and shows what needs cover, with a way to arrange it.",
+    "Record leave with the first day off and the number of days; the last day fills itself in (or pick the last day and the number follows). WonderHome checks what they normally handle on those days and shows what needs cover, with a way to arrange it.",
   "help.guide.househelp.body.3":
     "Househelpers are never asked to tick off chores, and there are no productivity scores.",
+  "help.guide.househelp.body.4": "Looks after, on each helper's card, lists the outcomes they own. An Admin adds another with Add responsibility, which starts with that helper as the owner, and taps one to change who owns or backs it up, or to remove it. It is the same list as Manage Household → Responsibilities.",
 
   // Outcomes, responsibilities and the playbook
   "help.guide.outcomes.title": "Outcomes, responsibilities and the playbook",
@@ -352,6 +354,7 @@ export const helpEn = {
     "Ask HomeTalk \"why?\" — why it needs approval, why it did not do something, where a fact came from — and the answer comes from what is actually on record, not from a guess.",
   "help.guide.certification.body.3":
     "Answers are checked before you see them. A name, date, amount or event that is not on record is never stated as fact; if nothing is on record, WonderHome says so.",
+  "help.guide.certification.body.4": "To decide many at once, tap Select above the list, tick the ones you mean (or Select all) and choose Confirm selected, Remove selected or Later for selected. Removing asks first. Each item is recorded in History as its own decision; a correction is still made one item at a time, in its own words.",
 
   // Privacy and your data
   "help.guide.privacy.title": "Privacy and your data",

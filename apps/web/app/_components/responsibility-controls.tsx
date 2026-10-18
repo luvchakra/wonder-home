@@ -65,6 +65,80 @@ export function AddResponsibilityButton({
 }
 
 /**
+ * What a helper looks after, on their own card (Househelper): each outcome a
+ * chip that opens it — change who owns it or backs it up, or take it off —
+ * and "Add" for another one, starting with this helper as its owner. The same
+ * form and the same actions as Manage Household → Responsibilities, never a
+ * second write path (rule 12: add, change and remove, all three).
+ */
+export function HelperLooksAfter({
+  householdId,
+  helperId,
+  owned,
+  outcomes,
+  members,
+  editable,
+  emptyText,
+  labels,
+}: {
+  householdId: string;
+  helperId: string;
+  owned: (ResponsibilityInitial & { definition?: string })[];
+  outcomes: { key: string; label: string }[];
+  members: MemberOption[];
+  editable: boolean;
+  emptyText: string;
+  labels: ResponsibilityLabels;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const open = owned.find((item) => item.outcomeKey === openKey) ?? null;
+
+  return (
+    <div className="space-y-2">
+      {owned.length === 0 ? (
+        <p className="text-sm text-[var(--wh-foreground-muted)]">{emptyText}</p>
+      ) : (
+        <ul className="flex flex-wrap gap-1.5">
+          {owned.map((item) => (
+            <li key={item.outcomeKey}>
+              {editable ? (
+                <button
+                  type="button"
+                  onClick={() => setOpenKey(item.outcomeKey)}
+                  className="min-h-8 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--wh-primary-soft)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
+                >
+                  {item.outcomeLabel}
+                </button>
+              ) : (
+                <span className="inline-block rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2.5 py-1 text-xs font-medium">{item.outcomeLabel}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {editable ? (
+        <Pill type="button" tone="soft" onClick={() => setAdding(true)}>
+          <Plus aria-hidden className="size-3.5" /> {labels.add}
+        </Pill>
+      ) : null}
+
+      <Sheet open={adding} onOpenChange={setAdding} title={labels.addTitle} description={labels.addLede}>
+        <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} outcomes={outcomes} defaultOwnerId={helperId} labels={labels.form} />
+      </Sheet>
+      <Sheet open={open !== null} onOpenChange={(next) => setOpenKey(next ? openKey : null)} title={open?.outcomeLabel ?? ""} description={open?.definition}>
+        {open ? (
+          <div className="space-y-4">
+            <ResponsibilityForm action={saveResponsibilityAction} householdId={householdId} members={members} initial={open} labels={labels.form} />
+            <RemoveResponsibilityControl householdId={householdId} outcomeKey={open.outcomeKey} outcomeLabel={open.outcomeLabel} onRemoved={() => setOpenKey(null)} labels={labels} />
+          </div>
+        ) : null}
+      </Sheet>
+    </div>
+  );
+}
+
+/**
  * A responsibility row that opens on tap — what "expand" means here, since
  * there is nothing behind it but what the sheet already shows: what good
  * looks like, and the same owner/backup/autonomy fields the row summarises.

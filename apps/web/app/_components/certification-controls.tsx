@@ -1,16 +1,16 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useActionState, useState } from "react";
+import { CheckSquare, Plus } from "lucide-react";
+import { startTransition, useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { Sheet } from "@wonderhome/core/ui/sheet";
+import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
-import { addBeliefAction, reviewCertificationAction } from "../(auth)/certification-actions";
+import { addBeliefAction, reviewCertificationAction, reviewManyAction } from "../(auth)/certification-actions";
 
 const CATEGORIES = ["family_roles", "home_routines", "education", "finance", "lifestyle", "safety"] as const;
 
@@ -155,6 +155,144 @@ export function CertificationControls({ householdId, itemId, labels }: { househo
         />
         <CorrectPill label={labels.correct} />
       </form>
+    </div>
+  );
+}
+
+export type BulkReviewLabels = {
+  select: string;
+  done: string;
+  /** "{count} selected". */
+  selected: string;
+  all: string;
+  clear: string;
+  /** Accessible name of one row's checkbox: "Select: {claim}". */
+  pick: string;
+  decisions: Record<Decision, string>;
+  removeTitle: string;
+  removeLede: string;
+  cancel: string;
+  working: string;
+};
+
+/**
+ * The review list with a way to decide many at once: "Select" puts a box on
+ * every row, and the bar above the list then confirms, removes or leaves for
+ * later everything ticked — through the same review path each row's own
+ * buttons use, one decision per item on the record. Removing asks first,
+ * naming how many. A correction stays one item at a time, since it is that
+ * item's own words.
+ */
+export function BulkReviewList({
+  householdId,
+  rows,
+  labels,
+  selectable = true,
+}: {
+  householdId: string;
+  rows: { id: string; claim: string; meta: string; node: ReactNode }[];
+  labels: BulkReviewLabels;
+  /** Only someone who may review (an adult) gets the boxes at all. */
+  selectable?: boolean;
+}) {
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(reviewManyAction, {});
+  const ids = rows.map((row) => row.id);
+  // Rows that were decided leave the list; a stale pick never lingers.
+  const chosen = ids.filter((id) => picked.has(id));
+
+  const submit = (decision: Decision) => {
+    const data = new FormData();
+    data.set("householdId", householdId);
+    data.set("decision", decision);
+    for (const id of chosen) data.append("itemIds", id);
+    startTransition(() => formAction(data));
+    setPicked(new Set());
+  };
+
+  return (
+    <div className="space-y-2">
+      {selectable && rows.length > 1 ? (
+      <div className="flex flex-wrap items-center gap-2 px-2 pt-1">
+        <Pill type="button" tone={selecting ? "primary" : "soft"} aria-pressed={selecting} onClick={() => { setSelecting((on) => !on); setPicked(new Set()); }}>
+          <CheckSquare aria-hidden className="size-3.5" /> {selecting ? labels.done : labels.select}
+        </Pill>
+        {selecting ? (
+          <>
+            <span className="text-sm text-[var(--wh-foreground-muted)]" aria-live="polite">{labels.selected.replace("{count}", String(chosen.length))}</span>
+            <Pill type="button" tone="quiet" onClick={() => setPicked(chosen.length === ids.length ? new Set() : new Set(ids))}>
+              {chosen.length === ids.length ? labels.clear : labels.all}
+            </Pill>
+          </>
+        ) : null}
+      </div>
+      ) : null}
+      {selecting ? (
+        <div className="flex flex-wrap gap-2 px-2">
+          <Pill type="button" tone="primary" disabled={pending || chosen.length === 0} onClick={() => submit("confirmed")}>
+            {labels.decisions.confirmed}
+          </Pill>
+          <Pill type="button" tone="quiet" disabled={pending || chosen.length === 0} onClick={() => setConfirmRemove(true)}>
+            {labels.decisions.removed}
+          </Pill>
+          <Pill type="button" tone="quiet" disabled={pending || chosen.length === 0} onClick={() => submit("deferred")}>
+            {labels.decisions.deferred}
+          </Pill>
+          {pending ? <span className="self-center text-xs text-[var(--wh-foreground-muted)]">{labels.working}</span> : null}
+        </div>
+      ) : null}
+      {state.error ? <Alert>{state.error}</Alert> : null}
+      {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+
+      <ul className="divide-y divide-[var(--wh-border)]">
+        {rows.map((row) =>
+          selecting ? (
+            <li key={row.id}>
+              <label className="flex cursor-pointer items-start gap-3 rounded-[var(--wh-radius-sm)] px-2 py-3 has-[:checked]:bg-[var(--wh-primary-soft)]/40">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-5 shrink-0 accent-[var(--wh-primary)]"
+                  checked={picked.has(row.id)}
+                  onChange={(event) =>
+                    setPicked((current) => {
+                      const next = new Set(current);
+                      if (event.target.checked) next.add(row.id);
+                      else next.delete(row.id);
+                      return next;
+                    })
+                  }
+                  aria-label={labels.pick.replace("{claim}", row.claim)}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium leading-snug">{row.claim}</span>
+                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
+                </span>
+              </label>
+            </li>
+          ) : (
+            <li key={row.id} className="list-none">
+              <ul>{row.node}</ul>
+            </li>
+          ),
+        )}
+      </ul>
+
+      <ConfirmationSheet
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title={labels.removeTitle.replace("{count}", String(chosen.length))}
+        description={labels.removeLede}
+        confirmLabel={labels.decisions.removed}
+        cancelLabel={labels.cancel}
+        destructive
+        pending={pending}
+        onConfirm={() => {
+          setConfirmRemove(false);
+          submit("removed");
+        }}
+      />
     </div>
   );
 }

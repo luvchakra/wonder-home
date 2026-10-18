@@ -42,10 +42,13 @@ import {
   BackupServiceRowControls,
 } from "../_components/backup-service-forms";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
+import { listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
 
 import { MemberDetail } from "../_components/member-detail";
+import { HelperLooksAfter } from "../_components/responsibility-controls";
+import { responsibilityLabels, starterOutcomes } from "../_lib/manage-labels";
 import { backupServiceFormLabels, helperFormLabels } from "../_lib/helper-form-labels";
 import { formatDate, requireSession } from "../_lib/session";
 
@@ -75,6 +78,7 @@ type ResponsibilityRow = {
   outcome_key: string;
   primary_member_id: string | null;
   backup_member_id: string | null;
+  ai_mode: "observe" | "prepare" | "approve" | "execute";
   priority: number;
   playbook_items: { name: string } | { name: string }[] | null;
 };
@@ -130,6 +134,7 @@ export default async function HousehelperPage({
     windowRows,
     exceptionRows,
     responsibilityRows,
+    playbook,
   ] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).then(
       (data) => ({ data, failed: false }),
@@ -155,9 +160,10 @@ export default async function HousehelperPage({
     supabase
       .from("responsibilities")
       .select(
-        "outcome_key, primary_member_id, backup_member_id, priority, playbook_items(name)",
+        "outcome_key, primary_member_id, backup_member_id, ai_mode, priority, playbook_items(name)",
       )
       .eq("household_id", householdId),
+    listPlaybookOutcomes(supabase, householdId).catch(() => []),
   ]);
 
   const members = membersResult.data;
@@ -166,8 +172,14 @@ export default async function HousehelperPage({
   const profiles = (profileRows.data as ProfileRow[] | null) ?? [];
   const windows = (windowRows.data as WindowRow[] | null) ?? [];
   const exceptions = (exceptionRows.data as ExceptionRow[] | null) ?? [];
-  const responsibilities =
-    (responsibilityRows.data as ResponsibilityRow[] | null) ?? [];
+  // A starter outcome added without a playbook entry has no name of its own
+  // yet; it reads as the starter's own words, never as its key.
+  const starterNames = new Map(starterOutcomes(t).map((starter) => [starter.key, starter.label]));
+  const responsibilities = ((responsibilityRows.data as ResponsibilityRow[] | null) ?? []).map((row) => {
+    const embedded = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
+    const starter = starterNames.get(row.outcome_key);
+    return embedded?.name || !starter ? row : { ...row, playbook_items: { name: starter } };
+  });
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const helperIds = new Set(helpers.map((helper) => helper.id));
@@ -202,6 +214,15 @@ export default async function HousehelperPage({
         ),
       ])
     : [[] as BackupService[], new Set<string>()];
+  // "Looks after" on each card adds from the same list Responsibilities does:
+  // outcomes not yet given to anyone (an assigned one is changed from its chip).
+  const alreadyAssigned = new Set(responsibilities.map((r) => r.outcome_key));
+  const addableOutcomes = [
+    ...playbook.map((outcome) => ({ key: outcome.key, label: outcome.name })),
+    ...starterOutcomes(t).filter((starter) => !playbook.some((outcome) => outcome.key === starter.key)),
+  ].filter((outcome) => !alreadyAssigned.has(outcome.key));
+  const responsibilityWords = responsibilityLabels(t);
+  const memberOptions = members.map((member) => ({ id: member.id, displayName: member.displayName }));
   const helperOutcomes = responsibilities
     .filter((r) => r.primary_member_id && helperIds.has(r.primary_member_id))
     .map((r) => ({ key: r.outcome_key, name: nameOfOutcome(r) }));
@@ -553,22 +574,23 @@ export default async function HousehelperPage({
                         <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
                           {t("helpers.section.looksAfter")}
                         </p>
-                        {owned.length === 0 ? (
-                          <p className="text-sm text-[var(--wh-foreground-muted)]">
-                            {t("helpers.noResponsibilities")}
-                          </p>
-                        ) : (
-                          <ul className="flex flex-wrap gap-1.5">
-                            {owned.map((r) => (
-                              <li
-                                key={r.outcome_key}
-                                className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2.5 py-1 text-xs font-medium"
-                              >
-                                {nameOfOutcome(r)}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                        <HelperLooksAfter
+                          householdId={householdId}
+                          helperId={helper.id}
+                          owned={owned.map((r) => ({
+                            outcomeKey: r.outcome_key,
+                            outcomeLabel: nameOfOutcome(r),
+                            primaryMemberId: r.primary_member_id,
+                            backupMemberId: r.backup_member_id,
+                            aiMode: r.ai_mode,
+                            priority: r.priority,
+                          }))}
+                          outcomes={addableOutcomes}
+                          members={memberOptions}
+                          editable={admin}
+                          emptyText={t("helpers.noResponsibilities")}
+                          labels={responsibilityWords}
+                        />
                       </div>
                       {nextAbsence ? (
                         <p className="flex items-center gap-2 text-xs text-[var(--wh-foreground-muted)]">

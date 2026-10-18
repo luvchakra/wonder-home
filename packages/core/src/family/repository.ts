@@ -37,7 +37,7 @@ export async function listEvents(
   let query = supabase
     .from("family_events")
     .select(
-      "id, title, kind, starts_at, ends_at, protected, owner_member_id, status, action_state, action_due_at, event_participants(member_id, response, required)",
+      "id, title, kind, starts_at, ends_at, protected, owner_member_id, status, action_state, action_due_at, all_day, location, event_participants(member_id, response, required)",
     )
     .eq("household_id", householdId)
     .order("starts_at", { ascending: true });
@@ -64,6 +64,8 @@ export async function listEvents(
       response: participant.response as "unknown" | "yes" | "no" | "maybe",
       required: participant.required as boolean,
     })),
+    allDay: row.all_day === true,
+    location: (row.location as string | null) ?? null,
   }));
 }
 

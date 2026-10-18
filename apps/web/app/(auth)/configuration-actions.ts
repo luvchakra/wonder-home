@@ -70,6 +70,7 @@ export async function saveResponsibilityAction(
 
     revalidatePath("/household/setup");
     revalidatePath("/household/responsibilities");
+    revalidatePath("/househelper");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
@@ -95,6 +96,7 @@ export async function acceptRebalanceAction(_previous: ActionState, formData: Fo
     const members = await listMembers(supabase, householdId, membership.household.ownerMemberId);
     const { changed } = await acceptRebalance(supabase, { householdId, actorMemberId: membership.memberId, members, ...swap });
     revalidatePath("/household/responsibilities");
+    revalidatePath("/househelper");
     return { notice: changed ? "Swapped. The backup owns it now, and the owner backs it up." : "Already swapped." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
@@ -123,6 +125,7 @@ export async function removeResponsibilityAction(_previous: ActionState, formDat
     });
     revalidatePath("/household/setup");
     revalidatePath("/household/responsibilities");
+    revalidatePath("/househelper");
     return { notice: "Removed. Nobody is assigned to this outcome anymore — add it again whenever you're ready." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
@@ -355,6 +358,7 @@ export async function applyConfigurationAction(
     revalidatePath("/household/setup");
     revalidatePath("/household");
     revalidatePath("/household/responsibilities");
+    revalidatePath("/househelper");
 
     return { notice: proposal.summary, downstream: saved.downstream };
   } catch (thrown) {

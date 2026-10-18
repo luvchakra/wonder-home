@@ -7,7 +7,8 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import {
   createHelperEngagement,
-  recordAvailabilityException,
+  MAX_LEAVE_DAYS,
+  recordLeave,
   removeHelperEngagement,
   replaceAvailabilityPattern,
   updateHelperEngagement,
@@ -149,20 +150,21 @@ export async function setAvailabilityPatternAction(_previous: ActionState, formD
   }
 }
 
-const exceptionSchema = z.object({
+/** Leave from one day for a number of days; every day of it is an away day. */
+const leaveSchema = z.object({
   householdId: z.uuid(),
   memberId: z.uuid({ error: "Choose who this is about." }),
   onDate: isoDate,
-  available: z.enum(["away", "extra"]),
+  days: z.coerce.number().int({ error: "Days off is a whole number." }).min(1, { error: "At least one day." }).max(MAX_LEAVE_DAYS, { error: `At most ${MAX_LEAVE_DAYS} days at a time.` }),
   reason: z.string().trim().max(200).optional(),
 });
 
 export async function recordLeaveAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = exceptionSchema.safeParse({
+  const parsed = leaveSchema.safeParse({
     householdId: formData.get("householdId"),
     memberId: formData.get("memberId"),
     onDate: formData.get("onDate"),
-    available: formData.get("available"),
+    days: formData.get("days") || "1",
     reason: formData.get("reason") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
@@ -170,11 +172,11 @@ export async function recordLeaveAction(_previous: ActionState, formData: FormDa
   try {
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
-    await recordAvailabilityException(supabase, {
+    const dates = await recordLeave(supabase, {
       householdId: parsed.data.householdId,
       memberId: parsed.data.memberId,
-      onDate: parsed.data.onDate,
-      available: parsed.data.available === "extra",
+      fromDate: parsed.data.onDate,
+      days: parsed.data.days,
       reason: parsed.data.reason || null,
     });
     revalidatePath("/househelper");
@@ -182,9 +184,9 @@ export async function recordLeaveAction(_previous: ActionState, formData: FormDa
     revalidatePath("/");
     return {
       notice:
-        parsed.data.available === "extra"
-          ? "Recorded as an extra day."
-          : "Recorded. What they normally handle that day will show as needing cover.",
+        dates.length === 1
+          ? "Recorded. What they normally handle that day will show as needing cover."
+          : `Recorded ${dates.length} days off, ${dates[0]} to ${dates[dates.length - 1]}. What they normally handle on those days will show as needing cover.`,
     };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "househelper").body.error.message };

@@ -106,7 +106,8 @@ export function MobileHeader({
                 size={26}
                 className="max-w-full"
                 tagline
-                taglineClassName="max-w-[13.5rem] text-[0.65rem] font-medium tracking-normal whitespace-normal normal-case"
+                nameClassName="text-[min(1.0625rem,4.6vw)]"
+                taglineClassName="text-[min(0.65rem,2.4vw)] font-medium tracking-normal whitespace-nowrap normal-case"
               />
             </Link>
           </div>

@@ -98,10 +98,13 @@ export function Wordmark({
   className,
   tagline = false,
   taglineClassName,
+  nameClassName,
   size = 28,
 }: {
   className?: string;
   tagline?: boolean;
+  /** Overrides the name's size for this call site only (the phone header keeps it within the screen's width). */
+  nameClassName?: string;
   /** Overrides the tagline's own size/weight/tracking for this call site only — every other Wordmark keeps the default. */
   taglineClassName?: string;
   size?: number;
@@ -112,7 +115,7 @@ export function Wordmark({
       {/* The name and tagline are the brand's own English, so they keep
           their own direction inside a right-to-left page. */}
       <span className="min-w-0 leading-tight" dir="ltr" lang="en">
-        <span className="block text-[1.0625rem] font-bold tracking-tight">
+        <span className={cn("block text-[1.0625rem] font-bold tracking-tight whitespace-nowrap", nameClassName)}>
           <span className="sr-only">WonderHome</span>
           <span aria-hidden>
             {WORDMARK_LETTERS.map((letter, index) => (

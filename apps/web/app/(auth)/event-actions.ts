@@ -7,7 +7,8 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
-import { answerEvent, createInviteLink, removeGuest, replyThroughLink, revokeInviteLink, setEventCancelled, setEventInvitees, updateEvent } from "@wonderhome/core/family/event-detail";
+import { answerEvent, createInviteLink, removeGuest, replyThroughLink, revokeInviteLink, setEventCancelled, setEventInvitees, setInviteDesign, updateEvent } from "@wonderhome/core/family/event-detail";
+import { INVITE_TEMPLATES } from "@wonderhome/core/family/invite-templates";
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
 import { hashClientIp } from "@wonderhome/core/homesend/rate-limit";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -157,6 +158,28 @@ export async function createInviteLinkAction(_previous: ActionState, formData: F
   }
   refresh(parsed.data.eventId);
   return {};
+}
+
+/** The invitation's design ("auto" follows the event) and its line for guests. */
+export async function setInviteDesignAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = ids
+    .extend({ template: z.enum(["auto", ...INVITE_TEMPLATES]), message: z.string().max(600).optional() })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await setInviteDesign(supabase, {
+      householdId: parsed.data.householdId,
+      eventId: parsed.data.eventId,
+      template: parsed.data.template === "auto" ? null : parsed.data.template,
+      message: parsed.data.message ?? null,
+    });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "family").body.error.message };
+  }
+  refresh(parsed.data.eventId);
+  return { notice: "saved" };
 }
 
 export async function revokeInviteLinkAction(_previous: ActionState, formData: FormData): Promise<ActionState> {

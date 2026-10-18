@@ -23,7 +23,18 @@ export type CalendarItemProps = {
   protectedLabel?: string;
   /** Where the event opens to its full detail. The row becomes a link with a chevron; its action stays its own button. */
   href?: string;
+  /** The kind's tile beside the date; off where a heading already says the kind. */
+  showKind?: boolean;
+  /** Who is going, in words ("With Asmi"), under when. */
+  people?: string | null;
+  /** Where, under when. */
+  place?: string | null;
 };
+
+/** The tile a kind of event wears, shared by every event row. */
+export function calendarKindLook(kind?: string): { icon: ComponentType<{ className?: string }>; tone: IconTone } {
+  return (kind && KIND_ICON[kind]) || { icon: CalendarDays, tone: "primary" };
+}
 
 const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; tone: IconTone }> = {
   birthday: { icon: Cake, tone: "people" },
@@ -39,19 +50,30 @@ const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; t
   appointment: { icon: CalendarClock, tone: "primary" },
 };
 
-export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className, protectedLabel = "Protected", href }: CalendarItemProps) {
-  const presentation = (kind && KIND_ICON[kind]) || { icon: CalendarDays, tone: "primary" as IconTone };
+export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className, protectedLabel = "Protected", href, showKind = true, people, place }: CalendarItemProps) {
+  const presentation = calendarKindLook(kind);
 
   const body = (
     <>
-      <span
-        aria-hidden
-        className="grid w-12 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-1 leading-none"
-      >
-        <span className="text-[0.5625rem] font-bold tracking-wider text-[var(--wh-tone-people)] uppercase">{month}</span>
-        <span className="text-lg font-bold tabular-nums">{day}</span>
+      {/* The date leaf with the kind's tile tucked under it, one narrow column,
+          so the title, time and place get the row's width (the owner, 2026-10-18). */}
+      <span className={cn("relative w-12 shrink-0 self-start", showKind && "pb-3")}>
+        <span
+          aria-hidden
+          className="grid w-12 place-items-center rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-1 leading-none"
+        >
+          <span className="text-[0.5625rem] font-bold tracking-wider text-[var(--wh-tone-people)] uppercase">{month}</span>
+          <span className="text-lg font-bold tabular-nums">{day}</span>
+        </span>
+        {showKind ? (
+          <IconTile
+            icon={presentation.icon}
+            tone={presentation.tone}
+            size="sm"
+            className="absolute bottom-0 left-1/2 size-6 -translate-x-1/2 rounded-full ring-2 ring-[var(--wh-surface)] [&>svg]:size-3.5"
+          />
+        ) : null}
       </span>
-      <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
       <div className="min-w-0 flex-1">
         {/* The badge wraps under the title when the row is narrow, never under the action (rule 15). */}
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-medium">
@@ -63,8 +85,10 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
           ) : null}
         </p>
         <p className="text-xs text-[var(--wh-foreground-subtle)]">{when}</p>
+        {place ? <p className="text-xs [overflow-wrap:anywhere] text-[var(--wh-foreground-subtle)]">{place}</p> : null}
+        {people ? <p className="text-xs text-[var(--wh-foreground-muted)]">{people}</p> : null}
       </div>
-      {href ? <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}
+      {href ? <ChevronRight aria-hidden className="size-4 shrink-0 self-center text-[var(--wh-foreground-subtle)]" /> : null}
     </>
   );
 
@@ -73,7 +97,7 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
       {href ? (
         <Link
           href={href}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--wh-radius-sm)] transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+          className="flex min-w-0 flex-1 items-start gap-3 rounded-[var(--wh-radius-sm)] transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
         >
           {body}
         </Link>

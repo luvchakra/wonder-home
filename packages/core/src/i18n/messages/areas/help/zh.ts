@@ -158,6 +158,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.5": "筛选只改变你自己看到的内容：类别、成员、只看与你有关的、只看已确认的计划、假日，以及日历打开时显示的视图。今天的计划——饭菜、账单、学校和需要你的事——在今天这一天点一下就能打开。",
   "help.guide.calendar.body.6": "问 HomeTalk 一个月或更长时间内有什么安排——“十二月有活动吗？”“接下来几个月有什么？”——它会按日期列出日历上你能看到的活动、生日和假日。它直接读取日历，所以绝不会提到别人的私人内容。",
   "help.guide.calendar.body.7": "问接下来有什么——“下一个活动是什么？”“下一个公共假日是什么时候？”“最近有人过生日吗？”——HomeTalk 会说出日历上的下一个以及之后的两个，最多看一年以内，只包含你能看到的内容。",
+  "help.guide.calendar.body.8": "活动的邀请链接有一种样式：生日、周年纪念、婚礼、节日、祈福、乔迁、宝宝、聚会或经典。在你选择之前，样式随活动而定——「Diwali at ours」会配上灯笼和油灯。你可以写一句给客人的话；他们会在邀请函上看到，但绝不会看到你的备注。在 WhatsApp 上发送链接时，聊天里会以大图显示邀请函，写明内容、时间和地点；「预览邀请函」会显示客人打开的页面。",
 
   "help.guide.notifications.title": "提醒和通知",
   "help.guide.notifications.summary": "关于真实的事，发给一个人，在合适的时候——处理完就安静。",
@@ -250,8 +251,9 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.househelp.title": "家政帮手",
   "help.guide.househelp.summary": "谁在家里帮忙、什么时候来，以及他们不在时由谁顶上。",
   "help.guide.househelp.body.1": "“家政帮手”记录谁在家里帮忙——固定的、偶尔的，或上门服务——以及他们通常的日子和时间。",
-  "help.guide.househelp.body.2": "记录一天请假或额外来一天，WonderHome 会查看他们那天通常负责什么，并显示需要找人顶替的事，同时提供安排的方式。",
+  "help.guide.househelp.body.2": "记录休假：填写休假第一天和天数，最后一天会自动填好（或选好最后一天，天数随之更新）。WonderHome 会检查他们那些天通常负责的事，并显示哪些需要有人顶上，以及安排的办法。",
   "help.guide.househelp.body.3": "家政帮手从不会被要求为家务打勾，也没有工作效率评分。",
+  "help.guide.househelp.body.4": "每位帮手卡片上的「负责」列出他们负责的结果。管理员可以用「添加职责」再加一项——负责人默认就是这位帮手——点一下某项，可以更改负责人或替补，或将其移除。这和「管理家庭 → 职责」是同一份列表。",
 
   "help.guide.outcomes.title": "结果、职责和家庭手册",
   "help.guide.outcomes.summary": "描述你想要的家，而不是达到它的步骤。",
@@ -282,6 +284,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "HomeBrain显示 WonderHome 对你家的认知，以及每条认知从哪里来——你告诉它的、它观察到的，或者你发送的内容里写的。任何它弄错的地方，你都可以更正、补充或删除。",
   "help.guide.certification.body.2": "问 HomeTalk“为什么？”——为什么需要批准、为什么没做某件事、某个事实从哪里来——答案来自真实的记录，而不是猜测。",
   "help.guide.certification.body.3": "答案在你看到之前都会经过检查。记录中没有的名字、日期、金额或事件，绝不会被当作事实说出来；如果记录中什么都没有，WonderHome 会直说。",
+  "help.guide.certification.body.4": "要一次处理多项，点列表上方的「选择」，勾选要处理的内容（或「全选」），再选「确认所选」「移除所选」或「所选稍后处理」。移除前会先询问。每一项都会作为单独的决定记入历史记录；更正仍然一项一项地用你自己的话来做。",
 
   "help.guide.privacy.title": "隐私和你的数据",
   "help.guide.privacy.summary": "保存了什么、谁能看到，以及如何带走或要求删除。",

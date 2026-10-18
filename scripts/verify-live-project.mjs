@@ -917,6 +917,12 @@ async function main() {
   const anonActivities = await anon.from("child_activities").select("id").limit(1);
   check("anonymous cannot read child_activities", Boolean(anonActivities.error) || (anonActivities.data ?? []).length === 0, anonActivities.error?.code ?? "no rows");
 
+  // Story 26-009: decorated invitations, and member occasions as all-day local days.
+  const invitationProbe = await admin.from("family_events").select("id, invite_template, invite_message").limit(1);
+  check("migration landed: family_events.invite_template", !invitationProbe.error, invitationProbe.error?.code ?? "ok");
+  const utcOccasions = await admin.from("family_events").select("id", { count: "exact", head: true }).like("external_id", "member_%").eq("all_day", false);
+  check("member occasions are all-day", !utcOccasions.error && (utcOccasions.count ?? 0) === 0, utcOccasions.error?.code ?? `${utcOccasions.count ?? 0} timed`);
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

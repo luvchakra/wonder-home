@@ -34,9 +34,8 @@ export type HelperFormLabels = {
   leaveDescription: string;
   who: string;
   date: string;
-  whichWay: string;
-  awayThatDay: string;
-  extraDay: string;
+  leaveDays: string;
+  lastDay: string;
   reason: string;
   reasonPlaceholder: string;
   recording: string;
@@ -110,16 +109,7 @@ export function RecordLeaveButton({
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={labels.date} name="onDate" type="date" required />
-            <div className="space-y-1.5">
-              <label htmlFor="leave-kind" className="block text-sm font-medium">{labels.whichWay}</label>
-              <select id="leave-kind" name="available" defaultValue="away" className={selectClass}>
-                <option value="away">{labels.awayThatDay}</option>
-                <option value="extra">{labels.extraDay}</option>
-              </select>
-            </div>
-          </div>
+          <LeaveDays labels={labels} />
           <Field label={labels.reason} name="reason" placeholder={labels.reasonPlaceholder} maxLength={200} autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? labels.recording : labels.record}
@@ -127,6 +117,66 @@ export function RecordLeaveButton({
         </form>
       </Sheet>
     </>
+  );
+}
+
+const MAX_DAYS = 60;
+
+function shiftDay(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
+}
+
+function daysBetween(from: string, to: string): number {
+  const at = (date: string) => {
+    const [y, m, d] = date.split("-").map(Number);
+    return Date.UTC(y!, m! - 1, d!);
+  };
+  return Math.round((at(to) - at(from)) / 86_400_000) + 1;
+}
+
+/**
+ * From when, for how many days, and the last day off — filled in from the
+ * other two. Typing a number of days moves the last day; picking a last day
+ * sets the number. Only the first day and the count are sent; the server
+ * works out the dates again.
+ */
+function LeaveDays({ labels }: { labels: HelperFormLabels }) {
+  const [from, setFrom] = useState("");
+  const [days, setDays] = useState("1");
+  const count = Math.min(Math.max(Number.parseInt(days, 10) || 0, 0), MAX_DAYS);
+  const last = from && count > 0 ? shiftDay(from, count - 1) : "";
+
+  return (
+    <div className="space-y-3">
+      <Field label={labels.date} name="onDate" type="date" required value={from} onChange={(event) => setFrom(event.target.value)} />
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label={labels.leaveDays}
+          name="days"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={MAX_DAYS}
+          required
+          value={days}
+          onChange={(event) => setDays(event.target.value)}
+        />
+        <Field
+          label={labels.lastDay}
+          name="lastDay"
+          type="date"
+          min={from || undefined}
+          disabled={!from}
+          value={last}
+          onChange={(event) => {
+            const picked = event.target.value;
+            if (!from || !picked || picked < from) return;
+            setDays(String(Math.min(daysBetween(from, picked), MAX_DAYS)));
+          }}
+        />
+      </div>
+    </div>
   );
 }
 

@@ -128,10 +128,44 @@ async function recordAvailabilityExceptionImpl(
   }
 }
 
+/** The most days one leave may cover: a long trip home, never an open-ended absence. */
+export const MAX_LEAVE_DAYS = 60;
+
+/** The dates a leave covers: its first day and the days after it, as YYYY-MM-DD. */
+export function leaveDates(fromDate: string, days: number): string[] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fromDate);
+  if (!match || !Number.isInteger(days) || days < 1 || days > MAX_LEAVE_DAYS) return [];
+  const first = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (new Date(first).toISOString().slice(0, 10) !== fromDate) return [];
+  return Array.from({ length: days }, (_, index) => new Date(first + index * 86_400_000).toISOString().slice(0, 10));
+}
+
+/**
+ * Leave over one or more days: each day is an away day, written together so
+ * a week off is one change, not seven. A day already recorded is replaced.
+ */
+async function recordLeaveImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string; fromDate: string; days: number; reason: string | null },
+): Promise<string[]> {
+  const dates = leaveDates(input.fromDate, input.days);
+  if (dates.length === 0) throw ApiError.badRequest(`Leave runs from a real date for 1 to ${MAX_LEAVE_DAYS} days.`);
+  const { error } = await supabase.from("availability_exceptions").upsert(
+    dates.map((onDate) => ({ household_id: input.householdId, member_id: input.memberId, on_date: onDate, available: false, reason: input.reason })),
+    { onConflict: "member_id,on_date" },
+  );
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only the person themselves or a household administrator can record this.");
+    throw new Error(`recordLeave failed: ${error.code ?? "unknown"}`);
+  }
+  return dates;
+}
+
 // Every write forgets the household's cached context once it succeeds, so
 // the next HomeTalk answer sees the change (Wave 1 §14).
 export const createHelperEngagement = invalidatesContext(createHelperEngagementImpl, (_supabase, input) => input.householdId);
 export const updateHelperEngagement = invalidatesContext(updateHelperEngagementImpl, (_supabase, input) => input.householdId);
 export const removeHelperEngagement = invalidatesContext(removeHelperEngagementImpl, (_supabase, input) => input.householdId);
 export const replaceAvailabilityPattern = invalidatesContext(replaceAvailabilityPatternImpl, (_supabase, input) => input.householdId);
+export const recordLeave = invalidatesContext(recordLeaveImpl, (_supabase, input) => input.householdId);
 export const recordAvailabilityException = invalidatesContext(recordAvailabilityExceptionImpl, (_supabase, input) => input.householdId);

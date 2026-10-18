@@ -150,12 +150,15 @@ export function ResponsibilityForm({
   members,
   outcomes = [],
   initial,
+  defaultOwnerId,
   labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   members: MemberOption[];
   labels: ConfigFormLabels;
+  /** Who a new responsibility starts with — opened from a helper's card, that helper. */
+  defaultOwnerId?: string;
   /** Outcomes offered when creating a new responsibility. Unused once `initial` is set. */
   outcomes?: { key: string; label: string }[];
   /** Editing an existing responsibility rather than creating one — the outcome is fixed. */
@@ -179,7 +182,7 @@ export function ResponsibilityForm({
       ) : (
         <Select label={labels.outcome} name="outcomeKey" options={outcomes.map((o) => ({ value: o.key, label: o.label }))} />
       )}
-      <Select label={labels.owner} name="primaryMemberId" options={people} defaultValue={initial?.primaryMemberId ?? undefined} />
+      <Select label={labels.owner} name="primaryMemberId" options={people} defaultValue={initial?.primaryMemberId ?? defaultOwnerId ?? undefined} />
       <Select
         label={labels.backup}
         name="backupMemberId"
