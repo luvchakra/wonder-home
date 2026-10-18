@@ -2,7 +2,7 @@ import type { CertificationItem } from "@wonderhome/core/household/certification
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import type { CertificationItemLabels } from "@wonderhome/core/ui/certification-item";
 
-import type { CertificationControlLabels } from "../_components/certification-controls";
+import type { BulkReviewLabels, CertificationControlLabels } from "../_components/certification-controls";
 
 /**
  * HomeBrain Review's words in the viewer's language (story 22-004). What
@@ -45,6 +45,26 @@ export function certificationItemLabels(t: Translate): CertificationItemLabels {
       high: t("review.risk.high"),
       critical: t("review.risk.critical"),
     },
+  };
+}
+
+export function bulkReviewLabels(t: Translate): BulkReviewLabels {
+  return {
+    select: t("review.bulk.select"),
+    done: t("review.bulk.done"),
+    selected: t("review.bulk.selected", { count: "{count}" }),
+    all: t("review.bulk.all"),
+    clear: t("review.bulk.clear"),
+    pick: t("review.bulk.pick", { claim: "{claim}" }),
+    decisions: {
+      confirmed: t("review.bulk.confirm"),
+      removed: t("review.bulk.remove"),
+      deferred: t("review.bulk.later"),
+    },
+    removeTitle: t("review.bulk.removeTitle", { count: "{count}" }),
+    removeLede: t("review.bulk.removeLede"),
+    cancel: t("review.bulk.cancel"),
+    working: t("review.bulk.working"),
   };
 }
 

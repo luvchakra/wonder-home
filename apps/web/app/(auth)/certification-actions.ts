@@ -92,6 +92,133 @@ export async function addBeliefAction(_previous: ActionState, formData: FormData
   }
 }
 
+type Decision = "confirmed" | "corrected" | "removed" | "deferred";
+type Reviewer = Awaited<ReturnType<typeof requireMembership>>;
+
+/**
+ * One decision on one item, after the caller has checked the reviewer is an
+ * adult of the household: the item's status by `applyReview`, the memory
+ * HomeBrain reads, a correction as a new item, the evidence and the review
+ * trail. The single path for a review, whether one item or many.
+ */
+async function reviewItem(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  membership: Reviewer,
+  input: { householdId: string; itemId: string; decision: Decision; correction?: string },
+): Promise<{ found: boolean; correction: string | null }> {
+  const { householdId, itemId, decision } = input;
+  const { data: row } = await supabase
+    .from("certification_items")
+    .select("id, memory_id, category, claim, scope, member_id, source_type, source_detail, status, risk_level, last_reviewed_at")
+    .eq("id", itemId)
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (!row) return { found: false, correction: null };
+
+  const item: CertificationItem = {
+    id: row.id as string,
+    category: row.category as CertificationItem["category"],
+    claim: row.claim as string,
+    sourceType: row.source_type as CertificationItem["sourceType"],
+    sourceDetail: (row.source_detail as string | null) ?? null,
+    status: row.status as CertificationItem["status"],
+    riskLevel: row.risk_level as CertificationItem["riskLevel"],
+    lastReviewedAt: row.last_reviewed_at ? new Date(row.last_reviewed_at as string) : null,
+  };
+  const now = new Date();
+  const updated = applyReview(item, decision, now);
+  const correction = decision === "corrected" ? input.correction ?? null : null;
+
+  const admin = createAdminClient();
+  // The retired item keeps the claim it had: the correction is a new item
+  // (below), so what was believed and what replaced it are both on record.
+  await admin
+    .from("certification_items")
+    .update({
+      status: updated.status,
+      last_reviewed_at: now.toISOString(),
+      last_reviewed_by: membership.memberId,
+    })
+    .eq("id", item.id);
+
+  // What HomeBrain actually reads (Wave 2 §8): a belief HomeTalk learned
+  // lives in `memories`, and a decision here has to reach it — confirmed
+  // becomes the household's word, removed stops being believed, corrected
+  // replaces it with what the person just said.
+  const memoryId = (row.memory_id as string | null) ?? null;
+  let replacementMemoryId: string | null = null;
+  if (memoryId) {
+    if (decision === "confirmed") {
+      await admin.from("memories").update({ status: "confirmed", confidence: 1 }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
+    } else if (decision === "removed") {
+      await admin.from("memories").update({ status: "rejected" }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
+    } else if (correction) {
+      const { data: previous } = await admin.from("memories").select("scope, member_id, category, key").eq("id", memoryId).maybeSingle();
+      if (previous) {
+        await admin.from("memories").update({ status: "superseded" }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
+        const { data: replacement } = await admin
+          .from("memories")
+          .insert({
+            household_id: householdId,
+            scope: previous.scope,
+            member_id: previous.member_id,
+            category: previous.category,
+            key: previous.key,
+            value: { statement: correction },
+            source_type: "conversation",
+            confidence: 1,
+            status: "confirmed",
+          })
+          .select("id")
+          .single();
+        replacementMemoryId = (replacement?.id as string | undefined) ?? null;
+      }
+    }
+  }
+
+  if (correction) {
+    const { error: insertError } = await admin.from("certification_items").insert({
+      memory_id: replacementMemoryId,
+      household_id: householdId,
+      category: item.category,
+      claim: correction,
+      scope: row.scope,
+      member_id: row.member_id,
+      source_type: "conversation",
+      source_detail: `corrected by ${membership.displayName}`,
+      // A person just stated it, so it is confirmed by the family from the start.
+      status: "confirmed",
+      risk_level: item.riskLevel,
+      last_reviewed_at: now.toISOString(),
+      last_reviewed_by: membership.memberId,
+    });
+    if (insertError) throw new Error(`replacement insert failed: ${insertError.code ?? "unknown"}`);
+  }
+
+  // A belief WonderHome held, corrected by a person, is evaluation
+  // evidence (Wave 5 §13) — alongside the review history, never instead.
+  if (correction) {
+    await recordCorrectionEvidence(admin, {
+      householdId: householdId,
+      surface: "homebrain",
+      sourceType: "certification_item",
+      sourceId: item.id,
+      memberId: membership.memberId,
+      evidence: homebrainCorrectionEvidence(item.claim, correction),
+    }).catch((error) => log.warn("correction evidence not recorded", { reason: error instanceof Error ? error.message : "unknown" }));
+  }
+
+  await admin.from("certification_reviews").insert({
+    household_id: householdId,
+    item_id: item.id,
+    reviewer_member_id: membership.memberId,
+    decision: decision,
+    previous_value: { claim: item.claim, status: item.status },
+    new_value: { claim: correction ?? item.claim, status: updated.status },
+  });
+  return { found: true, correction };
+}
+
 export async function reviewCertificationAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = schema.safeParse({
     householdId: formData.get("householdId"),
@@ -111,117 +238,11 @@ export async function reviewCertificationAction(_previous: ActionState, formData
       return { error: "Only an adult in the household can review what WonderHome believes." };
     }
 
-    const { data: row } = await supabase
-      .from("certification_items")
-      .select("id, memory_id, category, claim, scope, member_id, source_type, source_detail, status, risk_level, last_reviewed_at")
-      .eq("id", parsed.data.itemId)
-      .eq("household_id", parsed.data.householdId)
-      .maybeSingle();
-    if (!row) {
+    const reviewed = await reviewItem(supabase, membership, parsed.data);
+    if (!reviewed.found) {
       return { error: "That item is no longer there — it may already have been reviewed." };
     }
-
-    const item: CertificationItem = {
-      id: row.id as string,
-      category: row.category as CertificationItem["category"],
-      claim: row.claim as string,
-      sourceType: row.source_type as CertificationItem["sourceType"],
-      sourceDetail: (row.source_detail as string | null) ?? null,
-      status: row.status as CertificationItem["status"],
-      riskLevel: row.risk_level as CertificationItem["riskLevel"],
-      lastReviewedAt: row.last_reviewed_at ? new Date(row.last_reviewed_at as string) : null,
-    };
-    const now = new Date();
-    const updated = applyReview(item, parsed.data.decision, now);
-    const correction = parsed.data.decision === "corrected" ? parsed.data.correction ?? null : null;
-
-    const admin = createAdminClient();
-    // The retired item keeps the claim it had: the correction is a new item
-    // (below), so what was believed and what replaced it are both on record.
-    await admin
-      .from("certification_items")
-      .update({
-        status: updated.status,
-        last_reviewed_at: now.toISOString(),
-        last_reviewed_by: membership.memberId,
-      })
-      .eq("id", item.id);
-
-    // What HomeBrain actually reads (Wave 2 §8): a belief HomeTalk learned
-    // lives in `memories`, and a decision here has to reach it — confirmed
-    // becomes the household's word, removed stops being believed, corrected
-    // replaces it with what the person just said.
-    const memoryId = (row.memory_id as string | null) ?? null;
-    let replacementMemoryId: string | null = null;
-    if (memoryId) {
-      if (parsed.data.decision === "confirmed") {
-        await admin.from("memories").update({ status: "confirmed", confidence: 1 }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
-      } else if (parsed.data.decision === "removed") {
-        await admin.from("memories").update({ status: "rejected" }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
-      } else if (correction) {
-        const { data: previous } = await admin.from("memories").select("scope, member_id, category, key").eq("id", memoryId).maybeSingle();
-        if (previous) {
-          await admin.from("memories").update({ status: "superseded" }).eq("id", memoryId).in("status", ["learned", "confirmed"]);
-          const { data: replacement } = await admin
-            .from("memories")
-            .insert({
-              household_id: parsed.data.householdId,
-              scope: previous.scope,
-              member_id: previous.member_id,
-              category: previous.category,
-              key: previous.key,
-              value: { statement: correction },
-              source_type: "conversation",
-              confidence: 1,
-              status: "confirmed",
-            })
-            .select("id")
-            .single();
-          replacementMemoryId = (replacement?.id as string | undefined) ?? null;
-        }
-      }
-    }
-
-    if (correction) {
-      const { error: insertError } = await admin.from("certification_items").insert({
-        memory_id: replacementMemoryId,
-        household_id: parsed.data.householdId,
-        category: item.category,
-        claim: correction,
-        scope: row.scope,
-        member_id: row.member_id,
-        source_type: "conversation",
-        source_detail: `corrected by ${membership.displayName}`,
-        // A person just stated it, so it is confirmed by the family from the start.
-        status: "confirmed",
-        risk_level: item.riskLevel,
-        last_reviewed_at: now.toISOString(),
-        last_reviewed_by: membership.memberId,
-      });
-      if (insertError) throw new Error(`replacement insert failed: ${insertError.code ?? "unknown"}`);
-    }
-
-    // A belief WonderHome held, corrected by a person, is evaluation
-    // evidence (Wave 5 §13) — alongside the review history, never instead.
-    if (correction) {
-      await recordCorrectionEvidence(admin, {
-        householdId: parsed.data.householdId,
-        surface: "homebrain",
-        sourceType: "certification_item",
-        sourceId: item.id,
-        memberId: membership.memberId,
-        evidence: homebrainCorrectionEvidence(item.claim, correction),
-      }).catch((error) => log.warn("correction evidence not recorded", { reason: error instanceof Error ? error.message : "unknown" }));
-    }
-
-    await admin.from("certification_reviews").insert({
-      household_id: parsed.data.householdId,
-      item_id: item.id,
-      reviewer_member_id: membership.memberId,
-      decision: parsed.data.decision,
-      previous_value: { claim: item.claim, status: item.status },
-      new_value: { claim: correction ?? item.claim, status: updated.status },
-    });
+    const correction = reviewed.correction;
 
     // HomeBrain answers from what was just decided, not from a copy read a moment ago.
     forgetHouseholdContext(parsed.data.householdId);
@@ -239,5 +260,47 @@ export async function reviewCertificationAction(_previous: ActionState, formData
   } catch (error) {
     log.warn("certification review failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "That review didn’t go through. Please try again." };
+  }
+}
+
+const bulkSchema = z.object({
+  householdId: z.uuid(),
+  itemIds: z.array(z.uuid()).min(1, { error: "Choose at least one." }).max(100, { error: "At most 100 at a time." }),
+  decision: z.enum(["confirmed", "removed", "deferred"]),
+});
+
+/**
+ * The same decision on several items at once — Confirm, Remove or Later for
+ * everything selected. A correction is always one item's own words, so it is
+ * never a bulk decision. Each item goes through `reviewItem`, so the trail
+ * reads exactly as if each had been decided on its own.
+ */
+export async function reviewManyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = bulkSchema.safeParse({
+    householdId: formData.get("householdId"),
+    itemIds: [...new Set(formData.getAll("itemIds").map(String))],
+    decision: formData.get("decision"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "That review could not be read. Please try again." };
+
+  const supabase = await createClient();
+  try {
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    if (membership.memberType === "child") {
+      return { error: "Only an adult in the household can review what WonderHome believes." };
+    }
+    let done = 0;
+    for (const itemId of parsed.data.itemIds) {
+      const reviewed = await reviewItem(supabase, membership, { householdId: parsed.data.householdId, itemId, decision: parsed.data.decision });
+      if (reviewed.found) done += 1;
+    }
+    forgetHouseholdContext(parsed.data.householdId);
+    revalidatePath("/certification");
+    const verb = parsed.data.decision === "confirmed" ? "Confirmed" : parsed.data.decision === "removed" ? "Removed" : "Left for later:";
+    const skipped = parsed.data.itemIds.length - done;
+    return { notice: `${verb} ${done} ${done === 1 ? "item" : "items"}.${skipped > 0 ? ` ${skipped} had already been reviewed.` : ""}` };
+  } catch (error) {
+    log.warn("bulk certification review failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { error: "Some of that didn’t go through. Please check the list and try again." };
   }
 }

@@ -89,6 +89,8 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | The header tagline broke onto two lines | — | Done in #236: one line at any text size |
 | Add more entries under a helper's Looks after | 07-009 | Done in #236 |
 | Leave: no "Which way"; a number of days that fills the end date | 07-010 | Done in #236 |
+| HomeBrain review: select many and confirm, remove or leave for later together | 05-009 | Done in #236 |
+| Event card: use the space better, and show only who is actually going (all kinds of events) | 26-011 | Done in #236 |
 | School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Next |
 | Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Next |
 | Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Next |

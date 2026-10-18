@@ -1,6 +1,6 @@
 # Decorated invitations, and five fixes from the owner's phone
 
-**Date:** 2026-10-18 · **PR:** #236 · **Stories:** 26-009, 26-010, 08-014, 07-009, 07-010
+**Date:** 2026-10-18 · **PR:** #236 · **Stories:** 26-009, 26-010, 08-014, 07-009, 07-010, 05-009, 26-011
 
 ## What was done
 
@@ -34,6 +34,19 @@
   day that fills itself in (or sets the number). "Which way" is gone; every day
   is written in one upsert (`recordLeave`, `leaveDates`, max 60).
 
+- **Review many at once (05-009).** HomeBrain's list has Select: tick items (or
+  Select all) and Confirm, Remove (asks first) or Later together
+  (`reviewManyAction`). Single and bulk decisions share one `reviewItem` path
+  in `certification-actions.ts`, so the trail is one decision per item. While
+  selecting, each item is a compact row (claim, source, category) so nothing is
+  squeezed.
+
+- **Event cards (26-011).** Home's next-event card showed every member's avatar;
+  it now names who is going from the event's own list, gives the title the full
+  width and puts the action beside who is going. Every event list says when the
+  same way (`_lib/event-when.ts`: "All day", never midnight), with its place;
+  Today's rows wear the event's own kind and no longer truncate.
+
 ## Verified
 
 - Typecheck; lint (0 errors); core unit tests 3445/3445, web 9/9; security
@@ -55,7 +68,9 @@
   - Kids & School's three tiles at 360px and 1280px;
   - the header at 16px and 20px text;
   - two responsibilities added to a helper from its card;
-  - leave for 7 days recorded from the new form.
+  - leave for 7 days recorded from the new form;
+  - HomeBrain: two items confirmed together, then the rest removed together; the review trail held four decisions;
+  - a school trip only the QA child goes to reads "With Asmi QA" on Family; a birthday reads "All day"; Home's card with nobody asked says so beside the ask button.
 
 ## Open / for a person
 

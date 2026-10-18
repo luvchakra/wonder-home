@@ -33,6 +33,7 @@ import { MemberDetail } from "../_components/member-detail";
 import { NewEventForm } from "../_components/new-event-form";
 import { PetDetail } from "../_components/pet-detail";
 import { childDetailWords } from "../_lib/child-detail-words";
+import { eventGoing, eventWhen } from "../_lib/event-when";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { describeRoles } from "../_lib/member-role";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
@@ -401,7 +402,13 @@ export default async function FamilyPage() {
                         protectedLabel={t("family.protected")}
                         day={formatDate(timezone, event.startsAt).split(" ")[0] ?? ""}
                         month={formatDate(timezone, event.startsAt).split(" ")[1] ?? ""}
-                        when={`${formatDate(timezone, event.startsAt, "long")} · ${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}`}
+                        when={eventWhen(event, timezone, t)}
+                        place={event.location}
+                        people={(() => {
+                          // Only a list worth reading: who is going, when anyone is.
+                          const going = eventGoing(event, (id) => members.find((member) => member.id === id)?.displayName ?? null, t, session.locale.format.locale);
+                          return going.names.length > 0 ? going.words : null;
+                        })()}
                         href={`/family/events/${event.id}`}
                         action={event.actionState === "needs_gift" ? <SettleEventPill householdId={householdId} eventId={event.id} label={needLabels.giftSorted} /> : undefined}
                       />

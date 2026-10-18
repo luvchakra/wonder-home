@@ -22,8 +22,8 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AddBeliefButton, CertificationControls } from "../_components/certification-controls";
-import { certificationControlLabels, certificationItemLabels, reviewCategoryWords, reviewReason } from "../_lib/review-labels";
+import { AddBeliefButton, BulkReviewList, CertificationControls } from "../_components/certification-controls";
+import { bulkReviewLabels, certificationControlLabels, certificationItemLabels, reviewCategoryWords, reviewReason } from "../_lib/review-labels";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "HomeBrain" };
@@ -125,6 +125,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const canReview = view.tone !== "child";
   const itemLabels = certificationItemLabels(t);
   const controlLabels = certificationControlLabels(t);
+  const bulkLabels = bulkReviewLabels(t);
   // The explanation `certificationHealth` writes, from the same counts, in the reader's words.
   const highRiskNeedsReview = health.byRisk.high.needsReview + health.byRisk.critical.needsReview;
   const healthExplanation =
@@ -229,29 +230,36 @@ export default async function CertificationPage({ searchParams }: { searchParams
               />
             ) : (
               <Card className="p-2">
-                <ul className="divide-y divide-[var(--wh-border)]">
-                  {shown.map((item) => {
+                <BulkReviewList
+                  householdId={householdId}
+                  labels={bulkLabels}
+                  selectable={canReview}
+                  rows={shown.map((item) => {
                     const alert = alerts.find((a) => a.itemId === item.id);
                     const sourceLabel = `${t(`review.source.${item.sourceType}`)}${item.sourceDetail ? ` (${item.sourceDetail})` : ""}`;
-                    return (
-                      <CertificationItem
-                        key={item.id}
-                        claim={item.claim}
-                        status={alert ? "needs_review" : item.status}
-                        badgeLabel={alert ? alertActionWords(alert.action, t) : undefined}
-                        sourceLabel={sourceLabel}
-                        category={reviewCategoryWords(item.category, t)}
-                        risk={item.riskLevel}
-                        lastReviewed={item.lastReviewedAt ? `${formatDate(timezone, item.lastReviewedAt, "long")} · ${formatTime(timezone, item.lastReviewedAt)}` : null}
-                        learnedAt={learnedAt.get(item.id) ? formatDate(timezone, learnedAt.get(item.id)!, "long") : null}
-                        confidence={confidenceFor(item.sourceType, item.status, t)}
-                        reason={alert ? reviewReason(item, now, t) : undefined}
-                        controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} labels={controlLabels} /> : undefined}
-                        labels={itemLabels}
-                      />
-                    );
+                    return {
+                      id: item.id,
+                      claim: item.claim,
+                      meta: `${sourceLabel} · ${reviewCategoryWords(item.category, t)}`,
+                      node: (
+                        <CertificationItem
+                          claim={item.claim}
+                          status={alert ? "needs_review" : item.status}
+                          badgeLabel={alert ? alertActionWords(alert.action, t) : undefined}
+                          sourceLabel={sourceLabel}
+                          category={reviewCategoryWords(item.category, t)}
+                          risk={item.riskLevel}
+                          lastReviewed={item.lastReviewedAt ? `${formatDate(timezone, item.lastReviewedAt, "long")} · ${formatTime(timezone, item.lastReviewedAt)}` : null}
+                          learnedAt={learnedAt.get(item.id) ? formatDate(timezone, learnedAt.get(item.id)!, "long") : null}
+                          confidence={confidenceFor(item.sourceType, item.status, t)}
+                          reason={alert ? reviewReason(item, now, t) : undefined}
+                          controls={canReview ? <CertificationControls householdId={householdId} itemId={item.id} labels={controlLabels} /> : undefined}
+                          labels={itemLabels}
+                        />
+                      ),
+                    };
                   })}
-                </ul>
+                />
               </Card>
             )}
 

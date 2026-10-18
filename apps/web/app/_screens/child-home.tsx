@@ -15,7 +15,8 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { formatDate, formatTime, type Session } from "../_lib/session";
+import { eventWhen } from "../_lib/event-when";
+import { formatDate, type Session } from "../_lib/session";
 
 /**
  * The child view (requirements §15): "Hi Anaya!", with Today, Homework, Goals
@@ -107,7 +108,9 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
                       kind={event.kind}
                       day={formatDate(timezone, event.startsAt).split(" ")[0] ?? ""}
                       month={formatDate(timezone, event.startsAt).split(" ")[1] ?? ""}
-                      when={`${formatDate(timezone, event.startsAt, "long")} · ${formatTime(timezone, event.startsAt)}`}
+                      when={eventWhen(event, timezone, t)}
+                      place={event.location}
+                      href={`/family/events/${event.id}`}
                     />
                   ))}
                 </ul>

@@ -316,6 +316,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Frag HomeTalk „Warum?“ – warum es eine Freigabe braucht, warum es etwas nicht getan hat, woher eine Tatsache stammt –, und die Antwort kommt aus dem, was tatsächlich festgehalten ist, nicht aus einer Vermutung.",
   "help.guide.certification.body.3":
     "Antworten werden geprüft, bevor du sie siehst. Ein Name, ein Datum, ein Betrag oder ein Ereignis, das nicht festgehalten ist, wird nie als Tatsache behauptet; wenn nichts festgehalten ist, sagt WonderHome das.",
+  "help.guide.certification.body.4": "Um mehrere auf einmal zu entscheiden, tippt über der Liste auf Auswählen, hakt die gemeinten an (oder Alle auswählen) und wählt Auswahl bestätigen, Auswahl entfernen oder Auswahl später. Vor dem Entfernen wird nachgefragt. Jeder Eintrag steht im Verlauf als eigene Entscheidung; eine Korrektur geschieht weiterhin einzeln, in euren eigenen Worten.",
 
   "help.guide.privacy.title": "Datenschutz und deine Daten",
   "help.guide.privacy.summary": "Was gespeichert wird, wer es sehen kann und wie du es mitnimmst oder löschen lässt.",

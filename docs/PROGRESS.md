@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**267 of 288 stories done — 92.7%**
+**269 of 290 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 267 |
+| Done | 269 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 17 |
@@ -30,7 +30,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 22 | 23 | 1 in progress |
-| 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
+| 05 Household Certification & Understanding | `██████████` | 9 | 9 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `█████████░` | 14 | 15 | 1 not started |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
 | 25 HomeFood | `████░░░░░░` | 9 | 19 | 1 in progress, 9 not started |
-| 26 HomeEvents | `█████░░░░░` | 5 | 10 | 1 in progress, 4 not started |
+| 26 HomeEvents | `█████░░░░░` | 6 | 11 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -182,7 +182,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 05 — Household Certification & Understanding
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -194,6 +194,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-006` Actionable certification alerts | P0 | Done | Source on every claim; coverage counted, never estimated |
 | `05-007` Certification history | P1 | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
 | `05-008` Certification health | P2 | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
+| `05-009` Review many at once | P1 | Done | The owner, 2026-10-18 (PR #236): HomeBrain's list has Select; ticked items (or Select all) are confirmed, removed (after asking) or left for later together. Each goes through the same `reviewItem` path as one item's own buttons, so History, the memory HomeBrain reads and correction evidence are as if decided one by one; a correction stays one at a time. Checked at 360px: two confirmed, then the rest removed, and the review trail showed four decisions |
 
 ### 06 — Actionable Notification Engine
 
@@ -543,7 +544,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-5 of 10 done `█████░░░░░`
+6 of 11 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -557,5 +558,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-008` Today with nothing booked doesn't call itself a free day | P1 | Done | The owner's report, 2026-10-18 (PR #235): the day view said "Nothing planned — a free day" right above Today's plan of meals, bills and school. Today with no events is now one card, "Nothing on the calendar today.", holding the Today's plan link; another empty day reads "No events — nothing is on the calendar for this day." Eight languages. Checked at 360px |
 | `26-009` Decorated invitations, and a big postcard on WhatsApp | P1 | Done | The owner, 2026-10-18 (PR #236): an event's invite link wears one of nine designs (birthday, anniversary, wedding, festival, puja, housewarming, baby, get-together, classic), chosen from the event's kind and title by rules (`family/invite-templates.ts`, `suggestTemplate`) until the household picks one on the event page, with an optional line for guests (never the notes). The guest page is the decorated `InvitationCard`; `e/[token]/opengraph-image.tsx` draws the same design as a 1200×630 postcard that WhatsApp shows large, in the household's language (Devanagari and other scripts through Noto for just the characters used). Migration `20261018270000` live (`invite_template`, `invite_message`). Checked: all nine postcards rendered; the guest page at 360px and desktop; picking Festival and a line on the event page showed on the page |
 | `26-010` A member's birthday is the whole day, not 5:30 am to 5:30 am | P1 | Done | The owner's report, 2026-10-18 (PR #236): the member-occasion trigger wrote a birthday as UTC midnight to midnight, so in India the event read "5:30 am – 5:30 am". It now writes the household's local day as an all-day event, and the rows already written were moved onto that day (same migration). DB test; `verify:live` checks no timed member occasion is left |
+| `26-011` Event cards say who is going, and use their width | P1 | Done | The owner's report, 2026-10-18 (PR #236): Home's event card showed every family member's avatar although only Asmi was going, and squeezed the title and time beside a second kind tile and the button. Now every event list (Home's card, Today's focus, Family's Upcoming, a child's Home) says when the same way — "All day" for an all-day event, never a midnight time (`_lib/event-when.ts`) — and its place; Home's card and Family's list name who is going from the event's own list ("With Asmi", or on Home "Nobody from the family is asked yet" with a button to ask), and the card gives the title the full width with the action beside who is going. Today's rows wear the event's kind, not always a heart, and no longer cut the time. Checked at 360px and 1280px: a school trip only Asmi goes to reads "With Asmi QA"; a birthday reads "All day" |
 
 _Generated 2026-10-18 from 27 backlog files._

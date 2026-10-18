@@ -316,6 +316,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Demandez « pourquoi ? » à HomeTalk — pourquoi il a besoin d’un accord, pourquoi il n’a pas fait quelque chose, d’où vient un fait — et la réponse vient de ce qui est réellement enregistré, pas d’une supposition.",
   "help.guide.certification.body.3":
     "Les réponses sont vérifiées avant que vous ne les voyiez. Un nom, une date, un montant ou un événement qui n’est pas enregistré n’est jamais présenté comme un fait ; si rien n’est enregistré, WonderHome le dit.",
+  "help.guide.certification.body.4": "Pour en décider plusieurs à la fois, touchez Sélectionner au-dessus de la liste, cochez ceux qui vous concernent (ou Tout sélectionner) et choisissez Confirmer la sélection, Retirer la sélection ou Plus tard pour la sélection. Le retrait demande confirmation. Chaque élément est noté dans l’historique comme une décision à part ; une correction se fait toujours un élément à la fois, avec vos mots.",
 
   "help.guide.privacy.title": "Confidentialité et vos données",
   "help.guide.privacy.summary": "Ce qui est conservé, qui peut le voir, et comment l’emporter ou le faire supprimer.",

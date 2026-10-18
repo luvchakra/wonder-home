@@ -27,7 +27,7 @@ import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/hou
 import { cn } from "@wonderhome/core/lib/cn";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
-import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
+import { CalendarItem, calendarKindLook } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
 import { CozyCornerIllustration } from "@wonderhome/core/ui/cozy-corner-illustration";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
@@ -62,6 +62,7 @@ import { eventFormLabels } from "../_lib/event-form-labels";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
+import { eventGoing, eventWhen } from "../_lib/event-when";
 import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
 import { localizeSetup, onboardingCardLabels, setupProgressLabels } from "../_lib/setup-labels";
 import { DOMAIN_ICONS } from "../_lib/domain-icons";
@@ -189,25 +190,25 @@ function MemberActivities({ owned, backup, t }: { owned: readonly Responsibility
  * one place that sentence is written, so this row never invents its own.
  */
 function TodayEventRow({ event, timezone, t }: { event: FamilyEvent; timezone: string; t: Translate }) {
+  const look = calendarKindLook(event.kind);
   return (
     <ExpandableRow
       summary={
         <>
-          <IconTile icon={CalendarHeart} tone="people" size="sm" />
+          <IconTile icon={look.icon} tone={look.tone} size="sm" />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">{event.title}</span>
-            <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">
-              {formatTime(timezone, event.startsAt)} – {formatTime(timezone, event.endsAt)}
+            <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+              {event.allDay ? t("calendar.entry.allDay") : `${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}`}
             </span>
           </span>
-          <Badge tone="neutral">{formatTime(timezone, event.startsAt)}</Badge>
+          {event.allDay ? null : <Badge tone="neutral">{formatTime(timezone, event.startsAt)}</Badge>}
         </>
       }
     >
       <div className="space-y-3">
         <p className="text-sm text-[var(--wh-foreground-muted)]">
-          {formatDate(timezone, event.startsAt, "long")} · {formatTime(timezone, event.startsAt)} –{" "}
-          {formatTime(timezone, event.endsAt)}
+          {eventWhen(event, timezone, t)}
           {event.protected ? ` · ${t("homeScreen.protectedTime")}` : ""}
         </p>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
@@ -380,6 +381,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         ? { heading: t("home.appointmentMoment"), icon: CalendarClock, iconClass: "text-[var(--wh-primary)]", family: false }
         : { heading: t("home.familyMoment"), icon: Heart, iconClass: "text-[var(--wh-tone-people)]", family: true };
   const MomentIcon = momentLook.icon;
+  const memberName = (id: string) => members.find((member) => member.id === id)?.displayName ?? null;
+  const momentGoing = nextMoment ? eventGoing(nextMoment, memberName, t, session.locale.format.locale) : { names: [], words: "" };
 
   // The six everyday domains, in the order a household actually reaches for
   // them — responsibilities/school/meals/groceries/bills/upkeep. Househelper,
@@ -814,42 +817,50 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           </div>
           {nextMoment ? (
             <>
+              {/* The event gets the card's full width: no second kind tile (the
+                  heading says the kind), and its action moves down beside who
+                  is going, so the title and its time never squeeze (rule 15). */}
               <ul className="-mx-2">
                 <CalendarItem
                   title={nextMoment.title}
                   kind={nextMoment.kind}
+                  showKind={false}
                   protectedTime={nextMoment.protected}
+                  protectedLabel={t("family.protected")}
                   day={formatDate(timezone, nextMoment.startsAt).split(" ")[0] ?? ""}
                   month={formatDate(timezone, nextMoment.startsAt).split(" ")[1] ?? ""}
-                  when={`${formatDate(timezone, nextMoment.startsAt, "long")} · ${formatTime(timezone, nextMoment.startsAt)}`}
-                  action={
-                    momentLook.family ? (
-                      <PillLink href="/family" tone="soft">
-                        {t("homeScreen.planTogether")}
-                      </PillLink>
-                    ) : (
-                      <PillLink href={`/family/events/${nextMoment.id}`} tone="soft">
-                        {t("homeScreen.openEvent")}
-                      </PillLink>
-                    )
-                  }
+                  when={eventWhen(nextMoment, timezone, t)}
+                  place={nextMoment.location}
+                  href={`/family/events/${nextMoment.id}`}
                 />
               </ul>
-              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--wh-border)] pt-3">
-                <div className="flex items-center gap-1.5">
-                  <AvatarGroup names={family.map((member) => member.displayName)} />
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--wh-border)] pt-3">
+                {/* Who is going is the event's own list, never the whole family. */}
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {momentGoing.names.length > 0 ? <AvatarGroup names={momentGoing.names} /> : null}
+                  <span className="min-w-0 text-xs text-[var(--wh-foreground-muted)]">{momentGoing.words}</span>
                   <Link
-                    href="/family"
-                    aria-label={t("homeScreen.addFamilyMember")}
+                    href={`/family/events/${nextMoment.id}#family`}
+                    aria-label={t("events.going.ask")}
+                    title={t("events.going.ask")}
                     className="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-[var(--wh-border-strong)] text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)]"
                   >
                     <UserRoundPlus aria-hidden className="size-4" />
                   </Link>
                 </div>
-                <ScriptAccent size="sm" tilt={false} heart>
-                  {t("homeScreen.moreFamilyTime")}
-                </ScriptAccent>
+                {momentLook.family ? (
+                  <PillLink href="/family" tone="soft">
+                    {t("homeScreen.planTogether")}
+                  </PillLink>
+                ) : (
+                  <PillLink href={`/family/events/${nextMoment.id}`} tone="soft">
+                    {t("homeScreen.openEvent")}
+                  </PillLink>
+                )}
               </div>
+              <ScriptAccent size="sm" tilt={false} heart className="mt-2 block text-end">
+                {t("homeScreen.moreFamilyTime")}
+              </ScriptAccent>
             </>
           ) : (
             <div className="flex flex-1 flex-col">

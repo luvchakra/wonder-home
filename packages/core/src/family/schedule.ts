@@ -47,6 +47,9 @@ export type FamilyEvent = {
   actionState: "needs_rsvp" | "needs_gift" | "needs_preparation" | "needs_travel" | "ready" | null;
   actionDueAt: Date | null;
   participants: { memberId: string; response: "unknown" | "yes" | "no" | "maybe"; required: boolean }[];
+  /** Runs local midnight to midnight; said as "All day", never as a time. Unset where a reader did not ask for it. */
+  allDay?: boolean;
+  location?: string | null;
 };
 
 /**

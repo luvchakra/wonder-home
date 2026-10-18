@@ -11,7 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
-| 2026-10-18 | [Decorated invitations, and five fixes from the owner's phone (26-009, 26-010, 08-014, 07-009, 07-010)](2026-10-18-decorated-invitations.md) |
+| 2026-10-18 | [Decorated invitations, and five fixes from the owner's phone (26-009, 26-010, 08-014, 07-009, 07-010, 05-009, 26-011)](2026-10-18-decorated-invitations.md) |
 | 2026-10-18 | [A child's classes in Family; an honest empty today (08-013, 26-008)](2026-10-18-family-classes-and-today.md) |
 | 2026-10-18 | [Kids & School: teachers, classes outside school, today's classes on the Calendar (08-010 to 08-012)](2026-10-18-kids-school-details.md) |
 | 2026-10-18 | [Gemini Live writes what was said; sheets open calmly with the keyboard (04-023, 25-016)](2026-10-18-live-transcript-and-sheets.md) |
