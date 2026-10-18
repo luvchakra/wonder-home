@@ -110,9 +110,15 @@ describe("least privilege: a voice link can do less than the member, never more"
 
   it("paying, ordering, delegating and running the agents are never over a voice link, whatever the scopes", () => {
     const everything = normaliseScopes([...DEFAULT_VOICE_SCOPES, ...SENSITIVE_VOICE_SCOPES]);
-    for (const action of ["make_payment", "order_items", "assign_responsibility", "check_agents", "set_preference", "adjust_schedule"] as const) {
+    for (const action of ["make_payment", "order_items", "assign_responsibility", "check_agents", "adjust_schedule"] as const) {
       expect(voiceAllowsAction(action, everything)).toBe(false);
     }
+  });
+
+  it("telling WonderHome something about the family works by voice, with no scope of its own (owner, 2026-10-18)", () => {
+    // Kept as learned, never certified, and correctable in the app — so it is
+    // a member's own words, like a question, not a change to who does what.
+    expect(voiceAllowsAction("set_preference", [])).toBe(true);
   });
 
   it("facts open by scope: without bills.read or health.read those domains are closed", () => {

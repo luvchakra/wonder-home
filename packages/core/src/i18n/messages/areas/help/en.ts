@@ -134,7 +134,7 @@ export const helpEn = {
   "help.guide.voice.body.1":
     "Tap the microphone and your words appear in the box for you to check before sending. Nothing is sent until you do.",
   "help.guide.voice.body.2":
-    "Live conversation is hands-free: WonderHome listens, answers out loud and keeps going until you end it, and you can pause and resume. It runs on WonderHome's own voice or, where your household has chosen it and it is available, on Gemini Live. The composer shows which one is answering and lets you switch.",
+    "Live conversation is hands-free: WonderHome listens, answers out loud and keeps going until you end it, and you can pause and resume. It runs on WonderHome's own voice or, where your household has chosen it and it is available, on Gemini Live. The composer shows which one is answering and lets you switch. By voice you can ask about the household, add to the grocery list, set a reminder for yourself, and tell WonderHome what someone in the family likes or doesn't — kept as learned, and yours to correct in HomeBrain Review. Changing who does what, plans and payments stay in the app.",
   "help.guide.voice.body.3":
     "Settings → Voice chooses the speech service (your browser's own, or a more accurate one), the voice, and how it listens. Where a choice is not available to your household, it is shown with the reason rather than offered and broken. If an Admin can change that reason, for example Gemini Live needing a Google AI key, a link goes straight to the setting and brings you back once it is saved.",
   "help.guide.voice.body.4":
@@ -233,7 +233,7 @@ export const helpEn = {
   "help.guide.meals-and-shopping.body.2":
     "To buy shows just what's on the list, by category. Mark as bought asks how much you actually bought of each: that amount is added to what's at home, and anything you bought less of stays on the list. Use soon shows use-by dates someone entered from the pack, and items at or below the low level you set on their page. Add item searches what you already have first, including things you stopped tracking, so the same thing isn't added twice.",
   "help.guide.meals-and-shopping.body.3":
-    "Send a receipt through HomeSend and each line you keep becomes purchase history for that item. Lines it cannot match to something you track are yours to match, start tracking or skip; it never guesses. Ordering from a shop is not available, so nothing is ever bought on your behalf.",
+    "Send a receipt through HomeSend and each line you keep becomes purchase history for that item. Lines it cannot match to something you track are yours to match, start tracking or skip; it never guesses. Ordering from a shop is not available, so nothing is ever bought on your behalf. Each kept line is also added to what's at home and taken off the list when it's waiting there; the review shows the amount before and after, and you can untick either. If someone counted the item after the receipt's day, it isn't added again unless you tick it. A receipt that looks already recorded — the same shop, day and total — is only recorded again when you tick Record it again. Undo takes the purchase, the amount at home and the list change back together.",
   "help.guide.meals-and-shopping.body.4":
     "Meals has a plan, your recipes, and preferences. A recipe can carry rough nutrients per serving. Suggest proposes a meal from what you have and what people like, and missing ingredients go on the shopping list.",
   "help.guide.meals-and-shopping.body.5":

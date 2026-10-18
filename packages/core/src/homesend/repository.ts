@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
+import type { RecordedReceipt } from "../commerce/receipt-stock";
 import type {
   HomeSendExtraction,
   HomeSendFailureReason,
@@ -114,6 +115,33 @@ export async function listHomeSendItems(
   const { data, error } = await query;
   if (error) throw new Error(`listHomeSendItems failed: ${error.code ?? "unknown"}`);
   return (data ?? []).map((row) => fromRow(row as Row));
+}
+
+/**
+ * Receipts this household already recorded, as they were read — shop, day and
+ * total — for catching the same receipt sent twice (HomeFood 25-003b). An
+ * undone receipt is not recorded any more and does not count.
+ */
+export async function listRecordedReceipts(supabase: SupabaseClient, householdId: string): Promise<RecordedReceipt[]> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .select("id, extracted, reviewed_at, created_at")
+    .eq("household_id", householdId)
+    .eq("status", "routed")
+    .eq("routed_table", "consumable_purchases")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(`listRecordedReceipts failed: ${error.code ?? "unknown"}`);
+  return ((data ?? []) as Row[]).map((row) => {
+    const read = (row.extracted ?? {}) as { merchant?: unknown; documentDate?: unknown; amount?: unknown };
+    return {
+      id: row.id as string,
+      merchant: typeof read.merchant === "string" ? read.merchant : null,
+      purchasedOn: typeof read.documentDate === "string" ? read.documentDate : null,
+      total: typeof read.amount === "number" ? read.amount : null,
+      recordedAt: ((row.reviewed_at as string | null) ?? (row.created_at as string)) as string,
+    };
+  });
 }
 
 export async function getHomeSendItem(supabase: SupabaseClient, householdId: string, itemId: string): Promise<HomeSendItem | null> {

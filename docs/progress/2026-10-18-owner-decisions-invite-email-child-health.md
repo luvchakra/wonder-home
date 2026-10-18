@@ -43,7 +43,7 @@ This note covers what each became.
   - **Office picker.** "WeWork BKC Mumbai" listed real results, and saving showed Office: WeWork.
   - **Add a place.** "Blue Tokai Coffee Bandra" listed three real branches, and saving added the place to the place book.
   - **Layout.** No horizontal scroll at either width.
-- **Not verified here:** a real send. This sandbox cannot reach any SMTP port. It is checked on production after the merge.
+- **A real send:** this sandbox cannot reach any SMTP port, so it was checked on production after the merge: GoDaddy accepted the email and the sheet said "Sent to connect@wonderapps.biz".
 
 ## Still open
 

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**236 of 246 stories done — 95.9%**
+**236 of 247 stories done — 95.5%**
 
 | Status | Stories |
 |---|---:|
 | Done | 236 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 6 |
+| Not Started | 7 |
 | Deferred | 1 |
 
 ## By module
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 7 | 7 | — |
-| 25 HomeFood | `████░░░░░░` | 2 | 5 | 1 in progress, 2 not started |
+| 25 HomeFood | `███░░░░░░░` | 2 | 6 | 1 in progress, 3 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
@@ -61,6 +61,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
+| `25-006` A shared grocery catalog with quick-commerce search | 25 HomeFood | P0 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -159,7 +160,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-014` Gemini Voice: Gemini Live as a HomeTalk channel | P0 | Done | Voice phase 3: `voicelink/gemini-live.ts` (12 allowlisted tools, each only words a member could say to HomeTalk), single-use Live tokens locked to that config, `/voice/gemini/session` + `/voice/gemini/tool`, facts narrowed to the content classes the household lets reach Google, `useGeminiLive` behind the one live control, `live_engine` voice setting. Live-verified token → Gemini Live → tool → HomeTalk → spoken answer; in-browser mic audio not exercisable in the sandbox (its proxy has no WebSocket upgrades) |
 | `04-015` Alexa as a HomeTalk channel | P1 | Done | Voice phase 4: `/api/v1/voice/alexa` verified as Amazon documents (cert chain, signature, timestamp, skill id), carrier-word interaction model; inert until a person creates the skill and sets `ALEXA_*` (`integrations/alexa/README.md`) |
 | `04-016` Unified voice experience and capability matrix | P0 | Done | Voice phase 5: `voicelink/capabilities.ts` — the spec's matrix as data, every HomeTalk action placed once, every cell held to the real gates by `capabilities.test.ts`, shown to households on `/settings/voice-assistants`; payments/orders stay app-only by voice (stricter than the spec, on purpose). Conversations belong to their surface (`conversation_sessions.surface`: app / alexa, migration `20260926100000`, applied live) — a question the app asked is never answered by Alexa. Everyday domain questions ("what's for dinner?", "do we need milk?", "do the kids have homework?") now read by the rules |
-| `04-017` Voice evaluation, metrics and release gates | P0 | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery |
+| `04-017` Voice evaluation, metrics and release gates | P0 | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery Since 2026-10-18 (owner's report: Gemini Live said it could not update a family preference), telling WonderHome what someone likes is available by voice: `family_facts` capability, Gemini tool `remember_family_fact`, `set_preference` needs no voice scope (kept as learned, correctable in HomeBrain Review); eval voice gate 18/18 tool sentences |
 
 ### 05 — Household Certification & Understanding
 
@@ -482,14 +483,15 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-2 of 5 done `████░░░░░░`
+2 of 6 done `███░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `25-001` One Groceries list: what's at home and what to buy | P0 | Done | Formerly 09-010. #207, Phase 1 (design/GROCERIES-PANTRY-HOMETALK-PHASE0.md, approved 2026-10-17): stock and to-buy are separate amounts with unit-safe arithmetic, written only through three database functions; item page, add-item search, mark bought, use soon; groceries on every plan |
 | `25-002` HomeTalk manages groceries | P0 | Done | Formerly 09-011. #209, Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens (`conversation/quantity.ts`, `conversation/grocery-actions.ts`; actions `set_stock`, `use_stock`, `mark_bought`); dialogues A–H as evaluation cases |
-| `25-003` Meals, receipts and use-soon reconcile with stock | P1 | In Progress | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. Still to do: **b** receipts add to stock and close list entries, duplicate receipts; **c** use-soon and depletion wording never claims stock |
+| `25-003` Meals, receipts and use-soon reconcile with stock | P1 | In Progress | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. **b (receipts into stock) done 2026-10-18:** `commerce/receipt-stock.ts` (`receiptStockLine`: each kept line's stock before → after and the list amount it takes off, in the item's unit, never across dimensions; add-to-stock off by default when a person counted the item after the receipt's day; `duplicateReceipt`: same shop, day and total as a recorded receipt), the receipt review's **Add to what's at home** and **Take it off the list** per line, the server recomputing both before writing through `changeStock`/`adjustListEntry` with keys tied to the purchase, undo reversing the purchase, the stock and the list together (`recordedChange`), and a duplicate flagged with a required **Record it again**; browser-checked at 360px and desktop against the live project. Still to do: **c** use-soon and depletion wording never claims stock |
 | `25-004` Send to Cook over WhatsApp | P1 | Not Started | Formerly 09-013. Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
+| `25-006` A shared grocery catalog with quick-commerce search | P0 | Not Started | The owner's ask, 2026-10-18: typing in **Add an item** shows results like a quick-commerce app — name, picture, pack size — from one catalog shared by every household (a platform table, not a household's), with images and nutrient values per item, kept current. Needs a licensed source for products, images and nutrients (never invented), and a per-household item still made from the catalog entry the person picks |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents
