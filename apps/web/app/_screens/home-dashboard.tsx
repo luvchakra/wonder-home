@@ -1,9 +1,11 @@
 import {
   AlertTriangle,
+  CalendarClock,
   CalendarHeart,
   CalendarOff,
   ChevronRight,
   CircleCheck,
+  GraduationCap,
   Heart,
   PawPrint,
   Sparkles,
@@ -363,7 +365,21 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const endOfToday = new Date(now);
   endOfToday.setHours(23, 59, 59, 999);
   const todayFocus = upcoming.filter((event) => event.startsAt <= endOfToday && event.status !== "cancelled").slice(0, 3);
-  const nextMoment = upcoming.find((event) => event.protected || event.kind === "family_time" || event.kind === "outing") ?? upcoming[0] ?? null;
+  // The next family moment (the calendar's family kinds); only when there is
+  // none, the next thing of any kind, said as what it is (below).
+  const FAMILY_KINDS = new Set(["family_time", "outing", "birthday", "gathering", "travel", "special_occasion"]);
+  const nextMoment = upcoming.find((event) => FAMILY_KINDS.has(event.kind)) ?? upcoming[0] ?? null;
+  // The card says what the event is (the owner, 2026-10-18: a school trip
+  // came up as a "Family moment" with a heart and "Plan together"): when the
+  // next thing is a school event or an appointment, the heading, the icon and
+  // the action follow its kind.
+  const momentLook =
+    nextMoment?.kind === "school_event"
+      ? { heading: t("home.schoolMoment"), icon: GraduationCap, iconClass: "text-[var(--wh-tone-school)]", family: false }
+      : nextMoment?.kind === "appointment"
+        ? { heading: t("home.appointmentMoment"), icon: CalendarClock, iconClass: "text-[var(--wh-primary)]", family: false }
+        : { heading: t("home.familyMoment"), icon: Heart, iconClass: "text-[var(--wh-tone-people)]", family: true };
+  const MomentIcon = momentLook.icon;
 
   // The six everyday domains, in the order a household actually reaches for
   // them — responsibilities/school/meals/groceries/bills/upkeep. Househelper,
@@ -793,8 +809,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
         <Card className="wh-rise p-4" style={{ "--wh-rise-delay": "150ms" } as React.CSSProperties}>
           <div className="mb-3 flex items-center gap-2.5">
-            <Heart aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-people)]" />
-            <h2 className="text-base font-semibold tracking-tight">{t("home.familyMoment")}</h2>
+            <MomentIcon aria-hidden className={`size-5 shrink-0 ${momentLook.iconClass}`} />
+            <h2 className="text-base font-semibold tracking-tight">{nextMoment ? momentLook.heading : t("home.familyMoment")}</h2>
           </div>
           {nextMoment ? (
             <>
@@ -807,9 +823,15 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   month={formatDate(timezone, nextMoment.startsAt).split(" ")[1] ?? ""}
                   when={`${formatDate(timezone, nextMoment.startsAt, "long")} · ${formatTime(timezone, nextMoment.startsAt)}`}
                   action={
-                    <PillLink href="/family" tone="soft">
-                      {t("homeScreen.planTogether")}
-                    </PillLink>
+                    momentLook.family ? (
+                      <PillLink href="/family" tone="soft">
+                        {t("homeScreen.planTogether")}
+                      </PillLink>
+                    ) : (
+                      <PillLink href={`/family/events/${nextMoment.id}`} tone="soft">
+                        {t("homeScreen.openEvent")}
+                      </PillLink>
+                    )
                   }
                 />
               </ul>

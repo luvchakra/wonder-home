@@ -98,6 +98,8 @@ export const zh: Catalog = {
   "home.handledLede": "这些事我们已经帮你办好了。",
   "home.todaysFocus": "今日重点",
   "home.familyMoment": "家庭时光",
+  "home.schoolMoment": "学校活动",
+  "home.appointmentMoment": "预约",
 
   "personalize.title": "打造你的专属体验",
   "personalize.body": "选择你的语言、地区和货币。",

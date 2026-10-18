@@ -98,6 +98,8 @@ export const hi: Catalog = {
   "home.handledLede": "यह वह है जिसका हमने ध्यान रखा।",
   "home.todaysFocus": "आज का ध्यान",
   "home.familyMoment": "परिवार का पल",
+  "home.schoolMoment": "स्कूल का कार्यक्रम",
+  "home.appointmentMoment": "अपॉइंटमेंट",
 
   "personalize.title": "अपना अनुभव निजी बनाएँ",
   "personalize.body": "अपनी भाषा, क्षेत्र और मुद्रा चुनें।",

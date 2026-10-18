@@ -579,6 +579,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "homeScreen.clearDay": "मोकळा दिवस",
   "homeScreen.clearDayLede": "काहीही तुमची वाट पाहत नाही, आणि आज कॅलेंडरवर महत्त्वाचे काहीही उरलेले नाही.",
   "homeScreen.planTogether": "एकत्र नियोजन करा",
+  "homeScreen.openEvent": "कार्यक्रम उघडा",
   "homeScreen.addFamilyMember": "कुटुंबातील सदस्य जोडा",
   "homeScreen.moreFamilyTime": "कुटुंबासाठी जास्त वेळ!",
   "homeScreen.moreMoments": "असे आणखी क्षण.",

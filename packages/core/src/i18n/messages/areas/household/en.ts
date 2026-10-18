@@ -577,6 +577,7 @@ export const householdEn = {
   "homeScreen.clearDay": "A clear day",
   "homeScreen.clearDayLede": "Nothing is waiting on you, and nothing important is left on the calendar today.",
   "homeScreen.planTogether": "Plan together",
+  "homeScreen.openEvent": "Open event",
   "homeScreen.addFamilyMember": "Add a family member",
   "homeScreen.moreFamilyTime": "More family time!",
   "homeScreen.moreMoments": "More moments like this.",

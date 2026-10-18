@@ -98,6 +98,8 @@ export const ar: Catalog = {
   "home.handledLede": "هذا ما اعتنينا به.",
   "home.todaysFocus": "أولويات اليوم",
   "home.familyMoment": "لحظة عائلية",
+  "home.schoolMoment": "فعالية مدرسية",
+  "home.appointmentMoment": "موعد",
 
   "personalize.title": "خصّص تجربتك",
   "personalize.body": "اختر لغتك ومنطقتك وعملتك.",

@@ -10,6 +10,7 @@
 | 4 | P1 | 26-004 | Calendar reminders and holiday region | Not Started | Formerly 12-012. C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |
 | 5 | P2 | 26-005 | Calendar notices over WhatsApp | Not Started | Formerly 12-013. C5: only if wanted; the official template, shared with Groceries' Send to Cook |
 | 6 | P2 | 26-006 | Google and Outlook calendars | Not Started | Formerly 12-014. C6: only after a separate approval |
+| 7 | P1 | 26-007 | Home's next event says what kind it is | Done | The owner's report, 2026-10-18 (PR #232): a school trip came up on Home as a "Family moment" with a heart and "Plan together". The card now takes the next family-kind event (family time, outing, birthday, gathering, travel, special occasion), and only when there is none the next event of any kind, said as what it is: "School event" with the school tile and "Open event" to that event's page, "Appointment" likewise, "Family moment" with "Plan together" for the rest. `CalendarItem` gives school events and appointments the calendar's own tiles, and its Protected badge wraps under a short title instead of being cut. Words in eight languages. Browser-checked at 360px and 1280px: a protected school trip alone reads School event / Open event (the event page opens); with a family picnic three days later the card is the picnic, Family moment / Plan together; no horizontal scroll |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -53,6 +54,11 @@ HomeEvents is the owner's name for everything about the household's calendar: fa
 **Epic:** HomeEvents
 **Priority:** P2
 **Goal:** Two-way sync with Google and Outlook calendars, only after a separate approval.
+
+### Story 26-007 — Home's next event says what kind it is
+**Epic:** HomeEvents
+**Priority:** P1
+**Goal:** Home's next-event card is named, drawn and acted on as the kind of event it is, so a school trip is never shown as a family moment.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

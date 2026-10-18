@@ -108,6 +108,8 @@ export const en = {
   "home.handledLede": "Here is what we have taken care of.",
   "home.todaysFocus": "Today's focus",
   "home.familyMoment": "Family moment",
+  "home.schoolMoment": "School event",
+  "home.appointmentMoment": "Appointment",
 
   "personalize.title": "Personalize your experience",
   "personalize.body": "Choose your language, region and currency.",

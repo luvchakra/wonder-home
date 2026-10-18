@@ -98,6 +98,8 @@ export const es: Catalog = {
   "home.handledLede": "Esto es lo que hemos atendido.",
   "home.todaysFocus": "El foco de hoy",
   "home.familyMoment": "Momento en familia",
+  "home.schoolMoment": "Evento escolar",
+  "home.appointmentMoment": "Cita",
 
   "personalize.title": "Personaliza tu experiencia",
   "personalize.body": "Elige tu idioma, región y moneda.",

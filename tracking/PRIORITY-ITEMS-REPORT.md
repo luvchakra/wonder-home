@@ -74,6 +74,7 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | "What does Upasana like in food?" answered from what was remembered (it said "no records" minutes after "Remembered") | 04-019 | Done, #228 — the rule fix; the cause is a design limit, see below |
 | HomeTalk knows the whole household, fast: guests at an event two months out, no forgetting, replies in ~2 s | 14-020 to 14-023 | Owner said go, 2026-10-18. Phase A (the Household Context Store, 14-020) done in #230 and live: whole context, guests, preferences, places. **Next:** phase B (retrieval and one pass, the speed), then C, then D |
 | Gemini Live takes a few seconds to start listening, but looked ready at once: show the wait prominently until it can hear | 04-021 | Done in #230: "Getting ready… don't speak yet" in amber with a turning ring, then "Ready — speak now" in green; the same for WonderHome's own voice, on the live bar and in the floating window; browser-checked at 360px and desktop |
+| A school event showed on Home as a "Family moment": display events by their type | 26-007 | Done in #232: School event / Appointment / Family moment by kind, family moments preferred; browser-checked |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |

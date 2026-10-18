@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**249 of 265 stories done — 94%**
+**250 of 266 stories done — 94%**
 
 | Status | Stories |
 |---|---:|
-| Done | 249 |
+| Done | 250 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 12 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 8 | 8 | — |
 | 25 HomeFood | `█████░░░░░` | 7 | 13 | 1 in progress, 5 not started |
-| 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
+| 26 HomeEvents | `██░░░░░░░░` | 2 | 7 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -519,7 +519,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-1 of 6 done `█░░░░░░░░░`
+2 of 7 done `██░░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -529,5 +529,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-004` Calendar reminders and holiday region | P1 | Not Started | Formerly 12-012. C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |
 | `26-005` Calendar notices over WhatsApp | P2 | Not Started | Formerly 12-013. C5: only if wanted; the official template, shared with Groceries' Send to Cook |
 | `26-006` Google and Outlook calendars | P2 | Not Started | Formerly 12-014. C6: only after a separate approval |
+| `26-007` Home's next event says what kind it is | P1 | Done | The owner's report, 2026-10-18 (PR #232): a school trip came up on Home as a "Family moment" with a heart and "Plan together". The card now takes the next family-kind event (family time, outing, birthday, gathering, travel, special occasion), and only when there is none the next event of any kind, said as what it is: "School event" with the school tile and "Open event" to that event's page, "Appointment" likewise, "Family moment" with "Plan together" for the rest. `CalendarItem` gives school events and appointments the calendar's own tiles, and its Protected badge wraps under a short title instead of being cut. Words in eight languages. Browser-checked at 360px and 1280px: a protected school trip alone reads School event / Open event (the event page opens); with a family picnic three days later the card is the picnic, Family moment / Plan together; no horizontal scroll |
 
 _Generated 2026-10-18 from 27 backlog files._

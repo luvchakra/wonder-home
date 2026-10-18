@@ -1,4 +1,4 @@
-import { CalendarDays, Cake, ChevronRight, Gift, Heart, PartyPopper, Plane, Users } from "lucide-react";
+import { CalendarClock, CalendarDays, Cake, ChevronRight, Gift, GraduationCap, Heart, PartyPopper, Plane, Users } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
@@ -33,6 +33,10 @@ const KIND_ICON: Record<string, { icon: ComponentType<{ className?: string }>; t
   visit: { icon: Users, tone: "people" },
   family_time: { icon: Heart, tone: "people" },
   special_occasion: { icon: Gift, tone: "people" },
+  gathering: { icon: Users, tone: "people" },
+  // The calendar's own look for these (`CATEGORY_LOOK`): school is school's tile, never a family heart.
+  school_event: { icon: GraduationCap, tone: "school" },
+  appointment: { icon: CalendarClock, tone: "primary" },
 };
 
 export function CalendarItem({ title, when, kind, protectedTime, day, month, action, className, protectedLabel = "Protected", href }: CalendarItemProps) {
@@ -49,10 +53,11 @@ export function CalendarItem({ title, when, kind, protectedTime, day, month, act
       </span>
       <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">
-          {title}
+        {/* The badge wraps under the title when the row is narrow, never under the action (rule 15). */}
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-medium">
+          <span className="min-w-0">{title}</span>
           {protectedTime ? (
-            <span className="ml-1.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-tone-people-soft)] px-1.5 py-0.5 text-[0.625rem] font-semibold text-[var(--wh-tone-people)]">
+            <span className="shrink-0 rounded-[var(--wh-radius-pill)] bg-[var(--wh-tone-people-soft)] px-1.5 py-0.5 text-[0.625rem] font-semibold whitespace-nowrap text-[var(--wh-tone-people)]">
               {protectedLabel}
             </span>
           ) : null}
