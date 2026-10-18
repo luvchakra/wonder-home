@@ -156,6 +156,7 @@ export default async function GroceriesPage({
               unit: item.unit,
               step: item.step,
               onList: Boolean(item.toBuy),
+              catalogId: item.catalog?.id ?? null,
             }))}
             retired={retired}
             categories={categories}

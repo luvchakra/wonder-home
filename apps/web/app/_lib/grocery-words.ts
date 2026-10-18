@@ -1,3 +1,4 @@
+import { NUTRIENT_KEYS } from "@wonderhome/core/commerce/catalog";
 import { COUNTED_UNITS, UNIT_CHOICES } from "@wonderhome/core/commerce/units";
 import type {
   Translate,
@@ -138,6 +139,18 @@ export function groceryWords(translate: Translate, language: string | undefined)
       added: t("grocery.add.added"),
       pickerAddNew: t("grocery.picker.addNew"),
       pickerChooseExisting: t("grocery.picker.chooseExisting"),
+      catalog: t("grocery.add.catalog"),
+      catalogAdd: t("grocery.add.catalogAdd"),
+      catalogSearching: t("grocery.add.catalogSearching"),
+      catalogFailed: t("grocery.add.catalogFailed"),
+      catalogCredit: t("grocery.add.catalogCredit"),
+    },
+    nutrition: {
+      title: t("grocery.item.nutrition"),
+      per100g: t("grocery.item.nutritionPer100g"),
+      per100ml: t("grocery.item.nutritionPer100ml"),
+      credit: t("grocery.item.nutritionCredit", { source: "{source}" }),
+      names: Object.fromEntries(NUTRIENT_KEYS.map((nutrient) => [nutrient, t(`grocery.nutrient.${nutrient}` as TranslationKey)])) as Record<(typeof NUTRIENT_KEYS)[number], string>,
     },
   };
 }

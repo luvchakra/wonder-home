@@ -1,5 +1,6 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { reconcileAllProviders, type ReconciliationSummary } from "@wonderhome/core/billing/reconcile";
+import { importOpenFoodFacts, todaysQueries, type ImportReport } from "@wonderhome/core/commerce/catalog-import";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
@@ -183,9 +184,19 @@ export async function POST(request: Request) {
       log.error("payments reconciliation failed", { reason: reconciliationError, allow: ["reason"] });
     }
 
+    // The shared grocery catalog (HomeFood 25-006): a few staples a night,
+    // from Open Food Facts, so it stays current without one long run.
+    let catalog: ImportReport | null = null;
+    try {
+      catalog = await importOpenFoodFacts(admin, fetch, todaysQueries(new Date()));
+    } catch (thrown) {
+      log.warn("grocery catalog refresh failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+    }
+
     return Response.json(
       {
         swept,
+        catalog,
         deletionsFulfilled,
         deletionsFailed,
         healthReminders: reminderSummary ?? { error: reminderError },

@@ -8,7 +8,9 @@
 | 2 | P0 | 25-002 | HomeTalk manages groceries | Done | Formerly 09-011. #209, Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens (`conversation/quantity.ts`, `conversation/grocery-actions.ts`; actions `set_stock`, `use_stock`, `mark_bought`); dialogues A–H as evaluation cases |
 | 3 | P1 | 25-003 | Meals, receipts and use-soon reconcile with stock | In Progress | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. **b (receipts into stock) done 2026-10-18:** `commerce/receipt-stock.ts` (`receiptStockLine`: each kept line's stock before → after and the list amount it takes off, in the item's unit, never across dimensions; add-to-stock off by default when a person counted the item after the receipt's day; `duplicateReceipt`: same shop, day and total as a recorded receipt), the receipt review's **Add to what's at home** and **Take it off the list** per line, the server recomputing both before writing through `changeStock`/`adjustListEntry` with keys tied to the purchase, undo reversing the purchase, the stock and the list together (`recordedChange`), and a duplicate flagged with a required **Record it again**; browser-checked at 360px and desktop against the live project. Still to do: **c** use-soon and depletion wording never claims stock |
 | 4 | P1 | 25-004 | Send to Cook over WhatsApp | Not Started | Formerly 09-013. Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
-| 6 | P0 | 25-006 | A shared grocery catalog with quick-commerce search | Not Started | The owner's ask, 2026-10-18: typing in **Add an item** shows results like a quick-commerce app — name, picture, pack size — from one catalog shared by every household (a platform table, not a household's), with images and nutrient values per item, kept current. Needs a licensed source for products, images and nutrients (never invented), and a per-household item still made from the catalog entry the person picks |
+| 6 | P0 | 25-006 | A shared grocery catalog with quick-commerce search | Done | 2026-10-18, browser-checked at 360px and desktop. `grocery_catalog` (migrations `20261018190000`, `20261018200000`, live): one platform table every household reads and none writes, each row's `id` its catalog id. **Items:** 1,559 generic things WonderHome curated itself across 29 categories (`supabase/seed/grocery-catalog/items.csv`, loaded by `npm run catalog:seed`), each with its other names (Hindi in both scripts, regional names, spellings). **Products:** packed products from Open Food Facts India (Indian barcode, brand, pack and picture required; no alcohol), pictures copied into WonderHome's own storage, label nutrients as stated, credited (ODbL/CC BY-SA). Search ranks in the database (`public.search_grocery_catalog`). **Add an item** shows the household's own items, then the catalog; picking one creates or reuses the household's item, linked. The item page shows the catalog picture and label nutrition. `usda_foods` holds USDA foods with a `catalog_id` link, empty and linked later (25-007) |
+| 7 | P2 | 25-007 | USDA nutrition for catalog items, linked in phases | Not Started | The owner, 2026-10-18: lower priority, linking is research done in phases. `usda_foods.catalog_id` is the link (candidate until a person approves). Phase 1 load Foundation + SR Legacy; phase 2 candidates by the structured matcher (`design/grocery-catalog/USDA_NUTRITION_MATCHING_STUDY.md`); phase 3 a review screen; phase 4 approved values shown as "approximate" where they are |
+| 8 | P2 | 25-008 | Catalog follow-ups: pictures for curated items, products linked to their item | Not Started | Curated items show their category icon, not a picture. A product names the item it is (`grocery_catalog.item_id`) only by review. A native speaker should check the regional names the curators flagged |
 | 5 | P2 | 25-005 | "Make that 2 litres" corrects an amount | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
@@ -54,6 +56,16 @@ HomeFood is everything about the household's food: what is at home, what to buy,
 **Epic:** HomeFood
 **Priority:** P0
 **Goal:** Adding an item searches one catalog every household shares, showing pictures, pack sizes and nutrients from a real, licensed source.
+
+### Story 25-007 — USDA nutrition for catalog items, linked in phases
+**Epic:** HomeFood
+**Priority:** P2
+**Goal:** A catalog item shows nutrition from a USDA food a person has approved as its match, labelled approximate where it is.
+
+### Story 25-008 — Catalog follow-ups
+**Epic:** HomeFood
+**Priority:** P2
+**Goal:** Curated items carry WonderHome's own pictures, and a packed product knows which generic item it is.
 
 ### Story 25-005 — "Make that 2 litres" corrects an amount
 **Epic:** HomeFood

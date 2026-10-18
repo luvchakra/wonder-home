@@ -15,16 +15,20 @@ import {
   setGroceryImage,
   setUseBy,
 } from "@wonderhome/core/commerce/inventory";
+import { getCatalogEntry, searchCatalog, type CatalogEntry } from "@wonderhome/core/commerce/catalog";
 import {
   createConsumable,
   retireConsumable,
   updateConsumable,
 } from "@wonderhome/core/commerce/repository";
 import {
+  compatible,
   normalizeUnit,
   parseQuantity,
+  stepInBase,
   toBase,
 } from "@wonderhome/core/commerce/units";
+import { publicEnv } from "@wonderhome/core/config/env";
 import { similarity } from "@wonderhome/core/context/normalize";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -506,5 +510,69 @@ export async function groceryPhotoAction(
     return { notice: "Photo updated." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "commerce").body.error.message };
+  }
+}
+
+export type CatalogResult = { ok: true; entries: CatalogEntry[] } | { ok: false };
+
+/**
+ * The shared catalog for what someone typed in Add an item (HomeFood 25-006):
+ * pictures, names, brands and packs, like a quick-commerce search. Reads only.
+ */
+export async function searchCatalogAction(householdId: string, query: string): Promise<CatalogResult> {
+  const parsed = z.object({ householdId: uuid, query: z.string().trim().min(2).max(60) }).safeParse({ householdId, query });
+  if (!parsed.success) return { ok: true, entries: [] };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const entries = await searchCatalog(supabase, parsed.data.query, { supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL, limit: 10 });
+    return { ok: true, entries };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export type CatalogAddResult = { ok: true; itemId: string; name: string; created: boolean } | { ok: false; error: string };
+
+/**
+ * Adds a catalog entry to the household's list: the household's own item for
+ * it if there is one — linked to the entry, or plainly the same name — else a
+ * new item made from the entry (name, category, unit, linked), then one pack
+ * to buy. The entry is read again here; the browser names only its id.
+ */
+export async function addFromCatalogAction(input: { householdId: string; catalogId: string; key: string }): Promise<CatalogAddResult> {
+  const parsed = z.object({ householdId: uuid, catalogId: uuid, key }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please try again." };
+  const { householdId, catalogId } = parsed.data;
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, householdId);
+    const entry = await getCatalogEntry(supabase, catalogId, publicEnv().NEXT_PUBLIC_SUPABASE_URL);
+    if (!entry) return { ok: false, error: "That item is no longer in the catalog." };
+
+    const name = entry.name;
+    const existing = (await listGroceries(supabase, householdId)).find(
+      (item) => item.catalog?.id === entry.id || [item.name, ...item.aliases].some((known) => similarity(known, name) >= 0.9),
+    );
+    let itemId = existing?.id ?? null;
+    let created = false;
+    if (!itemId) {
+      ({ id: itemId } = await createConsumable(supabase, {
+        householdId,
+        name,
+        category: entry.category,
+        unit: entry.unit,
+        typicalQuantity: entry.pack?.quantity ?? 1,
+        catalogId: entry.id,
+      }));
+      created = true;
+    }
+    const preferred = existing?.unit ?? entry.unit;
+    const amount = entry.pack && compatible(entry.pack.unit, preferred) ? entry.pack : stepInBase(preferred, existing?.step ?? null);
+    await adjustListEntry(supabase, { householdId, itemId, kind: "add", amount, source: "manual", idempotencyKey: `${parsed.data.key}:list` });
+    revalidatePath("/groceries");
+    return { ok: true, itemId, name: existing?.name ?? name, created };
+  } catch (thrown) {
+    return failed(thrown);
   }
 }

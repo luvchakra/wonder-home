@@ -866,6 +866,15 @@ async function main() {
   const preferred = await admin.from("household_members").select("nickname_preferred").limit(1);
   check("a member can go by their nickname", !preferred.error, preferred.error?.code ?? "ok");
 
+  const curated = await admin.from("grocery_catalog").select("id", { count: "exact", head: true }).eq("kind", "item");
+  check("the grocery catalog holds WonderHome's curated items", !curated.error && (curated.count ?? 0) > 1000, curated.error?.code ?? `${curated.count} items`);
+  const anonCatalog = await anon.rpc("search_grocery_catalog", { p_query: "dal", p_limit: 3 });
+  check("anonymous cannot search the grocery catalog", Boolean(anonCatalog.error), anonCatalog.error?.code ?? "allowed!");
+  const usda = await admin.from("usda_foods").select("fdc_id, catalog_id, link_status").limit(1);
+  check("USDA foods carry a catalog id", !usda.error, usda.error?.code ?? "ok");
+  const anonUsda = await anon.from("usda_foods").select("fdc_id").limit(1);
+  check("anonymous cannot read USDA foods", Boolean(anonUsda.error) || (anonUsda.data ?? []).length === 0, anonUsda.error?.code ?? "no rows");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

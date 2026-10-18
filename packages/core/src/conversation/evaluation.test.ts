@@ -296,6 +296,7 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
     aliases: [],
     imageUrl: null,
     imagePath: null,
+    catalog: null,
     lastPurchasedOn: null,
     stock: null,
     toBuy: null,

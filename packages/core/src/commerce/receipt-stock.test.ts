@@ -4,7 +4,7 @@ import type { GroceryItem } from "./inventory";
 import { duplicateReceipt, receiptStockLine } from "./receipt-stock";
 
 const item = (unit: string, stock: { quantity: number; unit: string; confirmedAt: string; source?: string } | null, toBuy: { quantity: number; unit: string } | null = null): GroceryItem => ({
-  id: "milk", name: "Milk", category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, lastPurchasedOn: null,
+  id: "milk", name: "Milk", category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null,
   stock: stock ? { source: "stated", ...stock, confirmedBy: null, version: 1, useBy: null, useByBasis: null } as GroceryItem["stock"] : null,
   toBuy: toBuy ? { entryId: "e-milk", ...toBuy, version: 1, source: "manual", mealId: null } : null,
 });

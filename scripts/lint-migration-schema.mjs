@@ -51,6 +51,10 @@ const NON_TENANT_TABLES = new Set([
   "public_holidays",
   // One reconciliation pass per provider across every household (story 20-011); its findings carry household_id.
   "billing_reconciliation_runs",
+  // The shared grocery catalog (HomeFood 25-006): open data every household reads and none writes.
+  "grocery_catalog",
+  // USDA FoodData Central foods, linked to the catalog by review (25-006): public-domain reference data, service role only.
+  "usda_foods",
 ]);
 
 export function lintMigrationSource(filename, sql) {
