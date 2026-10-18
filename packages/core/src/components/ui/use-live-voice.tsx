@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { speakable, voiceQuality } from "../../conversation/speech";
+import { speakable, speechChunks, voiceQuality } from "../../conversation/speech";
 import { captureUtterance, microphoneAvailable, playClip } from "../../voice/capture";
 import { recognitionConstructor, type RecognitionLike } from "../../voice/recognition";
 
@@ -147,20 +147,40 @@ export function useLiveVoice(input: {
   const runWithProvider = useCallback(async () => {
     if (!householdId) return;
 
-    const speak = async (text: string): Promise<void> => {
+    const synthesise = async (text: string): Promise<{ audio: string; mimeType: string } | "off"> => {
       const response = await fetch(`/api/v1/households/${householdId}/voice`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ speak: speakable(text) }),
+        body: JSON.stringify({ speak: text }),
       });
       const payload = await response.json();
       // Spoken replies being switched off is a setting, not a failure: the
       // conversation carries on in text and listens again.
       if (!response.ok) {
-        if (response.status === 400) return;
+        if (response.status === 400) return "off";
         throw new Error(payload?.error?.message ?? "That reply could not be spoken.");
       }
-      await playClip({ base64: payload.audio, mimeType: payload.mimeType }, abortRef.current?.signal);
+      return { audio: payload.audio, mimeType: payload.mimeType };
+    };
+
+    // The first sentence is made and played on its own while the rest is
+    // still being made, so the reply starts as soon as one sentence is ready
+    // rather than when all of it is (owner's ask: voice was too slow).
+    const speak = async (text: string): Promise<void> => {
+      const pieces = speechChunks(speakable(text)).map((piece) => synthesise(piece));
+      // A piece that fails after the first is dropped quietly: what was heard stands.
+      pieces.slice(1).forEach((piece) => piece.catch(() => undefined));
+      for (const [index, piece] of pieces.entries()) {
+        let clip: Awaited<ReturnType<typeof synthesise>>;
+        try {
+          clip = await piece;
+        } catch (thrown) {
+          if (index === 0) throw thrown;
+          return;
+        }
+        if (clip === "off" || !activeRef.current) return;
+        await playClip({ base64: clip.audio, mimeType: clip.mimeType }, abortRef.current?.signal);
+      }
     };
 
     while (activeRef.current && !pausedRef.current) {
