@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { baseOf, defaultLadder, startAmount, uniformLadder, type Ladder } from "./buying-sizes";
 import { searchWords } from "./catalog-curated";
 import { normalizeUnit, unitInfo } from "./units";
 
@@ -24,7 +25,23 @@ import { normalizeUnit, unitInfo } from "./units";
 
 export const CATALOG_BUCKET = "grocery-catalog";
 
-export const NUTRIENT_KEYS = ["energy_kcal", "protein_g", "carbohydrate_g", "sugars_g", "fat_g", "saturated_fat_g", "fibre_g", "sodium_mg"] as const;
+export const NUTRIENT_KEYS = [
+  "energy_kcal",
+  "protein_g",
+  "carbohydrate_g",
+  "sugars_g",
+  "fat_g",
+  "saturated_fat_g",
+  "fibre_g",
+  "sodium_mg",
+  // What IFCT 2017 also measures for Indian foods (25-009); a label rarely states them.
+  "calcium_mg",
+  "iron_mg",
+  "potassium_mg",
+  "zinc_mg",
+  "vitamin_c_mg",
+  "folate_ug",
+] as const;
 export type NutrientKey = (typeof NUTRIENT_KEYS)[number];
 export type Nutrients = Partial<Record<NutrientKey, number>>;
 
@@ -33,19 +50,39 @@ export type CatalogSource = "wonderhome" | "open_food_facts" | "usda";
 export type CatalogEntry = {
   id: string;
   kind: "item" | "product";
+  /** The everyday variant a household means by the word (25-010). */
+  common: boolean;
   name: string;
   brand: string | null;
   category: string;
   subcategory: string | null;
   pack: { quantity: number; unit: string } | null;
   unit: string;
+  /** The amounts + and − step through, in the unit's base (25-010). */
+  ladder: Ladder;
   imageUrl: string | null;
+  /** Who made the picture and its licence, shown wherever it is (Wikimedia Commons pictures need it). */
+  imageCredit: string | null;
   nutrients: Nutrients;
   nutrientBasis: "100g" | "100ml" | null;
   source: CatalogSource;
   licence: string;
   attribution: string;
   sourceUrl: string | null;
+  /**
+   * For a curated item, the Indian food it is in IFCT 2017 (ICMR–NIN) and how
+   * close (25-009): nutrition per 100 g edible portion, credited to NIN.
+   */
+  ifct: IfctNutrition | null;
+};
+
+export type IfctNutrition = {
+  code: string;
+  name: string;
+  match: "exact" | "close" | "approximate";
+  note: string | null;
+  nutrients: Nutrients;
+  energyComputed: boolean;
 };
 
 /** A row as the import writes it. */
@@ -62,6 +99,8 @@ export type CatalogRow = {
   pack_quantity: number | null;
   pack_unit: string | null;
   unit: string;
+  /** A packed product steps by its own pack (25-010). */
+  buy_sizes: number[] | null;
   barcode: string | null;
   nutrients: Nutrients;
   nutrient_basis: "100g" | "100ml" | null;
@@ -76,7 +115,8 @@ export type CatalogRow = {
 type Row = Record<string, unknown>;
 
 export const CATALOG_COLUMNS =
-  "id, kind, name, brand, category, subcategory, pack_quantity, pack_unit, unit, image_path, nutrients, nutrient_basis, source, licence, attribution, source_url";
+  "ifct_match, ifct_note, ifct_foods(code, name, nutrients, energy_basis), " +
+  "id, kind, common, buy_sizes, image_licence, image_attribution, name, brand, category, subcategory, pack_quantity, pack_unit, unit, image_path, nutrients, nutrient_basis, source, licence, attribution, source_url";
 
 /** A picture's public address in the catalog bucket, on the project's own origin. */
 export function catalogImageUrl(supabaseUrl: string, path: string | null): string | null {
@@ -89,19 +129,62 @@ export function toCatalogEntry(row: Row, supabaseUrl: string): CatalogEntry {
   return {
     id: row.id as string,
     kind: row.kind === "item" ? "item" : "product",
+    common: row.common === true,
     name: row.name as string,
     brand: (row.brand as string | null) ?? null,
     category: row.category as string,
     subcategory: (row.subcategory as string | null) ?? null,
     pack: packQuantity && row.pack_unit ? { quantity: packQuantity, unit: row.pack_unit as string } : null,
     unit: row.unit as string,
+    ladder: ladderFrom(row.buy_sizes, row.unit as string),
     imageUrl: catalogImageUrl(supabaseUrl, (row.image_path as string | null) ?? null),
+    imageCredit: row.image_attribution ? [row.image_attribution, row.image_licence].filter(Boolean).join(", ") : null,
     nutrients: cleanNutrients(row.nutrients),
     nutrientBasis: (row.nutrient_basis as CatalogEntry["nutrientBasis"]) ?? null,
     source: row.source as CatalogEntry["source"],
     licence: row.licence as string,
     attribution: row.attribution as string,
     sourceUrl: (row.source_url as string | null) ?? null,
+    ifct: toIfct(row),
+  };
+}
+
+function ladderFrom(raw: unknown, unit: string): Ladder {
+  const sizes = Array.isArray(raw) ? raw.map(Number).filter((size) => Number.isFinite(size) && size > 0) : [];
+  return sizes.length > 0 ? { unit: baseOf(unit).unit, sizes } : defaultLadder(unit);
+}
+
+/**
+ * The ladder a household's item steps through: its own step when it set one;
+ * else the catalog entry it came from, when that counts the same way; else
+ * its unit's natural default.
+ */
+export function householdLadder(item: { unit: string; step: number | null; catalog?: Pick<CatalogEntry, "ladder"> | null }): Ladder {
+  if (item.step && item.step > 0) return uniformLadder(item.unit, item.step);
+  const base = baseOf(item.unit).unit;
+  if (item.catalog && item.catalog.ladder.unit === base) return item.catalog.ladder;
+  return defaultLadder(item.unit);
+}
+
+/** A household item's ladder and where a first add starts on it: the catalog's usual buy, else the first rung. */
+export function stepperOf(item: { unit: string; step: number | null; catalog?: Pick<CatalogEntry, "ladder" | "pack"> | null }): { ladder: Ladder; start: number } {
+  const ladder = householdLadder(item);
+  const pack = item.catalog?.pack;
+  const usual = pack && baseOf(pack.unit).unit === ladder.unit ? pack.quantity * baseOf(pack.unit).factor : null;
+  return { ladder, start: startAmount(ladder, usual) };
+}
+
+function toIfct(row: Row): IfctNutrition | null {
+  const food = (Array.isArray(row.ifct_foods) ? row.ifct_foods[0] : row.ifct_foods) as Row | null | undefined;
+  const match = row.ifct_match;
+  if (!food || (match !== "exact" && match !== "close" && match !== "approximate")) return null;
+  return {
+    code: food.code as string,
+    name: food.name as string,
+    match,
+    note: (row.ifct_note as string | null) ?? null,
+    nutrients: cleanNutrients(food.nutrients),
+    energyComputed: food.energy_basis === "computed",
   };
 }
 
@@ -119,24 +202,53 @@ export function cleanNutrients(value: unknown): Nutrients {
 export { searchWords } from "./catalog-curated";
 
 /**
- * Catalog entries for what someone typed, best first, ranked in the database
- * (`public.search_grocery_catalog`): a name that starts with it, then a word
- * of the name or another name that starts with it, then anything containing
- * it — WonderHome's items before products, pictures first. Reads only.
+ * What a quick search shows (25-010), from the ranked items and products:
+ * - the everyday items a household means by the word — only those when any
+ *   match, so "eggs" is white and brown eggs, not duck and quail; a word only
+ *   a less common item answers ("duck eggs") shows that one;
+ * - then the brands on sale: one entry per brand and name (a product in three
+ *   pack sizes is one choice, since the amount is picked afterwards), and only
+ *   those with a picture.
  */
-export async function searchCatalog(supabase: SupabaseClient, query: string, options: { supabaseUrl: string; limit?: number }): Promise<CatalogEntry[]> {
+export function chooseResults(items: readonly CatalogEntry[], products: readonly CatalogEntry[], limits = { items: 4, products: 6 }): CatalogEntry[] {
+  const everyday = items.filter((item) => item.common);
+  const shownItems = (everyday.length > 0 ? everyday : items).slice(0, everyday.length > 0 ? limits.items : 3);
+  const seen = new Set<string>();
+  const shownProducts: CatalogEntry[] = [];
+  // Beside an everyday item, a few brands; on their own (a brand searched by name), more.
+  const productLimit = everyday.length > 0 ? Math.min(3, limits.products) : limits.products;
+  for (const product of products) {
+    if (!product.brand || !product.imageUrl) continue;
+    const key = searchWords(`${product.brand} ${product.name}`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    shownProducts.push(product);
+    if (shownProducts.length >= productLimit) break;
+  }
+  return [...shownItems, ...shownProducts];
+}
+
+/**
+ * Catalog entries for what someone typed, best first, ranked in the database
+ * (`public.search_grocery_catalog_kind`) and chosen by `chooseResults`. Reads only.
+ */
+export async function searchCatalog(supabase: SupabaseClient, query: string, options: { supabaseUrl: string }): Promise<CatalogEntry[]> {
   const needle = searchWords(query);
   if (needle.length < 2) return [];
-  const limit = Math.min(options.limit ?? 8, 20);
-  const { data, error } = await supabase.rpc("search_grocery_catalog", { p_query: needle, p_limit: limit });
+  const [items, products] = await Promise.all([
+    supabase.rpc("search_grocery_catalog_kind", { p_query: needle, p_limit: 12, p_kind: "item" }),
+    supabase.rpc("search_grocery_catalog_kind", { p_query: needle, p_limit: 30, p_kind: "product" }),
+  ]);
+  const error = items.error ?? products.error;
   if (error) throw new Error(`searchCatalog failed: ${error.code ?? "unknown"}`);
-  return ((data ?? []) as Row[]).map((row) => toCatalogEntry(row, options.supabaseUrl));
+  const entries = (data: unknown) => ((data ?? []) as Row[]).map((row) => toCatalogEntry(row, options.supabaseUrl));
+  return chooseResults(entries(items.data), entries(products.data));
 }
 
 export async function getCatalogEntry(supabase: SupabaseClient, id: string, supabaseUrl: string): Promise<CatalogEntry | null> {
   const { data, error } = await supabase.from("grocery_catalog").select(CATALOG_COLUMNS).eq("id", id).maybeSingle();
   if (error) throw new Error(`getCatalogEntry failed: ${error.code ?? "unknown"}`);
-  return data ? toCatalogEntry(data as Row, supabaseUrl) : null;
+  return data ? toCatalogEntry(data as unknown as Row, supabaseUrl) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +345,7 @@ export function fromOpenFoodFacts(product: Row): CatalogRow | null {
     pack_quantity: pack?.quantity ?? null,
     pack_unit: pack?.unit ?? null,
     unit: pack ? unitInfo(pack.unit).key : "pcs",
+    buy_sizes: pack ? [pack.quantity * baseOf(pack.unit).factor] : null,
     barcode: code,
     nutrients,
     nutrient_basis: Object.keys(nutrients).length === 0 ? null : dimension === "volume" ? "100ml" : "100g",

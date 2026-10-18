@@ -872,6 +872,14 @@ async function main() {
   check("anonymous cannot search the grocery catalog", Boolean(anonCatalog.error), anonCatalog.error?.code ?? "allowed!");
   const usda = await admin.from("usda_foods").select("fdc_id, catalog_id, link_status").limit(1);
   check("USDA foods carry a catalog id", !usda.error, usda.error?.code ?? "ok");
+  const ifct = await admin.from("grocery_catalog").select("id", { count: "exact", head: true }).not("ifct_code", "is", null);
+  check("curated items carry Indian nutrition (IFCT 2017)", !ifct.error && (ifct.count ?? 0) > 300, ifct.error?.code ?? `${ifct.count} linked`);
+  const common = await admin.from("grocery_catalog").select("id", { count: "exact", head: true }).eq("common", true);
+  check("the catalog marks its everyday items", !common.error && (common.count ?? 0) > 300, common.error?.code ?? `${common.count} everyday`);
+  const anonKind = await anon.rpc("search_grocery_catalog_kind", { p_query: "eggs", p_limit: 3, p_kind: "item" });
+  check("anonymous cannot use the catalog's kind search", Boolean(anonKind.error), anonKind.error?.code ?? "allowed!");
+  const anonIfct = await anon.from("ifct_foods").select("code").limit(1);
+  check("anonymous cannot read IFCT foods", Boolean(anonIfct.error) || (anonIfct.data ?? []).length === 0, anonIfct.error?.code ?? "no rows");
   const phones = await admin.from("household_member_phones").select("member_id, phone").limit(1);
   check("members can have a phone number", !phones.error, phones.error?.code ?? "ok");
   const anonPhones = await anon.from("household_member_phones").select("phone").limit(1);

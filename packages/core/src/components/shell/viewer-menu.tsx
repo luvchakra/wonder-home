@@ -52,7 +52,7 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
         aria-label={`${viewer.displayName}, ${viewer.roleLabel}. Account menu`}
         className="ml-1 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
       >
-        <Avatar name={viewer.displayName} size="sm" />
+        <Avatar name={viewer.displayName} size="sm" imageUrl={viewer.avatarUrl ?? undefined} />
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
@@ -62,7 +62,7 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
           className="z-50 min-w-56 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1.5 shadow-[var(--wh-shadow-float)]"
         >
           <div className="flex items-center gap-2.5 px-2 py-2">
-            <Avatar name={viewer.displayName} size="sm" />
+            <Avatar name={viewer.displayName} size="sm" imageUrl={viewer.avatarUrl ?? undefined} />
             <div className="min-w-0">
               <p className="text-sm font-semibold">{viewer.displayName}</p>
               <p className="text-xs text-[var(--wh-foreground-subtle)]">

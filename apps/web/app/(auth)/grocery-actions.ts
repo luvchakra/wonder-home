@@ -525,7 +525,7 @@ export async function searchCatalogAction(householdId: string, query: string): P
   try {
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
-    const entries = await searchCatalog(supabase, parsed.data.query, { supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL, limit: 10 });
+    const entries = await searchCatalog(supabase, parsed.data.query, { supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL });
     return { ok: true, entries };
   } catch {
     return { ok: false };
@@ -540,8 +540,21 @@ export type CatalogAddResult = { ok: true; itemId: string; name: string; created
  * new item made from the entry (name, category, unit, linked), then one pack
  * to buy. The entry is read again here; the browser names only its id.
  */
-export async function addFromCatalogAction(input: { householdId: string; catalogId: string; key: string }): Promise<CatalogAddResult> {
-  const parsed = z.object({ householdId: uuid, catalogId: uuid, key }).safeParse(input);
+export async function addFromCatalogAction(input: {
+  householdId: string;
+  catalogId: string;
+  /** What the person chose on the item's ladder; the usual buy when absent. */
+  amount?: { quantity: number; unit: string };
+  key: string;
+}): Promise<CatalogAddResult> {
+  const parsed = z
+    .object({
+      householdId: uuid,
+      catalogId: uuid,
+      amount: z.object({ quantity: z.number().positive().max(1_000_000), unit: z.string().trim().min(1).max(20) }).optional(),
+      key,
+    })
+    .safeParse(input);
   if (!parsed.success) return { ok: false, error: "Please try again." };
   const { householdId, catalogId } = parsed.data;
   try {
@@ -568,7 +581,9 @@ export async function addFromCatalogAction(input: { householdId: string; catalog
       created = true;
     }
     const preferred = existing?.unit ?? entry.unit;
-    const amount = entry.pack && compatible(entry.pack.unit, preferred) ? entry.pack : stepInBase(preferred, existing?.step ?? null);
+    const chosen = parsed.data.amount;
+    if (chosen && !compatible(chosen.unit, preferred)) return { ok: false, error: "That amount doesn't fit how this item is counted." };
+    const amount = chosen ?? (entry.pack && compatible(entry.pack.unit, preferred) ? entry.pack : stepInBase(preferred, existing?.step ?? null));
     await adjustListEntry(supabase, { householdId, itemId, kind: "add", amount, source: "manual", idempotencyKey: `${parsed.data.key}:list` });
     revalidatePath("/groceries");
     return { ok: true, itemId, name: existing?.name ?? name, created };

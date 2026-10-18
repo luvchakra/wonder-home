@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { stepperOf } from "@wonderhome/core/commerce/catalog";
 import {
   listGroceries,
   listRetiredGroceries,
@@ -110,6 +111,7 @@ export default async function GroceriesPage({
     category: item.category,
     unit: item.unit,
     step: item.step,
+    ...stepperOf(item),
     imageUrl: item.imageUrl,
     status: stockStatus(item),
     stockText: item.stock

@@ -55,6 +55,7 @@ export type MessageRole = "assistant" | "member";
 export function ChatMessage({
   role,
   name,
+  avatarUrl,
   speaker,
   children,
   aside,
@@ -75,6 +76,8 @@ export function ChatMessage({
    * noise on a normal conversation.
    */
   speaker?: string;
+  /** The speaker's photo from Family, beside their bubble. */
+  avatarUrl?: string | null;
   children: ReactNode;
   /** Something attached beneath the bubble: an action preview, suggestions. */
   aside?: ReactNode;
@@ -93,7 +96,7 @@ export function ChatMessage({
 
   return (
     <div id={id} className={cn("wh-rise flex scroll-my-4 gap-2.5", fromAssistant ? "flex-row" : "flex-row-reverse", className)}>
-      {!fromAssistant && name ? <Avatar name={name} size="sm" className="mt-0.5" /> : null}
+      {!fromAssistant && name ? <Avatar name={name} size="sm" className="mt-0.5" imageUrl={avatarUrl ?? undefined} /> : null}
       <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-2", fromAssistant ? "items-start" : "items-end")}>
         <div
           className={cn(

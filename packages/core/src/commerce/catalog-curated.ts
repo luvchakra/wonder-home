@@ -9,7 +9,7 @@
  * catalog entry (and so keeps its catalog id), never adds a second one.
  */
 
-export const CURATED_HEADER = ["slug", "name", "category", "subcategory", "is_food", "unit", "pack_quantity", "pack_unit", "aliases"] as const;
+export const CURATED_HEADER = ["slug", "name", "category", "subcategory", "is_food", "unit", "pack_quantity", "pack_unit", "aliases", "common"] as const;
 
 /** The units a curated item may be kept in: units.ts's UNIT_CHOICES (a test holds them equal). */
 export const CURATED_UNITS = ["pcs", "g", "kg", "ml", "l", "dozen", "bunch", "pack", "packet", "bottle", "box", "jar", "can", "bag", "loaf", "tray"] as const;
@@ -29,6 +29,8 @@ export type CuratedRow = {
   subcategory: string | null;
   aliases: string[];
   is_food: boolean;
+  /** What a household means by the word: search shows these, and the rest only when someone asks for them by name. */
+  common: boolean;
   pack_quantity: number | null;
   pack_unit: string | null;
   unit: string;
@@ -108,7 +110,7 @@ export function curatedRows(csv: string): { rows: CuratedRow[]; problems: Curate
       problems.push({ line, problem: `expected ${CURATED_HEADER.length} fields, found ${cells.length}` });
       return;
     }
-    const [slug, rawName, category, subcategory, isFood, unit, packQuantity, packUnit, aliases] = cells.map((cell) => cell.trim()) as [string, string, string, string, string, string, string, string, string];
+    const [slug, rawName, category, subcategory, isFood, unit, packQuantity, packUnit, aliases, common] = cells.map((cell) => cell.trim()) as [string, string, string, string, string, string, string, string, string, string];
     const name = rawName.replace(/\s+/g, " ");
     const fail = (problem: string) => problems.push({ line, problem: `${slug || "(no slug)"}: ${problem}` });
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 64) return fail("slug must be lowercase words joined by hyphens");
@@ -118,6 +120,7 @@ export function curatedRows(csv: string): { rows: CuratedRow[]; problems: Curate
     if (category.length < 1 || category.length > 40) return fail("category must be 1–40 characters");
     if (subcategory.length > 60) return fail("subcategory is longer than 60 characters");
     if (isFood !== "true" && isFood !== "false") return fail("is_food must be true or false");
+    if (common !== "true" && common !== "false") return fail("common must be true or false");
     if (!(CURATED_UNITS as readonly string[]).includes(unit)) return fail(`unknown unit "${unit}"`);
     const quantity = packQuantity === "" ? null : Number(packQuantity);
     if (quantity !== null && !(Number.isFinite(quantity) && quantity > 0)) return fail("pack_quantity must be a positive number");
@@ -138,6 +141,7 @@ export function curatedRows(csv: string): { rows: CuratedRow[]; problems: Curate
       subcategory: subcategory || null,
       aliases: otherNames,
       is_food: isFood === "true",
+      common: common === "true",
       pack_quantity: quantity,
       pack_unit: packUnit || null,
       unit,

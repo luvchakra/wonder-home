@@ -194,7 +194,7 @@ export default async function SettingsPage() {
               }}
             />
           ) : (
-            <Avatar name={view.displayName} size="xl" />
+            <Avatar name={view.displayName} size="xl" imageUrl={viewer.avatarUrl ?? undefined} />
           )}
           <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         </Card>

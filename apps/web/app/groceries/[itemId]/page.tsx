@@ -1,7 +1,7 @@
 import { History, PackageCheck, ShoppingBasket } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
-import { NUTRIENT_KEYS } from "@wonderhome/core/commerce/catalog";
+import { NUTRIENT_KEYS, stepperOf } from "@wonderhome/core/commerce/catalog";
 import {
   getGroceryItem,
   stockHistory,
@@ -28,7 +28,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { groceryWords } from "../../_lib/grocery-words";
 import { formatDate, requireSession } from "../../_lib/session";
-import { sayAmount } from "../_components/amounts";
+import { fill, sayAmount } from "../_components/amounts";
 import { ToBuyStepper } from "../_components/to-buy-stepper";
 import {
   DetailsForm,
@@ -113,19 +113,41 @@ export default async function GroceryItemPage({
   const categories = [
     ...new Set([...all.map((entry) => entry.category), ...words.categories]),
   ];
-  // A product's label nutrients, from the shared catalog (25-006): only what
-  // the label states, with its basis and its source's credit.
+  // Nutrition from the shared catalog: for a curated item, its Indian food in
+  // IFCT 2017 (ICMR–NIN, 25-009), saying how close the match is; for a packed
+  // product, only what its label states (25-006). Each with its basis and credit.
   const nutrition = (() => {
     const catalog = item.catalog;
-    if (!catalog || !catalog.nutrientBasis) return null;
+    if (!catalog) return null;
+    const ifct = catalog.ifct;
+    const nutrients = ifct ? ifct.nutrients : catalog.nutrients;
+    const basis = ifct ? "100g" : catalog.nutrientBasis;
+    if (!basis) return null;
     const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
     const rows = NUTRIENT_KEYS.flatMap((key) => {
-      const value = catalog.nutrients[key];
+      const value = nutrients[key];
       if (value === undefined) return [];
-      const unit = key === "energy_kcal" ? "kcal" : key === "sodium_mg" ? "mg" : "g";
+      const unit = key === "energy_kcal" ? "kcal" : key.endsWith("_mg") ? "mg" : key.endsWith("_ug") ? "µg" : "g";
       return [{ key, label: words.nutrition.names[key], value: `${number.format(value)} ${unit}`, sub: key === "sugars_g" || key === "saturated_fat_g" }];
     });
-    return rows.length > 0 ? { basis: catalog.nutrientBasis, rows } : null;
+    if (rows.length === 0) return null;
+    return ifct
+      ? {
+          basis,
+          rows,
+          heading: words.nutrition.perEdible,
+          match: ifct.match === "exact" ? null : fill(ifct.match === "close" ? words.nutrition.close : words.nutrition.approximate, { food: ifct.name }),
+          energyComputed: ifct.energyComputed,
+          credit: words.nutrition.ifctCredit,
+        }
+      : {
+          basis,
+          rows,
+          heading: [catalog.brand, catalog.name].filter(Boolean).join(" · ") + " · " + (basis === "100ml" ? words.nutrition.per100ml : words.nutrition.per100g),
+          match: null,
+          energyComputed: false,
+          credit: words.nutrition.credit.replace("{source}", catalog.attribution),
+        };
   })();
 
   return (
@@ -169,6 +191,9 @@ export default async function GroceryItemPage({
             </p>
           </div>
         </header>
+        {!item.imageUrl && item.catalog?.imageUrl && item.catalog.imageCredit ? (
+          <p className="-mt-3 text-xs text-[var(--wh-foreground-subtle)]">{fill(words.nutrition.pictureCredit, { credit: item.catalog.imageCredit })}</p>
+        ) : null}
         {adult ? (
           <PhotoForm
             householdId={householdId}
@@ -215,6 +240,7 @@ export default async function GroceryItemPage({
               name: item.name,
               unit: item.unit,
               step: item.step,
+              ...stepperOf(item),
             }}
             stock={
               item.stock
@@ -251,6 +277,7 @@ export default async function GroceryItemPage({
               name: item.name,
               unit: item.unit,
               step: item.step,
+              ...stepperOf(item),
             }}
             initial={
               item.toBuy
@@ -341,11 +368,8 @@ export default async function GroceryItemPage({
         {nutrition ? (
           <Card className="space-y-3 p-4">
             <SectionHeader title={words.nutrition.title} />
-            <p className="text-sm text-[var(--wh-foreground-muted)]">
-              {[item.catalog?.brand, item.catalog?.name].filter(Boolean).join(" · ")}
-              {" · "}
-              {nutrition.basis === "100ml" ? words.nutrition.per100ml : words.nutrition.per100g}
-            </p>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{nutrition.heading}</p>
+            {nutrition.match ? <p className="text-sm">{nutrition.match}</p> : null}
             <dl className="divide-y divide-[var(--wh-border)] text-sm">
               {nutrition.rows.map((row) => (
                 <div key={row.key} className="flex items-baseline justify-between gap-3 py-2">
@@ -354,9 +378,8 @@ export default async function GroceryItemPage({
                 </div>
               ))}
             </dl>
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              {words.nutrition.credit.replace("{source}", item.catalog?.attribution ?? "")}
-            </p>
+            {nutrition.energyComputed ? <p className="text-xs text-[var(--wh-foreground-muted)]">{words.nutrition.energyComputed}</p> : null}
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{nutrition.credit}</p>
           </Card>
         ) : null}
 

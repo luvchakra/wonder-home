@@ -77,6 +77,7 @@ const ENGLISH_LABELS = assistantLabels(translator("en", en));
 export function Assistant({
   householdId,
   memberName,
+  memberAvatarUrl,
   firstName,
   initialMessages,
   initialQuery,
@@ -94,6 +95,8 @@ export function Assistant({
 }: {
   householdId: string;
   memberName: string;
+  /** Their photo from Family, beside their own messages. */
+  memberAvatarUrl?: string | null;
   firstName: string;
   initialMessages: AssistantMessage[];
   initialQuery?: string;
@@ -464,6 +467,7 @@ export function Assistant({
               id={`message-${message.id}`}
               role={message.role}
               name={memberName}
+              avatarUrl={memberAvatarUrl}
               speaker={message.speaker}
               pending={message.pending}
               sentAt={message.at ? { label: messageTime(new Date(message.at), timeZone, labels.time), dateTime: message.at } : undefined}

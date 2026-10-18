@@ -70,3 +70,26 @@ test("USDA foods are the service role's alone, and a link's catalog id and statu
   psql(`update public.usda_foods set catalog_id = '${toorDal}', link_status = 'candidate', match_type = 'close' where fdc_id = 172436;`, options);
   assert.equal(psql(`select link_status from public.usda_foods where catalog_id = '${toorDal}';`, options), "candidate");
 });
+
+test("the kind search puts the everyday variant first and keeps items and products apart (25-010)", () => {
+  psql(
+    `insert into public.grocery_catalog (source, source_id, kind, name, category, unit, common, licence, attribution, search_text)
+     values ('wonderhome', 'eggs-white', 'item', 'Eggs, White', 'Eggs', 'pcs', true, 'WonderHome curated', 'WonderHome', 'eggs white eggs anda'),
+            ('wonderhome', 'eggs-duck', 'item', 'Eggs, Duck', 'Eggs', 'pcs', false, 'WonderHome curated', 'WonderHome', 'eggs duck duck eggs');`,
+    options,
+  );
+  assert.equal(asProfile(MEMBER, `select string_agg(name, '|') from public.search_grocery_catalog_kind('eggs', 10, 'item');`, options), "Eggs, White|Eggs, Duck");
+  assert.equal(asProfile(MEMBER, `select count(*) from public.search_grocery_catalog_kind('eggs', 10, 'product');`, options), "0");
+  assert.ok(deniedForAnonymous(`select count(*) from public.search_grocery_catalog_kind('eggs', 5, 'item');`, options));
+});
+
+test("IFCT foods are read by members, written by nobody, and only a curated item links to one (25-009)", () => {
+  psql(`insert into public.ifct_foods (code, name, food_group, nutrients) values ('B021', 'Red gram, dal', 'Grain Legumes', '{"energy_kcal": 331}');`, options);
+  assert.equal(asProfile(MEMBER, `select name from public.ifct_foods where code = 'B021';`, options), "Red gram, dal");
+  assert.ok(deniedForProfile(MEMBER, `insert into public.ifct_foods (code, name, food_group) values ('B099', 'X', 'Y');`, options));
+  assert.ok(deniedForAnonymous(`select count(*) from public.ifct_foods;`, options));
+  psql(`update public.grocery_catalog set ifct_code = 'B021', ifct_match = 'exact' where id = '${toorDal}';`, options);
+  // A link always says how close it is, and a packed product carries its own label.
+  assert.throws(() => psql(`update public.grocery_catalog set ifct_match = null where id = '${toorDal}';`, options));
+  assert.throws(() => psql(`update public.grocery_catalog set ifct_code = 'B021', ifct_match = 'close' where kind = 'product';`, options));
+});

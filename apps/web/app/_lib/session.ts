@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
-import { listMemberships } from "@wonderhome/core/identity/households";
+import { listMemberships, signAvatarPaths } from "@wonderhome/core/identity/households";
 import { claimMembers } from "@wonderhome/core/identity/member-phone";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
@@ -104,6 +104,10 @@ export async function buildSession(
   const t = await translatorFor(preferences.language);
   setRequestLocale(preferences, t);
 
+  // The viewer's own photo, the one their household keeps in Family: the
+  // same picture in the header as on their card, for every member.
+  const avatarUrl = await ownAvatarUrl(supabase, membership.household.id, membership.memberId);
+
   const labels: ShellLabels = {
     nav: Object.fromEntries(PRIMARY_NAVIGATION.map((item) => [item.key, t(`nav.${item.key}`)])),
     groups: Object.fromEntries(SECONDARY_GROUP_ORDER.map((group) => [group, t(`nav.group.${group}`)])),
@@ -120,6 +124,7 @@ export async function buildSession(
     view,
     viewer: {
       displayName: view.displayName,
+      avatarUrl,
       roleLabel: roleWords(view.roleLabel, t),
       householdName: view.householdName,
       unread,
@@ -196,4 +201,16 @@ const ROLE_KEYS = { Admin: "role.admin", Adult: "role.adult", Child: "role.child
 export function roleWords(label: string, t: Translate): string {
   const key = ROLE_KEYS[label as keyof typeof ROLE_KEYS];
   return key ? t(key) : label;
+}
+
+/** A signed URL for this member's own photo in Family, or null. Never fails the page. */
+async function ownAvatarUrl(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string, memberId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase.from("household_members").select("avatar_path").eq("household_id", householdId).eq("id", memberId).maybeSingle();
+    const path = (data?.avatar_path as string | null | undefined) ?? null;
+    if (!path) return null;
+    return (await signAvatarPaths(supabase, [path])).get(path) ?? null;
+  } catch {
+    return null;
+  }
 }

@@ -2,7 +2,7 @@
 
 import { Dialog } from "radix-ui";
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
 import { Button } from "./button";
@@ -23,16 +23,45 @@ export type SheetProps = {
   className?: string;
 };
 
+/**
+ * How much of the layout the on-screen keyboard covers, in px. A phone browser
+ * shrinks only the visual viewport when the keyboard opens, so a sheet fixed
+ * to the bottom would sit behind it; the sheet rises by this much instead, and
+ * its height is held to what is still visible.
+ */
+function useKeyboardInset(active: boolean): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const viewport = typeof window === "undefined" ? undefined : window.visualViewport;
+    if (!active || !viewport) return;
+    const update = () => setInset(Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)));
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+      setInset(0);
+    };
+  }, [active]);
+  return inset;
+}
+
 export function Sheet({ open, onOpenChange, title, description, children, className }: SheetProps) {
+  const keyboard = useKeyboardInset(open);
+  // Only on a phone, where the sheet is anchored to the bottom (sm: centres it).
+  const lifted: CSSProperties | undefined =
+    keyboard > 0 ? ({ "--wh-keyboard": `${keyboard}px` } as CSSProperties) : undefined;
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[oklch(0.27_0.05_255/0.35)] backdrop-blur-[2px] data-[state=open]:animate-[wh-rise_var(--wh-duration)_var(--wh-ease)]" />
         <Dialog.Content
+          style={lifted}
           className={cn(
-            "fixed z-50 flex max-h-[92dvh] flex-col bg-[var(--wh-surface)] shadow-[var(--wh-shadow-float)] outline-none",
-            "inset-x-0 bottom-0 rounded-t-[var(--wh-radius-lg)] pb-[env(safe-area-inset-bottom)]",
-            "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--wh-radius-lg)]",
+            "fixed z-50 flex max-h-[calc(92dvh-var(--wh-keyboard,0px))] flex-col bg-[var(--wh-surface)] shadow-[var(--wh-shadow-float)] outline-none",
+            "inset-x-0 bottom-[var(--wh-keyboard,0px)] rounded-t-[var(--wh-radius-lg)] pb-[env(safe-area-inset-bottom)] transition-[bottom] duration-150 motion-reduce:transition-none",
+            "sm:inset-auto sm:max-h-[92dvh] sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--wh-radius-lg)]",
             "data-[state=open]:animate-[wh-rise_var(--wh-duration)_var(--wh-ease)]",
             className,
           )}

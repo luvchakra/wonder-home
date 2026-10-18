@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import { createClient } from "@supabase/supabase-js";
 
+import { ladderForItem } from "../packages/core/src/commerce/buying-sizes.ts";
 import { curatedRows } from "../packages/core/src/commerce/catalog-curated.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -58,7 +59,8 @@ const admin = createClient(vars.NEXT_PUBLIC_SUPABASE_URL, vars.SUPABASE_SERVICE_
 
 const now = new Date().toISOString();
 for (let start = 0; start < rows.length; start += 400) {
-  const batch = rows.slice(start, start + 400).map((row) => ({ ...row, active: true, imported_at: now }));
+  // Each item's ladder of natural amounts (commerce/buying-sizes.ts).
+  const batch = rows.slice(start, start + 400).map((row) => ({ ...row, buy_sizes: ladderForItem(row).sizes, active: true, imported_at: now }));
   const { error } = await admin.from("grocery_catalog").upsert(batch, { onConflict: "source,source_id" });
   if (error) {
     console.error(`Upsert failed at row ${start}: ${error.code ?? "unknown"}`);
@@ -68,12 +70,18 @@ for (let start = 0; start < rows.length; start += 400) {
 
 // Items no longer in the file stop showing in search; their rows stay.
 const keep = new Set(rows.map((row) => row.source_id));
-const { data: existing, error: readError } = await admin.from("grocery_catalog").select("id, source_id").eq("source", "wonderhome").eq("active", true);
-if (readError) {
-  console.error(`Reading curated items failed: ${readError.code ?? "unknown"}`);
-  process.exit(1);
+// Paged: a read returns at most 1,000 rows.
+const existing: Record<string, unknown>[] = [];
+for (let from = 0; ; from += 1000) {
+  const { data, error: readError } = await admin.from("grocery_catalog").select("id, source_id").eq("source", "wonderhome").eq("active", true).order("id").range(from, from + 999);
+  if (readError) {
+    console.error(`Reading curated items failed: ${readError.code ?? "unknown"}`);
+    process.exit(1);
+  }
+  existing.push(...(data ?? []));
+  if ((data ?? []).length < 1000) break;
 }
-const retired = (existing ?? []).filter((row) => !keep.has(row.source_id as string)).map((row) => row.id as string);
+const retired = existing.filter((row) => !keep.has(row.source_id as string)).map((row) => row.id as string);
 for (let start = 0; start < retired.length; start += 200) {
   const { error } = await admin.from("grocery_catalog").update({ active: false }).in("id", retired.slice(start, start + 200));
   if (error) {
