@@ -71,4 +71,8 @@ The owner asked for HomeTalk to float by itself when someone switches to another
 
 ## QA cleanup
 
-Recorded after the merge.
+Done after #232 merged:
+- QA household `df2d0762-15e1-4c5a-ad25-5fd803bcc4b1` deleted with a scoped script that refused unless its only member was this session's QA user. A count across all 132 household tables found 0 rows left.
+- QA account `eba77d28-c046-48ed-8e54-095aa068f0b3` deleted (`qa-test-user.mjs delete`).
+- No Storage files were uploaded.
+- Local scripts, screenshots and logs removed; dev server stopped.

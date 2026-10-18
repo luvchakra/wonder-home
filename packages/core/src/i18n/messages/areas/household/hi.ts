@@ -624,6 +624,7 @@ export const householdHi: AreaCatalog<typeof householdEn> = {
   "places.openInMaps": "Google Maps में खोलें",
   "places.address.hint": "Google Maps से अपना पता चुनें। अगर यह सूची में नहीं है, तो लिखें, यह वैसा ही सहेजा जाएगा।",
   "places.school.hint": "आपके घर के पास के स्कूल पहले दिखते हैं। कोई एक चुनें, या नाम लिखें।",
+  "places.school.label": "स्कूल",
   "places.office.label": "दफ़्तर",
   "places.office.placeholder": "दफ़्तर का नाम या पता लिखना शुरू करें",
   "places.office.nothingFound": "कुछ नहीं मिला। लिखते रहें: दफ़्तर Google Maps से चुना जाता है, ताकि HomeTalk उसके पास खोज सके।",

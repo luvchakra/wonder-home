@@ -112,6 +112,26 @@ async function saveEnrolmentImpl(
 export const saveEnrolment = invalidatesContext(saveEnrolmentImpl, (_supabase, input) => input.householdId);
 
 /**
+ * The child has no current school on record any more: every active enrolment
+ * stops being current, kept rather than deleted (its school items keep their
+ * history). The other half of `saveEnrolment` (rule 12).
+ */
+async function endEnrolmentsImpl(supabase: SupabaseClient, input: { householdId: string; childMemberId: string }): Promise<void> {
+  const { error } = await supabase
+    .from("school_enrolments")
+    .update({ active: false })
+    .eq("household_id", input.householdId)
+    .eq("child_member_id", input.childMemberId)
+    .eq("active", true);
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only the child's guardians or an Admin can change their school.");
+    throw new Error(`endEnrolments failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+export const endEnrolments = invalidatesContext(endEnrolmentsImpl, (_supabase, input) => input.householdId);
+
+/**
  * A child's school day, set on whichever school is theirs now — from Family
  * or Settings, where the school itself is not re-picked. Nothing happens
  * when no school is on record; the caller says so.

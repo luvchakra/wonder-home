@@ -7,6 +7,7 @@ import { DEFAULT_PREFERENCES, resolvePreferences } from "@wonderhome/core/i18n/p
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { PlacesUnavailableError, type Place } from "@wonderhome/core/places/provider";
+import { endEnrolments, listEnrolments, saveEnrolment } from "@wonderhome/core/school/enrolments";
 
 /**
  * Server-side halves of the place pickers, kept out of the "use server"
@@ -88,6 +89,43 @@ export async function saveWorkPlaceFromForm(
   const place = await pickedPlace(actor, placeId, formData.get("office_session"));
   if (!place) throw new PlacesUnavailableError("unavailable");
   await saveWorkPlace(supabase, { householdId, memberId, setByMemberId: actor.memberId, place });
+  return "saved";
+}
+
+/**
+ * Saves a child's school from their details in Family (story 24-010), the
+ * same way setup does: a picked place, re-read on the server, or the typed
+ * name when there is no pick; nothing at all ends the school on record.
+ * Untouched when the form carried no school field.
+ */
+export async function saveSchoolFromForm(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  childMemberId: string,
+  formData: FormData,
+): Promise<"saved" | "removed" | "unchanged" | "untouched"> {
+  if (formData.get("schoolField") !== "1") return "untouched";
+  const householdId = actor.household.id;
+  // Only a child has a school: a field sent for anyone else changes nothing.
+  const { data: member } = await supabase.from("household_members").select("member_type").eq("household_id", householdId).eq("id", childMemberId).maybeSingle();
+  if ((member as { member_type?: string } | null)?.member_type !== "child") return "untouched";
+  const placeId = String(formData.get("school_place_id") ?? "").trim();
+  const typed = String(formData.get("school_name") ?? "").trim().slice(0, 120);
+  const current = (await listEnrolments(supabase, householdId).catch(() => [])).find((entry) => entry.childMemberId === childMemberId) ?? null;
+  if (placeId) {
+    if (current?.placeId === placeId) return "unchanged";
+    const place = await pickedPlace(actor, placeId, formData.get("school_session"));
+    if (!place) throw new PlacesUnavailableError("unavailable");
+    await saveEnrolment(supabase, { householdId, childMemberId, schoolName: place.name, place, only: true, ...(current?.hours ? { hours: current.hours } : {}) });
+    return "saved";
+  }
+  if (!typed) {
+    if (!current) return "unchanged";
+    await endEnrolments(supabase, { householdId, childMemberId });
+    return "removed";
+  }
+  if (current && current.schoolName === typed) return "unchanged";
+  await saveEnrolment(supabase, { householdId, childMemberId, schoolName: typed, place: null, only: true, ...(current?.hours ? { hours: current.hours } : {}) });
   return "saved";
 }
 

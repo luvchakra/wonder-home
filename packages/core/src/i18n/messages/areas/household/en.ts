@@ -622,6 +622,7 @@ export const householdEn = {
   "places.openInMaps": "Open in Google Maps",
   "places.address.hint": "Pick your address from Google Maps. If it isn't listed, type it and it is saved as written.",
   "places.school.hint": "Schools near your home come first. Pick one, or type the name.",
+  "places.school.label": "School",
   "places.office.label": "Office",
   "places.office.placeholder": "Start typing the office's name or address",
   "places.office.nothingFound": "Nothing found. Keep typing: an office is picked from Google Maps, so HomeTalk can search near it.",

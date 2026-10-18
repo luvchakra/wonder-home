@@ -4,6 +4,12 @@ import type { schoolEn } from "./en";
 export const schoolZh: AreaCatalog<typeof schoolEn> = {
   "school.notInPlan": "当前套餐不包含学校功能",
   "school.lede": "学校信息集中一处——只把需要你处理的放在前面。",
+  "school.place.section": "学校",
+  "school.place.none": "还没有记录学校",
+  "school.place.edit": "更改{name}的学校",
+  "school.place.title": "{name}的学校",
+  "school.place.lede": "从 Google 地图中选择学校；如果没有列出，就输入校名。留空即可移除。",
+  "school.place.save": "保存学校",
   "school.connect": "连接学校",
   "school.fixConnection": "修复连接",
   "school.everyone": "全部",

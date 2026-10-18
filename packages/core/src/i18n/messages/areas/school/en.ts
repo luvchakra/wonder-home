@@ -3,6 +3,12 @@ export const schoolEn = {
   // Kids & School screen
   "school.notInPlan": "School is not part of this plan",
   "school.lede": "All school info in one place — and only what needs you up front.",
+  "school.place.section": "Schools",
+  "school.place.none": "No school on record yet",
+  "school.place.edit": "Change {name}'s school",
+  "school.place.title": "{name}'s school",
+  "school.place.lede": "Pick the school from Google Maps, or type its name if it isn't listed. Leave it empty to remove it.",
+  "school.place.save": "Save school",
   "school.connect": "Connect school",
   "school.fixConnection": "Fix the connection",
   "school.everyone": "Everyone",

@@ -78,6 +78,8 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | Switching to another app during HomeTalk should float it automatically as the small window | 04-022 | Done in #232: armed while a live conversation runs, floats on leaving where the phone allows it; Float stays as the manual way; browser-checked |
 | A meal's ingredients typed in a text box: add raw items with a quantity each; a small Add a recipe link when there is no recipe; recipe items and amounts tracked properly | 25-014 | Done in #232: rows with amount and unit everywhere ingredients are written, recipes store amounts, Add a recipe from Change meal; editing a recipe queued as 25-015 |
 | Rename Places to HomePlaces and move it under AI; HomeBrain Review becomes HomeBrain | 24-009 | Done in #232 |
+| A home address added did not appear in HomePlaces: every address picked with Google Maps anywhere should be there | 24-010 | Done in #233: Our places lists home, schools and offices, each linked to its editor; a child's school is picked on Kids & School |
+| Kids & School: per child, the school with its Google Maps address, the class teacher and subject teachers, activities (music, piano, karate) folded with timings and teacher, opened for classes, competitions and medals; today's classes on the calendar | 08-010, 08-011, 08-012 | School picker done in #233 (24-010). **Next:** 08-010 and 08-011 (a migration for the owner), then 08-012 |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |

@@ -13,6 +13,9 @@
 | 7 | P1 | 08-007 | School summaries | Done | only messages that ask something surface; a newsletter is filed |
 | 8 | P2 | 08-008 | Deep portal automation | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
 | 9 | P2 | 08-009 | Add a child from a school notice | Done | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline. Done: the resolver names an untitled unknown child (`unknown`), never assumes the household's only child; the review offers "Add <name> as a child" to Admins (guardian = the Admin, as on Family) and confirms the notice for them in the same step; golden case HS-15 |
+| 10 | P0 | 08-010 | Each child's school details: class, class teacher, subject teachers | Not Started | The owner, 2026-10-18. The school itself (Google Maps picker) is done in 24-010. Left: the class/grade, the class teacher and every subject teacher with their names, per child on Kids & School, each added, changed and removed (rule 12). Needs a migration (SQL for the owner) |
+| 11 | P0 | 08-011 | Activities and classes outside school, folded | Not Started | The owner, 2026-10-18: music, piano, karate and any learning class, per child, as folded rows showing the class, a short description and its timings; opened, the teacher, the schedule, notes, upcoming competitions and medals won, all addable. Needs a migration |
+| 12 | P0 | 08-012 | Today's classes on the calendar by default | Not Started | The owner, 2026-10-18: an activity's sessions that fall today appear in the Calendar without anyone adding them (a calendar adapter over the activity schedule, like occasions and holidays). Depends on 08-011 |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -208,6 +211,21 @@ Implement Kids & School Intelligence as a first-class WonderHome domain. The mod
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 08-010 — Each child's school details
+**Epic:** Kids & School
+**Priority:** P0
+**Goal:** A parent keeps a child's class, class teacher and subject teachers beside the school, on Kids & School.
+
+### Story 08-011 — Activities and classes outside school
+**Epic:** Kids & School
+**Priority:** P0
+**Goal:** Every class a child goes to outside school is one folded row (class, short description, timings); opened, it holds the teacher, the schedule, notes, upcoming competitions and medals.
+
+### Story 08-012 — Today's classes on the calendar
+**Epic:** Kids & School
+**Priority:** P0
+**Goal:** A class that meets today is on the Calendar by default, from its schedule, with nothing to add by hand.
 
 ### Story 08-009 — Add a child from a school notice
 **Epic:** Kids & School

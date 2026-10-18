@@ -569,6 +569,7 @@ export async function updateMemberProfileAction(
   revalidatePath("/household/members");
   revalidatePath("/family");
   revalidatePath("/househelper");
+  revalidatePath("/places");
   return {};
 }
 

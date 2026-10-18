@@ -4,6 +4,12 @@ import type { schoolEn } from "./en";
 export const schoolFr: AreaCatalog<typeof schoolEn> = {
   "school.notInPlan": "L’école ne fait pas partie de cette formule",
   "school.lede": "Toutes les infos de l’école au même endroit — et en premier, seulement ce qui a besoin de vous.",
+  "school.place.section": "Écoles",
+  "school.place.none": "Aucune école enregistrée pour l’instant",
+  "school.place.edit": "Modifier l’école de {name}",
+  "school.place.title": "École de {name}",
+  "school.place.lede": "Choisissez l’école dans Google Maps, ou tapez son nom si elle n’apparaît pas. Laissez vide pour la retirer.",
+  "school.place.save": "Enregistrer l’école",
   "school.connect": "Connecter l’école",
   "school.fixConnection": "Réparer la connexion",
   "school.everyone": "Tout le monde",

@@ -624,6 +624,7 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "places.openInMaps": "在 Google 地图中打开",
   "places.address.hint": "从 Google 地图中选择你的地址。如果没有列出，直接输入，会按原样保存。",
   "places.school.hint": "离你家近的学校排在前面。选一所，或输入名称。",
+  "places.school.label": "学校",
   "places.office.label": "办公室",
   "places.office.placeholder": "开始输入办公室名称或地址",
   "places.office.nothingFound": "未找到。请继续输入：办公室需从 Google 地图中选择，这样 HomeTalk 才能在附近搜索。",
