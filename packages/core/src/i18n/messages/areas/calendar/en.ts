@@ -34,8 +34,9 @@ export const calendarEn = {
   "calendar.day.moreLong": "+{count} more",
   "calendar.day.week": "Days of this week",
 
-  "calendar.agenda.empty": "Nothing planned",
-  "calendar.agenda.emptyLede": "A free day. Add something if you like.",
+  "calendar.agenda.empty": "No events",
+  "calendar.agenda.emptyLede": "Nothing is on the calendar for this day.",
+  "calendar.agenda.emptyToday": "Nothing on the calendar today.",
   "calendar.agenda.todayPlan": "Today's plan",
   "calendar.agenda.todayPlanLede": "Meals, bills, school and what needs you today.",
   "calendar.agenda.allDay": "All day",

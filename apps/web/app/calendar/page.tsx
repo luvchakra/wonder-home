@@ -296,7 +296,15 @@ function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string;
   return (
     <section aria-label={words.dayTitle(day)} className="space-y-2">
       <SectionHeader title={words.dayTitle(day)} />
-      {entries.length === 0 ? (
+      {entries.length === 0 && day === today ? (
+        // Today with nothing booked is not a free day: meals, bills and school still live in Today's plan, so say only what is true.
+        <Card className="px-3 py-1">
+          <p className="px-1 pt-3 text-sm text-[var(--wh-foreground-muted)]">{t("calendar.agenda.emptyToday")}</p>
+          <ul>
+            <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href="/today" />
+          </ul>
+        </Card>
+      ) : entries.length === 0 ? (
         <EmptyState icon={CalendarDays} tone="people" title={t("calendar.agenda.empty")} description={t("calendar.agenda.emptyLede")} />
       ) : (
         <Card className="px-2 py-1">
@@ -308,7 +316,7 @@ function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string;
           </ul>
         </Card>
       )}
-      {day === today ? (
+      {day === today && entries.length > 0 ? (
         <Card className="px-3 py-1">
           <ul>
             <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href="/today" />

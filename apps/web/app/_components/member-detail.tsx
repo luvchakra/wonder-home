@@ -18,6 +18,9 @@ import { MemberInviteControl } from "./member-invite-control";
 import { MemberProfileForm } from "./member-profile-form";
 import { officeField } from "../_lib/office-field";
 import { schoolField } from "../_lib/school-field";
+import type { Activity } from "@wonderhome/core/school/activities";
+import type { ChildDetailWords } from "../school/child-details";
+import { ChildClasses } from "./child-classes";
 import { RemoveMemberControl } from "./remove-member-control";
 
 /** One label/value pair, skipped entirely when there is nothing to say (design principle 9: never a placeholder for what is not known). */
@@ -54,6 +57,7 @@ export function MemberDetail({
   phone,
   invite,
   workPlace,
+  classes,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -79,6 +83,8 @@ export function MemberDetail({
   invite?: { householdName: string; inviterName: string; canEmail: boolean } | null;
   /** An adult's picked office, when this viewer may see it (adults and Admins, and the person). */
   workPlace?: WorkPlace | null;
+  /** A child's classes outside school (08-011), the same list and saves as Kids & School; absent when this viewer may not see them. */
+  classes?: { activities: readonly Activity[]; words: ChildDetailWords; canChange: boolean; language: string } | null;
 }) {
   const t = requestT();
   const clockTime = requestFormatIn("UTC").time;
@@ -124,6 +130,18 @@ export function MemberDetail({
         <Fact label={t("family.fact.siblings")} value={siblings} />
         <Fact label={t("family.fact.specialOccasion")} value={occasion} />
       </dl>
+      {member.memberType === "child" && classes ? (
+        // Outside the details form on purpose: each class's sheet carries its own form.
+        <ChildClasses
+          householdId={householdId}
+          child={{ id: member.id, name: member.displayName }}
+          activities={classes.activities}
+          canChange={classes.canChange}
+          words={classes.words}
+          timezone={timezone}
+          language={classes.language}
+        />
+      ) : null}
       {member.notes ? (
         <div>
           <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("family.fact.notes")}</p>

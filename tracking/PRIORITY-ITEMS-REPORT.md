@@ -81,6 +81,8 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | A home address added did not appear in HomePlaces: every address picked with Google Maps anywhere should be there | 24-010 | Done in #233: Our places lists home, schools and offices, each linked to its editor; a child's school is picked on Kids & School |
 | Kids & School: per child, the school with its Google Maps address, the class teacher and subject teachers, activities (music, piano, karate) folded with timings and teacher, opened for classes, competitions and medals; today's classes on the calendar | 08-010, 08-011, 08-012 | Done in #234: teachers, classes outside school (folded, with competitions and medals), today's classes on the Calendar; school hours on the school sheet, the same record as Family |
 | A long email ran off a child's details in Family | 01-012 | Done in #234 |
+| Add and change a child's extracurricular classes in their Family details, folded with days and timings | 08-013 | Done in #235 |
+| The calendar said "Nothing planned — a free day" above Today's plan | 26-008 | Done in #235 |
 | Gemini Live hears well, but the chat writes different, misspelt words: write what was actually said | 04-023 | Done in #234: each turn written down again from its audio with the listening language and family names |
 | A sheet and the keyboard open together and flicker; the keyboard hides the field | 25-016 | Done in #234: the keyboard waits for a tap, rises natively on Android, the field is kept in view |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
