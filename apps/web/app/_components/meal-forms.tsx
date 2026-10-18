@@ -1,12 +1,13 @@
 "use client";
 
 import { Lightbulb, Plus } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { IngredientRows, type IngredientRowsLabels } from "@wonderhome/core/ui/ingredient-rows";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
@@ -19,6 +20,7 @@ import {
   createPreferenceAction,
   createRecipeAction,
   suggestMealAction,
+  type RecipeActionState,
   type SuggestMealState,
 } from "../(auth)/meal-actions";
 
@@ -69,8 +71,10 @@ export type MealFormLabels = {
   removing: string;
   noRecipe: string;
   writeIngredients: string;
-  writeHint: string;
-  writePlaceholder: string;
+  /** The ingredient rows' words; the legend is the form's own question. */
+  rows: Omit<IngredientRowsLabels, "legend">;
+  /** Each unit key's name in the viewer's language (the grocery list's own words). */
+  unitNames: Record<string, string>;
   saveIngredients: string;
   orRecipe: string;
   useRecipe: string;
@@ -175,7 +179,7 @@ export function PlanMealButton({
     {},
   );
   const [recipeState, recipeFormAction] = useActionState<
-    ActionState,
+    RecipeActionState,
     FormData
   >(createRecipeAction, {});
   const today = new Date().toISOString().slice(0, 10);
@@ -229,21 +233,7 @@ export function PlanMealButton({
               placeholder={labels.mealPlaceholder}
               autoComplete="off"
             />
-            <div className="space-y-1.5">
-              <label
-                htmlFor="essentialIngredients"
-                className="block text-sm font-medium"
-              >
-                {labels.essential}
-              </label>
-              <textarea
-                id="essentialIngredients"
-                name="essentialIngredients"
-                rows={3}
-                placeholder={labels.essentialPlaceholder}
-                className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
-              />
-            </div>
+            <IngredientRows prefix="essential" labels={{ ...labels.rows, legend: labels.essential }} unitLabels={labels.unitNames} />
             <p className="text-xs text-[var(--wh-foreground-subtle)]">
               {labels.fillLater}
             </p>
@@ -386,6 +376,11 @@ export function ChangeMealButton({
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(updateMealAction, {});
+  const [recipeId, setRecipeId] = useState(meal.recipeId ?? "");
+  const [addingRecipe, setAddingRecipe] = useState(false);
+  // A recipe made from here is picked at once, listed even before the page's own list refreshes with it.
+  const [made, setMade] = useState<{ id: string; name: string } | null>(null);
+  const choices = made && !recipes.some((recipe) => recipe.id === made.id) ? [...recipes, made] : recipes;
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [handled, setHandled] = useState<string | undefined>(undefined);
@@ -398,7 +393,14 @@ export function ChangeMealButton({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)}>
+      <Pill
+        type="button"
+        tone="quiet"
+        onClick={() => {
+          setRecipeId(meal.recipeId ?? "");
+          setOpen(true);
+        }}
+      >
         {labels.change}
       </Pill>
       <Sheet open={open} onOpenChange={setOpen} title={fill(labels.changeTitle, { name: meal.name })} description={labels.changeDescription}>
@@ -413,14 +415,23 @@ export function ChangeMealButton({
               <label htmlFor={`recipe-${meal.id}`} className="block text-sm font-medium">
                 {labels.fromRecipe}
               </label>
-              <select id={`recipe-${meal.id}`} name="recipeId" defaultValue={meal.recipeId ?? ""} className={select}>
+              <select id={`recipe-${meal.id}`} name="recipeId" value={recipeId} onChange={(event) => setRecipeId(event.target.value)} className={select}>
                 <option value="">{labels.noRecipe}</option>
-                {recipes.map((recipe) => (
+                {choices.map((recipe) => (
                   <option key={recipe.id} value={recipe.id}>
                     {recipe.name}
                   </option>
                 ))}
               </select>
+              {recipeId === "" ? (
+                <button
+                  type="button"
+                  onClick={() => setAddingRecipe(true)}
+                  className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-[var(--wh-primary)] hover:underline"
+                >
+                  <Plus aria-hidden className="size-3.5" /> {labels.recipeTitle}
+                </button>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <label htmlFor={`slot-${meal.id}`} className="block text-sm font-medium">
@@ -470,17 +481,24 @@ export function ChangeMealButton({
           </form>
         ) : null}
       </Sheet>
+      {/* Outside the meal's form, so its own form never submits this one. */}
+      <AddRecipeSheet
+        householdId={householdId}
+        labels={labels}
+        open={addingRecipe}
+        onOpenChange={setAddingRecipe}
+        onCreated={(recipe) => {
+          setMade(recipe);
+          setRecipeId(recipe.id);
+        }}
+      />
     </>
   );
 }
 
-/** "Add recipe" — the Recipes tab's own add form. Ingredients are kept to a name-per-line list; a household can refine quantities later. */
+/** "Add recipe" — the Recipes tab's own add form. */
 export function AddRecipeButton({ householdId, labels }: { householdId: string; labels: MealFormLabels }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    createRecipeAction,
-    {},
-  );
 
   return (
     <>
@@ -493,128 +511,156 @@ export function AddRecipeButton({ householdId, labels }: { householdId: string; 
         <Plus aria-hidden className="size-3.5" /> {labels.addRecipe}
       </Pill>
 
-      <Sheet
-        open={open}
-        onOpenChange={setOpen}
-        title={labels.recipeTitle}
-        description={labels.recipeDescription}
-      >
-        <form action={formAction} className="space-y-3">
-          {state.error ? <Alert>{state.error}</Alert> : null}
-          {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
-          <input type="hidden" name="householdId" value={householdId} />
-          <Field
-            label={labels.recipeName}
-            name="name"
-            required
-            placeholder={labels.mealPlaceholder}
-            autoComplete="off"
-          />
-          <Field
-            label={labels.cuisine}
-            name="cuisine"
-            placeholder={labels.cuisinePlaceholder}
-            autoComplete="off"
-          />
-          <div className="grid grid-cols-3 gap-3">
-            <Field
-              label={labels.activeMinutes}
-              name="activeMinutes"
-              type="number"
-              min={1}
-              required
-              defaultValue={20}
-            />
-            <Field
-              label={labels.totalMinutes}
-              name="totalMinutes"
-              type="number"
-              min={1}
-              required
-              defaultValue={40}
-            />
-            <Field
-              label={labels.serves}
-              name="serves"
-              type="number"
-              min={1}
-              required
-              defaultValue={4}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label
-              htmlFor="essentialIngredients"
-              className="block text-sm font-medium"
-            >
-              {labels.essential}
-            </label>
-            <textarea
-              id="essentialIngredients"
-              name="essentialIngredients"
-              rows={3}
-              placeholder={labels.essentialPlaceholder}
-              className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label
-              htmlFor="optionalIngredients"
-              className="block text-sm font-medium"
-            >
-              {labels.optional}
-            </label>
-            <textarea
-              id="optionalIngredients"
-              name="optionalIngredients"
-              rows={2}
-              placeholder={labels.optionalPlaceholder}
-              className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
-            />
-          </div>
-          <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-            {labels.nutrients}
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label={labels.calories}
-              name="caloriesPerServing"
-              type="number"
-              min={0}
-              placeholder="450"
-            />
-            <Field
-              label={labels.protein}
-              name="proteinGrams"
-              type="number"
-              min={0}
-              placeholder="18"
-            />
-            <Field
-              label={labels.carbs}
-              name="carbsGrams"
-              type="number"
-              min={0}
-              placeholder="55"
-            />
-            <Field
-              label={labels.fat}
-              name="fatGrams"
-              type="number"
-              min={0}
-              placeholder="12"
-            />
-          </div>
-          <Field
-            label={labels.method}
-            name="method"
-            placeholder={labels.methodPlaceholder}
-            autoComplete="off"
-          />
-          <Submit label={labels.addRecipe} pendingLabel={labels.adding} />
-        </form>
-      </Sheet>
+      <AddRecipeSheet householdId={householdId} labels={labels} open={open} onOpenChange={setOpen} />
     </>
+  );
+}
+
+/**
+ * The recipe form, in its own sheet: each essential ingredient a raw item with
+ * how much of it (`IngredientRows`), so a meal planned from it knows what to
+ * buy. Opened by the Recipes tab's "Add recipe" and by the "Add a recipe" link
+ * under a meal's recipe picker, which picks the new recipe through `onCreated`.
+ */
+export function AddRecipeSheet({
+  householdId,
+  labels,
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  householdId: string;
+  labels: MealFormLabels;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated?: (recipe: { id: string; name: string }) => void;
+}) {
+  const [state, formAction] = useActionState<RecipeActionState, FormData>(createRecipeAction, {});
+  // A recipe that went through starts the next one on a fresh form (the rows are kept in state), and a caller waiting on it picks it.
+  const [handled, setHandled] = useState<string | undefined>(undefined);
+  const [formKey, setFormKey] = useState(0);
+  if (state.recipeId && state.recipeId !== handled) {
+    setHandled(state.recipeId);
+    setFormKey((key) => key + 1);
+  }
+  // Telling the caller is a change in another component, so it waits for the commit.
+  const created = state.recipeId ? { id: state.recipeId, name: state.recipeName ?? "" } : null;
+  useEffect(() => {
+    if (!created || !onCreated) return;
+    onCreated(created);
+    onOpenChange(false);
+    // Once per recipe made; the callbacks are the caller's and may change on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [created?.id]);
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={labels.recipeTitle}
+      description={labels.recipeDescription}
+    >
+      <form key={formKey} action={formAction} className="space-y-3">
+        {state.error ? <Alert>{state.error}</Alert> : null}
+        {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+        <input type="hidden" name="householdId" value={householdId} />
+        <Field
+          label={labels.recipeName}
+          name="name"
+          required
+          placeholder={labels.mealPlaceholder}
+          autoComplete="off"
+        />
+        <Field
+          label={labels.cuisine}
+          name="cuisine"
+          placeholder={labels.cuisinePlaceholder}
+          autoComplete="off"
+        />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Field
+            label={labels.activeMinutes}
+            name="activeMinutes"
+            type="number"
+            min={1}
+            required
+            defaultValue={20}
+          />
+          <Field
+            label={labels.totalMinutes}
+            name="totalMinutes"
+            type="number"
+            min={1}
+            required
+            defaultValue={40}
+          />
+          <Field
+            label={labels.serves}
+            name="serves"
+            type="number"
+            min={1}
+            required
+            defaultValue={4}
+          />
+        </div>
+        <IngredientRows prefix="essential" labels={{ ...labels.rows, legend: labels.essential }} unitLabels={labels.unitNames} />
+        <div className="space-y-1.5">
+          <label
+            htmlFor="optionalIngredients"
+            className="block text-sm font-medium"
+          >
+            {labels.optional}
+          </label>
+          <textarea
+            id="optionalIngredients"
+            name="optionalIngredients"
+            rows={2}
+            placeholder={labels.optionalPlaceholder}
+            className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
+          />
+        </div>
+        <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+          {labels.nutrients}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label={labels.calories}
+            name="caloriesPerServing"
+            type="number"
+            min={0}
+            placeholder="450"
+          />
+          <Field
+            label={labels.protein}
+            name="proteinGrams"
+            type="number"
+            min={0}
+            placeholder="18"
+          />
+          <Field
+            label={labels.carbs}
+            name="carbsGrams"
+            type="number"
+            min={0}
+            placeholder="55"
+          />
+          <Field
+            label={labels.fat}
+            name="fatGrams"
+            type="number"
+            min={0}
+            placeholder="12"
+          />
+        </div>
+        <Field
+          label={labels.method}
+          name="method"
+          placeholder={labels.methodPlaceholder}
+          autoComplete="off"
+        />
+        <Submit label={labels.addRecipe} pendingLabel={labels.adding} />
+      </form>
+    </Sheet>
   );
 }
 

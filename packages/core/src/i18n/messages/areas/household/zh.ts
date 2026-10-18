@@ -579,6 +579,7 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "homeScreen.clearDay": "轻松的一天",
   "homeScreen.clearDayLede": "没有等着你处理的事，今天日历上也没有重要安排了。",
   "homeScreen.planTogether": "一起计划",
+  "homeScreen.openEvent": "打开活动",
   "homeScreen.addFamilyMember": "添加家庭成员",
   "homeScreen.moreFamilyTime": "更多家庭时光！",
   "homeScreen.moreMoments": "更多这样的时刻。",

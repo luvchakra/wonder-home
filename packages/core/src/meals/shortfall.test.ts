@@ -67,6 +67,11 @@ describe("mealShortfalls", () => {
     ]);
   });
 
+  it("reads the \"unit\" placeholder as an amount nobody gave, never as one piece", () => {
+    const [line] = mealShortfalls({ ingredients: [need("Coriander", 1, "unit")], scale: 1, groceries: [] }).short;
+    expect(line).toEqual(expect.objectContaining({ name: "Coriander", need: null, basis: "estimate" }));
+  });
+
   it("leaves out what the household said it has or swapped", () => {
     const result = mealShortfalls({ ingredients: [need("Pasta", 900, "g", { status: "have" }), need("Paneer", 1, "unit", { status: "substituted", substituteName: "Tofu" })], scale: 1, groceries });
     expect(result.short).toEqual([]);

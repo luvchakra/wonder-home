@@ -16,7 +16,7 @@ import { requireSession } from "../_lib/session";
 import { AddPlaceForm } from "./add-place-form";
 import { PlaceBookActions, type PlaceBookLabels } from "./place-book-actions";
 
-export const metadata = { title: "Places" };
+export const metadata = { title: "HomePlaces" };
 export const dynamic = "force-dynamic";
 
 /** A place's tile: somewhere to eat, somewhere outdoors, or anywhere else. */

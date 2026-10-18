@@ -391,7 +391,7 @@ export const householdEn = {
   "manage.weather.use": "Use this area",
   "manage.weather.cancel": "Cancel",
 
-  // HomeBrain Review
+  // HomeBrain
   "review.lede": "What WonderHome understands about your home — and where each belief came from.",
   "review.category.family_roles": "Family & roles",
   "review.category.home_routines": "Home routines",
@@ -577,6 +577,7 @@ export const householdEn = {
   "homeScreen.clearDay": "A clear day",
   "homeScreen.clearDayLede": "Nothing is waiting on you, and nothing important is left on the calendar today.",
   "homeScreen.planTogether": "Plan together",
+  "homeScreen.openEvent": "Open event",
   "homeScreen.addFamilyMember": "Add a family member",
   "homeScreen.moreFamilyTime": "More family time!",
   "homeScreen.moreMoments": "More moments like this.",

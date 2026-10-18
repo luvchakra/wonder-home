@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**249 of 265 stories done — 94%**
+**253 of 270 stories done — 93.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 249 |
+| Done | 253 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 12 |
+| Not Started | 13 |
 | Deferred | 1 |
 
 ## By module
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 11 | 11 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 20 | 21 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 21 | 22 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
@@ -49,9 +49,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
-| 24 HomePlaces | `██████████` | 8 | 8 | — |
-| 25 HomeFood | `█████░░░░░` | 7 | 13 | 1 in progress, 5 not started |
-| 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
+| 24 HomePlaces | `██████████` | 9 | 9 | — |
+| 25 HomeFood | `█████░░░░░` | 8 | 15 | 1 in progress, 6 not started |
+| 26 HomeEvents | `██░░░░░░░░` | 2 | 7 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -67,6 +67,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
+| `25-015` Change or remove a recipe and its ingredients | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -146,7 +147,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-20 of 21 done `█████████░`
+21 of 22 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -171,6 +172,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-019` Voice in the app is HomeTalk; getaways and likes answered from the record | P0 | Done | The owner's reports, 2026-10-18 (PR #228). Gemini Live inside HomeTalk said "I can't do that from this voice assistant, use the WonderHome app": the in-app channel now carries `inApp` limits (`channelAllowsAction`, `channelRefusal` in `voicelink/scopes.ts`), its refusal names HomeTalk and the on-screen OK, and Gemini's instructions say it is HomeTalk's own voice inside WonderHome and never to send the person to "the app". A place question is answered by Gemini Live where the household lets location reach Google (capability `places` is `consent` for Gemini, still `app_only` for Alexa). "Can you suggest a two-day vacation plan?" is a HomePlaces getaway (`purpose: "getaway"`, `when: trip`): tourist attractions within a few hours' drive of home, the search kept to that area (`within`, `includedType`), day-trip distances left out, no opening hours checked; real check from Pune gave Mahabaleshwar, Naneghat and the Wai hills. "What does Upasana like in food?" is answered by rules from every record about her — what HomeTalk was told (`memories`) and the Meals screen's preferences — in `conversation/likes.ts`, after the model said "no records" minutes after "Remembered". Golden HT-88. The cause behind the forgetting is a design limit, written up as `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` for the owner |
 | `04-020` HomeTalk floats over other apps | P0 | Done | The owner's ask, 2026-10-18 (PR #229): use other apps on the phone while talking to HomeTalk, with WonderHome as a picture-in-picture window and the voice still going. A web app cannot float itself, but a phone floats a video: the live session is painted onto a canvas (`components/ui/live-float.ts` — the orb, listening/thinking/speaking/paused, the last thing heard and said, in the theme's own tokens, text shrinking before it is cut), streamed as a video and floated by the browser (`LiveTalkProvider`'s `float`/`unfloat`: `requestPictureInPicture`, or Safari's presentation mode). The engines never move; the window is a view of the one session at the app's root. Float sits beside End in the composer and on the live bar, only where the browser can do it; the phone's media controls pause, resume and end the same session; a recogniser that lapses in the background relistens after a breath and on return. Help: Voice ¶8 in eight languages. `live-float.test.ts` 17. Browser-checked at 360px and 1280px: headless Chromium really entered picture-in-picture (video 480×360), the frame showed the exchange, Groceries opened while floating, End closed the window. The microphone behind another app on a real phone is the owner's check |
 | `04-021` Wait to speak until HomeTalk can hear | P0 | Done | The owner's report, 2026-10-18 (PR #230): Gemini Live takes a few seconds to open its session and only then listens, but the composer looked ready the moment it was tapped, so people spoke into nothing. A live session now has its own `connecting` state, kept apart from thinking and listening, in `LiveTalkProvider`, the live bar and the floating window. The composer shows "Getting ready… don't speak yet" in amber with a turning ring and "{who} is connecting. Start speaking when it says it's listening." (assertive live region), then "Ready — speak now" in green for three seconds, then the usual "… is listening". WonderHome's own voice does the same on a session's first listen, until the recogniser says it has started (`onstart`) or the microphone is recording (`captureUtterance`'s `onReady`), with a 2.5 s fallback. Labels in eight languages; help Voice ¶2. Browser-checked at 360px and 1280px with a recogniser that takes 2 s to start: 0.5 s "Getting ready", 2.5 s "Ready — speak now", 6 s "HomeTalk is listening…", no errors |
+| `04-022` HomeTalk floats on its own when you leave the app | P0 | Done | The owner's ask, 2026-10-18 (PR #232): switching to another app in the middle of a live conversation should float HomeTalk without anyone remembering Float. While a live conversation runs and isn't paused (`shouldArmFloat`), the floating window's hidden video is armed and playing with `autopictureinpicture`, so Safari floats it as the page goes to the background, Chrome floats it through the media session's `enterpictureinpicture` action, and a `visibilitychange` to hidden asks once more, quietly (no notice if the browser refuses). Closing the window keeps it armed; ending the conversation tears it down. Float stays as the manual way. Help Voice ¶8 in eight languages. Browser-checked at 360px and 1280px: armed before any tap, leaving the page floated it with no notice, Float/Bring back/End unchanged, no errors |
 
 ### 05 — Household Certification & Understanding
 
@@ -484,7 +486,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -496,10 +498,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-006` Search for places from the Places screen | P2 | Done | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser-checked 2026-10-18 at 360px and 1280px with a real Google Maps key against the live project (QA household, cleaned up afterwards): "Blue Tokai Coffee Bandra" listed three real branches; picking one and saving showed "Saved to your place book" and the place, with its full address, under Saved. No horizontal scroll at either width |
 | `24-007` Work hours as a fact in Family | P2 | Done | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): Family shows How they work and Office hours |
 | `24-008` Getaways: "a two-day vacation plan" answered with places worth the trip | P0 | Done | The owner, 2026-10-18 (PR #228). `homeplaces/request.ts` reads a getaway (vacation, holiday, trip, weekend away; the days from "two-day", "a weekend", "4 day"): `purpose: "getaway"`, anchored at home, `when: { kind: "trip", days }`, radius 200 km (80 km for one day). The search asks for tourist attractions ("hill station weekend getaway" for a weekend; vaguer words drew resorts and travel agencies when tried) and is kept within the area (`NearbyQuery.within` → a `locationRestriction` rectangle, `includedType` with strict type filtering in `places/google.ts`); day-trip distances (under 25 km) are left out; no opening hours are checked; distance costs little in the ranking. The reply says "worth the trip from home, the best rated first" and to check the drive, weather and stay. Live check from Pune: Mahabaleshwar, Louisa Point, Naneghat, the Wai hills. Gemini Live answers it where location may reach Google |
+| `24-009` HomePlaces is named and placed with the AI tools | P1 | Done | The owner, 2026-10-18 (PR #232): the Places screen is now HomePlaces and sits in the nav drawer and More under AI & Smart Tools, after HomeSend (`navigation/secondary-navigation.ts`, AI tone). HomeBrain Review is now HomeBrain in the same section. Nav labels, page titles, HomeTalk's "take me to HomePlaces", the help guide and HomeTalk's own replies are renamed in all eight languages. Browser-checked at 360px and desktop |
 
 ### 25 — HomeFood
 
-7 of 13 done `█████░░░░░`
+8 of 15 done `█████░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -515,11 +518,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-011` Indian nutrition, the rest | P1 | Not Started | The owner, 2026-10-18: medium priority, for later; what 25-009 finished is what is used. Left: link the curated Indian items not yet linked to their IFCT food (399 of 1,559 are), in the same rules (same food and state, "close" says what differs, nothing processed); cooked and prepared foods, which IFCT does not hold (INDB 2024 builds them from IFCT, so the same NIN permission covers it); NIN's written permission for IFCT (email drafted in `docs/progress/2026-10-18-ifct-indian-nutrition.md`, needs a person to send); a native speaker's review of the close matches and regional names |
 | `25-012` Compact grocery cards with nutrition, and items named in words counted like the catalog | P0 | Done | The owner, 2026-10-18 (PR #226): each row is about a fifth shorter at 360px (picture, name and chevron on one line, in stock and the stepper across the card's full width, 36px steppers), and shows energy and protein per 100 g under the name from the item's credited source (`cardNutrition`: IFCT for a curated item, the label for a product; nothing when neither has it). An item made by name — HomeTalk's "add pasta", an agent's add, a meal's shortfall — takes the catalog's reading (`pickCatalogItem` / `catalogItemFor`): an exact name or alias links to that catalog item; a word only its everyday variants carry ("Pasta, penne", "Pasta, macaroni") takes how they are counted and the pack they share, never a variant picked for the household. So "add pasta" is 500 g of pasta under Rice & grains, not 1 pc. Browser-checked at 360px and 1280px |
 | `25-013` Change how an item is counted, even pieces to grams | P1 | Done | Migration `20261018240000` run by the owner in the SQL editor on 2026-10-18 (the service-role key cannot run DDL), `verify:live` 278/278; browser-checked at 360px and 1280px against the live project: an item in pieces with 3 at home and 2 on the list, "Counted in" → grams (g) said what would happen, then counted in grams, stock back to not counted with the 3 pieces kept on the change's record, the list reopened at 50 g, no errors. Code shipped in PR #229 (`commerce/unit-change.ts`, "Counted in" in the amount sheet, history rows, `verify:live` probes), inert until the migration `20261018240000_grocery_unit_change.sql` runs: the service-role key cannot run DDL (Management API 401, no SQL RPC), so the file was handed to the owner for the SQL editor. Then `npm run verify:live` and the pieces → grams browser check, then Done. The owner asked to change an item's unit from its card (pasta kept in pieces). The item page's unit picker already changes units that convert; one that does not (pcs to g) is refused while anything is at home or on the list. Built and DB-tested but held back at the owner's choice on 2026-10-18 because its migration could not be applied: `public.change_consumable_unit` + `consumable_unit_changes` (stock back to not counted and recorded, list restarts at the usual buy), a "Counted in" picker in the amount sheet with an own-unit option. Pick up from the saved work, apply the migration live, browser-check |
+| `25-014` Ingredients as raw items with amounts, and a recipe added from a meal | P0 | Done | The owner, 2026-10-18 (PR #232). The ingredient text boxes are gone: a meal's Ingredients, Add recipe and Plan a meal's quick recipe take one row per raw item, each with how much and a unit picked from the grocery list's units, with its own way to add a unit (`ui/ingredient-rows.tsx`; read on the server by `meals/ingredient-lines.ts`: decimals with a comma or a point, the same item twice in one unit added together, no amount kept as "not known"). A recipe now stores what it needs (it used to store 1 "unit" of everything), so a meal planned from it gets real amounts. Change meal shows a small **Add a recipe** link under the recipe picker when there is none, and the new recipe is picked for the meal. Fixed on the way: an ingredient with no amount was read as "1 pc" (`normalizeUnit` turns "unit" into pieces); it now says the amount isn't known. Help Meals ¶10 in eight languages. Browser-checked at 360px and desktop on the live project |
+| `25-015` Change or remove a recipe and its ingredients | P1 | Not Started | Left open by 25-014: a recipe can be added but not edited or removed (rule 12), so a recipe saved before 25-014 keeps its "amount not known" ingredients until it is added again |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents
 
-1 of 6 done `█░░░░░░░░░`
+2 of 7 done `██░░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -529,5 +534,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-004` Calendar reminders and holiday region | P1 | Not Started | Formerly 12-012. C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |
 | `26-005` Calendar notices over WhatsApp | P2 | Not Started | Formerly 12-013. C5: only if wanted; the official template, shared with Groceries' Send to Cook |
 | `26-006` Google and Outlook calendars | P2 | Not Started | Formerly 12-014. C6: only after a separate approval |
+| `26-007` Home's next event says what kind it is | P1 | Done | The owner's report, 2026-10-18 (PR #232): a school trip came up on Home as a "Family moment" with a heart and "Plan together". The card now takes the next family-kind event (family time, outing, birthday, gathering, travel, special occasion), and only when there is none the next event of any kind, said as what it is: "School event" with the school tile and "Open event" to that event's page, "Appointment" likewise, "Family moment" with "Plan together" for the rest. `CalendarItem` gives school events and appointments the calendar's own tiles, and its Protected badge wraps under a short title instead of being cut. Words in eight languages. Browser-checked at 360px and 1280px: a protected school trip alone reads School event / Open event (the event page opens); with a family picnic three days later the card is the picnic, Family moment / Plan together; no horizontal scroll |
 
 _Generated 2026-10-18 from 27 backlog files._

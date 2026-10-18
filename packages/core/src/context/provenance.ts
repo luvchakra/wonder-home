@@ -70,7 +70,7 @@ export function explainProvenance(item: HouseholdContextItem, timezone: string):
   const intake = item.evidence.find((ref) => ref.type === "homesend_intake");
   if (intake?.capturedAt) return `Added from something sent to HomeSend on ${formatDate(new Date(intake.capturedAt), timezone)}.`;
   if (item.source.type === "certification_items") {
-    return item.confirmed ? "Something the household told WonderHome in HomeBrain Review, and confirmed." : "A belief in HomeBrain Review that nobody has confirmed yet.";
+    return item.confirmed ? "Something the household told WonderHome in HomeBrain, and confirmed." : "A belief in HomeBrain that nobody has confirmed yet.";
   }
   if (item.source.type.startsWith("memories")) {
     return item.confirmed ? "Something the household told WonderHome and confirmed." : "Something WonderHome picked up and has not had confirmed yet.";

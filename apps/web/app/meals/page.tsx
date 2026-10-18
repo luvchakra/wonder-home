@@ -159,7 +159,7 @@ export default async function MealsPage({
     id: recipe.id,
     name: recipe.name,
   }));
-  const formLabels = mealFormLabels(t);
+  const formLabels = mealFormLabels(t, words.unitNames);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now.getTime() + index * 86_400_000);
@@ -580,8 +580,8 @@ function MealCard({
             empty: {
               lede: labels.noIngredientsYet,
               write: labels.writeIngredients,
-              hint: labels.writeHint,
-              placeholder: labels.writePlaceholder,
+              rows: labels.rows,
+              unitNames: labels.unitNames,
               save: labels.saveIngredients,
               saving: labels.saving,
               orRecipe: labels.orRecipe,

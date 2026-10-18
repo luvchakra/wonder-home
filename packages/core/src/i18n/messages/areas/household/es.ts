@@ -393,7 +393,7 @@ export const householdEs: AreaCatalog<typeof householdEn> = {
   "manage.weather.use": "Usar esta zona",
   "manage.weather.cancel": "Cancelar",
 
-  // Revisión de HomeBrain
+  // HomeBrain
   "review.lede": "Lo que WonderHome entiende de tu casa, y de dónde viene cada creencia.",
   "review.category.family_roles": "Familia y roles",
   "review.category.home_routines": "Rutinas de la casa",
@@ -579,6 +579,7 @@ export const householdEs: AreaCatalog<typeof householdEn> = {
   "homeScreen.clearDay": "Un día despejado",
   "homeScreen.clearDayLede": "No hay nada esperándote y no queda nada importante en el calendario de hoy.",
   "homeScreen.planTogether": "Planear juntos",
+  "homeScreen.openEvent": "Abrir evento",
   "homeScreen.addFamilyMember": "Añadir un familiar",
   "homeScreen.moreFamilyTime": "¡Más tiempo en familia!",
   "homeScreen.moreMoments": "Más momentos como este.",

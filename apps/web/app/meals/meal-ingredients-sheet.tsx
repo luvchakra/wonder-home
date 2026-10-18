@@ -6,10 +6,12 @@ import { useState, useTransition } from "react";
 
 import type { GroceryItem } from "@wonderhome/core/commerce/inventory";
 import type { IngredientNeed } from "@wonderhome/core/meals/meals";
+import { ingredientRowsOf } from "@wonderhome/core/meals/ingredient-lines";
 import { mealShortfalls, servingScale, type ShortfallLine } from "@wonderhome/core/meals/shortfall";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
+import { IngredientRows, type IngredientRowsLabels } from "@wonderhome/core/ui/ingredient-rows";
 import { Pill, PillLink } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -42,8 +44,8 @@ export type MealIngredientsLabels = {
   empty: {
     lede: string;
     write: string;
-    hint: string;
-    placeholder: string;
+    rows: Omit<IngredientRowsLabels, "legend">;
+    unitNames: Record<string, string>;
     save: string;
     saving: string;
     orRecipe: string;
@@ -185,8 +187,8 @@ export function MealIngredientsSheet({
 /**
  * A meal planned without a recipe has nothing to check yet. Rather than
  * saying "pick a recipe" with nowhere to pick one, the sheet lets the person
- * write what it needs, one line each ("500 g rajma"), or use one of their
- * recipes, right here.
+ * list what it needs — each raw item with how much of it, the unit picked
+ * (`IngredientRows`) — or use one of their recipes, right here.
  */
 function NoIngredientsYet({
   householdId,
@@ -200,14 +202,13 @@ function NoIngredientsYet({
   labels: MealIngredientsLabels["empty"];
 }) {
   const router = useRouter();
-  const [text, setText] = useState("");
   const [recipeId, setRecipeId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const saveLines = () =>
+  const saveLines = (form: FormData) =>
     startTransition(async () => {
-      const done = await addMealIngredientsAction({ householdId, mealId, text });
+      const done = await addMealIngredientsAction({ householdId, mealId, rows: ingredientRowsOf(form, "ingredient") });
       if (done.error) setError(done.error);
       else router.refresh();
     });
@@ -226,20 +227,12 @@ function NoIngredientsYet({
     <div className="space-y-3">
       <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.lede}</p>
       {error ? <Alert>{error}</Alert> : null}
-      <label className="block space-y-1.5">
-        <span className="text-sm font-medium">{labels.write}</span>
-        <textarea
-          rows={4}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder={labels.placeholder}
-          className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base"
-        />
-        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{labels.hint}</span>
-      </label>
-      <Button type="button" className="w-full" disabled={pending || !text.trim()} onClick={saveLines}>
-        {pending ? labels.saving : labels.save}
-      </Button>
+      <form action={saveLines} className="space-y-3">
+        <IngredientRows prefix="ingredient" labels={{ ...labels.rows, legend: labels.write }} unitLabels={labels.unitNames} />
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending ? labels.saving : labels.save}
+        </Button>
+      </form>
       {recipes.length > 0 ? (
         <div className="space-y-2 border-t border-[var(--wh-border)] pt-3">
           <Select label={labels.orRecipe} name="recipeId" value={recipeId} onChange={(event) => setRecipeId(event.target.value)}>

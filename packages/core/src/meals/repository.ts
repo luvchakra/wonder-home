@@ -18,6 +18,7 @@ import {
   type Recipe,
 } from "./meals";
 import { invalidatesContext } from "../context/invalidation";
+import type { IngredientLine } from "./ingredient-lines";
 
 /**
  * Reading and writing meals (module 10).
@@ -354,8 +355,9 @@ export type CreateRecipeInput = {
   proteinGrams?: number | null;
   carbsGrams?: number | null;
   fatGrams?: number | null;
-  /** One name per ingredient. Quantity defaults to 1 unit each — a household can refine amounts later by editing the recipe. */
-  essentialIngredients: string[];
+  /** Each raw item with how much the recipe needs (`meals/ingredient-lines.ts`); "unit" where the amount is not known. */
+  essentialIngredients: IngredientLine[];
+  /** Nice to have, by name only: they never become a shopping need, so no amount is kept. */
   optionalIngredients: string[];
 };
 
@@ -398,15 +400,19 @@ async function createRecipeImpl(
 
   const recipeId = (data as Row).id as string;
 
+  const essentialNames = new Set(input.essentialIngredients.map((line) => line.name.toLowerCase()));
   const ingredientRows = [
-    ...input.essentialIngredients.map((name) => ({ name, essential: true })),
-    ...input.optionalIngredients.map((name) => ({ name, essential: false })),
+    ...input.essentialIngredients.map((line) => ({ ...line, essential: true })),
+    // An optional item already listed as essential is the same row (unique per recipe and name).
+    ...input.optionalIngredients
+      .filter((name) => !essentialNames.has(name.toLowerCase()))
+      .map((name) => ({ name, quantity: 1, unit: "unit", essential: false })),
   ].map((ingredient) => ({
     household_id: input.householdId,
     recipe_id: recipeId,
     name: ingredient.name,
-    quantity: 1,
-    unit: "unit",
+    quantity: ingredient.quantity,
+    unit: ingredient.unit,
     essential: ingredient.essential,
   }));
 

@@ -393,7 +393,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "manage.weather.use": "हा भाग वापरा",
   "manage.weather.cancel": "रद्द करा",
 
-  // HomeBrain पुनरावलोकन
+  // HomeBrain
   "review.lede": "WonderHome ला तुमच्या घराबद्दल काय समजते — आणि प्रत्येक समजूत कुठून आली.",
   "review.category.family_roles": "कुटुंब आणि भूमिका",
   "review.category.home_routines": "घराचा दिनक्रम",
@@ -579,6 +579,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "homeScreen.clearDay": "मोकळा दिवस",
   "homeScreen.clearDayLede": "काहीही तुमची वाट पाहत नाही, आणि आज कॅलेंडरवर महत्त्वाचे काहीही उरलेले नाही.",
   "homeScreen.planTogether": "एकत्र नियोजन करा",
+  "homeScreen.openEvent": "कार्यक्रम उघडा",
   "homeScreen.addFamilyMember": "कुटुंबातील सदस्य जोडा",
   "homeScreen.moreFamilyTime": "कुटुंबासाठी जास्त वेळ!",
   "homeScreen.moreMoments": "असे आणखी क्षण.",

@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { plainText } from "../../conversation/reply-format";
 import { cn } from "../../lib/cn";
 import { setTalkActivity } from "../shell/talk-activity";
-import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, type FloatMode, type FloatPalette } from "./live-float";
+import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, shouldArmFloat, type FloatMode, type FloatPalette } from "./live-float";
 import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
 
@@ -203,8 +203,11 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     drawLiveFrame(ctx, liveFrame(viewRef.current, exchangeRef.current, labels), palette, phase);
   }, []);
 
-  /** Closes the window and lets its elements go; the conversation itself is untouched. */
-  const endFloat = useCallback(() => {
+  /**
+   * Lets the floating video go entirely — the conversation ended. Closing the
+   * window alone (`unfloat`) keeps it ready, so leaving the app floats again.
+   */
+  const disarmFloat = useCallback(() => {
     const session = floatRef.current;
     if (!session) return;
     floatRef.current = null;
@@ -224,23 +227,47 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     setFloating(false);
   }, []);
 
+  /** Closes the floating window; the video stays ready for the next time the person leaves. */
+  const closeFloat = useCallback(() => {
+    const session = floatRef.current;
+    if (!session) return;
+    try {
+      if (document.pictureInPictureElement === session.video) void document.exitPictureInPicture().catch(() => undefined);
+      else if (session.mode === "webkit" && (session.video as WebkitVideo).webkitPresentationMode === "picture-in-picture") {
+        (session.video as WebkitVideo).webkitSetPresentationMode?.("inline");
+      }
+    } catch {
+      // Already closed.
+    }
+    setFloating(false);
+  }, []);
+
   /**
-   * Opens the floating window. Called from a tap, because the browser only
-   * floats a video the person asked for. The canvas is painted first so the
-   * window never opens blank, and the stream from it is what the phone floats.
+   * Gets the floating video ready and playing, hidden in the page, while a
+   * live conversation runs (story 04-022). A browser floats a window on its
+   * own only for a video that is already playing: Safari's
+   * `autopictureinpicture` when the person goes home, Chrome's
+   * `enterpictureinpicture` media-session action when they leave a page
+   * using the microphone. So the video has to exist before they leave, not
+   * after. Muted, so it may play without a tap; painted at once, so the
+   * window never opens blank.
    */
-  const floatNow = useCallback(async () => {
-    if (floatRef.current || typeof window === "undefined") return;
+  const armFloat = useCallback(async (): Promise<FloatSession | null> => {
+    if (floatRef.current) return floatRef.current;
+    if (typeof window === "undefined") return null;
     const mode = floatSupport(readFloatEnvironment(window));
-    if (!mode) return;
+    if (!mode) return null;
     const canvas = document.createElement("canvas");
     canvas.width = FRAME_WIDTH;
     canvas.height = FRAME_HEIGHT;
-    const video = document.createElement("video");
+    const video = document.createElement("video") as WebkitVideo & { autoPictureInPicture?: boolean };
     video.muted = true;
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.setAttribute("aria-hidden", "true");
+    // Safari floats a playing video marked this way when the person leaves.
+    video.setAttribute("autopictureinpicture", "");
+    video.autoPictureInPicture = true;
     // Kept in the page (a detached video is never floated) but out of the way of it.
     video.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none";
     document.body.appendChild(video);
@@ -248,30 +275,51 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     floatRef.current = session;
     paletteRef.current = null;
     paint();
+    // Whichever way the window opens or closes (a tap, the browser on leaving, its own close button), the state follows.
+    video.addEventListener("enterpictureinpicture", () => setFloating(true));
+    video.addEventListener("leavepictureinpicture", () => setFloating(false));
+    video.addEventListener("webkitpresentationmodechanged", () => setFloating(video.webkitPresentationMode === "picture-in-picture"));
     try {
       video.srcObject = canvas.captureStream(FRAME_RATE);
       await video.play();
-      if (floatRef.current !== session) return;
-      if (mode === "standard") {
-        await video.requestPictureInPicture();
-        video.addEventListener("leavepictureinpicture", () => endFloat(), { once: true });
-      } else {
-        const webkit = video as WebkitVideo;
-        if (webkit.webkitSupportsPresentationMode?.("picture-in-picture") === false) throw new Error("not supported");
-        webkit.webkitSetPresentationMode?.("picture-in-picture");
-        video.addEventListener("webkitpresentationmodechanged", () => {
-          if (webkit.webkitPresentationMode !== "picture-in-picture") endFloat();
-        });
-      }
-      if (floatRef.current !== session) return;
-      session.timer = window.setInterval(paint, 1000 / FRAME_RATE);
-      setFloating(true);
-      setNotice(null);
     } catch {
-      endFloat();
-      setNotice(configRef.current?.labels.floatFailed ?? null);
+      if (floatRef.current === session) disarmFloat();
+      return null;
     }
-  }, [endFloat, paint]);
+    if (floatRef.current !== session) return null;
+    session.timer = window.setInterval(paint, 1000 / FRAME_RATE);
+    return session;
+  }, [disarmFloat, paint]);
+
+  /**
+   * Opens the floating window. From a tap it always may; from leaving the app
+   * (`quiet`) the browser may refuse, and then nothing is said: the person
+   * can still tap Float when they come back.
+   */
+  const floatNow = useCallback(
+    async (quiet = false) => {
+      const session = await armFloat();
+      if (!session) {
+        if (!quiet) setNotice(configRef.current?.labels.floatFailed ?? null);
+        return;
+      }
+      if (document.pictureInPictureElement === session.video) return;
+      try {
+        if (session.mode === "standard") {
+          await session.video.requestPictureInPicture();
+        } else {
+          const webkit = session.video as WebkitVideo;
+          if (webkit.webkitSupportsPresentationMode?.("picture-in-picture") === false) throw new Error("not supported");
+          webkit.webkitSetPresentationMode?.("picture-in-picture");
+        }
+        setFloating(true);
+        setNotice(null);
+      } catch {
+        if (!quiet) setNotice(configRef.current?.labels.floatFailed ?? null);
+      }
+    },
+    [armFloat],
+  );
 
   const navigate = useCallback(
     (href: string) => {
@@ -369,7 +417,7 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       stop: () => {
         if (running) engineOf(running).stop();
         setRunning(null);
-        endFloat();
+        disarmFloat();
         // On HomeTalk's page the page posts the recap itself (its `onLiveEnd`).
         const since = startMessageId.current;
         if (!handlerRef.current && since && configRef.current) {
@@ -389,10 +437,10 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       floatable,
       floating,
       float: () => void floatNow(),
-      unfloat: endFloat,
+      unfloat: closeFloat,
       notice,
     }),
-    [endFloat, engineOf, floatNow, floatable, floating, navigate, notice, running, view],
+    [closeFloat, disarmFloat, engineOf, floatNow, floatable, floating, navigate, notice, running, view],
   );
 
   // The tab bar's raised HomeTalk button glows for as long as the conversation runs, on any screen.
@@ -410,9 +458,24 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     paint();
   }, [liveActive, livePaused, liveState, paint]);
   useEffect(() => {
-    if (!running) endFloat();
-  }, [endFloat, running]);
-  useEffect(() => () => endFloat(), [endFloat]);
+    if (!running) disarmFloat();
+  }, [disarmFloat, running]);
+  useEffect(() => () => disarmFloat(), [disarmFloat]);
+
+  // Leaving the app floats HomeTalk (story 04-022): while a conversation is
+  // live, the floating video is kept ready, and the moment the page is hidden
+  // the window is asked for. Chrome's own "enterpictureinpicture" action and
+  // Safari's autopictureinpicture take it from there where they can.
+  const autoFloat = shouldArmFloat({ floatable, active: liveActive, paused: livePaused });
+  useEffect(() => {
+    if (!autoFloat) return;
+    void armFloat();
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") void floatNow(true);
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    return () => document.removeEventListener("visibilitychange", onHidden);
+  }, [armFloat, autoFloat, floatNow]);
 
   // The phone's own media controls — on its lock screen, in the floating
   // window — pause, resume and end this conversation; where the browser
@@ -448,8 +511,8 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     set("play", value.resume);
     set("pause", value.pause);
     set("stop", value.stop);
-    set("enterpictureinpicture", floatable ? value.float : null);
-  }, [floatable, liveActive, livePaused, value]);
+    set("enterpictureinpicture", floatable ? () => void floatNow(true) : null);
+  }, [floatNow, floatable, liveActive, livePaused, value]);
 
   // While the bar shows, every page keeps its last row clear of it (rule 15).
   const barShown = Boolean(live?.active && config && !pathname.startsWith("/ai"));

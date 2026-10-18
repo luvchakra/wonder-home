@@ -18,7 +18,7 @@ export const welcomeFr: AreaCatalog<typeof welcomeEn> = {
   "welcome.q.noPets": "Des animaux à la maison, ou un en route ?",
   "welcome.ack": "C'est noté, je m'en souviendrai.",
   "welcome.ackNone": "D'accord, rien à noter de ce côté.",
-  "welcome.done": "Merci ! J'ai gardé tout cela dans « Revue HomeBrain », où vous pouvez le modifier à tout moment. Par quoi voulez-vous commencer ?",
+  "welcome.done": "Merci ! J'ai gardé tout cela dans « HomeBrain », où vous pouvez le modifier à tout moment. Par quoi voulez-vous commencer ?",
   "welcome.skipped": "Pas de souci, on fera ça une autre fois. Par quoi voulez-vous commencer ?",
   "welcome.listen": "Écouter l'accueil",
 };

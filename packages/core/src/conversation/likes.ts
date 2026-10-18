@@ -118,7 +118,7 @@ export function composeLikes(question: LikesQuestion, person: LikesPerson, recor
     };
   }
   return {
-    text: [`Here's what's on record about ${first}:`, lines.map((line) => `- ${line}`).join("\n"), "You can correct any of this under HomeBrain Review, or tell me what's changed."].join("\n\n"),
+    text: [`Here's what's on record about ${first}:`, lines.map((line) => `- ${line}`).join("\n"), "You can correct any of this under HomeBrain, or tell me what's changed."].join("\n\n"),
     count: lines.length,
     health,
   };
