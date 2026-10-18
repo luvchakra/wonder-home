@@ -125,12 +125,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("calendar.lede", { name: viewer.displayName.split(" ")[0] ?? viewer.displayName })}</p>
         </header>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <nav aria-label={t("calendar.nav.label")} className="flex min-w-0 flex-1 items-center gap-1">
+        {/* On a phone the period gets a row of its own, so "October 2026" is never squeezed by the buttons beside it (rule 15). */}
+        <div className="space-y-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 sm:space-y-0">
+          <nav aria-label={t("calendar.nav.label")} className="flex items-center gap-1">
             <Link href={previousHref} scroll={false} aria-label={t(`calendar.previous.${view}`)} className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]">
               <ChevronLeft aria-hidden className="size-5 rtl:rotate-180" />
             </Link>
-            <h2 className="min-w-0 text-lg font-semibold break-words" aria-live="polite">{periodTitle}</h2>
+            <h2 className="flex-1 text-center text-lg font-semibold sm:flex-none sm:text-start" aria-live="polite">{periodTitle}</h2>
             <Link href={nextHref} scroll={false} aria-label={t(`calendar.next.${view}`)} className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]">
               <ChevronRight aria-hidden className="size-5 rtl:rotate-180" />
             </Link>
