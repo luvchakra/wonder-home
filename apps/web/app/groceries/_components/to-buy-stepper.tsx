@@ -137,7 +137,7 @@ export function ToBuyStepper({
     timer.current = setTimeout(() => void flush(), SETTLE_MS);
   };
 
-  const buttonSize = size === "lg" ? "size-11" : "size-10";
+  const buttonSize = size === "lg" ? "size-11" : "size-9";
 
   return (
     <div className="flex flex-col items-end">
@@ -149,7 +149,7 @@ export function ToBuyStepper({
           aria-label={fill(words.stepper.addToList, { name: item.name })}
           title={fill(words.stepper.addToList, { name: item.name })}
           onClick={() => nudge(1)}
-          className={`inline-flex ${size === "lg" ? "h-11 px-4" : "h-10 px-3.5"} items-center gap-1 rounded-full border border-[var(--wh-primary)] bg-[var(--wh-primary-soft)] text-[var(--wh-primary)] transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]`}
+          className={`inline-flex ${size === "lg" ? "h-11 px-4" : "h-9 px-3"} items-center gap-1 rounded-full border border-[var(--wh-primary)] bg-[var(--wh-primary-soft)] text-[var(--wh-primary)] transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]`}
         >
           <Plus className="size-4" aria-hidden />
           <ShoppingCart className="size-5" aria-hidden />
@@ -173,7 +173,7 @@ export function ToBuyStepper({
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label={fill(words.stepper.amount, { name: item.name })}
-            className="min-h-10 min-w-[4.75rem] rounded-[var(--wh-radius-sm)] px-1.5 text-center text-sm font-semibold whitespace-nowrap tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+            className="min-h-9 min-w-[4rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm font-semibold whitespace-nowrap tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
           >
             {amountText}
           </button>

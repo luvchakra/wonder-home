@@ -37,8 +37,11 @@ import { IconTile } from "./icon-tile";
  * grey, because nobody has said how much there is and the row never guesses.
  *
  * The name wraps rather than truncating (rule 11). At phone width the
- * amounts move onto their own line under the name, so neither is squeezed.
- * The stepper is the caller's (it writes); the row is only the layout.
+ * amounts sit on one short line under the name — in stock on the left, the
+ * stepper on the right — so a row is compact without squeezing either
+ * (25-012). Under the name, beside the category, the item's energy and
+ * protein per 100 g when its catalog source has them. The stepper is the
+ * caller's (it writes); the row is only the layout.
  */
 export type GroceryStatus = "unknown" | "none" | "low" | "enough";
 
@@ -99,6 +102,8 @@ export type GroceryRowProps = {
   stepper: ReactNode;
   /** "Open {name}" — the chevron's accessible name. */
   openLabel: string;
+  /** "155 kcal · 13 g protein per 100 g", from the catalog's credited source, or nothing (25-012). */
+  nutrition?: string | null;
   className?: string;
 };
 
@@ -114,13 +119,17 @@ export function GroceryRow({
   toBuyLabel,
   stepper,
   openLabel,
+  nutrition,
   className,
 }: GroceryRowProps) {
   const icon = groceryIcon(name, category);
+  const label = "text-[0.6875rem] font-semibold tracking-wide whitespace-nowrap text-[var(--wh-foreground-subtle)] uppercase";
   return (
     <li
       className={cn(
-        "relative flex items-stretch gap-3 py-3 pr-1 pl-3",
+        // Phone: picture · name · chevron, then the amounts across the whole
+        // card. Wider: one line, amounts before the chevron.
+        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 py-2.5 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
         className,
       )}
     >
@@ -128,58 +137,56 @@ export function GroceryRow({
         aria-hidden
         title={statusLabel}
         className={cn(
-          "absolute top-3 bottom-3 left-0 w-1 rounded-full",
+          "absolute top-2.5 bottom-2.5 left-0 w-1 rounded-full",
           BAR[status],
         )}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-        <Link
-          href={href}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--wh-radius-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-        >
-          {imageUrl ? (
-            // A signed, short-lived URL for the household's own photo; next/image would cache it past its expiry.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt=""
-              loading="lazy"
-              className="size-12 shrink-0 rounded-[var(--wh-radius-sm)] object-cover"
-            />
-          ) : (
-            <IconTile icon={icon} tone="care" size="lg" />
-          )}
-          <span className="min-w-0">
-            <span className="block text-[0.9375rem] leading-snug font-semibold break-words">
-              {name}
-            </span>
-            <span className="block text-xs text-[var(--wh-foreground-muted)] first-letter:uppercase">
-              {category}
-            </span>
-            <span className="sr-only">{statusLabel}</span>
-          </span>
-        </Link>
-        <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
-          <div className="min-w-[4.5rem] text-left sm:text-right">
-            <span className="block text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-              {stockLabel}
-            </span>
-            <span className="block text-sm font-semibold tabular-nums">
-              {stockText}
-            </span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="mb-0.5 block text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-              {toBuyLabel}
-            </span>
-            {stepper}
-          </div>
-        </div>
+      <Link
+        href={href}
+        tabIndex={-1}
+        aria-hidden
+        className="col-start-1 row-start-1 rounded-[var(--wh-radius-sm)]"
+      >
+        {imageUrl ? (
+          // A signed, short-lived URL for the household's own photo; next/image would cache it past its expiry.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt=""
+            loading="lazy"
+            className="size-10 rounded-[var(--wh-radius-sm)] object-cover"
+          />
+        ) : (
+          <IconTile icon={icon} tone="care" size="md" />
+        )}
+      </Link>
+      <Link
+        href={href}
+        className="col-start-2 row-start-1 min-w-0 self-center rounded-[var(--wh-radius-sm)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+      >
+        <span className="block text-[0.9375rem] leading-snug font-semibold break-words">
+          {name}
+        </span>
+        <span className="block text-xs leading-snug text-[var(--wh-foreground-muted)]">
+          <span className="first-letter:uppercase">{category}</span>
+          {nutrition ? <span className="text-[var(--wh-foreground-subtle)]"> · {nutrition}</span> : null}
+        </span>
+        <span className="sr-only">{statusLabel}</span>
+      </Link>
+      <div className="col-span-3 row-start-2 flex items-center justify-between gap-3 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:justify-end sm:gap-5">
+        <span className="flex items-baseline gap-1.5 text-sm">
+          <span className={label}>{stockLabel}</span>
+          <span className="font-semibold tabular-nums">{stockText}</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className={label}>{toBuyLabel}</span>
+          {stepper}
+        </span>
       </div>
       <Link
         href={href}
         aria-label={openLabel}
-        className="grid w-8 shrink-0 place-items-center self-center rounded-full text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+        className="col-start-3 row-start-1 grid size-8 place-items-center self-center rounded-full text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] sm:col-start-4"
       >
         <ChevronRight aria-hidden className="size-5" />
       </Link>

@@ -12,7 +12,9 @@ import {
   type PlanChoice,
 } from "@wonderhome/core/meals/meals";
 import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
+import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
+import { compatible } from "@wonderhome/core/commerce/units";
 import { mealShortfalls, servingScale } from "@wonderhome/core/meals/shortfall";
 import {
   listMeals,
@@ -432,9 +434,20 @@ export async function addMealShortfallsAction(input: z.input<typeof shortfallSch
     let added = 0;
     for (const [index, line] of plan.short.entries()) {
       if (!line.short) continue;
+      // A new item takes the catalog's link and category when the name is one (25-012); the recipe's own unit stays.
+      const named = line.itemId ? null : await catalogItemFor(supabase, line.name).catch(() => null);
       const itemId =
         line.itemId ??
-        (await createConsumable(supabase, { householdId, name: line.name, category: "grocery", unit: line.short.unit, typicalQuantity: 1 })).id;
+        (
+          await createConsumable(supabase, {
+            householdId,
+            name: line.name,
+            category: named?.category ?? "grocery",
+            unit: line.short.unit,
+            typicalQuantity: 1,
+            catalogId: named?.catalogId && compatible(named.unit, line.short.unit) ? named.catalogId : null,
+          })
+        ).id;
       await adjustListEntry(supabase, { householdId, itemId, kind: "add", amount: line.short, source: "meal", mealId, idempotencyKey: `${key}:${index}` });
       added += 1;
     }

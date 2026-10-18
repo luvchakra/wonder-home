@@ -75,3 +75,7 @@ Before this, "go to the grocery list" got the list read out, and leaving the Hom
   - `apps/web/app/ai/assistant.tsx`;
   - `apps/web/app/layout.tsx`.
 - **Help:** the Voice section, paragraph 7, in all eight languages.
+
+## QA cleanup
+
+Done after the merge (#225). The QA account `84b42171-a8e2-4350-b4cf-ed4831843e55` was deleted, along with the households "Ladder QA Home" (`2b1a95b8-…`) and "Catalog QA Home" (`b02d1d91-…`) and everything in them. A check of all 130 household tables found no rows, no account and no stored files left. The local credentials and screenshots are gone, and no dev server is running.

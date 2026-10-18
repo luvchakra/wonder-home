@@ -60,6 +60,11 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | Indian nutrient profiles for Indian foods | 25-009 | Done: IFCT 2017 (ICMR–NIN) for 399 items, credited. The rest is 25-011, medium priority for later |
 | Fewer, everyday search results with brands and pictures; natural amounts (1 kg, 1.25 kg; eggs one at a time) | 25-010 | Done |
 | Ask HomeTalk to open screens and keep talking while moving between them, with the glow showing on every screen | 04-018 | Done, #225 (golden HT-84 to HT-87) |
+| Compact grocery cards, nutrition on each, pasta counted in grams | 25-012 | Done, #226 |
+| Change an item's unit from its card, even pieces to grams | 25-013 | Queued: built, held back with its migration |
+| One HomePlaces screen with every place (home, schools, offices, saved) and tags for what each is for | 24 | Next |
+| Meal card: Change meal in place; Ingredients with no recipe lets you add one | 10 | Next |
+| Gemini Live in the app never says "use the WonderHome app"; trip ideas answered | 04 | Next |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |

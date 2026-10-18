@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeFood: compact grocery cards, nutrition on each, items named in words counted like the catalog](2026-10-18-compact-grocery-cards.md) |
 | 2026-10-18 | [HomeTalk follows you across screens](2026-10-18-hometalk-across-screens.md) |
 | 2026-10-18 | [HomeFood: Indian nutrition (IFCT 2017) and a search that shows what a household means](2026-10-18-ifct-indian-nutrition.md) |
 | 2026-10-18 | [Members: a phone number for everyone, and sign-in by phone (01-011)](2026-10-18-member-phone-numbers.md) |

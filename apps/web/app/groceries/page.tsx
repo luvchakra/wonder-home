@@ -8,7 +8,7 @@ import {
 import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
-import { stepperOf } from "@wonderhome/core/commerce/catalog";
+import { cardNutrition, stepperOf } from "@wonderhome/core/commerce/catalog";
 import {
   listGroceries,
   listRetiredGroceries,
@@ -28,7 +28,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { groceryWords } from "../_lib/grocery-words";
 import { formatDate, requireSession } from "../_lib/session";
 import { AddItemButton } from "./_components/add-item";
-import { sayAmount } from "./_components/amounts";
+import { fill, sayAmount } from "./_components/amounts";
 import { GroceryList, type ListItem } from "./_components/grocery-list";
 
 export const metadata = { title: "Groceries" };
@@ -104,6 +104,17 @@ export default async function GroceriesPage({
     (item) => item.stock && item.stock.quantity > 0,
   ).length;
   const notCounted = (items ?? []).filter((item) => !item.stock).length;
+  // Energy and protein per 100 g under each name, from the source the item page credits (25-012).
+  const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
+  const nutritionOf = (item: GroceryItem): string | null => {
+    const facts = cardNutrition(item.catalog);
+    if (!facts) return null;
+    const parts = [
+      facts.energyKcal !== null ? fill(words.row.kcal, { value: number.format(Math.round(facts.energyKcal)) }) : null,
+      facts.proteinG !== null ? fill(words.row.protein, { value: number.format(facts.proteinG) }) : null,
+    ].filter(Boolean);
+    return `${parts.join(" · ")} ${facts.basis === "100ml" ? words.row.per100ml : words.row.per100g}`;
+  };
   const listItems: ListItem[] = (items ?? []).map((item) => ({
     id: item.id,
     name: item.name,
@@ -113,6 +124,7 @@ export default async function GroceriesPage({
     step: item.step,
     ...stepperOf(item),
     imageUrl: item.imageUrl,
+    nutrition: nutritionOf(item),
     status: stockStatus(item),
     stockText: item.stock
       ? sayAmount(

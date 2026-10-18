@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
+import { catalogItemFor } from "../commerce/catalog";
 import { adjustListEntry, changeStock, listGroceries, markBought, type GroceryItem } from "../commerce/inventory";
 import { createConsumable, retireConsumable } from "../commerce/repository";
 import { compatible, formatAmount, stepInBase, toBase, unitInfo, type Amount } from "../commerce/units";
@@ -94,9 +95,19 @@ function say(amount: Amount, preferredUnit?: string): string {
   return formatAmount(amount, "en", englishCount);
 }
 
-/** The amount a line asks for, in the item's base unit — its own step when none was said. */
-function amountFor(line: GroceryLine, item: Pick<GroceryItem, "name" | "unit" | "step">): Amount {
-  if (!line.amount) return stepInBase(item.unit, item.step);
+/**
+ * The amount a line asks for, in the item's base unit. When none was said:
+ * the household's own step, else the usual buy (its catalog pack, or the
+ * pack the everyday kinds share — "add pasta" is a 500 g pack, 25-012),
+ * else the unit's natural step.
+ */
+function amountFor(line: GroceryLine, item: Pick<GroceryItem, "name" | "unit" | "step"> & { catalog?: Pick<NonNullable<GroceryItem["catalog"]>, "pack"> | null }, usual?: Amount | null): Amount {
+  if (!line.amount) {
+    if (item.step && item.step > 0) return stepInBase(item.unit, item.step);
+    const pack = item.catalog?.pack ?? usual ?? null;
+    if (pack && compatible(pack.unit, item.unit)) return toBase(pack.quantity, pack.unit);
+    return stepInBase(item.unit, item.step);
+  }
   const unit = line.amount.unit ?? item.unit;
   if (!compatible(unit, item.unit)) {
     throw ApiError.badRequest(`${item.name} is kept in ${unitInfo(item.unit).key}, so ${line.amount.quantity} ${unit} does not fit it.`);
@@ -112,16 +123,23 @@ function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[], create: boolean): Promise<{ item: GroceryItem | null; created: boolean }> {
+async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[], create: boolean): Promise<{ item: GroceryItem | null; created: boolean; usual?: Amount | null }> {
   const known = line.itemId ? items.find((item) => item.id === line.itemId) : findGrocery(line.item, items);
   if (known || !create) return { item: known ?? null, created: false };
-  const unit = line.amount?.unit ?? "pcs";
+  // The catalog's reading of the name (25-012): "add pasta" is counted in
+  // grams like pasta is, never one piece; an exact item comes with its
+  // picture and nutrition. An amount the person said still decides the unit.
+  const named = await catalogItemFor(context.supabase, line.item).catch(() => null);
+  const said = line.amount?.unit;
+  const unit = said ?? named?.unit ?? "pcs";
+  const catalogId = named?.catalogId && (!said || compatible(said, named.unit)) ? named.catalogId : null;
+  const category = named?.category ?? "grocery";
   const name = titleCase(line.item.trim());
-  const { id } = await createConsumable(context.supabase, { householdId: context.householdId, name, category: "grocery", unit, typicalQuantity: 1 });
+  const { id } = await createConsumable(context.supabase, { householdId: context.householdId, name, category, unit, typicalQuantity: 1, catalogId });
   const fresh: GroceryItem = {
     id,
     name,
-    category: "grocery",
+    category,
     unit: unitInfo(unit).key,
     step: null,
     lowLevel: null,
@@ -136,7 +154,7 @@ async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[]
     toBuy: null,
   };
   items.push(fresh);
-  return { item: fresh, created: true };
+  return { item: fresh, created: true, usual: named?.pack ?? null };
 }
 
 export type ListChangeEntry = { name: string; consumableId: string; created: boolean; delta: Amount; after: Amount };
@@ -162,7 +180,7 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
   const there: { name: string; consumableId: string; toBuy: Amount }[] = [];
   const atHome: string[] = [];
   for (const line of lines) {
-    const { item, created } = await itemFor(context, line, items, true);
+    const { item, created, usual } = await itemFor(context, line, items, true);
     if (!item) continue;
     // "Make sure we have everything for pasta": what is confirmed at home
     // already is not bought again. Without a confirmed amount it goes on.
@@ -174,7 +192,7 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
       there.push({ name: item.name, consumableId: item.id, toBuy: { quantity: item.toBuy.quantity, unit: item.toBuy.unit } });
       continue;
     }
-    const delta = amountFor(line, item);
+    const delta = amountFor(line, item, usual);
     const result = await adjustListEntry(context.supabase, { householdId: context.householdId, itemId: item.id, kind: "add", amount: delta, source: "hometalk", idempotencyKey: key("ht-add") });
     changed.push({ name: item.name, consumableId: item.id, created, delta, after: { quantity: result.after, unit: result.unit } });
   }
