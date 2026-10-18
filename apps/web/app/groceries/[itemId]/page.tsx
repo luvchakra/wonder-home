@@ -1,6 +1,7 @@
 import { History, PackageCheck, ShoppingBasket } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
+import { NUTRIENT_KEYS } from "@wonderhome/core/commerce/catalog";
 import {
   getGroceryItem,
   stockHistory,
@@ -112,6 +113,20 @@ export default async function GroceryItemPage({
   const categories = [
     ...new Set([...all.map((entry) => entry.category), ...words.categories]),
   ];
+  // A product's label nutrients, from the shared catalog (25-006): only what
+  // the label states, with its basis and its source's credit.
+  const nutrition = (() => {
+    const catalog = item.catalog;
+    if (!catalog || !catalog.nutrientBasis) return null;
+    const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
+    const rows = NUTRIENT_KEYS.flatMap((key) => {
+      const value = catalog.nutrients[key];
+      if (value === undefined) return [];
+      const unit = key === "energy_kcal" ? "kcal" : key === "sodium_mg" ? "mg" : "g";
+      return [{ key, label: words.nutrition.names[key], value: `${number.format(value)} ${unit}`, sub: key === "sugars_g" || key === "saturated_fat_g" }];
+    });
+    return rows.length > 0 ? { basis: catalog.nutrientBasis, rows } : null;
+  })();
 
   return (
     <AppShell {...shell} title={item.name}>
@@ -124,6 +139,14 @@ export default async function GroceryItemPage({
               src={item.imageUrl}
               alt=""
               className="size-24 shrink-0 rounded-[var(--wh-radius)] object-cover shadow-[var(--wh-shadow-card)]"
+            />
+          ) : item.catalog?.imageUrl ? (
+            // The shared catalog's copy of the product picture (25-006), from WonderHome's own storage.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.catalog.imageUrl}
+              alt=""
+              className="size-24 shrink-0 rounded-[var(--wh-radius)] bg-[var(--wh-surface)] object-contain shadow-[var(--wh-shadow-card)]"
             />
           ) : (
             <IconTile
@@ -314,6 +337,28 @@ export default async function GroceryItemPage({
             }}
           />
         </Card>
+
+        {nutrition ? (
+          <Card className="space-y-3 p-4">
+            <SectionHeader title={words.nutrition.title} />
+            <p className="text-sm text-[var(--wh-foreground-muted)]">
+              {[item.catalog?.brand, item.catalog?.name].filter(Boolean).join(" · ")}
+              {" · "}
+              {nutrition.basis === "100ml" ? words.nutrition.per100ml : words.nutrition.per100g}
+            </p>
+            <dl className="divide-y divide-[var(--wh-border)] text-sm">
+              {nutrition.rows.map((row) => (
+                <div key={row.key} className="flex items-baseline justify-between gap-3 py-2">
+                  <dt className={row.sub ? "pl-4 text-[var(--wh-foreground-muted)]" : "font-medium"}>{row.label}</dt>
+                  <dd className="tabular-nums">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">
+              {words.nutrition.credit.replace("{source}", item.catalog?.attribution ?? "")}
+            </p>
+          </Card>
+        ) : null}
 
         <section className="space-y-2">
           <SectionHeader title={t("grocery.item.purchases")} />

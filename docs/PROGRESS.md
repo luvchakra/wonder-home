@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**236 of 247 stories done — 95.5%**
+**237 of 250 stories done — 94.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 236 |
+| Done | 237 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 7 |
+| Not Started | 9 |
 | Deferred | 1 |
 
 ## By module
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 12 | 12 | — |
-| 01 Identity & Family Accounts | `██████████` | 10 | 10 | — |
+| 01 Identity & Family Accounts | `█████████░` | 10 | 11 | 1 not started |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
@@ -50,18 +50,20 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 7 | 7 | — |
-| 25 HomeFood | `███░░░░░░░` | 2 | 6 | 1 in progress, 3 not started |
+| 25 HomeFood | `███░░░░░░░` | 3 | 8 | 1 in progress, 4 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
+| `01-011` A phone number for every member, and sign-in by phone | 01 Identity & Family Accounts | P0 | Not Started |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
-| `25-006` A shared grocery catalog with quick-commerce search | 25 HomeFood | P0 | Not Started |
+| `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
+| `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -92,7 +94,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-10 of 10 done `██████████`
+10 of 11 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -106,6 +108,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-008` Helper/service identity | P2 | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 | `01-009` Settings & Profile consolidation | P1 | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
 | `01-010` Every member signs in as themselves | P0 | Done | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Since 2026-10-18 (owner's decision), when the member has a sign-in email on record and the deployment has SMTP set (`email/mailer.ts`, `WONDERHOME_SMTP_*`; production sends from the GoDaddy mailbox connect@wonderapps.biz, its password only in Vercel), the first choice is **Email the invite to {email}** (`emailMemberInviteAction`): WonderHome emails the link to the address on record, read on the server, never one the browser names; the link is made either way, a failed send says so (amber) and keeps Share/Copy and the Admin's own mail app, and a sent one drops the second Send email. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): an Admin set a child's sign-in email in Family; that child then signed in by password and landed straight in the household on the child Home, with Bills refused and Members and Plan read-only; Invite made a link (Send email opened a filled-in mail, Copy worked; Share appears only where the browser has a share sheet); a helper opened her link signed out, signed in, accepted and became the helper already on record, with no second member |
+| `01-011` A phone number for every member, and sign-in by phone | P0 | Not Started | The owner, 2026-10-18: every member, helpers included, has a phone number; a helper may have no email and will mostly sign in by phone. Phone sign-in sends a real SMS only once a person connects an SMS provider in Supabase Auth |
 
 ### 02 — Household Configuration & Playbook
 
@@ -483,7 +486,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-2 of 6 done `███░░░░░░░`
+3 of 8 done `███░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -491,7 +494,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-002` HomeTalk manages groceries | P0 | Done | Formerly 09-011. #209, Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens (`conversation/quantity.ts`, `conversation/grocery-actions.ts`; actions `set_stock`, `use_stock`, `mark_bought`); dialogues A–H as evaluation cases |
 | `25-003` Meals, receipts and use-soon reconcile with stock | P1 | In Progress | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. **b (receipts into stock) done 2026-10-18:** `commerce/receipt-stock.ts` (`receiptStockLine`: each kept line's stock before → after and the list amount it takes off, in the item's unit, never across dimensions; add-to-stock off by default when a person counted the item after the receipt's day; `duplicateReceipt`: same shop, day and total as a recorded receipt), the receipt review's **Add to what's at home** and **Take it off the list** per line, the server recomputing both before writing through `changeStock`/`adjustListEntry` with keys tied to the purchase, undo reversing the purchase, the stock and the list together (`recordedChange`), and a duplicate flagged with a required **Record it again**; browser-checked at 360px and desktop against the live project. Still to do: **c** use-soon and depletion wording never claims stock |
 | `25-004` Send to Cook over WhatsApp | P1 | Not Started | Formerly 09-013. Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
-| `25-006` A shared grocery catalog with quick-commerce search | P0 | Not Started | The owner's ask, 2026-10-18: typing in **Add an item** shows results like a quick-commerce app — name, picture, pack size — from one catalog shared by every household (a platform table, not a household's), with images and nutrient values per item, kept current. Needs a licensed source for products, images and nutrients (never invented), and a per-household item still made from the catalog entry the person picks |
+| `25-006` A shared grocery catalog with quick-commerce search | P0 | Done | 2026-10-18, browser-checked at 360px and desktop. `grocery_catalog` (migrations `20261018190000`, `20261018200000`, live): one platform table every household reads and none writes, each row's `id` its catalog id. **Items:** 1,559 generic things WonderHome curated itself across 29 categories (`supabase/seed/grocery-catalog/items.csv`, loaded by `npm run catalog:seed`), each with its other names (Hindi in both scripts, regional names, spellings). **Products:** packed products from Open Food Facts India (Indian barcode, brand, pack and picture required; no alcohol), pictures copied into WonderHome's own storage, label nutrients as stated, credited (ODbL/CC BY-SA). Search ranks in the database (`public.search_grocery_catalog`). **Add an item** shows the household's own items, then the catalog; picking one creates or reuses the household's item, linked. The item page shows the catalog picture and label nutrition. `usda_foods` holds USDA foods with a `catalog_id` link, empty and linked later (25-007) |
+| `25-007` USDA nutrition for catalog items, linked in phases | P2 | Not Started | The owner, 2026-10-18: lower priority, linking is research done in phases. `usda_foods.catalog_id` is the link (candidate until a person approves). Phase 1 load Foundation + SR Legacy; phase 2 candidates by the structured matcher (`design/grocery-catalog/USDA_NUTRITION_MATCHING_STUDY.md`); phase 3 a review screen; phase 4 approved values shown as "approximate" where they are |
+| `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | P2 | Not Started | Curated items show their category icon, not a picture. A product names the item it is (`grocery_catalog.item_id`) only by review. A native speaker should check the regional names the curators flagged |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents

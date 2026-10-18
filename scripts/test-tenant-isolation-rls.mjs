@@ -38,6 +38,8 @@ const NON_TENANT_TABLES = new Set([
   "payment_provider_plans", // which provider plan backs a price; server-only configuration of the catalogue
   "public_holidays", // a sourced, read-only list of a country's holidays; the same for every household
   "billing_reconciliation_runs", // one reconciliation pass per provider across every household; its findings carry household_id
+  "grocery_catalog", // the shared grocery catalog (HomeFood 25-006): every household reads it, none writes it
+  "usda_foods", // USDA FoodData Central reference foods, linked to the catalog by review; service role only
 ]);
 
 const ALICE = "11111111-1111-4111-8111-111111111111";

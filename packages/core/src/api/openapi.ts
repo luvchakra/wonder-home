@@ -1752,6 +1752,25 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform/catalog/import": {
+        get: {
+          summary: "The same import, as a scheduled call makes it",
+          description: "GET runs the staples import behind the same shared secret as POST.",
+          responses: {
+            "200": { description: "Counts of what was seen, saved and skipped" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+        post: {
+          summary: "Fill the shared grocery catalog from Open Food Facts",
+          description:
+            "HomeFood 25-006. Searches Open Food Facts for the staples, or for the searches named in the body ({ queries: string[] }), and saves each product with its licence, credit and per-100 nutrients; its picture is copied into WonderHome's own storage. Authorised by a shared secret, never a household session: the catalog is every household's, and no household writes it. Reports counts, never product content.",
+          responses: {
+            "200": { description: "Counts of what was seen, saved and skipped" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+      },
       "/platform/webhook-delivery": {
         get: {
           summary: "The same run, as Vercel Cron calls it",

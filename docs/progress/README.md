@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomeFood: the shared grocery catalog (25-006)](2026-10-18-homefood-grocery-catalog.md) |
 | 2026-10-18 | [HomeTalk and voice: where the time went, and making it faster](2026-10-18-hometalk-voice-latency.md) |
 | 2026-10-18 | [HomeFood: receipts into stock (25-003b), and family facts by voice](2026-10-18-homefood-receipts-into-stock.md) |
 | 2026-10-18 | [Owner's decisions: invite email, a child's own appointment, the dashboard policy, Maps check](2026-10-18-owner-decisions-invite-email-child-health.md) |

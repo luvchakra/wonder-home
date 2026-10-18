@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { stepInBase, UNIT_CHOICES } from "@wonderhome/core/commerce/units";
+import type { CatalogEntry } from "@wonderhome/core/commerce/catalog";
+import { formatAmount, stepInBase, UNIT_CHOICES } from "@wonderhome/core/commerce/units";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button, ButtonLink } from "@wonderhome/core/ui/button";
 import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
@@ -17,9 +18,11 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../../(auth)/actions";
 import {
+  addFromCatalogAction,
   addGroceryItemAction,
   adjustListAction,
   restoreGroceryAction,
+  searchCatalogAction,
   type AddItemState,
 } from "../../(auth)/grocery-actions";
 import type { GroceryWords } from "../../_lib/grocery-words";
@@ -33,6 +36,8 @@ export type AddCandidate = {
   unit: string;
   step: number | null;
   onList: boolean;
+  /** The shared catalog entry it was picked from, so the catalog doesn't offer it again. */
+  catalogId: string | null;
 };
 export type RetiredCandidate = { id: string; name: string; category: string };
 
@@ -41,6 +46,11 @@ export type RetiredCandidate = { id: string; name: string; category: string };
  * on the list, tracked, or tracked once and stopped — and only then a new
  * item, which the server still refuses as a near-duplicate unless the
  * person says it really is different.
+ *
+ * Below the household's own, the shared catalog (HomeFood 25-006) answers as
+ * a quick-commerce search does: a picture, the name, the brand and the pack,
+ * and one tap to put it on the list — linked to the catalog entry, so its
+ * picture and nutrients come with it. The catalog is open data and says so.
  */
 export function AddItemButton({
   householdId,
@@ -62,8 +72,33 @@ export function AddItemButton({
   const [creating, setCreating] = useState(false);
   const [added, setAdded] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<{ query: string; entries: CatalogEntry[]; failed: boolean } | null>(null);
+  const [catalogAdded, setCatalogAdded] = useState<Record<string, boolean>>({});
 
   const needle = query.trim().toLowerCase();
+
+  // The catalog answers as the person types, a moment after they pause.
+  useEffect(() => {
+    if (needle.length < 2) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      searchCatalogAction(householdId, needle)
+        .then((result) => live && setCatalog({ query: needle, entries: result.ok ? result.entries : [], failed: !result.ok }))
+        .catch(() => live && setCatalog({ query: needle, entries: [], failed: true }));
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [householdId, needle]);
+  // What the household already tracks is shown above as its own; the catalog
+  // never offers the same entry a second time.
+  const tracked = new Set(items.map((item) => item.catalogId).filter(Boolean));
+  const shownCatalog =
+    needle.length >= 2 && catalog?.query === needle
+      ? { ...catalog, entries: catalog.entries.filter((entry) => !tracked.has(entry.id)) }
+      : null;
+  const searching = needle.length >= 2 && catalog?.query !== needle;
   const matches = needle
     ? items
         .filter((item) =>
@@ -83,6 +118,7 @@ export function AddItemButton({
     setOpen(next);
     if (!next) {
       setQuery("");
+      setCatalog(null);
       setCreating(false);
       setError(null);
       router.refresh();
@@ -102,6 +138,18 @@ export function AddItemButton({
     if (!result.ok) setError(result.error);
     else setAdded((current) => ({ ...current, [item.id]: true }));
   };
+
+  const addFromCatalog = async (entry: CatalogEntry) => {
+    setError(null);
+    const result = await addFromCatalogAction({ householdId, catalogId: entry.id, key: newKey("catalog") });
+    if (!result.ok) setError(result.error);
+    else setCatalogAdded((current) => ({ ...current, [entry.id]: true }));
+  };
+  const plural = new Intl.PluralRules(words.language);
+  const pack = (entry: CatalogEntry) =>
+    entry.pack
+      ? formatAmount(entry.pack, words.language, (unit, quantity) => words.unitWords[unit]?.[plural.select(quantity)] ?? words.unitWords[unit]?.other ?? unit)
+      : null;
 
   return (
     <>
@@ -192,6 +240,40 @@ export function AddItemButton({
                   </li>
                 ))}
               </ul>
+            ) : null}
+            {searching ? <p className="text-sm text-[var(--wh-foreground-muted)]" role="status">{words.add.catalogSearching}</p> : null}
+            {shownCatalog?.failed ? <p className="text-sm text-[var(--wh-foreground-muted)]">{words.add.catalogFailed}</p> : null}
+            {shownCatalog && shownCatalog.entries.length > 0 ? (
+              <section className="space-y-1" aria-label={words.add.catalog}>
+                <h3 className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-muted)] uppercase">{words.add.catalog}</h3>
+                <ul className="divide-y divide-[var(--wh-border)]">
+                  {shownCatalog.entries.map((entry) => (
+                    <li key={entry.id} className="flex items-center gap-3 py-2.5">
+                      {entry.imageUrl ? (
+                        // The catalog's own copy of the source's picture, from WonderHome's storage.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={entry.imageUrl} alt="" loading="lazy" className="size-12 shrink-0 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)] object-contain ring-1 ring-[var(--wh-border)]" />
+                      ) : (
+                        <IconTile icon={groceryIcon(entry.name, entry.category)} tone="care" size="sm" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium break-words">{entry.name}</span>
+                        <span className="block text-xs break-words text-[var(--wh-foreground-muted)]">{[entry.brand ?? entry.subcategory, pack(entry)].filter(Boolean).join(" · ")}</span>
+                      </span>
+                      {catalogAdded[entry.id] ? (
+                        <Badge tone="handled">{words.add.onList}</Badge>
+                      ) : (
+                        <Pill type="button" tone="soft" onClick={() => void addFromCatalog(entry)} aria-label={fill(words.add.catalogAdd, { name: entry.name })}>
+                          <Plus aria-hidden className="size-3.5" />
+                        </Pill>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {shownCatalog.entries.some((entry) => entry.source === "open_food_facts") ? (
+                  <p className="text-xs text-[var(--wh-foreground-subtle)]">{words.add.catalogCredit}</p>
+                ) : null}
+              </section>
             ) : null}
             <Button
               type="button"

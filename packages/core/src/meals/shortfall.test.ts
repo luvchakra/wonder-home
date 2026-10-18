@@ -5,7 +5,7 @@ import type { IngredientNeed } from "./meals";
 import { itemFor, mealShortfalls, servingScale } from "./shortfall";
 
 const item = (id: string, name: string, unit: string, stock: number | null, toBuy: number | null = null, extra: Partial<GroceryItem> = {}): GroceryItem => ({
-  id, name, category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, lastPurchasedOn: null,
+  id, name, category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null,
   stock: stock === null ? null : { quantity: stock, unit: unit === "kg" ? "g" : unit === "l" ? "ml" : unit, confirmedAt: "2026-09-20T00:00:00Z", confirmedBy: null, source: "stated", version: 1, useBy: null, useByBasis: null },
   toBuy: toBuy === null ? null : { entryId: `e-${id}`, quantity: toBuy, unit: unit === "kg" ? "g" : unit === "l" ? "ml" : unit, version: 1, source: "manual", mealId: null },
   ...extra,

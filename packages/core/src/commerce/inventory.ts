@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../api/errors";
 import { invalidatesContext } from "../context/invalidation";
 import { signAvatarPaths } from "../identity/households";
+import { CATALOG_COLUMNS, toCatalogEntry, type CatalogEntry } from "./catalog";
 import { refreshPurchaseHistory } from "./repository";
 import { compatible, stepInBase, toBase, unitInfo, type Amount } from "./units";
 
@@ -62,6 +63,8 @@ export type GroceryItem = {
   aliases: string[];
   imageUrl: string | null;
   imagePath: string | null;
+  /** The shared catalog entry it was picked from (25-006): its picture, pack and nutrients. */
+  catalog: CatalogEntry | null;
   lastPurchasedOn: string | null;
   stock: GroceryStock | null;
   toBuy: GroceryToBuy | null;
@@ -90,6 +93,7 @@ export function itemBaseUnit(item: Pick<GroceryItem, "unit">): string {
 
 const ITEM_COLUMNS =
   "id, name, category, unit, step, low_level, storage, note, aliases, image_path, last_purchased_on, " +
+  `grocery_catalog(${CATALOG_COLUMNS}), ` +
   "inventory_balances(quantity, unit, confirmed_at, source, version, use_by, use_by_basis, household_members(display_name)), " +
   "shopping_list_entries(id, quantity, unit, version, source, meal_id, state)";
 
@@ -105,6 +109,7 @@ function toItem(row: Row, imageUrls: Map<string, string>): GroceryItem {
   const open = entries.find((entry) => entry.state === "to_buy");
   const confirmer = balanceRow?.household_members as Row | null | undefined;
   const imagePath = (row.image_path as string | null) ?? null;
+  const catalogRow = (Array.isArray(row.grocery_catalog) ? row.grocery_catalog[0] : row.grocery_catalog) as Row | null | undefined;
   return {
     id: row.id as string,
     name: row.name as string,
@@ -120,6 +125,7 @@ function toItem(row: Row, imageUrls: Map<string, string>): GroceryItem {
     aliases: (row.aliases as string[] | null) ?? [],
     imagePath,
     imageUrl: imagePath ? (imageUrls.get(imagePath) ?? null) : null,
+    catalog: catalogRow ? toCatalogEntry(catalogRow, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "") : null,
     lastPurchasedOn: (row.last_purchased_on as string | null) ?? null,
     stock: balanceRow
       ? {

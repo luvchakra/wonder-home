@@ -74,6 +74,8 @@ export type CreateConsumableInput = {
   typicalQuantity: number;
   /** How often the household goes through one typical quantity — telling WonderHome this directly is "member_stated" evidence, same as any other basis. */
   daysPerUnit?: number | null;
+  /** The shared catalog entry it was picked from (25-006). */
+  catalogId?: string | null;
 } & ItemDetails;
 
 /** What the Groceries list keeps about an item beyond its name (Groceries Phase 1). Absent: unchanged on an update, empty on a create. */
@@ -112,6 +114,7 @@ async function createConsumableImpl(
       days_per_unit: input.daysPerUnit ?? null,
       evidence_basis: input.daysPerUnit ? "member_stated" : null,
       active: true,
+      ...(input.catalogId ? { catalog_id: input.catalogId } : {}),
       ...detailColumns(input),
     })
     .select("id")

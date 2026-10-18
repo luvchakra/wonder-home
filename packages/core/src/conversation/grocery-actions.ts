@@ -130,6 +130,7 @@ async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[]
     aliases: [],
     imageUrl: null,
     imagePath: null,
+    catalog: null,
     lastPurchasedOn: null,
     stock: null,
     toBuy: null,
