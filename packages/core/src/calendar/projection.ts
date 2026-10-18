@@ -12,7 +12,7 @@
 import { atLocal, daysBetween, localMoment, partsOf, shiftDate, dateKeyOf, isRealDate } from "./dates";
 import { expandSeries, type OccurrenceException, type RecurrenceRule } from "./recurrence";
 
-export const CALENDAR_SOURCES = ["event", "occasion", "holiday", "school", "meal", "bill", "health", "helper", "upkeep", "outcome", "order"] as const;
+export const CALENDAR_SOURCES = ["event", "occasion", "holiday", "school", "activity", "meal", "bill", "health", "helper", "upkeep", "outcome", "order"] as const;
 export type CalendarSource = (typeof CALENDAR_SOURCES)[number];
 
 export const CALENDAR_CATEGORIES = ["family", "school", "meals", "health", "personal", "work", "household", "holiday"] as const;

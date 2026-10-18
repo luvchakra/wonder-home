@@ -258,3 +258,178 @@ export async function saveChildSchoolAction(_previous: ActionState, formData: Fo
     return { error: toErrorBody(error, "school").body.error.message };
   }
 }
+
+// --- A child's teachers and classes outside school (08-010, 08-011) ----------
+
+const optionalText = (max: number) => z.string().trim().max(max).optional().transform((value) => value || null);
+const timeField = z
+  .string()
+  .trim()
+  .regex(/^(\d{2}:\d{2})?$/, { error: "Use a time like 17:30." })
+  .optional()
+  .transform((value) => value || null);
+const dateField = z
+  .string()
+  .trim()
+  .regex(/^(\d{4}-\d{2}-\d{2})?$/, { error: "Use a date like 2026-11-02." })
+  .optional()
+  .transform((value) => value || null);
+const field = (formData: FormData, name: string) => {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : undefined;
+};
+
+async function inHousehold<T>(householdId: string, work: (supabase: Awaited<ReturnType<typeof createClient>>, actor: Awaited<ReturnType<typeof requireMembership>>) => Promise<T>): Promise<ActionState> {
+  try {
+    const supabase = await createClient();
+    const actor = await requireMembership(supabase, householdId);
+    await work(supabase, actor);
+    revalidatePath("/school");
+    revalidatePath("/calendar");
+    return { notice: "Saved." };
+  } catch (error) {
+    const { PlacesUnavailableError } = await import("@wonderhome/core/places/provider");
+    if (error instanceof PlacesUnavailableError) return { error: "That place could not be read just now. Try picking it again in a minute." };
+    return { error: toErrorBody(error, "school").body.error.message };
+  }
+}
+
+const teacherSchema = z.object({
+  householdId: z.uuid(),
+  childMemberId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  role: z.enum(["class_teacher", "subject_teacher"]),
+  subject: optionalText(80),
+  name: z.string().trim().min(1, { error: "What is the teacher's name?" }).max(120),
+  contact: optionalText(160),
+});
+
+/** A class teacher or a subject teacher, added or changed (08-010). */
+export async function saveTeacherAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = teacherSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    childMemberId: field(formData, "childMemberId"),
+    id: field(formData, "id"),
+    role: field(formData, "role"),
+    subject: field(formData, "subject"),
+    name: field(formData, "name"),
+    contact: field(formData, "contact"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  const { saveTeacher } = await import("@wonderhome/core/school/activities");
+  return inHousehold(parsed.data.householdId, (supabase) => saveTeacher(supabase, { ...parsed.data, id: parsed.data.id || null }));
+}
+
+const standDownSchema = z.object({ householdId: z.uuid(), id: z.uuid() });
+
+/** A teacher who no longer teaches the child, stood down (kept, not deleted). */
+export async function removeTeacherAction(input: { householdId: string; id: string }): Promise<ActionState> {
+  const parsed = standDownSchema.safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  const { standDownTeacher } = await import("@wonderhome/core/school/activities");
+  return inHousehold(parsed.data.householdId, (supabase) => standDownTeacher(supabase, parsed.data));
+}
+
+const activitySchema = z.object({
+  householdId: z.uuid(),
+  childMemberId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  name: z.string().trim().min(1, { error: "What is the class called?" }).max(120),
+  kind: z.string().trim().max(40).optional().transform((value) => value || "other"),
+  description: optionalText(300),
+  teacherName: optionalText(120),
+  teacherContact: optionalText(160),
+  days: z.array(z.coerce.number().int().min(1).max(7)).max(7),
+  startsAt: timeField,
+  endsAt: timeField,
+  startsOn: dateField,
+  endsOn: dateField,
+  notes: optionalText(2000),
+});
+
+/**
+ * A class outside school, added or changed (08-011): its weekly days and
+ * times put its sessions on the Calendar (08-012). Where it is, picked from
+ * Google Maps, is re-read on the server; a pick that did not change is left
+ * as it is, and a typed place is kept as words.
+ */
+export async function saveActivityAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = activitySchema.safeParse({
+    householdId: field(formData, "householdId"),
+    childMemberId: field(formData, "childMemberId"),
+    id: field(formData, "id"),
+    name: field(formData, "name"),
+    kind: field(formData, "kind"),
+    description: field(formData, "description"),
+    teacherName: field(formData, "teacherName"),
+    teacherContact: field(formData, "teacherContact"),
+    days: formData.getAll("days").map(String),
+    startsAt: field(formData, "startsAt"),
+    endsAt: field(formData, "endsAt"),
+    startsOn: field(formData, "startsOn"),
+    endsOn: field(formData, "endsOn"),
+    notes: field(formData, "notes"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  if (parsed.data.startsAt && parsed.data.endsAt && parsed.data.startsAt >= parsed.data.endsAt) return { error: "The class has to end after it starts." };
+  if (parsed.data.startsOn && parsed.data.endsOn && parsed.data.startsOn > parsed.data.endsOn) return { error: "The class has to end after it starts." };
+  const placeId = (field(formData, "place_id") ?? "").trim();
+  const typedPlace = (field(formData, "place_name") ?? "").trim();
+  const currentPlaceId = (field(formData, "place_current") ?? "").trim();
+  const { saveActivity } = await import("@wonderhome/core/school/activities");
+  return inHousehold(parsed.data.householdId, async (supabase, actor) => {
+    let place: Parameters<typeof saveActivity>[1]["place"];
+    if (placeId && placeId === currentPlaceId) place = undefined;
+    else if (placeId) {
+      const { pickedPlace } = await import("../_lib/places");
+      const { PlacesUnavailableError } = await import("@wonderhome/core/places/provider");
+      const picked = await pickedPlace(actor, placeId, formData.get("place_session"));
+      if (!picked) throw new PlacesUnavailableError("unavailable");
+      place = { picked };
+    } else place = typedPlace ? { typed: typedPlace } : null;
+    await saveActivity(supabase, { ...parsed.data, id: parsed.data.id || null, place });
+  });
+}
+
+/** A class the child no longer goes to, stood down with its notes kept; it leaves the Calendar. */
+export async function removeActivityAction(input: { householdId: string; id: string }): Promise<ActionState> {
+  const parsed = standDownSchema.safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  const { standDownActivity } = await import("@wonderhome/core/school/activities");
+  return inHousehold(parsed.data.householdId, (supabase) => standDownActivity(supabase, parsed.data));
+}
+
+const noteSchema = z.object({
+  householdId: z.uuid(),
+  activityId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  kind: z.enum(["competition", "award", "note"]),
+  title: z.string().trim().min(1, { error: "What is it?" }).max(200),
+  onDate: dateField,
+  detail: optionalText(1000),
+  result: optionalText(120),
+});
+
+/** A competition coming up, a medal or award won, or a note, on one class. */
+export async function saveActivityNoteAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = noteSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    activityId: field(formData, "activityId"),
+    id: field(formData, "id"),
+    kind: field(formData, "kind"),
+    title: field(formData, "title"),
+    onDate: field(formData, "onDate"),
+    detail: field(formData, "detail"),
+    result: field(formData, "result"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  const { saveActivityNote } = await import("@wonderhome/core/school/activities");
+  return inHousehold(parsed.data.householdId, (supabase) => saveActivityNote(supabase, { ...parsed.data, id: parsed.data.id || null }));
+}
+
+export async function removeActivityNoteAction(input: { householdId: string; id: string }): Promise<ActionState> {
+  const parsed = standDownSchema.safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  const { standDownActivityNote } = await import("@wonderhome/core/school/activities");
+  return inHousehold(parsed.data.householdId, (supabase) => standDownActivityNote(supabase, parsed.data));
+}

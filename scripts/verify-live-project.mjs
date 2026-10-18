@@ -91,6 +91,9 @@ const SHIPPED_TABLES = [
   "calendar_preferences",
   "household_member_emails",
   "member_work_places",
+  "school_teachers",
+  "child_activities",
+  "child_activity_notes",
   "schedule_conflicts",
   "gift_plans",
   "step_up_verifications",
@@ -904,6 +907,15 @@ async function main() {
   check("migration landed: household_context", !contextStore.error, contextStore.error?.code ?? "ok");
   const anonContext = await anon.from("household_context").select("household_id").limit(1);
   check("anonymous cannot read household_context", Boolean(anonContext.error) || (anonContext.data ?? []).length === 0, anonContext.error?.code ?? "no rows");
+  // A child's teachers and classes outside school (08-010 to 08-012).
+  const teachersProbe = await admin.from("school_teachers").select("id, child_member_id, role, subject, name, active").limit(1);
+  check("migration landed: school_teachers", !teachersProbe.error, teachersProbe.error?.code ?? "ok");
+  const activitiesProbe = await admin.from("child_activities").select("id, child_member_id, days, starts_at, ends_at, place_id, active").limit(1);
+  check("migration landed: child_activities", !activitiesProbe.error, activitiesProbe.error?.code ?? "ok");
+  const activityNotesProbe = await admin.from("child_activity_notes").select("id, activity_id, kind, result, active").limit(1);
+  check("migration landed: child_activity_notes", !activityNotesProbe.error, activityNotesProbe.error?.code ?? "ok");
+  const anonActivities = await anon.from("child_activities").select("id").limit(1);
+  check("anonymous cannot read child_activities", Boolean(anonActivities.error) || (anonActivities.data ?? []).length === 0, anonActivities.error?.code ?? "no rows");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

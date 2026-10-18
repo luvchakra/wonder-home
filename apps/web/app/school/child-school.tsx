@@ -4,6 +4,7 @@ import { ExternalLink, Pencil } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
+import { Field } from "@wonderhome/core/ui/field";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -13,6 +14,8 @@ import { SubmitButton } from "../_components/submit-pill";
 
 export type ChildSchoolLabels = {
   field: string;
+  gradeField: string;
+  gradePlaceholder: string;
   /** `{name}` is the child's name. */
   edit: string;
   title: string;
@@ -44,7 +47,7 @@ export function ChildSchoolActions({
 }: {
   householdId: string;
   child: { id: string; name: string };
-  school: { name: string; address: string | null; placeId: string | null; mapsUri: string } | null;
+  school: { name: string; address: string | null; placeId: string | null; mapsUri: string; grade?: string | null } | null;
   canChange: boolean;
   available: boolean;
   labels: ChildSchoolLabels;
@@ -87,6 +90,7 @@ export function ChildSchoolActions({
               available={available}
               labels={labels.search}
             />
+            <Field label={labels.gradeField} name="grade" defaultValue={school?.grade ?? ""} placeholder={labels.gradePlaceholder} autoComplete="off" maxLength={40} />
             <SubmitButton className="w-full" pendingLabel={labels.saving}>
               {labels.save}
             </SubmitButton>

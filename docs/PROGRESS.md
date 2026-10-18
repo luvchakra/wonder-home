@@ -16,9 +16,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Status | Stories |
 |---|---:|
 | Done | 254 |
-| In Progress | 3 |
+| In Progress | 6 |
 | Blocked | 0 |
-| Not Started | 16 |
+| Not Started | 13 |
 | Deferred | 1 |
 
 ## By module
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
-| 08 Kids & School Intelligence | `███████░░░` | 9 | 12 | 3 not started |
+| 08 Kids & School Intelligence | `███████░░░` | 9 | 12 | 3 in progress |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 9 | 9 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
@@ -58,9 +58,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `08-010` Each child's school details: class, class teacher, subject teachers | 08 Kids & School Intelligence | P0 | Not Started |
-| `08-011` Activities and classes outside school, folded | 08 Kids & School Intelligence | P0 | Not Started |
-| `08-012` Today's classes on the calendar by default | 08 Kids & School Intelligence | P0 | Not Started |
+| `08-010` Each child's school details: class, class teacher, subject teachers | 08 Kids & School Intelligence | P0 | In Progress |
+| `08-011` Activities and classes outside school, folded | 08 Kids & School Intelligence | P0 | In Progress |
+| `08-012` Today's classes on the calendar by default | 08 Kids & School Intelligence | P0 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Not Started |
@@ -237,9 +237,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-007` School summaries | P1 | Done | only messages that ask something surface; a newsletter is filed |
 | `08-008` Deep portal automation | P2 | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
 | `08-009` Add a child from a school notice | P2 | Done | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline. Done: the resolver names an untitled unknown child (`unknown`), never assumes the household's only child; the review offers "Add <name> as a child" to Admins (guardian = the Admin, as on Family) and confirms the notice for them in the same step; golden case HS-15 |
-| `08-010` Each child's school details: class, class teacher, subject teachers | P0 | Not Started | The owner, 2026-10-18. The school itself (Google Maps picker) is done in 24-010. Left: the class/grade, the class teacher and every subject teacher with their names, per child on Kids & School, each added, changed and removed (rule 12). Needs a migration (SQL for the owner) |
-| `08-011` Activities and classes outside school, folded | P0 | Not Started | The owner, 2026-10-18: music, piano, karate and any learning class, per child, as folded rows showing the class, a short description and its timings; opened, the teacher, the schedule, notes, upcoming competitions and medals won, all addable. Needs a migration |
-| `08-012` Today's classes on the calendar by default | P0 | Not Started | The owner, 2026-10-18: an activity's sessions that fall today appear in the Calendar without anyone adding them (a calendar adapter over the activity schedule, like occasions and holidays). Depends on 08-011 |
+| `08-010` Each child's school details: class, class teacher, subject teachers | P0 | In Progress | The owner, 2026-10-18. The school itself (Google Maps picker) is done in 24-010. Left: the class/grade, the class teacher and every subject teacher with their names, per child on Kids & School, each added, changed and removed (rule 12). Needs a migration (SQL for the owner) |
+| `08-011` Activities and classes outside school, folded | P0 | In Progress | The owner, 2026-10-18: music, piano, karate and any learning class, per child, as folded rows showing the class, a short description and its timings; opened, the teacher, the schedule, notes, upcoming competitions and medals won, all addable. Needs a migration |
+| `08-012` Today's classes on the calendar by default | P0 | In Progress | The owner, 2026-10-18: an activity's sessions that fall today appear in the Calendar without anyone adding them (a calendar adapter over the activity schedule, like occasions and holidays). Depends on 08-011 |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 

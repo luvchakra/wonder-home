@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
 import { invalidatesContext } from "../context/invalidation";
+import { activityEntries, listActivities } from "../school/activities";
 import { rangeInstants, isDateKey } from "./dates";
 import {
   DEFAULT_FILTERS,
@@ -75,10 +76,12 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
   };
 
   const region = effectiveHolidayRegion(input.holidayRegion, input.householdRegion);
-  const [events, members, holidays] = await Promise.all([
+  const [events, members, holidays, activities] = await Promise.all([
     settle("event", () => readEvents(supabase, input.householdId, range, input.viewer.timeZone)),
     settle("occasion", () => readOccasionMembers(supabase, input.householdId)),
     region ? settle("holiday", () => readHolidays(supabase, region, range)) : Promise.resolve([] as HolidayRecord[]),
+    // A child's classes outside school, on the days they meet (08-012); RLS keeps them to the child, guardians and Admins.
+    settle("activity", () => listActivities(supabase, input.householdId)),
   ]);
 
   return {
@@ -86,6 +89,7 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
       eventEntries(events, input.viewer, range),
       occasionEntries(members, input.viewer, range, input.words),
       holidayEntries(holidays, input.viewer),
+      activityEntries(activities, input.viewer, range),
     ),
     failedSources,
   };

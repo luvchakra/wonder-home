@@ -205,6 +205,10 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.school.body.3": "Seule une personne peut marquer un travail comme fait. Un portail qui se tait, ce n’est pas un enfant qui dit avoir fini.",
   "help.guide.school.body.4":
     "Le travail scolaire d’un enfant est visible par cet enfant, ses parents référents et les administrateurs — vivre sous le même toit ne suffit pas.",
+  "help.guide.school.body.5":
+    "Chaque enfant a sa propre carte dans Enfants et école. Elle montre l’école, choisie dans Google Maps avec sa classe et sa section, le professeur principal et chaque professeur de matière. Un adulte ajoute, modifie ou retire un enseignant avec le crayon et la corbeille à côté de chaque nom.",
+  "help.guide.school.body.6":
+    "Les activités hors de l’école, comme la musique, le piano, le karaté ou n’importe quel cours, sont des lignes repliées sous la carte de l’enfant. Repliée, une ligne montre l’activité, une courte description et ses jours et horaires. Ouverte, elle montre le professeur, le lieu (choisi dans Google Maps), les dates de début et de fin, vos notes, les compétitions à venir et les médailles et prix gagnés, et vous pouvez en ajouter. Ses jours et horaires placent chaque séance dans le Calendrier d’eux-mêmes, celles d’aujourd’hui aussi, sans rien ajouter à la main. Arrêter une activité la retire du Calendrier et garde ce qui a été noté.",
 
   "help.guide.meals-and-shopping.title": "Repas, courses et produits qui s’épuisent",
   "help.guide.meals-and-shopping.summary": "Une seule liste : ce qu’il y a à la maison et ce qu’il faut acheter, côte à côte.",

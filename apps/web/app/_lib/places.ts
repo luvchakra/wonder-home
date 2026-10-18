@@ -111,12 +111,20 @@ export async function saveSchoolFromForm(
   if ((member as { member_type?: string } | null)?.member_type !== "child") return "untouched";
   const placeId = String(formData.get("school_place_id") ?? "").trim();
   const typed = String(formData.get("school_name") ?? "").trim().slice(0, 120);
+  // The class and section, when the form carried them ("5B"); left alone otherwise.
+  const grade = formData.has("grade") ? String(formData.get("grade") ?? "").trim().slice(0, 40) || null : undefined;
   const current = (await listEnrolments(supabase, householdId).catch(() => [])).find((entry) => entry.childMemberId === childMemberId) ?? null;
+  const keep = { ...(current?.hours ? { hours: current.hours } : {}), ...(grade !== undefined ? { grade } : {}) };
+  const gradeChanged = grade !== undefined && (current?.grade ?? null) !== grade;
   if (placeId) {
-    if (current?.placeId === placeId) return "unchanged";
+    if (current?.placeId === placeId) {
+      if (!gradeChanged) return "unchanged";
+      await saveEnrolment(supabase, { householdId, childMemberId, schoolName: current.schoolName, grade });
+      return "saved";
+    }
     const place = await pickedPlace(actor, placeId, formData.get("school_session"));
     if (!place) throw new PlacesUnavailableError("unavailable");
-    await saveEnrolment(supabase, { householdId, childMemberId, schoolName: place.name, place, only: true, ...(current?.hours ? { hours: current.hours } : {}) });
+    await saveEnrolment(supabase, { householdId, childMemberId, schoolName: place.name, place, only: true, ...keep });
     return "saved";
   }
   if (!typed) {
@@ -124,8 +132,12 @@ export async function saveSchoolFromForm(
     await endEnrolments(supabase, { householdId, childMemberId });
     return "removed";
   }
-  if (current && current.schoolName === typed) return "unchanged";
-  await saveEnrolment(supabase, { householdId, childMemberId, schoolName: typed, place: null, only: true, ...(current?.hours ? { hours: current.hours } : {}) });
+  if (current && current.schoolName === typed) {
+    if (!gradeChanged) return "unchanged";
+    await saveEnrolment(supabase, { householdId, childMemberId, schoolName: typed, grade });
+    return "saved";
+  }
+  await saveEnrolment(supabase, { householdId, childMemberId, schoolName: typed, place: null, only: true, ...keep });
   return "saved";
 }
 

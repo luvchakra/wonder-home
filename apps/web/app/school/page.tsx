@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BookOpen, CalendarDays, GraduationCap, MessageSquareText, Plug, School } from "lucide-react";
+import { BookOpen, CalendarDays, Dumbbell, ExternalLink, GraduationCap, Languages, MessageSquareText, Music, Palette, Plug, School, Sparkles, Trophy, UserRound } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import type { HomeAssessment } from "@wonderhome/core/home/assessment";
@@ -9,6 +9,7 @@ import type { Translate } from "@wonderhome/core/i18n/translate";
 import type { Integration } from "@wonderhome/core/integrations/repository";
 import { describeSchoolHealth } from "@wonderhome/core/school/connector";
 import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/items";
+import { listActivities, listTeachers, orderedNotes, type Activity } from "@wonderhome/core/school/activities";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
 import { mapsLink } from "@wonderhome/core/places/provider";
@@ -39,6 +40,8 @@ import { SchoolItemDetail } from "../_components/school-item-controls";
 import { placeSearchLabels } from "../_lib/place-labels";
 import { placeSearchAvailable } from "../_lib/places";
 import { schoolFormLabels } from "../_lib/school-form-labels";
+import { childDetailWords, weekdayNames } from "../_lib/child-detail-words";
+import { ActivityNoteSheet, ActivitySheet, StandDownButton, TeacherSheet } from "./child-details";
 import { ChildSchoolActions, type ChildSchoolLabels } from "./child-school";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
@@ -74,7 +77,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, items, communications, members, integrations, enrolments] = await Promise.all([
+  const [agenda, items, communications, members, integrations, enrolments, teachers, activities] = await Promise.all([
     schoolAgenda(supabase, householdId).catch(() => null),
     listSchoolItems(supabase, householdId, child ? { childMemberId: child } : {}).catch(() => []),
     listCommunications(supabase, householdId).catch(() => []),
@@ -82,6 +85,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     listIntegrations(supabase, householdId).catch(() => []),
     // Each child's school (story 24-010); RLS returns only the children this viewer may see.
     listEnrolments(supabase, householdId).catch(() => []),
+    // Each child's teachers and classes outside school (08-010, 08-011); empty until the tables exist.
+    listTeachers(supabase, householdId).catch(() => []),
+    listActivities(supabase, householdId).catch(() => []),
   ]);
 
   // A stale portal and "no homework" must never look alike (17-004): if a
@@ -105,11 +111,14 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
           address: enrolment.schoolAddress ?? null,
           placeId: enrolment.placeId ?? null,
           mapsUri: mapsLink({ name: enrolment.schoolName, formattedAddress: enrolment.schoolAddress ?? "", placeId: enrolment.placeId }),
+          grade: enrolment.grade,
         }
       : null;
   };
   const schoolLabels: ChildSchoolLabels = {
     field: t("places.school.label"),
+    gradeField: t("school.place.gradeField"),
+    gradePlaceholder: t("school.place.gradePlaceholder"),
     edit: t("school.place.edit", { name: "{name}" }),
     title: t("school.place.title", { name: "{name}" }),
     lede: t("school.place.lede"),
@@ -120,6 +129,23 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   };
   const shownChildren = child ? children.filter((kid) => kid.id === child) : children;
   const canChangeSchool = view.tone === "adult";
+  const detailWords = childDetailWords(t, locale.preferences.language);
+  const dayNames = weekdayNames(locale.preferences.language);
+  const clock = new Intl.DateTimeFormat(locale.preferences.language, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+  const clockOf = (time: string) => clock.format(Date.UTC(2026, 0, 1, Number(time.slice(0, 2)), Number(time.slice(3, 5))));
+  const today = isoDateIn(new Date(), timezone);
+  // "Tue, Thu · 5:00 – 6:00 pm": what a folded class says about when it meets.
+  const whenOf = (activity: Activity) =>
+    [
+      activity.days.length > 0 ? activity.days.map((day) => dayNames[day - 1]).join(", ") : t("school.activities.noSchedule"),
+      activity.startsAt ? (activity.endsAt ? `${clockOf(activity.startsAt)} – ${clockOf(activity.endsAt)}` : clockOf(activity.startsAt)) : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  const activityIcon = (kind: string) =>
+    kind === "music" || kind === "dance" ? Music : kind === "sport" || kind === "martial_arts" ? Dumbbell : kind === "art" ? Palette : kind === "language" ? Languages : kind === "academic" ? BookOpen : Sparkles;
+  const kindWord = (kind: string) => detailWords.activity.kinds[kind] ?? kind;
+  const dateWord = (dateKey: string) => formatDate(timezone, new Date(`${dateKey}T12:00:00Z`), "long");
   const childOptions = children.map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? t("school.unknownChild");
   const formLabels = schoolFormLabels(t, locale.preferences.language);
@@ -280,37 +306,140 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
         {active === "overview" ? (
           <>
             <ExpandableMetricGrid metrics={metrics} />
-            {shownChildren.length > 0 ? (
-              <section className="space-y-2">
-                <SectionHeader title={t("school.place.section")} />
-                <Card className="px-3">
-                  <ul className="divide-y divide-[var(--wh-border)]">
-                    {shownChildren.map((kid) => {
-                      const school = schoolOf(kid.id);
-                      return (
+            {shownChildren.map((kid) => {
+              const school = schoolOf(kid.id);
+              const enrolment = enrolments.find((entry) => entry.childMemberId === kid.id);
+              const theirTeachers = teachers.filter((teacher) => teacher.childMemberId === kid.id);
+              const theirClasses = activities.filter((activity) => activity.childMemberId === kid.id);
+              const childRef = { id: kid.id, name: kid.displayName };
+              return (
+                <section key={kid.id} className="space-y-2">
+                  <SectionHeader title={kid.displayName} />
+                  <Card className="px-3 pb-1">
+                    <ul className="divide-y divide-[var(--wh-border)]">
+                      <ActionRow
+                        icon={School}
+                        tone="school"
+                        title={school ? school.name : t("school.place.label")}
+                        meta={school ? [enrolment?.grade ? t("school.place.grade", { grade: enrolment.grade }) : null, school.address].filter(Boolean).join(" · ") : t("school.place.none")}
+                        action={<ChildSchoolActions householdId={householdId} child={childRef} school={school} canChange={canChangeSchool} available={placeSearchAvailable()} labels={schoolLabels} />}
+                      />
+                      {theirTeachers.map((teacher) => (
                         <ActionRow
-                          key={kid.id}
-                          icon={School}
+                          key={teacher.id}
+                          icon={UserRound}
                           tone="school"
-                          title={kid.displayName}
-                          meta={school ? [school.name, school.address].filter(Boolean).join(" · ") : t("school.place.none")}
+                          title={teacher.name}
+                          meta={[teacher.role === "class_teacher" ? detailWords.teacher.roles.class_teacher : teacher.subject, teacher.contact].filter(Boolean).join(" · ")}
                           action={
-                            <ChildSchoolActions
-                              householdId={householdId}
-                              child={{ id: kid.id, name: kid.displayName }}
-                              school={school}
-                              canChange={canChangeSchool}
-                              available={placeSearchAvailable()}
-                              labels={schoolLabels}
-                            />
+                            canChangeSchool ? (
+                              <div className="flex items-center gap-1">
+                                <TeacherSheet householdId={householdId} child={childRef} teacher={teacher} words={detailWords} />
+                                <StandDownButton kind="teacher" householdId={householdId} id={teacher.id} label={t("school.teachers.remove", { name: teacher.name })} />
+                              </div>
+                            ) : undefined
                           }
                         />
-                      );
-                    })}
-                  </ul>
-                </Card>
-              </section>
-            ) : null}
+                      ))}
+                    </ul>
+                    {theirTeachers.length === 0 ? <p className="px-1 pb-2 text-xs text-[var(--wh-foreground-subtle)]">{t("school.teachers.none")}</p> : null}
+                    {canChangeSchool ? <TeacherSheet householdId={householdId} child={childRef} words={detailWords} /> : null}
+                  </Card>
+                  <Card className="px-3 pb-1">
+                    <p className="pt-3 pb-1 text-sm font-semibold">{t("school.activities.title")}</p>
+                    {theirClasses.length === 0 ? (
+                      <p className="pb-2 text-xs text-[var(--wh-foreground-subtle)]">{t("school.activities.none")}</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {theirClasses.map((activity) => {
+                          const notes = orderedNotes(activity.items, today);
+                          const facts = [
+                            activity.teacherName ? t("school.activities.teacherLine", { name: [activity.teacherName, activity.teacherContact].filter(Boolean).join(" · ") }) : null,
+                            activity.startsOn || activity.endsOn
+                              ? [activity.startsOn ? t("school.activities.fromLine", { date: dateWord(activity.startsOn) }) : null, activity.endsOn ? t("school.activities.untilLine", { date: dateWord(activity.endsOn) }) : null].filter(Boolean).join(" · ")
+                              : null,
+                          ].filter(Boolean);
+                          return (
+                            <ExpandableRow
+                              key={activity.id}
+                              summary={
+                                <>
+                                  <IconTile icon={activityIcon(activity.kind)} tone="school" />
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block text-sm font-medium">{activity.name}</span>
+                                    <span className="block text-xs text-[var(--wh-foreground-muted)]">{activity.description ?? kindWord(activity.kind)}</span>
+                                    <span className="block text-xs text-[var(--wh-foreground-subtle)]">{whenOf(activity)}</span>
+                                  </span>
+                                </>
+                              }
+                            >
+                              <div className="space-y-3 px-2 pb-3 text-sm">
+                                {facts.map((fact) => (
+                                  <p key={fact} className="text-[var(--wh-foreground-muted)]">{fact}</p>
+                                ))}
+                                {activity.place ? (
+                                  <p className="flex flex-wrap items-center gap-1 text-[var(--wh-foreground-muted)]">
+                                    {t("school.activities.whereLine", { place: [activity.place.name, activity.place.address].filter(Boolean).join(", ") })}
+                                    <a href={mapsLink({ name: activity.place.name, formattedAddress: activity.place.address ?? "", placeId: activity.place.placeId })} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-[var(--wh-primary)]">
+                                      {t("places.openInMaps")} <ExternalLink aria-hidden className="size-3" />
+                                    </a>
+                                  </p>
+                                ) : null}
+                                {activity.notes ? <p className="whitespace-pre-line">{activity.notes}</p> : null}
+                                {notes.upcoming.length > 0 ? (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("school.activities.upcoming")}</p>
+                                    <ul className="divide-y divide-[var(--wh-border)]">
+                                      {notes.upcoming.map((note) => (
+                                        <ActionRow
+                                          key={note.id}
+                                          icon={Trophy}
+                                          tone="attention"
+                                          title={note.title}
+                                          meta={[note.onDate ? dateWord(note.onDate) : null, note.detail].filter(Boolean).join(" · ")}
+                                          action={canChangeSchool ? <StandDownButton kind="note" householdId={householdId} id={note.id} label={t("school.notes.remove", { name: note.title })} /> : undefined}
+                                        />
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+                                {notes.past.length > 0 ? (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("school.activities.record")}</p>
+                                    <ul className="divide-y divide-[var(--wh-border)]">
+                                      {notes.past.map((note) => (
+                                        <ActionRow
+                                          key={note.id}
+                                          icon={note.kind === "award" ? Trophy : note.kind === "competition" ? CalendarDays : BookOpen}
+                                          tone={note.kind === "award" ? "handled" : "school"}
+                                          title={note.title}
+                                          meta={[detailWords.note.kinds[note.kind], note.result, note.onDate ? dateWord(note.onDate) : null, note.detail].filter(Boolean).join(" · ")}
+                                          action={canChangeSchool ? <StandDownButton kind="note" householdId={householdId} id={note.id} label={t("school.notes.remove", { name: note.title })} /> : undefined}
+                                        />
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+                                {canChangeSchool ? (
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    <ActivityNoteSheet householdId={householdId} activity={{ id: activity.id, name: activity.name }} words={detailWords} />
+                                    <span className="ml-auto flex items-center gap-1">
+                                      <ActivitySheet householdId={householdId} child={childRef} activity={activity} words={detailWords} />
+                                      <StandDownButton kind="activity" householdId={householdId} id={activity.id} label={t("school.activities.remove", { name: activity.name })} />
+                                    </span>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </ExpandableRow>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {canChangeSchool ? <ActivitySheet householdId={householdId} child={childRef} words={detailWords} /> : null}
+                  </Card>
+                </section>
+              );
+            })}
             {agenda === null ? (
               <EmptyState icon={GraduationCap} tone="school" title={t("school.loadFailed.title")} description={t("school.loadFailed.lede")} />
             ) : needsYou === 0 ? (

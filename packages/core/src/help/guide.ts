@@ -135,8 +135,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "school",
     group: "Everyday use",
-    updated: "2026-09-25",
-    keywords: ["school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice"],
+    updated: "2026-10-18",
+    keywords: ["school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice", "class teacher", "subject teacher", "activity", "class", "music", "piano", "karate", "competition", "medal", "award"],
   },
   {
     id: "meals-and-shopping",
