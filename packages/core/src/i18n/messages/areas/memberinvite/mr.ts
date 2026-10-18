@@ -20,6 +20,7 @@ export const memberInviteMr: AreaCatalog<typeof memberInviteEn> = {
   "memberInvite.subject": "WonderHome वर {household} मध्ये सामील व्हा",
   "memberInvite.message": "{inviter} यांनी तुम्हाला WonderHome वर {household} मध्ये सामील होण्यासाठी आमंत्रित केले आहे. आत येण्यासाठी ही लिंक उघडा:",
   "memberInvite.factEmail": "साइन-इन ईमेल",
+  "memberInvite.factPhone": "फोन",
   "memberInvite.signsIn": "साइन इन करतात",
   "memberInvite.emailTo": "{email} वर आमंत्रण ईमेल करा",
   "memberInvite.emailing": "पाठवत आहे…",

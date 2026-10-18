@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (25-006 grocery catalog done; USDA linking queued as 25-007 at the owner's lower priority; member phone numbers queued as 01-011).
+Last updated: 2026-10-18 (25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
 
 ---
 
@@ -27,7 +27,7 @@ Last updated: 2026-10-18 (25-006 grocery catalog done; USDA linking queued as 25
 | 1 | HomeFood | 25-003a | Meal shortfalls: each planned meal's ingredients, scaled to servings, minus stock and minus what is already to buy (units-safe). The meal sheet's **Add n to the list** (design §3.5) | Done — 2026-10-18, browser-checked | — |
 | 2 | HomeFood | 25-003b | Receipts into stock: each kept receipt line gets a unit, **add to stock** (on by default) and **clears list entry**. The review shows stock before → after. Duplicate receipts are caught (design §3.8) | Done — 2026-10-18, browser-checked | — |
 | 2a | HomeFood | 25-006 (P0) | The owner's ask: a shared grocery catalog (one platform table for every household) behind **Add an item**, searched like a quick-commerce app, with pictures, pack sizes and nutrients from a licensed source | Done — 2026-10-18, browser-checked | — |
-| 2b | Family | 01-011 (P0) | The owner's ask: a phone number for every member, helpers included, and sign-in by phone, since a helper may have no email | **Next** | Phone sign-in sends a real SMS only once a person connects an SMS provider in Supabase Auth |
+| 2b | Family | 01-011 (P0) | The owner's ask: a phone number for every member, helpers included, and sign-in by phone, since a helper may have no email | Done — 2026-10-18, browser-checked | Phone sign-in goes live once a person connects an SMS provider in Supabase Auth and sets `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true` |
 | 3 | HomeFood | 25-003c | Use soon and depletion wording: "Use first" (a known expiry) and "Running low" are never mixed. Wording never claims stock it does not know, and never suggests something past an estimated date (design §3.6) | Not Started | — |
 | 4 | HomeFood | 25-005 | "Make that 2 litres" corrects an amount: wire `readMakeThat` (`conversation/quantity.ts`) into `conversation/corrections.ts` | Not Started | — |
 | 5 | HomeFood | 25-004 | Send to Cook over WhatsApp: an approved meal plan goes to a consenting helper through the official template. Built inert | Not Started | The template stays inert until a person registers it with Meta (`WHATSAPP_COOK_TEMPLATE_NAME`) |
@@ -55,7 +55,7 @@ Last updated: 2026-10-18 (25-006 grocery catalog done; USDA linking queued as 25
 | Gemini Live said it could not update a family preference | 04-017 | Done: telling WonderHome what someone likes works by voice (`remember_family_fact`) |
 | A shared grocery catalog with pictures and nutrients behind Add an item | 25-006 | Done: 1,559 curated items and Open Food Facts India products, searched by any name |
 | USDA nutrition linked to the catalog, in phases | 25-007 | Queued, lower priority |
-| A phone number for every member and helper, and sign-in by phone | 01-011 | Next |
+| A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |
 | The calendar title squeezed on a phone | — | Done, #212 |
 | HomePlaces office, Add a place, work facts | 24-005, 24-006, 24-007 | Done — #216; 24-005 and 24-006 browser-checked with a real Google Maps key on 2026-10-18 |

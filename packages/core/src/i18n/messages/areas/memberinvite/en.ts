@@ -21,6 +21,7 @@ export const memberInviteEn = {
   "memberInvite.subject": "Join {household} on WonderHome",
   "memberInvite.message": "{inviter} invited you to join {household} on WonderHome. Open this link to come in:",
   "memberInvite.factEmail": "Sign-in email",
+  "memberInvite.factPhone": "Phone",
   "memberInvite.signsIn": "Signs in",
   "memberInvite.emailTo": "Email the invite to {email}",
   "memberInvite.emailing": "Sending…",

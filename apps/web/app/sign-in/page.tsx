@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
+import { googleAuthEnabled, phoneAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Field } from "@wonderhome/core/ui/field";
 import { PasswordField } from "@wonderhome/core/ui/password-field";
@@ -21,6 +21,7 @@ export default async function SignInPage({
   const [{ next, error }, locale] = await Promise.all([searchParams, visitorLocale()]);
   const { t } = locale;
   const google = googleAuthEnabled();
+  const phone = phoneAuthEnabled();
 
   return (
     <AuthLayout
@@ -69,6 +70,16 @@ export default async function SignInPage({
             }
           />
         </AuthForm>
+
+        {/* A member with no email — a househelper above all — signs in with a texted code. */}
+        {phone ? (
+          <Link
+            href={`/sign-in/phone${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+            className="block text-center text-sm font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline"
+          >
+            {t("entry.phone.usePhone")}
+          </Link>
+        ) : null}
       </div>
     </AuthLayout>
   );

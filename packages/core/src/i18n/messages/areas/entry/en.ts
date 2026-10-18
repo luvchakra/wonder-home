@@ -39,6 +39,17 @@ export const entryEn = {
   "entry.signIn.forgot": "Forgot password?",
 
   // Sign up.
+  "entry.phone.usePhone": "Sign in with your phone number instead",
+  "entry.phone.title": "Sign in with your phone",
+  "entry.phone.lede": "We'll text you a code. No email needed.",
+  "entry.phone.number": "Phone number",
+  "entry.phone.numberHint": "An Indian number works as it is. Add the country code for any other (+44…).",
+  "entry.phone.send": "Send code",
+  "entry.phone.sending": "Sending…",
+  "entry.phone.code": "Code from the text message",
+  "entry.phone.resend": "Send a new code",
+  "entry.phone.otherNumber": "Use a different number",
+  "entry.phone.useEmail": "Sign in with email instead",
   "entry.signUp.title": "Create your account",
   "entry.signUp.lede": "Join families building happier homes together.",
   "entry.signUp.footerPrompt": "Already have an account?",

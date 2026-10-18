@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [Members: a phone number for everyone, and sign-in by phone (01-011)](2026-10-18-member-phone-numbers.md) |
 | 2026-10-18 | [HomeFood: the shared grocery catalog (25-006)](2026-10-18-homefood-grocery-catalog.md) |
 | 2026-10-18 | [HomeTalk and voice: where the time went, and making it faster](2026-10-18-hometalk-voice-latency.md) |
 | 2026-10-18 | [HomeFood: receipts into stock (25-003b), and family facts by voice](2026-10-18-homefood-receipts-into-stock.md) |

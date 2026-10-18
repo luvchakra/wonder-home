@@ -1,6 +1,7 @@
 import { completedYears, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { siblingOrder } from "@wonderhome/core/identity/households";
 import type { HouseholdMember } from "@wonderhome/core/identity/households";
+import { formatPhone } from "@wonderhome/core/identity/member-phone";
 
 import { hoursLabel, type DayHours } from "@wonderhome/core/household/day-hours";
 import { WORK_ARRANGEMENTS } from "@wonderhome/core/identity/households";
@@ -48,6 +49,7 @@ export function MemberDetail({
   currentMemberId,
   school,
   email,
+  phone,
   invite,
   workPlace,
 }: {
@@ -65,6 +67,12 @@ export function MemberDetail({
    * themselves — the database decides). Undefined when it was not read.
    */
   email?: string | null;
+  /**
+   * Their phone number, when this viewer may read it (Admins, the household's
+   * adults and the member themselves — the database decides). Undefined when
+   * it was not read.
+   */
+  phone?: string | null;
   /** Who is inviting, into which household: the Invite control's message. Set for Admins. */
   invite?: { householdName: string; inviterName: string; canEmail: boolean } | null;
   /** An adult's picked office, when this viewer may see it (adults and Admins, and the person). */
@@ -97,6 +105,7 @@ export function MemberDetail({
         <Fact label={t("family.fact.nickname")} value={member.nickname} />
         <Fact label={t("family.fact.familyCallsMe")} value={member.relationship} />
         <Fact label={t("memberInvite.factEmail")} value={email ?? null} />
+        <Fact label={t("memberInvite.factPhone")} value={phone ? formatPhone(phone) : null} />
         <Fact label={t("family.fact.age")} value={age} />
         <Fact label={t("family.fact.dateOfBirth")} value={born} />
         <Fact label={t("family.fact.gender")} value={member.gender} />
@@ -143,6 +152,7 @@ export function MemberDetail({
               workHours: member.workHours ?? null,
               school: member.memberType === "child" ? (school ?? null) : null,
               ...(email !== undefined ? { email } : {}),
+              ...(phone !== undefined ? { phone } : {}),
             }}
             workOptions={member.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
             office={member.memberType === "adult" ? officeField(workPlace ?? null) : undefined}

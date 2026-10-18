@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@wonderhome/core/db/server";
-import { claimMembersByEmail } from "@wonderhome/core/identity/member-email";
+import { claimMembers } from "@wonderhome/core/identity/member-phone";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   // Google, a confirmed email, any provider: a family member the household
   // recorded with this verified email becomes that member here.
-  await claimMembersByEmail(supabase);
+  await claimMembers(supabase);
   return NextResponse.redirect(new URL(next, url.origin));
 }
 

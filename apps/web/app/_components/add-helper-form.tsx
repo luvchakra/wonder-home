@@ -29,6 +29,7 @@ export function AddHelperForm({ householdId, labels }: { householdId: string; la
 
         <input type="hidden" name="householdId" value={householdId} />
         <Field label={labels.theirName} name="displayName" required autoComplete="off" />
+        <Field label={labels.phone} name="phone" type="tel" inputMode="tel" autoComplete="off" placeholder="98765 43210" hint={labels.phoneHint} />
         <MemberDetailFields labels={{ notes: labels.notes, notesPlaceholder: labels.notesPlaceholder, gender: labels.gender }} />
 
         <Button type="submit" disabled={pending}>

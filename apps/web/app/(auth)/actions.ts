@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
-import { claimMembersByEmail } from "@wonderhome/core/identity/member-email";
+import { googleAuthEnabled, phoneAuthEnabled } from "@wonderhome/core/config/auth-providers";
+import { claimMembers, formatPhone, normalPhone } from "@wonderhome/core/identity/member-phone";
 import { createClient } from "@wonderhome/core/db/server";
 import { recordOnboardingEvent, startOnboarding } from "@wonderhome/core/household/onboarding-repository";
 import { createHousehold } from "@wonderhome/core/identity/households";
@@ -55,7 +55,7 @@ export async function signIn(_previous: ActionState, formData: FormData): Promis
   }
 
   // A family member the household recorded with this email becomes that member now.
-  await claimMembersByEmail(supabase);
+  await claimMembers(supabase);
   redirect(safeNext(formData.get("next")));
 }
 
@@ -176,6 +176,51 @@ export async function resetPassword(
  * a hidden button is presentation, and a server action is reachable without
  * one.
  */
+/** The phone sign-in's two steps: the number, then the code texted to it. */
+export type PhoneSignInState = ActionState & { phone?: string };
+
+const PHONE_UNAVAILABLE = "Signing in by phone isn't available here yet. Use your email, or ask your household's Admin for an invite link.";
+
+/**
+ * Step one of signing in by phone (story 01-011): text a one-time code to the
+ * number. Supabase sends it and limits how often; a number with no account
+ * yet gets one, which becomes the household's member recorded with that
+ * number once the code is verified. Nothing is said about whether the number
+ * belongs to anyone.
+ */
+export async function sendPhoneCode(_previous: PhoneSignInState, formData: FormData): Promise<PhoneSignInState> {
+  if (!phoneAuthEnabled()) return { error: PHONE_UNAVAILABLE };
+  const phone = normalPhone(String(formData.get("phone") ?? ""));
+  if (!phone) return { error: "Enter your phone number. An Indian number works as it is; add the country code for any other (+44…)." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({ phone });
+  if (error) {
+    log.warn("phone code not sent", { reason: error.code ?? "unknown" });
+    // No SMS provider is connected in Supabase Auth yet: say so, not "check the number".
+    if (error.code === "phone_provider_disabled") return { error: PHONE_UNAVAILABLE };
+    return { error: error.code === "over_sms_send_rate_limit" ? "Too many codes were asked for. Wait a minute, then try again." : "The code could not be sent. Check the number and try again." };
+  }
+  return { phone, notice: `We texted a code to ${formatPhone(phone)}.` };
+}
+
+/** Step two: the code. A verified number becomes the member recorded with it. */
+export async function verifyPhoneCode(previous: PhoneSignInState, formData: FormData): Promise<PhoneSignInState> {
+  if (!phoneAuthEnabled()) return { error: PHONE_UNAVAILABLE };
+  const phone = normalPhone(String(formData.get("phone") ?? ""));
+  const token = String(formData.get("code") ?? "").replace(/\s+/g, "");
+  if (!phone) return { error: "Start again with your phone number." };
+  if (!/^[0-9]{4,10}$/.test(token)) return { ...previous, phone, error: "Enter the code from the text message." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
+  if (error) {
+    log.warn("phone code rejected", { reason: error.code ?? "unknown" });
+    return { phone, error: "That code didn't work. It may have expired — ask for a new one." };
+  }
+  // A member the household recorded with this number becomes this account now.
+  await claimMembers(supabase);
+  redirect(safeNext(formData.get("next")));
+}
+
 export async function signInWithGoogle(
   _previous: ActionState,
   formData: FormData,

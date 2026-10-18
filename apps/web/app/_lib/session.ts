@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { listMemberships } from "@wonderhome/core/identity/households";
-import { claimMembersByEmail } from "@wonderhome/core/identity/member-email";
+import { claimMembers } from "@wonderhome/core/identity/member-phone";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 import type { Formatter } from "@wonderhome/core/i18n/format";
@@ -59,7 +59,7 @@ export async function requireSession(nextPath: string): Promise<Session> {
 export async function membershipsOrClaimed(supabase: SupabaseClient): Promise<HouseholdMembership[]> {
   const memberships = await listMemberships(supabase);
   if (memberships.length > 0) return memberships;
-  return (await claimMembersByEmail(supabase)) > 0 ? listMemberships(supabase) : memberships;
+  return (await claimMembers(supabase)) > 0 ? listMemberships(supabase) : memberships;
 }
 
 /**
