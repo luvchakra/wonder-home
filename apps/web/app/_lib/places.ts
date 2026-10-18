@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { loadHouseholdAddress, saveHouseholdAddress } from "@wonderhome/core/household/address";
+import { loadWorkPlace, removeWorkPlace, saveWorkPlace } from "@wonderhome/core/household/work-place";
 import { DEFAULT_PREFERENCES, resolvePreferences } from "@wonderhome/core/i18n/preferences";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
@@ -24,7 +25,7 @@ function preferencesOf(membership: HouseholdMembership) {
 const placeIdSchema = z.string().trim().min(1).max(300).regex(/^[A-Za-z0-9_-]+$/);
 
 /**
- * The place an Admin picked, read again from the provider by its id. The
+ * The place someone picked, read again from the provider by its id. The
  * browser never supplies an address or coordinates; null when nothing was
  * picked or the provider is off.
  */
@@ -60,6 +61,35 @@ export async function saveAddressFromForm(
   return "saved";
 }
 
+/**
+ * Saves an adult's office from the member details form (story 24-005): a
+ * picked place, re-read on the server, or nothing to remove it. A typed name
+ * with no pick is refused, because HomePlaces needs the point, not the words.
+ * Untouched when the form carried no office field.
+ */
+export async function saveWorkPlaceFromForm(
+  supabase: SupabaseClient,
+  actor: HouseholdMembership,
+  memberId: string,
+  formData: FormData,
+): Promise<"saved" | "removed" | "unchanged" | "untouched" | "typed"> {
+  if (formData.get("officeField") !== "1") return "untouched";
+  const householdId = actor.household.id;
+  const placeId = String(formData.get("office_place_id") ?? "").trim();
+  const typed = String(formData.get("office_name") ?? "").trim();
+  const current = await loadWorkPlace(supabase, householdId, memberId).catch(() => null);
+  if (!placeId) {
+    if (typed) return "typed";
+    if (!current) return "unchanged";
+    await removeWorkPlace(supabase, { householdId, memberId });
+    return "removed";
+  }
+  if (current?.placeId === placeId) return "unchanged";
+  const place = await pickedPlace(actor, placeId, formData.get("office_session"));
+  if (!place) throw new PlacesUnavailableError("unavailable");
+  await saveWorkPlace(supabase, { householdId, memberId, setByMemberId: actor.memberId, place });
+  return "saved";
+}
 
 /**
  * A small map of the saved home, as a data URL the page carries inline. The

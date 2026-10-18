@@ -28,6 +28,15 @@ describe("reading a place question", () => {
     expect(readPlaceRequest("places to hang out after office")!.when.kind).toBe("after_work");
   });
 
+  it("near the speaker's office, or a named person's", () => {
+    expect(readPlaceRequest("somewhere for lunch near my office")!).toMatchObject({ purpose: "eat", anchor: { kind: "work", personName: null }, radiusMeters: 4_000 });
+    expect(readPlaceRequest("any good cafes close to work?")!.anchor).toEqual({ kind: "work", personName: null });
+    expect(readPlaceRequest("suggest a place for dinner around Kunal's office after work")!).toMatchObject({ anchor: { kind: "work", personName: "Kunal" }, when: { kind: "after_work" } });
+    // Finishing work is a time, not a place.
+    expect(readPlaceRequest("any good cafes near home when I finish work?")!.anchor).toEqual({ kind: "home" });
+    expect(readPlaceRequest("suggest somewhere for dinner after work")!.anchor).toEqual({ kind: "home" });
+  });
+
   it("is not every sentence that mentions food", () => {
     expect(isPlaceQuestion("The food was good")).toBe(false);
     expect(isPlaceQuestion("add pizza to the list")).toBe(false);

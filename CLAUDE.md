@@ -897,6 +897,12 @@ same pull request:
   one the work closed;
 - then `tracking/PROGRESS.md` and `npm run tracker`.
 
+**"Work on the next high-priority story" means `tracking/PRIORITY-ITEMS-REPORT.md`.**
+It is the owner's ordered queue for the four priority modules (HomePlaces,
+HomeFood, HomeTalk, HomeEvents) and their direct asks. Take its first
+**Next** or **Not Started** row that waits on nobody, and update the file in
+the same PR that moves it.
+
 **Regenerate `docs/PROGRESS.md` after every story status change.** Run
 `npm run tracker`. It projects all twenty-two backlogs into one page — where
 the whole application stands, what is left, and every story with its status —

@@ -16,9 +16,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Status | Stories |
 |---|---:|
 | Done | 230 |
-| In Progress | 5 |
+| In Progress | 8 |
 | Blocked | 0 |
-| Not Started | 10 |
+| Not Started | 7 |
 | Deferred | 1 |
 
 ## By module
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
-| 24 HomePlaces | `█████░░░░░` | 4 | 7 | 3 not started |
+| 24 HomePlaces | `█████░░░░░` | 4 | 7 | 3 in progress |
 | 25 HomeFood | `████░░░░░░` | 2 | 5 | 3 not started |
 | 26 HomeEvents | `░░░░░░░░░░` | 0 | 6 | 2 in progress, 4 not started |
 
@@ -61,9 +61,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-010` Every member signs in as themselves | 01 Identity & Family Accounts | P0 | In Progress |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
-| `24-005` Places near the office | 24 HomePlaces | P1 | Not Started |
-| `24-006` Search for places from the Places screen | 24 HomePlaces | P2 | Not Started |
-| `24-007` Work hours as a fact in Family | 24 HomePlaces | P2 | Not Started |
+| `24-005` Places near the office | 24 HomePlaces | P1 | In Progress |
+| `24-006` Search for places from the Places screen | 24 HomePlaces | P2 | In Progress |
+| `24-007` Work hours as a fact in Family | 24 HomePlaces | P2 | In Progress |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | Not Started |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
@@ -482,9 +482,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-002` The family's place book | P1 | Done | #204: save and "not for us" from a place card (`apps/web/app/ai/place-actions.ts`, re-read from the stored reply, never the browser) into `household_places`; every member reads, adults and Admins write; saved places rank first, turned-down places never return |
 | `24-003` School and office hours | P1 | Done | #210: `school_enrolments.starts_at/ends_at` and `household_members.work_starts_at/work_ends_at` (migration `20261018090000`, live); "after school" uses the recorded end time and "after work" is read; an assumed time is said in the reply |
 | `24-004` The place book screen | P1 | Done | #210: `/places` lists saved and turned-down places, with undo |
-| `24-005` Places near the office | P1 | Not Started | The office is free text today, so "near my office" cannot be searched. Needs the office location picked like a school's (coordinates), then an anchor in `homeplaces/service.ts` |
-| `24-006` Search for places from the Places screen | P2 | Not Started | Places reach the book only from HomeTalk's answers today; the screen has no search of its own |
-| `24-007` Work hours as a fact in Family | P2 | Not Started | The member-details sheet records work hours but Family's member detail does not show the work arrangement |
+| `24-005` Places near the office | P1 | In Progress | An adult's office is picked from Google Maps (`member_work_places`, migration `20261018150000`, live; the person or an Admin writes, adults and Admins read; `scripts/test-work-places-rls.mjs`), in Settings for yourself and in Family for an Admin. "Near my office" / "near Rohan's work" anchors there (`homeplaces/request.ts` work anchor, `service.ts` `workAnchor`); with no office picked HomeTalk says where to add it (`needs_work`). Golden HT-81. Browser check at 360px still to do (no QA credentials in the session) |
+| `24-006` Search for places from the Places screen | P2 | In Progress | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser check still to do |
+| `24-007` Work hours as a fact in Family | P2 | In Progress | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser check still to do |
 
 ### 25 — HomeFood
 

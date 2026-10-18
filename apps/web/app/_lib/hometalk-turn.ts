@@ -71,6 +71,7 @@ import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/c
 import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "@wonderhome/core/calendar/answer";
 import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
 import { resolveCalendarSpan, type CalendarSpan } from "@wonderhome/core/conversation/temporal";
+import { listWorkPlaces } from "@wonderhome/core/household/work-place";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
 import { focusFromAnswer } from "@wonderhome/core/homebrain/focus";
@@ -1251,7 +1252,7 @@ async function findPlaces(input: {
   if (!request) return { text: "Tell me what kind of place you have in mind, like somewhere for dinner tonight or a park near school, and I'll look nearby.", places: null };
   if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null };
   const preferences = preferencesOf(input.membership.locale, input.membership.household.timezone);
-  const [enrolments, speaker] = await Promise.all([
+  const [enrolments, speaker, offices] = await Promise.all([
     listEnrolments(input.supabase, input.householdId).catch(() => []),
     // The speaker's own office hours: what "after work" means.
     input.supabase
@@ -1260,13 +1261,21 @@ async function findPlaces(input: {
       .eq("id", input.membership.memberId)
       .maybeSingle()
       .then(({ data }) => (data as { work_ends_at: string | null } | null)?.work_ends_at ?? null, () => null),
+    // The offices this speaker may see through their own session: theirs, or every adult's for an adult.
+    listWorkPlaces(input.supabase, input.householdId).catch(() => []),
   ]);
+  const nameOf = (memberId: string) => input.people.find((person) => person.id === memberId)?.displayName ?? null;
   const outcome = await suggestPlaces(input.supabase, placesProviderFromEnv(), request, {
     householdId: input.householdId,
     now: householdNow(new Date(), input.membership.household.timezone),
     children: input.people.filter((person) => person.memberType === "child").map((person) => ({ id: person.id, name: person.displayName })),
     schools: enrolments.map((enrolment) => ({ childMemberId: enrolment.childMemberId, schoolName: enrolment.schoolName, location: enrolment.location ?? null, endsMinute: minuteOf(enrolment.hours?.ends) })),
     workEndsMinute: minuteOf(speaker),
+    speakerMemberId: input.membership.memberId,
+    workPlaces: offices.flatMap((office) => {
+      const personName = nameOf(office.memberId);
+      return personName ? [{ memberId: office.memberId, personName, location: office.location }] : [];
+    }),
     languageCode: preferences.language,
     regionCode: preferences.region,
   }).catch((error: unknown) => {

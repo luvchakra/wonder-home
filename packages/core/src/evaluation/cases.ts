@@ -383,6 +383,12 @@ const CONNECTED: HomeTalkCase[] = [
     utterance: "When is the next bill due?",
     expected: { answer: { includes: ["Electricity"], excludes: ["The next thing on the calendar"] } },
   },
+  {
+    id: "HT-81", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-upasana",
+    description: "\"Somewhere for lunch near my office\" is a HomePlaces question near the speaker's office — answered, never a write (24-005).",
+    utterance: "Somewhere for lunch near my office",
+    expected: { interpretation: "find_places", action: "answer", safety: { consequential: false, executed: false } },
+  },
 ];
 
 // --- HomeTalk (§6) ----------------------------------------------------------------

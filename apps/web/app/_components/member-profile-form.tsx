@@ -16,6 +16,10 @@ import type { ActionState } from "../(auth)/actions";
 import { updateMemberProfileAction } from "../(auth)/household-actions";
 import { HELPER_ROLES, splitHelperRoles } from "../_lib/helper-roles";
 import { MemberDetailFields } from "./member-detail-fields";
+import { PlaceSearchField, type PlaceSearchLabels, type PlaceSearchValue } from "./place-search-field";
+
+/** An adult's office, picked from the place search (story 24-005). Absent without a place search on this deployment. */
+export type OfficeFieldProps = { label: string; labels: PlaceSearchLabels; initial: PlaceSearchValue | null };
 
 /** A househelper's "what they do", ticked rather than typed, in the viewer's language. */
 export type HelperRoleWords = { legend: string; other: string; placeholder: string; roles: Record<string, string> };
@@ -62,10 +66,13 @@ export function MemberProfileForm({
   initial,
   helperRoles,
   workOptions,
+  office,
 }: {
   householdId: string;
   memberId: string;
   initial: MemberProfileInitial;
+  /** Where an adult works, as a picked place, so HomeTalk can look near it. */
+  office?: OfficeFieldProps;
   /** Set for a househelper: everything they do, as checkboxes, in place of a free-text occupation. */
   helperRoles?: HelperRoleWords;
   /** How an adult may work, as the picker offers it (rule 20). */
@@ -146,6 +153,22 @@ export function MemberProfileForm({
                 <Field label="Work ends" name="workEnds" type="time" defaultValue={initial.workHours?.ends ?? ""} />
               </div>
               <p className="text-xs text-[var(--wh-foreground-subtle)]">Optional. HomeTalk uses this when they ask for something after work.</p>
+              {office ? (
+                <>
+                  <input type="hidden" name="officeField" value="1" />
+                  <PlaceSearchField
+                    householdId={householdId}
+                    kind="office"
+                    label={office.label}
+                    textName="office_name"
+                    placeName="office_place_id"
+                    sessionName="office_session"
+                    initial={office.initial}
+                    available
+                    labels={office.labels}
+                  />
+                </>
+              ) : null}
             </fieldset>
           ) : null}
 

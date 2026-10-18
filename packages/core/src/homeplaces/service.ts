@@ -9,9 +9,10 @@ import { listHouseholdPlaces, type HouseholdPlace } from "./repository";
  * HomePlaces: real places for a household's question, found and ranked by
  * rules.
  *
- * 1. **Where.** The anchor is home, or a child's school, taken from what the
- *    household saved: never guessed. Two children at different schools and
- *    no name is one question back.
+ * 1. **Where.** The anchor is home, a child's school, or someone's office,
+ *    taken from what the household saved: never guessed. Two children at
+ *    different schools and no name is one question back; an office nobody
+ *    picked is said, with where to pick it.
  * 1b. **When.** "After school" starts when that school's day ends, and
  *    "after work" when the speaker's office hours end, both as recorded.
  *    With nothing on record the usual time is assumed and said aloud.
@@ -63,6 +64,8 @@ export type PlacesOutcome =
   | { kind: "needs_home" }
   | { kind: "needs_school"; childName: string | null }
   | { kind: "which_child"; names: string[] }
+  /** The office asked about has not been picked: the speaker's own when `personName` is null. */
+  | { kind: "needs_work"; personName: string | null }
   | { kind: "off" }
   | { kind: "unavailable" };
 
@@ -75,6 +78,10 @@ export type PlacesContext = {
   schools: readonly { childMemberId: string; schoolName: string; location: LatLng | null; endsMinute?: number | null }[];
   /** When the speaker's working day ends, minutes past midnight, when recorded. */
   workEndsMinute?: number | null;
+  /** Who is asking, so "my office" is theirs. */
+  speakerMemberId?: string | null;
+  /** The offices this speaker may see (their own, or every adult's for an adult), each by its person. */
+  workPlaces?: readonly { memberId: string; personName: string; location: LatLng }[];
   languageCode?: string | null;
   regionCode?: string | null;
 };
@@ -121,6 +128,7 @@ async function anchorFor(supabase: SupabaseClient, request: PlaceRequest, contex
     const home = await loadHouseholdAddress(supabase, context.householdId).catch(() => null);
     return home?.location ? { point: home.location, near: "home" } : { kind: "needs_home" };
   }
+  if (request.anchor.kind === "work") return workAnchor(request.anchor.personName, context);
 
   const named = request.anchor.childName?.toLocaleLowerCase();
   const children = named ? context.children.filter((child) => child.name.toLocaleLowerCase().split(/\s+/)[0] === named || child.name.toLocaleLowerCase() === named) : context.children;
@@ -135,6 +143,23 @@ async function anchorFor(supabase: SupabaseClient, request: PlaceRequest, contex
   if (!school.location) return { kind: "needs_school", childName: child.name };
   const firstName = child.name.split(/\s+/)[0] ?? child.name;
   return { point: school.location, near: withSchool.length > 1 ? school.schoolName : `${firstName}'s school`, schoolEnds: school.endsMinute ?? null };
+}
+
+/** "Near my office" is the speaker's; "near Kunal's office" is the adult of that first name, if this speaker may see it. */
+function workAnchor(personName: string | null, context: PlacesContext): Anchor | { kind: "needs_work"; personName: string | null } {
+  const offices = context.workPlaces ?? [];
+  if (!personName) {
+    const own = offices.find((office) => office.memberId === context.speakerMemberId);
+    return own ? { point: own.location, near: "your office" } : { kind: "needs_work", personName: null };
+  }
+  const named = personName.toLocaleLowerCase();
+  const theirs = offices.find((office) => {
+    const name = office.personName.toLocaleLowerCase();
+    return name === named || name.split(/\s+/)[0] === named;
+  });
+  if (!theirs) return { kind: "needs_work", personName };
+  const firstName = theirs.personName.split(/\s+/)[0] ?? theirs.personName;
+  return { point: theirs.location, near: theirs.memberId === context.speakerMemberId ? "your office" : `${firstName}'s office` };
 }
 
 type Window = { day: number; minute: number; forMinutes: number; label: string; assumption: string | null; now: boolean };

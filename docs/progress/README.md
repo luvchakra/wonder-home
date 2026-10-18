@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomePlaces: places near the office, Add a place, and work facts in Family](2026-10-18-homeplaces-office-and-add-place.md) |
 | 2026-10-18 | [Every member signs in as themselves; the bars step aside; HomeTalk looks ahead](2026-10-18-member-sign-in-and-look-ahead.md) |
 | 2026-10-18 | [HomeTalk across the home: 48 golden cases and multi-turn conversations, and the defects they found](2026-10-18-hometalk-cross-module-evaluation.md) |
 | 2026-10-18 | [What's new on Home, and HomeTalk answers from the Calendar](2026-10-18-whats-new-and-calendar-answers.md) |
