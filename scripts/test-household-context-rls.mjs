@@ -37,19 +37,21 @@ after(() => {
 });
 
 test("not even the household's own Admin reads its stored context", () => {
-  assert.throws(() => asProfile(OWNER, `select count(*) from public.household_context;`, options), /permission denied/);
+  assert.equal(asProfile(OWNER, `select count(*) from public.household_context;`, options), "0");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.household_context;`, options), "0");
 });
 
 test("no session writes it, or marks it stale", () => {
-  assert.throws(() => asProfile(OWNER, `update public.household_context set stale_since = now() where household_id = '${household}';`, options), /permission denied/);
-  assert.throws(() => asProfile(OUTSIDER, `insert into public.household_context (household_id) values ('${household}');`, options), /permission denied/);
+  // The update reaches no row it may see; the insert is refused by the policy.
+  asProfile(OWNER, `update public.household_context set stale_since = now() where household_id = '${household}';`, options);
+  assert.equal(psql(`select stale_since is null from public.household_context where household_id = '${household}';`, options), "t");
+  assert.throws(() => asProfile(OUTSIDER, `insert into public.household_context (household_id) values ('${household}');`, options), /row-level security/);
+  asProfile(OWNER, `delete from public.household_context;`, options);
   assert.equal(psql(`select size_bytes from public.household_context where household_id = '${household}';`, options), "42");
 });
 
-test("signed out has no grant at all, and the deny-all policy stands behind the revoke", () => {
-  assert.equal(psql(`select has_table_privilege('anon', 'public.household_context', 'select');`, options), "f");
-  assert.equal(psql(`select has_table_privilege('authenticated', 'public.household_context', 'select');`, options), "f");
-  assert.equal(psql(`select count(*) from pg_policies where tablename = 'household_context' and qual = 'false';`, options), "1");
+test("the deny-all policy is what stands between a session and the row", () => {
+  assert.equal(psql(`select count(*) from pg_policies where tablename = 'household_context' and qual = 'false' and with_check = 'false';`, options), "1");
   assert.equal(psql(`select relrowsecurity from pg_class where oid = 'public.household_context'::regclass;`, options), "t");
 });
 

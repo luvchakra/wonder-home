@@ -16,8 +16,11 @@
 -- Service role only. It holds the whole household before the viewer filter
 -- runs, so no session may read it: the server reads it after
 -- `requireMembership`, runs `filterForViewer` in memory, and only then does
--- anything leave. The browser never sees it. Deny-all, stated as a policy,
--- the convention for server-only tables (usda_foods, payment_provider_plans).
+-- anything leave. The browser never sees it. The repo's server-only shape
+-- (`payment_provider_plans`, `billing_reconciliation_findings`): the usual
+-- grants and a policy that lets no session through, so a session sees no
+-- rows rather than a permission error, and the tenant-isolation suite can
+-- read it as any other household table.
 
 create table public.household_context (
   household_id uuid primary key references public.households(id) on delete cascade,
@@ -37,10 +40,12 @@ comment on table public.household_context is
   'HomeBrain 3.0: the household''s whole context as canonical items, derived from the domain tables and rebuilt on change. Server-only; the viewer filter runs in memory before anything leaves.';
 
 alter table public.household_context enable row level security;
-revoke all on public.household_context from anon, authenticated;
+grant select, insert, update, delete on public.household_context to anon, authenticated;
 
 create policy household_context_no_client_access
   on public.household_context for all
   to anon, authenticated
   using (false)
   with check (false);
+
+notify pgrst, 'reload schema';

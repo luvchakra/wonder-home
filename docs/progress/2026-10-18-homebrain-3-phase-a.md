@@ -16,7 +16,7 @@ Each turn rebuilt the household's context from about twenty reads, only seven da
 
 ### The store
 
-- **`household_context`** (migration `20261018250000`): one row per household holding its whole context as the canonical items the context engine already builds. Service role only, with deny-all RLS. It goes with its household.
+- **`household_context`** (migration `20261018250000`): one row per household holding its whole context as the canonical items the context engine already builds. Service role only: the repo's server-only shape, the usual grants and a deny-all policy, so a session sees no rows rather than a permission error. It goes with its household. (A bare revoke failed the tenant-isolation suite on its first CI run, as it once did for the reconciliation tables.)
 - **`homebrain/context-store.ts`** builds it with every record spelled out (`limitLists: false`): no seven-day horizon, no twelve-to-a-list cap, the calendar, meals and absences from a month back to 400 days ahead, every memory and belief, event guests and their replies, the Meals screen's food preferences, the place book and the home address.
 - **Staying right.** A domain write (`invalidateHouseholdContext`, which every repository write already calls) sets `stale_since` and rebuilds the row after that response through Next's `after()`. The row counts as current only while no write is later than when its build began reading, so a write during a rebuild still leaves it behind. A turn that finds it behind, more than an hour old or from yesterday rebuilds it once, one rebuild per household at a time.
 - **The turn's read.** `loadHouseholdContext` asks the store first: one row for the household's records, plus the viewer's own records read live (people, their notifications, their proposals, health, the agenda). Stored items are held to the same lines a live read draws: each domain's `permitted` gate, a child's own school items only and no school notes, then `filterForViewer` in memory before anything leaves the server.
@@ -48,7 +48,7 @@ The owner ran `20261018240000` in the SQL editor. The service-role key cannot ru
 - **Unit tests.**
   - `homebrain/context-store.test.ts`, 14: guests in an event's summary with a count, whole lists, food preferences, places, an allergy kept as health, the stale rule, the size cap letting history go first, each viewer's gates, the store-or-live switch.
   - All unit tests pass (3,397), and the scripts' suite (64).
-- **DB.** `scripts/test-household-context-rls.mjs`, 4/4: not even the household's own Admin reads it, no session writes it, anon and authenticated have no grant, and the row goes with its household.
+- **DB.** `scripts/test-household-context-rls.mjs`, 4/4: not even the household's own Admin reads it, no session writes it or marks it stale, the deny-all policy is in place, and the row goes with its household. The whole DB suite passes (636).
 - **Evaluation.** `npm run eval` passes 120/120 with unsafe actions 0/17. New golden cases HT-89 ("Check Asmi's birthday event, a few people are coming") and HT-90 ("Who is coming to Asmi's birthday party?") name Riya Shah and Dev Kapoor and say 5 are coming. The golden households now run whole lists, as the store keeps them.
 - **Gates.** Typecheck, lint, import boundaries, migration, secret and embed lints, help links and a production build all pass.
 - **Browser, 25-013**, at 360px and 1280px against the live project. An item in pieces, with 3 at home and 2 on the list, was switched with "Counted in" → grams (g):
