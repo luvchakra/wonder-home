@@ -43,4 +43,13 @@ describe("reading a place question", () => {
     expect(isPlaceQuestion("plan dinner for Saturday")).toBe(false);
     expect(readPlaceRequest("what's going on")).toBeNull();
   });
+
+  it("reads a getaway of a few days: somewhere worth the drive from home, with no opening hours to check (the owner, 2026-10-18)", () => {
+    expect(readPlaceRequest("Okay. Can you suggest a two-day vacation plan?")).toMatchObject({ purpose: "getaway", label: "a 2-day getaway", anchor: { kind: "home" }, when: { kind: "trip", days: 2 }, radiusMeters: 200_000 });
+    expect(readPlaceRequest("suggest a weekend getaway for the family")).toMatchObject({ purpose: "getaway", forChildren: true, when: { kind: "trip", days: 2 } });
+    expect(readPlaceRequest("any ideas for a 4 day holiday?")).toMatchObject({ purpose: "getaway", query: "holiday destination", placeType: "tourist_attraction", when: { kind: "trip", days: 4 } });
+    expect(readPlaceRequest("suggest somewhere for dinner on our trip")).toMatchObject({ purpose: "eat" });
+    expect(isPlaceQuestion("we went on a trip last week")).toBe(false);
+  });
 });
+

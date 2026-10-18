@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { INTENT_ACTIONS } from "../conversation/intent";
 import { CAPABILITY_CHANNELS, capabilityForAction, channelSummary, VOICE_CAPABILITIES } from "./capabilities";
 import { GEMINI_LIVE_TOOL_NAMES, inAppVoiceScopes } from "./gemini-live";
-import { DEFAULT_VOICE_SCOPES, SENSITIVE_VOICE_SCOPES, VOICE_SCOPES, voiceAllowsAction } from "./scopes";
+import { channelAllowsAction, channelRefusal, DEFAULT_VOICE_SCOPES, SENSITIVE_VOICE_SCOPES, VOICE_SCOPES, voiceAllowsAction } from "./scopes";
 
 /**
  * The capability matrix (voice phase 5) is policy written down; these tests
@@ -88,8 +88,19 @@ describe("Gemini Voice: every tool is placed, and consent decides the sensitive 
     for (const capability of VOICE_CAPABILITIES) {
       if (capability.policy.gemini_voice !== "consent") continue;
       expect(capability.contentClass, capability.id).toBeTruthy();
-      expect(inAppVoiceScopes(["general"]), capability.id).not.toContain(capability.scope);
-      expect(inAppVoiceScopes(["general", capability.contentClass!]), capability.id).toContain(capability.scope);
+      if (capability.scope) {
+        expect(inAppVoiceScopes(["general"]), capability.id).not.toContain(capability.scope);
+        expect(inAppVoiceScopes(["general", capability.contentClass!]), capability.id).toContain(capability.scope);
+        continue;
+      }
+      // No scope: opened only in the app, and only by the household's agreement for that class.
+      for (const action of capability.actions) {
+        const without = { scopes: inAppVoiceScopes(["general"]), classes: ["general"] as const, inApp: true };
+        const withClass = { scopes: inAppVoiceScopes(["general", capability.contentClass!]), classes: ["general", capability.contentClass!] as const, inApp: true };
+        expect(channelAllowsAction(action, without), `${capability.id}/${action} without consent`).toBe(false);
+        expect(channelAllowsAction(action, withClass), `${capability.id}/${action} with consent`).toBe(true);
+        expect(channelAllowsAction(action, { scopes: ALL_SCOPES, classes: [...ALL_CLASSES] }), `${capability.id}/${action} over a linked assistant`).toBe(false);
+      }
     }
   });
 
@@ -109,5 +120,14 @@ describe("the matrix as a household reads it", () => {
     expect(gemini.appOnly.map((capability) => capability.id)).toEqual(expect.arrayContaining(["payments", "orders", "household_admin"]));
     expect(gemini.available.map((capability) => capability.id)).toEqual(expect.arrayContaining(["household_questions", "groceries_write", "reminders"]));
     expect(channelSummary("alexa").conditional.map((capability) => capability.id)).toEqual(expect.arrayContaining(["school", "health", "financial_status"]));
+  });
+});
+
+describe("voice inside the app is HomeTalk, not somewhere else", () => {
+  it("its refusal never sends the person to the app they are already in", () => {
+    const inApp = channelRefusal({ scopes: [], inApp: true });
+    expect(inApp).not.toMatch(/WonderHome app|voice assistant/i);
+    expect(inApp).toMatch(/HomeTalk/);
+    expect(channelRefusal({ scopes: [] })).toMatch(/WonderHome app/);
   });
 });

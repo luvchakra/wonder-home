@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**243 of 257 stories done — 94.6%**
+**245 of 259 stories done — 94.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 243 |
+| Done | 245 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 10 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 11 | 11 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 17 | 18 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 18 | 19 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
-| 24 HomePlaces | `██████████` | 7 | 7 | — |
+| 24 HomePlaces | `██████████` | 8 | 8 | — |
 | 25 HomeFood | `████░░░░░░` | 6 | 13 | 1 in progress, 6 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
@@ -144,7 +144,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-17 of 18 done `█████████░`
+18 of 19 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -166,6 +166,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-016` Unified voice experience and capability matrix | P0 | Done | Voice phase 5: `voicelink/capabilities.ts` — the spec's matrix as data, every HomeTalk action placed once, every cell held to the real gates by `capabilities.test.ts`, shown to households on `/settings/voice-assistants`; payments/orders stay app-only by voice (stricter than the spec, on purpose). Conversations belong to their surface (`conversation_sessions.surface`: app / alexa, migration `20260926100000`, applied live) — a question the app asked is never answered by Alexa. Everyday domain questions ("what's for dinner?", "do we need milk?", "do the kids have homework?") now read by the rules |
 | `04-017` Voice evaluation, metrics and release gates | P0 | In Progress | Voice phase 6 built: golden voice scenarios and a blocking `voice` gate in `npm run eval` (`voicelink/readiness.ts`); per-channel telemetry `hometalk_channel_events` (migration `20260926110000`, applied live) with the spec's metrics at `GET /platform-admin/voice-metrics`; Gemini tool calls capped per session; structured Gemini tool sentences read by the rules first. Left, and needing a person: a real Alexa end-to-end run (the skill must be created), a device-level Gemini Live audio run, and a rendered dashboard with alert delivery Since 2026-10-18 (owner's report: Gemini Live said it could not update a family preference), telling WonderHome what someone likes is available by voice: `family_facts` capability, Gemini tool `remember_family_fact`, `set_preference` needs no voice scope (kept as learned, correctable in HomeBrain Review); eval voice gate 18/18 tool sentences |
 | `04-018` HomeTalk follows you across screens | P0 | Done | The owner's ask, 2026-10-18 (PR #225): "take me to the grocery list", add or remove things there, move on, come back. A live conversation now lives at the app's root (`components/ui/live-talk.tsx`, `LiveTalkProvider`), so changing screens no longer ends it. Intent `open_screen` (`conversation/screens.ts`, a fixed list of screens a model and the rules pick from by key, never a path) read by the rules and the model; the reply carries `navigate` (a same-app path, through `hometalk/contract.ts` and the Gemini tool result) and is followed on any screen. A screen this person is never offered is not opened; Alexa says there is no screen. A glowing bar above the tab bar on every other screen shows listening/thinking/speaking with pause, end and the way back, and pages reserve room for it (`--wh-live-bar-clearance`). Gemini Live tool `open_screen`. Golden HT-84 to HT-87; eval voice gate 23/23. Browser-checked at 360px and desktop with a scripted recogniser: Groceries → added bananas there → Calendar → back to HomeTalk |
+| `04-019` Voice in the app is HomeTalk; getaways and likes answered from the record | P0 | Done | The owner's reports, 2026-10-18 (PR #228). Gemini Live inside HomeTalk said "I can't do that from this voice assistant, use the WonderHome app": the in-app channel now carries `inApp` limits (`channelAllowsAction`, `channelRefusal` in `voicelink/scopes.ts`), its refusal names HomeTalk and the on-screen OK, and Gemini's instructions say it is HomeTalk's own voice inside WonderHome and never to send the person to "the app". A place question is answered by Gemini Live where the household lets location reach Google (capability `places` is `consent` for Gemini, still `app_only` for Alexa). "Can you suggest a two-day vacation plan?" is a HomePlaces getaway (`purpose: "getaway"`, `when: trip`): tourist attractions within a few hours' drive of home, the search kept to that area (`within`, `includedType`), day-trip distances left out, no opening hours checked; real check from Pune gave Mahabaleshwar, Naneghat and the Wai hills. "What does Upasana like in food?" is answered by rules from every record about her — what HomeTalk was told (`memories`) and the Meals screen's preferences — in `conversation/likes.ts`, after the model said "no records" minutes after "Remembered". Golden HT-88. The cause behind the forgetting is a design limit, written up as `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` for the owner |
 
 ### 05 — Household Certification & Understanding
 
@@ -475,7 +476,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-7 of 7 done `██████████`
+8 of 8 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -486,6 +487,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-005` Places near the office | P1 | Done | An adult's office is picked from Google Maps (`member_work_places`, migration `20261018150000`, live; the person or an Admin writes, adults and Admins read; `scripts/test-work-places-rls.mjs`), in Settings for yourself and in Family for an Admin. "Near my office" / "near Rohan's work" anchors there (`homeplaces/request.ts` work anchor, `service.ts` `workAnchor`); with no office picked HomeTalk says where to add it (`needs_work`). Golden HT-81. Browser-checked 2026-10-18 at 360px and 1280px on a local production build with a real Google Maps key, against the live project (QA household, cleaned up afterwards): in a member's details, typing "WeWork BKC Mumbai" in Office listed two real WeWork BKC results; picking one and saving showed Office: WeWork on the member |
 | `24-006` Search for places from the Places screen | P2 | Done | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser-checked 2026-10-18 at 360px and 1280px with a real Google Maps key against the live project (QA household, cleaned up afterwards): "Blue Tokai Coffee Bandra" listed three real branches; picking one and saving showed "Saved to your place book" and the place, with its full address, under Saved. No horizontal scroll at either width |
 | `24-007` Work hours as a fact in Family | P2 | Done | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): Family shows How they work and Office hours |
+| `24-008` Getaways: "a two-day vacation plan" answered with places worth the trip | P0 | Done | The owner, 2026-10-18 (PR #228). `homeplaces/request.ts` reads a getaway (vacation, holiday, trip, weekend away; the days from "two-day", "a weekend", "4 day"): `purpose: "getaway"`, anchored at home, `when: { kind: "trip", days }`, radius 200 km (80 km for one day). The search asks for tourist attractions ("hill station weekend getaway" for a weekend; vaguer words drew resorts and travel agencies when tried) and is kept within the area (`NearbyQuery.within` → a `locationRestriction` rectangle, `includedType` with strict type filtering in `places/google.ts`); day-trip distances (under 25 km) are left out; no opening hours are checked; distance costs little in the ranking. The reply says "worth the trip from home, the best rated first" and to check the drive, weather and stay. Live check from Pune: Mahabaleshwar, Louisa Point, Naneghat, the Wai hills. Gemini Live answers it where location may reach Google |
 
 ### 25 — HomeFood
 

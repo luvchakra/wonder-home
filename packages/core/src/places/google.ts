@@ -188,9 +188,15 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
       const body: Record<string, unknown> = {
         textQuery: query.text,
         pageSize: Math.min(Math.max(query.max ?? 8, 1), 20),
-        locationBias: { circle: { center: point(query.near), radius: Math.min(query.radiusMeters, 50_000) } },
+        ...(query.within
+          ? { locationRestriction: { rectangle: aroundBox(query.near, query.radiusMeters) } }
+          : { locationBias: { circle: { center: point(query.near), radius: Math.min(query.radiusMeters, 50_000) } } }),
       };
       if (query.openNow) body.openNow = true;
+      if (query.includedType) {
+        body.includedType = query.includedType;
+        body.strictTypeFiltering = true;
+      }
       if (query.languageCode) body.languageCode = query.languageCode;
       if (query.regionCode) body.regionCode = query.regionCode.toLowerCase();
       const response = await call("https://places.googleapis.com/v1/places:searchText", {
@@ -254,4 +260,14 @@ export function placesProviderFromEnv(env: Record<string, string | undefined> = 
   const apiKey = env.GOOGLE_MAPS_API_KEY?.trim();
   if (!apiKey) return null;
   return createGooglePlacesProvider({ apiKey, fetch: fetchImpl });
+}
+
+/** A box `radiusMeters` each way around a point: the place search's restriction takes a rectangle, not a circle. */
+function aroundBox(near: LatLng, radiusMeters: number): { low: { latitude: number; longitude: number }; high: { latitude: number; longitude: number } } {
+  const dLat = radiusMeters / 111_320;
+  const dLng = radiusMeters / (111_320 * Math.max(Math.cos((near.latitude * Math.PI) / 180), 0.01));
+  return {
+    low: { latitude: Math.max(near.latitude - dLat, -90), longitude: Math.max(near.longitude - dLng, -180) },
+    high: { latitude: Math.min(near.latitude + dLat, 90), longitude: Math.min(near.longitude + dLng, 180) },
+  };
 }

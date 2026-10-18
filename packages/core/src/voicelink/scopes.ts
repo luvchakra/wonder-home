@@ -136,7 +136,45 @@ export function voiceAllowsAction(action: IntentAction, scopes: readonly VoiceSc
 export const VOICE_NOT_ALLOWED = "I can't do that from this voice assistant. You can do it in the WonderHome app.";
 
 /** What an external channel may reach: a voice link's scopes and, for a provider-voiced channel, the content classes it may hear. */
-export type ChannelLimits = { scopes: readonly VoiceScope[]; classes?: readonly ContentClass[] };
+export type ChannelLimits = {
+  scopes: readonly VoiceScope[];
+  classes?: readonly ContentClass[];
+  /**
+   * The channel runs inside WonderHome's own HomeTalk screen (Gemini Live in
+   * the app), not on a speaker somewhere else: what it answers is also shown
+   * on screen, and its refusals never send the person to "the app" they are
+   * already in.
+   */
+  inApp?: boolean;
+};
+
+/**
+ * What a voice channel inside the app may also answer, once the household
+ * lets that content class reach the voice's provider: a place question shows
+ * its places as cards on the same screen (the owner, 2026-10-18).
+ */
+const IN_APP_BY_CLASS: Partial<Record<IntentAction, ContentClass>> = {
+  find_places: "location",
+};
+
+/** Whether this channel may ask for this action: its scopes, and in the app, what the household's agreement opens. */
+export function channelAllowsAction(action: IntentAction, limits: ChannelLimits): boolean {
+  if (voiceAllowsAction(action, limits.scopes)) return true;
+  const needs = limits.inApp ? IN_APP_BY_CLASS[action] : undefined;
+  return needs !== undefined && (limits.classes ?? []).includes(needs);
+}
+
+/**
+ * Said when voice in the app cannot do something: it is HomeTalk, inside
+ * WonderHome, so the way on is right here — typed, it waits for an OK on
+ * screen. Never "use the WonderHome app".
+ */
+export const IN_APP_VOICE_NOT_ALLOWED =
+  "That needs your OK on screen, which I can't give by voice. Type it here in HomeTalk and I'll set it up for you to confirm.";
+
+export function channelRefusal(limits: ChannelLimits): string {
+  return limits.inApp ? IN_APP_VOICE_NOT_ALLOWED : VOICE_NOT_ALLOWED;
+}
 
 /**
  * A household's facts narrowed to what a channel may reach: the domains its

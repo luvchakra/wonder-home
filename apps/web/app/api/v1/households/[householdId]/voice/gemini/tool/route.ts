@@ -69,7 +69,8 @@ export async function POST(request: Request, { params }: Params) {
         device: { provider: "gemini" },
       },
       { supabase },
-      { scopes: inAppVoiceScopes(policy.allowedClasses), classes: policy.allowedClasses },
+      // Gemini Live runs inside HomeTalk's own screen: in-app limits.
+      { scopes: inAppVoiceScopes(policy.allowedClasses), classes: policy.allowedClasses, inApp: true },
       { rulesFirst: call.structured },
     );
     return toolResultFrom(answer);

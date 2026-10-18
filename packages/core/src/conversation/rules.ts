@@ -6,6 +6,7 @@ import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
 import { CALENDAR_SPAN_PHRASE, splitTrailingWhen } from "./temporal";
 import { isPlaceQuestion } from "../homeplaces/request";
+import { readLikesQuestion } from "./likes";
 import { isRosterQuestion } from "./roster";
 import { readOpenScreen } from "./screens";
 
@@ -242,6 +243,17 @@ const RULES: readonly Rule[] = [
     pattern: /^.+$/,
     read: (_match, utterance) =>
       isRosterQuestion(utterance) ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "people" }, confidence: 0.95 } : null,
+  },
+
+  // --- What someone likes ----------------------------------------------------
+  {
+    // "What does Upasana like in food?" is answered from every record about
+    // her (likes.ts), never only from the facts a model was shown.
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const likes = readLikesQuestion(utterance);
+      return likes ? { action: "ask_status", target: { kind: "member", reference: likes.name.toLowerCase() }, parameters: { scope: "likes", subject: likes.name, food: likes.food }, confidence: 0.93 } : null;
+    },
   },
 
   // --- Status: what is going on ---------------------------------------------

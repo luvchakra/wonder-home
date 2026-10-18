@@ -80,6 +80,10 @@ export type NearbyQuery = {
   max?: number;
   languageCode?: string | null;
   regionCode?: string | null;
+  /** One of the provider's place types to keep to ("tourist_attraction"), so a getaway is never a travel agency. */
+  includedType?: string;
+  /** Keep to this far from `near` instead of only leaning towards it: a getaway is a few hours' drive, beyond the 50 km a bias reaches. */
+  within?: boolean;
 };
 
 export type PlacesProvider = {
