@@ -74,7 +74,9 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
   // A question about one part of the home ("health appointments") is not
   // answered with everything about the person asking — only the parts it is
   // unmistakably about, what those connect to, and the calendar.
-  const inScope = new Set<ContextDomain>([...reading.domains, ...reading.connected]);
+  // A domain the question only reached through a common word ("week") is
+  // not one of them when something else is plainly what it asks about.
+  const inScope = new Set<ContextDomain>([...(reading.focus.size > 0 ? reading.focus : reading.domains), ...reading.connected]);
   const asked = new Set(meaningfulWords(reading.retrievalText));
 
   const drafts: Omit<GroundedFact, "contextId">[] = [];

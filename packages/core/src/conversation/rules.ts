@@ -608,7 +608,8 @@ const RULES: readonly Rule[] = [
 
   // --- Responsibilities --------------------------------------------------------
   {
-    pattern: /^([A-Za-z]+) (?:handles|takes|takes over|is responsible for|will do|does|owns|looks after|is in charge of|will handle)\s+(.+?)(?:\s+from now on| now| going forward)?$/i,
+    // "Who is responsible for the bills?" asks; it does not name a "Who".
+    pattern: /^(?!(?:who|what|which|whom|whose|where|when|why|how)\b)([A-Za-z]+) (?:handles|takes|takes over|is responsible for|will do|does|owns|looks after|is in charge of|will handle)\s+(.+?)(?:\s+from now on| now| going forward)?$/i,
     read: (match) => ({
       action: "assign_responsibility",
       target: { kind: "member", reference: lowerName(match[1]!) },

@@ -68,11 +68,12 @@ import { placesReply } from "@wonderhome/core/homeplaces/answer";
 import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
-import { calendarSpanReply } from "@wonderhome/core/calendar/answer";
+import { asksTheCalendar, calendarSpanReply } from "@wonderhome/core/calendar/answer";
 import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
 import { resolveCalendarSpan, type CalendarSpan } from "@wonderhome/core/conversation/temporal";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
+import { focusFromAnswer } from "@wonderhome/core/homebrain/focus";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
 import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
@@ -763,6 +764,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     result.intent.action === "ask_status" &&
     result.proposal.kind === "answer" &&
     (!limits || (limits.scopes as readonly string[]).includes("calendar.read")) &&
+    asksTheCalendar(body.utterance) &&
     calendarSpanOf(result.intent.parameters.when, membership.household.timezone)
   ) {
     // "Do you see any events in December?": a month-sized span, answered
@@ -864,6 +866,13 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // Confident enough to go on, not certain (§20): say who it was taken to be.
   const hedge = result.kind === "reply" && result.proposal.kind !== "clarify" ? confidenceLead(result.intent) : null;
   if (hedge) text = `${hedge} ${text}`;
+
+  // What HomeBrain's answer rested on, so "move it to Friday" after "when is
+  // the Science project due?" means the project (homebrain/focus.ts).
+  if (brainAnswer && brainRead) {
+    const read = await brainRead.catch(() => null);
+    if (read) turnFocus.push(...focusFromAnswer(brainAnswer, read.context.snapshot.items, new Date().toISOString()));
+  }
 
   const memberMessageId = await memberMessageWrite;
   // The question left open for the next turn: the engine's own, unless

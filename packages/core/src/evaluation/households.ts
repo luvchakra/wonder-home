@@ -1,4 +1,5 @@
 import type { Person } from "../ai/privacy";
+import { eventEntries, holidayEntries, mergeEntries, occasionEntries, type CalendarEntry, type CalendarEventRecord, type CalendarViewer, type HolidayRecord } from "../calendar/projection";
 import type { Consumable } from "../commerce/consumables";
 import { buildContextItems, type ContextRecords } from "../context/builders";
 import { applyFreshness } from "../context/freshness";
@@ -51,7 +52,21 @@ export type GoldenHousehold = {
   recipes: { id: string; name: string; ingredients: string[] }[];
   /** Who looks after whom — the one authority over a child's private health. */
   guardians: Record<string, string[]>;
+  /**
+   * Events further out than the week the context engine reads, with the
+   * visibility the calendar enforces (HomeEvents). The Calendar reads these
+   * alongside `records.events`; HomeBrain's facts never reach them.
+   */
+  calendar?: CalendarEventRecord[];
 };
+
+/** The public holidays every golden household's calendar shows (a slice of the DoP&T list). */
+export const GOLDEN_HOLIDAYS: HolidayRecord[] = [
+  { id: "hol-gandhi", onDate: "2026-10-02", name: "Gandhi Jayanti", source: "DoP&T" },
+  { id: "hol-dussehra", onDate: "2026-10-20", name: "Dussehra", source: "DoP&T" },
+  { id: "hol-diwali", onDate: "2026-11-08", name: "Diwali", source: "DoP&T" },
+  { id: "hol-christmas", onDate: "2026-12-25", name: "Christmas Day", source: "DoP&T" },
+];
 
 // --- builders ----------------------------------------------------------------
 
@@ -132,6 +147,15 @@ function pet(id: string, name: string, species: string): Pet {
   return { id, name, species, active: true };
 }
 
+function later(id: string, title: string, startsAt: string, extra: Partial<CalendarEventRecord> = {}): CalendarEventRecord {
+  const start = new Date(startsAt);
+  return {
+    id, title, kind: "gathering", category: null, startsAt: start, endsAt: new Date(start.getTime() + 2 * 3_600_000), allDay: false, timeZone: null,
+    visibility: "household", recurrence: null, status: "confirmed", ownerMemberId: null, protected: false, location: null, participantMemberIds: [], exceptions: [],
+    ...extra,
+  };
+}
+
 function meal(id: string, name: string, onDate: string, slot: Meal["slot"], cookMemberId: string | null, readyBy: string): Meal {
   return { id, name, slot, onDate, readyBy: new Date(readyBy), cookMemberId, status: "planned", readyAt: null, recipe: null, ingredients: [] };
 }
@@ -158,6 +182,14 @@ const HOUSEHOLD_A: GoldenHousehold = {
   recipes: [
     { id: "a-r-pasta", name: "Tomato pasta", ingredients: ["pasta", "tomatoes", "basil"] },
     { id: "a-r-dal", name: "Dal tadka", ingredients: ["toor dal", "ghee", "cumin"] },
+  ],
+  calendar: [
+    later("a-k-diwali", "Diwali puja at home", "2026-11-08T13:30:00Z", { status: "proposed", kind: "special_occasion" }),
+    later("a-k-surprise", "Surprise gift shopping", "2026-12-05T06:30:00Z", { visibility: "private", ownerMemberId: "a-upasana" }),
+    later("a-k-concert", "Manan's school concert", "2026-12-12T12:30:00Z", { kind: "school_event", participantMemberIds: ["a-manan"] }),
+    later("a-k-evening", "Parents' evening out", "2026-12-19T14:00:00Z", { visibility: "participants", ownerMemberId: "a-kunal", participantMemberIds: ["a-kunal", "a-upasana"] }),
+    later("a-k-shahs", "Dinner with the Shahs", "2026-12-20T14:00:00Z", { status: "cancelled" }),
+    later("a-k-goa", "Goa trip", "2026-12-26T18:30:00Z", { kind: "travel", allDay: true, endsAt: new Date("2026-12-30T18:30:00Z") }),
   ],
   records: {
     members: A_MEMBERS,
@@ -239,6 +271,7 @@ const HOUSEHOLD_C: GoldenHousehold = {
   members: C_MEMBERS,
   guardians: { "c-anu": ["c-ravi", "c-priya"] },
   recipes: [],
+  calendar: [later("c-k-anniversary", "Thatha and Paati's anniversary lunch", "2026-11-15T06:30:00Z", { participantMemberIds: ["c-lakshmi", "c-venkat"] })],
   records: {
     members: C_MEMBERS,
     schoolItems: [schoolItem("c-s-drawing", "c-anu", "homework", "Drawing homework", "Art", "2026-09-24T09:00:00Z")],
@@ -266,6 +299,7 @@ const HOUSEHOLD_D: GoldenHousehold = {
   members: D_MEMBERS,
   guardians: { "d-kabir": ["d-neha"] },
   recipes: [],
+  calendar: [later("d-k-plan", "Plan Rohan's birthday dinner", "2026-10-24T13:30:00Z", { visibility: "private", ownerMemberId: "d-neha" })],
   records: {
     members: D_MEMBERS,
     healthAppointments: [
@@ -297,6 +331,10 @@ const HOUSEHOLD_E: GoldenHousehold = {
   members: E_MEMBERS,
   guardians: { "e-ishaan": ["e-simran", "e-harpreet"], "e-tara": ["e-simran", "e-harpreet"], "e-veer": ["e-simran", "e-harpreet"] },
   recipes: [],
+  calendar: [
+    later("e-k-annual", "Annual Day", "2026-10-09T04:30:00Z", { kind: "school_event", participantMemberIds: ["e-ishaan", "e-tara", "e-veer"] }),
+    later("e-k-recital", "Tara's dance recital", "2026-10-17T11:30:00Z", { participantMemberIds: ["e-tara"] }),
+  ],
   records: {
     members: E_MEMBERS,
     schoolItems: [
@@ -376,11 +414,14 @@ function focusOf(household: GoldenHousehold, spec: FocusSpec, source: FocusEntit
 }
 
 /** What HomeTalk's grounding reads for this household, as the conversation route assembles it. */
-export function groundingEnvFor(household: GoldenHousehold, memberId: string, references: ReferenceSpec = {}): GroundingEnv {
+export function groundingEnvFor(household: GoldenHousehold, memberId: string, references: ReferenceSpec = {}, carried: Partial<ReferenceState> = {}): GroundingEnv {
+  // What earlier turns of the same conversation left behind (`carried`) comes
+  // first, as the route reads its own recent turns before anything older.
   const state: ReferenceState = {
     ...NO_REFERENCES,
-    proposal: (references.proposal ?? []).map((spec) => focusOf(household, spec, "proposal")),
-    conversation: (references.conversation ?? []).map((spec) => focusOf(household, spec, "mention")),
+    clarification: carried.clarification ?? [],
+    proposal: carried.proposal ?? (references.proposal ?? []).map((spec) => focusOf(household, spec, "proposal")),
+    conversation: [...(carried.conversation ?? []), ...(references.conversation ?? []).map((spec) => focusOf(household, spec, "mention"))],
     homesend: (references.homesend ?? []).map((spec) => focusOf(household, spec, "homesend")),
   };
   const people = buildContextItems({ members: household.members }, { householdId: household.id, householdName: household.name, timezone: household.timezone, now: household.now, viewerMemberId: memberId });
@@ -398,6 +439,35 @@ export function groundingEnvFor(household: GoldenHousehold, memberId: string, re
         .map((item) => ({ id: item.id, title: item.title, childMemberId: item.childMemberId, dueAt: item.dueAt ? item.dueAt.toISOString() : null, status: item.status, dueTimeKnown: item.dueTimeKnown, endsAt: item.endsAt ? item.endsAt.toISOString() : null })),
     assets: async () => (household.records.assets ?? []).filter((a) => a.status === "active").map((a) => ({ id: a.id, name: a.name })),
   };
+}
+
+/**
+ * The household's calendar for one person over a span, as `calendarRange`
+ * returns it: events (the week's and later ones), birthdays and holidays.
+ * Which events a person may see is the database's call in production
+ * (`wh.may_see_event`, held by `scripts/test-calendar-rls.mjs`); this is the
+ * same rule, so a private event of someone else's never reaches a reply here
+ * either.
+ */
+export function calendarFor(household: GoldenHousehold, memberId: string, range: { from: string; to: string }): CalendarEntry[] {
+  const who = memberOf(household, memberId);
+  const viewer: CalendarViewer = { memberId, isAdmin: who.roles.includes("head") || who.roles.includes("administrator"), timeZone: household.timezone };
+  const fromWeek: CalendarEventRecord[] = (household.records.events ?? []).map((event) => ({
+    id: event.id, title: event.title, kind: event.kind, category: null, startsAt: event.startsAt, endsAt: event.endsAt, allDay: false, timeZone: null,
+    visibility: "household", recurrence: null, status: event.status, ownerMemberId: event.ownerMemberId, protected: event.protected, location: null,
+    participantMemberIds: event.participants.map((participant) => participant.memberId), exceptions: [],
+  }));
+  const visible = [...fromWeek, ...(household.calendar ?? [])].filter(
+    (event) => event.visibility === "household" || event.ownerMemberId === memberId || (event.visibility === "participants" && event.participantMemberIds.includes(memberId)),
+  );
+  return mergeEntries(
+    eventEntries(visible, viewer, range),
+    occasionEntries(household.members.filter((m) => m.status === "active"), viewer, range, {
+      birthday: (name) => `${name}'s birthday`,
+      occasion: (name, label) => (label ? `${name}: ${label}` : `${name}'s special day`),
+    }),
+    holidayEntries(GOLDEN_HOLIDAYS.filter((holiday) => holiday.onDate >= range.from && holiday.onDate <= range.to), viewer),
+  );
 }
 
 /** The household's people, as the consent gate names them. */

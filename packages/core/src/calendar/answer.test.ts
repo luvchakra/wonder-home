@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveCalendarSpan } from "../conversation/temporal";
-import { calendarSpanReply, MAX_LISTED } from "./answer";
+import { asksTheCalendar, calendarSpanReply, MAX_LISTED } from "./answer";
 import { atLocal } from "./dates";
 import { eventEntries, holidayEntries, mergeEntries, occasionEntries, type CalendarViewer } from "./projection";
 
@@ -50,3 +50,20 @@ describe("calendarSpanReply", () => {
     expect(text).toContain("…and 3 more. The Calendar has them all.");
   });
 });
+
+describe("asksTheCalendar", () => {
+  it("is the calendar's question only when no other part of the home is named", () => {
+    expect(asksTheCalendar("Do you see any events scheduled in December?")).toBe(true);
+    expect(asksTheCalendar("What's coming up in the next few months?")).toBe(true);
+    expect(asksTheCalendar("Which bills are due this month?")).toBe(false);
+    expect(asksTheCalendar("Any homework due next month?")).toBe(false);
+    expect(asksTheCalendar("Any doctor appointments in December?")).toBe(false);
+  });
+
+  it("writes September as Sep, like every other date", () => {
+    const september = resolveCalendarSpan("this month", { timezone: TZ, now: new Date("2026-09-23T04:30:00Z") })!;
+    const entries = holidayEntries([{ id: "h", onDate: "2026-09-24", name: "A day", source: "x" }], viewer);
+    expect(calendarSpanReply({ span: september, entries, failedSources: [], timeZone: TZ })).toContain("- Thu 24 Sep — A day");
+  });
+});
+

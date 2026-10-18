@@ -15,6 +15,19 @@ import type { CalendarEntry, CalendarSource } from "./projection";
 
 export const MAX_LISTED = 12;
 
+/**
+ * Words that put a question in another part of the home. "Which bills are due
+ * this month?" names a month, but it asks about bills — HomeBrain's to answer
+ * from the bills — and a list of the month's events would answer something
+ * nobody asked.
+ */
+const ANOTHER_PART = /\b(?:bills?|pay|paid|payments?|fees?|rent|emi|insurance|owe|homework|worksheets?|projects?|exams?|tests?|groceries|grocery|shopping|stock|meals?|dinner|lunch|breakfast|cook|cooking|medicines?|doctor|dentist|appointments?|check-?ups?|services?|repairs?)\b/i;
+
+/** Whether a month-sized question is about the calendar itself, rather than one part of the home over that month. */
+export function asksTheCalendar(utterance: string): boolean {
+  return !ANOTHER_PART.test(utterance);
+}
+
 export function calendarSpanReply(input: {
   span: CalendarSpan;
   entries: readonly CalendarEntry[];
@@ -49,7 +62,8 @@ const TIME = (timeZone: string) => new Intl.DateTimeFormat("en-US", { hour: "num
 
 /** "Tue 8 Dec" for an all-day entry, "Tue 8 Dec, 6:30 pm" for a timed one. */
 function when(entry: CalendarEntry, timeZone: string): string {
-  const day = DATE(timeZone).format(entry.start).replace(",", "");
+  // en-GB writes September "Sept"; every other date WonderHome says is "Sep".
+  const day = DATE(timeZone).format(entry.start).replace(",", "").replace(/\bSept\b/, "Sep");
   if (entry.allDay || entry.kind !== "block") return day;
   return `${day}, ${TIME(timeZone).format(entry.start).replace(" AM", " am").replace(" PM", " pm")}`;
 }

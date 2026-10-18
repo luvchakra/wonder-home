@@ -265,3 +265,31 @@ describe("cross-domain grounding (Wave 4 §10, §11): meals, what they need, and
     expect(grounded.kind === "clarify" && grounded.awaiting).toBe("day");
   });
 });
+
+describe("\"it\" for school work (§8)", () => {
+  const schoolEnv = (references: Partial<ReferenceState>): GroundingEnv => ({
+    ...env(references),
+    schoolItems: async () => [
+      { id: "s-hindi", title: "Hindi test", childMemberId: "m-asmi", dueAt: "2026-09-28T04:00:00.000Z", status: "pending", dueTimeKnown: true, endsAt: null },
+      { id: "s-maths", title: "Maths worksheet", childMemberId: "m-manan", dueAt: "2026-09-24T09:00:00.000Z", status: "pending", dueTimeKnown: true, endsAt: null },
+    ],
+  });
+  const asked = (id: string, label: string): FocusEntity => ({ entityType: "school_item", entityId: id, label, source: "mention", at: NOW.toISOString() });
+  const complete = intent({ action: "complete_school_item", target: { kind: "unspecified" }, parameters: { title: "it" } });
+
+  it("\"mark it complete\" after a question about one piece of school work is that piece", async () => {
+    const grounded = await groundIntent(complete, schoolEnv({ conversation: [asked("s-hindi", "Hindi test")] }));
+    expect(grounded.kind === "grounded" && grounded.intent.parameters.schoolItemId).toBe("s-hindi");
+  });
+
+  it("two pieces just talked about make \"it\" one question, never the first one", async () => {
+    const grounded = await groundIntent(complete, schoolEnv({ conversation: [asked("s-hindi", "Hindi test"), asked("s-maths", "Maths worksheet")] }));
+    expect(grounded.kind).toBe("clarify");
+  });
+
+  it("\"move it to Friday\" moves the school work the conversation was about", async () => {
+    const move = intent({ action: "adjust_schedule", target: { kind: "unspecified" }, parameters: { what: "it", to: "friday" } });
+    const grounded = await groundIntent(move, schoolEnv({ conversation: [asked("s-maths", "Maths worksheet")] }));
+    expect(grounded.kind === "grounded" && grounded.intent.parameters.schoolItemId).toBe("s-maths");
+  });
+});

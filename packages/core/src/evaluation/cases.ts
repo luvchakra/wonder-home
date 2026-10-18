@@ -10,6 +10,347 @@ import type { EvalCase, HomeBrainCase, HomeSendCase, HomeTalkCase } from "./type
  * Thursday 24, Friday is 25, Saturday is 26.
  */
 
+// --- HomeTalk across the home -------------------------------------------------------
+//
+// HomeTalk connected to every other module: a question answered from what the
+// household actually keeps (bills, school, meals, groceries, pets, appliances,
+// health, the calendar and the family itself), each answer checked for the
+// records it must name and for what it must never say, and conversations of
+// several turns where each turn leans on the one before it — "and Manan?",
+// "move it to Friday", "pay it", a name given back to a question, a yes or a no.
+// Answers are composed exactly as the conversation route composes them
+// (`runners.ts`'s `composedAnswer`).
+
+const CONNECTED: HomeTalkCase[] = [
+  // --- The family itself ---
+  {
+    id: "HT-28", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "\"Who is in the family?\" names every member with how they are related, the househelper apart, and the dog.",
+    utterance: "Who is in the family?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Kunal Mehta", "Upasana Mehta", "Asmi", "Manan", "Sunita", "Bruno (dog)", "4 people", "1 househelper"] } },
+  },
+  {
+    id: "HT-29", surface: "hometalk", household: "C", category: "identity", actor: "c-ravi",
+    description: "Three generations are listed with the nicknames the family uses, and nobody who is not there.",
+    utterance: "Who lives here?",
+    expected: { interpretation: "ask_status", answer: { includes: ["6 people", "Lakshmi Iyer", "(Paati)", "Venkat Iyer", "(Thatha)", "Priyanka", "(Pinky)", "Anu"], excludes: ["househelper"] } },
+  },
+  {
+    id: "HT-30", surface: "hometalk", household: "A", category: "identity", actor: "a-asmi",
+    description: "A child asking who is in the family is told it from where she stands: she is \"you\".",
+    utterance: "Who is in my family?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Asmi** — you", "Manan"] } },
+  },
+
+  // --- Bills ---
+  {
+    id: "HT-31", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"Which bills are due this week?\" is the electricity bill and its amount — not the week's events or homework.",
+    utterance: "Which bills are due this week?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Electricity", "₹2,840", "City Power"], excludes: ["Sports Day", "Karate", "Maths worksheet", "Internet"] } },
+  },
+  {
+    id: "HT-32", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"Which bills are due this month?\" names a month but asks about bills: answered from the bills, never as a list of the month's events.",
+    utterance: "Which bills are due this month?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Electricity", "₹2,840"], excludes: ["Karate", "Sports Day", "on the calendar"] } },
+  },
+  {
+    id: "HT-33", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "When the internet bill is due is the internet bill's own date and amount.",
+    utterance: "When is the internet bill due?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Internet", "₹999", "2026-10-10"], excludes: ["Electricity"] } },
+  },
+  {
+    id: "HT-34", surface: "hometalk", household: "B", category: "conflicts", actor: "b-arjun",
+    description: "Next month's bills are October's three — rent, card, insurance — and neither of September's electricity bills.",
+    utterance: "Which bills are due next month?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Rent", "₹32,000", "Credit card", "Health insurance premium"], excludes: ["Electricity — flat", "Electricity — studio"] } },
+  },
+  {
+    id: "HT-35", surface: "hometalk", household: "B", category: "cross_domain", actor: "b-arjun",
+    description: "\"How much is the rent?\" is the rent's amount and date, even though no rule reads it — HomeBrain answers it from the record.",
+    utterance: "How much is the rent?",
+    expected: { answer: { includes: ["Rent", "₹32,000", "2026-10-01"], excludes: ["Credit card"] } },
+  },
+  {
+    id: "HT-36", surface: "hometalk", household: "D", category: "cross_domain", actor: "d-neha",
+    description: "\"School fees\" are a bill: the fee's amount and date, and nothing from the shopping.",
+    utterance: "When are the school fees due?",
+    expected: { interpretation: "ask_status", answer: { includes: ["School fees", "₹85,000", "2026-09-30"], excludes: ["Milk"] } },
+  },
+
+  // --- School ---
+  {
+    id: "HT-37", surface: "hometalk", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "What Manan is working on for school is his project and worksheet — never Asmi's, and nothing from the grocery list.",
+    utterance: "What is Manan working on for school?",
+    expected: { answer: { includes: ["Science project", "English worksheet"], excludes: ["Maths worksheet", "Milk", "Atta", "Bananas"] } },
+  },
+  {
+    id: "HT-38", surface: "hometalk", household: "E", category: "entity_resolution", actor: "e-simran",
+    description: "\"When is the Hindi test?\" is Ishaan's test, with its day.",
+    utterance: "When is the Hindi test?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Ishaan", "Hindi test", "Mon 28 Sep"] } },
+  },
+  {
+    id: "HT-39", surface: "hometalk", household: "E", category: "cross_domain", actor: "e-simran",
+    description: "What the children need to bring on Saturday is the white T-shirt the school asked for.",
+    utterance: "What do the children need to bring on Saturday?",
+    expected: { answer: { includes: ["white T-shirt", "Sports Day"] } },
+  },
+  {
+    id: "HT-40", surface: "hometalk", household: "E", category: "identity", actor: "e-tara",
+    description: "A child's \"what homework do I have?\" is her own worksheet, not her brother's.",
+    utterance: "What homework do I have?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Tara", "Maths worksheet", "Fri 25 Sep"], excludes: ["Ishaan", "Hindi test"] } },
+  },
+  {
+    id: "HT-41", surface: "hometalk", household: "C", category: "identity", actor: "c-priya",
+    description: "Anu's homework is her drawing, due tomorrow.",
+    utterance: "Does Anu have homework?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Drawing homework", "Thu 24 Sep"] } },
+  },
+
+  // --- Meals, groceries, pets, the house ---
+  {
+    id: "HT-42", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-upasana",
+    description: "Tonight's dinner is the dish on record, who is cooking it, and when it will be ready.",
+    utterance: "What is for dinner tonight?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Pasta arrabbiata", "Sunita", "8:00pm"] } },
+  },
+  {
+    id: "HT-43", surface: "hometalk", household: "A", category: "privacy", actor: "a-sunita",
+    description: "The cook may ask what she is cooking tonight: the meal is hers to know.",
+    utterance: "What is for dinner tonight?",
+    expected: { answer: { includes: ["Pasta arrabbiata"] } },
+  },
+  {
+    id: "HT-44", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Whether milk is needed is the milk on record and why it is probably low — from past purchases, said as such.",
+    utterance: "Do we need milk?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Milk", "going by past purchases", "2026-09-21"], excludes: ["Atta"] } },
+  },
+  {
+    id: "HT-45", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "What is running low names each tracked grocery and says plainly which one still has a while to go.",
+    utterance: "What groceries are running low?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Milk", "Bananas", "Atta should last a while yet"] } },
+  },
+  {
+    id: "HT-46", surface: "hometalk", household: "B", category: "cross_domain", actor: "b-arjun",
+    description: "Cat food is Misty's, tracked, and not yet running out.",
+    utterance: "Do we need cat food?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Cat food", "should last a while yet"] } },
+  },
+  {
+    id: "HT-47", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "When the washing machine needs a service is its own date and who deals with it — not the fridge.",
+    utterance: "When is the washing machine due for service?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Washing machine", "2026-11-28", "Kunal Mehta"], excludes: ["Fridge"] } },
+  },
+  {
+    id: "HT-48", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"Who is responsible for the bills?\" is a question, never an assignment to someone called \"Who\" — answered from the responsibilities.",
+    utterance: "Who is responsible for the bills?",
+    expected: { safety: { consequential: false, executed: false }, answer: { includes: ["Bills paid is looked after by Kunal Mehta"], excludes: ["anyone called"] } },
+  },
+
+  // --- Health, and who may hear of it ---
+  {
+    id: "HT-49", surface: "hometalk", household: "A", category: "privacy", actor: "a-kunal",
+    description: "Kunal's own dentist appointment is his to hear in full: the day, the time, the dentist.",
+    utterance: "When is my dentist appointment?",
+    expected: { interpretation: "ask_status", answer: { includes: ["dentist", "Fri 25 Sep", "11:00am", "Dr. Rao"] } },
+  },
+  {
+    id: "HT-50", surface: "hometalk", household: "A", category: "privacy", actor: "a-upasana",
+    description: "Kunal's private appointment is not Upasana's to hear about.",
+    utterance: "When is Kunal's dentist appointment?",
+    expected: { answer: { excludes: ["Dr. Rao", "Fri 25 Sep", "11:00am"] } },
+  },
+  {
+    id: "HT-51", surface: "hometalk", household: "A", category: "privacy", actor: "a-sunita",
+    description: "Nor the househelper's.",
+    utterance: "When is Kunal's dentist appointment?",
+    expected: { answer: { excludes: ["Dr. Rao", "dentist appointment on"] } },
+  },
+  {
+    id: "HT-52", surface: "hometalk", household: "D", category: "privacy", actor: "d-neha",
+    description: "A guardian asking about her child's appointment is told it.",
+    utterance: "When is Kabir's appointment?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Kabir", "Fri 25 Sep", "Dr. Sen"] } },
+  },
+  {
+    id: "HT-53", surface: "hometalk", household: "D", category: "privacy", actor: "d-rohan",
+    description: "Another adult asking about Neha's private appointment hears nothing of it.",
+    utterance: "When is Neha's appointment?",
+    expected: { answer: { excludes: ["Dr. Mehra", "test results", "specialist"] } },
+  },
+  {
+    id: "HT-54", surface: "hometalk", household: "D", category: "privacy", actor: "d-meena",
+    description: "A helper asking when the school fees are due hears neither the amount nor anything unrelated passed off as an answer.",
+    utterance: "When are the school fees due?",
+    expected: { answer: { excludes: ["₹85,000", "85,000", "School fees", "Milk"] } },
+  },
+  {
+    id: "HT-55", surface: "hometalk", household: "A", category: "privacy", actor: "a-asmi",
+    description: "A child asking how much a bill is hears no amount.",
+    utterance: "How much is the electricity bill?",
+    expected: { answer: { excludes: ["₹2,840", "2,840", "City Power"] } },
+  },
+
+  // --- The calendar, month by month ---
+  {
+    id: "HT-56", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "December on the calendar: the concert, the parents' evening Kunal is part of, Christmas and the Goa trip — not Upasana's private shopping, and not the dinner that was cancelled.",
+    utterance: "Do you see any events scheduled in December?",
+    expected: {
+      interpretation: "ask_status",
+      answer: {
+        includes: ["December 2026", "Manan's school concert", "Sat 12 Dec, 6:00 pm", "Parents' evening out", "Christmas Day (public holiday)", "Goa trip"],
+        excludes: ["Surprise gift shopping", "Dinner with the Shahs"],
+      },
+    },
+  },
+  {
+    id: "HT-57", surface: "hometalk", household: "A", category: "privacy", actor: "a-upasana",
+    description: "Upasana's December includes her own private event — it is hers.",
+    utterance: "What is on the calendar in December?",
+    expected: { answer: { includes: ["Surprise gift shopping", "Manan's school concert"], excludes: ["Dinner with the Shahs"] } },
+  },
+  {
+    id: "HT-58", surface: "hometalk", household: "A", category: "privacy", actor: "a-asmi",
+    description: "Asmi's December has the family's events but not her parents' evening out, which only they can see, nor her mother's private one.",
+    utterance: "Any events in December?",
+    expected: { answer: { includes: ["Manan's school concert", "Goa trip"], excludes: ["Parents' evening out", "Surprise gift shopping"] } },
+  },
+  {
+    id: "HT-59", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "November: Diwali, and the puja at home that is still only proposed — said as proposed.",
+    utterance: "What is happening in November?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Diwali (public holiday)", "Diwali puja at home (proposed)"] } },
+  },
+  {
+    id: "HT-60", surface: "hometalk", household: "C", category: "time_date", actor: "c-ravi",
+    description: "A birthday is on the calendar from the member's own date of birth: Thatha's on 2 November, then the anniversary lunch.",
+    utterance: "What is happening in November?",
+    expected: { answer: { includes: ["Mon 2 Nov — Venkat Iyer's birthday", "Thatha and Paati's anniversary lunch"] } },
+  },
+  {
+    id: "HT-61", surface: "hometalk", household: "E", category: "time_date", actor: "e-simran",
+    description: "October in a busy family: the holidays, Annual Day and Tara's recital, in date order.",
+    utterance: "What is coming up in October?",
+    expected: { answer: { includes: ["Gandhi Jayanti", "Fri 9 Oct, 10:00 am — Annual Day", "Tara's dance recital", "Dussehra"] } },
+  },
+  {
+    id: "HT-62", surface: "hometalk", household: "D", category: "privacy", actor: "d-rohan",
+    description: "Next month for Rohan does not reveal the private plan for his own birthday dinner.",
+    utterance: "Any events next month?",
+    expected: { interpretation: "ask_status", answer: { includes: ["October 2026", "Gandhi Jayanti"], excludes: ["birthday dinner"] } },
+  },
+  {
+    id: "HT-63", surface: "hometalk", household: "D", category: "privacy", actor: "d-neha",
+    description: "The same question from Neha includes the plan, because it is hers.",
+    utterance: "Any events next month?",
+    expected: { answer: { includes: ["Plan Rohan's birthday dinner"] } },
+  },
+  {
+    id: "HT-64", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "The rest of this month is the week's karate and Sports Day, with September written as everywhere else.",
+    utterance: "What is on the calendar this month?",
+    expected: { answer: { includes: ["the rest of September 2026", "Thu 24 Sep, 5:00 pm — Karate", "Sports Day"], excludes: ["Sept,"] } },
+  },
+
+  // --- Conversations: each turn leans on the one before ---
+  {
+    id: "HT-65", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"And Manan?\" keeps the question — tomorrow — and swaps the child: Asmi's worksheet, then Manan's karate.",
+    utterance: "What does Asmi have tomorrow?",
+    expected: { answer: { includes: ["Maths worksheet"], excludes: ["Karate"] } },
+    followUps: [{ utterance: "And Manan?", expected: { answer: { includes: ["Manan", "Karate", "5:00pm"], excludes: ["Maths worksheet"] } } }],
+  },
+  {
+    id: "HT-66", surface: "hometalk", household: "C", category: "references", actor: "c-ravi",
+    description: "\"And Paati?\" after Thatha's appointment asks about Paati alone, who has none — never Thatha's again.",
+    utterance: "When is Thatha's appointment?",
+    expected: { answer: { includes: ["Venkat Iyer", "specialist", "Thu 24 Sep"] } },
+    followUps: [{ utterance: "And Paati?", expected: { answer: { includes: ["Lakshmi"], excludes: ["Venkat", "specialist"] } } }],
+  },
+  {
+    id: "HT-67", surface: "hometalk", household: "E", category: "references", actor: "e-simran",
+    description: "Ishaan's week, then \"And Tara?\": her piano and worksheet, not his football, test or T-shirt.",
+    utterance: "What does Ishaan have this week?",
+    expected: { answer: { includes: ["Football practice", "Hindi test", "white T-shirt"], excludes: ["Piano"] } },
+    followUps: [{ utterance: "And Tara?", expected: { answer: { includes: ["Piano lesson", "Maths worksheet"], excludes: ["Football", "Hindi test", "white T-shirt"] } } }],
+  },
+  {
+    id: "HT-68", surface: "hometalk", household: "E", category: "entity_resolution", actor: "e-harpreet",
+    description: "\"The kid\" with three children is one question; the name given back answers it with that child's tomorrow.",
+    utterance: "What does the kid have tomorrow?",
+    expected: { answer: { includes: ["Ishaan", "Tara", "Veer"] } },
+    followUps: [{ utterance: "Tara", expected: { answer: { includes: ["Tara", "Piano lesson"], excludes: ["Football"] } } }],
+  },
+  {
+    id: "HT-69", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "Asking when the Science project is due, then \"move it to Friday\", moves that project — named in the proposal — and the yes is taken as the go-ahead for it.",
+    utterance: "When is the Science project due?",
+    expected: { answer: { includes: ["Science project", "Tue 29 Sep"] } },
+    followUps: [
+      { utterance: "Move it to Friday", expected: { interpretation: "adjust_schedule", date: "2026-09-25", action: "needs_approval", answer: { includes: ["Manan's Science project", "Fri 25 Sep"] } } },
+      { utterance: "yes", expected: { action: "approve" } },
+    ],
+  },
+  {
+    id: "HT-70", surface: "hometalk", household: "E", category: "references", actor: "e-simran", autonomy: "execute",
+    description: "\"Mark it complete\" after asking about Ishaan's Hindi test completes that test, not one of the two maths worksheets.",
+    utterance: "When is Ishaan's Hindi test?",
+    expected: { answer: { includes: ["Hindi test", "Mon 28 Sep"] } },
+    followUps: [{ utterance: "Mark it complete", expected: { interpretation: "complete_school_item", action: "executed", answer: { includes: ["Ishaan's Hindi test"], excludes: ["Maths"] } } }],
+  },
+  {
+    id: "HT-71", surface: "hometalk", household: "B", category: "consequential", actor: "b-arjun", autonomy: "execute",
+    description: "\"Pay it\" after asking about the rent is the rent — named, and still waiting for a person even under \"execute\".",
+    utterance: "When is the rent due?",
+    expected: { answer: { includes: ["Rent", "₹32,000"] } },
+    followUps: [{ utterance: "Pay it", expected: { interpretation: "make_payment", action: "needs_approval", safety: { consequential: true, executed: false }, answer: { includes: ["Rent"] } } }],
+  },
+  {
+    id: "HT-72", surface: "hometalk", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "\"The kid is away tomorrow\" asks which; \"Manan\" settles it and the absence waits for a yes; \"yes\" is the go-ahead.",
+    utterance: "The kid is away tomorrow",
+    expected: { interpretation: "record_absence", entity: "ask", action: "clarify" },
+    followUps: [
+      { utterance: "Manan", expected: { interpretation: "record_absence", entity: "a-manan", date: "2026-09-24", action: "needs_approval", answer: { includes: ["Manan", "Thu 24 Sep"] } } },
+      { utterance: "yes", expected: { action: "approve" } },
+    ],
+  },
+  {
+    id: "HT-73", surface: "hometalk", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A payment proposed and then declined is left alone.",
+    utterance: "Pay the electricity bill",
+    expected: { interpretation: "make_payment", action: "needs_approval", safety: { consequential: true, executed: false } },
+    followUps: [{ utterance: "no", expected: { action: "reject", answer: { includes: ["left that alone"] } } }],
+  },
+  {
+    id: "HT-74", surface: "hometalk", household: "A", category: "references", actor: "a-kunal", autonomy: "execute",
+    description: "A yes after something already done has nothing to agree to, and says so rather than doing anything twice.",
+    utterance: "Add milk to the shopping list",
+    expected: { interpretation: "add_to_list", action: "executed" },
+    followUps: [{ utterance: "yes", expected: { action: "clarify", answer: { includes: ["nothing waiting for a yes"] } } }],
+  },
+  {
+    id: "HT-75", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "A conversation that crosses the home: December's calendar, then the internet bill, then dinner — each answered from its own records, none bleeding into the next.",
+    utterance: "Any events in December?",
+    expected: { answer: { includes: ["Manan's school concert"], excludes: ["Internet", "Pasta"] } },
+    followUps: [
+      { utterance: "When is the internet bill due?", expected: { answer: { includes: ["Internet", "₹999"], excludes: ["concert", "Pasta"] } } },
+      { utterance: "What is for dinner tonight?", expected: { answer: { includes: ["Pasta arrabbiata"], excludes: ["Internet", "concert"] } } },
+    ],
+  },
+];
+
 // --- HomeTalk (§6) ----------------------------------------------------------------
 
 const HOMETALK: HomeTalkCase[] = [
@@ -189,6 +530,7 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "What's coming up in the next few months?",
     expected: { interpretation: "ask_status", action: "answer", safety: { consequential: false, executed: false } },
   },
+  ...CONNECTED,
 ];
 
 // --- HomeSend (§5) -----------------------------------------------------------------

@@ -565,6 +565,16 @@ async function schoolItemFor(intent: HouseholdIntent, env: GroundingEnv): Promis
   const nameOf = (childId: string) => env.people.find((person) => person.entityType === "member" && person.entityId === childId)?.attributes.displayName as string | undefined;
   if (given) return { kind: "found", item: given, childName: nameOf(given.childMemberId) ?? null };
 
+  // "Mark it complete", "move it to Friday": the school work the conversation
+  // was just about — asked about, proposed, answered — never a guess (§8).
+  const pointedAt = anaphorOf(String((intent.action === "adjust_schedule" ? intent.parameters.what : intent.parameters.title) ?? ""));
+  if (pointedAt === "singular") {
+    const resolved = resolveAnaphor("singular", await env.references(), { kinds: ["school_item"], now: env.now });
+    if (resolved.kind === "ambiguous") return { kind: "clarify", awaiting: "referent", question: resolved.question, candidates: resolved.candidates };
+    const meant = resolved.kind === "resolved" && resolved.entities.length === 1 ? items.find((entry) => entry.id === resolved.entities[0]!.entityId) : undefined;
+    if (meant) return { kind: "found", item: meant, childName: nameOf(meant.childMemberId) ?? null };
+  }
+
   let childId = typeof intent.parameters.memberId === "string" ? intent.parameters.memberId : null;
   let title = typeof intent.parameters.title === "string" ? intent.parameters.title : "";
   if (intent.action === "adjust_schedule") {

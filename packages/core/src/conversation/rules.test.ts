@@ -161,6 +161,11 @@ describe("plans, moves and who does what", () => {
     expect(intent.target).toEqual({ kind: "member", reference: "priya" });
     expect(intent.parameters.outcomeKey).toBe("school.run");
   });
+
+  it("\"who is responsible for the bills?\" asks; it never names someone called Who", () => {
+    expect(read("Who is responsible for the bills?").action).not.toBe("assign_responsibility");
+    expect(read("Who handles the school run").action).not.toBe("assign_responsibility");
+  });
 });
 
 describe("preferences", () => {
