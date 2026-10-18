@@ -831,7 +831,7 @@ async function main() {
       anonRead.error ? anonRead.error.code : `${anonRead.data?.length ?? "?"} rows`,
     );
   }
-  for (const table of ["inventory_balances", "inventory_events", "shopping_list_entries", "shopping_list_events"]) {
+  for (const table of ["inventory_balances", "inventory_events", "shopping_list_entries", "shopping_list_events", "consumable_unit_changes"]) {
     const landed = await admin.from(table).select("id").limit(1);
     check(`migration landed: ${table}`, !landed.error, landed.error?.code ?? "ok");
     const anonRead = await anon.from(table).select("id").limit(1);
@@ -841,6 +841,17 @@ async function main() {
       anonRead.error ? anonRead.error.code : `${anonRead.data?.length ?? "?"} rows`,
     );
   }
+  // 25-012: changing how an item is counted is one function, and a signed-out caller cannot run it.
+  const anonUnit = await anon.rpc("change_consumable_unit", {
+    p_household_id: "00000000-0000-4000-8000-000000000000",
+    p_consumable_id: "00000000-0000-4000-8000-000000000000",
+    p_unit: "g",
+    p_base_unit: "g",
+    p_step: null,
+    p_list_quantity: null,
+    p_idempotency_key: "verify-live-unit",
+  });
+  check("anonymous cannot change how an item is counted", Boolean(anonUnit.error) && anonUnit.error.code !== "PGRST202", anonUnit.error?.code ?? "allowed");
   const itemDetails = await admin.from("consumables").select("step, low_level, storage, note, aliases, image_path").limit(1);
   check("a grocery item keeps its step, low level, storage and photo", !itemDetails.error, itemDetails.error?.code ?? "ok");
   const purchaseUnit = await admin.from("consumable_purchases").select("unit, shopping_entry_id, best_before, expiry_basis").limit(1);

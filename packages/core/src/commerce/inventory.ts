@@ -266,7 +266,26 @@ export async function stockHistory(
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(`stockHistory failed: ${error.code ?? "unknown"}`);
-  return ((data ?? []) as unknown as Row[]).map((row) => ({
+  // A change of unit that sent what was at home back to not counted (25-012)
+  // is part of the same story: "counted in grams now; it was 3 pcs".
+  const { data: changes } = await supabase
+    .from("consumable_unit_changes")
+    .select("created_at, stock_before, stock_unit, household_members(display_name)")
+    .eq("household_id", householdId)
+    .eq("consumable_id", itemId)
+    .eq("stock_cleared", true)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  const unitChanges: ItemHistoryEntry[] = ((changes ?? []) as unknown as Row[]).map((row) => ({
+    at: row.created_at as string,
+    kind: "unit_change",
+    delta: -Number(row.stock_before ?? 0),
+    after: 0,
+    unit: (row.stock_unit as string | null) ?? "pcs",
+    by: ((row.household_members as Row | null)?.display_name as string | undefined) ?? null,
+    source: "correction",
+  }));
+  const events: ItemHistoryEntry[] = ((data ?? []) as unknown as Row[]).map((row) => ({
     at: row.created_at as string,
     kind: row.kind as string,
     delta: Number(row.delta),
@@ -278,6 +297,7 @@ export async function stockHistory(
         | undefined) ?? null,
     source: row.source as string,
   }));
+  return [...events, ...unitChanges].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
 
 // ---------------------------------------------------------------------------

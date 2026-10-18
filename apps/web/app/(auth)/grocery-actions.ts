@@ -8,6 +8,7 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import {
   adjustListEntry,
   changeStock,
+  getGroceryItem,
   groceryPhotoPath,
   listGroceries,
   markBought,
@@ -16,6 +17,7 @@ import {
   setUseBy,
 } from "@wonderhome/core/commerce/inventory";
 import { getCatalogEntry, searchCatalog, type CatalogEntry } from "@wonderhome/core/commerce/catalog";
+import { changeItemUnit } from "@wonderhome/core/commerce/unit-change";
 import {
   createConsumable,
   retireConsumable,
@@ -111,6 +113,40 @@ export async function adjustListAction(
     };
   } catch (thrown) {
     return failed(thrown);
+  }
+}
+
+export type UnitChangeState =
+  | { ok: true; unit: string; stockCleared: number | null; listAfter: number | null; converts: boolean }
+  | { ok: false; error: string };
+
+/**
+ * "Count it in grams" (25-012): how an item is counted, from the amount
+ * sheet. A unit that does not convert puts what is at home back to not
+ * counted, and starts the list amount again at the usual buy — the result
+ * says which, so the sheet can tell the person.
+ */
+export async function changeUnitAction(input: { householdId: string; itemId: string; unit: string; key: string }): Promise<UnitChangeState> {
+  const parsed = z.object({ householdId: uuid, itemId: uuid, unit, key }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "That unit could not be used." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const item = await getGroceryItem(supabase, parsed.data.householdId, parsed.data.itemId);
+    if (!item) return { ok: false, error: "That item is not on record in this household." };
+    const changed = await changeItemUnit(supabase, {
+      householdId: parsed.data.householdId,
+      item: { id: item.id, unit: item.unit, step: item.step, catalog: item.catalog, onList: item.toBuy !== null },
+      unit: parsed.data.unit,
+      idempotencyKey: parsed.data.key,
+    });
+    revalidatePath("/groceries");
+    revalidatePath(`/groceries/${item.id}`);
+    return changed
+      ? { ok: true, ...changed }
+      : { ok: true, unit: item.unit, stockCleared: null, listAfter: item.toBuy?.quantity ?? null, converts: true };
+  } catch (thrown) {
+    return { ok: false, error: toErrorBody(thrown, "commerce").body.error.message };
   }
 }
 
@@ -428,6 +464,23 @@ export async function updateGroceryItemAction(
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
     const preferred = normalizeUnit(parsed.data.unit) ?? "pcs";
+    // A new unit goes through the one path that knows what to do with the
+    // amounts (25-012), even when it does not convert; the step typed
+    // beside it is then in the new unit, unless it was left as it was.
+    const before = await getGroceryItem(supabase, parsed.data.householdId, parsed.data.itemId);
+    let carriedStep: number | null | undefined;
+    if (before && normalizeUnit(before.unit) !== preferred) {
+      const changed = await changeItemUnit(supabase, {
+        householdId: parsed.data.householdId,
+        item: { id: before.id, unit: before.unit, step: before.step, catalog: before.catalog, onList: before.toBuy !== null },
+        unit: preferred,
+        idempotencyKey: `unit-${parsed.data.itemId}-${globalThis.crypto.randomUUID()}`,
+      });
+      if (changed && (step ?? null) === (before.step ?? null)) {
+        const after = await getGroceryItem(supabase, parsed.data.householdId, parsed.data.itemId);
+        carriedStep = after?.step ?? null;
+      }
+    }
     await updateConsumable(supabase, {
       id: parsed.data.itemId,
       householdId: parsed.data.householdId,
@@ -439,7 +492,7 @@ export async function updateGroceryItemAction(
         parsed.data.daysPerUnit === "" || parsed.data.daysPerUnit === undefined
           ? null
           : parsed.data.daysPerUnit,
-      step: step || null,
+      step: carriedStep !== undefined ? carriedStep : step || null,
       // The low level is typed in the item's own unit and kept in base units, like stock.
       lowLevel: lowLevel === null ? null : toBase(lowLevel, preferred).quantity,
       storage: parsed.data.storage ? parsed.data.storage : null,
