@@ -87,6 +87,13 @@ export function groceryWords(translate: Translate, language: string | undefined)
       remove: t("grocery.amount.remove"),
       invalid: t("grocery.amount.invalid"),
     },
+    row: {
+      kcal: t("grocery.row.kcal", { value: "{value}" }),
+      protein: t("grocery.row.protein", { value: "{value}" }),
+      per100g: t("grocery.row.per100g"),
+      per100ml: t("grocery.row.per100ml"),
+      nutrition: t("grocery.row.nutrition"),
+    },
     empty: {
       title: t("grocery.empty.title"),
       lede: t("grocery.empty.lede"),

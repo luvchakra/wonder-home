@@ -50,7 +50,7 @@ disagree again.)
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 7 | 1 | 4 | 2 | 4 | In Progress |
-| 25 | HomeFood | 11 | 5 | 3 | 3 | 5 | In Progress |
+| 25 | HomeFood | 13 | 6 | 4 | 3 | 6 | In Progress |
 | 26 | HomeEvents | 6 | 2 | 2 | 2 | 0 | In Progress |
 
 ## Execution Log
@@ -270,3 +270,4 @@ disagree again.)
 | 2026-10-18 | 25, 04 | 25-003 (b), 04-017 | In Progress (25-003 c left); 04-017 follow-up | `commerce/receipt-stock.test.ts` 10; commerce 126; voicelink/conversation/hometalk 599; eval 113/113 (voice gate 18/18); browser QA against the live project at 360px and desktop (receipt stock/list before → after, undo, duplicate refused then recorded with Record it again), QA data deleted and counted 0 | Receipts add to stock and come off the list; a duplicate receipt is caught. Telling WonderHome what someone likes now works by voice |
 | 2026-10-18 | 04 | 04-017 | Performance pass | Live `metadata.timings`: turns 4.2–15.6 s, almost all of it two sequential calls to the main model; tiered understanding (Haiku 5.5) and answers (Sonnet 5.5), speech synthesised and played sentence by sentence; tests 903, eval 113/113 | Voice replies were slow; the bottleneck and the fix are in `docs/progress/2026-10-18-hometalk-voice-latency.md` |
 | 2026-10-18 | 04 | 04-018 | Done | `conversation/screens.test.ts` 30, rules/gateway/Gemini tests, all unit tests 3,330; eval 117/117 (voice gate 23/23, 27/27 actions placed); typecheck, lint, build, bundle check; browser QA at 360px and desktop with a scripted recogniser: Groceries → bananas added there → Calendar → back to HomeTalk, bar on every other screen, no horizontal scroll | HomeTalk follows you across screens: `open_screen`, a live conversation that survives navigation, and a glowing bar on every screen (`docs/progress/2026-10-18-hometalk-across-screens.md`) |
+| 2026-10-18 | 25 | 25-012, 25-013 | Done (25-012); 25-013 queued | `commerce/catalog-names.test.ts` 9; commerce/conversation/ai/i18n 914; typecheck, lint; browser QA at 360px and 1280px with a QA household: rows 105px against 128px before, labels on one line, nutrition on catalog items, "Add pasta" through HomeTalk made Pasta under Rice & grains in grams | Compact grocery cards with nutrition; items named in words counted like the catalog. Changing pieces to grams held back with its migration (`docs/progress/2026-10-18-compact-grocery-cards.md`) |

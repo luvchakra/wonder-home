@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
+import { catalogItemFor } from "../commerce/catalog";
 import { createConsumable } from "../commerce/repository";
+import { compatible } from "../commerce/units";
 import { prepareIntent } from "../finance/repository";
 import { getCheckup } from "../health/checkups";
 import { candidatesFor } from "../health/reminders";
@@ -66,16 +68,20 @@ export async function runExecutor(
 async function addListItem(supabase: SupabaseClient, householdId: string, step: PlannedStep): Promise<ExecutorResult> {
   const name = String(step.arguments.name ?? "").trim();
   if (!name) return { performed: false, reason: "No item name was proposed." };
-  const unit = typeof step.arguments.unit === "string" && step.arguments.unit.trim() ? step.arguments.unit.trim() : "item";
+  const said = typeof step.arguments.unit === "string" && step.arguments.unit.trim() ? step.arguments.unit.trim() : null;
+  // Counted the way the catalog counts it (25-012) when no unit was proposed.
+  const named = await catalogItemFor(supabase, name).catch(() => null);
+  const unit = said ?? named?.unit ?? "item";
   const quantity = typeof step.arguments.quantity === "number" && step.arguments.quantity > 0 ? step.arguments.quantity : 1;
 
   try {
     await createConsumable(supabase, {
       householdId,
       name: name.charAt(0).toUpperCase() + name.slice(1),
-      category: "grocery",
+      category: named?.category ?? "grocery",
       unit,
       typicalQuantity: quantity,
+      catalogId: named?.catalogId && (!said || compatible(said, named.unit)) ? named.catalogId : null,
     });
     return { performed: true, detail: `Added ${name} to the groceries.` };
   } catch (thrown) {

@@ -26,6 +26,8 @@ export type ListItem = {
   ladder: Ladder;
   start: number;
   imageUrl: string | null;
+  /** "155 kcal · 13 g protein per 100 g", or null when no source has it (25-012). */
+  nutrition: string | null;
   status: GroceryStatus;
   stockText: string;
   toBuy: { entryId: string; quantity: number; unit: string } | null;
@@ -95,11 +97,13 @@ export function GroceryList({
 
   const row = (item: ListItem) => (
     <GroceryRow
-      key={item.id}
+      // A new unit is a new stepper: its amounts are in another base (25-012).
+      key={`${item.id}:${item.unit}`}
       name={item.name}
       category={item.category}
       href={`/groceries/${item.id}`}
       imageUrl={item.imageUrl}
+      nutrition={item.nutrition}
       status={item.status}
       statusLabel={words.status[item.status]}
       stockLabel={words.inStock}

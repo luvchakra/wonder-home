@@ -357,3 +357,87 @@ export function fromOpenFoodFacts(product: Row): CatalogRow | null {
     source_updated_at: updated ? new Date(updated * 1000).toISOString() : null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// An item made by name: what the catalog says about it (25-012)
+// ---------------------------------------------------------------------------
+
+/** What a name means in the catalog: the item itself when it is one, else just how such things are counted. */
+export type NamedItem = {
+  catalogId: string | null;
+  unit: string;
+  category: string | null;
+  /** The usual buy, when the item (or every everyday kind of it) comes in the same pack. */
+  pack: { quantity: number; unit: string } | null;
+};
+
+type NamedRow = { id: string; name: string; aliases: string[]; unit: string; category: string; common: boolean; pack?: { quantity: number; unit: string } | null };
+
+function plainWords(value: string): string {
+  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+/**
+ * "Pasta" said to HomeTalk, or left short by a meal, becomes an item the way
+ * the catalog keeps it — never one piece of pasta. Pure: an exact name or
+ * alias is that catalog item (its picture, nutrition and pack sizes come
+ * with it); a word only its variants carry ("Pasta, penne", "Pasta,
+ * macaroni") gives just how they are counted, and only when the everyday
+ * ones agree. No variant is ever picked on the household's behalf.
+ */
+export function pickCatalogItem(name: string, rows: readonly NamedRow[]): NamedItem | null {
+  const said = plainWords(name);
+  if (!said) return null;
+  const exact = rows.find((row) => plainWords(row.name) === said || row.aliases.some((alias) => plainWords(alias) === said));
+  if (exact) return { catalogId: exact.id, unit: exact.unit, category: exact.category, pack: exact.pack ?? null };
+  const variants = rows.filter((row) => row.name.includes(",") && plainWords(row.name.split(",")[0]!) === said);
+  const everyday = variants.filter((row) => row.common);
+  const counted = everyday.length > 0 ? everyday : variants;
+  if (counted.length === 0) return null;
+  const bases = new Set(counted.map((row) => baseOf(row.unit).unit));
+  if (bases.size !== 1) return null;
+  const categories = new Set(counted.map((row) => row.category));
+  const packs = new Set(counted.map((row) => (row.pack ? `${row.pack.quantity} ${row.pack.unit}` : "none")));
+  const pack = packs.size === 1 ? (counted[0]!.pack ?? null) : null;
+  return { catalogId: null, unit: counted[0]!.unit, category: categories.size === 1 ? counted[0]!.category : null, pack };
+}
+
+/** The catalog's reading of a name a person said, or null when it has nothing certain to add. */
+export async function catalogItemFor(supabase: SupabaseClient, name: string): Promise<NamedItem | null> {
+  const needle = searchWords(name);
+  if (needle.length < 2) return null;
+  const { data, error } = await supabase.rpc("search_grocery_catalog_kind", { p_query: needle, p_limit: 20, p_kind: "item" });
+  if (error) return null;
+  const rows = ((data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    aliases: Array.isArray(row.aliases) ? (row.aliases as string[]) : [],
+    unit: row.unit as string,
+    category: row.category as string,
+    common: row.common === true,
+    pack: row.pack_quantity && row.pack_unit ? { quantity: Number(row.pack_quantity), unit: row.pack_unit as string } : null,
+  }));
+  return pickCatalogItem(name, rows);
+}
+
+/**
+ * The line a grocery card shows under its name (25-012): energy and protein
+ * per 100 g or 100 ml, from the same source the item page credits — the
+ * item's Indian food in IFCT 2017, or a packed product's own label. Null
+ * when neither is on record: nothing is estimated.
+ */
+export function cardNutrition(entry: Pick<CatalogEntry, "ifct" | "nutrients" | "nutrientBasis"> | null): {
+  basis: "100g" | "100ml";
+  energyKcal: number | null;
+  proteinG: number | null;
+  source: "ifct" | "label";
+} | null {
+  if (!entry) return null;
+  const nutrients = entry.ifct ? entry.ifct.nutrients : entry.nutrients;
+  const basis = entry.ifct ? "100g" : entry.nutrientBasis;
+  if (!basis) return null;
+  const energyKcal = nutrients.energy_kcal ?? null;
+  const proteinG = nutrients.protein_g ?? null;
+  if (energyKcal === null && proteinG === null) return null;
+  return { basis, energyKcal, proteinG, source: entry.ifct ? "ifct" : "label" };
+}
