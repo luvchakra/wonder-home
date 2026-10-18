@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveDay, resolveTemporal } from "./temporal";
+import { resolveCalendarSpan, resolveDay, resolveTemporal } from "./temporal";
 
 // Wednesday 23 September 2026, 10:00 in Kolkata.
 const WED = { timezone: "Asia/Kolkata", now: new Date("2026-09-23T04:30:00Z") };
@@ -77,5 +77,32 @@ describe("temporal grounding (Wave 4 §7) — the phrase is the model's, the dat
     expect(resolveDay("next week", WED)).toBeNull();
     expect(resolveDay("tomorrow after school", WED)).toBe("2026-09-24");
     expect(resolveDay("next friday", WED)).toBe("2026-10-02");
+  });
+});
+
+describe("calendar spans — month-sized questions", () => {
+  const span = (phrase: string, options = WED) => resolveCalendarSpan(phrase, options);
+
+  it("reads a month by name as this year's, or next year's once it has passed", () => {
+    expect(span("December")).toEqual({ from: "2026-12-01", to: "2026-12-31", label: "December 2026" });
+    expect(span("in december")).toMatchObject({ from: "2026-12-01" });
+    expect(span("march")).toMatchObject({ from: "2027-03-01", to: "2027-03-31", label: "March 2027" });
+    expect(span("September")).toMatchObject({ from: "2026-09-01", to: "2026-09-30" });
+    expect(span("february 2028")).toMatchObject({ from: "2028-02-01", to: "2028-02-29" });
+  });
+
+  it("reads this month, next month, and the months ahead", () => {
+    expect(span("this month")).toEqual({ from: "2026-09-23", to: "2026-09-30", label: "the rest of September 2026" });
+    expect(span("next month")).toEqual({ from: "2026-10-01", to: "2026-10-31", label: "October 2026" });
+    expect(span("the next few months")).toMatchObject({ from: "2026-09-23", to: "2026-12-23" });
+    expect(span("next 2 months")).toMatchObject({ to: "2026-11-23" });
+    expect(span("the months ahead")).toMatchObject({ to: "2026-12-23" });
+    expect(span("rest of the year")).toMatchObject({ from: "2026-09-23", to: "2026-12-31" });
+    // December's next month is January of the next year.
+    expect(span("next month", { timezone: "Asia/Kolkata", now: new Date("2026-12-10T04:30:00Z") })).toMatchObject({ from: "2027-01-01", to: "2027-01-31" });
+  });
+
+  it("leaves day- and week-sized phrases to resolveTemporal", () => {
+    for (const phrase of ["today", "next week", "friday", "this weekend", "nonsense"]) expect(span(phrase), phrase).toBeNull();
   });
 });

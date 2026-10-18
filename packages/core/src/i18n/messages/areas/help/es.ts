@@ -149,6 +149,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.4": "En el teléfono, desliza a izquierda o derecha para moverte entre Inicio, Calendario, HomeTalk, Familia y Más.",
   "help.guide.today-and-home.body.5":
     "Debajo del estado de la familia, Inicio muestra tus mascotas, si tienes. Cada una abre los mismos datos que la pantalla Familia; para cambiarlos, ve a Familia.",
+  "help.guide.today-and-home.body.6": "Novedades, arriba en Inicio, enumera lo que se ha añadido a WonderHome desde la última vez que lo abriste aquí, y cada elemento abre su lugar. Entendido oculta la lista; nunca muestra lo mismo dos veces, y cada elemento desaparece solo un mes después de llegar.",
 
   // Calendar
   "help.guide.calendar.title": "Calendario",
@@ -158,6 +159,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.3": "Añadir pone un plan en el calendario: qué, cuándo (o todo el día), quién va y una categoría. En Más opciones puedes hacer que se repita, elegir quién puede verlo —todos, solo quienes van o solo tú— y añadir notas. Antes de añadirlo, WonderHome comprueba si coincide con algo y te dice con qué; alguien ocupado en algo que tú no puedes ver aparece solo como ocupado. Aun así puedes añadirlo.",
   "help.guide.calendar.body.4": "Abre un día de un evento que se repite y quien lo organiza puede saltar solo ese día o recuperarlo; los demás siguen igual. Un plan propuesto tiene el borde discontinuo y dice «Propuesto».",
   "help.guide.calendar.body.5": "Los filtros solo cambian lo que ves tú: categorías, personas, solo lo tuyo, solo planes confirmados, festivos y la vista en la que se abre el calendario. El plan de hoy —comidas, facturas, colegio y lo que te necesita— está a un toque desde el día de hoy.",
+  "help.guide.calendar.body.6": "Pregunta a HomeTalk qué hay en un mes o más —«¿hay eventos en diciembre?», «¿qué viene en los próximos meses?»— y te enumera por fecha los eventos, cumpleaños y festivos del Calendario que puedes ver. Lee el propio Calendario, así que nunca menciona nada privado de otra persona.",
 
   "help.guide.notifications.title": "Recordatorios y notificaciones",
   "help.guide.notifications.summary": "Sobre cosas reales, para una persona, cuando le viene bien, y en silencio una vez resuelto.",

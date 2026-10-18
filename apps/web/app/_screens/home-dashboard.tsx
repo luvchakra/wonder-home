@@ -46,6 +46,8 @@ import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 
 import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
 import { PersonalizeCard } from "../_components/personalize-card";
+import { WhatsNewCard } from "../_components/whats-new-card";
+import { whatsNewItems, whatsNewLabels } from "../_lib/whats-new";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { EmptyState, LoadingState } from "@wonderhome/core/ui/states";
 import { Suspense } from "react";
@@ -241,6 +243,7 @@ export function HomeDashboard({ session }: { session: Session }) {
   const timezone = membership.household.timezone;
   const now = new Date();
   const firstName = membership.preferredName ?? view.displayName.split(" ")[0] ?? view.displayName;
+  const whatsNew = whatsNewItems(session, now);
 
   // The greeting needs nothing from the database, so it is on screen in the
   // first flush; everything below it streams in as its queries return.
@@ -295,6 +298,9 @@ export function HomeDashboard({ session }: { session: Session }) {
             <p className="text-sm text-[var(--wh-foreground-muted)]">{t("home.lede")}</p>
           </div>
         </header>
+
+        {/* What reached WonderHome since this person last opened it: temporary, and gone once seen. */}
+        <WhatsNewCard items={whatsNew} labels={whatsNewLabels(t, whatsNew.length)} />
 
         <Suspense fallback={<LoadingState rows={4} label={t("homeScreen.loading")} />}>
           <DashboardBody session={session} now={now} />

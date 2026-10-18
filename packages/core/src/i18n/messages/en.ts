@@ -19,6 +19,7 @@ import { entryEn } from "./areas/entry/en";
 import { installEn } from "./areas/install/en";
 import { eventsEn } from "./areas/events/en";
 import { calendarEn } from "./areas/calendar/en";
+import { whatsNewEn } from "./areas/whatsnew/en";
 import { groceryEn } from "./areas/grocery/en";
 import { welcomeEn } from "./areas/welcome/en";
 
@@ -691,6 +692,7 @@ export const en = {
   ...installEn,
   ...eventsEn,
   ...calendarEn,
+  ...whatsNewEn,
   ...groceryEn,
   ...welcomeEn,
 } as const;

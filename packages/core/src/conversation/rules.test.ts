@@ -418,3 +418,24 @@ describe("Wave 4: several things, reminders and what a meal needs", () => {
     expect(read("add everything we need for pasta")).toMatchObject({ action: "add_to_list", parameters: { ingredientsOf: "pasta" } });
   });
 });
+
+describe("calendar questions over a month-sized span", () => {
+  it("reads them as a schedule question naming the span", () => {
+    for (const [utterance, when] of [
+      ["Do you see any events scheduled in December?", "december"],
+      ["what's coming up in the next few months?", "the next few months"],
+      ["any birthdays next month", "next month"],
+      ["do we have anything planned in march 2027?", "march 2027"],
+      ["What is on the calendar for the months ahead?", "the months ahead"],
+    ] as const) {
+      const intent = read(utterance);
+      expect(intent.action, utterance).toBe("ask_status");
+      expect(intent.parameters, utterance).toMatchObject({ scope: "schedule", when });
+    }
+  });
+
+  it("never reads a request to plan or a grocery question as one", () => {
+    expect(read("plan a dinner in December").action).toBe("plan_event");
+    expect(read("do we need milk").parameters).not.toMatchObject({ scope: "schedule" });
+  });
+});

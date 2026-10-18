@@ -4,7 +4,7 @@ import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
-import { splitTrailingWhen } from "./temporal";
+import { CALENDAR_SPAN_PHRASE, splitTrailingWhen } from "./temporal";
 import { isPlaceQuestion } from "../homeplaces/request";
 import { isRosterQuestion } from "./roster";
 
@@ -269,6 +269,21 @@ const RULES: readonly Rule[] = [
     // question, it decides nothing about what may be shown.
     pattern: new RegExp(`^(?:what(?:'s| is|s)?\\s+)?(?:my |our )?health(?: appointments?| issues?| checkups?| records?)?(?: do (?:i|we) have)?(?: (${WHEN_WORDS}))?\\??$`, "i"),
     read: (match) => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: withWhen({ scope: "health" }, match[1]), confidence: 0.93 }),
+  },
+
+  {
+    // "Do you see any events scheduled in December?", "what's coming up in the
+    // next few months?", "any birthdays next month?" — a calendar question
+    // over a month-sized span, which the day-word rules above do not reach.
+    // Answered from the calendar itself for that span (hometalk-turn), never
+    // from a week's facts. Only questions: a request to plan something is
+    // never read as one.
+    pattern: new RegExp(`\\b(${CALENDAR_SPAN_PHRASE})\\b`, "i"),
+    read: (match, utterance) => {
+      if (!/^(?:what|whats|what's|any|anything|is there|are there|do (?:you|we|i)|does|did|have (?:we|i)|show|tell|list|can you (?:see|show|tell|list)|which|how many)\b/i.test(utterance.trim())) return null;
+      if (!/\b(?:events?|plans?|planned|scheduled|happening|on|coming(?: up)?|birthdays?|anniversar(?:y|ies)|holidays?|occasions?|calendar|anything|something)\b/i.test(utterance)) return null;
+      return { action: "ask_status", target: { kind: "unspecified" }, parameters: withWhen({ scope: "schedule" }, match[1]!.replace(/^(?:in|for|during|over) /i, "")), confidence: 0.9 };
+    },
   },
 
   {

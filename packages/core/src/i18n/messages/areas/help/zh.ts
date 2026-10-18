@@ -138,6 +138,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.4": "在手机上，向左或向右滑动，就能在首页、日历、HomeTalk、家人和更多之间切换。",
   "help.guide.today-and-home.body.5":
     "在家庭状态下方，首页会显示你家的宠物（如果有的话）。每只都会展开和家庭页面相同的信息；要修改，请到家庭页面。",
+  "help.guide.today-and-home.body.6": "首页顶部的“新功能”会列出自你上次在这里打开 WonderHome 以来新增的内容，每一项都能打开它所在的位置。点“知道了”即可隐藏；同一内容不会重复出现，每一项在出现一个月后会自动消失。",
 
   // Calendar
   "help.guide.calendar.title": "日历",
@@ -147,6 +148,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.3": "“添加”会把一个计划放进日历：做什么、什么时候（或全天）、谁参加，以及类别。在“更多选项”里，你可以设置重复，选择谁能看到——所有人、仅参加的人或仅你自己——并添加备注。添加之前，WonderHome 会检查时间冲突并告诉你与什么冲突；如果有人在忙你看不到的事，只会显示为“有事”。你仍然可以照样添加。",
   "help.guide.calendar.body.4": "打开重复活动中的某一天，它的安排人可以只跳过这一天，或者恢复它；其余的照常进行。提议中的计划有虚线边框，并标着“提议中”。",
   "help.guide.calendar.body.5": "筛选只改变你自己看到的内容：类别、成员、只看与你有关的、只看已确认的计划、假日，以及日历打开时显示的视图。今天的计划——饭菜、账单、学校和需要你的事——在今天这一天点一下就能打开。",
+  "help.guide.calendar.body.6": "问 HomeTalk 一个月或更长时间内有什么安排——“十二月有活动吗？”“接下来几个月有什么？”——它会按日期列出日历上你能看到的活动、生日和假日。它直接读取日历，所以绝不会提到别人的私人内容。",
 
   "help.guide.notifications.title": "提醒和通知",
   "help.guide.notifications.summary": "关于真实的事，发给一个人，在合适的时候——处理完就安静。",

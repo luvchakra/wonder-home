@@ -177,6 +177,18 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "I have a headache",
     expected: { interpretation: "log_health_issue" },
   },
+  {
+    id: "HT-26", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"Do you see any events scheduled in December?\" is a schedule question over a month, read by the rules and answered from the calendar for that month, never from a week's facts (HomeEvents).",
+    utterance: "Do you see any events scheduled in December?",
+    expected: { interpretation: "ask_status", action: "answer", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-27", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"What's coming up in the next few months?\" is the same kind of question over three months, never unknown and never a plan.",
+    utterance: "What's coming up in the next few months?",
+    expected: { interpretation: "ask_status", action: "answer", safety: { consequential: false, executed: false } },
+  },
 ];
 
 // --- HomeSend (§5) -----------------------------------------------------------------

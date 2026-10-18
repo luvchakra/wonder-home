@@ -10,6 +10,7 @@ import { entryFr } from "./areas/entry/fr";
 import { installFr } from "./areas/install/fr";
 import { eventsFr } from "./areas/events/fr";
 import { calendarFr } from "./areas/calendar/fr";
+import { whatsNewFr } from "./areas/whatsnew/fr";
 import { groceryFr } from "./areas/grocery/fr";
 import { welcomeFr } from "./areas/welcome/fr";
 
@@ -681,6 +682,7 @@ export const fr: Catalog = {
   ...installFr,
   ...eventsFr,
   ...calendarFr,
+  ...whatsNewFr,
   ...groceryFr,
   ...welcomeFr,
 };
