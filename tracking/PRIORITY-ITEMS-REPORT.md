@@ -93,6 +93,7 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | Event card: use the space better, and show only who is actually going (all kinds of events) | 26-011 | Done in #236 |
 | Push notifications for what a family member must know, in time, personal, and only when it makes sense | 23-013 | Done in #237: live once the owner sets the push keys and the cron secret |
 | Invitations vertical, shaped for a phone, and a preview option | 26-012 | Done in #237 |
+| Play Gemini's voice through the floating window, so switching apps floats it on its own | 04-024 | Done in #237; real-phone check is the owner's |
 | School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Next |
 | Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Next |
 | Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Next |

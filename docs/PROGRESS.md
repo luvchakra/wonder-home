@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**271 of 292 stories done — 92.8%**
+**272 of 293 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 271 |
+| Done | 272 |
 | In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 17 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 12 | 12 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 22 | 23 | 1 in progress |
+| 04 Conversation, Voice & Text | `█████████░` | 23 | 24 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 9 | 9 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
@@ -152,7 +152,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-22 of 23 done `█████████░`
+23 of 24 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -179,6 +179,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-021` Wait to speak until HomeTalk can hear | P0 | Done | The owner's report, 2026-10-18 (PR #230): Gemini Live takes a few seconds to open its session and only then listens, but the composer looked ready the moment it was tapped, so people spoke into nothing. A live session now has its own `connecting` state, kept apart from thinking and listening, in `LiveTalkProvider`, the live bar and the floating window. The composer shows "Getting ready… don't speak yet" in amber with a turning ring and "{who} is connecting. Start speaking when it says it's listening." (assertive live region), then "Ready — speak now" in green for three seconds, then the usual "… is listening". WonderHome's own voice does the same on a session's first listen, until the recogniser says it has started (`onstart`) or the microphone is recording (`captureUtterance`'s `onReady`), with a 2.5 s fallback. Labels in eight languages; help Voice ¶2. Browser-checked at 360px and 1280px with a recogniser that takes 2 s to start: 0.5 s "Getting ready", 2.5 s "Ready — speak now", 6 s "HomeTalk is listening…", no errors |
 | `04-022` HomeTalk floats on its own when you leave the app | P0 | Done | The owner's ask, 2026-10-18 (PR #232): switching to another app in the middle of a live conversation should float HomeTalk without anyone remembering Float. While a live conversation runs and isn't paused (`shouldArmFloat`), the floating window's hidden video is armed and playing with `autopictureinpicture`, so Safari floats it as the page goes to the background, Chrome floats it through the media session's `enterpictureinpicture` action, and a `visibilitychange` to hidden asks once more, quietly (no notice if the browser refuses). Closing the window keeps it armed; ending the conversation tears it down. Float stays as the manual way. Help Voice ¶8 in eight languages. Browser-checked at 360px and 1280px: armed before any tap, leaving the page floated it with no notice, Float/Bring back/End unchanged, no errors |
 | `04-023` The chat shows what was really said in Gemini Live | P0 | Done | The owner's report, 2026-10-18 (PR #234): Gemini heard them clearly and answered well, but the chat line had different, misspelt words. The line came from the Live API's `inputTranscription`, a light side transcriber that guesses the language unaided; the conversation model's own understanding is never exposed as text, and the documented transcription hints (`languageCodes`, `customVocabulary`) are for Google's separate transcribe model, so they were not put into the locked session. Now the page keeps each turn's microphone audio (the same audio already sent; at most a minute) and, once the person's line is shown, `POST /voice/gemini/transcribe` writes it down word for word with a full Gemini model (`voicelink/live-transcribe.ts`), told the member's listening language and the household's names; the chat line, and the floating window, are replaced with it. Same gate as the session (flag, plan, Google key, data-use agreement), its own rate limit (`voice.transcribe`), nothing stored; on any failure Gemini's line stands. Help Voice ¶2 in eight languages. Checked: unit tests for the WAV header, vocabulary, instruction and cleaning; the route refuses without Gemini voice (403), a bad body (400) and signed out (401). A real Gemini Live run needs the owner's phone |
+| `04-024` Gemini's voice plays through the floating window, so leaving the app floats it | P1 | Done | The owner's yes, 2026-10-18 (PR #237): Chrome floats on its own only media that is audibly playing, and the armed window was a silent picture, so it never floated by itself. Gemini's voice now passes through one node (`use-gemini-live.tsx`, `voiceStream`/`releaseVoice`) that plays into the armed video's stream instead of the speaker (`live-talk.tsx`, `attachVoice`), heard once either way; where sound may not play, the video stays muted and the voice returns to the speaker. Checked in Chromium: an audio track added to the playing picture after a tap plays unmuted. A real-phone check of the automatic float is the owner's |
 
 ### 05 — Household Certification & Understanding
 

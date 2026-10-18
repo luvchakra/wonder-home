@@ -1,6 +1,6 @@
 # Push notifications that arrive in time; a tall invitation with a preview
 
-**Date:** 2026-10-18 · **PR:** #237 · **Stories:** 23-013, 26-012
+**Date:** 2026-10-18 · **PR:** #237 · **Stories:** 23-013, 26-012, 04-024
 
 ## What was done
 
@@ -13,6 +13,8 @@
 - **A tall invitation and a preview (26-012).**
   - Share invitation sends the invitation as a 1080×1350 picture with the link (`e/[token]/card`; one renderer with the link preview, `render-invitation.tsx`). The wide picture stays the link preview, since a chat only shows a wide one large.
   - Preview in the design picker shows the invitation with the picked design and line before saving.
+
+- **Gemini's voice through the floating window (04-024).** The owner said yes to the fix proposed for "switching apps doesn't float it": Chrome floats only media that is audibly playing, and the armed window was silent. Gemini's voice now goes through one node that plays into the armed video's stream (`attachVoice` in `live-talk.tsx`, `voiceStream`/`releaseVoice` in `use-gemini-live.tsx`), heard once; where sound may not play, it stays on the speaker.
 
 ## Verified
 
@@ -29,5 +31,5 @@
 
 - **Production keys.** Production push needs the VAPID key pair on Vercel (`WONDERHOME_VAPID_PUBLIC_KEY`, `WONDERHOME_VAPID_PRIVATE_KEY`, optionally `WONDERHOME_VAPID_SUBJECT`).
 - **Cron secret.** The database needs the cron secret in Vault: `select vault.create_secret('<the CRON_SECRET value>', 'cron_secret');`.
-- **Real phones.** A real-phone check on Android and an iPhone with WonderHome on the Home Screen is the owner's.
+- **Real phones.** Whether Chrome on Android now floats a Gemini Live conversation by itself is a real-phone check; A real-phone check on Android and an iPhone with WonderHome on the Home Screen is the owner's.
 - **QA cleanup.** Recorded after the merge.
