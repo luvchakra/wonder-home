@@ -434,7 +434,8 @@ const updateMemberProfileSchema = z.object({
   nickname: z.string().trim().max(60),
   relationship: z.string().trim().max(60),
   occupation: z.string().trim().max(100),
-  schoolOrWorkLocation: z.string().trim().max(120),
+  // Absent when the form showed a picked school or office instead: left as it is then.
+  schoolOrWorkLocation: z.string().trim().max(120).optional(),
   specialOccasionLabel: z.string().trim().max(80),
   specialOccasionDate: z.string().trim().max(10),
   gender: z.string().trim().max(GENDER_MAX_LENGTH, { error: "Keep gender under 40 characters." }),
@@ -471,7 +472,7 @@ export async function updateMemberProfileAction(
     relationship: formData.get("relationship") ?? "",
     // A househelper's occupation is everything ticked (rule 20), kept as "Maid, Cook".
     occupation: formData.get("helperRolesField") === "1" ? (helperRolesFrom(formData, "helperRoles") ?? "") : (formData.get("occupation") ?? ""),
-    schoolOrWorkLocation: formData.get("schoolOrWorkLocation") ?? "",
+    schoolOrWorkLocation: formData.has("schoolOrWorkLocation") ? String(formData.get("schoolOrWorkLocation")) : undefined,
     specialOccasionLabel: formData.get("specialOccasionLabel") ?? "",
     specialOccasionDate: formData.get("specialOccasionDate") ?? "",
     gender: formData.get("gender") ?? "",
@@ -544,14 +545,17 @@ export async function updateMemberProfileAction(
       nicknamePreferred: Boolean(textOrNull(parsed.data.nickname)) && formData.get("nicknamePreferred") === "on",
       relationship: textOrNull(parsed.data.relationship),
       occupation: textOrNull(parsed.data.occupation),
-      schoolOrWorkLocation: textOrNull(parsed.data.schoolOrWorkLocation),
+      schoolOrWorkLocation: parsed.data.schoolOrWorkLocation === undefined ? undefined : textOrNull(parsed.data.schoolOrWorkLocation),
       specialOccasionLabel: textOrNull(parsed.data.specialOccasionLabel),
       specialOccasionDate: textOrNull(parsed.data.specialOccasionDate),
       gender: textOrNull(parsed.data.gender),
       notes: textOrNull(parsed.data.notes),
       ...(work ?? {}),
     });
-    if (schoolHours) {
+    // A child's school, picked from Google Maps (story 24-010): the same save as Kids & School, before its hours so they land on it.
+    const { saveSchoolFromForm } = await import("../_lib/places");
+    const school = await saveSchoolFromForm(supabase, actor, parsed.data.memberId, formData);
+    if (schoolHours && school !== "removed") {
       const { setSchoolHours } = await import("@wonderhome/core/school/enrolments");
       await setSchoolHours(supabase, { householdId: parsed.data.householdId, childMemberId: parsed.data.memberId, hours: schoolHours.hours });
     }
@@ -561,7 +565,7 @@ export async function updateMemberProfileAction(
     if (office === "typed") return { error: OFFICE_TYPED };
   } catch (error) {
     const { PlacesUnavailableError } = await import("@wonderhome/core/places/provider");
-    if (error instanceof PlacesUnavailableError) return { error: "That office could not be read just now. Try picking it again in a minute." };
+    if (error instanceof PlacesUnavailableError) return { error: "That place could not be read just now. Try picking it again in a minute." };
     const { toErrorBody } = await import("@wonderhome/core/api/errors");
     return { error: toErrorBody(error, "household").body.error.message };
   }
@@ -570,6 +574,7 @@ export async function updateMemberProfileAction(
   revalidatePath("/family");
   revalidatePath("/househelper");
   revalidatePath("/places");
+  revalidatePath("/school");
   return {};
 }
 

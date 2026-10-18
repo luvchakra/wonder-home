@@ -25,6 +25,11 @@ Event and appointment locations are typed text, not Maps picks, so they are not 
   - Kids & School's Overview has a **Schools** section, one row per child. The pencil opens the same Google Maps picker setup uses, or takes a typed name (`school/child-school.tsx`, `saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`).
   - Leaving the field empty retires the school with `endEnrolments`. The row is kept, so its school items keep their history.
   - The field only changes a child.
+- **The same school in Family.** The owner asked for a child's location in Family to be picked from Google Maps and to match Kids & School.
+  - A child's details now use the same school picker, in place of the free-text "School or work location".
+  - Both screens save through `saveSchoolFromForm`, so they always show the same school.
+  - An adult's location is their Office picker, and only a helper keeps the free-text line.
+  - A form without the free-text field leaves the stored value unchanged.
 - **Words and help.** The words are in eight languages, and Help (Talk to WonderHome ¶11) explains Our places and where each place is changed.
 
 ## Verified
@@ -34,6 +39,7 @@ Event and appointment locations are typed text, not Maps picks, so they are not 
   - with no address on record, HomePlaces offered "Add your home address";
   - after Brigade Road was picked in Manage Household, a school on Kids & School and an office were added, Our places listed all three, each with a Maps link and the right editor link;
   - changing the school on Kids & School to Baldwin Girls' High School moved it in HomePlaces;
+  - in Family, the child's details showed that same school with no free-text field, and picking Bishop Cotton Girls' School there changed it on Kids & School;
   - no errors and no horizontal scroll.
 
 ## Still open
