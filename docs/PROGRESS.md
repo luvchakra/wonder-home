@@ -11,15 +11,15 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**273 of 293 stories done — 93.2%**
+**273 of 301 stories done — 90.7%**
 
 | Status | Stories |
 |---|---:|
 | Done | 273 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 16 |
-| Deferred | 1 |
+| Not Started | 21 |
+| Deferred | 4 |
 
 ## By module
 
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `████████░░` | 20 | 23 | 3 not started |
+| 14 AI Orchestration & Learning | `██████░░░░` | 20 | 31 | 8 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -59,9 +59,17 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `08-015` School timetable and exams | 08 Kids & School Intelligence | P0 | Not Started |
-| `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Not Started |
-| `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Not Started |
-| `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Not Started |
+| `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
+| `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
+| `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
+| `14-024` HomeBrain 4.0 phase 0 — hearing it right | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-025` HomeBrain 4.0 phase 1 — do what was asked | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-026` HomeBrain 4.0 phase 2 — look deeper | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-028` HomeBrain 4.0 phase 4 — the household graph | 14 AI Orchestration & Learning | P1 | Not Started |
+| `14-029` HomeBrain 4.0 phase 5 — inferences with evidence | 14 AI Orchestration & Learning | P1 | Not Started |
+| `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | 14 AI Orchestration & Learning | P1 | Not Started |
+| `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
@@ -329,7 +337,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-20 of 23 done `████████░░`
+20 of 31 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -353,9 +361,17 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-018` Deep document understanding — review, apply and receipt | P0 | Done | Phases D–E. A document with two or more records is reviewed as its plan in HomeSend and in the HomeTalk paperclip sheet (`_components/home-send-plan.tsx`): Found N items, grouped Updates / New / Already on record / Conflicts / Needs your answer, each row opening to its fields, before → after, household-record enrichment and source page, with per-record include, edit and "who is it for"; "Review and apply (N)". `applyDocumentPlanAction` rebuilds the plan on the server from the stored reading (the browser sends only choices), writes each included record through its domain service (writes moved to the server-only `home-send-writes.ts`), verifies updates by reading them back, records each change with its plan key, field-level before/after and evidence (migration `20261005090000_homesend_document_plan_receipt.sql`, applied live), and keeps the exact plan and receipt on the item. `homesend/apply.ts` makes the receipt: created / updated / cancelled / unchanged / skipped / needs_clarification / failed, partial never reported as done, "Nothing new found. No records changed." as a success; a second apply returns the stored receipt. "Undo all" reverses every change of a document; history names each change. A document with a plan never applies on its own |
 | `14-019` Deep document understanding — HomeTalk attachments & certification | P0 | Done | Phases F–G. The paperclip in HomeTalk opens the same HomeSend sheet, pipeline, plan and apply — no second parser — and once a plan is applied HomeTalk posts what it did into the conversation from the stored receipt (`documentReceipt` turn, `homesend/talk.ts` `documentReplyText`: "I read the 2-page school notice and found 7 things… Done. Updated: • Annual Day — 12 Oct → 15 Oct …"). "What did the school notice change?" is answered by rules from the receipt and the change rows (`readDocumentChangeQuestion` / `answerDocumentChanges`), never from the model's reading: undone changes are said to be undone, and a question no applied document fits goes on to HomeBrain; not over a voice link, whose content limits the HomeBrain path applies. Golden scenario 4 (same reading → same plan whichever door) in `talk.test.ts`; eval HS-16 (a part of an occasion is not the occasion, 50/50); §50 counts in HomeSend metrics (`documents`: applied, outcomes, changes standing, correct household changes per document). A receipt with a question still open says so ("1 change applied, 1 waiting on your answer") |
 | `14-020` HomeBrain 3.0 phase A — the Household Context Store | P0 | Done | Live on 2026-10-18 after the owner ran `20261018250000`: `verify:live` 280/280; on the live project HomeTalk answered "Who is coming to the QA birthday party?" (9 December, two months out) with "Riya Shah (3 people) said yes; Dev Kapoor said maybe — 3 coming so far", where the live path had said "nothing on the calendar for the next 7 days"; the row was built on the first turn (10.8 KB), and a HomeTalk write ("add bananas") marked it behind and rebuilt it after the response (version 1 → 3, built after the write). Two fixes found live: the store's reader and write listener are kept on `globalThis` (instrumentation and the routes are separate bundles, so a module variable set at startup was never seen by a turn), and an invite-link reply, written without a member's session, now marks its household changed. Spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` §3.1–§3.2; the owner's reports of 2026-10-18 (Asmi's party with guests "not known", a preference remembered then forgotten, slow replies). PR #230: `household_context` (one row per household, deny-all RLS, migration `20261018250000`, waiting on the owner's SQL run); `homebrain/context-store.ts` builds every record whole (no seven-day horizon, no twelve-to-a-list cap, `limitLists: false`), a month back and 400 days ahead, with event guests and their replies, every memory, the Meals screen's food preferences, the place book and the home address; a domain write sets `stale_since` and rebuilds after that response (`after()`), a turn that finds it behind rebuilds once; a turn reads one row plus the viewer's own live reads (people, notifications, proposals, health, agenda), held to the same domain gates and `filterForViewer`. Falls back to live reads without the table. Live reads now carry guests, food preferences and places too (new `places` domain). A calendar look-ahead no longer answers "who is coming" with the family's birthdays (`calendar/answer.ts`). Golden HT-89, HT-90; eval 120/120 |
-| `14-021` HomeBrain 3.0 phase B — retrieval and one pass | P0 | Not Started | Spec §3.3–§3.5: question-sized retrieval (`homebrain/retrieve.ts`: lexical index, connected records, a token budget), one structured model call with a cached household prefix, streaming, timings `store`/`retrieve`/`firstToken`; typed p95 to first token 2.5 s |
-| `14-022` HomeBrain 3.0 phase C — one answer source | P0 | Not Started | Spec §3.6: deterministic answers read the store; the agenda summary only for broad questions; the "said not on record while on record" gate and count |
-| `14-023` HomeBrain 3.0 phase D — keep-warm hardening | P1 | Not Started | Spec §3.2/§3.1: DB-trigger safety net for writes that bypass a service, an hourly rebuild of dated sections (until then a store older than an hour rebuilds on the next turn), the store's lag on the AI quality page |
+| `14-021` HomeBrain 3.0 phase B — retrieval and one pass | P0 | Deferred | Folded into HomeBrain 4.0 (`design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`), built as 14-027. Spec §3.3–§3.5: question-sized retrieval (`homebrain/retrieve.ts`: lexical index, connected records, a token budget), one structured model call with a cached household prefix, streaming, timings `store`/`retrieve`/`firstToken`; typed p95 to first token 2.5 s |
+| `14-022` HomeBrain 3.0 phase C — one answer source | P0 | Deferred | Folded into HomeBrain 4.0 (`design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`), built as 14-031. Spec §3.6: deterministic answers read the store; the agenda summary only for broad questions; the "said not on record while on record" gate and count |
+| `14-023` HomeBrain 3.0 phase D — keep-warm hardening | P1 | Deferred | Folded into HomeBrain 4.0 (`design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`), built as 14-031. Spec §3.2/§3.1: DB-trigger safety net for writes that bypass a service, an hourly rebuild of dated sections (until then a store older than an hour rebuilds on the next turn), the store's lag on the AI quality page |
+| `14-024` HomeBrain 4.0 phase 0 — hearing it right | P0 | Not Started | Spec §3.1–§3.2. `conversation/normalise.ts` (lead-ins, wrappers, repeats; a "check the database" marker); every rule and the roster read the canonical sentence; `ROSTER_QUESTION` widened ("in this household", "who all", "who lives in this house"); people and pets answer questions about them (out of `BACKGROUND` when asked). The owner's report 2026-10-18: Gemini's "Okay, so. Okay, who are the family members in this household?" got "couldn't find the list". Golden HT-100, HT-101 |
+| `14-025` HomeBrain 4.0 phase 1 — do what was asked | P0 | Not Started | Spec §3.9. The owner, 2026-10-18: "it should just understand user intent and do what is asked during conversation, no separate okay required". `conversation/consent.ts`: Act (everyday reversible changes the person asked for run at once, with undo by voice or chip), Confirm in the conversation (others' duties, guests, medium-confidence grounding), App with step-up (payments, orders, access, deleting). `decideAutonomy` gains `requestedBy`. Gemini in the app gets the app's policy and a `do_household_change` tool; Alexa unchanged. Settings → AI Assistant switch "Ask before acting on what I say" (default off, a `policies` row). Footer, CLAUDE.md and help in 8 languages. Golden HT-103 to HT-107, HT-110 |
+| `14-026` HomeBrain 4.0 phase 2 — look deeper | P0 | Not Started | Spec §3.7–§3.8. Before "not on record", a targeted live read of the question's domains through the viewer's own session (≤3 adapters, ≤1.5 s), answered again; the store is marked stale when the read found what it lacked; `homebrain_misses` (service-role, content-free) counted on the AI quality page. Golden HT-102 |
+| `14-027` HomeBrain 4.0 phase 3 — one pass over the store | P0 | Not Started | Spec §3.4, §3.6 (was 14-021). `homebrain/retrieve.ts` (lexical index, token budget), `homebrain/one-pass.ts` (structured answer-or-intent, cached household prefix, streaming); the understand call dropped for questions; timings. Typed p95 2.5 s to the first token |
+| `14-028` HomeBrain 4.0 phase 4 — the household graph | P1 | Not Started | Spec §3.3. Typed edges between every module's records (person, school, events and guests, meals and needs, bills, responsibilities, places, health), built with the store, viewer-filtered; retrieval follows them. Golden HT-111 |
+| `14-029` HomeBrain 4.0 phase 5 — inferences with evidence | P1 | Not Started | Spec §3.5. `homebrain/insights.ts`: night before an exam, a meal short of ingredients, away but assigned, clashes, a bill due while away, guests' food needs, school kit not on the list, a helper's leave with no cover, counts; `unsupported_inference` in `validate.ts`. Golden HT-108, HT-109 |
+| `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | P1 | Not Started | Spec §3.10. `homebrain/goal.ts` (find out, plan, decide, check, remember, do) chooses retrieval hops, insights and the answer's shape |
+| `14-031` HomeBrain 4.0 phase 7 — keep it whole | P1 | Not Started | Spec §3.2, §3.8 (was 14-022 and 14-023). Rules read the store; the agenda summary only for broad questions; the "not on record while on record" gate; a database trigger safety net; an hourly rebuild; the store's lag on the AI quality page |
 
 ### 15 — Privacy, Security & Governance
 

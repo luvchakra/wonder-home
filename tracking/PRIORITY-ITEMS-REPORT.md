@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
+Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 phases B–D; HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
 
 ---
 
@@ -34,9 +34,11 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 | 5 | HomeFood | 25-004 | Send to Cook over WhatsApp: an approved meal plan goes to a consenting helper through the official template. Built inert | Not Started | The template stays inert until a person registers it with Meta (`WHATSAPP_COOK_TEMPLATE_NAME`) |
 | 5a | HomeFood | 25-011 (P1) | Indian nutrition, the rest: link the remaining Indian items to IFCT, cooked foods once cleared, a native speaker's review. Medium priority, for later (the owner, 2026-10-18); the 399 linked items are what is used | Later | NIN's written permission for cooked foods (INDB) |
 | 5b | HomeTalk | 14-020 (P0) | HomeBrain 3.0 phase A, the Household Context Store: one server-only row per household with the whole context (no seven-day horizon, no twelve-to-a-list cap), event guests and their replies, every memory, food preferences, places; rebuilt after every write; a turn reads one row. Spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` | Done — #230; live: guests named for a party two months out, rebuilt after a write | — |
-| 5c | HomeTalk | 14-021 (P0) | HomeBrain 3.0 phase B, retrieval and one pass: question-sized facts (lexical index, connected records, a token budget), one model call with a cached household prefix, streamed; typed p95 2.5 s to the first token. This is where the speed comes from | Next | 14-020 merged |
-| 5d | HomeTalk | 14-022 (P0) | HomeBrain 3.0 phase C, one answer source: deterministic answers read the store, the agenda summary only for broad questions, a blocking gate on "not on record" while it is on record | Not Started | 14-021 |
-| 5e | HomeTalk | 14-023 (P1) | HomeBrain 3.0 phase D, keep-warm hardening: a database safety net for writes that bypass a service, an hourly rebuild of dated sections, the store's lag on the AI quality page | Not Started | 14-020 |
+| 5c | HomeTalk | 14-024 (P0) | HomeBrain 4.0 phase 0, hearing it right: spoken lead-ins and wrappers cleaned before the rules read a sentence, so "Okay, so, who are the family members in this household?" gets the roster. Spec `design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md` | Next | — |
+| 5d | HomeTalk | 14-025 (P0) | HomeBrain 4.0 phase 1, do what was asked: an everyday request made in the conversation is done at once with an undo; only others' duties and guests are confirmed in the conversation, and only payments, orders and access go to the screen. Gemini in the app gets the same | Next | Owner's decisions §7.1–7.2 (proposed defaults stand unless changed) |
+| 5e | HomeTalk | 14-026 (P0) | HomeBrain 4.0 phase 2, look deeper: a targeted live read before "not on record", and the store repaired from what it found | Not Started | 14-024 |
+| 5f | HomeTalk | 14-027 (P0) | HomeBrain 4.0 phase 3, one pass over the store (was 14-021): question-sized retrieval, one cached, streamed model call, typed p95 2.5 s to first token | Not Started | 14-026 |
+| 5g | HomeTalk | 14-028 to 14-031 (P1) | HomeBrain 4.0 phases 4–7: the household graph across modules, inferences with evidence, answers shaped by the person's goal, keep-warm hardening (was 14-022/14-023) | Not Started | 14-027 |
 | 6 | HomeTalk | H-1 | "How much do I owe this month?": a total of the bills in the window, as arithmetic from the records (rule 9), with each bill listed | Not Started | — |
 | 7 | HomeTalk | H-2 | Corrections in the golden runner: replay "actually, make that Friday" and "not bread, eggs" against the executed action, as the route does, so `npm run eval` covers them | Not Started | — |
 | 7a | HomeTalk | H-4 | A typed paragraph of several family facts ("Manan likes home-cooked food. He doesn't like outside food and Upasana likes cooking") is split into one fact each, with "he/she" resolved to the person just named. Gemini Live already does this per tool call | Not Started | — |
@@ -52,6 +54,8 @@ Last updated: 2026-10-18 (HomeBrain 3.0 phases A–D queued as 5b–5e, phase A 
 
 | Ask | Story | Status |
 |---|---|---|
+| HomeTalk should know the family members, and look in WonderHome's records when it doesn't know, then remember; a next HomeBrain that goes deep into every module, connects them and answers with the person's intent in mind | 14-024, 14-026 to 14-031 | Designed 2026-10-18 (`design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`); phase 0 Next |
+| No separate OK: understand the intent and do what was asked during the conversation | 14-025 | Designed 2026-10-18 (spec §3.9); Next |
 | Every family member logs in as themselves, matched by the email in their details, with any login method, and lands in the household with their role's menus | 01-010 | Done — #215, browser-checked 2026-10-18 |
 | An Invite button on each member: send an email, and a shareable link through WhatsApp and other apps | 01-010 | Done — #215, browser-checked 2026-10-18 |
 | Hide the top and then the bottom bar while scrolling | 00-012 | Done — browser-checked; tab bar now waits until 280px so the top goes visibly first |
