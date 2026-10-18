@@ -38,6 +38,11 @@ The pilot is **500 distinct, commonly bought Indian household items**. They are 
 | Nutrition for an item | Only an **approved** `nutrition_links` row with the same `food_state` | Values shown, with basis, provider and version, and "approximate" when `match_type ≠ exact` |
 | No approved link | Nothing | "No nutrition on record" — never a value inferred from name similarity |
 
+**How nutrition candidates are found.** `USDA_NUTRITION_MATCHING_STUDY.md` measured four methods on 200 items.
+- The importer uses the structured method with rules (M4). It reads the item's curated `canonical_name`, `food_state` and `variant`, never a household's word.
+- It stores the top three as candidates, with the matcher's version.
+- Plain text search (BM25) is not used: it gave food nutrition to 10 of 30 non-food items.
+
 **Auto-approve only deterministic, independently verified exact matches.** In practice that means an FDC id WonderHome curated by hand for that exact item and state, double-checked by a second reviewer. Everything else goes through `catalog_review_tasks`. No FDC id is ever written without its record being fetched and stored in `source_records`.
 
 ## 4. The importer (idempotent, staged, reversible)
