@@ -12,6 +12,8 @@ export const whatsNewAr: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#many": "اعرض {count} أخرى",
   "whatsNew.showAll#other": "اعرض {count} أخرى",
   "whatsNew.showLess": "اعرض أقل",
+  "whatsNew.memberSignIn.title": "الجميع يسجّلون الدخول",
+  "whatsNew.memberSignIn.body": "أضف بريد كل شخص في العائلة، أو أرسل رابط دعوة. يدخلون المنزل مباشرة.",
   "whatsNew.calendarAnswers.title": "اسأل HomeTalk عمّا لديك",
   "whatsNew.calendarAnswers.body": "سؤال «هل هناك مناسبات في ديسمبر؟» يحصل الآن على الإجابة الحقيقية مباشرة من تقويمك.",
   "whatsNew.calendar.title": "تبويب التقويم",

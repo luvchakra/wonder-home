@@ -180,6 +180,7 @@ export const helpEn = {
   "help.guide.calendar.body.4": "Open one day of a repeating event and its planner can skip just that day, or bring it back; the rest carry on. A proposed plan has a dashed edge and says \"Proposed\".",
   "help.guide.calendar.body.5": "Filters only change what you see: categories, people, only things you're part of, only confirmed plans, holidays, and the view the calendar opens on. Today's plan — meals, bills, school and what needs you — is one tap from today's day.",
   "help.guide.calendar.body.6": "Ask HomeTalk what's on for a month or more — \"any events in December?\", \"what's coming up in the next few months?\" — and it lists, by date, the events, birthdays and holidays on the Calendar that you can see. It reads the Calendar itself, so nothing private of someone else's is mentioned.",
+  "help.guide.calendar.body.7": "Ask what comes next — \"what's the next upcoming event?\", \"when is the next public holiday?\", \"any birthdays coming up?\" — and HomeTalk names the next one on the Calendar and the two after it, looking up to a year ahead, with only what you can see.",
 
   // Reminders and notifications
   "help.guide.notifications.title": "Reminders and notifications",
@@ -283,6 +284,7 @@ export const helpEn = {
     "Family events — birthdays, outings, visits, appointments — can be marked as protected time, and WonderHome never schedules over them. Things that need a reply, such as a clash or a gift still to sort, are listed until they are settled.",
   "help.guide.family.body.4":
     "Tap an event to open it. It shows the details, what is still to plan (a place, who's coming, a note, a link), and everyone's replies. The event's planner or an Admin can edit or cancel it and choose who in the family is asked. \"Invite with a link\" makes a link you can send to anyone: it shows only the event's name, time, place and your household's name, and they reply yes, maybe or no with their name. Turning the link off stops it working; replies already given stay.",
+  "help.guide.family.body.5": "Everyone can sign in as themselves — adults, children and househelpers. An Admin opens a person in Family, taps the pencil and adds their sign-in email. When that person signs in with that email, by password or with Google, and the email is confirmed, they come straight into the household with the role they already have; what they see follows that role. An Admin can also tap Invite on someone without an account: Create invite link makes a link that works once and stops after 7 days, and Send email, Share (WhatsApp and other apps) or Copy link passes it on. WonderHome does not send the email itself — Send email opens your own email app.",
 
   // Household help
   "help.guide.househelp.title": "Household help",

@@ -349,6 +349,40 @@ const CONNECTED: HomeTalkCase[] = [
       { utterance: "What is for dinner tonight?", expected: { answer: { includes: ["Pasta arrabbiata"], excludes: ["Internet", "concert"] } } },
     ],
   },
+  // --- Looking ahead on the calendar (the "your week is clear" defect) ---
+  {
+    id: "HT-76", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"What's the next upcoming event?\" is the next thing on the calendar and the two after it — never \"your week is clear\".",
+    utterance: "What's the next upcoming event?",
+    expected: { answer: { includes: ["The next thing on the calendar is **Karate**", "Thu 24 Sep, 5:00 pm", "Sports Day"], excludes: ["clear", "nothing at all"] } },
+  },
+  {
+    id: "HT-77", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "Then \"How about the public holiday?\" is the next public holiday on the calendar, with the two after it.",
+    utterance: "What's the next upcoming event?",
+    expected: { answer: { includes: ["Karate"] } },
+    followUps: [
+      { utterance: "How about the public holiday?", expected: { answer: { includes: ["The next public holiday is **Gandhi Jayanti**, Fri 2 Oct", "Dussehra", "Diwali"], excludes: ["Karate", "don't have", "(public holiday)"] } } },
+    ],
+  },
+  {
+    id: "HT-78", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"Any birthdays coming up?\" reads the members' own dates of birth: Kunal's in February is next.",
+    utterance: "Any birthdays coming up?",
+    expected: { answer: { includes: ["The next birthday is **Kunal Mehta's birthday**", "11 Feb", "Upasana Mehta's birthday"], excludes: ["Karate"] } },
+  },
+  {
+    id: "HT-79", surface: "hometalk", household: "D", category: "privacy", actor: "d-rohan",
+    description: "Rohan's next events never include the private plan for his own birthday dinner.",
+    utterance: "What's the next event?",
+    expected: { answer: { includes: ["Gandhi Jayanti"], excludes: ["birthday dinner"] } },
+  },
+  {
+    id: "HT-80", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"When is the next bill due?\" is about bills, not the calendar's next event.",
+    utterance: "When is the next bill due?",
+    expected: { answer: { includes: ["Electricity"], excludes: ["The next thing on the calendar"] } },
+  },
 ];
 
 // --- HomeTalk (§6) ----------------------------------------------------------------

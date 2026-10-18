@@ -1,0 +1,24 @@
+import type { AreaCatalog } from "../types";
+import type { memberInviteEn } from "./en";
+
+export const memberInviteHi: AreaCatalog<typeof memberInviteEn> = {
+  "memberInvite.button": "आमंत्रित करें",
+  "memberInvite.buttonLabel": "{name} को साइन इन के लिए आमंत्रित करें",
+  "memberInvite.title": "{name} को आमंत्रित करें",
+  "memberInvite.lede": "{name} ख़ुद साइन इन करते हैं और घर को अपनी भूमिका के अनुसार देखते हैं।",
+  "memberInvite.emailHint": "जब {name} {email} से साइन इन करेंगे, पासवर्ड से या Google से, तो सीधे अंदर आ जाएँगे। लिंक भी काम करता है।",
+  "memberInvite.noEmail": "{name} का ईमेल उनकी जानकारी में जोड़ें, उससे साइन इन करते ही वे सीधे अंदर आ जाएँगे। या उन्हें लिंक भेजें।",
+  "memberInvite.create": "आमंत्रण लिंक बनाएँ",
+  "memberInvite.creating": "बन रहा है…",
+  "memberInvite.ready": "लिंक तैयार है। यह एक बार काम करता है और 7 दिन बाद बंद हो जाता है।",
+  "memberInvite.newLinkNote": "नया लिंक बनाने से पहले वाला बंद हो जाता है।",
+  "memberInvite.sendEmail": "ईमेल भेजें",
+  "memberInvite.share": "शेयर करें",
+  "memberInvite.copy": "लिंक कॉपी करें",
+  "memberInvite.copied": "कॉपी हो गया",
+  "memberInvite.failed": "लिंक नहीं बन सका। कृपया फिर से कोशिश करें।",
+  "memberInvite.subject": "WonderHome पर {household} से जुड़ें",
+  "memberInvite.message": "{inviter} ने आपको WonderHome पर {household} से जुड़ने के लिए आमंत्रित किया है। अंदर आने के लिए यह लिंक खोलें:",
+  "memberInvite.factEmail": "साइन-इन ईमेल",
+  "memberInvite.signsIn": "साइन इन करते हैं",
+} as const;

@@ -36,10 +36,12 @@ export const INVITATION_TTL_DAYS = 7;
 
 export type CreateInvitationInput = {
   householdId: string;
-  email: string;
+  /** Where the invitation goes. Optional only for a member already on record, whose link may be shared any way the inviter likes. */
+  email: string | null;
   displayName: string;
-  memberType: MemberType & ("adult" | "helper");
-  role: Extract<HouseholdRole, "administrator" | "adult" | "helper">;
+  /** "child" only for a child already on record (`memberId`): an invitation never creates a child. */
+  memberType: MemberType;
+  role: Extract<HouseholdRole, "administrator" | "adult" | "helper" | "child">;
   /**
    * The member this invitation is for, when they were already added without a
    * login (story 02-009). Accepting links the new account to that member. The
@@ -72,14 +74,17 @@ export async function createInvitation(
   const tokenHash = await hashInvitationToken(token);
   const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 86_400_000).toISOString();
 
-  await revokeLiveInvitationsFor(supabase, input.householdId, input.email);
+  if (!input.memberId && !input.email) throw ApiError.badRequest("An invitation needs an email address.");
+  if (input.memberType === "child" && !input.memberId) throw ApiError.badRequest("A child is invited to the member already on record.");
+
+  await revokeLiveInvitationsFor(supabase, input.householdId, { email: input.email, memberId: input.memberId ?? null });
 
   const { data, error } = await supabase
     .from("household_invitations")
     .insert({
       household_id: input.householdId,
       invited_by_member_id: invitedByMemberId,
-      email: input.email.trim().toLowerCase(),
+      email: input.email ? input.email.trim().toLowerCase() : null,
       display_name: input.displayName,
       member_type: input.memberType,
       role: input.role,
@@ -114,17 +119,24 @@ export async function createInvitation(
 async function revokeLiveInvitationsFor(
   supabase: SupabaseClient,
   householdId: string,
-  email: string,
+  seat: { email: string | null; memberId: string | null },
 ): Promise<void> {
-  const { error } = await supabase
-    .from("household_invitations")
-    .update({ revoked_at: new Date().toISOString() })
-    .eq("household_id", householdId)
-    .eq("email", email.trim().toLowerCase())
-    .is("revoked_at", null)
-    .is("accepted_at", null);
+  // The same seat is the same address, or the same member on record.
+  for (const [column, value] of [
+    ["email", seat.email ? seat.email.trim().toLowerCase() : null],
+    ["member_id", seat.memberId],
+  ] as const) {
+    if (!value) continue;
+    const { error } = await supabase
+      .from("household_invitations")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("household_id", householdId)
+      .eq(column, value)
+      .is("revoked_at", null)
+      .is("accepted_at", null);
 
-  if (error) throw new Error(`revoking previous invitations failed: ${error.code ?? "unknown"}`);
+    if (error) throw new Error(`revoking previous invitations failed: ${error.code ?? "unknown"}`);
+  }
 }
 
 export async function revokeInvitation(
@@ -210,7 +222,7 @@ export async function acceptInvitation(
 
 export type PendingInvitation = {
   id: string;
-  email: string;
+  email: string | null;
   displayName: string;
   role: string;
   expiresAt: string;
@@ -235,7 +247,7 @@ export async function listInvitations(
   const now = Date.now();
   return (data ?? []).map((row) => ({
     id: row.id as string,
-    email: row.email as string,
+    email: (row.email as string | null) ?? null,
     displayName: row.display_name as string,
     role: row.role as string,
     expiresAt: row.expires_at as string,

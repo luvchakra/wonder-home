@@ -89,6 +89,7 @@ const SHIPPED_TABLES = [
   "event_exceptions",
   "public_holidays",
   "calendar_preferences",
+  "household_member_emails",
   "schedule_conflicts",
   "gift_plans",
   "step_up_verifications",
@@ -790,6 +791,14 @@ async function main() {
     "anonymous cannot read anyone's languages",
     Boolean(anonSpoken.error) || (Array.isArray(anonSpoken.data) && anonSpoken.data.length === 0),
     anonSpoken.error ? anonSpoken.error.code : `${anonSpoken.data?.length ?? "?"} rows`,
+  );
+  const signInEmails = await admin.from("household_member_emails").select("member_id, email").limit(1);
+  check("migration landed: household_member_emails", !signInEmails.error, signInEmails.error?.code ?? "ok");
+  const anonEmails = await anon.from("household_member_emails").select("email").limit(1);
+  check(
+    "anonymous cannot read anyone's sign-in email",
+    Boolean(anonEmails.error) || (Array.isArray(anonEmails.data) && anonEmails.data.length === 0),
+    anonEmails.error ? anonEmails.error.code : `${anonEmails.data?.length ?? "?"} rows`,
   );
   const placeBook = await admin.from("household_places").select("place_id, status, maps_uri").limit(1);
   check("migration landed: household_places", !placeBook.error, placeBook.error?.code ?? "ok");

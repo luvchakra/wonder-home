@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { listMemberships } from "@wonderhome/core/identity/households";
+import { claimMembersByEmail } from "@wonderhome/core/identity/member-email";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 import type { Formatter } from "@wonderhome/core/i18n/format";
@@ -43,10 +44,22 @@ export async function requireSession(nextPath: string): Promise<Session> {
   const [supabase, user] = await Promise.all([createClient(), getVerifiedUser()]);
   if (!user) redirect(`/sign-in?next=${encodeURIComponent(nextPath)}`);
 
-  const memberships = await listMemberships(supabase);
+  const memberships = await membershipsOrClaimed(supabase);
   if (memberships.length === 0) redirect("/welcome");
 
   return buildSession(supabase, memberships[0]!);
+}
+
+/**
+ * This person's households — and, when they have none yet, the ones a family
+ * recorded them in by their verified email (they confirmed it by a link, so
+ * no sign-in action ran). Someone with no household and no match goes on to
+ * create one, as before.
+ */
+export async function membershipsOrClaimed(supabase: SupabaseClient): Promise<HouseholdMembership[]> {
+  const memberships = await listMemberships(supabase);
+  if (memberships.length > 0) return memberships;
+  return (await claimMembersByEmail(supabase)) > 0 ? listMemberships(supabase) : memberships;
 }
 
 /**
@@ -61,7 +74,7 @@ export async function optionalSession(): Promise<Session | null> {
   const [supabase, user] = await Promise.all([createClient(), getVerifiedUser()]);
   if (!user) return null;
 
-  const memberships = await listMemberships(supabase).catch(() => []);
+  const memberships = await membershipsOrClaimed(supabase).catch(() => []);
   if (memberships.length === 0) return null;
 
   return buildSession(supabase, memberships[0]!).catch(() => null);

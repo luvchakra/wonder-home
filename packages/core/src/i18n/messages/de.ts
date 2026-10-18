@@ -10,6 +10,7 @@ import { entryDe } from "./areas/entry/de";
 import { installDe } from "./areas/install/de";
 import { eventsDe } from "./areas/events/de";
 import { calendarDe } from "./areas/calendar/de";
+import { memberInviteDe } from "./areas/memberinvite/de";
 import { whatsNewDe } from "./areas/whatsnew/de";
 import { groceryDe } from "./areas/grocery/de";
 import { welcomeDe } from "./areas/welcome/de";
@@ -683,6 +684,7 @@ export const de: Catalog = {
   ...eventsDe,
   ...calendarDe,
   ...whatsNewDe,
+  ...memberInviteDe,
   ...groceryDe,
   ...welcomeDe,
 };

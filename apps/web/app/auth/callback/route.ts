@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@wonderhome/core/db/server";
+import { claimMembersByEmail } from "@wonderhome/core/identity/member-email";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -35,6 +36,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/sign-in?error=link", url.origin));
   }
 
+  // Google, a confirmed email, any provider: a family member the household
+  // recorded with this verified email becomes that member here.
+  await claimMembersByEmail(supabase);
   return NextResponse.redirect(new URL(next, url.origin));
 }
 

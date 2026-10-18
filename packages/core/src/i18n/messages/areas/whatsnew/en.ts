@@ -9,6 +9,8 @@ export const whatsNewEn = {
   "whatsNew.showAll#one": "Show {count} more",
   "whatsNew.showAll#other": "Show {count} more",
   "whatsNew.showLess": "Show fewer",
+  "whatsNew.memberSignIn.title": "Everyone signs in",
+  "whatsNew.memberSignIn.body": "Add each person's email in Family, or send an invite link. They come straight into the household.",
   "whatsNew.calendarAnswers.title": "Ask HomeTalk what's on",
   "whatsNew.calendarAnswers.body": "\"Any events in December?\" now gets the real answer, straight from your Calendar.",
   "whatsNew.calendar.title": "The Calendar tab",

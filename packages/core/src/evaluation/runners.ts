@@ -1,7 +1,7 @@
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { DEFAULT_DATA_USE } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
-import { asksTheCalendar, calendarSpanReply } from "../calendar/answer";
+import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { converse, pendingFrom, type ConversationTurn, type Understanding } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
@@ -238,11 +238,15 @@ async function composedAnswer(
     }
     // "Why?" is answered from recorded evidence the route reads at the time; not composed here.
     if (typeof intent.parameters.explain === "string") return null;
+    const ahead = lookAhead(household, who.id, utterance);
+    if (ahead) return { text: ahead };
     const answered = await brainAnswer(c, utterance, previousQuestion, models);
     // With no sentence of its own, the route shows the agenda summary; the facts stand in for it here.
     return { text: answered.text ?? answered.facts.map((fact) => fact.statement).join("\n"), brain: answered };
   }
   if (intent.action === "unknown" && proposal.kind === "clarify" && !intent.understanding?.failure && typeof intent.parameters.clarify !== "string") {
+    const ahead = lookAhead(household, who.id, utterance);
+    if (ahead) return { text: ahead };
     const answered = await brainAnswer(c, utterance, previousQuestion, models);
     const usable =
       answered.text &&
@@ -250,6 +254,14 @@ async function composedAnswer(
     return usable && answered.text ? { text: answered.text, brain: answered } : null;
   }
   return null;
+}
+
+/** "What's next on the calendar?" — the route's look-ahead, over the golden calendar. */
+function lookAhead(household: (typeof GOLDEN_HOUSEHOLDS)[HomeTalkCase["household"]], memberId: string, utterance: string): string | null {
+  const asked = readLookAhead(utterance);
+  if (!asked) return null;
+  const span = lookAheadSpan(household.now, household.timezone);
+  return lookAheadReply({ lookAhead: asked, entries: calendarFor(household, memberId, span), failedSources: [], now: household.now, timeZone: household.timezone });
 }
 
 function brainAnswer(c: { household: HomeTalkCase["household"]; actor: string }, question: string, previousQuestion: string | null, models: Models) {

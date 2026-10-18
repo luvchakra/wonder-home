@@ -68,7 +68,7 @@ import { placesReply } from "@wonderhome/core/homeplaces/answer";
 import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
-import { asksTheCalendar, calendarSpanReply } from "@wonderhome/core/calendar/answer";
+import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "@wonderhome/core/calendar/answer";
 import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
 import { resolveCalendarSpan, type CalendarSpan } from "@wonderhome/core/conversation/temporal";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
@@ -775,6 +775,23 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     const read = await readCalendarSpan(supabase, membership, span);
     composedAt = Date.now();
     text = calendarSpanReply({ span, entries: read.entries, failedSources: read.failedSources, timeZone: membership.household.timezone });
+    carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
+    brain = { source: "deterministic", factsSent: 0 };
+  } else if (
+    result.kind === "reply" &&
+    ((result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain !== "string") ||
+      (result.intent.action === "unknown" && result.proposal.kind === "clarify" && !result.intent.understanding?.failure && typeof result.intent.parameters.clarify !== "string")) &&
+    (!limits || (limits.scopes as readonly string[]).includes("calendar.read")) &&
+    readLookAhead(body.utterance)
+  ) {
+    // "What's the next upcoming event?", "how about the public holiday?":
+    // what comes next, from the calendar itself over the next year, by rules.
+    // HomeBrain's facts stop at a week and hold no holidays, which is how
+    // "your week is clear" once answered a question about the next event.
+    const now = new Date();
+    const read = await readCalendarSpan(supabase, membership, lookAheadSpan(now, membership.household.timezone));
+    composedAt = Date.now();
+    text = lookAheadReply({ lookAhead: readLookAhead(body.utterance)!, entries: read.entries, failedSources: read.failedSources, now, timeZone: membership.household.timezone });
     carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
     brain = { source: "deterministic", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain === "string") {

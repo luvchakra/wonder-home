@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**230 of 244 stories done — 94.3%**
+**230 of 246 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
 | Done | 230 |
-| In Progress | 3 |
+| In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 10 |
 | Deferred | 1 |
@@ -25,8 +25,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
-| 00 Project Bootstrap & Architecture | `██████████` | 11 | 11 | — |
-| 01 Identity & Family Accounts | `██████████` | 9 | 9 | — |
+| 00 Project Bootstrap & Architecture | `█████████░` | 11 | 12 | 1 in progress |
+| 01 Identity & Family Accounts | `█████████░` | 9 | 10 | 1 in progress |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 16 | 17 | 1 in progress |
@@ -57,6 +57,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
+| `00-012` Bars step aside while reading on a phone | 00 Project Bootstrap & Architecture | P1 | In Progress |
+| `01-010` Every member signs in as themselves | 01 Identity & Family Accounts | P0 | In Progress |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `24-005` Places near the office | 24 HomePlaces | P1 | Not Started |
@@ -76,7 +78,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 00 — Project Bootstrap & Architecture
 
-11 of 11 done `██████████`
+11 of 12 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -91,10 +93,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `00-009` Create observability foundation | P1 | Done | Redacting structured logs; reporter seam |
 | `00-010` Create feature configuration | P1 | Done | Flags + fail-fast startup validation |
 | `00-011` Offer to install the app on phones and tablets | P1 | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
+| `00-012` Bars step aside while reading on a phone | P1 | In Progress | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser check at 360px still to do |
 
 ### 01 — Identity & Family Accounts
 
-9 of 9 done `██████████`
+9 of 10 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -107,6 +110,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-007` Preferences | P1 | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | `01-008` Helper/service identity | P2 | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 | `01-009` Settings & Profile consolidation | P1 | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
+| `01-010` Every member signs in as themselves | P0 | In Progress | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser check at 360px still to do: this session had no sign-in credentials |
 
 ### 02 — Household Configuration & Playbook
 
@@ -502,7 +506,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `26-001` Family Calendar foundation | P0 | In Progress | Formerly 12-009. C1 (design/FAMILY-CALENDAR-PHASE0.md, D1–D7 approved 2026-10-18) built: migration `20261018120000` (visibility, all-day, repeat rules, exceptions, DoP&T holidays, preferences, family events on every plan), `packages/core/src/calendar/`, `/calendar` Month/Week/Day/Year, the Today tab is Calendar. Migration live 2026-10-18 (applied by the owner in the SQL editor, verified by query). Waiting on: signed-in browser QA at 360px and 1280px |
 | `26-002` Calendar module adapters | P0 | Not Started | Formerly 12-010. C2: school, meals, bills, health, helpers, upkeep, outcomes and orders on the calendar, each through its own visibility rules; "Busy" for health; dedupe by source |
-| `26-003` HomeTalk plans with the calendar | P1 | In Progress | Formerly 12-011. Read half done (2026-10-18): a question over a month-sized span ("any events in December?", "the next few months") is answered by rules from `calendarRange` for the speaker (`calendar/answer.ts`, `resolveCalendarSpan`, golden HT-26/HT-27); day and week questions keep HomeBrain's answer. A month question about another part of the home ("which bills are due this month?") is HomeBrain's, not a calendar list (`asksTheCalendar`); the golden set checks each member's month against visibility (HT-56 to HT-64). Still to do: C3: plan_event with participants and conflicts, find_free_time, moving and cancelling events, answers read from the projection |
+| `26-003` HomeTalk plans with the calendar | P1 | In Progress | Formerly 12-011. Read half done (2026-10-18): a question over a month-sized span ("any events in December?", "the next few months") is answered by rules from `calendarRange` for the speaker (`calendar/answer.ts`, `resolveCalendarSpan`, golden HT-26/HT-27); day and week questions keep HomeBrain's answer. A month question about another part of the home ("which bills are due this month?") is HomeBrain's, not a calendar list (`asksTheCalendar`); the golden set checks each member's month against visibility (HT-56 to HT-64). "What's the next upcoming event?", "how about the public holiday?" and "any birthdays coming up?" are answered from the calendar a year ahead (`readLookAhead`, `lookAheadReply`), never "your week is clear" (HT-76 to HT-80). Still to do: C3: plan_event with participants and conflicts, find_free_time, moving and cancelling events, answers read from the projection |
 | `26-004` Calendar reminders and holiday region | P1 | Not Started | Formerly 12-012. C4: reminders to every participant, a daily digest option, holiday region in Settings → Language & Region |
 | `26-005` Calendar notices over WhatsApp | P2 | Not Started | Formerly 12-013. C5: only if wanted; the official template, shared with Groceries' Send to Cook |
 | `26-006` Google and Outlook calendars | P2 | Not Started | Formerly 12-014. C6: only after a separate approval |

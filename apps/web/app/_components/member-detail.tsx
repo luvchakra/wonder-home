@@ -12,6 +12,7 @@ import { formatDate } from "../_lib/session";
 import { describeRoles } from "../_lib/member-role";
 import { HELPER_ROLES } from "../_lib/helper-roles";
 import { MemberAvatarControl } from "./member-avatar-control";
+import { MemberInviteControl } from "./member-invite-control";
 import { MemberProfileForm } from "./member-profile-form";
 import { RemoveMemberControl } from "./remove-member-control";
 
@@ -44,6 +45,8 @@ export function MemberDetail({
   statusLabel,
   currentMemberId,
   school,
+  email,
+  invite,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -54,6 +57,13 @@ export function MemberDetail({
   currentMemberId: string;
   /** A child's current school and its day, when one is on record. */
   school?: { schoolName: string; hours: DayHours | null } | null;
+  /**
+   * Their sign-in email, when this viewer may read it (Admins, and the member
+   * themselves — the database decides). Undefined when it was not read.
+   */
+  email?: string | null;
+  /** Who is inviting, into which household: the Invite control's message. Set for Admins. */
+  invite?: { householdName: string; inviterName: string } | null;
 }) {
   const t = requestT();
   const clockTime = requestFormatIn("UTC").time;
@@ -81,6 +91,7 @@ export function MemberDetail({
         <Fact label={t("family.fact.status")} value={statusLabel ?? null} />
         <Fact label={t("family.fact.nickname")} value={member.nickname} />
         <Fact label={t("family.fact.familyCallsMe")} value={member.relationship} />
+        <Fact label={t("memberInvite.factEmail")} value={email ?? null} />
         <Fact label={t("family.fact.age")} value={age} />
         <Fact label={t("family.fact.dateOfBirth")} value={born} />
         <Fact label={t("family.fact.gender")} value={member.gender} />
@@ -124,6 +135,7 @@ export function MemberDetail({
               workArrangement: member.workArrangement ?? null,
               workHours: member.workHours ?? null,
               school: member.memberType === "child" ? (school ?? null) : null,
+              ...(email !== undefined ? { email } : {}),
             }}
             workOptions={member.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
             helperRoles={
@@ -137,6 +149,32 @@ export function MemberDetail({
                 : undefined
             }
           />
+          {/* Someone the household keeps without an account yet can be invited to sign in as themselves. */}
+          {invite && member.hasAccount === false && member.status !== "inactive" ? (
+            <MemberInviteControl
+              householdId={householdId}
+              memberId={member.id}
+              email={email ?? null}
+              labels={{
+                button: t("memberInvite.button"),
+                buttonLabel: t("memberInvite.buttonLabel", { name: member.displayName }),
+                title: t("memberInvite.title", { name: member.displayName }),
+                lede: t("memberInvite.lede", { name: member.displayName }),
+                hint: email ? t("memberInvite.emailHint", { name: member.displayName, email }) : t("memberInvite.noEmail", { name: member.displayName }),
+                create: t("memberInvite.create"),
+                creating: t("memberInvite.creating"),
+                ready: t("memberInvite.ready"),
+                newLinkNote: t("memberInvite.newLinkNote"),
+                sendEmail: t("memberInvite.sendEmail"),
+                share: t("memberInvite.share"),
+                copy: t("memberInvite.copy"),
+                copied: t("memberInvite.copied"),
+                failed: t("memberInvite.failed"),
+                subject: t("memberInvite.subject", { household: invite.householdName }),
+                message: t("memberInvite.message", { inviter: invite.inviterName, household: invite.householdName }),
+              }}
+            />
+          ) : null}
           {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (
             <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} />
           ) : null}

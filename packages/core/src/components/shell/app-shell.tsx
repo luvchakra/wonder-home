@@ -9,6 +9,7 @@ import { InstallBanner } from "./install-banner";
 import { MobileHeader, type ShellViewer } from "./mobile-header";
 import { NavDrawerProvider } from "./nav-drawer";
 import { PrimaryNav } from "./primary-nav";
+import { ScrollChrome } from "./scroll-chrome";
 import { SwipeMain } from "./swipe-main";
 
 export type AppShellProps = {
@@ -111,6 +112,7 @@ export function AppShell({
         </div>
 
         <PrimaryNav active={active} variant="tabbar" labels={viewer?.labels} />
+        <ScrollChrome />
         {viewer?.language ? <DocumentLocale language={viewer.language} dir={viewer.dir ?? "ltr"} /> : null}
       </NavDrawerProvider>
     </div>

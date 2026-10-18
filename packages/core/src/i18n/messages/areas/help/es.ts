@@ -160,6 +160,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.4": "Abre un día de un evento que se repite y quien lo organiza puede saltar solo ese día o recuperarlo; los demás siguen igual. Un plan propuesto tiene el borde discontinuo y dice «Propuesto».",
   "help.guide.calendar.body.5": "Los filtros solo cambian lo que ves tú: categorías, personas, solo lo tuyo, solo planes confirmados, festivos y la vista en la que se abre el calendario. El plan de hoy —comidas, facturas, colegio y lo que te necesita— está a un toque desde el día de hoy.",
   "help.guide.calendar.body.6": "Pregunta a HomeTalk qué hay en un mes o más —«¿hay eventos en diciembre?», «¿qué viene en los próximos meses?»— y te enumera por fecha los eventos, cumpleaños y festivos del Calendario que puedes ver. Lee el propio Calendario, así que nunca menciona nada privado de otra persona.",
+  "help.guide.calendar.body.7": "Pregunta qué viene después —«¿cuál es el próximo evento?», «¿cuándo es el próximo festivo?», «¿algún cumpleaños pronto?»— y HomeTalk nombra el siguiente del Calendario y los dos posteriores, mirando hasta un año adelante, solo con lo que puedes ver.",
 
   "help.guide.notifications.title": "Recordatorios y notificaciones",
   "help.guide.notifications.summary": "Sobre cosas reales, para una persona, cuando le viene bien, y en silencio una vez resuelto.",
@@ -251,6 +252,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Los eventos familiares —cumpleaños, salidas, visitas, citas— pueden marcarse como tiempo protegido, y WonderHome nunca programa nada encima. Lo que necesita respuesta, como un choque de horarios o un regalo aún por resolver, aparece en la lista hasta que se resuelve.",
   "help.guide.family.body.4":
     "Toca un evento para abrirlo. Verás los detalles, lo que falta por planear (un lugar, quién viene, una nota, un enlace) y las respuestas de todos. Quien lo planea, o un Admin, puede editarlo o cancelarlo y elegir a quién de la familia se invita. «Invitar con un enlace» crea un enlace que puedes enviar a cualquiera: solo muestra el nombre, la hora y el lugar del evento y el nombre de tu hogar, y responden sí, quizá o no con su nombre. Al desactivar el enlace deja de funcionar; las respuestas ya dadas se mantienen.",
+  "help.guide.family.body.5": "Todos pueden iniciar sesión con su propia cuenta: adultos, niños y personal del hogar. Un administrador abre a la persona en Familia, toca el lápiz y añade su correo de acceso. Cuando esa persona inicia sesión con ese correo, con contraseña o con Google, y el correo está confirmado, entra directamente al hogar con el rol que ya tiene; lo que ve depende de ese rol. Un administrador también puede tocar Invitar en alguien sin cuenta: Crear enlace de invitación crea un enlace que funciona una vez y caduca a los 7 días, y Enviar correo, Compartir (WhatsApp y otras apps) o Copiar enlace lo hacen llegar. WonderHome no envía el correo: Enviar correo abre tu propia app de correo.",
 
   "help.guide.househelp.title": "Ayuda doméstica",
   "help.guide.househelp.summary": "Quién ayuda en casa, cuándo se le espera y quién cubre cuando falta.",

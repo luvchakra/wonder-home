@@ -171,7 +171,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
   return (
     <nav
       aria-label="Primary"
-      className="wh-glass fixed inset-x-0 bottom-0 z-40 border-t border-[var(--wh-border)]/70 lg:hidden"
+      className="wh-glass wh-chrome-bottom fixed inset-x-0 bottom-0 z-40 border-t border-[var(--wh-border)]/70 lg:hidden"
     >
       <ul className="mx-auto flex max-w-[var(--wh-content-max)] items-stretch justify-between px-2 pb-[env(safe-area-inset-bottom)]">
         {PRIMARY_NAVIGATION.map((item) => {

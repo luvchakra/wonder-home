@@ -1,7 +1,6 @@
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
-import { listMemberships } from "@wonderhome/core/identity/households";
 
-import { buildSession } from "./_lib/session";
+import { buildSession, membershipsOrClaimed } from "./_lib/session";
 import { ChildHome } from "./_screens/child-home";
 import { HomeDashboard } from "./_screens/home-dashboard";
 import { Landing } from "./_screens/landing";
@@ -18,7 +17,7 @@ export default async function HomePage() {
 
   if (!user) return <Landing />;
 
-  const memberships = await listMemberships(supabase);
+  const memberships = await membershipsOrClaimed(supabase);
   if (memberships.length === 0) {
     const { redirect } = await import("next/navigation");
     redirect("/welcome");

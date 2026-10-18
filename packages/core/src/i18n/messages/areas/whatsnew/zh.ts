@@ -8,6 +8,8 @@ export const whatsNewZh: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "再显示 {count} 项",
   "whatsNew.showAll#other": "再显示 {count} 项",
   "whatsNew.showLess": "收起",
+  "whatsNew.memberSignIn.title": "每个人都能登录",
+  "whatsNew.memberSignIn.body": "在“家庭”中添加每个人的邮箱，或发送邀请链接。他们会直接进入家庭。",
   "whatsNew.calendarAnswers.title": "问 HomeTalk 有什么安排",
   "whatsNew.calendarAnswers.body": "“十二月有活动吗？”现在会直接根据你的日历给出真实答案。",
   "whatsNew.calendar.title": "日历标签页",

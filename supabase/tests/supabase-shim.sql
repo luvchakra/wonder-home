@@ -15,6 +15,9 @@ create table if not exists auth.users (
   email text unique,
   created_at timestamptz not null default now()
 );
+-- Set when the address is verified, as Supabase Auth does; null for an
+-- unconfirmed sign-up (wh.claim_members_by_email links only a verified one).
+alter table auth.users add column if not exists email_confirmed_at timestamptz;
 
 -- Supabase derives auth.uid() from the request's JWT claims. Tests set the same
 -- GUC, so the policies under test see exactly what they would in production.
