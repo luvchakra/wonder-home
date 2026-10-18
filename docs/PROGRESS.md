@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**241 of 253 stories done — 95.3%**
+**241 of 254 stories done — 94.9%**
 
 | Status | Stories |
 |---|---:|
 | Done | 241 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 8 |
+| Not Started | 9 |
 | Deferred | 1 |
 
 ## By module
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
 | 24 HomePlaces | `██████████` | 7 | 7 | — |
-| 25 HomeFood | `█████░░░░░` | 5 | 10 | 1 in progress, 4 not started |
+| 25 HomeFood | `████░░░░░░` | 5 | 11 | 1 in progress, 5 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
 ## What is left
@@ -63,6 +63,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
+| `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-002` Calendar module adapters | 26 HomeEvents | P0 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
@@ -486,7 +487,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-5 of 10 done `█████░░░░░`
+5 of 11 done `████░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -499,6 +500,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | P2 | Not Started | Curated items show their category icon, not a picture. A product names the item it is (`grocery_catalog.item_id`) only by review. A native speaker should check the regional names the curators flagged |
 | `25-009` Indian nutrition for the catalog, from IFCT 2017 | P0 | Done | The owner, 2026-10-18: Indian foods get an Indian nutrient profile, USDA kept for later. `ifct_foods` (migration `20261018220000`, live): ICMR–NIN's Indian Food Composition Tables 2017, 542 foods, per 100 g edible portion, 14 nutrients incl. iron, calcium, folate; loaded by `npm run catalog:ifct` from a pinned, checksummed copy of its MIT digitisation (never kept in the repo); energy computed from proximates, and said so, for the 17 entries the table gives none for or contradicts. 399 curated items link to their IFCT food (`grocery_catalog.ifct_code`, `supabase/seed/grocery-catalog/ifct-links.csv`: 220 exact, 175 close, 4 approximate). The item page shows it with the match said and ICMR–NIN credited. **Rights:** the owner chose to load now and ask NIN for written permission in parallel (draft in the progress note) |
 | `25-010` A search that shows what a household means, and amounts that move naturally | P0 | Done | The owner, 2026-10-18. `grocery_catalog.common` (411 everyday items): "eggs" shows white and brown eggs and the brands on sale, one entry per brand and name; a rarer kind when typed by name (`chooseResults`, `search_grocery_catalog_kind`). No amount in the list: tapping an entry opens − / + from the usual buy. Every stepper walks a ladder of natural amounts (`commerce/buying-sizes.ts`): loose produce 250 g, 500 g, 750 g, 1 kg, 1.25 kg…; atta and rice the packs sold (1, 2, 5, 10 kg); dal 500 g–5 kg; spices 50–500 g; oil 500 ml–5 l; milk by the half litre; anything counted one at a time; a packed product one pack at a time; a household's own step still wins. Wikimedia Commons pictures (CC0/PD/CC BY/CC BY-SA, credited) for everyday items only (`npm run catalog:pictures`). The sheet now rises above the phone keyboard |
+| `25-011` Indian nutrition, the rest | P1 | Not Started | The owner, 2026-10-18: medium priority, for later; what 25-009 finished is what is used. Left: link the curated Indian items not yet linked to their IFCT food (399 of 1,559 are), in the same rules (same food and state, "close" says what differs, nothing processed); cooked and prepared foods, which IFCT does not hold (INDB 2024 builds them from IFCT, so the same NIN permission covers it); NIN's written permission for IFCT (email drafted in `docs/progress/2026-10-18-ifct-indian-nutrition.md`, needs a person to send); a native speaker's review of the close matches and regional names |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
 
 ### 26 — HomeEvents

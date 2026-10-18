@@ -50,7 +50,7 @@ disagree again.)
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 7 | 1 | 4 | 2 | 4 | In Progress |
-| 25 | HomeFood | 5 | 2 | 2 | 1 | 2 | In Progress |
+| 25 | HomeFood | 11 | 5 | 3 | 3 | 5 | In Progress |
 | 26 | HomeEvents | 6 | 2 | 2 | 2 | 0 | In Progress |
 
 ## Execution Log

@@ -32,6 +32,7 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | 3 | HomeFood | 25-003c | Use soon and depletion wording: "Use first" (a known expiry) and "Running low" are never mixed. Wording never claims stock it does not know, and never suggests something past an estimated date (design §3.6) | Not Started | — |
 | 4 | HomeFood | 25-005 | "Make that 2 litres" corrects an amount: wire `readMakeThat` (`conversation/quantity.ts`) into `conversation/corrections.ts` | Not Started | — |
 | 5 | HomeFood | 25-004 | Send to Cook over WhatsApp: an approved meal plan goes to a consenting helper through the official template. Built inert | Not Started | The template stays inert until a person registers it with Meta (`WHATSAPP_COOK_TEMPLATE_NAME`) |
+| 5a | HomeFood | 25-011 (P1) | Indian nutrition, the rest: link the remaining Indian items to IFCT, cooked foods once cleared, a native speaker's review. Medium priority, for later (the owner, 2026-10-18); the 399 linked items are what is used | Later | NIN's written permission for cooked foods (INDB) |
 | 6 | HomeTalk | H-1 | "How much do I owe this month?": a total of the bills in the window, as arithmetic from the records (rule 9), with each bill listed | Not Started | — |
 | 7 | HomeTalk | H-2 | Corrections in the golden runner: replay "actually, make that Friday" and "not bread, eggs" against the executed action, as the route does, so `npm run eval` covers them | Not Started | — |
 | 7a | HomeTalk | H-4 | A typed paragraph of several family facts ("Manan likes home-cooked food. He doesn't like outside food and Upasana likes cooking") is split into one fact each, with "he/she" resolved to the person just named. Gemini Live already does this per tool call | Not Started | — |
@@ -56,7 +57,7 @@ Last updated: 2026-10-18 (04-018 HomeTalk across screens done; 25-006 grocery ca
 | Gemini Live said it could not update a family preference | 04-017 | Done: telling WonderHome what someone likes works by voice (`remember_family_fact`) |
 | A shared grocery catalog with pictures and nutrients behind Add an item | 25-006 | Done: 1,559 curated items and Open Food Facts India products, searched by any name |
 | USDA nutrition linked to the catalog, in phases | 25-007 | Queued, lower priority |
-| Indian nutrient profiles for Indian foods | 25-009 | Done: IFCT 2017 (ICMR–NIN) for 399 items, credited |
+| Indian nutrient profiles for Indian foods | 25-009 | Done: IFCT 2017 (ICMR–NIN) for 399 items, credited. The rest is 25-011, medium priority for later |
 | Fewer, everyday search results with brands and pictures; natural amounts (1 kg, 1.25 kg; eggs one at a time) | 25-010 | Done |
 | Ask HomeTalk to open screens and keep talking while moving between them, with the glow showing on every screen | 04-018 | Done, #225 (golden HT-84 to HT-87) |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
