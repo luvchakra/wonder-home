@@ -68,13 +68,16 @@ import { placesReply } from "@wonderhome/core/homeplaces/answer";
 import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
+import { calendarSpanReply } from "@wonderhome/core/calendar/answer";
+import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
+import { resolveCalendarSpan, type CalendarSpan } from "@wonderhome/core/conversation/temporal";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "@wonderhome/core/homebrain/turn";
 import { explain, type WhyTopic } from "@wonderhome/core/homebrain/why";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
-import { requireMembership } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 
@@ -755,6 +758,23 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     });
     carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
     brain = { source: "deterministic", factsSent: 0 };
+  } else if (
+    result.kind === "reply" &&
+    result.intent.action === "ask_status" &&
+    result.proposal.kind === "answer" &&
+    (!limits || (limits.scopes as readonly string[]).includes("calendar.read")) &&
+    calendarSpanOf(result.intent.parameters.when, membership.household.timezone)
+  ) {
+    // "Do you see any events in December?": a month-sized span, answered
+    // from the calendar itself for this person (HomeEvents), by rules.
+    // HomeBrain's facts only reach a week ahead, which is how "nothing in
+    // December" was once said about a month with three birthdays in it.
+    const span = calendarSpanOf(result.intent.parameters.when, membership.household.timezone)!;
+    const read = await readCalendarSpan(supabase, membership, span);
+    composedAt = Date.now();
+    text = calendarSpanReply({ span, entries: read.entries, failedSources: read.failedSources, timeZone: membership.household.timezone });
+    carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
+    brain = { source: "deterministic", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain === "string") {
     // "Why?", "where did this come from?", "what did I just send?" — from
     // the recorded evidence, assembled here; never a model (§10).
@@ -1165,6 +1185,27 @@ async function loadReferences(input: {
     conversation,
     homesend: homeSendFocus(homeSendItems),
   };
+}
+
+/** A month-sized span named in a question ("december", "the next few months"), or null for anything day- or week-sized. */
+function calendarSpanOf(when: unknown, timezone: string) {
+  return typeof when === "string" && when.trim() ? resolveCalendarSpan(when, { timezone, now: new Date() }) : null;
+}
+
+/** The calendar for a span, as this person may see it: events, birthdays and occasions, and their holiday list. */
+async function readCalendarSpan(supabase: Supabase, membership: HouseholdMembership, span: CalendarSpan) {
+  const timeZone = membership.household.timezone;
+  const preferences = await readCalendarPreferences(supabase, membership.memberId).catch(() => null);
+  const locale = preferencesOf(membership.locale, timeZone);
+  return calendarRange(supabase, {
+    householdId: membership.household.id,
+    householdRegion: locale.region ?? null,
+    viewer: { memberId: membership.memberId, isAdmin: isHouseholdAdmin(membership), timeZone },
+    from: span.from,
+    to: span.to,
+    holidayRegion: preferences?.holidayRegion ?? null,
+    words: { birthday: (name) => `${name}'s birthday`, occasion: (name, label) => (label ? `${name}: ${label}` : `${name}'s special day`) },
+  }).catch(() => ({ entries: [], failedSources: ["event" as const] }));
 }
 
 /**

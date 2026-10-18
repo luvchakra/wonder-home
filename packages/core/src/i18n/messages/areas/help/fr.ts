@@ -149,6 +149,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.4": "Sur un téléphone, balayez vers la gauche ou la droite pour passer d’Accueil à Calendrier, HomeTalk, Famille et Plus.",
   "help.guide.today-and-home.body.5":
     "Sous l'état de la famille, l'accueil affiche vos animaux, si vous en avez. Chacun ouvre les mêmes informations que l'écran Famille ; pour les modifier, allez dans Famille.",
+  "help.guide.today-and-home.body.6": "Nouveautés, en haut de l’Accueil, liste ce qui a été ajouté à WonderHome depuis votre dernière ouverture ici, et chaque élément ouvre l’endroit où il se trouve. Compris masque la liste ; elle ne montre jamais deux fois la même chose, et chaque élément s’en va de lui-même un mois après son arrivée.",
 
   // Calendar
   "help.guide.calendar.title": "Calendrier",
@@ -158,6 +159,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.3": "Ajouter place un projet dans le calendrier : quoi, quand (ou toute la journée), qui vient et une catégorie. Sous Plus d’options, vous pouvez le faire se répéter, choisir qui peut le voir — tout le monde, seulement ceux qui viennent, ou vous seul — et ajouter des notes. Avant de l’ajouter, WonderHome vérifie les chevauchements et vous dit avec quoi ; quelqu’un d’occupé par quelque chose que vous ne pouvez pas voir apparaît seulement comme occupé. Vous pouvez quand même l’ajouter.",
   "help.guide.calendar.body.4": "Ouvrez un jour d’un événement répété et son organisateur peut sauter seulement ce jour-là, ou le rétablir ; les autres ont toujours lieu. Un projet proposé a un bord en pointillés et indique « Proposé ».",
   "help.guide.calendar.body.5": "Les filtres ne changent que ce que vous voyez : catégories, personnes, seulement ce qui vous concerne, seulement les projets confirmés, jours fériés, et la vue sur laquelle le calendrier s’ouvre. Le programme du jour — repas, factures, école et ce qui vous attend — est à un geste de la journée d’aujourd’hui.",
+  "help.guide.calendar.body.6": "Demandez à HomeTalk ce qui est prévu sur un mois ou plus — « des événements en décembre ? », « qu’est-ce qui arrive dans les prochains mois ? » — et il liste, par date, les événements, anniversaires et jours fériés du Calendrier que vous pouvez voir. Il lit le Calendrier lui-même, donc rien de privé d’une autre personne n’est mentionné.",
 
   "help.guide.notifications.title": "Rappels et notifications",
   "help.guide.notifications.summary": "À propos de choses réelles, pour une seule personne, au bon moment — et silencieux une fois réglés.",

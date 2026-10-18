@@ -347,3 +347,71 @@ function short(isoDate: string): string {
   const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
   return `${part("weekday")} ${part("day")} ${part("month")}`;
 }
+
+export type CalendarSpan = {
+  /** First and last local day, YYYY-MM-DD, both included. */
+  from: string;
+  to: string;
+  /** Human words for a reply: "December 2026", "the next 3 months (Sun 18 Oct – Mon 18 Jan)". */
+  label: string;
+};
+
+/** The month-sized spans a calendar question names, for a rule's regex to find. */
+export const CALENDAR_SPAN_PHRASE =
+  "(?:(?:in |for |during |over )?(?:this|next) month|(?:in |for |during )?(?:january|february|march|april|may|june|july|august|september|october|november|december)(?: \\d{4})?|" +
+  "(?:the )?(?:next|coming) (?:\\d{1,2}|two|three|four|five|six|few|couple(?: of)?) months|(?:the )?(?:months|weeks) ahead|(?:the )?coming months|(?:the )?rest of (?:the|this) year)";
+
+const COUNTS: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, few: 3, couple: 2, "couple of": 2 };
+
+/**
+ * A month-sized span a calendar question names ("December", "next month",
+ * "the next few months", "the months ahead"), against `now` in `timezone`.
+ * A bare month is this year's, or next year's once it has passed. "The next
+ * few months" is three; "the weeks ahead" is four weeks. Day- and week-sized
+ * phrases are `resolveTemporal`'s, so this returns null for them.
+ */
+export function resolveCalendarSpan(phrase: string, options: { timezone: string; now: Date }): CalendarSpan | null {
+  const text = normalise(phrase).replace(/^(?:during|over) /, "").replace(/^the /, "");
+  if (!text) return null;
+  const today = isoDateIn(options.now, options.timezone);
+  const [year, month] = today.split("-").map(Number) as [number, number];
+  const monthEnd = (y: number, m0: number) => isoOf(y, m0, new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate());
+  const named = (y: number, m0: number) => `${MONTHS[m0]![0]!.toUpperCase()}${MONTHS[m0]!.slice(1)} ${y}`;
+
+  if (text === "this month") return { from: today, to: monthEnd(year, month - 1), label: `the rest of ${named(year, month - 1)}` };
+  if (text === "next month") {
+    const y = month === 12 ? year + 1 : year;
+    const m0 = month % 12;
+    return { from: isoOf(y, m0, 1), to: monthEnd(y, m0), label: named(y, m0) };
+  }
+  const bare = /^(january|february|march|april|may|june|july|august|september|october|november|december)(?: (\d{4}))?$/.exec(text);
+  if (bare) {
+    const m0 = monthIndex(bare[1]!)!;
+    const y = bare[2] ? Number(bare[2]) : m0 + 1 < month ? year + 1 : year;
+    if (y < year - 1 || y > year + 2) return null;
+    return { from: isoOf(y, m0, 1), to: monthEnd(y, m0), label: named(y, m0) };
+  }
+  const ahead = /^(?:next|coming) (\d{1,2}|two|three|four|five|six|few|couple(?: of)?) months$/.exec(text);
+  const count = ahead ? (/^\d+$/.test(ahead[1]!) ? Number(ahead[1]) : COUNTS[ahead[1]!]!) : /^(?:months ahead|coming months)$/.test(text) ? 3 : null;
+  if (count !== null) {
+    const months = Math.min(Math.max(count, 1), 12);
+    const to = addMonthsTo(today, months);
+    return { from: today, to, label: `the next ${months === 1 ? "month" : `${months} months`} (${short(today)} – ${short(to)})` };
+  }
+  if (text === "weeks ahead") {
+    const to = addDays(today, 27);
+    return { from: today, to, label: `the next 4 weeks (${short(today)} – ${short(to)})` };
+  }
+  if (/^rest of (?:the|this) year$/.test(text)) return { from: today, to: isoOf(year, 11, 31), label: `the rest of ${year}` };
+  return null;
+}
+
+/** The same day `months` later, or the month's last day when it has fewer. */
+function addMonthsTo(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number) as [number, number, number];
+  const index = y * 12 + (m - 1) + months;
+  const ty = Math.floor(index / 12);
+  const tm0 = index % 12;
+  const last = new Date(Date.UTC(ty, tm0 + 1, 0)).getUTCDate();
+  return isoOf(ty, tm0, Math.min(d, last));
+}

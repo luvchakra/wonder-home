@@ -149,6 +149,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.4": "Auf dem Handy wischst du nach links oder rechts, um zwischen Start, Kalender, HomeTalk, Familie und Mehr zu wechseln.",
   "help.guide.today-and-home.body.5":
     "Unter dem Familienstatus zeigt Home eure Haustiere, falls ihr welche habt. Jedes öffnet dieselben Angaben wie auf der Familienseite; ändern kannst du sie unter Familie.",
+  "help.guide.today-and-home.body.6": "„Neu“ oben auf Start listet, was seit deinem letzten Öffnen hier zu WonderHome hinzugekommen ist, und jeder Eintrag öffnet seine Stelle. Verstanden blendet die Liste aus; sie zeigt nie zweimal dasselbe, und jeder Eintrag verschwindet einen Monat nach seinem Erscheinen von selbst.",
 
   // Calendar
   "help.guide.calendar.title": "Kalender",
@@ -158,6 +159,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.calendar.body.3": "Hinzufügen trägt einen Plan in den Kalender ein: was, wann (oder ganztägig), wer mitkommt und eine Kategorie. Unter Weitere Optionen kannst du ihn wiederholen lassen, festlegen, wer ihn sieht – alle, nur wer mitkommt, oder nur du – und Notizen hinzufügen. Bevor er eingetragen wird, prüft WonderHome Überschneidungen und sagt dir, womit; wer mit etwas beschäftigt ist, das du nicht sehen kannst, erscheint nur als beschäftigt. Du kannst ihn trotzdem hinzufügen.",
   "help.guide.calendar.body.4": "Öffne einen Tag eines wiederkehrenden Termins, und wer ihn plant, kann nur diesen Tag auslassen oder zurückholen; die anderen finden weiter statt. Ein vorgeschlagener Plan hat einen gestrichelten Rand und trägt den Hinweis „Vorgeschlagen“.",
   "help.guide.calendar.body.5": "Filter ändern nur, was du siehst: Kategorien, Personen, nur, woran du beteiligt bist, nur bestätigte Pläne, Feiertage und die Ansicht, mit der der Kalender öffnet. Der Plan für heute – Essen, Rechnungen, Schule und was dich braucht – ist einen Tipp vom heutigen Tag entfernt.",
+  "help.guide.calendar.body.6": "Frag HomeTalk, was in einem Monat oder länger ansteht – „gibt es Termine im Dezember?“, „was kommt in den nächsten Monaten?“ –, und es listet nach Datum die Termine, Geburtstage und Feiertage im Kalender auf, die du sehen darfst. Es liest den Kalender selbst, daher wird nie etwas Privates von jemand anderem erwähnt.",
 
   "help.guide.notifications.title": "Erinnerungen und Benachrichtigungen",
   "help.guide.notifications.summary": "Zu echten Dingen, an eine Person, wenn es ihr passt – und still, sobald es erledigt ist.",

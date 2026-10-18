@@ -10,6 +10,7 @@ import { entryMr } from "./areas/entry/mr";
 import { installMr } from "./areas/install/mr";
 import { eventsMr } from "./areas/events/mr";
 import { calendarMr } from "./areas/calendar/mr";
+import { whatsNewMr } from "./areas/whatsnew/mr";
 import { groceryMr } from "./areas/grocery/mr";
 import { welcomeMr } from "./areas/welcome/mr";
 
@@ -681,6 +682,7 @@ export const mr: Catalog = {
   ...installMr,
   ...eventsMr,
   ...calendarMr,
+  ...whatsNewMr,
   ...groceryMr,
   ...welcomeMr,
 };

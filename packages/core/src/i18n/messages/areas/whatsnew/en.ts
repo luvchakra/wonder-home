@@ -1,0 +1,38 @@
+/**
+ * whatsNew — English, the source for this area: the "What's new" card at the
+ * top of Home, one title and one line per entry in `help/whats-new.ts`.
+ */
+export const whatsNewEn = {
+  "whatsNew.title": "What's new",
+  "whatsNew.lede": "Added since you last opened WonderHome.",
+  "whatsNew.dismiss": "Got it",
+  "whatsNew.showAll#one": "Show {count} more",
+  "whatsNew.showAll#other": "Show {count} more",
+  "whatsNew.showLess": "Show fewer",
+  "whatsNew.calendarAnswers.title": "Ask HomeTalk what's on",
+  "whatsNew.calendarAnswers.body": "\"Any events in December?\" now gets the real answer, straight from your Calendar.",
+  "whatsNew.calendar.title": "The Calendar tab",
+  "whatsNew.calendar.body": "Today is now Calendar: month, week, day and year, with today's plan one tap away.",
+  "whatsNew.eventPrivacy.title": "Private events",
+  "whatsNew.eventPrivacy.body": "Choose who sees an event: everyone, only the people going, or just you.",
+  "whatsNew.holidays.title": "Public holidays",
+  "whatsNew.holidays.body": "India's public holidays are on the calendar, each with its source.",
+  "whatsNew.placeBook.title": "Your place book",
+  "whatsNew.placeBook.body": "The places you saved or turned down, in one list under More.",
+  "whatsNew.dayHours.title": "School and office hours",
+  "whatsNew.dayHours.body": "Add them to people's details, so \"after school\" and \"after work\" mean your real times.",
+  "whatsNew.groceryTalk.title": "Groceries with HomeTalk",
+  "whatsNew.groceryTalk.body": "Say \"we have 10 eggs\" or \"bought 2 kg potatoes\" and the list keeps up.",
+  "whatsNew.petsHome.title": "Pets on Home",
+  "whatsNew.petsHome.body": "Your pets now sit with the family on the Home screen.",
+  "whatsNew.groceries.title": "One grocery list",
+  "whatsNew.groceries.body": "What's at home and what to buy, side by side.",
+  "whatsNew.eventPage.title": "Event pages and invite links",
+  "whatsNew.eventPage.body": "Open any event to plan it, and invite anyone with a link.",
+  "whatsNew.homePlaces.title": "Places to go",
+  "whatsNew.homePlaces.body": "Ask HomeTalk for somewhere to eat or hang out near home or school.",
+  "whatsNew.memberLanguages.title": "Every language you speak",
+  "whatsNew.memberLanguages.body": "Add each language you speak, and how well.",
+  "whatsNew.homeOnMap.title": "Home on the map",
+  "whatsNew.homeOnMap.body": "Pick the home address and schools from Google Maps.",
+} as const;

@@ -169,6 +169,7 @@ export const helpEn = {
   "help.guide.today-and-home.body.4": "On a phone, swipe left or right to move between Home, Calendar, HomeTalk, Family and More.",
   "help.guide.today-and-home.body.5":
     "Under Family status, Home shows your pets, if you have any. Each opens to the same details the Family screen shows; to change them, go to Family.",
+  "help.guide.today-and-home.body.6": "What's new, at the top of Home, lists what has been added to WonderHome since you last opened it here, each opening where it lives. Got it hides the list; it never shows the same thing twice, and an entry leaves on its own a month after it arrived.",
 
   // Calendar
   "help.guide.calendar.title": "Calendar",
@@ -178,6 +179,7 @@ export const helpEn = {
   "help.guide.calendar.body.3": "Add puts a plan on the calendar: what, when (or all day), who's going and a category. Under More options you can make it repeat, choose who can see it — everyone, only the people going, or just you — and add notes. Before it is added, WonderHome checks for clashes and tells you what it clashes with; someone busy with something you can't see is shown only as busy. You can still add it anyway.",
   "help.guide.calendar.body.4": "Open one day of a repeating event and its planner can skip just that day, or bring it back; the rest carry on. A proposed plan has a dashed edge and says \"Proposed\".",
   "help.guide.calendar.body.5": "Filters only change what you see: categories, people, only things you're part of, only confirmed plans, holidays, and the view the calendar opens on. Today's plan — meals, bills, school and what needs you — is one tap from today's day.",
+  "help.guide.calendar.body.6": "Ask HomeTalk what's on for a month or more — \"any events in December?\", \"what's coming up in the next few months?\" — and it lists, by date, the events, birthdays and holidays on the Calendar that you can see. It reads the Calendar itself, so nothing private of someone else's is mentioned.",
 
   // Reminders and notifications
   "help.guide.notifications.title": "Reminders and notifications",
