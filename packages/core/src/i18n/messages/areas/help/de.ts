@@ -206,7 +206,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.school.body.4":
     "Die Schulaufgaben eines Kindes sehen das Kind selbst, seine Erziehungsberechtigten und die Admins – im selben Haus zu wohnen reicht allein nicht aus.",
   "help.guide.school.body.5":
-    "Jedes Kind hat unter Kinder & Schule eine eigene Karte. Sie zeigt die Schule, aus Google Maps gewählt, mit Klasse, die Klassenleitung und jede Fachlehrkraft. Ein Erwachsener fügt eine Lehrkraft mit dem Stift und dem Papierkorb neben jedem Namen hinzu, ändert oder entfernt sie.",
+    "Jedes Kind hat unter Kinder & Schule eine eigene Karte. Sie zeigt die Schule, aus Google Maps gewählt, mit Klasse, die Klassenleitung und jede Fachlehrkraft. Ein Erwachsener fügt eine Lehrkraft mit dem Stift und dem Papierkorb neben jedem Namen hinzu, ändert oder entfernt sie. Dort werden auch Schulbeginn und Schulschluss eingetragen, dieselben wie in den Angaben des Kindes unter Familie: Ändern Sie eines, folgt das andere.",
   "help.guide.school.body.6":
     "Kurse außerhalb der Schule, etwa Musik, Klavier, Karate oder ein anderer Kurs, sind eingeklappte Zeilen unter der Karte des Kindes. Eingeklappt zeigt eine Zeile den Kurs, eine kurze Beschreibung und seine Tage und Zeiten. Aufgeklappt zeigt sie die Lehrkraft, den Ort (aus Google Maps gewählt), von wann bis wann, Ihre Notizen, anstehende Wettbewerbe sowie gewonnene Medaillen und Auszeichnungen, und Sie können jeweils mehr hinzufügen. Seine Tage und Zeiten tragen jede Stunde von selbst in den Kalender ein, auch die heutige, ohne dass Sie etwas von Hand hinzufügen. Wird ein Kurs beendet, verschwindet er aus dem Kalender, und das Eingetragene bleibt.",
 

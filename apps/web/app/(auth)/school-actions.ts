@@ -247,7 +247,16 @@ export async function saveChildSchoolAction(_previous: ActionState, formData: Fo
     const supabase = await createClient();
     const actor = await requireMembership(supabase, parsed.data.householdId);
     const { saveSchoolFromForm } = await import("../_lib/places");
+    // The school day, read before anything is written so a half-given time refuses the whole save.
+    const { readHoursInput, HOURS_PROBLEM } = await import("@wonderhome/core/household/day-hours");
+    const hours = formData.get("schoolHoursField") === "1" ? readHoursInput(formData.get("schoolStarts"), formData.get("schoolEnds"), { overnight: false }) : null;
+    if (hours && !hours.ok) return { error: HOURS_PROBLEM[hours.problem] };
     const result = await saveSchoolFromForm(supabase, actor, parsed.data.childMemberId, formData);
+    // The same hours the child's details in Family set (one record), on the school now on record.
+    if (hours?.ok && result !== "removed") {
+      const { setSchoolHours } = await import("@wonderhome/core/school/enrolments");
+      await setSchoolHours(supabase, { householdId: parsed.data.householdId, childMemberId: parsed.data.childMemberId, hours: hours.hours });
+    }
     revalidatePath("/school");
     revalidatePath("/places");
     revalidatePath("/family");

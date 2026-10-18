@@ -112,6 +112,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
           placeId: enrolment.placeId ?? null,
           mapsUri: mapsLink({ name: enrolment.schoolName, formattedAddress: enrolment.schoolAddress ?? "", placeId: enrolment.placeId }),
           grade: enrolment.grade,
+          hours: enrolment.hours ?? null,
         }
       : null;
   };
@@ -119,6 +120,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     field: t("places.school.label"),
     gradeField: t("school.place.gradeField"),
     gradePlaceholder: t("school.place.gradePlaceholder"),
+    starts: t("school.place.starts"),
+    ends: t("school.place.ends"),
+    hoursHint: t("school.place.hoursHint"),
     edit: t("school.place.edit", { name: "{name}" }),
     title: t("school.place.title", { name: "{name}" }),
     lede: t("school.place.lede"),
@@ -137,7 +141,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   // "Tue, Thu · 5:00 – 6:00 pm": what a folded class says about when it meets.
   const whenOf = (activity: Activity) =>
     [
-      activity.days.length > 0 ? activity.days.map((day) => dayNames[day - 1]).join(", ") : t("school.activities.noSchedule"),
+      activity.days.length === 7 ? t("school.activities.everyDay") : activity.days.length > 0 ? activity.days.map((day) => dayNames[day - 1]).join(", ") : t("school.activities.noSchedule"),
       activity.startsAt ? (activity.endsAt ? `${clockOf(activity.startsAt)} – ${clockOf(activity.endsAt)}` : clockOf(activity.startsAt)) : null,
     ]
       .filter(Boolean)
@@ -321,7 +325,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                         icon={School}
                         tone="school"
                         title={school ? school.name : t("school.place.label")}
-                        meta={school ? [enrolment?.grade ? t("school.place.grade", { grade: enrolment.grade }) : null, school.address].filter(Boolean).join(" · ") : t("school.place.none")}
+                        meta={school ? [enrolment?.grade ? t("school.place.grade", { grade: enrolment.grade }) : null, enrolment?.hours ? `${clockOf(enrolment.hours.starts)} – ${clockOf(enrolment.hours.ends)}` : null, school.address].filter(Boolean).join(" · ") : t("school.place.none")}
                         action={<ChildSchoolActions householdId={householdId} child={childRef} school={school} canChange={canChangeSchool} available={placeSearchAvailable()} labels={schoolLabels} />}
                       />
                       {theirTeachers.map((teacher) => (

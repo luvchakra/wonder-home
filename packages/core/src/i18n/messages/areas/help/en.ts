@@ -231,7 +231,7 @@ export const helpEn = {
   "help.guide.school.body.4":
     "A child's school work is visible to that child, their guardians and administrators — living in the same house is not by itself enough.",
   "help.guide.school.body.5":
-    "Each child has their own card on Kids & School. It shows the school, picked from Google Maps with its class and section, the class teacher and every subject teacher. An adult adds, changes or removes a teacher with the pencil and bin beside each name.",
+    "Each child has their own card on Kids & School. It shows the school, picked from Google Maps with its class and section, the class teacher and every subject teacher. An adult adds, changes or removes a teacher with the pencil and bin beside each name. The school's start and end times are set there too, and they are the same as in the child's details in Family: change one and the other follows.",
   "help.guide.school.body.6":
     "Classes outside school, such as music, piano, karate or any learning class, are folded rows under the child's card. A folded row shows the class, a short description and the days and times it meets. Opened, it shows the teacher, where it is (picked from Google Maps), from when until when, your notes, competitions coming up and the medals and awards won, and you can add more of each. Its days and times put every class on the Calendar on its own, including today's, with nothing to add by hand. Stopping a class takes it off the Calendar and keeps what was recorded.",
 

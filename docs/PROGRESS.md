@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**256 of 276 stories done — 92.8%**
+**260 of 277 stories done — 93.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 256 |
-| In Progress | 6 |
+| Done | 260 |
+| In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 13 |
 | Deferred | 1 |
@@ -26,14 +26,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 12 | 12 | — |
-| 01 Identity & Family Accounts | `██████████` | 11 | 11 | — |
+| 01 Identity & Family Accounts | `██████████` | 12 | 12 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 22 | 23 | 1 in progress |
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
-| 08 Kids & School Intelligence | `███████░░░` | 9 | 12 | 3 in progress |
+| 08 Kids & School Intelligence | `██████████` | 12 | 12 | — |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 9 | 9 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
@@ -58,9 +58,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
-| `08-010` Each child's school details: class, class teacher, subject teachers | 08 Kids & School Intelligence | P0 | In Progress |
-| `08-011` Activities and classes outside school, folded | 08 Kids & School Intelligence | P0 | In Progress |
-| `08-012` Today's classes on the calendar by default | 08 Kids & School Intelligence | P0 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Not Started |
@@ -101,7 +98,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-11 of 11 done `██████████`
+12 of 12 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -116,6 +113,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-009` Settings & Profile consolidation | P1 | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
 | `01-010` Every member signs in as themselves | P0 | Done | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Since 2026-10-18 (owner's decision), when the member has a sign-in email on record and the deployment has SMTP set (`email/mailer.ts`, `WONDERHOME_SMTP_*`; production sends from the GoDaddy mailbox connect@wonderapps.biz, its password only in Vercel), the first choice is **Email the invite to {email}** (`emailMemberInviteAction`): WonderHome emails the link to the address on record, read on the server, never one the browser names; the link is made either way, a failed send says so (amber) and keeps Share/Copy and the Admin's own mail app, and a sent one drops the second Send email. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): an Admin set a child's sign-in email in Family; that child then signed in by password and landed straight in the household on the child Home, with Bills refused and Members and Plan read-only; Invite made a link (Send email opened a filled-in mail, Copy worked; Share appears only where the browser has a share sheet); a helper opened her link signed out, signed in, accepted and became the helper already on record, with no second member |
 | `01-011` A phone number for every member, and sign-in by phone | P0 | Done | The owner, 2026-10-18: a helper may have no email and will mostly use a phone. `household_member_phones` (migration `20261018210000`, live): one E.164 number per member, unique in the household; Admins write it, Admins, adults and the member read it (a child or helper sees only their own). Set in a member's details (pencil) and when adding a helper (`member-phone.ts`: `normalPhone` takes an Indian number as written, any other with its country code). A verified phone sign-in becomes the member recorded with that number, keeping their role (`wh.claim_members_by_phone`, run after every sign-in alongside email: `claimMembers`). **Sign in by phone** (`/sign-in/phone`: number, then texted code; `sendPhoneCode`/`verifyPhoneCode`) appears only when `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true`, which waits on a person connecting an SMS provider (Twilio, MessageBird, Vonage or Textlocal) in Supabase Auth; until then the live project answers `phone_provider_disabled` and the page says sign-in by phone isn't available. DB-tested (`scripts/test-member-phone-rls.mjs`); browser-checked at 360px and desktop (a helper added with a number, shown as +91 98765 43210, edited to a UK number; the phone page and its refusal) |
+| `01-012` A person's details read in order, and nothing runs off the card | P1 | Done | The owner's report, 2026-10-18 (PR #234): a long sign-in email ran off a child's details. Facts are grouped by what they are about (who they are, how to reach them, their day, family), email and phone take a whole row, and every value wraps rather than overflowing (rule 15). Checked at 360px with a 60-character email: no overflow |
 
 ### 02 — Household Configuration & Playbook
 
@@ -225,7 +223,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-9 of 12 done `███████░░░`
+12 of 12 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -238,9 +236,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-007` School summaries | P1 | Done | only messages that ask something surface; a newsletter is filed |
 | `08-008` Deep portal automation | P2 | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
 | `08-009` Add a child from a school notice | P2 | Done | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline. Done: the resolver names an untitled unknown child (`unknown`), never assumes the household's only child; the review offers "Add <name> as a child" to Admins (guardian = the Admin, as on Family) and confirms the notice for them in the same step; golden case HS-15 |
-| `08-010` Each child's school details: class, class teacher, subject teachers | P0 | In Progress | The owner, 2026-10-18. The school itself (Google Maps picker) is done in 24-010. Left: the class/grade, the class teacher and every subject teacher with their names, per child on Kids & School, each added, changed and removed (rule 12). Needs a migration (SQL for the owner) |
-| `08-011` Activities and classes outside school, folded | P0 | In Progress | The owner, 2026-10-18: music, piano, karate and any learning class, per child, as folded rows showing the class, a short description and its timings; opened, the teacher, the schedule, notes, upcoming competitions and medals won, all addable. Needs a migration |
-| `08-012` Today's classes on the calendar by default | P0 | In Progress | The owner, 2026-10-18: an activity's sessions that fall today appear in the Calendar without anyone adding them (a calendar adapter over the activity schedule, like occasions and holidays). Depends on 08-011 |
+| `08-010` Each child's school details: class, class teacher, subject teachers | P0 | Done | The owner, 2026-10-18 (PR #234). Each child has a card on Kids & School: the school (Google Maps, 24-010) with its class and section and its start and end times, which are the same record the child's details in Family edit (`setSchoolHours`); the class teacher and each subject teacher (subject picked from a list with its own add, rule 20), each changed or removed with icons (`school_teachers`, migration `20261018260000`, run by the owner 2026-10-18; verify:live 287/287). Child, guardians and Admins read; guardians and Admins write (`wh.may_change_child`), `scripts/test-child-activities-rls.mjs` 7/7. Browser-checked at 360px and 1280px on the live project |
+| `08-011` Activities and classes outside school, folded | P0 | Done | PR #234. Folded rows (`ExpandableRow`) show the class, a short description and its days and times ("Every day" for all seven); opened: teacher, where (Google Maps, re-read on the server), from–until, notes, competitions coming up and medals, awards and notes, each addable and removable; a class is changed or stopped (`child_activities`, `child_activity_notes`, `school/activities.ts`). Nothing hard-deleted: a removed award was kept with `active = false`. Browser-checked: Piano, every day 5–6 pm, at TheMusicsCool picked from Maps, a December festival and a Grade 1 distinction |
+| `08-012` Today's classes on the calendar by default | P0 | Done | PR #234. A new `activity` source in `calendarRange` (`activityEntries`, `sessionDates`): each class's sessions on the days it meets, at its times on the household's clock, for that child, opening on Kids & School; stopping a class takes it off. Checked: the Calendar's day view showed "Piano · 5:00 pm – 6:00 pm · Anya QA" today with nothing added by hand |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
