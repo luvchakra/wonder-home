@@ -120,3 +120,11 @@ create index usda_foods_catalog_id on public.usda_foods (catalog_id) where catal
 
 alter table public.usda_foods enable row level security;
 revoke all on public.usda_foods from anon, authenticated;
+
+-- Service role only, stated as an explicit deny-all policy — the convention
+-- for server-only tables (payment_provider_plans, plan_policy_events).
+create policy usda_foods_no_client_access
+  on public.usda_foods for all
+  to anon, authenticated
+  using (false)
+  with check (false);
