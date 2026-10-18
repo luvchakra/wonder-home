@@ -872,6 +872,12 @@ async function main() {
   check("anonymous cannot search the grocery catalog", Boolean(anonCatalog.error), anonCatalog.error?.code ?? "allowed!");
   const usda = await admin.from("usda_foods").select("fdc_id, catalog_id, link_status").limit(1);
   check("USDA foods carry a catalog id", !usda.error, usda.error?.code ?? "ok");
+  const phones = await admin.from("household_member_phones").select("member_id, phone").limit(1);
+  check("members can have a phone number", !phones.error, phones.error?.code ?? "ok");
+  const anonPhones = await anon.from("household_member_phones").select("phone").limit(1);
+  check("anonymous cannot read members' phone numbers", Boolean(anonPhones.error) || (anonPhones.data ?? []).length === 0, anonPhones.error?.code ?? "no rows");
+  const anonPhoneClaim = await anon.rpc("claim_members_by_phone");
+  check("anonymous cannot claim a member by phone", Boolean(anonPhoneClaim.error), anonPhoneClaim.error?.code ?? "allowed!");
   const anonUsda = await anon.from("usda_foods").select("fdc_id").limit(1);
   check("anonymous cannot read USDA foods", Boolean(anonUsda.error) || (anonUsda.data ?? []).length === 0, anonUsda.error?.code ?? "no rows");
 

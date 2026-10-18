@@ -107,6 +107,8 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "manage.members.addChildSubmit": "मूल जोडा",
   "manage.members.addHelper": "मदतनीस जोडा",
   "manage.members.addHelperLede": "घरात मदत करणाऱ्या पण स्वतःच्या खात्याची गरज नसलेल्या व्यक्तीसाठी — त्यांचे आठवड्याचे वेळापत्रक आणि रजा घरकामातील मदतनीस विभागात नोंदवल्या जातात.",
+  "manage.members.phone": "फोन नंबर",
+  "manage.members.phoneHint": "ऐच्छिक. ईमेल नसलेला मदतनीस या नंबरवर SMS ने आलेल्या कोडने साइन इन करू शकतो.",
   "manage.members.addHelperSubmit": "मदतनीस जोडा",
   "manage.members.addPetLede": "कुटुंबाचा भाग, कुटुंब टॅबवर इतर सर्वांसोबत — पशुवैद्याची माहिती आणि नोंदी त्यांच्यासोबत राहतात, काळजी घेणाऱ्या प्रत्येकासाठी.",
   "manage.members.petName": "नाव",

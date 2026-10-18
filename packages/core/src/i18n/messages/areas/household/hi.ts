@@ -107,6 +107,8 @@ export const householdHi: AreaCatalog<typeof householdEn> = {
   "manage.members.addChildSubmit": "बच्चा जोड़ें",
   "manage.members.addHelper": "सहायक जोड़ें",
   "manage.members.addHelperLede": "ऐसे व्यक्ति के लिए जो घर में मदद करता है पर जिसे अपने खाते की ज़रूरत नहीं — उनका साप्ताहिक पैटर्न और छुट्टियाँ घरेलू सहायक में दर्ज होती हैं।",
+  "manage.members.phone": "फ़ोन नंबर",
+  "manage.members.phoneHint": "वैकल्पिक। जिस सहायक के पास ईमेल नहीं है, वह इस नंबर पर SMS से आए कोड से साइन इन कर सकता है।",
   "manage.members.addHelperSubmit": "सहायक जोड़ें",
   "manage.members.addPetLede": "परिवार का हिस्सा, परिवार टैब पर बाक़ी सबके साथ — पशु-चिकित्सक की जानकारी और नोट्स उनके साथ रहते हैं, ताकि देखभाल में मदद करने वाला हर कोई देख सके।",
   "manage.members.petName": "नाम",

@@ -19,3 +19,15 @@
 export function googleAuthEnabled(): boolean {
   return process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
 }
+
+/**
+ * Whether sign-in by phone (a one-time code by SMS) is offered (story 01-011).
+ * Like Google, it is the operator's to turn on, in two steps:
+ *   1. Phone enabled in Supabase Auth, with an SMS provider (Twilio,
+ *      MessageBird, Vonage or Textlocal) and its credentials.
+ *   2. NEXT_PUBLIC_PHONE_AUTH_ENABLED=true on the deployment.
+ * Until then no screen offers it, so nobody waits for a code that never comes.
+ */
+export function phoneAuthEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_PHONE_AUTH_ENABLED === "true";
+}

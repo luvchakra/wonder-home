@@ -7,6 +7,7 @@ import { listPets } from "@wonderhome/core/home/repository";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
+import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -50,7 +51,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, integrations, pets, enrolments, emails, offices] = await Promise.all([
+  const [members, entitlement, integrations, pets, enrolments, emails, offices, phones] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     listIntegrations(supabase, householdId).catch(() => []),
@@ -60,6 +61,8 @@ export default async function FamilyPage() {
     readMemberEmails(supabase, householdId).catch(() => new Map<string, string>()),
     // Adults' picked offices; RLS returns only what this viewer may see.
     listWorkPlaces(supabase, householdId).catch(() => []),
+    // Phone numbers this viewer may read: Admins and adults see everyone's, others their own.
+    readMemberPhones(supabase, householdId).catch(() => new Map<string, string>()),
   ]);
   const officeOf = (memberId: string) => offices.find((office) => office.memberId === memberId) ?? null;
   // Each child's current school and its day, read beside their other details.
@@ -194,6 +197,7 @@ export default async function FamilyPage() {
                         statusLabel={statusLabel(member.status)}
                         school={member.memberType === "child" ? schoolOf(member.id) : null}
                         email={emails.get(member.id) ?? null}
+                        phone={phones.get(member.id) ?? null}
                         invite={invite}
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
                       />
@@ -297,6 +301,7 @@ export default async function FamilyPage() {
                           currentMemberId={membership.memberId}
                           statusLabel={statusLabel(member.status)}
                           email={emails.get(member.id) ?? null}
+                        phone={phones.get(member.id) ?? null}
                           invite={invite}
                         />
                         <PillLink href="/househelper" tone="quiet">

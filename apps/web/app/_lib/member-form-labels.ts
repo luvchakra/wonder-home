@@ -34,6 +34,8 @@ export type MemberFormLabels = {
   addHelper: string;
   addHelperLede: string;
   addHelperSubmit: string;
+  phone: string;
+  phoneHint: string;
   addPet: string;
   addPetLede: string;
   petName: string;
@@ -86,6 +88,8 @@ export function memberFormLabels(t: Translate): MemberFormLabels {
     addHelper: t("manage.members.addHelper"),
     addHelperLede: t("manage.members.addHelperLede"),
     addHelperSubmit: t("manage.members.addHelperSubmit"),
+    phone: t("manage.members.phone"),
+    phoneHint: t("manage.members.phoneHint"),
     addPet: t("family.addAPet"),
     addPetLede: t("manage.members.addPetLede"),
     petName: t("manage.members.petName"),

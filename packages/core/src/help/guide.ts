@@ -166,7 +166,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "family",
     group: "Your household",
     updated: "2026-10-18",
-    keywords: ["invite", "sign in", "email", "login", "share link", "family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
+    keywords: ["invite", "sign in", "email", "phone", "phone number", "sms", "code", "login", "share link", "family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
   },
   {
     id: "househelp",

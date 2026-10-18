@@ -115,6 +115,8 @@ export const householdAr: AreaCatalog<typeof householdEn> = {
   "manage.members.addChildSubmit": "أضف الطفل",
   "manage.members.addHelper": "أضف مساعدًا",
   "manage.members.addHelperLede": "لشخص يساعد في المنزل ولا يحتاج إلى حساب خاص به — يُسجَّل نمطه الأسبوعي وإجازاته في قسم المساعد المنزلي.",
+  "manage.members.phone": "رقم الهاتف",
+  "manage.members.phoneHint": "اختياري. يستطيع المساعد الذي لا يملك بريدًا إلكترونيًا تسجيل الدخول برمز يُرسل برسالة نصية إلى هذا الرقم.",
   "manage.members.addHelperSubmit": "أضف المساعد",
   "manage.members.addPetLede": "جزء من العائلة، في تبويب العائلة مع الجميع — تبقى بيانات الطبيب البيطري والملاحظات معه، لكل من يساعد في رعايته.",
   "manage.members.petName": "الاسم",

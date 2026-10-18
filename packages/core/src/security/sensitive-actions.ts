@@ -79,6 +79,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "supabase/migrations/20261018160000_member_sign_in_by_email.sql",
   },
   {
+    event: "member.phone_set",
+    because: "Whoever signs in with this phone number becomes this member — it decides who can enter the household as them.",
+    recordedIn: "packages/core/src/identity/member-phone.ts",
+  },
+  {
+    event: "member.phone_cleared",
+    because: "Nobody can now sign in as this member by phone.",
+    recordedIn: "packages/core/src/identity/member-phone.ts",
+  },
+  {
+    event: "member.signed_in_by_phone",
+    because: "Somebody entered the household as a member the family recorded, matched by their verified phone number.",
+    recordedIn: "supabase/migrations/20261018210000_member_phone_numbers.sql",
+  },
+  {
     event: "household.locale_updated",
     because: "The household's region, currency, time zone or default language changed for everyone.",
     recordedIn: "packages/core/src/i18n/repository.ts",
@@ -542,6 +557,12 @@ export function describeAuditEvent(
       return { title: "A member's sign-in email was removed", detail: null };
     case "member.signed_in_by_email":
       return { title: "A member signed in for the first time", detail: null };
+    case "member.phone_set":
+      return { title: "A member's phone number was set", detail: null };
+    case "member.phone_cleared":
+      return { title: "A member's phone number was removed", detail: null };
+    case "member.signed_in_by_phone":
+      return { title: "A member signed in for the first time, by phone", detail: null };
     case "household.locale_updated":
       return { title: "The household's region, currency or time zone changed", detail: null };
     case "invitation.created":

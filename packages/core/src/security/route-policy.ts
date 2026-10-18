@@ -40,8 +40,9 @@ const AUTHENTICATED_PREFIXES = [
  *
  * - `/` — the landing page, including its contact section (`/#contact`):
  *   what WonderHome is, and how to reach a person.
- * - `/sign-in`, `/sign-up` — getting in. Their own screens carry the only
- *   help that matters signed out: the Google option, the forgot-password link.
+ * - `/sign-in`, `/sign-in/phone`, `/sign-up` — getting in. Their own screens
+ *   carry the only help that matters signed out: the Google and phone options,
+ *   the forgot-password link.
  * - `/forgot-password`, `/reset-password`, `/auth/*` — recovering an account
  *   and finishing an email link; by definition used without a session.
  * - `/legal` — terms and privacy, which anybody must be able to read before
@@ -56,7 +57,7 @@ const AUTHENTICATED_PREFIXES = [
  */
 
 /** Surfaces only for a signed-out visitor; a signed-in member is sent home. */
-const ANONYMOUS_ONLY = new Set(["/sign-in", "/sign-up", "/forgot-password"]);
+const ANONYMOUS_ONLY = new Set(["/sign-in", "/sign-in/phone", "/sign-up", "/forgot-password"]);
 
 
 /** The platform admin boundary, authorized separately from household roles. */

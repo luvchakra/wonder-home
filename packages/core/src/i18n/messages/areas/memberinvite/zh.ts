@@ -20,6 +20,7 @@ export const memberInviteZh: AreaCatalog<typeof memberInviteEn> = {
   "memberInvite.subject": "在 WonderHome 加入{household}",
   "memberInvite.message": "{inviter}邀请你在 WonderHome 加入{household}。打开此链接即可进入：",
   "memberInvite.factEmail": "登录邮箱",
+  "memberInvite.factPhone": "电话",
   "memberInvite.signsIn": "可登录",
   "memberInvite.emailTo": "将邀请发送到 {email}",
   "memberInvite.emailing": "正在发送…",

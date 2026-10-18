@@ -20,6 +20,7 @@ export const memberInviteAr: AreaCatalog<typeof memberInviteEn> = {
   "memberInvite.subject": "انضم إلى {household} على WonderHome",
   "memberInvite.message": "دعاك {inviter} للانضمام إلى {household} على WonderHome. افتح هذا الرابط للدخول:",
   "memberInvite.factEmail": "بريد تسجيل الدخول",
+  "memberInvite.factPhone": "الهاتف",
   "memberInvite.signsIn": "يسجّل الدخول",
   "memberInvite.emailTo": "أرسل الدعوة إلى {email}",
   "memberInvite.emailing": "جارٍ الإرسال…",

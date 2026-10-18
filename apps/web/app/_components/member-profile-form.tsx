@@ -48,6 +48,12 @@ export type MemberProfileInitial = {
    * Signing in with it, verified, brings them straight into the household.
    */
   email?: string | null;
+  /**
+   * Their phone number (story 01-011) — set only when an Admin edits someone
+   * else. A helper may have no email: signing in with a texted code to this
+   * number brings them into the household as themselves.
+   */
+  phone?: string | null;
 };
 
 /**
@@ -116,6 +122,13 @@ export function MemberProfileForm({
               <input type="hidden" name="emailField" value="1" />
               <Field label="Sign-in email" name="email" type="email" defaultValue={initial.email ?? ""} placeholder="name@example.com" autoComplete="off" />
               <p className="text-xs text-[var(--wh-foreground-subtle)]">When they sign in with this email, by password or with Google, they come straight into the household as themselves.</p>
+            </div>
+          ) : null}
+          {initial.phone !== undefined ? (
+            <div className="space-y-1">
+              <input type="hidden" name="phoneField" value="1" />
+              <Field label="Phone number" name="phone" type="tel" inputMode="tel" defaultValue={initial.phone ?? ""} placeholder="98765 43210" autoComplete="off" />
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">An Indian number works as it is; add the country code for any other (+44…). They can sign in with a code texted to it — no email needed.</p>
             </div>
           ) : null}
           {helperRoles ? (

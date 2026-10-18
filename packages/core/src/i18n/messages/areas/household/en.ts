@@ -105,6 +105,8 @@ export const householdEn = {
   "manage.members.addChildSubmit": "Add child",
   "manage.members.addHelper": "Add a helper",
   "manage.members.addHelperLede": "For someone who helps around the house but does not need an account of their own — their weekly pattern and any leave are recorded under Househelper.",
+  "manage.members.phone": "Phone number",
+  "manage.members.phoneHint": "Optional. A helper with no email can sign in with a code texted to this number.",
   "manage.members.addHelperSubmit": "Add helper",
   "manage.members.addPetLede": "Part of the family, on the Family tab alongside everyone else — vet details and notes stay with them for anyone helping to care for them.",
   "manage.members.petName": "Name",

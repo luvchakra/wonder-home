@@ -337,6 +337,7 @@ const addHelperSchema = z.object({
   displayName: z.string().trim().min(1, { error: "Give them a name." }).max(80),
   gender: z.string().trim().max(GENDER_MAX_LENGTH, { error: "Keep gender under 40 characters." }),
   notes: z.string().trim().max(MEMBER_NOTES_MAX_LENGTH, { error: "Keep notes under 500 characters." }),
+  phone: z.string().trim().max(30),
 });
 
 /**
@@ -353,9 +354,15 @@ export async function addHelperAction(
     displayName: formData.get("displayName"),
     gender: formData.get("gender") ?? "",
     notes: formData.get("notes") ?? "",
+    phone: formData.get("phone") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  }
+  const { normalPhone, setMemberPhone } = await import("@wonderhome/core/identity/member-phone");
+  // A helper may have no email; her phone is how she signs in (story 01-011).
+  if (parsed.data.phone && !normalPhone(parsed.data.phone)) {
+    return { error: "Enter a phone number, with its country code if it isn't Indian (+44…)." };
   }
 
   const supabase = await createClient();
@@ -365,11 +372,18 @@ export async function addHelperAction(
 
   try {
     const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await createHelperMember(supabase, actor, {
+    const { memberId } = await createHelperMember(supabase, actor, {
       displayName: parsed.data.displayName,
       gender: textOrNull(parsed.data.gender),
       notes: textOrNull(parsed.data.notes),
     });
+    if (parsed.data.phone) {
+      const saved = await setMemberPhone(supabase, actor, { memberId, phone: parsed.data.phone });
+      if (saved === "taken") {
+        revalidatePath("/household/members");
+        return { error: "The helper was added, but another member already has that phone number, so it wasn't saved." };
+      }
+    }
   } catch (error) {
     log.warn("adding a helper failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "We could not add that helper. Please try again." };
@@ -513,6 +527,14 @@ export async function updateMemberProfileAction(
       const said = String(formData.get("email") ?? "").trim();
       const saved = await setMemberEmail(supabase, actor, { memberId: parsed.data.memberId, email: said || null });
       if (saved === "taken") return { error: "Another member of this household already signs in with that email." };
+    }
+    // The phone number (story 01-011), the same way: an Admin's, and one
+    // number is one person.
+    if (formData.get("phoneField") === "1") {
+      const { setMemberPhone } = await import("@wonderhome/core/identity/member-phone");
+      const said = String(formData.get("phone") ?? "").trim();
+      const saved = await setMemberPhone(supabase, actor, { memberId: parsed.data.memberId, phone: said || null });
+      if (saved === "taken") return { error: "Another member of this household already has that phone number." };
     }
     await updateMemberProfile(supabase, actor, {
       memberId: parsed.data.memberId,

@@ -107,6 +107,8 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "manage.members.addChildSubmit": "添加孩子",
   "manage.members.addHelper": "添加帮手",
   "manage.members.addHelperLede": "适用于在家里帮忙但不需要自己账号的人——他们每周的安排和请假会记录在“家政帮手”中。",
+  "manage.members.phone": "电话号码",
+  "manage.members.phoneHint": "可选。没有电子邮箱的帮手可以用发送到这个号码的短信验证码登录。",
   "manage.members.addHelperSubmit": "添加帮手",
   "manage.members.addPetLede": "也是家庭的一员，和大家一起显示在“家人”标签页——兽医信息和备注会跟着它，方便每位帮忙照顾的人查看。",
   "manage.members.petName": "名字",
