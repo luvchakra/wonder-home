@@ -33,6 +33,7 @@ const FILENAME = /^\d{14}_[a-z0-9_]+\.sql$/;
  *   rate_limit_counters       — request counters keyed by a bucket and a subject (member, household or IP hash); some subjects have no household
  *   plan_prices               — what a plan costs; a property of the plan, not a tenant
  *   payment_provider_plans    — which provider plan/price backs one of those prices; platform configuration
+ *   public_holidays           — a sourced, read-only list of a country's holidays; the same for every household
  */
 const NON_TENANT_TABLES = new Set([
   "households",
@@ -47,6 +48,7 @@ const NON_TENANT_TABLES = new Set([
   "rate_limit_counters",
   "plan_prices",
   "payment_provider_plans",
+  "public_holidays",
   // One reconciliation pass per provider across every household (story 20-011); its findings carry household_id.
   "billing_reconciliation_runs",
 ]);

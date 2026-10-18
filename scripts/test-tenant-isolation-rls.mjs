@@ -36,6 +36,7 @@ const NON_TENANT_TABLES = new Set([
   "rate_limit_counters", // counters keyed by bucket and subject (member, household or IP hash); some subjects have no household
   "plan_prices", // what a plan costs; a property of the plan, like plan_features
   "payment_provider_plans", // which provider plan backs a price; server-only configuration of the catalogue
+  "public_holidays", // a sourced, read-only list of a country's holidays; the same for every household
   "billing_reconciliation_runs", // one reconciliation pass per provider across every household; its findings carry household_id
 ]);
 
