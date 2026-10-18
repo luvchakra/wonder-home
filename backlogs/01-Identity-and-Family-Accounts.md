@@ -13,6 +13,7 @@
 | 7 | P1 | 01-007 | Preferences | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | 8 | P2 | 01-008 | Helper/service identity | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 | 9 | P1 | 01-009 | Settings & Profile consolidation | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
+| 10 | P0 | 01-010 | Every member signs in as themselves | In Progress | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser check at 360px still to do: this session had no sign-in credentials |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -234,6 +235,17 @@ This row was closed to reflect that, not to duplicate it.
 - The household AI key and the AI data-use policy are edited only on `/settings/ai`; the plan only on `/settings/plan`. Privacy links to the AI page rather than keeping a second editor.
 - A person's own profile is edited only in Settings; other screens show it and link there. An Admin editing someone else stays in Family/Househelper.
 - Existing server-side authorization is unchanged.
+
+### Story 01-010 — Every member signs in as themselves
+**Epic:** 01-E05
+**Priority:** P0
+**Goal:** Each family member — adult, child or househelper — signs in with their own account and lands in the household with the role the family gave them.
+
+**Acceptance criteria**
+- An Admin records a member's sign-in email in their details; only Admins and that member can read it.
+- A sign-in whose verified email matches — password, Google or any provider — links the account to that member, keeping their role; an unverified email links nothing, a removed member is not brought back.
+- An Admin can Invite a member without an account: a single-use link that expires, shared by email, the share sheet or a copy. It links to that member with their own role and never creates a child.
+- What a member sees and may do is decided by their role, as for every other member.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

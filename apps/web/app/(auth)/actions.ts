@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { googleAuthEnabled } from "@wonderhome/core/config/auth-providers";
+import { claimMembersByEmail } from "@wonderhome/core/identity/member-email";
 import { createClient } from "@wonderhome/core/db/server";
 import { recordOnboardingEvent, startOnboarding } from "@wonderhome/core/household/onboarding-repository";
 import { createHousehold } from "@wonderhome/core/identity/households";
@@ -53,6 +54,8 @@ export async function signIn(_previous: ActionState, formData: FormData): Promis
     return { error: SIGN_IN_FAILED };
   }
 
+  // A family member the household recorded with this email becomes that member now.
+  await claimMembersByEmail(supabase);
   redirect(safeNext(formData.get("next")));
 }
 

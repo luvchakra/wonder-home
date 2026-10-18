@@ -84,6 +84,49 @@ export async function inviteMemberAction(
   }
 }
 
+export type MemberInviteResult = { path: string } | { error: "failed" | "linked" };
+
+/**
+ * The Invite button on a family member (Family): a single-use link for a
+ * member already on record, to pass on by email, a share sheet or a copy.
+ *
+ * Opening it and signing in — any way — links the account to that member,
+ * with the role they already have (a child stays a child). Creating a new link
+ * stops the earlier one. Admins only, as every invitation is.
+ */
+export async function inviteMemberToSignInAction(householdId: string, memberId: string): Promise<MemberInviteResult> {
+  const ids = z.object({ householdId: z.uuid(), memberId: z.uuid() }).safeParse({ householdId, memberId });
+  if (!ids.success) return { error: "failed" };
+
+  const supabase = await createClient();
+  try {
+    const membership = await requireHouseholdAdmin(supabase, householdId);
+    const member = (await listMembers(supabase, householdId, null)).find((entry) => entry.id === memberId);
+    if (!member || member.status === "inactive") return { error: "failed" };
+    if (member.hasAccount) return { error: "linked" };
+
+    const { readMemberEmails } = await import("@wonderhome/core/identity/member-email");
+    const email = (await readMemberEmails(supabase, householdId)).get(memberId) ?? null;
+    const role = member.roles.includes("administrator") ? "administrator" : member.memberType;
+
+    const invitation = await createInvitation(supabase, membership.memberId, {
+      householdId,
+      memberId,
+      email,
+      displayName: member.displayName,
+      memberType: member.memberType,
+      role,
+    });
+    revalidatePath("/household/members");
+    // No email provider is configured, so WonderHome sends nothing itself:
+    // the inviter's own email app, share sheet or clipboard carries the link.
+    return { path: `/invite/${invitation.token}` };
+  } catch (error) {
+    log.warn("member invitation failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { error: "failed" };
+  }
+}
+
 export async function revokeInvitationAction(formData: FormData): Promise<void> {
   const invitationId = z.uuid().safeParse(formData.get("invitationId"));
   if (!invitationId.success) return;
@@ -390,6 +433,15 @@ export async function updateMemberProfileAction(
 
   try {
     const actor = await requireMembership(supabase, parsed.data.householdId);
+    // The sign-in email, when the form carried it (an Admin editing someone
+    // else): saved first, so an address another member already has is said
+    // before anything else changes.
+    if (formData.get("emailField") === "1") {
+      const { setMemberEmail } = await import("@wonderhome/core/identity/member-email");
+      const said = String(formData.get("email") ?? "").trim();
+      const saved = await setMemberEmail(supabase, actor, { memberId: parsed.data.memberId, email: said || null });
+      if (saved === "taken") return { error: "Another member of this household already signs in with that email." };
+    }
     await updateMemberProfile(supabase, actor, {
       memberId: parsed.data.memberId,
       displayName: parsed.data.displayName,

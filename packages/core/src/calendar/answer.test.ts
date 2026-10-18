@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveCalendarSpan } from "../conversation/temporal";
-import { asksTheCalendar, calendarSpanReply, MAX_LISTED } from "./answer";
+import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, MAX_LISTED, readLookAhead } from "./answer";
 import { atLocal } from "./dates";
 import { eventEntries, holidayEntries, mergeEntries, occasionEntries, type CalendarViewer } from "./projection";
 
@@ -67,3 +67,39 @@ describe("asksTheCalendar", () => {
   });
 });
 
+
+describe("looking ahead", () => {
+  const now = new Date("2026-09-23T04:30:00Z");
+
+  it("reads what comes next, a holiday question, and birthdays — and leaves the rest alone", () => {
+    expect(readLookAhead("What's the next upcoming event?")).toEqual({ only: null });
+    expect(readLookAhead("How about the public holiday?")).toEqual({ only: "holiday" });
+    expect(readLookAhead("When is the next holiday?")).toEqual({ only: "holiday" });
+    expect(readLookAhead("Any birthdays coming up?")).toEqual({ only: "birthday" });
+    expect(readLookAhead("When is the next bill due?")).toBeNull();
+    expect(readLookAhead("What's on tomorrow?")).toBeNull();
+    expect(readLookAhead("Who is in the family?")).toBeNull();
+  });
+
+  it("says the next one and the two after it, from now on, never what has passed", () => {
+    const span = lookAheadSpan(now, TZ);
+    expect(span).toMatchObject({ from: "2026-09-23", to: "2027-09-23" });
+    const entries = holidayEntries(
+      [
+        { id: "past", onDate: "2026-09-01", name: "Gone", source: "x" },
+        { id: "a", onDate: "2026-10-02", name: "Gandhi Jayanti", source: "x" },
+        { id: "b", onDate: "2026-10-20", name: "Dussehra", source: "x" },
+        { id: "c", onDate: "2026-11-08", name: "Diwali", source: "x" },
+        { id: "d", onDate: "2026-12-25", name: "Christmas Day", source: "x" },
+      ],
+      viewer,
+    );
+    const text = lookAheadReply({ lookAhead: { only: "holiday" }, entries, failedSources: [], now, timeZone: TZ });
+    expect(text).toBe("The next public holiday is **Gandhi Jayanti**, Fri 2 Oct.\n\nAfter that:\n- Tue 20 Oct — Dussehra\n- Sun 8 Nov — Diwali");
+  });
+
+  it("says plainly when nothing lies ahead, and where holidays come from", () => {
+    expect(lookAheadReply({ lookAhead: { only: "holiday" }, entries: [], failedSources: [], now, timeZone: TZ })).toContain("choose a holiday list");
+    expect(lookAheadReply({ lookAhead: { only: null }, entries: [], failedSources: [], now, timeZone: TZ })).toBe("Nothing is on the calendar for the next 12 months.");
+  });
+});

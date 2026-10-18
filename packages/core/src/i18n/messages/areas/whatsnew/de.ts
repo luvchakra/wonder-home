@@ -8,6 +8,8 @@ export const whatsNewDe: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "{count} weitere zeigen",
   "whatsNew.showAll#other": "{count} weitere zeigen",
   "whatsNew.showLess": "Weniger zeigen",
+  "whatsNew.memberSignIn.title": "Alle melden sich an",
+  "whatsNew.memberSignIn.body": "Trag in Familie die E-Mail jeder Person ein oder schick einen Einladungslink. Sie kommen direkt in den Haushalt.",
   "whatsNew.calendarAnswers.title": "Frag HomeTalk, was ansteht",
   "whatsNew.calendarAnswers.body": "„Gibt es Termine im Dezember?“ bekommt jetzt die echte Antwort, direkt aus deinem Kalender.",
   "whatsNew.calendar.title": "Der Tab Kalender",

@@ -13,7 +13,7 @@
 
 export const WHATS_NEW_DAYS = 30;
 
-export type WhatsNewIcon = "calendar" | "lock" | "holiday" | "places" | "clock" | "groceries" | "talk" | "pets" | "event" | "languages" | "home";
+export type WhatsNewIcon = "calendar" | "lock" | "holiday" | "places" | "clock" | "groceries" | "talk" | "pets" | "event" | "languages" | "home" | "invite";
 
 export type WhatsNewEntry = {
   id: string;
@@ -28,6 +28,7 @@ export type WhatsNewEntry = {
 /** Newest first. An entry is never shown before its `at`. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   // Dated a little after its expected merge: an entry stays hidden until its time, so it can be late but never missed.
+  { id: "memberSignIn", at: "2026-10-18T05:30:00Z", icon: "invite", href: "/family", audience: "admin" },
   { id: "calendarAnswers", at: "2026-10-18T02:30:00Z", icon: "talk", href: "/ai" },
   { id: "calendar", at: "2026-10-18T01:15:49Z", icon: "calendar", href: "/calendar" },
   { id: "eventPrivacy", at: "2026-10-18T01:15:49Z", icon: "lock", href: "/calendar" },

@@ -10,6 +10,7 @@ import { entryEs } from "./areas/entry/es";
 import { installEs } from "./areas/install/es";
 import { eventsEs } from "./areas/events/es";
 import { calendarEs } from "./areas/calendar/es";
+import { memberInviteEs } from "./areas/memberinvite/es";
 import { whatsNewEs } from "./areas/whatsnew/es";
 import { groceryEs } from "./areas/grocery/es";
 import { welcomeEs } from "./areas/welcome/es";
@@ -683,6 +684,7 @@ export const es: Catalog = {
   ...eventsEs,
   ...calendarEs,
   ...whatsNewEs,
+  ...memberInviteEs,
   ...groceryEs,
   ...welcomeEs,
 };

@@ -575,3 +575,27 @@
     transform: none;
   }
 }
+
+/* Scroll-away bars (shell/scroll-chrome.tsx): on a phone the header slides up
+   first as a person reads down, the tab bar follows, and both return on any
+   scroll up. The desktop's bars never move. */
+@media (max-width: 1023.98px) {
+  .wh-chrome-top,
+  .wh-chrome-bottom {
+    transition: transform 220ms ease;
+  }
+  :root[data-wh-chrome="top-hidden"] .wh-chrome-top,
+  :root[data-wh-chrome="all-hidden"] .wh-chrome-top {
+    transform: translateY(-100%);
+  }
+  /* Past its own height and the raised assistant button that sits above it. */
+  :root[data-wh-chrome="all-hidden"] .wh-chrome-bottom {
+    transform: translateY(calc(100% + var(--wh-tabbar-raised-overhang) + 0.5rem));
+  }
+}
+@media (max-width: 1023.98px) and (prefers-reduced-motion: reduce) {
+  .wh-chrome-top,
+  .wh-chrome-bottom {
+    transition: none;
+  }
+}

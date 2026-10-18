@@ -8,6 +8,8 @@ export const whatsNewMr: AreaCatalog<typeof whatsNewEn> = {
   "whatsNew.showAll#one": "आणखी {count} दाखवा",
   "whatsNew.showAll#other": "आणखी {count} दाखवा",
   "whatsNew.showLess": "कमी दाखवा",
+  "whatsNew.memberSignIn.title": "सगळे स्वतः साइन इन करतात",
+  "whatsNew.memberSignIn.body": "कुटुंबमध्ये प्रत्येकाचा ईमेल जोडा, किंवा आमंत्रण लिंक पाठवा. ते थेट घरात येतात.",
   "whatsNew.calendarAnswers.title": "HomeTalk ला विचारा काय आहे",
   "whatsNew.calendarAnswers.body": "“डिसेंबरमध्ये काही कार्यक्रम आहेत का?” याचे आता खरे उत्तर मिळते, थेट तुमच्या दिनदर्शिकेतून.",
   "whatsNew.calendar.title": "दिनदर्शिका टॅब",

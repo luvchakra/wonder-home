@@ -14,6 +14,7 @@ import {
   PawPrint,
   ShoppingBasket,
   Sparkles,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -34,6 +35,7 @@ const ICON: Record<WhatsNewIcon, { icon: LucideIcon; tone: IconTone }> = {
   event: { icon: CalendarHeart, tone: "people" },
   languages: { icon: Languages, tone: "primary" },
   home: { icon: House, tone: "home" },
+  invite: { icon: UserPlus, tone: "people" },
 };
 
 export type WhatsNewItem = { id: string; at: string; icon: WhatsNewIcon; href: string; title: string; body: string };

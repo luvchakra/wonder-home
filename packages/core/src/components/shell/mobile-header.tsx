@@ -70,7 +70,7 @@ export function MobileHeader({
   return (
     <header
       className={cn(
-        "wh-glass sticky top-0 z-30 border-b border-[var(--wh-border)]/70 pt-[env(safe-area-inset-top)]",
+        "wh-glass wh-chrome-top sticky top-0 z-30 border-b border-[var(--wh-border)]/70 pt-[env(safe-area-inset-top)]",
         className,
       )}
     >

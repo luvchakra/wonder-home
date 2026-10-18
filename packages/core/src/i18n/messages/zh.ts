@@ -10,6 +10,7 @@ import { entryZh } from "./areas/entry/zh";
 import { installZh } from "./areas/install/zh";
 import { eventsZh } from "./areas/events/zh";
 import { calendarZh } from "./areas/calendar/zh";
+import { memberInviteZh } from "./areas/memberinvite/zh";
 import { whatsNewZh } from "./areas/whatsnew/zh";
 import { groceryZh } from "./areas/grocery/zh";
 import { welcomeZh } from "./areas/welcome/zh";
@@ -683,6 +684,7 @@ export const zh: Catalog = {
   ...eventsZh,
   ...calendarZh,
   ...whatsNewZh,
+  ...memberInviteZh,
   ...groceryZh,
   ...welcomeZh,
 };

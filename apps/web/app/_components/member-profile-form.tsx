@@ -39,6 +39,11 @@ export type MemberProfileInitial = {
   workHours?: DayHours | null;
   /** A child's current school and its day, when a school is on record. */
   school?: { schoolName: string; hours: DayHours | null } | null;
+  /**
+   * The email they sign in with — set only when an Admin edits someone else.
+   * Signing in with it, verified, brings them straight into the household.
+   */
+  email?: string | null;
 };
 
 /**
@@ -99,6 +104,13 @@ export function MemberProfileForm({
           </label>
           <Field label="Family calls me" name="relationship" defaultValue={initial.relationship ?? ""} placeholder="Father, Mother, Daughter, Grandmother…" autoComplete="off" />
           <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={initial.dateOfBirth ?? ""} />
+          {initial.email !== undefined ? (
+            <div className="space-y-1">
+              <input type="hidden" name="emailField" value="1" />
+              <Field label="Sign-in email" name="email" type="email" defaultValue={initial.email ?? ""} placeholder="name@example.com" autoComplete="off" />
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">When they sign in with this email, by password or with Google, they come straight into the household as themselves.</p>
+            </div>
+          ) : null}
           {helperRoles ? (
             <div className="space-y-2">
               {/* Tells the action the occupation is these ticks, so un-ticking them all clears it. */}

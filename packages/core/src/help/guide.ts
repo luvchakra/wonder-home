@@ -118,7 +118,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "calendar",
     group: "Everyday use",
     updated: "2026-10-18",
-    keywords: ["calendar", "month", "week", "day", "year", "pinch", "holiday", "public holiday", "birthday", "repeat", "recurring", "private", "just me", "clash", "conflict", "filter", "skip"],
+    keywords: ["next event", "next holiday", "upcoming", "calendar", "month", "week", "day", "year", "pinch", "holiday", "public holiday", "birthday", "repeat", "recurring", "private", "just me", "clash", "conflict", "filter", "skip"],
   },
   {
     id: "notifications",
@@ -165,8 +165,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "family",
     group: "Your household",
-    updated: "2026-10-17",
-    keywords: ["family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
+    updated: "2026-10-18",
+    keywords: ["invite", "sign in", "email", "login", "share link", "family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
   },
   {
     id: "househelp",

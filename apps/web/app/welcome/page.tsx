@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
-import { listMemberships } from "@wonderhome/core/identity/households";
 import { Field } from "@wonderhome/core/ui/field";
 
 import { createHouseholdAction } from "../(auth)/actions";
 import { AuthForm } from "../_components/auth-form";
+import { membershipsOrClaimed } from "../_lib/session";
 import { AuthLayout } from "../_components/auth-layout";
 import { visitorLocale } from "../_lib/entry-locale";
 
@@ -41,7 +41,7 @@ export default async function WelcomePage() {
 
   // The display name given at sign-up lives in user metadata, which the
   // token does not carry; this is the one screen that needs it.
-  const [memberships, { data: userData }] = await Promise.all([listMemberships(supabase), supabase.auth.getUser()]);
+  const [memberships, { data: userData }] = await Promise.all([membershipsOrClaimed(supabase), supabase.auth.getUser()]);
   if (memberships.length > 0) redirect("/");
 
   const locale = await visitorLocale();
