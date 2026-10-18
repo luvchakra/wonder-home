@@ -34,7 +34,7 @@ disagree again.)
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 9 | Done |
-| 09 | Commerce, Groceries & Pet Supplies | 13 | 6 | 6 | 1 | 11 | In Progress |
+| 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done (grocery pantry stories moved to 25 HomeFood) |
 | 10 | Meals & Cooking | 8 | 4 | 2 | 2 | 8 | Done |
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 14 | 5 | 6 | 3 | 8 | In Progress |
@@ -49,6 +49,8 @@ disagree again.)
 | 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
+| 24 | HomePlaces | 7 | 1 | 4 | 2 | 4 | In Progress |
+| 25 | HomeFood | 5 | 2 | 2 | 1 | 2 | In Progress |
 
 ## Execution Log
 

@@ -879,6 +879,18 @@ Then confirm it is gone: a SQL count, or a `qa-test-user.mjs` lookup, should fin
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 
+**HomePlaces and HomeFood keep their own backlogs, kept current by every PR
+that touches them.** HomePlaces is `backlogs/24-HomePlaces.md` (place
+questions, the place book, school and work hours, `/places`). HomeFood is
+`backlogs/25-HomeFood.md`, the owner's name for all grocery and pantry
+work — what is at home, what to buy, receipts into stock, Send to Cook
+(formerly 09-010 to 09-013). Any work on either, a fix included, updates
+that file in the same pull request:
+- the story's status and its notes, with the PR number;
+- a new story for each follow-up the work leaves open, and the removal of
+  one the work closed;
+- then `tracking/PROGRESS.md` and `npm run tracker`.
+
 **Regenerate `docs/PROGRESS.md` after every story status change.** Run
 `npm run tracker`. It projects all twenty-two backlogs into one page — where
 the whole application stands, what is left, and every story with its status —
