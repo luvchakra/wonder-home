@@ -1140,6 +1140,7 @@ async function askHomeBrain(input: {
       people: input.people,
       compose: input.routing.compose ?? null,
       factBudget: FACT_BUDGET,
+      heldForAdults: context.snapshot.heldForAdults,
     });
   } catch (thrown) {
     console.error("[conversation] HomeBrain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });

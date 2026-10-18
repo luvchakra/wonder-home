@@ -66,7 +66,7 @@ export function MemberDetail({
    */
   email?: string | null;
   /** Who is inviting, into which household: the Invite control's message. Set for Admins. */
-  invite?: { householdName: string; inviterName: string } | null;
+  invite?: { householdName: string; inviterName: string; canEmail: boolean } | null;
   /** An adult's picked office, when this viewer may see it (adults and Admins, and the person). */
   workPlace?: WorkPlace | null;
 }) {
@@ -163,6 +163,7 @@ export function MemberDetail({
               householdId={householdId}
               memberId={member.id}
               email={email ?? null}
+              canEmail={invite.canEmail}
               labels={{
                 button: t("memberInvite.button"),
                 buttonLabel: t("memberInvite.buttonLabel", { name: member.displayName }),
@@ -180,6 +181,11 @@ export function MemberDetail({
                 failed: t("memberInvite.failed"),
                 subject: t("memberInvite.subject", { household: invite.householdName }),
                 message: t("memberInvite.message", { inviter: invite.inviterName, household: invite.householdName }),
+                emailTo: t("memberInvite.emailTo", { email: email ?? "" }),
+                emailing: t("memberInvite.emailing"),
+                emailed: t("memberInvite.emailed", { email: email ?? "" }),
+                emailFailed: t("memberInvite.emailFailed"),
+                linkOnly: t("memberInvite.linkOnly"),
               }}
             />
           ) : null}

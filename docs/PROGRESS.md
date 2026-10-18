@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**234 of 246 stories done — 95.1%**
+**236 of 246 stories done — 95.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 234 |
-| In Progress | 5 |
+| Done | 236 |
+| In Progress | 3 |
 | Blocked | 0 |
 | Not Started | 6 |
 | Deferred | 1 |
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
-| 24 HomePlaces | `███████░░░` | 5 | 7 | 2 in progress |
+| 24 HomePlaces | `██████████` | 7 | 7 | — |
 | 25 HomeFood | `████░░░░░░` | 2 | 5 | 1 in progress, 2 not started |
 | 26 HomeEvents | `█░░░░░░░░░` | 1 | 6 | 1 in progress, 4 not started |
 
@@ -59,8 +59,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
-| `24-005` Places near the office | 24 HomePlaces | P1 | In Progress |
-| `24-006` Search for places from the Places screen | 24 HomePlaces | P2 | In Progress |
 | `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
@@ -106,7 +104,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-007` Preferences | P1 | Done | Already built as 04-007/04-008: `memories` (scope, source_type, confidence, status), captured via conversation, corrected via Certification |
 | `01-008` Helper/service identity | P2 | Done | Limited helper accounts already existed end-to-end (invitations, `ROLE_DEFAULTS.helper: []`, `/househelper` UI); the real gap was no RLS-level proof of the limits. New `scripts/test-helper-identity-rls.mjs` asserts a `member_type='helper'` row is refused `obligations` (finance) and another member's private conversation, cannot grant a role or create an invitation, but can read/write its own `member_availability` and read (not write) `household_roles` |
 | `01-009` Settings & Profile consolidation | P1 | Done | One editor per setting: `/settings` holds the profile and opens each setting's own page, grouped Personal / AI & privacy / Connected services / Plan & usage / Account. The AI key and data-use policy moved to `/settings/ai`, and the plan and usage to `/settings/plan` (the payment return lands there). Your own profile on Family/Househelper links to Settings; an Admin still edits other people there. The unbuilt 2FA row, the Export/Delete rows (Privacy has them) and Help (avatar menu and More) are gone from Settings |
-| `01-010` Every member signs in as themselves | P0 | Done | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): an Admin set a child's sign-in email in Family; that child then signed in by password and landed straight in the household on the child Home, with Bills refused and Members and Plan read-only; Invite made a link (Send email opened a filled-in mail, Copy worked; Share appears only where the browser has a share sheet); a helper opened her link signed out, signed in, accepted and became the helper already on record, with no second member |
+| `01-010` Every member signs in as themselves | P0 | Done | An Admin records a member's sign-in email in their details (`household_member_emails`, Admin write, Admin/self read). A verified sign-in with that email, by password, Google or any provider, links the account to the member with the role they already have (`wh.claim_members_by_email`, run at sign-in, in the OAuth callback and whenever a signed-in person has no household). Invite on a member without an account makes a single-use, 7-day link (child invitations allowed only for the child on record; never creates a child), passed on by Send email (the Admin's own mail app), Share (the phone's share sheet) or Copy. Since 2026-10-18 (owner's decision), when the member has a sign-in email on record and the deployment has SMTP set (`email/mailer.ts`, `WONDERHOME_SMTP_*`; production sends from the GoDaddy mailbox connect@wonderapps.biz, its password only in Vercel), the first choice is **Email the invite to {email}** (`emailMemberInviteAction`): WonderHome emails the link to the address on record, read on the server, never one the browser names; the link is made either way, a failed send says so (amber) and keeps Share/Copy and the Admin's own mail app, and a sent one drops the second Send email. Migration applied live; DB-tested (`scripts/test-member-sign-in-rls.mjs`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): an Admin set a child's sign-in email in Family; that child then signed in by password and landed straight in the household on the child Home, with Bills refused and Members and Plan read-only; Invite made a link (Send email opened a filled-in mail, Copy worked; Share appears only where the browser has a share sheet); a helper opened her link signed out, signed in, accepted and became the helper already on record, with no second member |
 
 ### 02 — Household Configuration & Playbook
 
@@ -470,7 +468,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-5 of 7 done `███████░░░`
+7 of 7 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -478,8 +476,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-002` The family's place book | P1 | Done | #204: save and "not for us" from a place card (`apps/web/app/ai/place-actions.ts`, re-read from the stored reply, never the browser) into `household_places`; every member reads, adults and Admins write; saved places rank first, turned-down places never return |
 | `24-003` School and office hours | P1 | Done | #210: `school_enrolments.starts_at/ends_at` and `household_members.work_starts_at/work_ends_at` (migration `20261018090000`, live); "after school" uses the recorded end time and "after work" is read; an assumed time is said in the reply |
 | `24-004` The place book screen | P1 | Done | #210: `/places` lists saved and turned-down places, with undo |
-| `24-005` Places near the office | P1 | In Progress | An adult's office is picked from Google Maps (`member_work_places`, migration `20261018150000`, live; the person or an Admin writes, adults and Admins read; `scripts/test-work-places-rls.mjs`), in Settings for yourself and in Family for an Admin. "Near my office" / "near Rohan's work" anchors there (`homeplaces/request.ts` work anchor, `service.ts` `workAnchor`); with no office picked HomeTalk says where to add it (`needs_work`). Golden HT-81. Browser check still to do with a Google Maps key (the local QA build had none, so the picker is hidden there by design) |
-| `24-006` Search for places from the Places screen | P2 | In Progress | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser check still to do with a Google Maps key |
+| `24-005` Places near the office | P1 | Done | An adult's office is picked from Google Maps (`member_work_places`, migration `20261018150000`, live; the person or an Admin writes, adults and Admins read; `scripts/test-work-places-rls.mjs`), in Settings for yourself and in Family for an Admin. "Near my office" / "near Rohan's work" anchors there (`homeplaces/request.ts` work anchor, `service.ts` `workAnchor`); with no office picked HomeTalk says where to add it (`needs_work`). Golden HT-81. Browser-checked 2026-10-18 at 360px and 1280px on a local production build with a real Google Maps key, against the live project (QA household, cleaned up afterwards): in a member's details, typing "WeWork BKC Mumbai" in Office listed two real WeWork BKC results; picking one and saving showed Office: WeWork on the member |
+| `24-006` Search for places from the Places screen | P2 | Done | `/places` has Add a place for adults: pick from a search (kind `place`, leaning toward home), an optional note, Save. The place is re-read from the provider on the server (`addPlaceAction`), and each save counts against the household's `places.find` budget. Browser-checked 2026-10-18 at 360px and 1280px with a real Google Maps key against the live project (QA household, cleaned up afterwards): "Blue Tokai Coffee Bandra" listed three real branches; picking one and saving showed "Saved to your place book" and the place, with its full address, under Saved. No horizontal scroll at either width |
 | `24-007` Work hours as a fact in Family | P2 | Done | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): Family shows How they work and Office hours |
 
 ### 25 — HomeFood

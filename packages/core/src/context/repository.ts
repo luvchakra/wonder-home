@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { listConsumables, listOrders } from "../commerce/repository";
 import { listEvents } from "../family/repository";
 import { listObligations } from "../finance/repository";
-import { listAppointments } from "../health/appointments";
+import { countUpcomingAppointments, listAppointments } from "../health/appointments";
 import { listCheckups } from "../health/checkups";
 import { listFitnessGoals } from "../health/fitness";
 import { listIssues } from "../health/issues";
@@ -198,6 +198,12 @@ export type ContextSnapshot = {
   unavailable: string[];
   /** Items the privacy boundary held back, by reason. Ids only. */
   withheld: WithheldItem[];
+  /**
+   * For a member who may not read health: how many of their own appointments
+   * are still to come. A count, never a detail — so HomeBrain can say one is
+   * on record and that the adults in the family can see it.
+   */
+  heldForAdults: number;
   gatheredAt: Date;
 };
 
@@ -247,7 +253,14 @@ export async function gatherHouseholdContext(supabase: Supabase, scope: ContextS
   const fresh = applyFreshness(withEvidence, scope.now);
   const { items, withheld } = filterForViewer(fresh, effectiveScope);
 
-  return { scope: effectiveScope, items, unavailable: [...(options.agenda?.unavailable ?? []), ...unavailable], withheld, gatheredAt: scope.now };
+  // A member who may not read health still hears that their own appointment
+  // exists. A count of their own rows only; a failed read is simply none.
+  let heldForAdults = 0;
+  if ((!wanted || wanted.has("health")) && !may(scope.viewer, "health.manage")) {
+    heldForAdults = await countUpcomingAppointments(supabase, scope.householdId, scope.viewer.memberId, scope.now).catch(() => 0);
+  }
+
+  return { scope: effectiveScope, items, unavailable: [...(options.agenda?.unavailable ?? []), ...unavailable], withheld, heldForAdults, gatheredAt: scope.now };
 }
 
 /** The same read, kept briefly per viewer and forgotten the moment the household changes. */

@@ -86,6 +86,40 @@ export async function inviteMemberAction(
 
 export type MemberInviteResult = { path: string } | { error: "failed" | "linked" };
 
+/** A new single-use sign-in link for a member on record, and what an email needs to carry it. */
+type CreatedInvite = {
+  path: string;
+  email: string | null;
+  member: Awaited<ReturnType<typeof listMembers>>[number];
+  membership: Awaited<ReturnType<typeof requireHouseholdAdmin>>;
+};
+
+async function createMemberInvite(householdId: string, memberId: string): Promise<CreatedInvite | { error: "failed" | "linked" }> {
+  const ids = z.object({ householdId: z.uuid(), memberId: z.uuid() }).safeParse({ householdId, memberId });
+  if (!ids.success) return { error: "failed" };
+
+  const supabase = await createClient();
+  const membership = await requireHouseholdAdmin(supabase, householdId);
+  const member = (await listMembers(supabase, householdId, null)).find((entry) => entry.id === memberId);
+  if (!member || member.status === "inactive") return { error: "failed" };
+  if (member.hasAccount) return { error: "linked" };
+
+  const { readMemberEmails } = await import("@wonderhome/core/identity/member-email");
+  const email = (await readMemberEmails(supabase, householdId)).get(memberId) ?? null;
+  const role = member.roles.includes("administrator") ? "administrator" : member.memberType;
+
+  const invitation = await createInvitation(supabase, membership.memberId, {
+    householdId,
+    memberId,
+    email,
+    displayName: member.displayName,
+    memberType: member.memberType,
+    role,
+  });
+  revalidatePath("/household/members");
+  return { path: `/invite/${invitation.token}`, email, member, membership };
+}
+
 /**
  * The Invite button on a family member (Family): a single-use link for a
  * member already on record, to pass on by email, a share sheet or a copy.
@@ -95,34 +129,64 @@ export type MemberInviteResult = { path: string } | { error: "failed" | "linked"
  * stops the earlier one. Admins only, as every invitation is.
  */
 export async function inviteMemberToSignInAction(householdId: string, memberId: string): Promise<MemberInviteResult> {
-  const ids = z.object({ householdId: z.uuid(), memberId: z.uuid() }).safeParse({ householdId, memberId });
-  if (!ids.success) return { error: "failed" };
-
-  const supabase = await createClient();
   try {
-    const membership = await requireHouseholdAdmin(supabase, householdId);
-    const member = (await listMembers(supabase, householdId, null)).find((entry) => entry.id === memberId);
-    if (!member || member.status === "inactive") return { error: "failed" };
-    if (member.hasAccount) return { error: "linked" };
-
-    const { readMemberEmails } = await import("@wonderhome/core/identity/member-email");
-    const email = (await readMemberEmails(supabase, householdId)).get(memberId) ?? null;
-    const role = member.roles.includes("administrator") ? "administrator" : member.memberType;
-
-    const invitation = await createInvitation(supabase, membership.memberId, {
-      householdId,
-      memberId,
-      email,
-      displayName: member.displayName,
-      memberType: member.memberType,
-      role,
-    });
-    revalidatePath("/household/members");
-    // No email provider is configured, so WonderHome sends nothing itself:
-    // the inviter's own email app, share sheet or clipboard carries the link.
-    return { path: `/invite/${invitation.token}` };
+    const created = await createMemberInvite(householdId, memberId);
+    if ("error" in created) return { error: created.error };
+    return { path: created.path };
   } catch (error) {
     log.warn("member invitation failed", { reason: error instanceof Error ? error.name : "unknown" });
+    return { error: "failed" };
+  }
+}
+
+export type MemberInviteEmailResult = { path: string; sent: boolean } | { error: "failed" | "linked" | "no_email" | "no_mail" };
+
+/**
+ * The same link, sent by WonderHome itself to the email in the member's
+ * details (connect@wonderapps.biz, through the deployment's SMTP settings).
+ *
+ * The address is the one on record, read here on the server — never one the
+ * browser names — so an Admin can only mail the person the link is for. The
+ * link is made whether or not the email goes, so a failed send still leaves
+ * one to share another way; `sent` says which happened, and never claims
+ * delivery, only that the mail server accepted it.
+ */
+export async function emailMemberInviteAction(householdId: string, memberId: string): Promise<MemberInviteEmailResult> {
+  const { platformMailer, singleRecipient } = await import("@wonderhome/core/email/mailer");
+  const mailer = platformMailer();
+  if (!mailer) return { error: "no_mail" };
+  try {
+    const created = await createMemberInvite(householdId, memberId);
+    if ("error" in created) return { error: created.error };
+    const to = created.email ? singleRecipient(created.email) : null;
+    if (!to) return { error: "no_email" };
+
+    const [{ inviteEmail }, { preferencesOf }, { translatorFor }, { headers }] = await Promise.all([
+      import("@wonderhome/core/identity/invite-email"),
+      import("@wonderhome/core/i18n/preferences"),
+      import("@wonderhome/core/i18n/translate"),
+      import("next/headers"),
+    ]);
+    const incoming = await headers();
+    const host = incoming.get("host") ?? "localhost:3000";
+    const origin = incoming.get("origin") ?? `${host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https"}://${host}`;
+    const t = await translatorFor(preferencesOf(created.membership.locale, created.membership.household.timezone).language);
+    const household = created.membership.household.name;
+    const mail = inviteEmail({
+      to,
+      link: `${origin}${created.path}`,
+      subject: t("memberInvite.subject", { household }),
+      greeting: t("memberInvite.emailGreeting", { name: created.member.displayName }),
+      message: t("memberInvite.message", { inviter: created.membership.displayName, household }),
+      action: t("memberInvite.emailAction", { household }),
+      expiry: t("memberInvite.emailExpiry"),
+      footer: t("memberInvite.emailFooter"),
+    });
+    const outcome = await mailer.send(mail);
+    if (!outcome.ok) log.warn("member invitation email failed", { reason: outcome.reason });
+    return { path: created.path, sent: outcome.ok };
+  } catch (error) {
+    log.warn("member invitation email failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "failed" };
   }
 }

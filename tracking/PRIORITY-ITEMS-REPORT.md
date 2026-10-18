@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (after #216 and the browser checks).
+Last updated: 2026-10-18 (after #218 and the owner's decisions on invite email, a child's own appointment and the dashboard policy).
 
 ---
 
@@ -51,17 +51,18 @@ Last updated: 2026-10-18 (after #216 and the browser checks).
 | What's new section on Home | — | Done, #213 |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |
 | The calendar title squeezed on a phone | — | Done, #212 |
-| HomePlaces office, Add a place, work facts | 24-005, 24-006, 24-007 | #216 merged. 24-007 Done; 24-005 and 24-006 need a browser check with a Google Maps key |
+| HomePlaces office, Add a place, work facts | 24-005, 24-006, 24-007 | Done — #216; 24-005 and 24-006 browser-checked with a real Google Maps key on 2026-10-18 |
+| WonderHome emails the member invite itself, from connect@wonderapps.biz (GoDaddy) | 01-010 | Done in code; the SMTP settings are in Vercel production. A real send is checked on production after the merge |
+| A child asking about his own private appointment hears that one is coming up and that the adults can see the details | 26-003 / HomeBrain | Done (golden HT-82, HT-83) |
 
 ## C. Waiting only on a browser check
 
 QA credentials now work in a session that has `apps/web/.env.local` (or `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY` as environment variables). Checked and Done on 2026-10-18: 26-001, 01-010, 00-012, 24-007.
 
-- **24-005, 24-006** The office picker and Add a place need `GOOGLE_MAPS_API_KEY` in the build that is checked; without it they are hidden by design. Check them on a build with the key.
+Nothing is waiting. 24-005 and 24-006 were checked with a real Google Maps key on 2026-10-18.
 
 ## D. Decisions waiting on the owner
 
-- Should a child see his own private health appointment? Today he is told nothing is on record (household D, Kabir).
-- Should WonderHome send invite emails itself? That needs a mail provider. Today **Send email** opens the Admin's own mail app.
 - Is Supabase email confirmation on for password sign-ups? Matching by email relies on a confirmed address.
-- What should the `wonderapps_dashboard_read` policy on 32 live tables become? It is not in the repo and includes `household_ai_credentials`. It was flagged on 2026-10-18 and left unchanged.
+- **Decided 2026-10-18:** a child is told his own appointment is on record and that the adults can see the details; WonderHome sends invite emails from connect@wonderapps.biz; `wonderapps_dashboard_read` stays on every table except `household_ai_credentials`.
+- **Needs the owner to run once:** migration `20261018180000_dashboard_no_ai_credentials.sql` drops that policy (and the role's grant) on `household_ai_credentials`. This session's attempts to apply it to the live project were not approved, so it is in the repository but not yet live.

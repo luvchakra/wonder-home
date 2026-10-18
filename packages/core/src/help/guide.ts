@@ -147,7 +147,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "health",
     group: "Everyday use",
-    updated: "2026-09-25",
+    updated: "2026-10-18",
     keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private"],
   },
   {

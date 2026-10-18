@@ -21,4 +21,13 @@ export const memberInviteZh: AreaCatalog<typeof memberInviteEn> = {
   "memberInvite.message": "{inviter}邀请你在 WonderHome 加入{household}。打开此链接即可进入：",
   "memberInvite.factEmail": "登录邮箱",
   "memberInvite.signsIn": "可登录",
+  "memberInvite.emailTo": "将邀请发送到 {email}",
+  "memberInvite.emailing": "正在发送…",
+  "memberInvite.emailed": "已发送到 {email}。请对方查看收件箱，如果没有，再看看垃圾邮件。",
+  "memberInvite.emailFailed": "邮件未能发送。下面的链接仍然有效，请用其他方式分享。",
+  "memberInvite.linkOnly": "改为创建链接",
+  "memberInvite.emailGreeting": "{name}，你好：",
+  "memberInvite.emailAction": "加入 {household}",
+  "memberInvite.emailExpiry": "此链接只能使用一次，7 天后失效。",
+  "memberInvite.emailFooter": "如果你没有预料到这封邮件，可以忽略它。",
 } as const;

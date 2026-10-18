@@ -19,7 +19,7 @@ import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/rec
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { compareStages } from "./compare";
-import { calendarFor, contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
+import { calendarFor, contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, heldForAdultsFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
 import type { CaseResult, EvalCase, Expectation, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation } from "./types";
 
 /**
@@ -280,6 +280,7 @@ function brainAnswer(c: { household: HomeTalkCase["household"]; actor: string },
     people: peopleOf(household),
     compose: models.compose ?? null,
     factBudget: 12,
+    heldForAdults: heldForAdultsFor(household, who.id),
   });
 }
 

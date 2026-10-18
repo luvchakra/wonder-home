@@ -396,6 +396,14 @@ export function viewerFor(household: GoldenHousehold, memberId: string): Context
   };
 }
 
+/** The member's own upcoming appointments they may not read — the count production's snapshot carries as `heldForAdults`. */
+export function heldForAdultsFor(household: GoldenHousehold, memberId: string): number {
+  if (viewerFor(household, memberId).permissions.includes("health.manage")) return 0;
+  return (household.records.healthAppointments ?? []).filter(
+    (entry) => entry.memberId === memberId && (entry.status === "proposed" || entry.status === "confirmed") && new Date(entry.startsAt).getTime() >= household.now.getTime(),
+  ).length;
+}
+
 /** Every fact a member may see, as the viewer-filtered context snapshot production builds. */
 export function contextItemsFor(household: GoldenHousehold, memberId: string): HouseholdContextItem[] {
   const scope: ContextScope = { householdId: household.id, householdName: household.name, timezone: household.timezone, now: household.now, viewer: viewerFor(household, memberId) };
