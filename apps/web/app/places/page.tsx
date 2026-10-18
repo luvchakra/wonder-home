@@ -1,6 +1,12 @@
-import { MapPin, Trees, UtensilsCrossed } from "lucide-react";
+import { Briefcase, ExternalLink, House, MapPin, Pencil, School, Trees, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
 
+import { ourPlaces, type OurPlace } from "@wonderhome/core/homeplaces/our-places";
 import { listHouseholdPlaces, type HouseholdPlace } from "@wonderhome/core/homeplaces/repository";
+import { loadHouseholdAddress } from "@wonderhome/core/household/address";
+import { listWorkPlaces } from "@wonderhome/core/household/work-place";
+import { listMembers } from "@wonderhome/core/identity/households";
+import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { mapsLink } from "@wonderhome/core/places/provider";
 import { rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -26,8 +32,14 @@ function tileFor(kind: string | null) {
   return { icon: MapPin, tone: "people" as const };
 }
 
+const ICON_LINK =
+  "grid size-9 place-items-center rounded-full text-[var(--wh-foreground-muted)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]";
+
 /**
- * The household's place book (HomePlaces): what the family saved from a
+ * HomePlaces: first the household's own places — the home address, each
+ * child's school, each adult's office, every place picked from Google Maps
+ * anywhere in the app (story 24-010), each with a link to the one screen that
+ * changes it (Manage Household, Kids & School, Family) — then the place book: what the family saved from a
  * HomeTalk answer, and what they said is "not for us". Every member reads
  * it; an adult changes it — keeps a note, removes a saved place, or lets a
  * turned-down place be suggested again. Places come from HomeTalk's answers,
@@ -41,6 +53,15 @@ export default async function PlacesPage() {
   const shell = { active: "more" as const, viewer, secondary, pathname: "/places", back: { href: "/more", label: t("common.back") }, title: t("nav.item.places") };
 
   let places: HouseholdPlace[];
+  // The household's own places, each read as this viewer's session may read it (RLS keeps the rest out).
+  const [address, enrolments, workPlaces, members] = await Promise.all([
+    loadHouseholdAddress(supabase, householdId).catch(() => null),
+    listEnrolments(supabase, householdId).catch(() => []),
+    listWorkPlaces(supabase, householdId).catch(() => []),
+    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+  ]);
+  const ours = ourPlaces({ address, enrolments, workPlaces, names: new Map(members.map((member) => [member.id, member.displayName])) });
+  const isAdmin = view.permissions.includes("household.manage");
   try {
     places = await listHouseholdPlaces(supabase, householdId);
   } catch {
@@ -95,6 +116,46 @@ export default async function PlacesPage() {
     );
   };
 
+  const ourRow = (place: OurPlace) => {
+    const look =
+      place.kind === "home"
+        ? { icon: House, tone: "home" as const, title: t("placeBook.ours.home"), editHref: isAdmin ? "/household/address" : null }
+        : place.kind === "school"
+          ? { icon: School, tone: "school" as const, title: place.name, editHref: canChange && place.memberIds[0] ? `/school?child=${place.memberIds[0]}` : null }
+          : { icon: Briefcase, tone: "primary" as const, title: place.name, editHref: canChange ? "/family" : null };
+    const who = place.people.join(", ");
+    const what =
+      place.kind === "home"
+        ? place.name
+        : place.kind === "school"
+          ? who
+            ? t("placeBook.ours.school", { names: who })
+            : t("placeBook.ours.schoolNone")
+          : t("placeBook.ours.office", { names: who });
+    const meta = [what, place.address, place.pinned ? null : t("placeBook.ours.typed")].filter(Boolean).join(" · ");
+    return (
+      <ActionRow
+        key={place.key}
+        icon={look.icon}
+        tone={look.tone}
+        title={look.title}
+        meta={meta}
+        action={
+          <div className="flex items-center gap-1">
+            <a href={place.mapsUri} target="_blank" rel="noopener noreferrer" aria-label={t("hometalk.places.open", { name: look.title })} title={t("hometalk.places.open", { name: look.title })} className={ICON_LINK}>
+              <ExternalLink aria-hidden className="size-4" />
+            </a>
+            {look.editHref ? (
+              <Link href={look.editHref} aria-label={t("placeBook.ours.change", { name: look.title })} title={t("placeBook.ours.change", { name: look.title })} className={ICON_LINK}>
+                <Pencil aria-hidden className="size-4" />
+              </Link>
+            ) : null}
+          </div>
+        }
+      />
+    );
+  };
+
   return (
     <AppShell {...shell}>
       <div className="space-y-6">
@@ -103,6 +164,30 @@ export default async function PlacesPage() {
           <p className="text-[0.9375rem] text-[var(--wh-foreground-muted)]">{t("placeBook.lede", { name: firstName })}</p>
           {!canChange ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("placeBook.readOnly")}</p> : null}
         </header>
+
+        {ours.length > 0 || (isAdmin && !address) ? (
+          <section className="space-y-2">
+            <SectionHeader title={t("placeBook.ours.title")} />
+            <Card className="px-3">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {isAdmin && !address ? (
+                  <ActionRow
+                    icon={House}
+                    tone="home"
+                    title={t("placeBook.ours.addHome")}
+                    meta={t("placeBook.ours.addHomeLede")}
+                    action={
+                      <Link href="/household/address" aria-label={t("placeBook.ours.addHome")} title={t("placeBook.ours.addHome")} className={ICON_LINK}>
+                        <Pencil aria-hidden className="size-4" />
+                      </Link>
+                    }
+                  />
+                ) : null}
+                {ours.map(ourRow)}
+              </ul>
+            </Card>
+          </section>
+        ) : null}
 
         {canChange && placeSearchAvailable() ? (
           <section className="space-y-2">
@@ -127,7 +212,7 @@ export default async function PlacesPage() {
           </section>
         ) : null}
 
-        {places.length === 0 ? (
+        {places.length === 0 && ours.length === 0 ? (
           <EmptyState icon={MapPin} tone="home" title={t("placeBook.emptyTitle")} description={t("placeBook.emptyLede")} />
         ) : (
           <>

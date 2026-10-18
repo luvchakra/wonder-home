@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BookOpen, CalendarDays, GraduationCap, MessageSquareText, Plug } from "lucide-react";
+import { BookOpen, CalendarDays, GraduationCap, MessageSquareText, Plug, School } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import type { HomeAssessment } from "@wonderhome/core/home/assessment";
@@ -9,7 +9,9 @@ import type { Translate } from "@wonderhome/core/i18n/translate";
 import type { Integration } from "@wonderhome/core/integrations/repository";
 import { describeSchoolHealth } from "@wonderhome/core/school/connector";
 import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/items";
+import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
+import { mapsLink } from "@wonderhome/core/places/provider";
 import { schoolDateValue, schoolDayZone } from "@wonderhome/core/school/times";
 import { isoDateIn } from "@wonderhome/core/context/format";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
@@ -34,7 +36,10 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { AddHomeworkButton } from "../_components/school-forms";
 import { SchoolItemDetail } from "../_components/school-item-controls";
+import { placeSearchLabels } from "../_lib/place-labels";
+import { placeSearchAvailable } from "../_lib/places";
 import { schoolFormLabels } from "../_lib/school-form-labels";
+import { ChildSchoolActions, type ChildSchoolLabels } from "./child-school";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
@@ -69,12 +74,14 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, items, communications, members, integrations] = await Promise.all([
+  const [agenda, items, communications, members, integrations, enrolments] = await Promise.all([
     schoolAgenda(supabase, householdId).catch(() => null),
     listSchoolItems(supabase, householdId, child ? { childMemberId: child } : {}).catch(() => []),
     listCommunications(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listIntegrations(supabase, householdId).catch(() => []),
+    // Each child's school (story 24-010); RLS returns only the children this viewer may see.
+    listEnrolments(supabase, householdId).catch(() => []),
   ]);
 
   // A stale portal and "no homework" must never look alike (17-004): if a
@@ -90,6 +97,29 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const admin = isHouseholdAdmin(membership);
 
   const children = members.filter((member) => member.memberType === "child");
+  const schoolOf = (childId: string) => {
+    const enrolment = enrolments.find((entry) => entry.childMemberId === childId);
+    return enrolment
+      ? {
+          name: enrolment.schoolName,
+          address: enrolment.schoolAddress ?? null,
+          placeId: enrolment.placeId ?? null,
+          mapsUri: mapsLink({ name: enrolment.schoolName, formattedAddress: enrolment.schoolAddress ?? "", placeId: enrolment.placeId }),
+        }
+      : null;
+  };
+  const schoolLabels: ChildSchoolLabels = {
+    field: t("places.school.label"),
+    edit: t("school.place.edit", { name: "{name}" }),
+    title: t("school.place.title", { name: "{name}" }),
+    lede: t("school.place.lede"),
+    save: t("school.place.save"),
+    saving: t("common.saving"),
+    open: t("hometalk.places.open", { name: "{name}" }),
+    search: placeSearchLabels(t, "school"),
+  };
+  const shownChildren = child ? children.filter((kid) => kid.id === child) : children;
+  const canChangeSchool = view.tone === "adult";
   const childOptions = children.map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? t("school.unknownChild");
   const formLabels = schoolFormLabels(t, locale.preferences.language);
@@ -250,6 +280,37 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
         {active === "overview" ? (
           <>
             <ExpandableMetricGrid metrics={metrics} />
+            {shownChildren.length > 0 ? (
+              <section className="space-y-2">
+                <SectionHeader title={t("school.place.section")} />
+                <Card className="px-3">
+                  <ul className="divide-y divide-[var(--wh-border)]">
+                    {shownChildren.map((kid) => {
+                      const school = schoolOf(kid.id);
+                      return (
+                        <ActionRow
+                          key={kid.id}
+                          icon={School}
+                          tone="school"
+                          title={kid.displayName}
+                          meta={school ? [school.name, school.address].filter(Boolean).join(" · ") : t("school.place.none")}
+                          action={
+                            <ChildSchoolActions
+                              householdId={householdId}
+                              child={{ id: kid.id, name: kid.displayName }}
+                              school={school}
+                              canChange={canChangeSchool}
+                              available={placeSearchAvailable()}
+                              labels={schoolLabels}
+                            />
+                          }
+                        />
+                      );
+                    })}
+                  </ul>
+                </Card>
+              </section>
+            ) : null}
             {agenda === null ? (
               <EmptyState icon={GraduationCap} tone="school" title={t("school.loadFailed.title")} description={t("school.loadFailed.lede")} />
             ) : needsYou === 0 ? (

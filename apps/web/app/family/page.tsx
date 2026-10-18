@@ -68,7 +68,7 @@ export default async function FamilyPage() {
   // Each child's current school and its day, read beside their other details.
   const schoolOf = (memberId: string) => {
     const enrolment = enrolments.find((entry) => entry.childMemberId === memberId);
-    return enrolment ? { schoolName: enrolment.schoolName, hours: enrolment.hours ?? null } : null;
+    return enrolment ? { schoolName: enrolment.schoolName, hours: enrolment.hours ?? null, placeId: enrolment.placeId ?? null, schoolAddress: enrolment.schoolAddress ?? null } : null;
   };
 
   // A stale calendar and a free afternoon must never look alike (17-002): if a

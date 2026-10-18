@@ -4,6 +4,12 @@ import type { schoolEn } from "./en";
 export const schoolMr: AreaCatalog<typeof schoolEn> = {
   "school.notInPlan": "शाळा या प्लॅनमध्ये समाविष्ट नाही",
   "school.lede": "शाळेची सगळी माहिती एका ठिकाणी — आणि समोर फक्त तुमची गरज असलेलं.",
+  "school.place.section": "शाळा",
+  "school.place.none": "अजून कोणतीही शाळा नोंदलेली नाही",
+  "school.place.edit": "{name} ची शाळा बदला",
+  "school.place.title": "{name} ची शाळा",
+  "school.place.lede": "Google Maps मधून शाळा निवडा, किंवा यादीत नसेल तर तिचे नाव लिहा. काढण्यासाठी रिकामे ठेवा.",
+  "school.place.save": "शाळा जतन करा",
   "school.connect": "शाळा जोडा",
   "school.fixConnection": "कनेक्शन दुरुस्त करा",
   "school.everyone": "सगळे",

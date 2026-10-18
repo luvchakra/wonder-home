@@ -17,6 +17,7 @@ import { MemberAvatarControl } from "./member-avatar-control";
 import { MemberInviteControl } from "./member-invite-control";
 import { MemberProfileForm } from "./member-profile-form";
 import { officeField } from "../_lib/office-field";
+import { schoolField } from "../_lib/school-field";
 import { RemoveMemberControl } from "./remove-member-control";
 
 /** One label/value pair, skipped entirely when there is nothing to say (design principle 9: never a placeholder for what is not known). */
@@ -61,7 +62,7 @@ export function MemberDetail({
   statusLabel?: string | null;
   currentMemberId: string;
   /** A child's current school and its day, when one is on record. */
-  school?: { schoolName: string; hours: DayHours | null } | null;
+  school?: { schoolName: string; hours: DayHours | null; placeId?: string | null; schoolAddress?: string | null } | null;
   /**
    * Their sign-in email, when this viewer may read it (Admins, and the member
    * themselves — the database decides). Undefined when it was not read.
@@ -110,7 +111,7 @@ export function MemberDetail({
         <Fact label={t("family.fact.dateOfBirth")} value={born} />
         <Fact label={t("family.fact.gender")} value={member.gender} />
         <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
-        <Fact label={t("family.fact.schoolOrWork")} value={member.schoolOrWorkLocation} />
+        <Fact label={t("family.fact.schoolOrWork")} value={member.memberType === "child" && school ? school.schoolName : member.memberType === "adult" && workPlace ? null : member.schoolOrWorkLocation} />
         <Fact label={t("family.fact.workArrangement")} value={member.memberType === "adult" && member.workArrangement ? t(`setupWizard.work.${member.workArrangement}`) : null} />
         <Fact label={t("family.fact.office")} value={member.memberType === "adult" && workPlace ? workPlace.name : null} />
         <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
@@ -156,6 +157,7 @@ export function MemberDetail({
             }}
             workOptions={member.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
             office={member.memberType === "adult" ? officeField(workPlace ?? null) : undefined}
+            schoolPlace={member.memberType === "child" ? schoolField(school ?? null) : undefined}
             helperRoles={
               member.memberType === "helper"
                 ? {

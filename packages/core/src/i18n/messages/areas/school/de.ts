@@ -4,6 +4,12 @@ import type { schoolEn } from "./en";
 export const schoolDe: AreaCatalog<typeof schoolEn> = {
   "school.notInPlan": "Schule ist in diesem Tarif nicht enthalten",
   "school.lede": "Alle Schulinfos an einem Ort – und vorne nur, was dich braucht.",
+  "school.place.section": "Schulen",
+  "school.place.none": "Noch keine Schule eingetragen",
+  "school.place.edit": "Schule von {name} ändern",
+  "school.place.title": "Schule von {name}",
+  "school.place.lede": "Wählen Sie die Schule aus Google Maps oder geben Sie ihren Namen ein, wenn sie nicht erscheint. Leer lassen, um sie zu entfernen.",
+  "school.place.save": "Schule speichern",
   "school.connect": "Schule verbinden",
   "school.fixConnection": "Verbindung reparieren",
   "school.everyone": "Alle",

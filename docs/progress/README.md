@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [HomePlaces shows every place picked with Google Maps (24-010)](2026-10-18-homeplaces-our-places.md) |
 | 2026-10-18 | [Home's next event says what kind it is (26-007)](2026-10-18-home-event-by-kind.md) |
 | 2026-10-18 | [HomeBrain 3.0 phase A: the Household Context Store (14-020), wait to speak until HomeTalk can hear (04-021), and pieces to grams live (25-013)](2026-10-18-homebrain-3-phase-a.md) |
 | 2026-10-18 | [HomeTalk floats over other apps (04-020), and the unit-change migration for the owner (25-013)](2026-10-18-hometalk-floats.md) |

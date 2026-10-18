@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**253 of 270 stories done — 93.7%**
+**254 of 274 stories done — 92.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 253 |
+| Done | 254 |
 | In Progress | 3 |
 | Blocked | 0 |
-| Not Started | 13 |
+| Not Started | 16 |
 | Deferred | 1 |
 
 ## By module
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 8 | 8 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 8 | 8 | — |
-| 08 Kids & School Intelligence | `██████████` | 9 | 9 | — |
+| 08 Kids & School Intelligence | `███████░░░` | 9 | 12 | 3 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 9 | 9 | — |
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 12 | 12 | — |
-| 24 HomePlaces | `██████████` | 9 | 9 | — |
+| 24 HomePlaces | `██████████` | 10 | 10 | — |
 | 25 HomeFood | `█████░░░░░` | 8 | 15 | 1 in progress, 6 not started |
 | 26 HomeEvents | `██░░░░░░░░` | 2 | 7 | 1 in progress, 4 not started |
 
@@ -58,6 +58,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Story | Module | Priority | Status |
 |---|---|---|---|
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
+| `08-010` Each child's school details: class, class teacher, subject teachers | 08 Kids & School Intelligence | P0 | Not Started |
+| `08-011` Activities and classes outside school, folded | 08 Kids & School Intelligence | P0 | Not Started |
+| `08-012` Today's classes on the calendar by default | 08 Kids & School Intelligence | P0 | Not Started |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Not Started |
@@ -221,7 +224,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-9 of 9 done `██████████`
+9 of 12 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -234,6 +237,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-007` School summaries | P1 | Done | only messages that ask something surface; a newsletter is filed |
 | `08-008` Deep portal automation | P2 | Done | adapter seam and scopes in place; no portal is live (CLAUDE.md) |
 | `08-009` Add a child from a school notice | P2 | Done | Found in the test-spec live run (23 Sep 2026): a household with no child on record cannot confirm a school notice — offer to add the child inline. Done: the resolver names an untitled unknown child (`unknown`), never assumes the household's only child; the review offers "Add <name> as a child" to Admins (guardian = the Admin, as on Family) and confirms the notice for them in the same step; golden case HS-15 |
+| `08-010` Each child's school details: class, class teacher, subject teachers | P0 | Not Started | The owner, 2026-10-18. The school itself (Google Maps picker) is done in 24-010. Left: the class/grade, the class teacher and every subject teacher with their names, per child on Kids & School, each added, changed and removed (rule 12). Needs a migration (SQL for the owner) |
+| `08-011` Activities and classes outside school, folded | P0 | Not Started | The owner, 2026-10-18: music, piano, karate and any learning class, per child, as folded rows showing the class, a short description and its timings; opened, the teacher, the schedule, notes, upcoming competitions and medals won, all addable. Needs a migration |
+| `08-012` Today's classes on the calendar by default | P0 | Not Started | The owner, 2026-10-18: an activity's sessions that fall today appear in the Calendar without anyone adding them (a calendar adapter over the activity schedule, like occasions and holidays). Depends on 08-011 |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -486,7 +492,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-9 of 9 done `██████████`
+10 of 10 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -499,6 +505,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-007` Work hours as a fact in Family | P2 | Done | Family's member detail shows how they work and their office beside their office hours (`family.fact.workArrangement`, `family.fact.office`). Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): Family shows How they work and Office hours |
 | `24-008` Getaways: "a two-day vacation plan" answered with places worth the trip | P0 | Done | The owner, 2026-10-18 (PR #228). `homeplaces/request.ts` reads a getaway (vacation, holiday, trip, weekend away; the days from "two-day", "a weekend", "4 day"): `purpose: "getaway"`, anchored at home, `when: { kind: "trip", days }`, radius 200 km (80 km for one day). The search asks for tourist attractions ("hill station weekend getaway" for a weekend; vaguer words drew resorts and travel agencies when tried) and is kept within the area (`NearbyQuery.within` → a `locationRestriction` rectangle, `includedType` with strict type filtering in `places/google.ts`); day-trip distances (under 25 km) are left out; no opening hours are checked; distance costs little in the ranking. The reply says "worth the trip from home, the best rated first" and to check the drive, weather and stay. Live check from Pune: Mahabaleshwar, Louisa Point, Naneghat, the Wai hills. Gemini Live answers it where location may reach Google |
 | `24-009` HomePlaces is named and placed with the AI tools | P1 | Done | The owner, 2026-10-18 (PR #232): the Places screen is now HomePlaces and sits in the nav drawer and More under AI & Smart Tools, after HomeSend (`navigation/secondary-navigation.ts`, AI tone). HomeBrain Review is now HomeBrain in the same section. Nav labels, page titles, HomeTalk's "take me to HomePlaces", the help guide and HomeTalk's own replies are renamed in all eight languages. Browser-checked at 360px and desktop |
+| `24-010` Every picked place shows in HomePlaces | P0 | Done | The owner, 2026-10-18 (PR #233): a home address added in Manage Household did not appear in HomePlaces, which only listed the place book. HomePlaces now opens with **Our places**: the home address, each child's school and each adult's office, every place picked from Google Maps anywhere in the app (`homeplaces/our-places.ts`; siblings at one school and colleagues at one office are one row). Each opens in Google Maps, and its pencil goes to its one editor: Manage Household for the home (Admins; others see no pencil), Kids & School for a school, Family for an office. An Admin with no address on record sees **Add your home address**. A child's school, which could only be set during setup, can now be picked from Google Maps (or typed) on Kids & School under **Schools**, per child (`saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`; leaving it empty retires it with `endEnrolments`, kept rather than deleted). The owner asked for the same in Family: a child's details now pick the school from Google Maps in place of the free-text "School or work location", through the same save, so the two screens always show one school; an adult's location is their Office picker, and only a helper keeps the free-text line. Event and appointment locations are typed text, not Maps picks, so they are not listed. Help ¶11 in eight languages. Browser-checked at 360px and 1280px on the live project |
 
 ### 25 — HomeFood
 

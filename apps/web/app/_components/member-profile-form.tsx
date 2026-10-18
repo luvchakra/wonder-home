@@ -21,6 +21,9 @@ import { PlaceSearchField, type PlaceSearchLabels, type PlaceSearchValue } from 
 /** An adult's office, picked from the place search (story 24-005). Absent without a place search on this deployment. */
 export type OfficeFieldProps = { label: string; labels: PlaceSearchLabels; initial: PlaceSearchValue | null };
 
+/** A child's school, the same Google Maps picker as Kids & School, typed where this deployment has no place search. */
+export type SchoolFieldProps = OfficeFieldProps & { available: boolean };
+
 /** A househelper's "what they do", ticked rather than typed, in the viewer's language. */
 export type HelperRoleWords = { legend: string; other: string; placeholder: string; roles: Record<string, string> };
 
@@ -73,12 +76,15 @@ export function MemberProfileForm({
   helperRoles,
   workOptions,
   office,
+  schoolPlace,
 }: {
   householdId: string;
   memberId: string;
   initial: MemberProfileInitial;
   /** Where an adult works, as a picked place, so HomeTalk can look near it. */
   office?: OfficeFieldProps;
+  /** Where a child goes to school (story 24-010): the same record and save path as Kids & School's Schools. */
+  schoolPlace?: SchoolFieldProps;
   /** Set for a househelper: everything they do, as checkboxes, in place of a free-text occupation. */
   helperRoles?: HelperRoleWords;
   /** How an adult may work, as the picker offers it (rule 20). */
@@ -147,7 +153,26 @@ export function MemberProfileForm({
           ) : (
             <Field label="Occupation" name="occupation" defaultValue={initial.occupation ?? ""} placeholder="What they do for work or study" autoComplete="off" />
           )}
-          <Field label="School or work location" name="schoolOrWorkLocation" defaultValue={initial.schoolOrWorkLocation ?? ""} placeholder="Where they spend the day" autoComplete="off" />
+          {initial.memberType === "child" && schoolPlace ? (
+            // A child's location is their school, picked from Google Maps like on Kids & School.
+            <div className="space-y-1.5">
+              <input type="hidden" name="schoolField" value="1" />
+              <PlaceSearchField
+                householdId={householdId}
+                kind="school"
+                label={schoolPlace.label}
+                textName="school_name"
+                placeName="school_place_id"
+                sessionName="school_session"
+                initial={schoolPlace.initial}
+                available={schoolPlace.available}
+                labels={schoolPlace.labels}
+              />
+            </div>
+          ) : initial.memberType === "adult" && office ? null : (
+            // An adult's location is their office (picked below); a helper's day is still said in words.
+            <Field label="School or work location" name="schoolOrWorkLocation" defaultValue={initial.schoolOrWorkLocation ?? ""} placeholder="Where they spend the day" autoComplete="off" />
+          )}
 
           {initial.memberType === "adult" ? (
             <fieldset className="space-y-3">

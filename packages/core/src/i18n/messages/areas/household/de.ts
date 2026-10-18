@@ -624,6 +624,7 @@ export const householdDe: AreaCatalog<typeof householdEn> = {
   "places.openInMaps": "In Google Maps öffnen",
   "places.address.hint": "Wähle deine Adresse aus Google Maps. Fehlt sie, tippe sie ein; sie wird so gespeichert.",
   "places.school.hint": "Schulen in der Nähe deines Zuhauses stehen oben. Wähle eine oder tippe den Namen.",
+  "places.school.label": "Schule",
   "places.office.label": "Büro",
   "places.office.placeholder": "Name oder Adresse des Büros eingeben",
   "places.office.nothingFound": "Nichts gefunden. Schreib weiter: Das Büro wird aus Google Maps gewählt, damit HomeTalk in der Nähe suchen kann.",

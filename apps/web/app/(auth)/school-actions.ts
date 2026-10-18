@@ -231,3 +231,30 @@ export async function cancelSchoolItemAction(_previous: ActionState, formData: F
     return { error: toErrorBody(thrown, "school").body.error.message };
   }
 }
+
+const childSchoolSchema = z.object({ householdId: z.uuid(), childMemberId: z.uuid() });
+
+/**
+ * A child's school from Kids & School (story 24-010): picked from Google Maps
+ * (re-read on the server, never an address from the browser), typed when the
+ * search has no match, or left empty to say they have no school on record.
+ * The guardian-or-Admin rule is the database's.
+ */
+export async function saveChildSchoolAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = childSchoolSchema.safeParse({ householdId: formData.get("householdId"), childMemberId: formData.get("childMemberId") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    const { saveSchoolFromForm } = await import("../_lib/places");
+    const result = await saveSchoolFromForm(supabase, actor, parsed.data.childMemberId, formData);
+    revalidatePath("/school");
+    revalidatePath("/places");
+    revalidatePath("/family");
+    return { notice: result === "removed" ? "Removed." : "Saved." };
+  } catch (error) {
+    const { PlacesUnavailableError } = await import("@wonderhome/core/places/provider");
+    if (error instanceof PlacesUnavailableError) return { error: "That school could not be read just now. Try picking it again in a minute." };
+    return { error: toErrorBody(error, "school").body.error.message };
+  }
+}
