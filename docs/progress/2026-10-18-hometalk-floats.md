@@ -51,4 +51,4 @@ The service-role key cannot run DDL: Supabase's Management API refused it (401, 
 
 ## QA cleanup
 
-Recorded after the merge.
+Done after #230 merged, on 2026-10-18. These PRs (#226 to #230) all used one QA account, `52b0dda2-aaaa-48eb-a863-298bbd8fd1ea`, and its household "Cards QA Home" (`0a6a54d8-3e1c-4ddd-8fe3-a77ce65923fb`). The household's only member was that account, so it was deleted with everything in it: the seeded pasta items and the unit-change record, the QA birthday party and its two guests, the conversation, the Pro subscription, the address and the stored context row. Then the account was deleted. A count of all 132 household tables found no rows left, the account lookup found nothing, and no stored files were under the household. The local credentials, saved session, screenshots and QA scripts are gone, and no dev server is running.
