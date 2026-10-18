@@ -43,8 +43,6 @@ export type MealFormLabels = {
   mealPlaceholder: string;
   essential: string;
   essentialPlaceholder: string;
-  fillLater: string;
-  backToPicking: string;
   addMeal: string;
   adding: string;
   fromRecipe: string;
@@ -52,7 +50,6 @@ export type MealFormLabels = {
   readyToCook: string;
   missingIngredient: string;
   recipeOption: string;
-  addNewMeal: string;
   slot: string;
   date: string;
   readyBy: string;
@@ -60,6 +57,13 @@ export type MealFormLabels = {
   nobodyYet: string;
   planSubmit: string;
   planning: string;
+  /** Where the ingredients written while planning go (25-019). */
+  ingredientsFor: string;
+  forThisMeal: string;
+  /** `{recipe}` is the recipe's name. */
+  forRecipeToo: string;
+  forNewRecipe: string;
+  newRecipeName: string;
   attach: string;
   attachTitle: string;
   change: string;
@@ -141,19 +145,17 @@ function Submit({
 }
 
 /**
- * "Plan a meal" as a sheet — the manual half of "Plan with AI". A recipe is
- * optional: picking one links timing and ingredients to the meal.
+ * "Plan a meal" as a sheet, starting from the recipe (25-019, the owner's
+ * order). Picking a recipe fills in the meal's name and every item it needs
+ * with its amount; all of it stays editable. Where the written ingredients
+ * go is the person's choice: just for this meal (the recipe is untouched),
+ * saved to the recipe too, or saved as a new recipe — which is also how a
+ * one-off dish becomes a recipe (rule 20's way to add what isn't listed).
  *
- * The recipe picker groups what the household can cook right now (every
- * essential ingredient in stock, the same check `suggestMeal`'s "Suggest"
- * button already runs) ahead of what's missing something — the choices are
- * offered based on what's actually available, not a flat alphabetical list,
- * but nothing is hidden: a recipe that's short an ingredient is still one
- * tap away, since WonderHome already turns that shortage into a shopping
- * item once the meal is planned. A final "Add a new meal" option swaps in a
- * compact recipe-creation form (rule 20: a picker always carries its own
- * way to add a value that isn't listed yet); creating it there also makes
- * it selectable for every future "Plan a meal", not just this one.
+ * The picker groups what the household can cook right now (every essential
+ * ingredient in stock, the check `suggestMeal` runs) ahead of what is short
+ * of something; nothing is hidden, since planning a recipe is what turns a
+ * shortage into a shopping item.
  */
 export function PlanMealButton({
   householdId,
@@ -170,97 +172,44 @@ export function PlanMealButton({
     totalMinutes: number;
     serves: number;
     available: boolean;
+    ingredients: { name: string; quantity: number; unit: string }[];
   }[];
 }) {
   const [open, setOpen] = useState(false);
-  const [addingMeal, setAddingMeal] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    createMealAction,
-    {},
-  );
-  const [recipeState, recipeFormAction] = useActionState<
-    RecipeActionState,
-    FormData
-  >(createRecipeAction, {});
+  const [state, formAction] = useActionState<ActionState, FormData>(createMealAction, {});
   const today = new Date().toISOString().slice(0, 10);
-
-  // Once the quick-add recipe form succeeds, `revalidatePath("/meals")`
-  // refreshes this sheet's `recipes` prop with the new one already in it —
-  // so switching back to the picker is enough; there is nothing further to
-  // do to select it, it is simply there now. Adjusted during render (React's
-  // own pattern for "reset state when something changes") rather than in an
-  // effect, since this is deriving state from a render, not synchronising
-  // with an external system.
-  const [handledNotice, setHandledNotice] = useState<string | undefined>(
-    undefined,
-  );
-  if (recipeState.notice && recipeState.notice !== handledNotice) {
-    setHandledNotice(recipeState.notice);
-    setAddingMeal(false);
-  }
-
-  const ready = recipes.filter((recipe) => recipe.available);
-  const missingSomething = recipes.filter((recipe) => !recipe.available);
+  // The recipe comes first (the owner, 2026-10-18): picking one fills in the
+  // meal's name and what it needs, and everything stays editable.
+  const [recipeId, setRecipeId] = useState("");
+  const [name, setName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
+  const [scope, setScope] = useState<"meal" | "recipe" | "new">("meal");
+  const recipe = recipes.find((choice) => choice.id === recipeId) ?? null;
+  const ready = recipes.filter((choice) => choice.available);
+  const missingSomething = recipes.filter((choice) => !choice.available);
+  const select = "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
+  const scopes: { key: "meal" | "recipe" | "new"; label: string }[] = recipe
+    ? [
+        { key: "meal", label: labels.forThisMeal },
+        { key: "recipe", label: fill(labels.forRecipeToo, { recipe: recipe.name }) },
+        { key: "new", label: labels.forNewRecipe },
+      ]
+    : [
+        { key: "meal", label: labels.forThisMeal },
+        { key: "new", label: labels.forNewRecipe },
+      ];
 
   return (
     <>
-      <Pill
-        type="button"
-        tone="soft"
-        onClick={() => setOpen(true)}
-        className="gap-1.5"
-      >
+      <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
         <Plus aria-hidden className="size-3.5" /> {labels.plan}
       </Pill>
 
-      <Sheet
-        open={open}
-        onOpenChange={setOpen}
-        title={labels.plan}
-        description={labels.planDescription}
-      >
-        {addingMeal ? (
-          <form action={recipeFormAction} className="space-y-3">
-            {recipeState.error ? <Alert>{recipeState.error}</Alert> : null}
-            <input type="hidden" name="householdId" value={householdId} />
-            <input type="hidden" name="activeMinutes" value={20} />
-            <input type="hidden" name="totalMinutes" value={40} />
-            <input type="hidden" name="serves" value={4} />
-            <Field
-              label={labels.mealName}
-              name="name"
-              required
-              placeholder={labels.mealPlaceholder}
-              autoComplete="off"
-            />
-            <IngredientRows prefix="essential" labels={{ ...labels.rows, legend: labels.essential }} unitLabels={labels.unitNames} />
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              {labels.fillLater}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setAddingMeal(false)}
-              >
-                {labels.backToPicking}
-              </Button>
-              <Submit label={labels.addMeal} pendingLabel={labels.adding} />
-            </div>
-          </form>
-        ) : (
+      <Sheet open={open} onOpenChange={setOpen} title={labels.plan} description={labels.planDescription}>
         <form action={formAction} className="space-y-3">
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Field
-            label={labels.mealName}
-            name="name"
-            required
-            placeholder={labels.mealPlaceholder}
-            autoComplete="off"
-          />
           <div className="space-y-1.5">
             <label htmlFor="recipeId" className="block text-sm font-medium">
               {labels.fromRecipe}
@@ -268,44 +217,88 @@ export function PlanMealButton({
             <select
               id="recipeId"
               name="recipeId"
-              defaultValue=""
+              value={recipeId}
               onChange={(event) => {
-                if (event.target.value === "__new__") setAddingMeal(true);
+                const next = recipes.find((choice) => choice.id === event.target.value) ?? null;
+                setRecipeId(event.target.value);
+                if (next && !nameTouched) setName(next.name);
+                if (!next && !nameTouched) setName("");
+                if (!next && scope === "recipe") setScope("meal");
               }}
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+              className={select}
             >
               <option value="">{labels.oneOff}</option>
               {ready.length > 0 ? (
                 <optgroup label={labels.readyToCook}>
-                  {ready.map((recipe) => (
-                    <option key={recipe.id} value={recipe.id}>
-                      {fill(labels.recipeOption, { name: recipe.name, minutes: recipe.totalMinutes, serves: recipe.serves })}
+                  {ready.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {fill(labels.recipeOption, { name: choice.name, minutes: choice.totalMinutes, serves: choice.serves })}
                     </option>
                   ))}
                 </optgroup>
               ) : null}
               {missingSomething.length > 0 ? (
                 <optgroup label={labels.missingIngredient}>
-                  {missingSomething.map((recipe) => (
-                    <option key={recipe.id} value={recipe.id}>
-                      {fill(labels.recipeOption, { name: recipe.name, minutes: recipe.totalMinutes, serves: recipe.serves })}
+                  {missingSomething.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {fill(labels.recipeOption, { name: choice.name, minutes: choice.totalMinutes, serves: choice.serves })}
                     </option>
                   ))}
                 </optgroup>
               ) : null}
-              <option value="__new__">{labels.addNewMeal}</option>
             </select>
           </div>
+          <Field
+            label={labels.mealName}
+            name="name"
+            required
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setNameTouched(true);
+            }}
+            placeholder={labels.mealPlaceholder}
+            autoComplete="off"
+          />
+          {/* A new key starts the rows again from the recipe just picked. */}
+          <IngredientRows
+            key={recipeId || "one-off"}
+            prefix="essential"
+            initial={recipe?.ingredients}
+            labels={{ ...labels.rows, legend: labels.essential }}
+            unitLabels={labels.unitNames}
+          />
+          <fieldset className="space-y-1.5">
+            <legend className="mb-1 text-sm font-medium">{labels.ingredientsFor}</legend>
+            {scopes.map((option) => (
+              <label key={option.key} className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[var(--wh-radius-sm)] px-1 text-sm">
+                <input
+                  type="radio"
+                  name="ingredientsFor"
+                  value={option.key}
+                  checked={scope === option.key}
+                  onChange={() => setScope(option.key)}
+                  className="size-4 accent-[var(--wh-primary)]"
+                />
+                <span className="min-w-0 flex-1">{option.label}</span>
+              </label>
+            ))}
+            {scope === "new" ? (
+              <Field
+                label={labels.newRecipeName}
+                name="newRecipeName"
+                required
+                defaultValue={recipe ? "" : name}
+                key={`new-${recipeId}`}
+                autoComplete="off"
+              />
+            ) : null}
+          </fieldset>
           <div className="space-y-1.5">
             <label htmlFor="slot" className="block text-sm font-medium">
               {labels.slot}
             </label>
-            <select
-              id="slot"
-              name="slot"
-              defaultValue="dinner"
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
+            <select id="slot" name="slot" defaultValue="dinner" className={select}>
               {SLOTS.map((slot) => (
                 <option key={slot} value={slot}>
                   {labels.slots[slot]}
@@ -314,31 +307,14 @@ export function PlanMealButton({
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field
-              label={labels.date}
-              name="onDate"
-              type="date"
-              required
-              defaultValue={today}
-            />
-            <Field
-              label={labels.readyBy}
-              name="readyByTime"
-              type="time"
-              required
-              defaultValue="20:00"
-            />
+            <Field label={labels.date} name="onDate" type="date" required defaultValue={today} />
+            <Field label={labels.readyBy} name="readyByTime" type="time" required defaultValue="20:00" />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="cookMemberId" className="block text-sm font-medium">
               {labels.cook}
             </label>
-            <select
-              id="cookMemberId"
-              name="cookMemberId"
-              defaultValue=""
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
+            <select id="cookMemberId" name="cookMemberId" defaultValue="" className={select}>
               <option value="">{labels.nobodyYet}</option>
               {members.map((member) => (
                 <option key={member.id} value={member.id}>
@@ -349,7 +325,6 @@ export function PlanMealButton({
           </div>
           <Submit label={labels.planSubmit} pendingLabel={labels.planning} />
         </form>
-        )}
       </Sheet>
     </>
   );

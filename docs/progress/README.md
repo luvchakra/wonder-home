@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-18 | [Plan a meal starts from the recipe (25-019)](2026-10-18-plan-a-meal-recipe-first.md) |
 | 2026-10-18 | [Push notifications that arrive in time; a tall invitation with a preview (23-013, 26-012, 04-024)](2026-10-18-push-notifications.md) |
 | 2026-10-18 | [Decorated invitations, and five fixes from the owner's phone (26-009, 26-010, 08-014, 07-009, 07-010, 05-009, 26-011)](2026-10-18-decorated-invitations.md) |
 | 2026-10-18 | [A child's classes in Family; an honest empty today (08-013, 26-008)](2026-10-18-family-classes-and-today.md) |

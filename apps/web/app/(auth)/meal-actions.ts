@@ -28,6 +28,8 @@ import {
   createMeal,
   createRecipe,
   removeMeal,
+  replaceRecipeEssentials,
+  setMealEssentials,
   suggestMeal,
   updateMeal,
 } from "@wonderhome/core/meals/repository";
@@ -40,7 +42,9 @@ import type { ActionState } from "./actions";
  * form behind it even though `createMeal` already existed. A recipe is
  * optional: picking one links the meal and copies its ingredients onto it
  * (`attachIngredients`), exactly as the API route already did for a
- * provider-driven plan.
+ * provider-driven plan. Since 25-019 the ingredients written in the form
+ * go where the person chose (`ingredientsFor`): this meal only, the
+ * picked recipe too, or a new recipe the meal is then planned from.
  */
 const schema = z.object({
   householdId: z.uuid(),
@@ -50,6 +54,8 @@ const schema = z.object({
   readyByTime: z.string().regex(/^\d{2}:\d{2}$/, { error: "Choose a time." }),
   cookMemberId: z.union([z.uuid(), z.literal("")]).optional(),
   recipeId: z.union([z.uuid(), z.literal("")]).optional(),
+  ingredientsFor: z.enum(["meal", "recipe", "new"]).default("meal"),
+  newRecipeName: z.string().trim().max(120).optional(),
 });
 
 export async function createMealAction(
@@ -64,6 +70,8 @@ export async function createMealAction(
     readyByTime: formData.get("readyByTime"),
     cookMemberId: formData.get("cookMemberId") || undefined,
     recipeId: formData.get("recipeId") || undefined,
+    ingredientsFor: formData.get("ingredientsFor") || undefined,
+    newRecipeName: formData.get("newRecipeName") || undefined,
   });
   if (!parsed.success) {
     return {
@@ -71,11 +79,17 @@ export async function createMealAction(
         parsed.error.issues[0]?.message ?? "Please check the details above.",
     };
   }
+  const lines = ingredientLinesFrom(ingredientRowsOf(formData, "essential"));
+  const scope = parsed.data.ingredientsFor === "recipe" && !parsed.data.recipeId ? "meal" : parsed.data.ingredientsFor;
+  if (scope === "new" && !parsed.data.newRecipeName) {
+    return { error: "Name the new recipe." };
+  }
 
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
 
+    // The meal first, so a slot that is already taken changes no recipe.
     const created = await createMeal(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
@@ -83,21 +97,40 @@ export async function createMealAction(
       onDate: parsed.data.onDate,
       readyBy: readyByOn(parsed.data.onDate, parsed.data.readyByTime, membership.household.timezone),
       cookMemberId: parsed.data.cookMemberId || null,
-      recipeId: parsed.data.recipeId || null,
+      recipeId: scope === "new" ? null : parsed.data.recipeId || null,
     });
 
-    if (parsed.data.recipeId) {
-      await attachIngredients(
-        supabase,
-        parsed.data.householdId,
-        created.id,
-        parsed.data.recipeId,
-      );
+    // 25-019: what was written for the ingredients goes where the person
+    // chose — a new recipe, the picked recipe too, or this meal only.
+    const householdId = parsed.data.householdId;
+    if (scope === "new") {
+      const recipe = await createRecipe(supabase, {
+        householdId,
+        name: parsed.data.newRecipeName!,
+        activeMinutes: 20,
+        totalMinutes: 40,
+        serves: 4,
+        essentialIngredients: lines,
+        optionalIngredients: [],
+      });
+      await attachRecipeToMeal(supabase, householdId, created.id, recipe.id);
+    } else if (parsed.data.recipeId) {
+      if (scope === "recipe") await replaceRecipeEssentials(supabase, { householdId, recipeId: parsed.data.recipeId, lines });
+      await attachIngredients(supabase, householdId, created.id, parsed.data.recipeId);
+      // "Just for this meal": the meal needs exactly what was written, the recipe stays as it was.
+      if (scope === "meal") await setMealEssentials(supabase, { householdId, mealId: created.id, lines });
+    } else if (lines.length > 0) {
+      await addMealIngredients(supabase, { householdId, mealId: created.id, lines });
     }
 
     revalidatePath("/meals");
     return {
-      notice: "Planned. WonderHome will check the ingredients against it.",
+      notice:
+        scope === "new"
+          ? "Planned, and saved as a new recipe to pick next time."
+          : scope === "recipe"
+            ? "Planned, and the recipe now uses these ingredients."
+            : "Planned. WonderHome will check the ingredients against it.",
     };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "meals").body.error.message };
