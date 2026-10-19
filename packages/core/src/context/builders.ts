@@ -23,6 +23,7 @@ import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
 import type { Enrolment } from "../school/enrolments";
 import { spokenSummary, type SpokenLanguage } from "../identity/member-languages";
+import type { Exam, TimetablePeriod } from "../school/exams";
 import type { SchoolItem } from "../school/items";
 import { capitalize, describeValue, formatDate, formatTime, humanKey, isoDateIn, money, words } from "./format";
 import type { ContextDomain, ContextTier, HealthScope, HouseholdContextItem, PrivacyClass, SourceRef } from "./types";
@@ -157,6 +158,9 @@ export type ContextRecords = {
   eventGuests?: readonly EventGuestRecord[];
   absences?: readonly AbsenceRecord[];
   schoolItems?: readonly SchoolItem[];
+  /** A child's exams with their papers, and their weekly timetable (story 08-015). */
+  exams?: readonly Exam[];
+  timetable?: readonly TimetablePeriod[];
   communications?: readonly SchoolCommunication[];
   consumables?: readonly Consumable[];
   orders?: readonly Order[];
@@ -625,6 +629,55 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
       });
     }
   }
+  // Each exam paper on its day, and each child's school day by weekday (08-015).
+  if (records.exams) {
+    for (const exam of records.exams) {
+      const examName = exam.title ? `${exam.examType} (${exam.title})` : exam.examType;
+      for (const paper of exam.papers) {
+        const upcoming = paper.onDate >= today;
+        const when = `${formatDate(new Date(`${paper.onDate}T12:00:00Z`), "UTC")}${paper.startsAt ? ` at ${clock(paper.startsAt)}${paper.endsAt ? ` to ${clock(paper.endsAt)}` : ""}` : ""}`;
+        add({
+          domain: "school",
+          entityType: "exam_paper",
+          entityId: paper.id,
+          summary: upcoming
+            ? `${name(exam.childMemberId) ?? "A child"} has the ${paper.subject} paper of the ${examName} on ${when}.${paper.syllabus ? ` It covers: ${paper.syllabus.replace(/\s+/g, " ").slice(0, 300)}.` : ""}${paper.links.length > 0 ? ` ${paper.links.length === 1 ? "One link" : `${paper.links.length} links`} to material.` : ""}`
+            : `${name(exam.childMemberId) ?? "A child"}'s ${paper.subject} paper of the ${examName} was on ${when}.`,
+          need: "what exams are coming up",
+          privacyClass: "child",
+          subjectMemberIds: [exam.childMemberId],
+          attributes: { title: `${paper.subject} ${exam.examType}`, kind: "exam", subject: paper.subject, examType: exam.examType, date: paper.onDate, childMemberId: exam.childMemberId },
+          source: { type: "school_exam_papers", sourceId: paper.id },
+          freshness: upcoming ? "current" : "historical",
+          tier: upcoming ? 2 : 3,
+          aliases: [paper.subject, exam.examType, exam.title, `${paper.subject} exam`, `${paper.subject} test`],
+        });
+      }
+    }
+  }
+  if (records.timetable && records.timetable.length > 0) {
+    const days = new Map<string, TimetablePeriod[]>();
+    for (const period of records.timetable) days.set(`${period.childMemberId}:${period.weekday}`, [...(days.get(`${period.childMemberId}:${period.weekday}`) ?? []), period]);
+    for (const [key, periods] of days) {
+      const [childMemberId, weekday] = key.split(":");
+      const dayName = WEEKDAY_NAMES[Number(weekday) - 1] ?? "a weekday";
+      const sorted = [...periods].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      add({
+        domain: "school",
+        entityType: "timetable_day",
+        entityId: key,
+        summary: `On ${dayName}s, ${name(childMemberId) ?? "a child"}'s school timetable is: ${sorted.map((period) => `${clock(period.startsAt)} ${period.subject}${period.teacherName ? ` with ${period.teacherName}` : ""}`).join("; ")}.`,
+        need: "what a child has at school on a day",
+        privacyClass: "child",
+        subjectMemberIds: [childMemberId!],
+        attributes: { title: `${dayName} timetable`, weekday: Number(weekday), subjects: sorted.map((period) => period.subject) },
+        source: { type: "school_timetable_periods", sourceId: null },
+        tier: 3,
+        aliases: [`${dayName} timetable`, "timetable", ...sorted.map((period) => period.subject)],
+      });
+    }
+  }
+
   if (records.communications) {
     for (const note of cap(records.communications.filter((entry) => entry.requiresAction), MAX_PER_LIST)) {
       add({
@@ -1248,3 +1301,12 @@ function objectOf(value: unknown): string | null {
   return typeof record?.object === "string" ? record.object : null;
 }
 
+const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** "14:30" → "2:30pm": a local time as a timetable says it. */
+function clock(hhmm: string): string {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  const suffix = (hours ?? 0) >= 12 ? "pm" : "am";
+  const hour = (hours ?? 0) % 12 === 0 ? 12 : (hours ?? 0) % 12;
+  return `${hour}:${String(minutes ?? 0).padStart(2, "0")}${suffix}`;
+}

@@ -66,7 +66,8 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
     });
 
   // night_before: an evening event on day D, and a child's exam on D+1.
-  const exams = usable.filter((item) => item.entityType === "school_item" && item.attributes.kind === "exam" && typeof item.attributes.date === "string");
+  // A school item marked exam, or a paper of an exam on Kids & School (08-015).
+  const exams = usable.filter((item) => (item.entityType === "school_item" || item.entityType === "exam_paper") && item.attributes.kind === "exam" && typeof item.attributes.date === "string");
   for (const event of usable.filter((item) => item.entityType === "event" && typeof item.attributes.startsAt === "string")) {
     const date = String(event.attributes.date ?? "");
     if (localHour(new Date(String(event.attributes.startsAt)), options.timezone) < EVENING_HOUR) continue;
@@ -76,7 +77,9 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
       // Only an evening the child is part of — or one for nobody in particular.
       if (event.subjectMemberIds.length > 0 && !event.subjectMemberIds.includes(child)) continue;
       const subject = exam.attributes.subject ? `${exam.attributes.subject} ` : "";
-      add("night_before", `${event.attributes.title} on ${weekday(date)} evening is the night before ${name(child) ?? "a child"}'s ${subject}exam (${exam.attributes.title}) on ${weekday(String(exam.attributes.date))}.`, [event, exam], date);
+      // A paper of an exam on Kids & School (08-015) says which exam it belongs to; a school item names itself.
+      const which = exam.entityType === "exam_paper" ? `${subject}paper of the ${exam.attributes.examType}` : `${subject}exam (${exam.attributes.title})`;
+      add("night_before", `${event.attributes.title} on ${weekday(date)} evening is the night before ${name(child) ?? "a child"}'s ${which} on ${weekday(String(exam.attributes.date))}.`, [event, exam], date);
     }
   }
 

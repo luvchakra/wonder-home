@@ -1,7 +1,8 @@
 import { ACTIVITY_KINDS } from "@wonderhome/core/school/activities";
-import type { Translate } from "@wonderhome/core/i18n/translate";
+import type { Translate, TranslationKey } from "@wonderhome/core/i18n/translate";
 
 import type { ChildDetailWords } from "../school/child-details";
+import type { SchoolWeekWords } from "../school/school-week-sheets";
 import { placeSearchLabels } from "./place-labels";
 import { placeSearchAvailable } from "./places";
 
@@ -78,5 +79,68 @@ export function childDetailWords(t: Translate, language: string): ChildDetailWor
     chooseExisting: t("grocery.picker.chooseExisting"),
     placeSearch: placeSearchLabels(t, "place"),
     placeAvailable: placeSearchAvailable(),
+  };
+}
+
+/** The keys the app's own exam types show under, in the reader's language (08-015); the stored name stays English. */
+const EXAM_TYPE_KEYS: Record<string, TranslationKey> = { "Unit test": "school.exams.types.unitTest", "Mid-term": "school.exams.types.midTerm", Finals: "school.exams.types.finals" };
+
+/** A child's timetable and exams words (08-015), resolved on the server, with the household's own exam types. */
+export function schoolWeekWords(t: Translate, language: string, examTypes: { builtIn: readonly string[]; own: readonly { name: string }[] }): SchoolWeekWords {
+  const types = [...examTypes.builtIn, ...examTypes.own.map((type) => type.name)];
+  return {
+    saving: t("common.saving"),
+    addNew: t("grocery.picker.addNew"),
+    chooseExisting: t("grocery.picker.chooseExisting"),
+    dayNames: weekdayNames(language),
+    subjects: t("school.teachers.subjects")
+      .split("|")
+      .map((word) => word.trim())
+      .filter(Boolean),
+    timetable: {
+      add: t("school.timetable.add"),
+      sheetAdd: t("school.timetable.sheetAdd", KEEP),
+      sheetEdit: t("school.timetable.sheetEdit", KEEP),
+      edit: t("school.timetable.edit", KEEP),
+      remove: t("school.timetable.remove", KEEP),
+      day: t("school.timetable.day"),
+      subject: t("school.timetable.subject"),
+      startsAt: t("school.timetable.startsAt"),
+      endsAt: t("school.timetable.endsAt"),
+      teacher: t("school.timetable.teacher"),
+      room: t("school.timetable.room"),
+      save: t("school.timetable.save"),
+    },
+    exams: {
+      add: t("school.exams.add"),
+      sheetAdd: t("school.exams.sheetAdd", KEEP),
+      sheetEdit: t("school.exams.sheetEdit", KEEP),
+      edit: t("school.exams.edit", KEEP),
+      remove: t("school.exams.remove", KEEP),
+      type: t("school.exams.type"),
+      types,
+      typeLabels: Object.fromEntries(types.map((name) => [name, EXAM_TYPE_KEYS[name] ? t(EXAM_TYPE_KEYS[name]!) : name])),
+      titleField: t("school.exams.titleField"),
+      titlePlaceholder: t("school.exams.titlePlaceholder"),
+      notes: t("school.exams.notes"),
+      save: t("school.exams.save"),
+      calendarHint: t("school.exams.calendarHint"),
+    },
+    paper: {
+      add: t("school.exams.paper.add"),
+      sheetAdd: t("school.exams.paper.sheetAdd", KEEP),
+      sheetEdit: t("school.exams.paper.sheetEdit", KEEP),
+      edit: t("school.exams.paper.edit", KEEP),
+      remove: t("school.exams.paper.remove", KEEP),
+      subject: t("school.exams.paper.subject"),
+      onDate: t("school.exams.paper.onDate"),
+      startsAt: t("school.exams.paper.startsAt"),
+      endsAt: t("school.exams.paper.endsAt"),
+      syllabus: t("school.exams.paper.syllabus"),
+      syllabusPlaceholder: t("school.exams.paper.syllabusPlaceholder"),
+      links: t("school.exams.paper.links"),
+      linksHint: t("school.exams.paper.linksHint"),
+      save: t("school.exams.paper.save"),
+    },
   };
 }

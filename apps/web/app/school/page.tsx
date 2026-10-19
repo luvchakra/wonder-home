@@ -10,6 +10,7 @@ import type { Integration } from "@wonderhome/core/integrations/repository";
 import { describeSchoolHealth } from "@wonderhome/core/school/connector";
 import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/items";
 import { listActivities, listTeachers } from "@wonderhome/core/school/activities";
+import { listExamTypes, listExams, listTimetable } from "@wonderhome/core/school/exams";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
 import { mapsLink } from "@wonderhome/core/places/provider";
@@ -40,8 +41,9 @@ import { SchoolItemDetail } from "../_components/school-item-controls";
 import { placeSearchLabels } from "../_lib/place-labels";
 import { placeSearchAvailable } from "../_lib/places";
 import { schoolFormLabels } from "../_lib/school-form-labels";
-import { childDetailWords } from "../_lib/child-detail-words";
+import { childDetailWords, schoolWeekWords } from "../_lib/child-detail-words";
 import { ChildClasses } from "../_components/child-classes";
+import { ChildSchoolWeek } from "../_components/child-school-week";
 import { StandDownButton, TeacherSheet } from "./child-details";
 import { ChildSchoolActions, type ChildSchoolLabels } from "./child-school";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
@@ -78,7 +80,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, items, communications, members, integrations, enrolments, teachers, activities] = await Promise.all([
+  const [agenda, items, communications, members, integrations, enrolments, teachers, activities, periods, exams, examTypes] = await Promise.all([
     schoolAgenda(supabase, householdId).catch(() => null),
     listSchoolItems(supabase, householdId, child ? { childMemberId: child } : {}).catch(() => []),
     listCommunications(supabase, householdId).catch(() => []),
@@ -89,6 +91,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     // Each child's teachers and classes outside school (08-010, 08-011); empty until the tables exist.
     listTeachers(supabase, householdId).catch(() => []),
     listActivities(supabase, householdId).catch(() => []),
+    // Each child's timetable and exams (08-015); empty until the tables exist.
+    listTimetable(supabase, householdId).catch(() => []),
+    listExams(supabase, householdId).catch(() => []),
+    listExamTypes(supabase, householdId).catch(() => ({ builtIn: ["Unit test", "Mid-term", "Finals"], own: [] })),
   ]);
 
   // A stale portal and "no homework" must never look alike (17-004): if a
@@ -135,6 +141,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const shownChildren = child ? children.filter((kid) => kid.id === child) : children;
   const canChangeSchool = view.tone === "adult";
   const detailWords = childDetailWords(t, locale.preferences.language);
+  const weekWords = schoolWeekWords(t, locale.preferences.language, examTypes);
   const clock = new Intl.DateTimeFormat(locale.preferences.language, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
   const clockOf = (time: string) => clock.format(Date.UTC(2026, 0, 1, Number(time.slice(0, 2)), Number(time.slice(3, 5))));
   const childOptions = children.map((kid) => ({ id: kid.id, displayName: kid.displayName }));
@@ -336,6 +343,16 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                     {theirTeachers.length === 0 ? <p className="px-1 pb-2 text-xs text-[var(--wh-foreground-subtle)]">{t("school.teachers.none")}</p> : null}
                     {canChangeSchool ? <TeacherSheet householdId={householdId} child={childRef} words={detailWords} /> : null}
                   </Card>
+                  <ChildSchoolWeek
+                    householdId={householdId}
+                    child={childRef}
+                    periods={periods}
+                    exams={exams.filter((exam) => exam.childMemberId === kid.id)}
+                    canChange={canChangeSchool}
+                    words={weekWords}
+                    timezone={timezone}
+                    language={locale.preferences.language}
+                  />
                   <ChildClasses householdId={householdId} child={childRef} activities={theirClasses} canChange={canChangeSchool} words={detailWords} timezone={timezone} language={locale.preferences.language} />
                 </section>
               );
