@@ -319,12 +319,12 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.certification.title": "HomeBrain y preguntar “¿por qué?”",
   "help.guide.certification.summary": "Todo lo que cree WonderHome, de dónde salió cada creencia y cómo corregirla.",
   "help.guide.certification.body.1":
-    "La HomeBrain muestra lo que WonderHome cree sobre tu hogar y de dónde salió cada creencia: se lo dijiste, lo observó o lo decía algo que enviaste. Cualquier cosa que tenga mal la puedes corregir, añadir o eliminar. Lo que un miembro de la familia le dice a WonderHome queda confirmado al instante: ya no espera en Por revisar. Un Admin puede quitar o corregir cualquier cosa aquí en cualquier momento; solo lo que contradice algo ya confirmado sigue esperando a que alguien decida.",
+    "La HomeBrain muestra lo que WonderHome cree sobre tu hogar y de dónde salió cada creencia: se lo dijiste, lo observó o lo decía algo que enviaste. Cualquier cosa que tenga mal la puedes corregir, añadir o eliminar. Lo que un miembro de la familia le dice a WonderHome queda registrado al instante: ya no espera en Por revisar. Un Admin puede quitar o corregir cualquier cosa aquí en cualquier momento; solo lo que contradice algo ya registrado sigue esperando a que alguien decida.",
   "help.guide.certification.body.2":
     "Pregunta a HomeTalk “¿por qué?” —por qué necesita aprobación, por qué no hizo algo, de dónde sale un dato— y la respuesta sale de lo que de verdad está registrado, no de una suposición.",
   "help.guide.certification.body.3":
     "Las respuestas se comprueban antes de que las veas. Un nombre, una fecha, un importe o un evento que no está registrado nunca se afirma como un hecho; si no hay nada registrado, WonderHome lo dice.",
-  "help.guide.certification.body.4": "Para decidir varios a la vez, toca Seleccionar encima de la lista, marca los que quieras (o Seleccionar todo) y elige Confirmar seleccionados, Quitar seleccionados o Dejar para después. Quitar pide confirmación. Cada elemento queda en el historial como su propia decisión; una corrección se sigue haciendo de uno en uno, con tus palabras.",
+  "help.guide.certification.body.4": "Para decidir varios a la vez, toca Seleccionar encima de la lista, marca los que quieras (o Seleccionar todo) y elige Registrar seleccionados, Quitar seleccionados o Dejar para después. Quitar pide confirmación. Cada elemento queda en el historial como su propia decisión; una corrección se sigue haciendo de uno en uno, con tus palabras.",
 
   "help.guide.privacy.title": "La privacidad y tus datos",
   "help.guide.privacy.summary": "Qué se guarda, quién puede verlo y cómo llevártelo o pedir que se borre.",

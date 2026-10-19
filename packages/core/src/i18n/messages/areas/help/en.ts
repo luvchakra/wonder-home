@@ -357,12 +357,12 @@ export const helpEn = {
   "help.guide.certification.title": "HomeBrain and asking \"why?\"",
   "help.guide.certification.summary": "Everything WonderHome believes, where each belief came from, and how to fix it.",
   "help.guide.certification.body.1":
-    "HomeBrain shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or something you sent said so. Anything it has wrong, you can correct, add or remove. What a family member tells WonderHome is confirmed straight away — it no longer waits under Needs review. An Admin can remove or correct anything here at any time; only something that contradicts what is already confirmed still waits for a person to decide.",
+    "HomeBrain shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or something you sent said so. Anything it has wrong, you can correct, add or remove. What a family member tells WonderHome is registered straight away — it no longer waits under Needs review. An Admin can remove or correct anything here at any time; only something that contradicts what is already registered still waits for a person to decide.",
   "help.guide.certification.body.2":
     "Ask HomeTalk \"why?\" — why it needs approval, why it did not do something, where a fact came from — and the answer comes from what is actually on record, not from a guess.",
   "help.guide.certification.body.3":
     "Answers are checked before you see them. A name, date, amount or event that is not on record is never stated as fact; if nothing is on record, WonderHome says so.",
-  "help.guide.certification.body.4": "To decide many at once, tap Select above the list, tick the ones you mean (or Select all) and choose Confirm selected, Remove selected or Later for selected. Removing asks first. Each item is recorded in History as its own decision; a correction is still made one item at a time, in its own words.",
+  "help.guide.certification.body.4": "To decide many at once, tap Select above the list, tick the ones you mean (or Select all) and choose Register selected, Remove selected or Later for selected. Removing asks first. Each item is recorded in History as its own decision; a correction is still made one item at a time, in its own words.",
 
   // Privacy and your data
   "help.guide.privacy.title": "Privacy and your data",

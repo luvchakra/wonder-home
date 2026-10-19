@@ -55,7 +55,7 @@ const STATUS: Record<
   CertificationItemProps["status"],
   { label: string; tone: IconTone; badge: "handled" | "attention" | "neutral" | "risk"; icon: typeof CircleCheck }
 > = {
-  confirmed: { label: "Confirmed", tone: "handled", badge: "handled", icon: CircleCheck },
+  confirmed: { label: "Registered", tone: "handled", badge: "handled", icon: CircleCheck },
   learned: { label: "Learned", tone: "ai", badge: "neutral", icon: Sparkles },
   needs_review: { label: "Needs review", tone: "attention", badge: "attention", icon: TriangleAlert },
   corrected: { label: "Corrected", tone: "neutral", badge: "neutral", icon: CircleCheck },
@@ -84,7 +84,7 @@ const ENGLISH: CertificationItemLabels = {
   matters: "How much it matters",
   lastChecked: "Last checked",
   never: "Never",
-  status: { confirmed: "Confirmed", learned: "Learned", needs_review: "Needs review", corrected: "Corrected", removed: "Removed" },
+  status: { confirmed: "Registered", learned: "Learned", needs_review: "Needs review", corrected: "Corrected", removed: "Removed" },
   risk: RISK_LABEL,
 };
 

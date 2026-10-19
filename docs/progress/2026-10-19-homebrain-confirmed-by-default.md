@@ -25,6 +25,19 @@
   - Remove took it off.
   - No page errors.
 
+## Follow-up: "Registered", never "Confirmed"
+
+The owner, the same day: "instead of calling default state as confirmed, call it Registered. let's not have anything called confirmed". Done in #251:
+- **HomeBrain Review.** The metric, the tab, the status, the decision, the ring, the count line, the empty states and the add lede now read "Registered". The controls read "Register" and "Register selected". The source lines no longer say "not yet confirmed".
+  - These are 18 `review.*` keys in all 8 household catalogs.
+  - They also cover the kit defaults (`certification-item.tsx`) and `DECISION_LABEL`.
+- **Notices.** The review actions say "Registered." and "Added, and registered".
+- **HomeTalk.** HomeTalk now says "(you told me; not registered yet)" and "This contradicts something the household registered". The "why" answer and the context conflict line were changed the same way.
+- **Help.** HomeBrain ¶1 and ¶4 are reworded in 8 languages.
+- **Left alone.** The stored status value stays `confirmed` (`memories`, `certification_items`, `certification_reviews`), so no migration was needed. "Confirm" elsewhere in the app keeps its own meaning: approving a HomeSend item, a payment, or a calendar "confirmed plan". Renaming the stored value too is a separate, larger change (check constraints, functions, the context builders and the golden set) and was not asked for.
+
+Verified: 1178 tests across conversation, household, homebrain, help, i18n, context and components; typecheck; eval 133/133. In the browser at 360px, HomeBrain Review showed "1 of 1 belief registered", a Registered metric and tab, and no "Confirmed" left.
+
 ## QA cleanup
 
 Ran after #250 merged (2026-10-19): QA account `7532f0fd-c1ea-40f0-aab2-19a4cdc0501b` and household `29c2c0e7-1ecc-4ed2-b62b-ed33a8a9f382` ("QA Confirmed Home") deleted. Confirmed by SQL: 0 households, members, memories, review items and auth users left for them.

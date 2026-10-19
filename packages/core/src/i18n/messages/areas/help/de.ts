@@ -319,12 +319,12 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.certification.title": "HomeBrain und „Warum?“ fragen",
   "help.guide.certification.summary": "Alles, was WonderHome glaubt, woher jede Annahme stammt und wie du sie korrigierst.",
   "help.guide.certification.body.1":
-    "Die HomeBrain zeigt, was WonderHome über deinen Haushalt glaubt und woher jede Annahme stammt – du hast es ihm gesagt, es hat es beobachtet, oder etwas, das du geschickt hast, hat es gesagt. Alles, was falsch ist, kannst du korrigieren, ergänzen oder entfernen. Was ein Familienmitglied WonderHome sagt, ist sofort bestätigt – es wartet nicht mehr unter „Zu prüfen“. Ein Admin kann hier jederzeit alles entfernen oder korrigieren; nur was etwas bereits Bestätigtem widerspricht, wartet noch auf die Entscheidung eines Menschen.",
+    "Die HomeBrain zeigt, was WonderHome über deinen Haushalt glaubt und woher jede Annahme stammt – du hast es ihm gesagt, es hat es beobachtet, oder etwas, das du geschickt hast, hat es gesagt. Alles, was falsch ist, kannst du korrigieren, ergänzen oder entfernen. Was ein Familienmitglied WonderHome sagt, ist sofort erfasst – es wartet nicht mehr unter „Zu prüfen“. Ein Admin kann hier jederzeit alles entfernen oder korrigieren; nur was etwas bereits Erfasstem widerspricht, wartet noch auf die Entscheidung eines Menschen.",
   "help.guide.certification.body.2":
     "Frag HomeTalk „Warum?“ – warum es eine Freigabe braucht, warum es etwas nicht getan hat, woher eine Tatsache stammt –, und die Antwort kommt aus dem, was tatsächlich festgehalten ist, nicht aus einer Vermutung.",
   "help.guide.certification.body.3":
     "Antworten werden geprüft, bevor du sie siehst. Ein Name, ein Datum, ein Betrag oder ein Ereignis, das nicht festgehalten ist, wird nie als Tatsache behauptet; wenn nichts festgehalten ist, sagt WonderHome das.",
-  "help.guide.certification.body.4": "Um mehrere auf einmal zu entscheiden, tippt über der Liste auf Auswählen, hakt die gemeinten an (oder Alle auswählen) und wählt Auswahl bestätigen, Auswahl entfernen oder Auswahl später. Vor dem Entfernen wird nachgefragt. Jeder Eintrag steht im Verlauf als eigene Entscheidung; eine Korrektur geschieht weiterhin einzeln, in euren eigenen Worten.",
+  "help.guide.certification.body.4": "Um mehrere auf einmal zu entscheiden, tippt über der Liste auf Auswählen, hakt die gemeinten an (oder Alle auswählen) und wählt Auswahl erfassen, Auswahl entfernen oder Auswahl später. Vor dem Entfernen wird nachgefragt. Jeder Eintrag steht im Verlauf als eigene Entscheidung; eine Korrektur geschieht weiterhin einzeln, in euren eigenen Worten.",
 
   "help.guide.privacy.title": "Datenschutz und deine Daten",
   "help.guide.privacy.summary": "Was gespeichert wird, wer es sehen kann und wie du es mitnimmst oder löschen lässt.",

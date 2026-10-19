@@ -278,7 +278,8 @@ export function applyReview(
 
 /** The same wording wherever a review decision is shown (story 05-007). */
 export const DECISION_LABEL: Record<ReviewDecision, string> = {
-  confirmed: "Confirmed",
+  // Stored as "confirmed"; people read it as "Registered" (the owner, 2026-10-19).
+  confirmed: "Registered",
   corrected: "Corrected",
   removed: "Removed",
   deferred: "Left for later",

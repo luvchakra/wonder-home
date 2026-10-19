@@ -13,7 +13,7 @@
 | 7 | P1 | 05-007 | Certification history | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
 | 8 | P2 | 05-008 | Certification health | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
 | 9 | P1 | 05-009 | Review many at once | Done | The owner, 2026-10-18 (PR #236): HomeBrain's list has Select; ticked items (or Select all) are confirmed, removed (after asking) or left for later together. Each goes through the same `reviewItem` path as one item's own buttons, so History, the memory HomeBrain reads and correction evidence are as if decided one by one; a correction stays one at a time. Checked at 360px: two confirmed, then the rest removed, and the review trail showed four decisions |
-| 10 | P1 | 05-010 | What HomeBrain registers is confirmed by default | Done | The owner, 2026-10-19 (screenshot of 14 items under Needs review): whatever HomeBrain registers is confirmed from the start; an Admin removes or corrects it later. New memories and their HomeBrain items are written confirmed (`conversation/memory.ts`, `welcome.ts`, `remember()`); the column defaults are `confirmed` (migration `20261019150000`, live), and the 18 learned memories and items on record were brought in line. Only a statement contradicting something already confirmed (`needs_review`) still waits for a person. Replies no longer say "(you told me; not confirmed yet)". Help: HomeBrain ¶1 in 8 languages |
+| 10 | P1 | 05-010 | What HomeBrain registers is registered by default | Done | The owner, 2026-10-19 (screenshot of 14 items under Needs review): whatever HomeBrain registers is registered from the start; an Admin removes or corrects it later. The owner, the same day (PR #251): "let's not have anything called confirmed" — HomeBrain Review, its notices, HomeTalk's replies and the help now say Registered and Register in all 8 languages; the stored status value stays `confirmed`, so nothing moved in the database. New memories and their HomeBrain items are written confirmed (`conversation/memory.ts`, `welcome.ts`, `remember()`); the column defaults are `confirmed` (migration `20261019150000`, live), and the 18 learned memories and items on record were brought in line. Only a statement contradicting something already confirmed (`needs_review`) still waits for a person. Replies no longer say "(you told me; not confirmed yet)". Help: HomeBrain ¶1 in 8 languages |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -217,7 +217,7 @@ assumptions .
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
 
-### Story 05-010 — What HomeBrain registers is confirmed by default
+### Story 05-010 — What HomeBrain registers is registered by default
 **Epic:** Household Certification
 **Priority:** P1
 **Goal:** What a family member tells WonderHome is the household's word from the start; an Admin reviews by removing or correcting, not by confirming each item first.

@@ -85,7 +85,7 @@ export async function addBeliefAction(_previous: ActionState, formData: FormData
 
     forgetHouseholdContext(parsed.data.householdId);
     revalidatePath("/certification");
-    return { notice: "Added, and confirmed — it's your own household saying so." };
+    return { notice: "Added, and registered — it's your own household saying so." };
   } catch (error) {
     log.warn("adding a belief failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "That didn't go through. Please try again." };
@@ -250,7 +250,7 @@ export async function reviewCertificationAction(_previous: ActionState, formData
     return {
       notice:
         parsed.data.decision === "confirmed"
-          ? "Confirmed."
+          ? "Registered."
           : parsed.data.decision === "removed"
             ? "Removed."
             : parsed.data.decision === "corrected"
@@ -296,7 +296,7 @@ export async function reviewManyAction(_previous: ActionState, formData: FormDat
     }
     forgetHouseholdContext(parsed.data.householdId);
     revalidatePath("/certification");
-    const verb = parsed.data.decision === "confirmed" ? "Confirmed" : parsed.data.decision === "removed" ? "Removed" : "Left for later:";
+    const verb = parsed.data.decision === "confirmed" ? "Registered" : parsed.data.decision === "removed" ? "Removed" : "Left for later:";
     const skipped = parsed.data.itemIds.length - done;
     return { notice: `${verb} ${done} ${done === 1 ? "item" : "items"}.${skipped > 0 ? ` ${skipped} had already been reviewed.` : ""}` };
   } catch (error) {
