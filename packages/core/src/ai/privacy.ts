@@ -65,9 +65,12 @@ export type DataUsePolicy = {
  * What applies before a household has said anything (15-005).
  *
  * Deliberately usable rather than empty: the assistant works out of the box
- * on ordinary household operations, and everything that is somebody's private
- * business — a child, a diagnosis, an amount, a whereabouts, a message — waits
- * for an explicit yes. Reading silence as consent is the failure this default
+ * on ordinary household operations and on what is about the household's
+ * children (the owner's call, 2026-10-19: a family assistant that cannot read
+ * "Asmi likes pasta" is not much of one, and an Admin can untick it in
+ * Settings → AI Assistant). Everything else that is somebody's private
+ * business — a diagnosis, an amount, a whereabouts, a message — waits for an
+ * explicit yes. Reading silence as consent is the failure this default
  * exists to prevent, and starting from "nothing at all" would push households
  * to switch the whole thing on without reading it, which is worse.
  *
@@ -82,7 +85,7 @@ export type DataUsePolicy = {
 export const DEFAULT_DATA_USE: DataUsePolicy = {
   allowProviderContent: true,
   allowedProviders: [...MODEL_PROVIDERS],
-  allowedClasses: ["general"],
+  allowedClasses: ["general", "child"],
   allowRetention: false,
   maxItems: 12,
 };
