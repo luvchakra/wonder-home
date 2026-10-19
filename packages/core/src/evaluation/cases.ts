@@ -74,6 +74,12 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Asmi at a glance", "likes Indian food"], excludes: ["not have anything on record"] } },
   },
   {
+    id: "HT-118", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"What best time for 2 day getaway\" (live, 2026-10-19) is answered with the weekends nothing is on the family calendar, and what is on the others — never the attention summary.",
+    utterance: "what best time for 2 day getaway",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["For a 2-day getaway, nothing is on the family calendar on Sat 3 Oct", "Sports Day (Sat 26 Sep)"], excludes: ["things across", "nothing needs anyone"] } },
+  },
+  {
     id: "HT-113", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"Who likes what?\" is the same answer for anyone in the family, and is never kept as a fact about someone called \"Who\".",
     utterance: "Who likes what?",

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**289 of 309 stories done — 93.5%**
+**290 of 310 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 289 |
+| Done | 290 |
 | In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 11 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `████████░░` | 27 | 32 | 2 in progress, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 28 | 33 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -334,7 +334,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-27 of 32 done `████████░░`
+28 of 33 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -370,6 +370,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | P1 | Done | PR #241. Built: `homebrain/goal.ts` (`readGoal`: find_out, plan, decide, check, remember, do, by rules on the question's own words) on every reading; a plan or a decision follows two links; the rules answer is shaped by it (to decide: what the rules noticed leads; to check whether anything is there: "Yes." first; never a yes the record does not say), and the model is told the goal (`AnswerInput.goal`). Spec §3.10 |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | P1 | In Progress | PR #241 built: the database trigger safety net (`wh.mark_context_stale` on 25 domain tables, live, DB-tested), the keep-warm rebuild of stores that are behind or over an hour old on the five-minute delivery clock (`keepStoresWarm`, 4 per tick), and the AI quality page's `homeBrainKeeping` (deeper looks and what they found by part of the home, stores behind and the oldest lag). Still open: rules read the store, the agenda summary only for broad questions, and the "not on record while on record" gate. Spec §3.2, §3.8 (was 14-022 and 14-023) |
 | `14-032` HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | P1 | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
+| `14-033` "When should we go away?" answered from the calendar | P1 | Done | Live finding, 2026-10-19: "what best time for 2 day getaway" fell into the wide status net and was answered with the attention summary. `homebrain/insights.ts` gains rule `free_window` (`tripQuestion` reads when and how many days): the next 8 weekends with nothing on the family calendar, and what is on the others — events, school events and exams, someone away, an exam the day after. Drawn as an insight that answers the question (`grounding.ts`), so a model may cite it and the rules answer with it. Golden case HT-118, `free-window.test.ts` |
 
 ### 15 — Privacy, Security & Governance
 

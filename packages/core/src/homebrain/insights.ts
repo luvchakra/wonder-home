@@ -24,7 +24,7 @@ import type { HouseholdContextItem, PrivacyClass } from "../context/types";
  * the meal-cook case of `away_but_assigned` is here.
  */
 
-export type InsightRule = "night_before" | "meal_short" | "away_but_assigned" | "bill_before_trip" | "routine_gap" | "count";
+export type InsightRule = "night_before" | "meal_short" | "away_but_assigned" | "bill_before_trip" | "routine_gap" | "count" | "free_window";
 
 export type Insight = {
   rule: InsightRule;
@@ -132,7 +132,110 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
     }
   }
 
+  // free_window: "what's the best time for a 2-day getaway?" is arithmetic
+  // over the calendar — the coming weekends with nothing on for the family,
+  // and what is on the others (rule 9). Never a model's guess at a date.
+  const trip = options.question ? tripQuestion(options.question) : null;
+  if (trip) {
+    const busy = usable.filter(
+      (item) =>
+        (item.entityType === "event" && item.attributes.status !== "cancelled") ||
+        item.entityType === "exam_paper" ||
+        (item.entityType === "school_item" && (item.attributes.kind === "exam" || item.attributes.kind === "event")) ||
+        item.entityType === "absence",
+    );
+    const daysOf = (item: HouseholdContextItem): string[] => {
+      const from = typeof item.attributes.date === "string" ? item.attributes.date.slice(0, 10) : null;
+      if (!from) return [];
+      // The end is exclusive: an all-day Friday ends at Saturday midnight, and is not on Saturday.
+      const until = item.entityType === "event" && typeof item.attributes.endsAt === "string" ? localDay(new Date(Date.parse(item.attributes.endsAt) - 1), options.timezone) : from;
+      const span = Math.max(0, Math.min(14, daysBetween(from, until)));
+      return Array.from({ length: span + 1 }, (_, index) => addDays(from, index));
+    };
+    const on = new Map<string, HouseholdContextItem[]>();
+    for (const item of busy) for (const day of daysOf(item)) on.set(day, [...(on.get(day) ?? []), item]);
+    const what = (item: HouseholdContextItem): string => {
+      if (item.entityType === "absence") return `${name(String(item.attributes.memberId ?? "")) ?? "Someone"} is away`;
+      if (item.entityType === "exam_paper") return `${name(String(item.attributes.childMemberId ?? "")) ?? "A child"}'s ${item.attributes.subject} paper of the ${item.attributes.examType}`;
+      if (item.entityType === "school_item") return `${name(String(item.attributes.childMemberId ?? "")) ?? "A child"}'s ${item.attributes.title}`;
+      return String(item.attributes.title ?? "an event");
+    };
+    // The window starts on a Saturday (a Friday for three days or more).
+    const startDay = trip.days >= 3 ? 5 : 6;
+    let first = addDays(options.today, 1);
+    while (new Date(`${first}T00:00:00Z`).getUTCDay() !== startDay) first = addDays(first, 1);
+    const clear: string[] = [];
+    const blocked: { label: string; reasons: string[]; evidence: HouseholdContextItem[]; date: string }[] = [];
+    for (let week = 0; week < TRIP_WEEKS; week += 1) {
+      const start = addDays(first, week * 7);
+      const days = Array.from({ length: Math.max(1, trip.days) }, (_, index) => addDays(start, index));
+      const end = days[days.length - 1]!;
+      const label = days.length === 1 ? shortDay(start) : `${shortDay(start)} to ${shortDay(end)}`;
+      const during = [...new Set(days.flatMap((day) => on.get(day) ?? []))];
+      // An exam the morning after is no time to be driving home from the hills.
+      const after = (on.get(addDays(end, 1)) ?? []).filter((item) => item.entityType === "exam_paper" || (item.entityType === "school_item" && item.attributes.kind === "exam"));
+      if (during.length === 0 && after.length === 0) {
+        clear.push(label);
+        continue;
+      }
+      if (blocked.length >= 3) continue;
+      const reasons = [
+        ...during.map((item) => `${what(item)} (${shortDay(String(item.attributes.date ?? start))})`),
+        ...after.map((item) => `${what(item)} the day after (${shortDay(addDays(end, 1))})`),
+      ];
+      blocked.push({ label, reasons, evidence: [...during, ...after], date: start });
+    }
+    const length = trip.days === 1 ? "a day out" : `a ${trip.days}-day ${trip.noun}`;
+    add(
+      "free_window",
+      clear.length > 0
+        ? `For ${length}, nothing is on the family calendar on ${listOf(clear.slice(0, 3))}${clear.length > 3 ? `, or ${count(clear.length - 3, "later weekend")}` : ""} (the next ${TRIP_WEEKS} weekends checked).`
+        : `For ${length}, every one of the next ${TRIP_WEEKS} weekends has something on the family calendar.`,
+      [],
+      clear.length > 0 ? first : null,
+    );
+    for (const entry of blocked) add("free_window", `${entry.label} is less free: ${entry.reasons.join("; ")}.`, entry.evidence, entry.date);
+  }
+
   return insights;
+}
+
+/** How many coming weekends a "when should we go?" question looks across. */
+const TRIP_WEEKS = 8;
+
+/**
+ * "What's the best time for a 2-day getaway?", "when can we go on a trip?",
+ * "which weekend is free for a vacation?": a question about when, for a trip
+ * of a number of days. "Suggest a getaway" (where) is HomePlaces' question.
+ */
+export function tripQuestion(question: string): { days: number; noun: string } | null {
+  const text = question.toLowerCase();
+  const noun = text.match(/\b(getaway|trip|vacation|holiday|outing|break|staycation|day out|road ?trip|excursion)s?\b/)?.[1];
+  if (!noun) return null;
+  if (!/\b(?:when|best time|good time|right time|ideal time|what time|which (?:weekend|days?|dates?|week)|free (?:weekend|days?)|(?:a |the )?free|available|go away)\b/.test(text)) return null;
+  // "When is the next holiday?" asks about the holiday, not a trip.
+  if (noun === "holiday" && /\b(?:next|public|school|bank|upcoming|national|festival) holidays?\b/.test(text)) return null;
+  if (/\b(?:where|suggest|recommend|places?|destinations?|ideas?)\b/.test(text) && !/\b(?:when|time|weekend|dates?)\b/.test(text)) return null;
+  const said = text.match(/\b(\d|one|two|three|four|five)[ -]?(?:day|night)s?\b/)?.[1];
+  const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+  const days = said ? (words[said] ?? Number(said)) : /\bweekend\b/.test(text) ? 2 : noun === "day out" ? 1 : 2;
+  return { days: Math.min(Math.max(days, 1), 5), noun: noun === "day out" ? "trip" : noun };
+}
+
+function listOf(things: readonly string[]): string {
+  return things.length <= 1 ? (things[0] ?? "") : `${things.slice(0, -1).join(", ")} or ${things[things.length - 1]}`;
+}
+
+function shortDay(day: string): string {
+  return `${WEEKDAYS[new Date(`${day.slice(0, 10)}T00:00:00Z`).getUTCDay()]!.slice(0, 3)} ${dayOfMonth(day)}`;
+}
+
+function localDay(date: Date, timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: timezone }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
 }
 
 function item_guests(event: HouseholdContextItem): { name: string; response: string; partySize: number }[] {

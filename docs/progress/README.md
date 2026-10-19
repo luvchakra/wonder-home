@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | ["When should we go away?" is answered from the calendar (14-033)](2026-10-19-trip-free-weekends.md) |
 | 2026-10-19 | [Children's information is on by default for the AI assistant](2026-10-19-children-on-by-default.md) |
 | 2026-10-19 | [HomeBrain Sleep (HomeBrain 5.0): a nightly tidy-up, meaning, links and profiles; Household understanding counts the household (14-032, 05-011)](2026-10-19-homebrain-sleep.md) |
 | 2026-10-19 | [The rest of the home on the calendar: school, meals, bills, health, helpers, upkeep, responsibilities and deliveries (26-002)](2026-10-19-calendar-module-adapters.md) |
