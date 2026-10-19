@@ -6,6 +6,7 @@ import { familyAgenda } from "@wonderhome/core/family/repository";
 import { listPets } from "@wonderhome/core/home/repository";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { listRelationships } from "@wonderhome/core/identity/relationships";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
@@ -35,6 +36,7 @@ import { eventGoing, eventWhen } from "../_lib/event-when";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
 import { describeRoles } from "../_lib/member-role";
+import { relationsLine } from "../_lib/relationship-words";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
 
@@ -53,7 +55,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones] = await Promise.all([
+  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, relationships] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     // Every upcoming event and what needs a person, read once and alongside
@@ -68,6 +70,8 @@ export default async function FamilyPage() {
     listWorkPlaces(supabase, householdId).catch(() => []),
     // Phone numbers this viewer may read: Admins and adults see everyone's, others their own.
     readMemberPhones(supabase, householdId).catch(() => new Map<string, string>()),
+    // How the family is related (Members & roles), for each person's details.
+    listRelationships(supabase, householdId).catch(() => []),
   ]);
   const officeOf = (memberId: string) => offices.find((office) => office.memberId === memberId) ?? null;
   // Each child's current school and its day, read beside their other details.
@@ -201,6 +205,7 @@ export default async function FamilyPage() {
                         phone={phones.get(member.id) ?? null}
                         invite={invite}
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
+                        relations={relationsLine(t, member.id, relationships, members)}
                       />
                       {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
                       {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (

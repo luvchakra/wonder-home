@@ -10,6 +10,7 @@ import { localDateTime, pendingWords, roleWords } from "../conversation/moment";
 import { isConsequential, type HouseholdIntent, type PendingProposal } from "../conversation/intent";
 import { focusFromProposal, readFocus, type FocusEntity } from "../conversation/references";
 import { composeFamilyLikes, composeLikes, likesRecordsFrom, personNamed } from "../conversation/likes";
+import { composeRelations } from "../conversation/relations";
 import { composeRoster } from "../conversation/roster";
 import { openScreenReply } from "../conversation/screens";
 import { permissionsFor } from "../identity/permissions";
@@ -242,6 +243,18 @@ async function composedAnswer(
       if (!subject) return { text: composeFamilyLikes(asked, people, records).text };
       const person = personNamed(subject, people);
       return { text: person ? composeLikes(asked, person, records).text : `I don't know who ${subject} is in your household. Check the name under Family.` };
+    }
+    if (intent.parameters.scope === "relations") {
+      // "Who is Asmi's father?": every relationship row, both ways round (relations.ts), as the route composes it.
+      const people = household.members.filter((m) => m.status === "active");
+      const parameters = intent.parameters;
+      const question =
+        typeof parameters.relationOf === "string" && typeof parameters.word === "string"
+          ? { kind: "of" as const, name: parameters.relationOf, word: parameters.word }
+          : Array.isArray(parameters.between) && parameters.between.length === 2
+            ? { kind: "between" as const, first: String(parameters.between[0]), second: String(parameters.between[1]) }
+            : { kind: "all" as const };
+      return { text: composeRelations(question, people, household.records.relationships ?? []).text };
     }
     if (intent.parameters.scope === "people") {
       return { text: composeRoster(household.members.filter((m) => m.status === "active"), {

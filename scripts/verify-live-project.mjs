@@ -94,6 +94,7 @@ const SHIPPED_TABLES = [
   "school_teachers",
   "child_activities",
   "push_subscriptions",
+  "member_relationships",
   "child_activity_notes",
   "schedule_conflicts",
   "gift_plans",
@@ -946,6 +947,12 @@ async function main() {
   check("migration landed: push_subscriptions", !pushProbe.error, pushProbe.error?.code ?? "ok");
   const anonPush = await anon.from("push_subscriptions").select("id").limit(1);
   check("anonymous cannot read push_subscriptions", Boolean(anonPush.error) || (anonPush.data ?? []).length === 0, anonPush.error?.code ?? "no rows");
+
+  // How the family is related (the owner, 2026-10-19): the table, and nothing for anyone signed out.
+  const relationshipsProbe = await admin.from("member_relationships").select("id, member_id, relation, related_member_id").limit(1);
+  check("migration landed: member_relationships", !relationshipsProbe.error, relationshipsProbe.error?.code ?? "ok");
+  const anonRelationships = await anon.from("member_relationships").select("id").limit(1);
+  check("anonymous cannot read member_relationships", Boolean(anonRelationships.error) || (anonRelationships.data ?? []).length === 0, anonRelationships.error?.code ?? "no rows");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

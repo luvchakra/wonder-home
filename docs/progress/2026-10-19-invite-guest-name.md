@@ -21,4 +21,4 @@ A phone's share sheet never tells a web page which contact was chosen, so the na
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #247 merged (2026-10-19): the same QA account and household as the family-likes check (`cf77f39f-…`, `5eaedd09-…`, with its event and invite link) deleted and confirmed gone by SQL; screenshots removed.

@@ -18,6 +18,7 @@ import type { HouseholdPlace } from "../homeplaces/repository";
 import type { HouseholdAddress } from "../household/address";
 import type { ResponsibilityRow } from "../household/configuration-repository";
 import type { HouseholdMember } from "../identity/households";
+import { relationshipSentences, type Relationship } from "../identity/relationships";
 import type { Integration } from "../integrations/repository";
 import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
@@ -144,6 +145,8 @@ function setupDetail(member: HouseholdMember, schools: readonly string[]): strin
 
 export type ContextRecords = {
   members?: readonly HouseholdMember[];
+  /** How the family is related, from Members & roles (the owner, 2026-10-19). */
+  relationships?: readonly Relationship[];
   /** Which school each child attends (story 02-009). */
   enrolments?: readonly Enrolment[];
   /** The languages each member speaks, and how well, by member id. */
@@ -331,6 +334,23 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         },
         source: { type: "household_members" },
         aliases: [member.displayName, firstName(member.displayName), member.nickname, member.relationship],
+      });
+    }
+    // How the family is related: one fact per row, said both ways round.
+    for (const { row, text } of relationshipSentences(records.relationships ?? [], active)) {
+      const pair = active.filter((member) => member.id === row.memberId || member.id === row.relatedMemberId);
+      add({
+        domain: "people",
+        entityType: "relationship",
+        entityId: row.id,
+        summary: text,
+        need: "how the family is related",
+        privacyClass: pair.some((member) => member.memberType === "child") ? "child" : "general",
+        subjectMemberIds: [row.memberId, row.relatedMemberId],
+        tier: 1,
+        attributes: { relation: row.relation, memberId: row.memberId, relatedMemberId: row.relatedMemberId },
+        source: { type: "member_relationships", sourceId: row.id },
+        aliases: [row.relation.replaceAll("_", "-")],
       });
     }
     const invited = members.filter((member) => member.status === "invited");

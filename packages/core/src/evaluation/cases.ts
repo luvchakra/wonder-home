@@ -49,6 +49,25 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["**Upasana Mehta**", "Doesn't like mushrooms", "**Asmi**", "Asmi likes Indian food (you told me; not confirmed yet)", "**Manan**", "Manan likes home-cooked food"], excludes: ["not have anything on record", "no information", "Kunal Mehta**"] } },
   },
   {
+    // The owner, 2026-10-19: relationships an Admin defines on Members & roles.
+    id: "HT-114", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
+    description: "\"Who is Asmi's father?\" is answered from the Relationships rows, by rules.",
+    utterance: "Who is Asmi's father?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Kunal Mehta is Asmi's father"], excludes: ["Remembered", "not on record"] } },
+  },
+  {
+    id: "HT-115", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "A row written one way answers the other: \"Upasana is wife of Kunal\" says who Kunal is to Upasana, and a pair with no row says so and where to add it.",
+    utterance: "How is Kunal related to Upasana?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Kunal Mehta is Upasana's husband", "Upasana Mehta is Kunal's wife"] } },
+  },
+  {
+    id: "HT-116", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "\"Who is Manan's father?\" with no such row is said to be missing, with where an Admin adds it — never guessed from the guardians.",
+    utterance: "Who is Manan's father?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["No one is recorded as Manan's father yet", "Members & roles"], excludes: ["Kunal Mehta is Manan's father"] } },
+  },
+  {
     id: "HT-113", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"Who likes what?\" is the same answer for anyone in the family, and is never kept as a fact about someone called \"Who\".",
     utterance: "Who likes what?",
