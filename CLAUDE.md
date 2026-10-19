@@ -857,6 +857,20 @@ For any UI change, actually drive it in a browser at 360px and desktop before ca
 ## Applying a migration to the live project
 Writing a migration file is not shipping it. This repo's live Supabase project only has what actually reached it through the Supabase MCP `apply_migration` tool (`mcp__Supabase__list_projects` finds the project id, `list_migrations` shows what has landed) — a file committed to `supabase/migrations/` with nobody having run that tool is invisible to production no matter what the story tracker says. This bit a real story: three migrations in a row got written, tested locally, committed and marked `Done` without ever being applied, and the gap surfaced only when a fourth story tried to read the column one of them added. Apply every migration to the live project as part of finishing the story that introduces it, in the same session, and run `npm run verify:live` afterward to confirm it landed — never treat a green `test:db` run (a from-scratch local database) as proof that the live project has it too.
 
+## Row-level security checks membership as a set
+A policy never calls `wh.is_member(x)`, `wh.is_household_admin(x)` or
+`col = wh.member_id(x)`. Each is a security-definer function that runs its
+own lookup for every row a query touches; counting 32 rows took 17 ms that
+way (performance pass, 2026-10-19). Write the set forms instead, which run
+once per statement:
+- `x in (select wh.member_households())`;
+- `x in (select wh.admin_households())`;
+- `(x, col) in (select household_id, member_id from wh.my_memberships())`;
+- `(select auth.uid())`, never a bare `auth.uid()`.
+
+`scripts/test-setup-counts-rls.mjs` fails if a policy still uses a per-row
+helper.
+
 ## Database query permissions
 All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_migration`, and every other Supabase MCP tool — is pre-authorized. Run what the work needs (including destructive statements: dropping a constraint, deleting QA/test rows, correcting bad data) without pausing to ask first. This still means investigate before deleting real household data and keep QA cleanup scoped to what a session's own test account created, per the rest of this file — it removes the confirmation step, not the judgment.
 

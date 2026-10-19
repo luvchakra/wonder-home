@@ -24,4 +24,4 @@
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #244 merged (2026-10-19): QA account `e60c0a74-c849-4aa7-9151-0d022735d72c` and household `19d65b0d-b719-465a-9ac6-329cf83bf549` ("QA Release Home") deleted, plus `1c69d23f-b142-4965-ae80-ce327eeb7f42` and `29283658-3fd7-4d0c-8122-dedd438c032c`, two accounts created by mistake in the same minute and never used. Confirmed by SQL: 0 households, 0 members, 0 auth users left for those ids. Screenshots and helper scripts removed; no server left running.
