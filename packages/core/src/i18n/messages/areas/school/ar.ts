@@ -85,7 +85,6 @@ export const schoolAr: AreaCatalog<typeof schoolEn> = {
   "school.notes.remove": "إزالة {name}",
   "school.connect": "ربط المدرسة",
   "school.fixConnection": "إصلاح الاتصال",
-  "school.everyone": "الجميع",
   "school.view": "عرض المدرسة",
   "school.tab.overview": "نظرة عامة",
   "school.tab.homework": "الواجبات",

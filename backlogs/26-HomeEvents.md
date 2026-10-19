@@ -18,6 +18,7 @@
 | 12 | P1 | 26-012 | A tall, phone-shaped invitation, and a preview before saving | Done | The owner, 2026-10-18 (PR #237): Share invitation sends the invitation as a 1080×1350 picture with the link (`e/[token]/card`, one renderer with the link preview, `render-invitation.tsx`), so it shows whole in a chat; the wide picture stays as the link preview, since a chat only shows a wide one large. Preview in the design picker shows the invitation with the design and line picked, before saving. Checked: three designs drawn tall; the wedding preview at 360px; Share invitation opened the picture where the browser can't share files |
 | 13 | P1 | 26-013 | "More family time!" only on family events | Done | The owner, 2026-10-18 (PR #241): Home's event card closed every event with "More family time!", a school event or an office review included. It now shows only for family kinds (family time, outing, birthday, gathering, travel, special occasion; `momentLook.family` in `_screens/home-dashboard.tsx`). Checked at 360px: a school event has no line, a movie night does |
 | 14 | P1 | 26-014 | An event's "Where" is picked from Google Maps | Done | The owner, 2026-10-19 (screenshot of Edit the plan). Adding or editing an event, an adult searches Google Maps for Where (`EventPlaceField`, the same `PlaceSearchField` as the place book). The server re-reads a picked place by its id (`eventPlaceFromForm` → `decideEventPlace`, `places/event-place.ts`) and keeps its name, address and id (`family_events.location_address`, `location_place_id`, migration `20261019130000`, live). A typed place such as Home is kept as written, and a pick that cannot be read keeps the typed words. The event page shows the address with Open in Google Maps, and the guest invitation page gives directions; a typed place has no link. Help: Calendar ¶3 in 8 languages |
+| 15 | P1 | 26-015 | The invitation link carries the guest's name | Done | The owner, 2026-10-19 (screenshot of the guest reply page's empty "Your name"). A phone's share sheet never says which contact was chosen, so the name is picked in WonderHome first: "Who is it for? (optional)" above the link in `EventLinkShare`, with Pick from contacts where the browser has the Contact Picker API (Android Chrome; one contact, name only, each time). The copied and shared link becomes `/e/<token>?to=<name>` and the share text names them; the guest page reads `?to=` (`guestNameFrom`: control characters dropped, 80 characters) into "Your name" as a default the guest can change, and trusts it for nothing else. Help: Calendar ¶8 in 8 languages
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -69,3 +70,19 @@ HomeEvents is the owner's name for everything about the household's calendar: fa
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
+
+### Story 26-015 — The invitation link carries the guest's name
+**Epic:** HomeEvents
+**Priority:** P1
+**Goal:** When a household sends an invitation link to one person, that person's reply page opens with their name already filled in, without the household typing it twice or the guest typing it at all.
+
+**Acceptance criteria**
+- The invitation box offers "Who is it for? (optional)"; on a phone that has the Contact Picker API, a Pick from contacts button fills it from one chosen contact's name, and nothing else is read from the address book.
+- The link shown, copied and shared carries the name (`?to=`), and the share text addresses the guest by name; with no name, the link and text are exactly as before.
+- The guest page opens with "Your name" set to that name, cleaned and capped, and the guest can change it; the reply is written only from what the form posts.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- Tests, typecheck, lint and build pass; the help section says what changed.
+

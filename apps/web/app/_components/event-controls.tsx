@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ImageIcon, Pencil, Share2 } from "lucide-react";
+import { Check, Contact, Copy, ImageIcon, Pencil, Share2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -255,6 +255,13 @@ export function EventInviteesForm({
 
 const noSubscription = () => () => undefined;
 
+/** The Contact Picker API (Android Chrome): one contact's name, chosen by the person, never the address book. */
+type ContactPicker = { select: (properties: ["name"], options: { multiple: false }) => Promise<{ name?: string[] }[]> };
+function contactPicker(): ContactPicker | null {
+  const contacts = (navigator as Navigator & { contacts?: ContactPicker }).contacts;
+  return contacts && typeof contacts.select === "function" ? contacts : null;
+}
+
 /** The live link: shown in full, copied in one tap, or handed to the phone's own share sheet. */
 export function EventLinkShare({
   path,
@@ -263,15 +270,44 @@ export function EventLinkShare({
 }: {
   path: string;
   title: string;
-  labels: { copy: string; copied: string; share: string; shareText: string; shareCard: string; saveCard: string };
+  labels: {
+    copy: string;
+    copied: string;
+    share: string;
+    shareText: string;
+    shareTextFor: string;
+    shareCard: string;
+    saveCard: string;
+    forLabel: string;
+    forHint: string;
+    pickContact: string;
+  };
 }) {
-  // The origin and the share sheet exist only in the browser; the server renders the bare path.
+  // The origin, the share sheet and the contact picker exist only in the browser; the server renders the bare path.
   const origin = useSyncExternalStore(noSubscription, () => window.location.origin, () => "");
   const canShare = useSyncExternalStore(noSubscription, () => typeof navigator.share === "function", () => false);
-  const url = `${origin}${path}`;
+  const canPickContact = useSyncExternalStore(noSubscription, () => contactPicker() !== null, () => false);
+  // A phone's share sheet never tells the page who was picked, so the guest's
+  // name is chosen here, before sharing, and travels in the link (`?to=`): the
+  // invitation opens with "Your name" already filled in, and they can change it.
+  const [guest, setGuest] = useState("");
+  const name = guest.trim().replace(/\s+/g, " ").slice(0, 80);
+  const url = `${origin}${path}${name ? `?to=${encodeURIComponent(name)}` : ""}`;
   const [copied, setCopied] = useState(false);
   const [sharingCard, setSharingCard] = useState(false);
-  const text = labels.shareText.replace("{title}", title);
+  const text = (name ? labels.shareTextFor.replace("{name}", name) : labels.shareText).replace("{title}", title);
+
+  const pickContact = async () => {
+    const picker = contactPicker();
+    if (!picker) return;
+    try {
+      const [contact] = await picker.select(["name"], { multiple: false });
+      const picked = contact?.name?.find((value) => value.trim());
+      if (picked) setGuest(picked.trim());
+    } catch {
+      // Closed without choosing: the field keeps what it had.
+    }
+  };
 
   // The invitation itself, as a tall picture with the link beside it: a chat
   // app shows it whole, the way a printed card is passed round. Where a
@@ -296,6 +332,25 @@ export function EventLinkShare({
 
   return (
     <div className="space-y-2">
+      <div className="flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <Field
+            label={labels.forLabel}
+            name="invite_for"
+            value={guest}
+            onChange={(event) => setGuest(event.target.value)}
+            maxLength={80}
+            autoComplete="off"
+            aria-describedby="invite_for-hint"
+          />
+        </div>
+        {canPickContact ? (
+          <Pill type="button" tone="soft" aria-label={labels.pickContact} title={labels.pickContact} onClick={() => void pickContact()} className="min-h-11 px-3">
+            <Contact aria-hidden className="size-4" />
+          </Pill>
+        ) : null}
+      </div>
+      <p id="invite_for-hint" className="text-xs text-[var(--wh-foreground-subtle)]">{labels.forHint}</p>
       <p className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] px-3 py-2 font-mono text-xs break-all">{url}</p>
       <div className="flex flex-wrap gap-2">
         <Pill type="button" tone="primary" disabled={sharingCard} onClick={() => void shareCard()}>

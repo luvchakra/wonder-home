@@ -39,4 +39,4 @@
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #246 merged (2026-10-19): QA account `61c4f276-6d08-4cb4-82df-7835a6a0e947` and household `39856c7c-3e4e-4a8c-ae28-eb0b2f720b90` ("QA Maps Home", with its event and invite link) deleted. Confirmed by SQL: 0 households, events, members and auth users left for those ids. Scratch screenshots removed.

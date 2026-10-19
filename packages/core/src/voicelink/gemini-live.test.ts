@@ -36,6 +36,7 @@ describe("Gemini gets narrow, domain-specific tools and nothing else", () => {
         "ask_household",
         "create_reminder",
         "get_bill_status",
+        "get_family_preferences",
         "get_grocery_status",
         "get_household_status",
         "get_meal_plan",
@@ -72,6 +73,8 @@ describe("a tool call is only ever words a member could have said to HomeTalk", 
     expect(utteranceForToolCall("get_school_items", { child: "Asmi" })).toMatchObject({ text: "What school work does Asmi have?" });
     expect(utteranceForToolCall("create_reminder", { what: "to call the plumber", when: "tomorrow at 9am" })).toMatchObject({ text: "Remind me to call the plumber tomorrow at 9am" });
     expect(utteranceForToolCall("get_bill_status", {})).toMatchObject({ text: "What bills are due this week?" });
+    expect(utteranceForToolCall("get_family_preferences", { person: "Asmi" })).toMatchObject({ text: "What does Asmi like?" });
+    expect(utteranceForToolCall("get_family_preferences", {})).toMatchObject({ text: "What does the family like?" });
     expect(utteranceForToolCall("get_recent_household_activity", {})).toMatchObject({ text: "What did WonderHome handle today?" });
     expect(utteranceForToolCall("answer_pending_question", { answer: "Manan" })).toMatchObject({ text: "Manan" });
     expect(utteranceForToolCall("ask_household", { question: "Is the plumber coming today?" })).toMatchObject({ text: "Is the plumber coming today?" });

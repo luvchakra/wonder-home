@@ -25,8 +25,21 @@ export type EventReplyLabels = {
   privacy: string;
 };
 
-/** A guest's reply through an event's invite link: their name, yes / maybe / no, how many, and a note. */
-export function EventReplyForm({ token, action, labels }: { token: string; action: (state: ReplyState, formData: FormData) => Promise<ReplyState>; labels: EventReplyLabels }) {
+/**
+ * A guest's reply through an event's invite link: their name, yes / maybe / no, how many, and a note.
+ * `guestName` is the name the household picked when it sent this link (`?to=`), filled in for them to keep or change.
+ */
+export function EventReplyForm({
+  token,
+  action,
+  labels,
+  guestName,
+}: {
+  token: string;
+  action: (state: ReplyState, formData: FormData) => Promise<ReplyState>;
+  labels: EventReplyLabels;
+  guestName?: string | null;
+}) {
   const [state, formAction, pending] = useActionState<ReplyState, FormData>(action, {});
   return (
     <div className="space-y-4">
@@ -38,7 +51,7 @@ export function EventReplyForm({ token, action, labels }: { token: string; actio
       {state.error ? <Alert>{state.error}</Alert> : null}
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="token" value={token} />
-        <Field label={labels.name} name="name" required maxLength={80} autoComplete="name" defaultValue={state.name ?? ""} />
+        <Field label={labels.name} name="name" required maxLength={80} autoComplete="name" defaultValue={state.name ?? guestName ?? ""} />
         <ChoiceChips
           legend={labels.question}
           name="response"

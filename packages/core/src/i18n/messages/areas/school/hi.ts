@@ -85,7 +85,6 @@ export const schoolHi: AreaCatalog<typeof schoolEn> = {
   "school.notes.remove": "{name} हटाएँ",
   "school.connect": "स्कूल जोड़ें",
   "school.fixConnection": "कनेक्शन ठीक करें",
-  "school.everyone": "सभी",
   "school.view": "स्कूल का व्यू",
   "school.tab.overview": "सारांश",
   "school.tab.homework": "होमवर्क",

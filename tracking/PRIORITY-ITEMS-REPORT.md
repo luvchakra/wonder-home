@@ -116,6 +116,8 @@ Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 p
 | WonderHome emails the member invite itself, from connect@wonderapps.biz (GoDaddy) | 01-010 | Done in code; the SMTP settings are in Vercel production. A real send is checked on production after the merge |
 | A child asking about his own private appointment hears that one is coming up and that the adults can see the details | 26-003 / HomeBrain | Done (golden HT-82, HT-83) |
 | Event "Where" from Google Maps: search and pick the place when adding or editing an event | 26-014 | Done — the address and Open in Google Maps on the event, directions for guests on the invitation page; a typed place such as Home is kept as written |
+| The invitation link opens with the guest's name filled in, picked (from contacts on Android) before sending | 26-015 | Done — "Who is it for?" above the link, Pick from contacts where the phone allows it, `?to=` on the link |
+| HomeTalk says it has no food preferences while HomeBrain Review lists them | 04-019 | Done — the Gemini turn never reached WonderHome; family-wide likes questions now answered by rules from every record, Gemini given `get_family_preferences` and told whose record it is |
 
 ## C. Waiting only on a browser check
 

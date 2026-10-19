@@ -49,6 +49,8 @@ export const GEMINI_GOLDEN: readonly VoiceGolden[] = [
   { name: "remember_family_fact", args: { fact: "Manan likes home-cooked food" }, action: "set_preference" },
   { name: "remember_family_fact", args: { fact: "Upasana likes cooking a lot" }, action: "set_preference" },
   { name: "remember_family_fact", args: { fact: "Asmi doesn't like mushrooms" }, action: "set_preference" },
+  { name: "get_family_preferences", args: { person: "Asmi" }, action: "ask_status", parameters: { scope: "likes", subject: "Asmi" } },
+  { name: "get_family_preferences", args: {}, action: "ask_status", parameters: { scope: "likes" } },
 ];
 
 export const ALEXA_GOLDEN: readonly { intent: string; slot: string; action: IntentAction }[] = [

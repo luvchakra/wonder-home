@@ -69,7 +69,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "informational",
     actions: ["ask_status", "greet", "unknown"],
     scope: "household.read",
-    geminiTools: ["ask_household", "get_household_status", "get_recent_household_activity"],
+    geminiTools: ["ask_household", "get_household_status", "get_recent_household_activity", "get_family_preferences"],
     policy: everywhere,
   },
   {

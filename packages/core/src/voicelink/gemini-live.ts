@@ -161,6 +161,22 @@ const TOOLS: readonly LiveTool[] = [
     utterance: (args) => said(args.fact, 160),
   },
   {
+    // "What do you know about the family's food preferences?" (the owner,
+    // 2026-10-19): asked that, Gemini answered from its own empty memory
+    // that it had no such record, while HomeBrain Review held fourteen. A
+    // question about what is on record is one tool call, never Gemini's own
+    // recollection; HomeTalk answers it from every record (likes.ts).
+    declaration: {
+      name: "get_family_preferences",
+      description: "What WonderHome has on record about what the family, or one person in it, likes, dislikes, eats or prefers — for \"what do you know about our food preferences?\", \"what does Asmi like?\", \"who likes what?\". WonderHome keeps this record; you have none of your own.",
+      parameters: { type: Type.OBJECT, properties: { person: text("The one person the question is about, if it named one. Leave out for the whole family.") } },
+    },
+    utterance: (args) => {
+      const person = said(args.person, 40);
+      return person ? `What does ${person} like?` : "What does the family like?";
+    },
+  },
+  {
     declaration: {
       name: "open_screen",
       description: "Open one of WonderHome's screens on the person's phone while you keep talking — Groceries, Calendar, Home, Meals, Family and the rest.",
@@ -258,6 +274,7 @@ export const GEMINI_LIVE_SYSTEM_INSTRUCTION = [
   "When the person asks for something to be done — plan an evening, add to the list, remind them, mark someone away, undo — call ask_household with their words: WonderHome does it then and there, and its userMessage says how to undo it. Never refuse a request yourself.",
   "For suggestions — somewhere to eat, a place to go, a day out, a weekend getaway or a vacation of a few days — call ask_household with their words; never decline without asking it.",
   "For anything about the household — its people, plans, meals, groceries, school, bills, home, pets, reminders or what WonderHome did — call a tool. Never answer those from memory or guess.",
+  "A question about what you know, remember or have on record — \"what do you know about the family's food preferences?\", \"what does Asmi like?\", \"who likes what?\" — is about WonderHome's record, never your own memory: call get_family_preferences (or ask_household) and say what it returns. Never say you have no information about the family: WonderHome keeps it, you do not.",
   "When the person asks to go to, open or switch to a screen (the grocery list, the calendar, Home), call open_screen and keep talking: the screen opens on their phone.",
   "When the person tells you something about the family — who likes, dislikes or prefers what — call remember_family_fact once for each fact, naming the person rather than saying he or she.",
   "Say the tool's userMessage in your own short words. Never add a name, date, time, amount or fact it does not contain.",

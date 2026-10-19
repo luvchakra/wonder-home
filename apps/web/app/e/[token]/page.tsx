@@ -51,6 +51,17 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
 }
 
 /**
+ * The guest's name the household picked when it shared this link
+ * (`/e/<token>?to=Priya`), filled into "Your name". Only a name: control
+ * characters dropped, spaces collapsed, cut to the form's 80 characters.
+ */
+function guestNameFrom(value: string | string[] | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const name = (raw ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  return name || null;
+}
+
+/**
  * A family event's invite link, for someone outside the household: the
  * decorated invitation (story 26-009), then the reply.
  *
@@ -61,8 +72,9 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
  * the token again before keeping the reply. A link that is off, or never
  * existed, says only that it isn't working, never which.
  */
-export default async function EventInvitePage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
+export default async function EventInvitePage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ to?: string | string[] }> }) {
+  const [{ token }, { to }] = await Promise.all([params, searchParams]);
+  const guestName = guestNameFrom(to);
   const [locale, invited] = await Promise.all([visitorLocale(), invitation(token)]);
   const { t } = locale;
 
@@ -112,6 +124,7 @@ export default async function EventInvitePage({ params }: { params: Promise<{ to
           ) : (
             <EventReplyForm
               token={token}
+              guestName={guestName}
               action={replyToEventAction}
               labels={{
                 name: t("invite.event.name"),

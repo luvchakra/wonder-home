@@ -85,7 +85,6 @@ export const schoolZh: AreaCatalog<typeof schoolEn> = {
   "school.notes.remove": "移除{name}",
   "school.connect": "连接学校",
   "school.fixConnection": "修复连接",
-  "school.everyone": "全部",
   "school.view": "学校视图",
   "school.tab.overview": "概览",
   "school.tab.homework": "作业",
