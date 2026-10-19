@@ -27,4 +27,4 @@
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #250 merged (2026-10-19): QA account `7532f0fd-c1ea-40f0-aab2-19a4cdc0501b` and household `29c2c0e7-1ecc-4ed2-b62b-ed33a8a9f382` ("QA Confirmed Home") deleted. Confirmed by SQL: 0 households, members, memories, review items and auth users left for them.

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | [The rest of the home on the calendar: school, meals, bills, health, helpers, upkeep, responsibilities and deliveries (26-002)](2026-10-19-calendar-module-adapters.md) |
 | 2026-10-19 | [What HomeBrain registers is confirmed by default (05-010); CLAUDE.md performance practices](2026-10-19-homebrain-confirmed-by-default.md) |
 | 2026-10-19 | [How the family is related: Relationships on Members & roles (01-013)](2026-10-19-family-relationships.md) |
 | 2026-10-19 | [Kids & School shows one child at a time; classes live only there](2026-10-19-school-one-child.md) |

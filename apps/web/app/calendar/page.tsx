@@ -19,6 +19,8 @@ import {
 import { DAY_GRID, gridHoursFor, layoutDay, type DayGridOptions } from "@wonderhome/core/calendar/layout";
 import { applyFilters, activeFilterCount, effectiveHolidayRegion, parsePreferences } from "@wonderhome/core/calendar/preferences";
 import { CALENDAR_CATEGORIES, densityByDay, entriesByDay, type CalendarEntry } from "@wonderhome/core/calendar/projection";
+import type { ModuleSource } from "@wonderhome/core/calendar/modules";
+import type { AppointmentType } from "@wonderhome/core/health/appointments";
 import { calendarRange, holidayRegions, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import type { Translate } from "@wonderhome/core/i18n/translate";
@@ -59,7 +61,7 @@ const VIEW_ORDER: CalendarView[] = ["month", "week", "day", "year"];
  */
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ view?: string; date?: string }> }) {
   const [params, session] = await Promise.all([searchParams, requireSession("/calendar")]);
-  const { supabase, membership, viewer, secondary, locale } = session;
+  const { supabase, membership, viewer, secondary, locale, view: personal } = session;
   const { t } = locale;
   const householdId = membership.household.id;
   const timeZone = membership.household.timezone;
@@ -90,11 +92,26 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         birthday: (name) => t("calendar.entry.birthday", { name }),
         occasion: (name, label) => (label ? t("calendar.entry.occasion", { name, label }) : t("calendar.entry.occasionFallback", { name })),
       },
-    }).catch(() => ({ entries: [] as CalendarEntry[], failedSources: ["event" as const] })),
+      // The rest of the household (26-002): each module through its own rules, never one this person hides.
+      modules: {
+        hidden: preferences.filters.hiddenSources,
+        financeView: personal.permissions.includes("finance.view"),
+        adult: membership.memberType === "adult",
+        words: {
+          appointment: (type) => t(`healthForm.careType.${type as AppointmentType}`),
+          busy: t("calendar.entry.busy"),
+          helperAway: (name) => t("calendar.entry.helperAway", { name }),
+          delivery: (provider) => t("calendar.entry.delivery", { provider }),
+        },
+      },
+    }).catch(() => ({ entries: [] as CalendarEntry[], failedSources: ["event" as const], offeredSources: [] as ModuleSource[] })),
     regionsRead,
   ]);
 
   const active = members.filter((member) => member.status !== "inactive");
+  // School work and classes are offered only where there is a child to have them.
+  const hasChildren = active.some((member) => member.memberType === "child");
+  const offeredSources = (result.offeredSources ?? []).filter((source) => hasChildren || (source !== "school" && source !== "activity"));
   const nameOf = (id: string) => active.find((member) => member.id === id)?.displayName ?? null;
   const entries = applyFilters(result.entries, preferences.filters, membership.memberId);
   const entryWords: EntryWords = { t, time: (at) => formatTime(timeZone, at), shortDate: words.shortDate, nameOf, timeZone };
@@ -150,6 +167,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                 title: t("calendar.filters.title"),
                 description: t("calendar.filters.description"),
                 categories: t("calendar.filters.categories"),
+                sources: t("calendar.filters.sources"),
                 people: t("calendar.filters.people"),
                 peopleHint: t("calendar.filters.peopleHint"),
                 onlyMine: t("calendar.filters.onlyMine"),
@@ -160,6 +178,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                 saving: t("calendar.filters.saving"),
                 failed: t("calendar.filters.failed"),
               }}
+              sources={offeredSources.map((value) => ({ value, label: t(`calendar.source.${value}`) }))}
+              shownSources={offeredSources.filter((source) => !preferences.filters.hiddenSources.includes(source))}
               categories={CALENDAR_CATEGORIES.map((value) => ({ value, label: t(`calendar.category.${value}`) }))}
               shown={CALENDAR_CATEGORIES.filter((category) => !preferences.filters.hiddenCategories.includes(category))}
               members={memberChoices}
