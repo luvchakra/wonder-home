@@ -335,7 +335,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.privacy.body.3":
     "Paramètres → Confidentialité et sécurité vous permet de télécharger une copie de vos données après avoir confirmé votre mot de passe. Vous pouvez aussi demander la suppression de vos données : un compte à rebours de 30 jours démarre, que vous pouvez annuler, et ce que le foyer partage, comme le guide de la maison et ce qui a été payé, reste au foyer. Le propriétaire du foyer transmet d’abord ce rôle à quelqu’un d’autre.",
   "help.guide.privacy.body.4":
-    "Un Admin décide dans Paramètres → Assistant IA quels types d’informations l’assistant peut partager avec le service d’IA — les détails des enfants, la santé, les montants et les factures, où se trouvent les gens, les messages privés. Ce qui n’est pas autorisé est exclu de tout ce que l’assistant envoie.",
+    "Un Admin décide dans Paramètres → Assistant IA quels types d’informations l’assistant peut partager avec le service d’IA — les détails des enfants, la santé, les montants et les factures, où se trouvent les gens, les messages privés. Ce qui n’est pas autorisé est exclu de tout ce que l’assistant envoie. Les détails des enfants sont autorisés dès le départ, pour que HomeTalk et HomeBrain puissent utiliser ce que vous leur dites de vos enfants ; un Admin peut les décocher au même endroit. Le reste attend qu’un Admin l’autorise.",
 
   "help.guide.ai-key.title": "Quel modèle fait fonctionner l’assistant",
   "help.guide.ai-key.summary": "Le nôtre par défaut ; le vôtre si vous préférez.",

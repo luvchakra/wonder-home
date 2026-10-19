@@ -335,7 +335,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.privacy.body.3":
     "Unter Einstellungen → Datenschutz & Sicherheit kannst du nach Bestätigung deines Passworts eine Kopie deiner Daten herunterladen. Du kannst auch die Löschung deiner Daten verlangen: Es läuft ein 30-tägiger Countdown, den du abbrechen kannst, und was der Haushalt gemeinsam hat, wie das Playbook und was bezahlt wurde, bleibt beim Haushalt. Der Eigentümer des Haushalts übergibt diese Rolle zuerst an jemand anderen.",
   "help.guide.privacy.body.4":
-    "Ein Admin entscheidet unter Einstellungen → KI-Assistent, welche Arten von Informationen der Assistent mit dem KI-Dienst teilen darf – Angaben zu Kindern, Gesundheit, Beträge und Rechnungen, wo Menschen sind, private Nachrichten. Was nicht erlaubt ist, bleibt aus allem heraus, was der Assistent sendet.",
+    "Ein Admin entscheidet unter Einstellungen → KI-Assistent, welche Arten von Informationen der Assistent mit dem KI-Dienst teilen darf – Angaben zu Kindern, Gesundheit, Beträge und Rechnungen, wo Menschen sind, private Nachrichten. Was nicht erlaubt ist, bleibt aus allem heraus, was der Assistent sendet. Angaben zu Kindern sind von Anfang an erlaubt, damit HomeTalk und HomeBrain nutzen können, was Sie über Ihre Kinder erzählen; ein Admin kann sie dort abwählen. Alles andere wartet, bis ein Admin es erlaubt.",
 
   "help.guide.ai-key.title": "Welches Modell den Assistenten antreibt",
   "help.guide.ai-key.summary": "Standardmäßig unseres; deins, wenn dir das lieber ist.",

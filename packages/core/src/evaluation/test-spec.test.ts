@@ -407,7 +407,8 @@ describe("E2E-001 (live finding) — a broad question whose answer was withheld 
     const answer = await answerWithHomeBrain({
       question: "What is happening on Saturday?", sentQuestion: "What is happening on Saturday?", previousQuestion: null, sentHistory: [],
       items: contextItemsFor(household, kunal.id), viewer: { memberId: kunal.id, roleLabel: "Adult", guardianOf: viewerFor(household, kunal.id).guardianOf },
-      timezone: household.timezone, now: household.now, policy: DEFAULT_DATA_USE, people: peopleOf(household),
+      // A household that unticked children's information (on by default since 2026-10-19).
+      timezone: household.timezone, now: household.now, policy: { ...DEFAULT_DATA_USE, allowedClasses: ["general"] }, people: peopleOf(household),
       compose: async (request) => {
         modelSawIt = request.facts.some((fact) => /Sports Day/.test(fact.text));
         return { text: "There is nothing scheduled on the family calendar for Saturday.", mode: "answer", grounded: true, usedFacts: [] };

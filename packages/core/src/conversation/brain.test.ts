@@ -192,11 +192,14 @@ describe("the facts a household's brain holds", () => {
     expect(classOf("Annual physical")).toBe("health");
   });
 
-  it("is held back by the default consent to ordinary household matters only", () => {
+  it("is held back by the default consent to ordinary household matters and the children's", () => {
     const people = snapshot.members.map((member) => ({ id: member.id, displayName: member.displayName, memberType: member.memberType }));
     const minimised = minimiseContext(facts, { policy: DEFAULT_DATA_USE, people });
     const sent = minimised.included.map((entry) => entry.text).join("\n");
-    expect(sent).not.toContain("Fractions worksheet");
+    // Children are on by default (2026-10-19); an Admin who unticks them keeps them home.
+    expect(sent).toContain("Fractions worksheet");
+    const unticked = minimiseContext(facts, { policy: { ...DEFAULT_DATA_USE, allowedClasses: ["general"] }, people });
+    expect(unticked.included.map((entry) => entry.text).join("\n")).not.toContain("Fractions worksheet");
     expect(sent).not.toContain("Electricity (utility");
     expect(sent).not.toContain("is away on");
     expect(sent).not.toContain("dentist appointment");

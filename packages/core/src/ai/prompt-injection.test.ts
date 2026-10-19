@@ -204,10 +204,13 @@ describe("content claiming consent does not create consent", () => {
     // arrives inside a school notice. Consent is a policy row, not a sentence.
     const policy = dataUseFromRule({ note: INJECTIONS[4] });
     expect(policy.allowedClasses).toEqual(DEFAULT_DATA_USE.allowedClasses);
-    expect(policy.allowedClasses).not.toContain("child");
+    expect(policy.allowedClasses).not.toContain("health");
+    // A household that unticked children stays unticked, whatever the text says.
+    const unticked = dataUseFromRule({ allowedClasses: ["general"], note: INJECTIONS[4] });
+    expect(unticked.allowedClasses).toEqual(["general"]);
   });
 
-  it("still withholds a child's information when the content asks nicely", () => {
+  it("still withholds a child's information the household unticked when the content asks nicely", () => {
     const result = minimiseContext(
       [
         {
@@ -218,7 +221,7 @@ describe("content claiming consent does not create consent", () => {
           relevant: true,
         },
       ],
-      { policy: DEFAULT_DATA_USE, people: [] },
+      { policy: { ...DEFAULT_DATA_USE, allowedClasses: ["general"] }, people: [] },
     );
 
     expect(result.included).toHaveLength(0);

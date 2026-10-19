@@ -45,16 +45,17 @@ function policy(overrides: Partial<DataUsePolicy> = {}): DataUsePolicy {
 }
 
 describe("the default, before a household has said anything", () => {
-  it("allows ordinary household matters and nothing else", () => {
-    expect(DEFAULT_DATA_USE.allowedClasses).toEqual(["general"]);
+  it("allows ordinary household matters and the children's, and nothing else", () => {
+    // The owner's call (2026-10-19): on unless an Admin unticks it.
+    expect(DEFAULT_DATA_USE.allowedClasses).toEqual(["general", "child"]);
   });
 
   it("does not agree to retention on the household's behalf", () => {
     expect(DEFAULT_DATA_USE.allowRetention).toBe(false);
   });
 
-  it("holds back a child, health, money, whereabouts and private messages", () => {
-    const sensitive = CONTENT_CLASSES.filter((entry) => entry !== "general" && entry !== "credential");
+  it("holds back health, money, whereabouts and private messages", () => {
+    const sensitive = CONTENT_CLASSES.filter((entry) => entry !== "general" && entry !== "child" && entry !== "credential");
 
     const result = minimiseContext(
       sensitive.map((contentClass) => candidate({ id: contentClass, contentClass })),
@@ -177,7 +178,7 @@ describe("routing to a provider", () => {
     // BYOK changes whose agreement with the provider governs the call. It
     // does not make a child's information the household's to trade.
     const own = minimiseContext([candidate({ contentClass: "child" })], {
-      policy: policy(),
+      policy: policy({ allowedClasses: ["general"] }),
       people: PEOPLE,
     });
     expect(own.included).toHaveLength(0);

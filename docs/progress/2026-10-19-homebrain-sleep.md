@@ -128,7 +128,7 @@ Migration `20261019160000_homebrain_sleep.sql` is additive and applied live:
 ## Notes and what is open
 
 - **Stale wording until deploy:** until this deploys, the live app's keep-warm rebuilds stores with the old builders, so "(confirmed)" can still appear in a stored context. It goes away with the deploy.
-- **The owner's household:** it sleeps for the first time on the first night after deploy, between 2 and 5 am IST. Its assistant key is Anthropic, which has no embeddings, so meaning uses its Gemini key. A child's notes (Asmi's) stay out of the model and embeddings unless the household's data-use settings allow the child class; the rules still tidy them.
+- **The owner's household:** it sleeps for the first time on the first night after deploy, between 2 and 5 am IST. Its assistant key is Anthropic, which has no embeddings, so meaning uses its Gemini key. Its data-use agreement already allows children's information, so Asmi's notes go to the model and the meaning search like everyone else's. Since `2026-10-19-children-on-by-default.md`, that is also the default for a household that has not chosen.
 - **Turn speed:** turn speed with the model is the provider's. The HomeBrain parts added here are bounded (900 ms for meaning) or run after the response.
 
 ## Where the code lives
@@ -141,6 +141,4 @@ Migration `20261019160000_homebrain_sleep.sql` is additive and applied live:
 
 ## QA cleanup
 
-Recorded after the merge. This build created:
-- QA account `0da5a27b-e4b5-47a3-97d1-d3523b2557e5`;
-- household `ecf0cb6f-c620-42ac-8705-605fb2131411` ("QA Sleep Home"), with its memories, links, runs, consolidations, embeddings and AI key row;
+Ran after #252 merged (2026-10-19). QA account `0da5a27b-e4b5-47a3-97d1-d3523b2557e5` and household `ecf0cb6f-c620-42ac-8705-605fb2131411` ("QA Sleep Home", with its memories, links, runs, consolidations, embeddings and AI key row) were deleted. SQL found 0 households, members, memories, links, runs, embeddings and auth users left for them. The scratch QA files were removed.
