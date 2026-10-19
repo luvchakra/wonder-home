@@ -95,7 +95,7 @@ describe("reconciling a new reading with what is already believed", () => {
     // Even at higher confidence, a pattern does not get to quietly disagree
     // with something the household certified.
     expect(update.kind).toBe("needs_review");
-    expect(update.kind === "needs_review" && update.reason).toMatch(/confirmed/i);
+    expect(update.kind === "needs_review" && update.reason).toMatch(/registered/i);
   });
 
   it("lets a person override a confirmed fact, because they are the authority", () => {

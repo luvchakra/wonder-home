@@ -99,7 +99,7 @@ export function reconcileMemory(
       existing,
       proposed,
       reason:
-        "This contradicts something the household confirmed, so it is waiting for someone to decide.",
+        "This contradicts something the household registered, so it is waiting for someone to decide.",
     };
   }
 

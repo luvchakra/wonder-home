@@ -81,7 +81,7 @@ export function findPotentialConflicts(items: readonly HouseholdContextItem[]): 
       itemIds: [winner.id, loser.id],
       subjectMemberIds: Array.from(new Set([...winner.subjectMemberIds, ...loser.subjectMemberIds])),
       summary: winner.confirmed && !loser.confirmed
-        ? `WonderHome picked up something different from what the household confirmed: kept "${winner.summary}" over "${loser.summary}".`
+        ? `WonderHome picked up something different from what the household registered: kept "${winner.summary}" over "${loser.summary}".`
         : `Two records disagree; the newer one stands: "${winner.summary}" over "${loser.summary}".`,
       severity: "low",
     });

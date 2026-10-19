@@ -74,7 +74,7 @@ describe("the answer comes from every record about the person", () => {
       { kind: "food", memberId: "k", preference: "preference", subject: "North Indian" },
     ]);
     expect(told.count).toBe(2);
-    expect(told.text).toContain("Upasana likes Italian food (you told me; not confirmed yet)");
+    expect(told.text).toContain("Upasana likes Italian food (you told me; not registered yet)");
     expect(told.text).toContain("Doesn't like mushrooms");
     expect(told.text).not.toContain("North Indian");
   });
@@ -128,10 +128,10 @@ describe("everyone's likes, person by person (the owner, 2026-10-19)", () => {
     expect(told.text.indexOf("**Upasana Chakraborty**")).toBeLessThan(told.text.indexOf("**Asmi**"));
     expect(told.text.indexOf("**Asmi**")).toBeLessThan(told.text.indexOf("**Manan**"));
     expect(told.text).toContain("- Doesn't like mushrooms");
-    expect(told.text).toContain("- Asmi likes Indian food (you told me; not confirmed yet)");
-    expect(told.text).toContain("- Asmi doesn't like Assamese food (you told me; not confirmed yet)");
+    expect(told.text).toContain("- Asmi likes Indian food (you told me; not registered yet)");
+    expect(told.text).toContain("- Asmi doesn't like Assamese food (you told me; not registered yet)");
     expect(told.text).toContain("- Manan likes home-cooked food\n");
-    expect(told.text).toContain("**The household**\n- The family likes food mildly spiced (you told me; not confirmed yet)\n- Doesn't eat, by choice: beef");
+    expect(told.text).toContain("**The household**\n- The family likes food mildly spiced (you told me; not registered yet)\n- Doesn't eat, by choice: beef");
     // Not a preference, and nobody's; and a person with nothing on record has no heading.
     expect(told.text).not.toContain("Bedtime");
     expect(told.text).not.toContain("**Kunal");

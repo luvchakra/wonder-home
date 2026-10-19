@@ -153,7 +153,7 @@ function linesFor(person: LikesPerson, records: readonly LikesRecord[]): { lines
     const about = parts.filter((part) => mentions(part));
     const chosen = about.length > 0 ? about : record.memberId === person.id ? parts : [];
     for (const part of chosen) {
-      const line = `${part.replace(/\.$/, "")}${record.confirmed ? "" : " (you told me; not confirmed yet)"}`;
+      const line = `${part.replace(/\.$/, "")}${record.confirmed ? "" : " (you told me; not registered yet)"}`;
       if (!seen.has(part.toLowerCase())) {
         seen.add(part.toLowerCase());
         lines.push(line);
@@ -220,7 +220,7 @@ export function composeFamilyLikes(question: LikesQuestion, people: readonly Lik
         ? `${FOOD_WORDS[record.preference]} ${record.subject}`
         : mentioned(record.statement)
           ? null
-          : `${record.statement.replace(/\.$/, "")}${record.confirmed ? "" : " (you told me; not confirmed yet)"}`;
+          : `${record.statement.replace(/\.$/, "")}${record.confirmed ? "" : " (you told me; not registered yet)"}`;
     if (!line || seen.has(line.toLowerCase())) continue;
     seen.add(line.toLowerCase());
     household.push(line);

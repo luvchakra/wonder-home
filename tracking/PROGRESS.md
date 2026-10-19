@@ -51,7 +51,7 @@ disagree again.)
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 8 | 2 | 4 | 2 | 5 | In Progress |
 | 25 | HomeFood | 13 | 6 | 4 | 3 | 6 | In Progress |
-| 26 | HomeEvents | 6 | 2 | 2 | 2 | 0 | In Progress |
+| 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
 ## Execution Log
 
@@ -296,3 +296,5 @@ disagree again.)
 | 2026-10-19 | 01 | 01-013 | Done | relationships 11 and relations tests, npm test (3601 + 64), test:db 674/674 (member_relationships 7/7), typecheck, lint, eval 133/133, security 12/12, bundle, help links, build; migration live with verify:live 305/305; browser QA at 360px and 1280px (suggestion added, sheet add, refused age and pair with named reasons, custom relation, edit, remove, Family lines, three HomeTalk answers) | How the family is related, on Members & roles (`docs/progress/2026-10-19-family-relationships.md`) |
 | 2026-10-19 | 01 | 01-013 | Done (fix) | households tests 16, npm test, typecheck, lint; browser QA at 360px (no sibling line for an adult; the children's order right) | A father is never shown as his children's sibling (`docs/progress/2026-10-19-family-relationships.md`) |
 | 2026-10-19 | 05 | 05-010 | Done | memory, engine and welcome tests (updated to the owner's rule), npm test (3603 + 64), test:db 674/674, typecheck, eval 133/133; migration live (18 memories and 18 items moved, defaults confirmed) with verify:live 305/305; browser QA at 360px (a like lands under Confirmed, Needs review empty, Remove works, the reply has no "not confirmed yet") | HomeBrain items confirmed by default (`docs/progress/2026-10-19-homebrain-confirmed-by-default.md`) |
+| 2026-10-19 | 26 | 26-002 | Done | calendar modules tests 13 (54 in calendar), help and i18n 106, npm test, typecheck, lint, build; browser QA at 360px and 1280px (each module on its day, "Due" on homework and the bill, Filters "Also show" turning planned meals and responsibilities on and deliveries off, no sideways scroll, no page errors) | The rest of the home on the calendar (`docs/progress/2026-10-19-calendar-module-adapters.md`) |
+| 2026-10-19 | 05 | 05-010 | Done (wording) | conversation, household, homebrain, help and i18n tests (1178), typecheck, eval 133/133; browser QA at 360px (HomeBrain Review reads Registered, no "Confirmed" left) | HomeBrain says Registered, never Confirmed (`docs/progress/2026-10-19-homebrain-confirmed-by-default.md`) |

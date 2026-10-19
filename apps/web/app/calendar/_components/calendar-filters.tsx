@@ -18,6 +18,7 @@ export type CalendarFiltersLabels = {
   title: string;
   description: string;
   categories: string;
+  sources: string;
   people: string;
   peopleHint: string;
   onlyMine: string;
@@ -31,13 +32,15 @@ export type CalendarFiltersLabels = {
 
 /**
  * What one person's calendar shows (story 12-009, design §4 "Filters"):
- * categories, people, only mine, confirmed only, the holiday list and the
+ * categories, the other modules on it (26-002), people, only mine, confirmed only, the holiday list and the
  * view it opens on. Saved to their own `calendar_preferences`; it narrows
  * what they see and never what anyone else sees.
  */
 export function CalendarFilters({
   householdId,
   labels,
+  sources,
+  shownSources,
   categories,
   shown,
   members,
@@ -51,6 +54,9 @@ export function CalendarFilters({
 }: {
   householdId: string;
   labels: CalendarFiltersLabels;
+  /** The other modules this person may see, to switch on and off (26-002). */
+  sources: { value: string; label: string }[];
+  shownSources: string[];
   categories: { value: string; label: string }[];
   shown: string[];
   members: { value: string; label: string }[];
@@ -80,6 +86,14 @@ export function CalendarFilters({
           {state.error ? <Alert>{labels.failed}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
           <ChoiceChips legend={labels.categories} name="shown" type="checkbox" options={categories} defaultValue={shown} />
+          {sources.length > 0 ? (
+            <>
+              {sources.map((source) => (
+                <input key={source.value} type="hidden" name="offeredSources" value={source.value} />
+              ))}
+              <ChoiceChips legend={labels.sources} name="shownSources" type="checkbox" options={sources} defaultValue={shownSources} />
+            </>
+          ) : null}
           {members.length > 1 ? (
             <div className="space-y-1">
               <ChoiceChips legend={labels.people} name="memberIds" type="checkbox" options={members} defaultValue={memberIds} />

@@ -187,7 +187,7 @@ function whereFrom(input: WhyInput): WhyAnswer {
 
   if (candidates.length === 0) {
     return {
-      text: "I cannot point to a record behind that. If it came from something said in this conversation, it is not a household fact until it has been recorded or confirmed.",
+      text: "I cannot point to a record behind that. If it came from something said in this conversation, it is not a household fact until it has been recorded or registered.",
       evidenceIds: [],
     };
   }
