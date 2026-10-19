@@ -59,6 +59,12 @@ export type HomeBrainTurn = {
   deepRead?: (domains: ContextDomain[]) => Promise<readonly HouseholdContextItem[]>;
   /** The person asked HomeBrain to look again ("can you check the database?"). */
   deeper?: boolean;
+  /**
+   * Records close in meaning to the question (HomeBrain Sleep), started by the
+   * caller alongside its other reads and awaited only here; it must already
+   * be bounded by a short timeout. Absent or empty, retrieval is by words.
+   */
+  semantic?: Promise<ReadonlyMap<string, number>>;
 };
 
 export type HomeBrainAnswer = {
@@ -128,7 +134,8 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
   const held = heldForAdultsAnswer(reading, turn.viewer.memberId, turn.heldForAdults ?? 0);
   if (held) return { ...base, text: held, mode: "answer", source: "deterministic" };
 
-  const facts = groundFacts(turn.items, reading, { timezone: turn.timezone, today: isoDay(turn.now, turn.timezone) });
+  const semantic = turn.semantic ? await turn.semantic.catch(() => undefined) : undefined;
+  const facts = groundFacts(turn.items, reading, { timezone: turn.timezone, today: isoDay(turn.now, turn.timezone), semantic });
   const validation = { attempts: 0, rejected: [] as ViolationKind[] };
   let factsSent = 0;
 
@@ -187,7 +194,7 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
         !reading.broad &&
         reading.focus.size > 0 &&
         answering.length === 0 &&
-        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && (fact.domain === "insight" || (fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)))));
+        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && (fact.domain === "insight" || fact.domain === "profile" || (fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)))));
       if (unfounded) validation.rejected = [...new Set([...validation.rejected, "unfounded_answer" as const])];
       if (outcome.status === "accepted" && !unfounded && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
         return {

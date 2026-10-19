@@ -88,6 +88,53 @@ export function toHomeTalkResponse(requestId: string, reply: TurnReply): HomeTal
   }
 }
 
+/**
+ * A heading with its list under it is one sentence when heard (HomeBrain
+ * Sleep, the owner's "only Asmi's preferences" report): "**Asmi**" then
+ * "- Asmi likes pasta", "- Asmi likes pizza" is read "Asmi likes pasta and
+ * pizza." — so the whole family fits in what a voice surface reads out,
+ * instead of the first person's lines and "and 10 more".
+ */
+export function groupedForSpeech(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = lines[index]!.trim().match(/^\*\*([^*]+)\*\*:?$/);
+    const items: string[] = [];
+    let next = index + 1;
+    while (heading && next < lines.length && /^\s*[-*•]\s+/.test(lines[next]!)) {
+      items.push(lines[next]!.replace(/^\s*[-*•]\s+/, "").replace(/\.$/, "").trim());
+      next += 1;
+    }
+    if (!heading || items.length === 0) {
+      out.push(lines[index]!);
+      continue;
+    }
+    out.push(`${spokenGroup(heading[1]!.trim(), items)}.`);
+    index = next - 1;
+  }
+  return out.join("\n");
+}
+
+/** "Asmi" + ["Asmi likes pasta", "Asmi likes pizza", "Asmi doesn't like okra"] → "Asmi likes pasta and pizza; doesn't like okra". */
+function spokenGroup(name: string, items: readonly string[]): string {
+  const first = name.split(/\s+/)[0]!;
+  const rest = items.map((item) => item.replace(new RegExp(`^(?:${[name, first].map((entry) => entry.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\s+`, "i"), "").replace(/\s*\([^)]*\)$/, ""));
+  const verbs = ["likes", "loves", "prefers", "doesn't like", "does not like", "is allergic to", "avoids", "dislikes"];
+  const groups: { verb: string | null; things: string[] }[] = [];
+  for (const item of rest) {
+    const verb = verbs.find((entry) => item.toLowerCase().startsWith(`${entry} `)) ?? null;
+    const thing = verb ? item.slice(verb.length + 1) : item;
+    const last = groups[groups.length - 1];
+    if (last && verb && last.verb === verb) last.things.push(thing);
+    else groups.push({ verb, things: [thing] });
+  }
+  const join = (things: string[]) => (things.length <= 1 ? (things[0] ?? "") : `${things.slice(0, -1).join(", ")} and ${things[things.length - 1]}`);
+  const phrases = groups.map((group) => (group.verb ? `${group.verb} ${join(group.things)}` : join(group.things)));
+  const startsWithVerb = groups[0]?.verb !== null;
+  return startsWithVerb ? `${first} ${phrases.join("; ")}` : `${name}: ${phrases.join("; ")}`;
+}
+
 /** The longest thing a voice surface reads out in one go, in characters. */
 export const MAX_SPEECH = 420;
 
@@ -97,7 +144,7 @@ export const MAX_SPEECH = 420;
  * fit is counted ("and 3 more"), never cut mid-sentence.
  */
 export function speechFrom(text: string): string {
-  const lines = text
+  const lines = groupedForSpeech(text)
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/https?:\/\/\S+/g, "")
     .replace(/\*\*|__|`/g, "")

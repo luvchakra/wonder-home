@@ -283,9 +283,12 @@ jobs:
         run: npm ci
 
       # The runner image ships PostgreSQL 16, stopped; starting it takes
-      # about two seconds.
+      # about two seconds. pgvector is added so HomeBrain's meaning (the
+      # hosted project has it) is tested as it runs there; without it the
+      # migration still applies and that one test skips.
       - name: Start PostgreSQL
         run: |
+          sudo apt-get install -y -q postgresql-16-pgvector >/dev/null 2>&1 || (sudo apt-get update -q >/dev/null 2>&1 && sudo apt-get install -y -q postgresql-16-pgvector >/dev/null 2>&1) || echo "pgvector not installed; its test will skip"
           sudo systemctl start postgresql.service
           sudo -u postgres psql -q -c "alter user postgres password 'postgres'"
 

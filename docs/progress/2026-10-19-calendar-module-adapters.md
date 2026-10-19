@@ -60,5 +60,5 @@ No migration was needed: every read uses an existing household-scoped index (che
 
 ## QA cleanup
 
-- **This story (26-002):** the QA account `f79221ab-ef6b-4c30-a364-4be6de2a5a6b` and household `be8bf68e-d8a3-4a75-aad5-6bda5938c703` ("QA Calendar Home", with its seeded records). Recorded after the merge, in the next code PR. A first QA account, `e7af6831-64fa-4e84-8be6-3ed3f87bc240`, was deleted the same day before it was used.
+- **This story (26-002):** ran after #251 merged (2026-10-19). QA account `f79221ab-ef6b-4c30-a364-4be6de2a5a6b` and household `be8bf68e-d8a3-4a75-aad5-6bda5938c703` ("QA Calendar Home", with its seeded records) were deleted; SQL found 0 households, members, school items, appointments, orders, memories and auth users left for them. A first QA account, `e7af6831-64fa-4e84-8be6-3ed3f87bc240`, was deleted the same day before it was used.
 - **The confirmed-by-default check (#250):** ran after #250 merged on 2026-10-19. QA account `7532f0fd-c1ea-40f0-aab2-19a4cdc0501b` and household `29c2c0e7-1ecc-4ed2-b62b-ed33a8a9f382` ("QA Confirmed Home") were deleted. SQL found 0 households, members, memories, review items and auth users left for them.

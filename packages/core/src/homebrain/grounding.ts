@@ -6,6 +6,7 @@ import { sourcesOf } from "../context/provenance";
 import { findRelevantFacts } from "../context/retrieval";
 import type { ContextDomain, ContextTier, HouseholdContextItem, PrivacyClass } from "../context/types";
 import { hopsFor } from "./goal";
+import { profileFacts } from "./sleep/profiles";
 import { buildHouseholdGraph, neighbours, type EdgeKind } from "./graph";
 import { householdInsights } from "./insights";
 import { inWindow, type BrainReading } from "./question";
@@ -34,7 +35,7 @@ export type GroundedFact = {
   score: number;
   /** The context item it states, or null for a derived fact (a clash between two items, an inference). */
   itemId: string | null;
-  domain: ContextDomain | "conflict" | "insight";
+  domain: ContextDomain | "conflict" | "insight" | "profile";
   /** An inference's evidence: the `contextId`s of the facts it rests on, every one of them sent with it (§3.5). */
   evidence?: string[];
   subjectMemberIds: string[];
@@ -61,7 +62,18 @@ export type GroundingOptions = {
   /** The household's zone and today in it, for the inferences (§3.5). Without them, no inferences are drawn. */
   timezone?: string;
   today?: string;
+  /**
+   * Records close in meaning to the question (HomeBrain Sleep), item id →
+   * similarity, from the household's embeddings. Lifts a record that shares
+   * no word with the question; never overrules who or what part of the home
+   * the reading named.
+   */
+  semantic?: ReadonlyMap<string, number>;
 };
+
+/** Close enough in meaning to offer to a model; near enough to stand beside a matched fact. */
+export const SEMANTIC_RELATED = 0.72;
+export const SEMANTIC_CLOSE = 0.8;
 
 /**
  * What a fact one link away from a seed scores (HomeBrain 4.0 §3.4, story
@@ -76,7 +88,7 @@ export const FACT_TOKEN_BUDGET = 8000;
 /** Only a fact this sure of itself pulls its neighbours in. */
 const SEED_SCORE = 0.6;
 /** The links worth following. A person's own row is background, so nothing is followed out of it. */
-const FOLLOWED: ReadonlySet<EdgeKind> = new Set(["about_person", "same_day", "needs", "responsible_for", "routed_from"]);
+const FOLLOWED: ReadonlySet<EdgeKind> = new Set(["about_person", "same_day", "needs", "responsible_for", "routed_from", "associated"]);
 /** A plan or a decision goes one link further, only along what changes a plan: the day's other things, what a meal needs. */
 const SECOND_HOP: ReadonlySet<EdgeKind> = new Set(["same_day", "needs"]);
 const LINK_WORDS: Record<EdgeKind, string> = {
@@ -85,6 +97,7 @@ const LINK_WORDS: Record<EdgeKind, string> = {
   needs: "needed for",
   responsible_for: "looked after for",
   routed_from: "came in with",
+  associated: "connected with",
 };
 
 /**
@@ -131,6 +144,16 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
       if (shared.length >= 2) {
         score = 0.65;
         reasons.push("says what the question asks about");
+      }
+    }
+
+    // Close in meaning, though not in words (HomeBrain Sleep): "pasta in pink sauce" for "pink pasta".
+    const meaning = options.semantic?.get(item.id);
+    if (usable && meaning !== undefined && meaning >= SEMANTIC_RELATED) {
+      const lifted = meaning >= SEMANTIC_CLOSE ? 0.55 : LINKED_SCORE;
+      if (score < lifted) {
+        score = lifted;
+        reasons.push("close in meaning to the question");
       }
     }
 
@@ -225,6 +248,39 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
   }
 
   followLinks(drafts, items, hopsFor(reading.goal));
+  // The person at a glance (HomeBrain Sleep): offered alongside, never what a rules answer is made of.
+  // "Tell me about Asmi", "what do you know about Manan": the profile is the answer, so it leads.
+  const aboutThePerson = /\b(?:tell me (?:all |everything )?about|what do you know about|what can you tell me about|who is|describe)\b/i.test(reading.retrievalText);
+  if (options.today && reading.people.length > 0) {
+    for (const profile of profileFacts(items, { memberIds: reading.people.map((person) => person.memberId), today: options.today })) {
+      // Leading, the profile already says what its facts say: they step back, still there for a model to read.
+      if (aboutThePerson) {
+        const covered = new Set(profile.sourceItemIds);
+        for (const draft of drafts) {
+          if (draft.itemId && covered.has(draft.itemId) && draft.score > LINKED_SCORE) {
+            draft.score = LINKED_SCORE;
+            draft.reasons.push("said in the person's at-a-glance");
+          }
+        }
+      }
+      drafts.push({
+        statement: `${profile.statement}.`,
+        sourceIds: profile.sourceItemIds,
+        confidence: 0.9,
+        privacyClass: profile.privacyClass,
+        relevant: true,
+        score: aboutThePerson ? 0.75 : LINKED_SCORE,
+        itemId: null,
+        domain: "profile",
+        subjectMemberIds: [profile.memberId],
+        date: null,
+        tier: 2,
+        confirmed: true,
+        need: "who this person is to the family, at a glance",
+        reasons: ["the person the question names, at a glance"],
+      });
+    }
+  }
   const evidenceOf = new Map<Omit<GroundedFact, "contextId">, string[]>();
   if (options.timezone && options.today) drawInferences(drafts, items, evidenceOf, { timezone: options.timezone, today: options.today, question: reading.retrievalText });
 

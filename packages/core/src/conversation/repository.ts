@@ -9,6 +9,7 @@ import type { HouseholdIntent } from "./intent";
 import { claimFor, isReviewable, reconcileMemory, reviewPlacementFor, type Memory } from "./memory";
 import type { ActionPreview, Proposal } from "./proposal";
 import { checkApproval, proposalFingerprint } from "./approval";
+import { salienceOf } from "../homebrain/sleep/salience";
 
 /** How long a proposal waits for a yes (the engine's PROPOSAL_TTL_MINUTES). */
 const APPROVAL_TTL_MINUTES = 10;
@@ -743,6 +744,8 @@ export async function remember(
       source_id: update.memory.sourceId,
       confidence: update.memory.confidence,
       status: update.memory.status,
+      // How much it matters, tagged as it is written (HomeBrain Sleep); each night tags it again with who it is about.
+      salience: salienceOf(update.memory),
     })
     .select("id")
     .single();

@@ -954,6 +954,18 @@ async function main() {
   const anonRelationships = await anon.from("member_relationships").select("id").limit(1);
   check("anonymous cannot read member_relationships", Boolean(anonRelationships.error) || (anonRelationships.data ?? []).length === 0, anonRelationships.error?.code ?? "no rows");
 
+  // HomeBrain Sleep (20261019160000): memory strength, the night's records, meaning.
+  const strengthProbe = await admin.from("memories").select("id, salience, tier, valid_until, merged_into").limit(1);
+  check("migration landed: memories strength columns", !strengthProbe.error, strengthProbe.error?.code ?? "ok");
+  for (const table of ["homebrain_runs", "homebrain_consolidations", "homebrain_links", "homebrain_recall", "homebrain_embeddings"]) {
+    const probe = await admin.from(table).select("*").limit(1);
+    check(`migration landed: ${table}`, !probe.error, probe.error?.code ?? "ok");
+    const open = await anon.from(table).select("*").limit(1);
+    check(`anonymous cannot read ${table}`, Boolean(open.error) || (open.data ?? []).length === 0, open.error?.code ?? "no rows");
+  }
+  const vectorProbe = await admin.rpc("match_homebrain_embeddings", { p_household_id: "00000000-0000-0000-0000-000000000000", p_model: "none", p_query: `[${new Array(768).fill(0).join(",")}]`, p_limit: 1 });
+  check("meaning search is there (pgvector)", !vectorProbe.error, vectorProbe.error?.code ?? "ok");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }

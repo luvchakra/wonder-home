@@ -196,7 +196,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "certification",
     group: "Privacy and trust",
     updated: "2026-10-19",
-    keywords: ["belief review", "certification", "understanding", "belief", "correct", "source", "confidence", "wrong", "why", "homebrain", "explain"],
+    keywords: ["belief review", "certification", "understanding", "belief", "correct", "source", "confidence", "wrong", "why", "homebrain", "explain", "while you slept", "tidy", "merged", "resting", "bring back", "connections", "memory"],
   },
   {
     id: "privacy",

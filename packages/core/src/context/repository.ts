@@ -339,9 +339,11 @@ type Row = Record<string, unknown>;
 export async function listMemories(supabase: Supabase, householdId: string, options: { limit?: number } = {}): Promise<MemoryRecord[]> {
   const { data, error } = await supabase
     .from("memories")
-    .select("id, scope, member_id, category, key, value, status, confidence, source_type, source_id, created_at, updated_at")
+    .select("id, scope, member_id, category, key, value, status, confidence, source_type, source_id, created_at, updated_at, tier, salience")
     .eq("household_id", householdId)
     .in("status", ["learned", "confirmed"])
+    // A memory whose time has passed is history (HomeBrain Sleep); a resting one is still read, ranked lower.
+    .neq("tier", "expired")
     .order("created_at", { ascending: false })
     .limit(options.limit ?? 60);
   if (error) throw new Error(`listMemories failed: ${error.code ?? "unknown"}`);
@@ -358,6 +360,8 @@ export async function listMemories(supabase: Supabase, householdId: string, opti
     sourceId: (row.source_id as string | null) ?? null,
     createdAt: (row.created_at as string | undefined) ?? undefined,
     updatedAt: (row.updated_at as string | undefined) ?? undefined,
+    resting: row.tier === "resting",
+    salience: row.salience === null || row.salience === undefined ? undefined : Number(row.salience),
   }));
 }
 

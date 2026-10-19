@@ -7,7 +7,9 @@ import {
   assessRisk,
   certificationHealth,
   needsReview,
+  recordCountsFrom,
   summarize,
+  withRecords,
   type CertificationItem,
 } from "./certification";
 
@@ -226,5 +228,25 @@ describe("certification health", () => {
 
     expect(health.highRiskGapExists).toBe(false);
     expect(health.explanation).toMatch(/none of them high risk/i);
+  });
+});
+
+describe("household understanding counts the household's own records (the owner, 2026-10-19)", () => {
+  it("counts members, relationships, school, bills and safety restrictions as registered, in their categories", () => {
+    const records = recordCountsFrom({ members: 4, relationships: 3, responsibilities: 2, playbookItems: 1, policies: 1, schoolEnrolments: 2, obligations: 5, foodPreferences: 3, safetyFoodPreferences: 1, pets: 1 });
+    expect(records).toEqual({ family_roles: 9, home_routines: 2, education: 2, finance: 5, lifestyle: 3, safety: 1 });
+    const empty = summarize([], new Date("2026-10-19T00:00:00Z"));
+    const understood = withRecords(empty, records);
+    expect(understood.byCategory.family_roles).toEqual({ confirmed: 9, total: 9 });
+    expect(understood.byCategory.safety).toEqual({ confirmed: 1, total: 1 });
+    expect(understood.understanding).toBe(100);
+    expect(understood.confirmed).toBe(22);
+  });
+
+  it("is arithmetic over everything held: a belief waiting for review still counts against it", () => {
+    const now = new Date("2026-10-19T00:00:00Z");
+    const waiting = summarize([{ id: "a", category: "lifestyle", claim: "x", sourceType: "conversation", sourceDetail: null, status: "needs_review", riskLevel: "low", lastReviewedAt: null }], now);
+    expect(withRecords(waiting, { family_roles: 3 }).understanding).toBe(75);
+    expect(withRecords(summarize([], now), {}).understanding).toBe(0);
   });
 });

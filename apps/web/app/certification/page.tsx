@@ -5,11 +5,14 @@ import {
   CERTIFICATION_CATEGORIES,
   certificationHealth,
   summarize,
+  withRecords,
   type CertificationAlert,
   type CertificationHistoryEntry,
   type CertificationItem as Item,
   type ReviewDecision,
 } from "@wonderhome/core/household/certification";
+import { loadUnderstandingRecords } from "@wonderhome/core/household/setup-repository";
+import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
@@ -22,6 +25,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { SleepSection, type SleepChange, type SleepView } from "./sleep-section";
 import { AddBeliefButton, BulkReviewList, CertificationControls } from "../_components/certification-controls";
 import { bulkReviewLabels, certificationControlLabels, certificationItemLabels, reviewCategoryWords, reviewReason } from "../_lib/review-labels";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
@@ -71,7 +75,9 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "review";
   const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: t("common.back") }, title: t("nav.item.certification") };
 
-  const [{ data }, { data: historyRows }] = await Promise.all([
+  const admin = isHouseholdAdmin(membership);
+  const sleepWanted = active === "learned" && admin;
+  const [{ data }, { data: historyRows }, records, sleep] = await Promise.all([
     supabase
       .from("certification_items")
       .select("id, category, claim, source_type, source_detail, status, risk_level, last_reviewed_at, created_at")
@@ -86,6 +92,10 @@ export default async function CertificationPage({ searchParams }: { searchParams
           .order("created_at", { ascending: false })
           .limit(50)
       : Promise.resolve({ data: null }),
+    // The household's own records, counted in the same wave (`withRecords`).
+    loadUnderstandingRecords(supabase, membership.household),
+    // What HomeBrain did overnight (HomeBrain Sleep): Admins, on the Learned tab.
+    sleepWanted ? readSleepView(supabase, householdId) : Promise.resolve(null),
   ]);
 
   const history: CertificationHistoryEntry[] = ((historyRows as Record<string, unknown>[] | null) ?? []).map((row) => {
@@ -117,6 +127,9 @@ export default async function CertificationPage({ searchParams }: { searchParams
 
   const now = new Date();
   const summary = summarize(items, now);
+  // How much of the household HomeBrain holds: what was said, and what the family keeps on its own screens.
+  const understood = withRecords(summary, records);
+  const understoodTotal = understood.confirmed + understood.learned + understood.needsReview;
   const health = certificationHealth(items, now);
   const alerts = alertsFor(items, now, 50);
   const alertIds = new Set(alerts.map((alert) => alert.itemId));
@@ -145,12 +158,12 @@ export default async function CertificationPage({ searchParams }: { searchParams
         </header>
 
         <Card className="flex items-center gap-5 p-5">
-          <ProgressRing value={summary.understanding} label={t("review.ringLabel")} />
+          <ProgressRing value={understood.understanding} label={t("review.ringLabel")} />
           <div className="min-w-0">
             <p className="text-base font-semibold">
-              {summary.understanding >= 80 ? t("review.understands.well") : summary.understanding >= 40 ? t("review.understands.partly") : t("review.understands.little")}
+              {understood.understanding >= 80 ? t("review.understands.well") : understood.understanding >= 40 ? t("review.understands.partly") : t("review.understands.little")}
             </p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("review.confirmedCount", { confirmed: summary.confirmed, count: live.length })}</p>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("review.confirmedCount", { confirmed: understood.confirmed, count: understoodTotal })}</p>
             {health.highRiskGapExists ? (
               <p className="mt-1 text-sm font-medium text-[var(--wh-attention)]">{healthExplanation}</p>
             ) : null}
@@ -219,6 +232,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
           )
         ) : (
           <>
+            {sleep ? <SleepSection view={sleep} t={t} householdId={householdId} when={(at) => `${formatDate(timezone, at)} · ${formatTime(timezone, at)}`} /> : null}
             <SectionHeader title={t("review.knows")} />
             {shown.length === 0 ? (
               <EmptyState
@@ -268,7 +282,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
                   {CERTIFICATION_CATEGORIES.map((category) => {
-                    const counts = summary.byCategory[category];
+                    const counts = understood.byCategory[category];
                     return (
                       <li key={category} className="flex items-center gap-3 px-2 py-2.5 text-sm">
                         <CircleCheck aria-hidden className={`size-4 ${counts.total > 0 && counts.confirmed === counts.total ? "text-[var(--wh-handled)]" : "text-[var(--wh-foreground-subtle)]"}`} />
@@ -287,4 +301,39 @@ export default async function CertificationPage({ searchParams }: { searchParams
       </div>
     </AppShell>
   );
+}
+
+/** The night's line, what it changed in the last month (not undone), and its links — through the Admin's own session (RLS: Admins read these). */
+async function readSleepView(supabase: Awaited<ReturnType<typeof requireSession>>["supabase"], householdId: string): Promise<SleepView | null> {
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [runs, changes, links, linkCount] = await Promise.all([
+    supabase.from("homebrain_runs").select("finished_at, counts").eq("household_id", householdId).eq("outcome", "done").order("local_date", { ascending: false }).limit(1),
+    supabase
+      .from("homebrain_consolidations")
+      .select("id, kind, statement, memory_ids, detail, created_at")
+      .eq("household_id", householdId)
+      .is("undone_at", null)
+      .in("kind", ["merged", "split", "expired", "reattributed", "rested"])
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(40),
+    supabase.from("homebrain_links").select("reason").eq("household_id", householdId).order("created_at", { ascending: false }).limit(5),
+    supabase.from("homebrain_links").select("id", { count: "exact", head: true }).eq("household_id", householdId),
+  ]);
+  // No tables yet (the migration has not reached this database): nothing to show.
+  if (runs.error && changes.error) return null;
+  const last = ((runs.data ?? []) as { finished_at: string | null; counts: Record<string, number> }[])[0];
+  return {
+    lastSlept: last?.finished_at ? new Date(last.finished_at) : null,
+    counts: last?.counts ?? {},
+    changes: ((changes.data ?? []) as { id: string; kind: SleepChange["kind"]; statement: string; memory_ids: string[]; detail: { reason?: string } | null; created_at: string }[]).map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      statement: row.statement,
+      count: row.memory_ids.length,
+      reason: row.detail?.reason ?? null,
+      at: new Date(row.created_at),
+    })),
+    links: { total: linkCount.count ?? 0, examples: ((links.data ?? []) as { reason: string }[]).map((row) => row.reason) },
+  };
 }

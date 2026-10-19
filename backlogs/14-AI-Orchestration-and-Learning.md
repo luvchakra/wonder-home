@@ -35,6 +35,7 @@
 | 29 | P1 | 14-029 | HomeBrain 4.0 phase 5 — inferences with evidence | Done | PR #241. Built: `homebrain/insights.ts` — night_before (an evening plan before a child's exam), meal_short, away_but_assigned (the cook away), bill_before_trip, routine_gap (one owner away, no backup) and count (guests coming, the yeses added up); each is a `domain: "insight"` fact sent with its evidence, leading a decision and following the fact for a plain question. `validate.ts` gains `unsupported_inference`: a model's own "because / which means / so you'll" is refused unless it cites an inference fact; the answer prompt says so. As built: guest_food and school_kit wait on records WonderHome does not keep (a guest's food preference; what a school item needs bought), and clashes stay in `context/conflicts.ts`. Golden HT-111 in `npm run eval`; HT-108/HT-109 as unit cases. Spec §3.5 |
 | 30 | P1 | 14-030 | HomeBrain 4.0 phase 6 — answers shaped by the goal | Done | PR #241. Built: `homebrain/goal.ts` (`readGoal`: find_out, plan, decide, check, remember, do, by rules on the question's own words) on every reading; a plan or a decision follows two links; the rules answer is shaped by it (to decide: what the rules noticed leads; to check whether anything is there: "Yes." first; never a yes the record does not say), and the model is told the goal (`AnswerInput.goal`). Spec §3.10 |
 | 31 | P1 | 14-031 | HomeBrain 4.0 phase 7 — keep it whole | In Progress | PR #241 built: the database trigger safety net (`wh.mark_context_stale` on 25 domain tables, live, DB-tested), the keep-warm rebuild of stores that are behind or over an hour old on the five-minute delivery clock (`keepStoresWarm`, 4 per tick), and the AI quality page's `homeBrainKeeping` (deeper looks and what they found by part of the home, stores behind and the oldest lag). Still open: rules read the store, the agenda summary only for broad questions, and the "not on record while on record" gate. Spec §3.2, §3.8 (was 14-022 and 14-023) |
+| 32 | P1 | 14-032 | HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -474,6 +475,17 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 **Epic:** HomeBrain 3.0
 **Priority:** P1
 **Goal:** The store stays right when a write bypasses a service and when time alone changes a fact, and its lag is visible.
+
+### Story 14-032 — HomeBrain Sleep (HomeBrain 5.0)
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** Like a brain in sleep, HomeBrain tidies what it remembers each night — merging, splitting, filing, letting go and resting — links records across the home, keeps meaning for recall, and answers about a person from one at-a-glance profile, all automatically, with only contradictions coming to a person.
+
+**Acceptance criteria**
+- A night changes nothing a person could not undo, and records each change with what it was before.
+- Health, allergy and safety facts never rest or expire on their own.
+- No name and no class the household has not allowed reaches a provider; a model's proposal is used only when it checks out against the records it was shown.
+- A turn never waits more than 900 ms on meaning, and recall is counted after the response.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
