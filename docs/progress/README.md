@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | [Release notes on Get help, and the guide pointed at them](2026-10-19-release-notes.md) |
 | 2026-10-19 | [Meal ideas from what is at home; a child's timetable and exams (25-018, 08-015)](2026-10-19-meal-ideas-and-school-exams.md) |
 | 2026-10-18 | [HomeBrain 4.0: look deeper, the graph, inferences, goals; ingredients from the catalog (14-026 to 14-031, 25-017, 26-013)](2026-10-18-homebrain-4-deeper.md) |
 | 2026-10-18 | [HomeBrain 4.0: hearing it right, doing what was asked; the Voice page (14-024, 14-025)](2026-10-18-homebrain-4-hear-and-act.md) |

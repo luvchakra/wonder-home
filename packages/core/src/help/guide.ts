@@ -111,8 +111,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "today-and-home",
     group: "Everyday use",
-    updated: "2026-10-18",
-    keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe", "pets", "what's new", "new features"],
+    updated: "2026-10-19",
+    keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe", "pets", "what's new", "new features", "release notes", "changelog", "version", "update"],
   },
   {
     id: "calendar",

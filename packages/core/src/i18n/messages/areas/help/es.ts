@@ -158,7 +158,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.4": "En el teléfono, desliza a izquierda o derecha para moverte entre Inicio, Calendario, HomeTalk, Familia y Más.",
   "help.guide.today-and-home.body.5":
     "Debajo del estado de la familia, Inicio muestra tus mascotas, si tienes. Cada una abre los mismos datos que la pantalla Familia; para cambiarlos, ve a Familia.",
-  "help.guide.today-and-home.body.6": "Novedades, arriba en Inicio, enumera lo que se ha añadido a WonderHome desde la última vez que lo abriste aquí, y cada elemento abre su lugar. Entendido oculta la lista; nunca muestra lo mismo dos veces, y cada elemento desaparece solo un mes después de llegar.",
+  "help.guide.today-and-home.body.6": "Novedades, arriba en Inicio, enumera lo que se ha añadido a WonderHome desde la última vez que lo abriste aquí, y cada elemento abre su lugar. Entendido oculta la lista; nunca muestra lo mismo dos veces, y cada elemento desaparece solo un mes después de llegar. Para todo lo que ha cambiado, versión a versión, consulta Notas de la versión al final de Obtener ayuda.",
 
   // Calendar
   "help.guide.calendar.title": "Calendario",
@@ -412,4 +412,23 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.faq.other-apps.a": "Donde esté activado para tu WonderHome, un Admin puede crear una clave en Ajustes → Cuentas conectadas que permite a una app de confianza ver la lista de la compra o añadir cosas —solo lo que marcaste— y se puede revocar en cualquier momento.",
   "help.faq.activity-trail.q": "¿Puedo ver quién cambió un ajuste?",
   "help.faq.activity-trail.a": "Si eres Admin, sí. Gestionar el hogar → Actividad enumera quién cambió qué y cuándo: roles, invitaciones, el manual, tus normas y las cuentas conectadas. Nunca registra lo que alguien dijo o preguntó.",
+
+  // Release notes (help/release-notes.ts).
+  "help.release.title": "Notas de la versión",
+  "help.release.lede": "Lo que cambió en WonderHome, lo más reciente primero. Se añade una entrada nueva cada vez que una versión nueva está disponible.",
+  "help.release.liveSince": "Disponible desde el {date}",
+  "help.release.2026-10-19.title": "El Calendario familiar, HomeFood y un HomeBrain que mira más a fondo",
+  "help.release.2026-10-19.item.1": "Calendario es ahora una pestaña principal, con vistas de Mes, Semana, Día y Año. Muestra los eventos familiares (que pueden repetirse o ser privados), los cumpleaños y días especiales de todos, y los festivos.",
+  "help.release.2026-10-19.item.2": "Un evento familiar se abre con su plan completo y un enlace de invitación que cualquiera puede abrir. Las invitaciones tienen diseños, se ven como una imagen en WhatsApp y se pueden previsualizar y compartir como una imagen alta.",
+  "help.release.2026-10-19.item.3": "La compra es una sola lista de lo que hay en casa y lo que hay que comprar. Añadir un artículo busca en un catálogo compartido con fotos, marcas y nutrición, incluidos los valores indios de IFCT 2017. Una foto de un tique suma lo comprado a lo que hay en casa y lo quita de la lista.",
+  "help.release.2026-10-19.item.4": "Una comida planificada muestra lo que aún le falta y lo añade a la lista. Planificar una comida empieza por una receta, y los ingredientes de una receta se eligen del catálogo de la compra, con la nutrición por ración calculada.",
+  "help.release.2026-10-19.item.5": "HomePlaces: pide a HomeTalk un sitio para comer o salir cerca de casa, del colegio de un hijo o de la oficina, o una escapada corta. Places, en Más, recuerda los sitios que tu familia guardó y los que no eran para vosotros.",
+  "help.release.2026-10-19.item.6": "HomeTalk entiende lo que querías decir y hace lo cotidiano al momento — la lista, un recordatorio, un plan — y «deshacer» lo revierte. Lo que afecta a otras personas se pregunta primero. Un Admin puede elegir que se le pregunte siempre antes.",
+  "help.release.2026-10-19.item.7": "La voz de HomeTalk te acompaña entre pantallas («llévame a la lista de la compra»), sigue en una pequeña ventana flotante cuando cambias de app y, con Gemini Live, el chat muestra lo que realmente se dijo.",
+  "help.release.2026-10-19.item.8": "HomeBrain responde a partir de todo lo que tu hogar tiene registrado. Vuelve a mirar antes de decir que algo no está, relaciona personas, días, comidas y tareas y, cuando señala algo, muestra los registros en los que se basa.",
+  "help.release.2026-10-19.item.9": "Niños y colegio guarda los profesores de cada hijo y sus clases fuera del colegio, y las clases de hoy aparecen en el Calendario. Las clases de un hijo también se ven en Familia.",
+  "help.release.2026-10-19.item.10": "Cada miembro inicia sesión como sí mismo, con correo o número de teléfono, desde una invitación que WonderHome le envía por correo. Cada persona puede indicar los idiomas que habla, y las mascotas de la familia aparecen en Inicio.",
+  "help.release.2026-10-19.item.11": "Las notificaciones push llegan al teléfono cuando un recordatorio vence y es importante, y callan en las horas de silencio. Actívalas en cada dispositivo en Ajustes → Notificaciones.",
+  "help.release.2026-10-19.item.12": "Novedades, arriba en Inicio, muestra las funciones que aún no has visto. La configuración encuentra tu casa y los colegios en Google Maps y añade fotos, apodos y cumpleaños.",
+  "help.release.2026-10-19.item.13": "Ajustes → Voz dice qué voz habla por HomeTalk, y un Admin puede añadir una clave de voz de Gemini aparte cuando el asistente usa otro proveedor.",
 };

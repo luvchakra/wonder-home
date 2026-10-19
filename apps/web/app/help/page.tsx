@@ -1,11 +1,13 @@
-import { BookOpen, LifeBuoy, MessageCircleQuestion } from "lucide-react";
+import { BookOpen, LifeBuoy, MessageCircleQuestion, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { guideByGroup, localizedFaq } from "@wonderhome/core/help/guide";
+import { localizedReleaseNotes } from "@wonderhome/core/help/release-notes";
 import { suggestedQuestions } from "@wonderhome/core/help/search";
 import { helpWords } from "@wonderhome/core/help/words";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -49,6 +51,7 @@ export default async function HelpPage() {
   const hw = helpWords(language);
   const groups = guideByGroup(hw);
   const faq = localizedFaq(hw);
+  const releases = localizedReleaseNotes(hw);
   const [correctBefore, correctAfter] = hw("help.page.correct", { link: "{link}" }).split("{link}");
 
   const body = (
@@ -99,6 +102,12 @@ export default async function HelpPage() {
                 </div>
               ))}
             </div>
+            <a
+              href="#release-notes"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline"
+            >
+              <Sparkles aria-hidden className="size-4" /> {hw("help.release.title")}
+            </a>
           </Card>
         </nav>
 
@@ -160,6 +169,38 @@ export default async function HelpPage() {
             </div>
           </section>
         ))}
+
+        {/* The record of what reached the household, newest first; each release opens to its list (rule 21). */}
+        <section id="release-notes" className="scroll-mt-24">
+          <SectionHeader title={hw("help.release.title")} />
+          <p className="mb-2 text-sm text-[var(--wh-foreground-muted)]">{hw("help.release.lede")}</p>
+          <Card className="p-2">
+            <ul className="space-y-1">
+              {releases.map((release) => (
+                <ExpandableRow
+                  key={release.id}
+                  summary={
+                    <>
+                      <IconTile icon={Sparkles} tone="ai" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{release.title}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                          {hw("help.release.liveSince", { date: format.date(release.date, "full") })}
+                        </span>
+                      </span>
+                    </>
+                  }
+                >
+                  <ul className="list-disc space-y-2 pl-5 text-sm sm:pl-14 leading-relaxed text-[var(--wh-foreground-muted)] marker:text-[var(--wh-foreground-subtle)]">
+                    {release.items.map((item) => (
+                      <li key={item.slice(0, 40)}>{item}</li>
+                    ))}
+                  </ul>
+                </ExpandableRow>
+              ))}
+            </ul>
+          </Card>
+        </section>
 
         <Card className="flex items-start gap-3 bg-[var(--wh-primary-soft)]/50 p-4">
           <LifeBuoy aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-primary)]" />
