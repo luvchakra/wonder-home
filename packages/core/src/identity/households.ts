@@ -520,20 +520,35 @@ export async function createAdultMember(
 }
 
 /**
- * Whether this member is the older or younger sibling among the household's
+ * Whether this child is the older or younger sibling among the household's
  * other children — derived from `date_of_birth`, never stored, so it can
  * never disagree with the birthdate the household already keeps (design
  * principle 9: a fact somebody can explain, not a second copy of one).
  *
+ * Only a child has siblings here: an adult is never "older sibling of" the
+ * children (the owner's report, 2026-10-19 — Kunal, their father, was shown
+ * as one). Only active children are compared, and a child the household's
+ * Relationships call something else ("Riya is cousin of Asmi") is left out.
+ *
  * Says nothing when there is only one child, or when a birthdate is missing
  * for this member or every other child — there is nothing true to compare.
  */
-export function siblingOrder(member: HouseholdMember, allMembers: readonly HouseholdMember[]): string | null {
-  if (!member.dateOfBirth) return null;
+export function siblingOrder(
+  member: HouseholdMember,
+  allMembers: readonly HouseholdMember[],
+  relationships: readonly { memberId: string; relation: string; relatedMemberId: string }[] = [],
+): string | null {
+  if (member.memberType !== "child" || !member.dateOfBirth) return null;
   const ownBirth = Date.parse(member.dateOfBirth);
+  // A pair the household related as anything but siblings is not a pair of siblings.
+  const notSiblings = new Set(
+    relationships
+      .filter((row) => !["brother", "sister", "sibling"].includes(row.relation))
+      .flatMap((row) => (row.memberId === member.id ? [row.relatedMemberId] : row.relatedMemberId === member.id ? [row.memberId] : [])),
+  );
 
   const otherSiblings = allMembers
-    .filter((other) => other.id !== member.id && other.memberType === "child" && other.dateOfBirth)
+    .filter((other) => other.id !== member.id && other.memberType === "child" && other.status !== "inactive" && other.dateOfBirth && !notSiblings.has(other.id))
     .map((other) => ({ name: other.displayName, birth: Date.parse(other.dateOfBirth as string) }))
     .filter((other) => Number.isFinite(other.birth));
 

@@ -171,6 +171,19 @@ describe("siblingOrder", () => {
   it("never compares against an adult, even with a birthdate on file", () => {
     expect(siblingOrder(anaya, [anaya, parent])).toBeNull();
   });
+
+  // The owner's report, 2026-10-19: Kunal, the father, was shown as "Older sibling of Asmi, Manan".
+  it("never gives an adult siblings among the children", () => {
+    expect(siblingOrder(parent, [anaya, kabir, parent])).toBeNull();
+  });
+
+  it("leaves out a child who was removed, and one the Relationships call something else", () => {
+    const removed = member({ id: "riya", displayName: "Riya", dateOfBirth: "2021-01-01", status: "inactive" });
+    expect(siblingOrder(kabir, [anaya, kabir, removed])).toBe("Younger sibling of Anaya");
+    const cousin = member({ id: "dev", displayName: "Dev", dateOfBirth: "2020-01-01" });
+    expect(siblingOrder(kabir, [anaya, kabir, cousin], [{ memberId: "dev", relation: "cousin", relatedMemberId: "kabir" }])).toBe("Younger sibling of Anaya");
+    expect(siblingOrder(kabir, [anaya, kabir, cousin], [{ memberId: "kabir", relation: "brother", relatedMemberId: "dev" }])).toBe("Older sibling of Dev · Younger sibling of Anaya");
+  });
 });
 
 describe("calledName", () => {
