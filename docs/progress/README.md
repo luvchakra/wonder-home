@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | [Destinations for those long weekends (24-011)](2026-10-19-trip-destinations.md) |
 | 2026-10-19 | [Long weekends from public holidays (14-034)](2026-10-19-long-weekends.md) |
 | 2026-10-19 | ["When should we go away?" is answered from the calendar (14-033)](2026-10-19-trip-free-weekends.md) |
 | 2026-10-19 | [Children's information is on by default for the AI assistant](2026-10-19-children-on-by-default.md) |

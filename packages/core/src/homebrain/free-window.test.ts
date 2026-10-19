@@ -33,13 +33,13 @@ const maths = item("exam_paper:p1", { title: "Maths Unit test", kind: "exam", su
 
 describe("when to go away", () => {
   it("reads the question: when, for how many days", () => {
-    expect(tripQuestion("what best time for 2 day getaway")).toEqual({ days: 2, noun: "getaway" });
-    expect(tripQuestion("Which weekend are we free for a trip?")).toEqual({ days: 2, noun: "trip" });
-    expect(tripQuestion("when can we take a three-day vacation")).toEqual({ days: 3, noun: "vacation" });
+    expect(tripQuestion("what best time for 2 day getaway")).toEqual({ days: 2, noun: "getaway", daysSaid: true });
+    expect(tripQuestion("Which weekend are we free for a trip?")).toEqual({ days: 2, noun: "trip", daysSaid: false });
+    expect(tripQuestion("when can we take a three-day vacation")).toEqual({ days: 3, noun: "vacation", daysSaid: true });
     expect(tripQuestion("suggest a 2 day getaway")).toBeNull();
     expect(tripQuestion("When is the next holiday?")).toBeNull();
     expect(tripQuestion("when is the diwali holiday")).toBeNull();
-    expect(tripQuestion("when can we go for a 3 day holiday")).toEqual({ days: 3, noun: "holiday" });
+    expect(tripQuestion("when can we go for a 3 day holiday")).toEqual({ days: 3, noun: "holiday", daysSaid: true });
     expect(tripQuestion("what is happening this weekend")).toBeNull();
   });
 

@@ -529,7 +529,7 @@ export function Assistant({
                 message.places && message.places.length > 0 ? (
                   <div className="space-y-3">
                     {/* The cards say what the list said; the words around it stay. */}
-                    <ReplyText text={withoutList(message.text)} />
+                    <ReplyText text={withoutList(message.text, message.places)} />
                     <PlaceCards householdId={householdId} messageId={message.id} places={message.places} marks={placeMarks} labels={labels.places} />
                   </div>
                 ) : (
@@ -674,14 +674,24 @@ function newIdempotencyKey(): string {
   return `turn-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
-/** A reply without its bulleted list, for when the same list is shown as cards. */
-function withoutList(text: string): string {
-  return text
-    .split("\n")
-    .filter((line) => !/^\s*[-*•]\s/.test(line))
+/**
+ * A reply without the bullets the place cards repeat, for when the same places
+ * are shown as cards. Only a bullet that names one of the cards goes: an answer
+ * that also lists free weekends (the long weekends beside where to go) keeps
+ * its own list.
+ */
+function withoutList(text: string, places: readonly { name: string }[]): string {
+  const names = places.map((place) => `**${place.name}**`);
+  const kept: string[] = [];
+  for (const line of text.split("\n")) {
+    const isPlace = /^\s*[-*•]\s/.test(line) && names.some((name) => line.includes(name));
+    if (!isPlace) {
+      kept.push(line);
+      continue;
+    }
     // A lead-in that introduced the list ends the sentence instead.
-    .map((line) => line.replace(/:\s*$/, "."))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    const last = kept.length - 1;
+    if (last >= 0 && /:\s*$/.test(kept[last]!)) kept[last] = kept[last]!.replace(/:\s*$/, ".");
+  }
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }

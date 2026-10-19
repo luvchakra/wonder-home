@@ -227,7 +227,7 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
       const firstTrip = insights.findIndex((entry) => entry.rule === "free_window");
       insights.splice(firstTrip < 0 ? insights.length : firstTrip, 0, {
         rule: "free_window",
-        statement: `Long weekends from public holidays, with nothing on the family calendar: ${long.slice(0, 3).map((entry) => entry.text).join("; ")}.`,
+        statement: `${LONG_WEEKENDS_LEAD} ${long.slice(0, 3).map((entry) => entry.text).join("; ")}.`,
         evidence: long.slice(0, 3).map((entry) => entry.holiday.id),
         subjectMemberIds: [],
         date: long[0]!.date,
@@ -241,6 +241,8 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
 
 /** How many coming weekends a "when should we go?" question looks across. */
 const TRIP_WEEKS = 8;
+/** How the long-weekend fact begins; the destinations after it are sized by it (`homeplaces/trip.ts`). */
+export const LONG_WEEKENDS_LEAD = "Long weekends from public holidays, with nothing on the family calendar:";
 /** How far ahead a public holiday can make a long weekend worth naming. */
 const LONG_WEEKEND_AHEAD_DAYS = 183;
 
@@ -249,7 +251,7 @@ const LONG_WEEKEND_AHEAD_DAYS = 183;
  * "which weekend is free for a vacation?": a question about when, for a trip
  * of a number of days. "Suggest a getaway" (where) is HomePlaces' question.
  */
-export function tripQuestion(question: string): { days: number; noun: string } | null {
+export function tripQuestion(question: string): { days: number; noun: string; daysSaid: boolean } | null {
   const text = question.toLowerCase();
   const noun = text.match(/\b(getaway|trip|vacation|holiday|outing|break|staycation|day out|road ?trip|excursion)s?\b/)?.[1];
   if (!noun) return null;
@@ -262,7 +264,7 @@ export function tripQuestion(question: string): { days: number; noun: string } |
   const said = text.match(/\b(\d|one|two|three|four|five)[ -]?(?:day|night)s?\b/)?.[1];
   const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
   const days = said ? (words[said] ?? Number(said)) : /\bweekend\b/.test(text) ? 2 : noun === "day out" ? 1 : 2;
-  return { days: Math.min(Math.max(days, 1), 5), noun: noun === "day out" ? "trip" : noun };
+  return { days: Math.min(Math.max(days, 1), 5), noun: noun === "day out" ? "trip" : noun, daysSaid: Boolean(said) };
 }
 
 function listOf(things: readonly string[]): string {
