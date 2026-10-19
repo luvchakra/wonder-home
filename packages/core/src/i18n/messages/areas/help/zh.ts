@@ -147,7 +147,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.4": "在手机上，向左或向右滑动，就能在首页、日历、HomeTalk、家人和更多之间切换。",
   "help.guide.today-and-home.body.5":
     "在家庭状态下方，首页会显示你家的宠物（如果有的话）。每只都会展开和家庭页面相同的信息；要修改，请到家庭页面。",
-  "help.guide.today-and-home.body.6": "首页顶部的“新功能”会列出自你上次在这里打开 WonderHome 以来新增的内容，每一项都能打开它所在的位置。点“知道了”即可隐藏；同一内容不会重复出现，每一项在出现一个月后会自动消失。",
+  "help.guide.today-and-home.body.6": "首页顶部的“新功能”会列出自你上次在这里打开 WonderHome 以来新增的内容，每一项都能打开它所在的位置。点“知道了”即可隐藏；同一内容不会重复出现，每一项在出现一个月后会自动消失。 每个版本的全部变化，请看“获取帮助”末尾的“版本说明”。",
 
   // Calendar
   "help.guide.calendar.title": "日历",
@@ -361,4 +361,23 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.faq.other-apps.a": "如果你的 WonderHome 开启了这项功能，管理员（Admin）可以在“设置 → 已连接的账户”中创建一个密钥，让你信任的应用查看购物清单或往里添加东西——只限你勾选的内容，而且随时可以撤销。",
   "help.faq.activity-trail.q": "我能看到是谁改了某项设置吗？",
   "help.faq.activity-trail.a": "如果你是管理员（Admin），可以。“家庭管理 → 活动记录”列出了谁在什么时候改了什么：角色、邀请、家务手册、你的规则和已连接的账户。它从不记录任何人说过或问过的内容。",
+
+  // Release notes (help/release-notes.ts).
+  "help.release.title": "版本说明",
+  "help.release.lede": "WonderHome 有哪些变化，最新的在前。每次新版本上线，都会添加一条新记录。",
+  "help.release.liveSince": "{date} 起上线",
+  "help.release.2026-10-19.title": "家庭日历、HomeFood，以及看得更深的 HomeBrain",
+  "help.release.2026-10-19.item.1": "日历现在是主标签页，有月、周、日和年视图。它显示家庭活动（可以重复，也可以设为私密）、每个人的生日和纪念日，以及公共假日。",
+  "help.release.2026-10-19.item.2": "家庭活动会打开完整的安排，并附有任何人都能打开的邀请链接。邀请函有多种设计，在 WhatsApp 上以图片显示，还可以先预览，再以竖版图片分享。",
+  "help.release.2026-10-19.item.3": "购物现在是一张清单：家里有什么、要买什么。添加物品会在共享目录中搜索，带图片、品牌和营养信息，包括 IFCT 2017 的印度数据。拍一张小票，买到的东西就会加到家里的存货中，并从清单上划掉。",
+  "help.release.2026-10-19.item.4": "已安排的餐会显示还缺什么，并把它加到清单上。安排一餐从食谱开始，食谱的食材从购物目录中选择，每份的营养会自动算好。",
+  "help.release.2026-10-19.item.5": "HomePlaces：问 HomeTalk 家附近、孩子学校或办公室附近哪里可以吃饭或出去玩，或者短途出游去哪里。“更多”下的 Places 会记住你家保存的地方，以及不适合你们的地方。",
+  "help.release.2026-10-19.item.6": "HomeTalk 能听懂你的意思，日常的事马上就办——清单、提醒、计划——说“撤销”就能撤回。涉及其他人的事会先问。Admin 可以选择每次都先问。",
+  "help.release.2026-10-19.item.7": "HomeTalk 的语音会跟着你切换页面（“带我去购物清单”），切换到其他应用时在一个小浮窗里继续，使用 Gemini Live 时聊天记录显示的是真正说过的话。",
+  "help.release.2026-10-19.item.8": "HomeBrain 根据你家记录的所有内容来回答。说“没有记录”之前会再查一遍，会把人、日子、餐食和职责联系起来，指出某件事时会给出背后的记录。",
+  "help.release.2026-10-19.item.9": "孩子与学校会记录每个孩子的老师和校外课程，今天的课程会显示在日历上。孩子的课程在“家人”中也能看到。",
+  "help.release.2026-10-19.item.10": "每位成员都以自己的身份登录，用邮箱或手机号，通过 WonderHome 发给他们的邀请邮件。每个人都可以列出自己会说的语言，家里的宠物会出现在首页。",
+  "help.release.2026-10-19.item.11": "当提醒到期且重要时，推送通知会发到你的手机，安静时段内保持安静。在“设置 → 通知”中为每台设备开启。",
+  "help.release.2026-10-19.item.12": "首页顶部的“新功能”会显示你还没看过的功能。设置时会在 Google Maps 上找到你的家和学校，并添加照片、昵称和生日。",
+  "help.release.2026-10-19.item.13": "“设置 → 语音”会说明由哪个语音为 HomeTalk 说话；当助手使用其他服务商时，Admin 可以另外添加一个 Gemini 语音密钥。",
 };

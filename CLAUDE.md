@@ -898,6 +898,11 @@ The user guide is for signed-in members only.
   - the section's `updated` date.
 - **How to write it.** Describe what the code does, in the UI's own labels. Say when something is AI-generated or done on the person's behalf, and what they stay in control of. Never describe a planned feature as available.
 - **The checks.** `npm run lint:help-links` fails on a link to a route or section that is gone. `npm run check:bundle` fails if the guide's words reach client JavaScript.
+- **Release notes** (`help/release-notes.ts`, `/help#release-notes`) are written only when the owner confirms a version is live:
+  - add one entry at the top of `RELEASE_NOTES`: that day's date, `fromPr` one after the previous entry's `throughPr`, and `throughPr` the last PR merged into what is live;
+  - cover every user-facing feature merged in that range, at a high level, one item per feature in the UI's own labels; leave out fixes, CI and docs;
+  - its words are `help.release.<id>.title` and `.item.N`, in all eight languages;
+  - never write an entry for work the owner has not confirmed live, and never edit an older entry except to correct it.
 
 ## Where it is hosted
 Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunals-projects-9f64757f`, `team_nGnxn1FrUI78kVpMm12R7FIF`, Hobby plan) — the account the Vercel connector is signed in to. The earlier teams (`wonder-team4`, `luvchakras-projects`) are history; older progress notes that name them are superseded.

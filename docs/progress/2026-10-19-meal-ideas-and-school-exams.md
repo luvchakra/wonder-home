@@ -72,4 +72,9 @@ The story rows edited in #241 (14-026 to 14-031 and 25-017) had lost their closi
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #243 merged (2026-10-19):
+
+- QA account `2bffa573-bbac-49e3-b544-1ea425fa700e` deleted with `node scripts/qa-test-user.mjs delete`.
+- QA household `693b38c1-7091-4a2b-a36d-2264b56d26fa` ("QA School Home", whose only signed-in member was that account) deleted with a household-scoped service-role delete; its rows went with it by cascade.
+- Confirmed by SQL: 0 households, 0 auth users, 0 members, 0 exams and 0 stored files left for those ids.
+- Screenshots in the session scratchpad removed; no dev server left running.

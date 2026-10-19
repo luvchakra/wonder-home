@@ -57,6 +57,11 @@ export function guideShape(source) {
   return { sections, faqTargets };
 }
 
+/** Literal ids on the help page itself (`<section id="release-notes">`), which `/help#…` may also link to. */
+export function pageAnchors(source) {
+  return [...source.matchAll(/\bid="([a-z0-9-]+)"/g)].map((m) => m[1]);
+}
+
 /** App paths a file mentions as string literals: "/x", "/x/y", "/x#a". */
 export function pathsIn(text) {
   return [...text.matchAll(/["'`(](\/[a-z0-9][a-z0-9\-/]*)(#[a-z0-9-]+)?(?=["'`)?\s])/g)].map((m) => ({ path: m[1], anchor: m[2]?.slice(1) }));
@@ -101,6 +106,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`Only ${sections.size} guide sections found in ${relative(ROOT, GUIDE)}; the check would prove nothing.`);
     process.exit(1);
   }
+  // The help page's own sections beyond the guide (release notes) are anchors too.
+  for (const anchor of pageAnchors(readFileSync(join(APP, "help/page.tsx"), "utf8"))) sections.add(anchor);
   const problems = check({ routes: appRoutes(), sections, faqTargets, helpFiles, otherFiles });
   if (problems.length > 0) {
     console.error("The user guide links to something that does not exist:");

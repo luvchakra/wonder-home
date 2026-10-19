@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { sentinels } from "./check-client-bundle.mjs";
-import { appRoutes, check, guideShape, isRoute, pathsIn } from "./lint-help-links.mjs";
+import { appRoutes, check, guideShape, isRoute, pageAnchors, pathsIn } from "./lint-help-links.mjs";
 
 const routes = [[], ["help"], ["settings", "plan"], ["household", "[id]"], ["certification"]];
 const sections = new Set(["privacy", "plan"]);
@@ -50,6 +50,7 @@ test("the real guide's shape is read, and the real app serves the help page's ow
   assert.ok(found.includes("/certification") && found.includes("/ai"), `found ${found.join(", ")}`);
   const served = appRoutes(new URL("../apps/web/app", import.meta.url).pathname);
   for (const path of found) assert.equal(isRoute(path, served), true, path);
+  assert.ok(pageAnchors(page).includes("release-notes"));
 });
 
 test("the bundle check's sentinels skip phrases the app's own screens also say", () => {

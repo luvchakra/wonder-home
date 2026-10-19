@@ -178,7 +178,7 @@ export const helpEn = {
   "help.guide.today-and-home.body.4": "On a phone, swipe left or right to move between Home, Calendar, HomeTalk, Family and More.",
   "help.guide.today-and-home.body.5":
     "Under Family status, Home shows your pets, if you have any. Each opens to the same details the Family screen shows; to change them, go to Family.",
-  "help.guide.today-and-home.body.6": "What's new, at the top of Home, lists what has been added to WonderHome since you last opened it here, each opening where it lives. Got it hides the list; it never shows the same thing twice, and an entry leaves on its own a month after it arrived.",
+  "help.guide.today-and-home.body.6": "What's new, at the top of Home, lists what has been added to WonderHome since you last opened it here, each opening where it lives. Got it hides the list; it never shows the same thing twice, and an entry leaves on its own a month after it arrived. For everything that has changed, version by version, see Release notes at the end of Get help.",
 
   // Calendar
   "help.guide.calendar.title": "Calendar",
@@ -457,4 +457,23 @@ export const helpEn = {
   "help.faq.other-apps.a": "Where it is switched on for your WonderHome, an Admin can create a key in Settings → Connected accounts that lets an app you trust see or add to the grocery list — only what you ticked, and it can be revoked at any time.",
   "help.faq.activity-trail.q": "Can I see who changed a setting?",
   "help.faq.activity-trail.a": "If you are an Admin, yes. Manage Household → Activity lists who changed what and when — roles, invitations, the playbook, your rules and connected accounts. It never records what anyone said or asked.",
+
+  // Release notes (help/release-notes.ts).
+  "help.release.title": "Release notes",
+  "help.release.lede": "What changed in WonderHome, newest first. A new entry is added each time a new version goes live.",
+  "help.release.liveSince": "Live since {date}",
+  "help.release.2026-10-19.title": "The family Calendar, HomeFood and a HomeBrain that looks deeper",
+  "help.release.2026-10-19.item.1": "Calendar is now a main tab, with Month, Week, Day and Year views. It shows family events (which can repeat or be kept private), everyone's birthdays and special days, and public holidays.",
+  "help.release.2026-10-19.item.2": "A family event opens to its full plan, with an invite link anyone can open. Invitations come in designs, show as a picture on WhatsApp, and can be previewed and shared as a tall picture.",
+  "help.release.2026-10-19.item.3": "Groceries are one list of what is at home and what to buy. Add an item searches a shared catalog with pictures, brands and nutrition, including Indian values from IFCT 2017. A photo of a receipt adds what was bought to what is at home and takes it off the list.",
+  "help.release.2026-10-19.item.4": "A planned meal shows what it still needs and adds it to the list. Plan a meal starts from a recipe, and a recipe's ingredients are picked from the grocery catalog, with nutrition per serving worked out for you.",
+  "help.release.2026-10-19.item.5": "HomePlaces: ask HomeTalk for somewhere to eat or go out near home, a child's school or the office, or for a short getaway. Places, under More, remembers the places your family saved and the ones that were not for you.",
+  "help.release.2026-10-19.item.6": "HomeTalk understands what you meant and does everyday things straight away — the list, a reminder, a plan — and \"undo\" takes it back. Anything that involves other people is asked first. An Admin can choose to be asked first every time.",
+  "help.release.2026-10-19.item.7": "HomeTalk's voice follows you across screens (\"take me to the grocery list\"), keeps going in a small floating window when you switch apps, and with Gemini Live the chat shows what was really said.",
+  "help.release.2026-10-19.item.8": "HomeBrain answers from everything your household has recorded. It looks again before saying something is not there, connects people, days, meals and duties, and when it points something out, it shows the records behind it.",
+  "help.release.2026-10-19.item.9": "Kids & School keeps each child's teachers and classes outside school, and today's classes appear on the Calendar. A child's classes show in Family too.",
+  "help.release.2026-10-19.item.10": "Every member signs in as themselves, by email or phone number, from an invitation WonderHome emails them. Each person can list the languages they speak, and the family's pets appear on Home.",
+  "help.release.2026-10-19.item.11": "Push notifications reach your phone when a reminder is due and matters, and stay quiet during quiet hours. Turn them on for each device in Settings → Notifications.",
+  "help.release.2026-10-19.item.12": "What's new, at the top of Home, shows the features you have not seen yet. Setup finds your home and schools on Google Maps and adds photos, nicknames and birthdays.",
+  "help.release.2026-10-19.item.13": "Settings → Voice says which voice speaks for HomeTalk, and an Admin can add a separate Gemini voice key when the assistant runs on another provider.",
 } as const;
