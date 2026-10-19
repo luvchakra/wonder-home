@@ -1,5 +1,6 @@
 import { readItemAmount } from "./quantity";
 import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments";
+import { tripQuestion } from "../homebrain/insights";
 import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
@@ -276,6 +277,15 @@ const RULES: readonly Rule[] = [
       if (likes.name === null) return { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "likes", food: likes.food }, confidence: 0.93 };
       return { action: "ask_status", target: { kind: "member", reference: likes.name.toLowerCase() }, parameters: { scope: "likes", subject: likes.name, food: likes.food }, confidence: 0.93 };
     },
+  },
+
+  // --- When the family is free for a trip (14-033) ---------------------------
+  {
+    // "Which weekend is free for a trip?", "what's the best time for a 2-day
+    // getaway?": a question HomeBrain answers from the calendar and the public
+    // holidays. "Suggest a getaway" (where) is not this, and stays HomePlaces'.
+    pattern: /^(?:what|when|which|is|are|any|how)\b.*\b(?:getaways?|trips?|vacations?|holidays?|outings?|breaks?|staycations?|day out)\b/i,
+    read: (_match, text) => (tripQuestion(text) ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "home" }, confidence: 0.9 } : null),
   },
 
   // --- One person, at a glance (HomeBrain Sleep) ----------------------------

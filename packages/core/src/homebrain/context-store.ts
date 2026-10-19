@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "../db/admin";
+import { listHouseholdHolidays } from "../calendar/holidays";
 import { listEvents } from "../family/repository";
 import type { HomeSendChange } from "../homesend/items";
 import { listMeals } from "../meals/repository";
@@ -12,7 +13,7 @@ import { householdMemory, setContextWriteListener } from "../context/invalidatio
 import { filterForViewer } from "../context/privacy";
 import { attachLinks, type LinkKind } from "./sleep/links";
 import { attachHomeSendEvidence } from "../context/provenance";
-import { CONTEXT_ADAPTERS, gatherHouseholdContext, listAbsences, listBeliefs, listEventGuests, listFoodPreferences, listMemories, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "../context/repository";
+import { CONTEXT_ADAPTERS, gatherHouseholdContext, HOLIDAYS_AHEAD_DAYS, listAbsences, listBeliefs, listEventGuests, listFoodPreferences, listMemories, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "../context/repository";
 import type { ContextDomain, ContextScope, ContextViewer, HouseholdContextItem } from "../context/types";
 
 /**
@@ -142,8 +143,12 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
   const results = await Promise.all([
     ...plain.map((adapter) => guard(adapter.label, () => adapter.read(admin, fullScope))),
     guard("the calendar", async () => {
-      const [events, guests] = await Promise.all([listEvents(admin, scope.householdId, { from, to }), listEventGuests(admin, scope.householdId)]);
-      return { events, eventGuests: guests };
+      const [events, guests, holidays] = await Promise.all([
+        listEvents(admin, scope.householdId, { from, to }),
+        listEventGuests(admin, scope.householdId),
+        listHouseholdHolidays(admin, scope.householdId, { from: isoDateIn(scope.now, scope.timezone), to: isoDateIn(new Date(scope.now.getTime() + HOLIDAYS_AHEAD_DAYS * DAY_MS), scope.timezone) }).catch(() => []),
+      ]);
+      return { events, eventGuests: guests, holidays };
     }),
     guard("who is away", async () => ({ absences: await listAbsences(admin, scope.householdId, fromDay, toDay) })),
     guard("meals", async () => ({ meals: await listMeals(admin, scope.householdId, { from: fromDay, to: toDay }) })),

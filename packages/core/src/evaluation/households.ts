@@ -194,6 +194,8 @@ const HOUSEHOLD_A: GoldenHousehold = {
   records: {
     members: A_MEMBERS,
     pets: [pet("a-bruno", "Bruno", "dog")],
+    // India's national holidays ahead (14-034): Gandhi Jayanti on a Friday makes a long weekend.
+    holidays: [{ id: "a-h-gandhi", onDate: "2026-10-02", name: "Gandhi Jayanti", source: "golden" }],
     responsibilities: [
       { outcomeKey: "groceries.stocked", primaryMemberId: "a-kunal", backupMemberId: "a-upasana", aiMode: "prepare", priority: 1 },
       { outcomeKey: "bills.paid", primaryMemberId: "a-kunal", backupMemberId: null, aiMode: "approve", priority: 2 },

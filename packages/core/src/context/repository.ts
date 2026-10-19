@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { listConsumables, listOrders } from "../commerce/repository";
+import { listHouseholdHolidays } from "../calendar/holidays";
 import { listEvents } from "../family/repository";
 import { listObligations } from "../finance/repository";
 import { countUpcomingAppointments, listAppointments } from "../health/appointments";
@@ -77,6 +78,9 @@ const may = (viewer: ContextViewer, permission: string) => viewer.permissions.in
 const notChild = (viewer: ContextViewer) => viewer.tone !== "child";
 const anyone = () => true;
 
+/** How far ahead public holidays are read: far enough to plan a long weekend. */
+export const HOLIDAYS_AHEAD_DAYS = 183;
+
 function horizon(scope: ContextScope): { from: Date; to: Date; fromDay: string; toDay: string } {
   const to = new Date(scope.now.getTime() + HORIZON_DAYS * 86_400_000);
   return { from: scope.now, to, fromDay: isoDateIn(scope.now, scope.timezone), toDay: isoDateIn(to, scope.timezone) };
@@ -131,11 +135,13 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
     permitted: anyone,
     read: async (supabase, scope) => {
       const window = horizon(scope);
-      const [events, eventGuests] = await Promise.all([
+      const [events, eventGuests, holidays] = await Promise.all([
         listEvents(supabase, scope.householdId, { from: window.from, to: window.to }),
         listEventGuests(supabase, scope.householdId).catch(() => []),
+        // Six months of public holidays, whatever the horizon: a long weekend is planned ahead.
+        listHouseholdHolidays(supabase, scope.householdId, { from: window.fromDay, to: isoDateIn(new Date(scope.now.getTime() + HOLIDAYS_AHEAD_DAYS * 86_400_000), scope.timezone) }).catch(() => []),
       ]);
-      return { events, eventGuests };
+      return { events, eventGuests, holidays };
     },
   },
   {
