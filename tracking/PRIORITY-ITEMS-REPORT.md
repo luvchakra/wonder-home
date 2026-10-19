@@ -118,6 +118,7 @@ Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 p
 | Event "Where" from Google Maps: search and pick the place when adding or editing an event | 26-014 | Done — the address and Open in Google Maps on the event, directions for guests on the invitation page; a typed place such as Home is kept as written |
 | The invitation link opens with the guest's name filled in, picked (from contacts on Android) before sending | 26-015 | Done — "Who is it for?" above the link, Pick from contacts where the phone allows it, `?to=` on the link |
 | HomeTalk says it has no food preferences while HomeBrain Review lists them | 04-019 | Done — the Gemini turn never reached WonderHome; family-wide likes questions now answered by rules from every record, Gemini given `get_family_preferences` and told whose record it is |
+| Relationships on Members & roles: "Kunal is father of Asmi", all dropdowns, many rows | 01-013 | Done — the other way round said for each row, impossible rows refused, suggestions from guardians and children, Family details and HomeTalk answer from them |
 
 ## C. Waiting only on a browser check
 

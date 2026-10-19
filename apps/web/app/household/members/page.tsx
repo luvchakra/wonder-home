@@ -4,6 +4,7 @@ import {
   type HouseholdMember,
 } from "@wonderhome/core/identity/households";
 import { listInvitations } from "@wonderhome/core/identity/invitations";
+import { listGuardianLinks, listRelationships, suggestRelationships } from "@wonderhome/core/identity/relationships";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -15,6 +16,7 @@ import { whatsappConnectedMembers } from "@wonderhome/core/whatsapp/repository";
 
 import { describeRoles } from "../../_lib/member-role";
 import { memberFormLabels, pendingInvitationLabels, type MemberFormLabels } from "../../_lib/member-form-labels";
+import { describeRelationships, describeSuggestions, relationshipWords } from "../../_lib/relationship-words";
 import { requireSession } from "../../_lib/session";
 
 import { AddChildForm } from "../../_components/add-child-form";
@@ -24,6 +26,7 @@ import { InviteMemberForm } from "../../_components/invite-member-form";
 import { MemberRoleControl } from "../../_components/member-role-control";
 import { PendingInvitations } from "../../_components/pending-invitations";
 import { RemoveMemberControl } from "../../_components/remove-member-control";
+import { RelationshipsCard } from "./relationships";
 
 export const metadata = { title: "Members & roles" };
 export const dynamic = "force-dynamic";
@@ -35,28 +38,28 @@ export default async function MembersPage() {
   const admin = isHouseholdAdmin(membership);
   const formLabels = memberFormLabels(t);
 
-  let members: HouseholdMember[] = [];
-  let invitations: Awaited<ReturnType<typeof listInvitations>> = [];
-  let loadFailed = false;
-  // Who has linked WhatsApp — ids only, never a number (story 14-016). A
-  // failed read shows nobody as connected rather than failing the page.
-  const whatsapp = await whatsappConnectedMembers(supabase, membership.household.id).catch(() => new Set<string>());
-  try {
-    members = await listMembers(
-      supabase,
-      membership.household.id,
-      membership.household.ownerMemberId,
-    );
-    invitations = admin
-      ? await listInvitations(supabase, membership.household.id)
-      : [];
-  } catch {
-    loadFailed = true;
-  }
+  const householdId = membership.household.id;
+  // One wave: WhatsApp links (ids only, never a number, story 14-016), the
+  // members, invitations for an Admin, and how the family is related with
+  // the guardian links its suggestions come from. A failed side read shows
+  // nothing for it rather than failing the page; the members decide that.
+  const [whatsapp, read, relationships, guardianLinks] = await Promise.all([
+    whatsappConnectedMembers(supabase, householdId).catch(() => new Set<string>()),
+    Promise.all([listMembers(supabase, householdId, membership.household.ownerMemberId), admin ? listInvitations(supabase, householdId) : Promise.resolve([])]).catch(() => null),
+    listRelationships(supabase, householdId).catch(() => []),
+    admin ? listGuardianLinks(supabase, householdId) : Promise.resolve([]),
+  ]);
+  const loadFailed = read === null;
+  const members: HouseholdMember[] = read?.[0] ?? [];
+  const invitations: Awaited<ReturnType<typeof listInvitations>> = read?.[1] ?? [];
   const familyMembers = members.filter(
     (member) => member.memberType !== "helper",
   );
   const helpers = members.filter((member) => member.memberType === "helper");
+  // How the family is related: active family only, never a househelper.
+  const relatable = familyMembers.filter((member) => member.status !== "inactive");
+  const relationshipRows = describeRelationships(t, relationships, members);
+  const suggestions = admin ? describeSuggestions(t, suggestRelationships(members, relationships, guardianLinks), members) : [];
 
   return (
     <AppShell
@@ -103,6 +106,17 @@ export default async function MembersPage() {
                 ))}
               </ul>
             </Card>
+
+            {relatable.length >= 2 || relationshipRows.length > 0 ? (
+              <RelationshipsCard
+                householdId={householdId}
+                admin={admin}
+                people={relatable.map((member) => ({ id: member.id, name: member.displayName }))}
+                rows={relationshipRows}
+                suggestions={suggestions}
+                words={relationshipWords(t)}
+              />
+            ) : null}
 
             {helpers.length > 0 ? (
               <Card>

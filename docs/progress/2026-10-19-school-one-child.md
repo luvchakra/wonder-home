@@ -15,4 +15,4 @@
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #247 merged (2026-10-19): QA account `5c8335b0-7d10-4875-8ca3-d132e608796e` and household `d8034f59-b0ec-40db-961e-1b72a45ee5af` ("QA Kids Home", two children, and the Pro subscription row added so Kids & School would open) deleted. Confirmed by SQL: 0 households, members, subscriptions and auth users left for those ids; screenshots removed.

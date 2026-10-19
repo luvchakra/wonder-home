@@ -241,6 +241,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.household-and-roles.body.3": "孩子获得与年龄相适应的访问权限。家政帮手从不会被要求更新家务，WonderHome 也不保存关于他们的任何工作效率数据。",
   "help.guide.household-and-roles.body.4": "管理员在“家庭管理”中邀请、修改和移除成员。移除某人绝不会删除他曾参与的历史记录。",
   "help.guide.household-and-roles.body.5": "管理员可以在“家庭管理 → 活动记录”中看到谁在什么时候改了什么：角色、邀请、家务手册、你的规则和已连接的账户。它是一份永不编辑的记录，里面没有任何人说过、写过或问过的内容，也没有密钥或密码。",
+  "help.guide.household-and-roles.body.6": "在“管理家庭 → 成员和角色”中，“家庭关系”记录家人之间的关系，每条一行：选择一个人、关系，以及与之相关的另一个人——“Kunal 是 Asmi 的父亲”“Upasana 是 Kunal 的妻子”。如果列表里没有你要的关系，选择“其他”并输入。每两个人只需一行：反过来的关系由 WonderHome 替你说出（“所以 Asmi 是 Kunal 的女儿”，有性别记录时据此措辞），不可能成立的一行会被拒绝，例如比孩子年纪还小的父母。它还会根据已有记录建议几行——孩子的监护人作为父母、孩子之间作为兄弟姐妹——你点一下即可添加；它从不自行添加。全家人都能查看这些关系，只有管理员可以添加、修改或删除，“家庭”中每个人的详情会显示他们与其他人的关系。HomeTalk 根据这些关系回答“Asmi 的父亲是谁？”或“Upasana 和 Manan 是什么关系？”，缺少某条时也会如实说明。",
 
   "help.guide.family.title": "家人、宠物和家庭时光",
   "help.guide.family.summary": "所有人都在一处，宠物也算在内，还有为彼此留出的时间。",

@@ -164,10 +164,10 @@ function meal(id: string, name: string, onDate: string, slot: Meal["slot"], cook
 
 const A_ID = "a0000000-0000-4000-8000-00000000000a";
 const A_MEMBERS = [
-  head("a-kunal", "Kunal Mehta", { relationship: "Father", dateOfBirth: "1985-02-11" }),
-  member("a-upasana", "Upasana Mehta", "adult", { relationship: "Mother", dateOfBirth: "1987-06-03" }),
-  member("a-asmi", "Asmi", "child", { relationship: "Daughter", dateOfBirth: "2015-04-10" }),
-  member("a-manan", "Manan", "child", { relationship: "Son", dateOfBirth: "2018-08-02" }),
+  head("a-kunal", "Kunal Mehta", { relationship: "Father", dateOfBirth: "1985-02-11", gender: "Male" }),
+  member("a-upasana", "Upasana Mehta", "adult", { relationship: "Mother", dateOfBirth: "1987-06-03", gender: "Female" }),
+  member("a-asmi", "Asmi", "child", { relationship: "Daughter", dateOfBirth: "2015-04-10", gender: "Female" }),
+  member("a-manan", "Manan", "child", { relationship: "Son", dateOfBirth: "2018-08-02", gender: "Male" }),
   member("a-sunita", "Sunita", "helper", { occupation: "Cook" }),
 ];
 
@@ -232,6 +232,12 @@ const HOUSEHOLD_A: GoldenHousehold = {
       { id: "a-mem-manan-home", scope: "member", memberId: "a-manan", category: "preference", key: "pref.manan.home-cooked-food", value: { statement: "Manan likes home-cooked food", subject: "Manan", object: "home-cooked food", stance: "likes" }, status: "confirmed", confidence: 1, sourceType: "conversation", createdAt: "2026-09-18T00:00:00Z", updatedAt: "2026-09-19T00:00:00Z" },
     ],
     foodPreferences: [{ id: "a-fp-upasana-mushrooms", memberId: "a-upasana", kind: "dislike", subject: "mushrooms" }],
+    // How the family is related, as an Admin wrote it on Members & roles (the owner, 2026-10-19).
+    relationships: [
+      { id: "a-rel-kunal-asmi", memberId: "a-kunal", relation: "father", relatedMemberId: "a-asmi" },
+      { id: "a-rel-upasana-kunal", memberId: "a-upasana", relation: "wife", relatedMemberId: "a-kunal" },
+      { id: "a-rel-asmi-manan", memberId: "a-asmi", relation: "sister", relatedMemberId: "a-manan" },
+    ],
   },
 };
 

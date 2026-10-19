@@ -72,6 +72,9 @@ import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { openScreenReply } from "@wonderhome/core/conversation/screens";
 import { composeFamilyLikes, composeLikes, likesRecordsFrom, personNamed } from "@wonderhome/core/conversation/likes";
+import { composeRelations } from "@wonderhome/core/conversation/relations";
+import { listRelationships } from "@wonderhome/core/identity/relationships";
+import { listMembers } from "@wonderhome/core/identity/households";
 import { listMemories } from "@wonderhome/core/context/repository";
 import type { Viewer } from "@wonderhome/core/navigation/secondary-navigation";
 import { placesReply } from "@wonderhome/core/homeplaces/answer";
@@ -832,6 +835,28 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       carry(speaking, [...(told.memberIds.some(isChild) ? (["child"] as const) : []), ...(told.health ? (["health"] as const) : [])]);
     }
     composedAt = Date.now();
+    brain = { source: "deterministic", factsSent: 0 };
+  } else if (
+    result.kind === "reply" &&
+    result.intent.action === "ask_status" &&
+    result.proposal.kind === "answer" &&
+    result.intent.parameters.scope === "relations" &&
+    (!limits || (limits.scopes as readonly string[]).includes("household.read"))
+  ) {
+    // "Who is Asmi's father?": every row on Members & roles' Relationships, both ways round, by rules (relations.ts).
+    const parameters = result.intent.parameters;
+    const question =
+      typeof parameters.relationOf === "string" && typeof parameters.word === "string"
+        ? { kind: "of" as const, name: parameters.relationOf, word: parameters.word }
+        : Array.isArray(parameters.between) && parameters.between.length === 2
+          ? { kind: "between" as const, first: String(parameters.between[0]), second: String(parameters.between[1]) }
+          : { kind: "all" as const };
+    // The full member list (gender and birth date word the other way round), read beside the rows.
+    const [rows, members] = await Promise.all([listRelationships(supabase, householdId).catch(() => []), listMembers(supabase, householdId, null).catch(() => [])]);
+    const told = composeRelations(question, members.filter((member) => member.status === "active"), rows);
+    composedAt = Date.now();
+    text = told.text;
+    carry(speaking, told.memberIds.some((id) => people.find((entry) => entry.id === id)?.memberType === "child") ? ["child"] : []);
     brain = { source: "deterministic", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && result.intent.parameters.scope === "people") {
     // Who is in the household: the whole member list, by rules (roster.ts).

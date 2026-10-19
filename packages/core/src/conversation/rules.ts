@@ -7,6 +7,7 @@ import { parsePreference } from "./memory";
 import { CALENDAR_SPAN_PHRASE, splitTrailingWhen } from "./temporal";
 import { isPlaceQuestion } from "../homeplaces/request";
 import { readLikesQuestion } from "./likes";
+import { readRelationQuestion } from "./relations";
 import { isRosterQuestion } from "./roster";
 import { readOpenScreen } from "./screens";
 
@@ -243,6 +244,24 @@ const RULES: readonly Rule[] = [
     pattern: /^.+$/,
     read: (_match, utterance) =>
       isRosterQuestion(utterance) ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "people" }, confidence: 0.95 } : null,
+  },
+
+  // --- How the family is related ---------------------------------------------
+  {
+    // "Who is Asmi's father?", "how is Upasana related to Manan?": every row on
+    // Members & roles' Relationships, both ways round (relations.ts).
+    pattern: /^.+$/,
+    read: (_match, utterance) => {
+      const asked = readRelationQuestion(utterance);
+      if (!asked) return null;
+      const parameters =
+        asked.kind === "of"
+          ? { scope: "relations", relationOf: asked.name, word: asked.word }
+          : asked.kind === "between"
+            ? { scope: "relations", between: [asked.first, asked.second] }
+            : { scope: "relations" };
+      return { action: "ask_status", target: { kind: "unspecified" }, parameters, confidence: 0.93 };
+    },
   },
 
   // --- What someone likes ----------------------------------------------------

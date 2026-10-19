@@ -54,6 +54,7 @@ export function MemberDetail({
   phone,
   invite,
   workPlace,
+  relations,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -79,6 +80,8 @@ export function MemberDetail({
   invite?: { householdName: string; inviterName: string; canEmail: boolean } | null;
   /** An adult's picked office, when this viewer may see it (adults and Admins, and the person). */
   workPlace?: WorkPlace | null;
+  /** What they are to the rest of the family, from Members & roles' Relationships ("Father of Asmi · Husband of Upasana"). */
+  relations?: string | null;
 }) {
   const t = requestT();
   const clockTime = requestFormatIn("UTC").time;
@@ -121,6 +124,7 @@ export function MemberDetail({
         <Fact label={t("family.fact.office")} value={member.memberType === "adult" && workPlace ? workPlace.name : null} />
         <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
         {/* Family. */}
+        <Fact wide label={t("relationships.fact")} value={relations ?? null} />
         <Fact label={t("family.fact.siblings")} value={siblings} />
         <Fact label={t("family.fact.specialOccasion")} value={occasion} />
       </dl>

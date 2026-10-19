@@ -37,4 +37,4 @@ Traced on the live project:
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #247 merged (2026-10-19): QA account `cf77f39f-e227-4943-8504-b9a852bb5506` and household `5eaedd09-90fe-4648-a80a-09c34bf57527` ("QA Guest Home", shared with the invite-link check) deleted. Confirmed by SQL: 0 households, memories, review items, context rows and messages left for it. The local dev server was stopped and screenshots removed.
