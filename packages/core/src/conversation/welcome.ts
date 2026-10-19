@@ -113,7 +113,8 @@ export function welcomeMemory(topic: WelcomeTopic, answer: string, sessionId: st
     sourceType: "conversation",
     sourceId: sessionId,
     confidence: 0.9,
-    status: "learned",
+    // Confirmed from the start, like everything a member tells HomeTalk (the owner, 2026-10-19).
+    status: "confirmed",
   };
 }
 

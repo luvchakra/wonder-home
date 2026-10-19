@@ -795,7 +795,7 @@ export async function remember(
       reviewer_member_id: statedBy.memberId,
       decision: "corrected",
       previous_value: { claim: replaced.claim, status: replaced.status },
-      new_value: { claim, status: "learned" },
+      new_value: { claim, status: update.memory.status === "confirmed" ? "confirmed" : "learned" },
       note: "Corrected in HomeTalk.",
     });
   }

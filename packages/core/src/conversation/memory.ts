@@ -61,10 +61,11 @@ export function extractMemory(
     value: parsed ? { ...value, subject: parsed.subject, object: parsed.object, stance: parsed.stance } : value,
     sourceType: "conversation",
     sourceId: context.sessionId,
-    // Someone stating a preference outright is strong evidence, but it is still
-    // not a confirmed fact until the household certifies it (module 05).
+    // What a member tells HomeTalk is the household's word from the start (the
+    // owner, 2026-10-19): kept as confirmed, and an Admin removes or corrects
+    // it in HomeBrain Review rather than confirming it first.
     confidence: Math.min(0.9, Math.max(0.5, intent.confidence)),
-    status: "learned",
+    status: "confirmed",
   };
 }
 

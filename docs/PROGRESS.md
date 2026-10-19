@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**285 of 306 stories done — 93.1%**
+**286 of 307 stories done — 93.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 285 |
+| Done | 286 |
 | In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 12 |
@@ -30,7 +30,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 23 | 25 | 1 in progress, 1 not started |
-| 05 Household Certification & Understanding | `██████████` | 9 | 9 | — |
+| 05 Household Certification & Understanding | `██████████` | 10 | 10 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `█████████░` | 15 | 16 | 1 not started |
@@ -185,7 +185,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 05 — Household Certification & Understanding
 
-9 of 9 done `██████████`
+10 of 10 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -198,6 +198,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-007` Certification history | P1 | Done | Reads the append-only `certification_reviews` trail `reviewCertificationAction` already wrote; a new History tab shows who reviewed what, the decision and the before/after claim, each row scoped by the RLS the item itself carries |
 | `05-008` Certification health | P2 | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
 | `05-009` Review many at once | P1 | Done | The owner, 2026-10-18 (PR #236): HomeBrain's list has Select; ticked items (or Select all) are confirmed, removed (after asking) or left for later together. Each goes through the same `reviewItem` path as one item's own buttons, so History, the memory HomeBrain reads and correction evidence are as if decided one by one; a correction stays one at a time. Checked at 360px: two confirmed, then the rest removed, and the review trail showed four decisions |
+| `05-010` What HomeBrain registers is confirmed by default | P1 | Done | The owner, 2026-10-19 (screenshot of 14 items under Needs review): whatever HomeBrain registers is confirmed from the start; an Admin removes or corrects it later. New memories and their HomeBrain items are written confirmed (`conversation/memory.ts`, `welcome.ts`, `remember()`); the column defaults are `confirmed` (migration `20261019150000`, live), and the 18 learned memories and items on record were brought in line. Only a statement contradicting something already confirmed (`needs_review`) still waits for a person. Replies no longer say "(you told me; not confirmed yet)". Help: HomeBrain ¶1 in 8 languages |
 
 ### 06 — Actionable Notification Engine
 

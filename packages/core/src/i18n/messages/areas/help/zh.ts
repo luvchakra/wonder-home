@@ -288,7 +288,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.certification.title": "HomeBrain以及问“为什么？”",
   "help.guide.certification.summary": "WonderHome 认为的一切、每条认知从哪里来，以及怎样更正。",
   "help.guide.certification.body.1":
-    "HomeBrain显示 WonderHome 对你家的认知，以及每条认知从哪里来——你告诉它的、它观察到的，或者你发送的内容里写的。任何它弄错的地方，你都可以更正、补充或删除。",
+    "HomeBrain显示 WonderHome 对你家的认知，以及每条认知从哪里来——你告诉它的、它观察到的，或者你发送的内容里写的。任何它弄错的地方，你都可以更正、补充或删除。家人告诉 WonderHome 的内容会立即被确认——不再停留在“待审核”中。管理员可以随时在这里删除或更正任何内容；只有与已确认内容相矛盾的信息，才会等待有人来决定。",
   "help.guide.certification.body.2": "问 HomeTalk“为什么？”——为什么需要批准、为什么没做某件事、某个事实从哪里来——答案来自真实的记录，而不是猜测。",
   "help.guide.certification.body.3": "答案在你看到之前都会经过检查。记录中没有的名字、日期、金额或事件，绝不会被当作事实说出来；如果记录中什么都没有，WonderHome 会直说。",
   "help.guide.certification.body.4": "要一次处理多项，点列表上方的「选择」，勾选要处理的内容（或「全选」），再选「确认所选」「移除所选」或「所选稍后处理」。移除前会先询问。每一项都会作为单独的决定记入历史记录；更正仍然一项一项地用你自己的话来做。",

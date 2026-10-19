@@ -42,7 +42,7 @@ describe("the questions", () => {
 describe("an answer", () => {
   it("is kept as said, under its topic, and the next question follows", () => {
     const step = answerWelcome({ topic: "food", answer: "Paneer, dal and pasta", sessionId: "s1", household }, { t, language: "en", english: t });
-    expect(step.memory).toMatchObject({ key: "household.welcome.food", value: { statement: "The family loves to eat: Paneer, dal and pasta", said: "Paneer, dal and pasta" }, status: "learned" });
+    expect(step.memory).toMatchObject({ key: "household.welcome.food", value: { statement: "The family loves to eat: Paneer, dal and pasta", said: "Paneer, dal and pasta" }, status: "confirmed" });
     expect(step.topic).toBe("dislikes");
     expect(step.reply).toBe("Got it, I'll remember that. Is there anything someone doesn't eat or doesn't like? An allergy, or a food someone avoids?");
   });

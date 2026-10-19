@@ -318,7 +318,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.certification.title": "HomeBrain y preguntar “¿por qué?”",
   "help.guide.certification.summary": "Todo lo que cree WonderHome, de dónde salió cada creencia y cómo corregirla.",
   "help.guide.certification.body.1":
-    "La HomeBrain muestra lo que WonderHome cree sobre tu hogar y de dónde salió cada creencia: se lo dijiste, lo observó o lo decía algo que enviaste. Cualquier cosa que tenga mal la puedes corregir, añadir o eliminar.",
+    "La HomeBrain muestra lo que WonderHome cree sobre tu hogar y de dónde salió cada creencia: se lo dijiste, lo observó o lo decía algo que enviaste. Cualquier cosa que tenga mal la puedes corregir, añadir o eliminar. Lo que un miembro de la familia le dice a WonderHome queda confirmado al instante: ya no espera en Por revisar. Un Admin puede quitar o corregir cualquier cosa aquí en cualquier momento; solo lo que contradice algo ya confirmado sigue esperando a que alguien decida.",
   "help.guide.certification.body.2":
     "Pregunta a HomeTalk “¿por qué?” —por qué necesita aprobación, por qué no hizo algo, de dónde sale un dato— y la respuesta sale de lo que de verdad está registrado, no de una suposición.",
   "help.guide.certification.body.3":

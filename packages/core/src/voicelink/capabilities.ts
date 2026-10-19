@@ -227,9 +227,9 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
   },
   {
     // "Manan likes home-cooked food": what a person tells WonderHome about the
-    // family. It is kept as learned, never as a certified fact, and can be
-    // corrected or removed in HomeBrain Review, so it is as safe by voice as
-    // it is typed. Changing who does what stays app-only, below.
+    // family. It is kept as confirmed (the owner, 2026-10-19) and can be
+    // corrected or removed in HomeBrain Review at any time, so it is as safe
+    // by voice as it is typed. Changing who does what stays app-only, below.
     id: "family_facts",
     label: "Remembering what you tell it about the family",
     category: "low_risk",
