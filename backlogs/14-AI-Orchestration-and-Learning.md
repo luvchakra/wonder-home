@@ -36,6 +36,7 @@
 | 30 | P1 | 14-030 | HomeBrain 4.0 phase 6 — answers shaped by the goal | Done | PR #241. Built: `homebrain/goal.ts` (`readGoal`: find_out, plan, decide, check, remember, do, by rules on the question's own words) on every reading; a plan or a decision follows two links; the rules answer is shaped by it (to decide: what the rules noticed leads; to check whether anything is there: "Yes." first; never a yes the record does not say), and the model is told the goal (`AnswerInput.goal`). Spec §3.10 |
 | 31 | P1 | 14-031 | HomeBrain 4.0 phase 7 — keep it whole | In Progress | PR #241 built: the database trigger safety net (`wh.mark_context_stale` on 25 domain tables, live, DB-tested), the keep-warm rebuild of stores that are behind or over an hour old on the five-minute delivery clock (`keepStoresWarm`, 4 per tick), and the AI quality page's `homeBrainKeeping` (deeper looks and what they found by part of the home, stores behind and the oldest lag). Still open: rules read the store, the agenda summary only for broad questions, and the "not on record while on record" gate. Spec §3.2, §3.8 (was 14-022 and 14-023) |
 | 32 | P1 | 14-032 | HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
+| 33 | P1 | 14-033 | "When should we go away?" answered from the calendar | Done | Live finding, 2026-10-19: "what best time for 2 day getaway" fell into the wide status net and was answered with the attention summary. `homebrain/insights.ts` gains rule `free_window` (`tripQuestion` reads when and how many days): the next 8 weekends with nothing on the family calendar, and what is on the others — events, school events and exams, someone away, an exam the day after. Drawn as an insight that answers the question (`grounding.ts`), so a model may cite it and the rules answer with it. Golden case HT-118, `free-window.test.ts` |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -486,6 +487,16 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - Health, allergy and safety facts never rest or expire on their own.
 - No name and no class the household has not allowed reaches a provider; a model's proposal is used only when it checks out against the records it was shown.
 - A turn never waits more than 900 ms on meaning, and recall is counted after the response.
+
+### Story 14-033 — "When should we go away?" answered from the calendar
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** A question about when the family could take a trip of a few days is answered with the weekends that are free on the family calendar, and what is on the others, worked out by a rule.
+
+**Acceptance criteria**
+- "What's the best time for a 2-day getaway?", "which weekend is free for a trip?" and "when can we take a three-day vacation?" are read as when-questions for a number of days; "suggest a getaway" stays HomePlaces' question and "when is the next holiday?" is not a trip.
+- The answer lists the next free weekends (8 checked) and says what makes the others less free, including an exam the day after.
+- Nothing a viewer may not see is used; a model's "because" about it has to cite the rule.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

@@ -322,6 +322,31 @@ function drawInferences(
 ): void {
   const byItem = new Map(drafts.filter((draft) => draft.itemId).map((draft) => [draft.itemId as string, draft]));
   for (const insight of householdInsights(items, options)) {
+    // "When should we go away?" is answered by the calendar as a whole: the
+    // free weekends rest on there being nothing, and what is on the others is
+    // sent with them where it was drafted (it is the viewer's own either way).
+    if (insight.rule === "free_window") {
+      const found = insight.evidence.map((id) => byItem.get(id)).filter((draft): draft is Omit<GroundedFact, "contextId"> => Boolean(draft));
+      const draft: Omit<GroundedFact, "contextId"> = {
+        statement: insight.statement,
+        sourceIds: found.flatMap((entry) => entry.sourceIds),
+        confidence: 1,
+        privacyClass: insight.privacyClass,
+        relevant: true,
+        score: insight.evidence.length === 0 ? 0.97 : 0.93,
+        itemId: null,
+        domain: "insight",
+        subjectMemberIds: insight.subjectMemberIds,
+        date: insight.date,
+        tier: 2,
+        confirmed: false,
+        need: "when the family is free",
+        reasons: [`inference (${insight.rule}) from the family calendar`, "named in the question"],
+      };
+      drafts.push(draft);
+      evidenceOf.set(draft, insight.evidence.filter((id) => byItem.has(id)));
+      continue;
+    }
     const evidence = insight.evidence.map((id) => byItem.get(id));
     if (evidence.some((draft) => !draft || RULED_OUT.some((reason) => draft.reasons.includes(reason)))) continue;
     const strongest = Math.max(...evidence.map((draft) => (draft!.relevant ? draft!.score : 0)));
