@@ -41,6 +41,19 @@ const CONNECTED: HomeTalkCase[] = [
     utterance: "Who is in my family?",
     expected: { interpretation: "ask_status", answer: { includes: ["Asmi** — you", "Manan"] } },
   },
+  {
+    // The owner, 2026-10-19: asked this, the assistant said it had no such record while HomeBrain Review listed fourteen.
+    id: "HT-112", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "\"What do you know about the preferences in food and family?\" lists everyone's likes, person by person, from what HomeTalk was told and the Meals screen — never \"nothing on record\".",
+    utterance: "What do you know about the preferences in food and family?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["**Upasana Mehta**", "Doesn't like mushrooms", "**Asmi**", "Asmi likes Indian food (you told me; not confirmed yet)", "**Manan**", "Manan likes home-cooked food"], excludes: ["not have anything on record", "no information", "Kunal Mehta**"] } },
+  },
+  {
+    id: "HT-113", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
+    description: "\"Who likes what?\" is the same answer for anyone in the family, and is never kept as a fact about someone called \"Who\".",
+    utterance: "Who likes what?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Asmi likes Indian food", "Manan likes home-cooked food", "Doesn't like mushrooms"], excludes: ["Remembered"] } },
+  },
 
   // --- Bills ---
   {

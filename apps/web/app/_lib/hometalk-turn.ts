@@ -71,7 +71,7 @@ import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { openScreenReply } from "@wonderhome/core/conversation/screens";
-import { composeLikes, personNamed, type LikesRecord } from "@wonderhome/core/conversation/likes";
+import { composeFamilyLikes, composeLikes, likesRecordsFrom, personNamed } from "@wonderhome/core/conversation/likes";
 import { listMemories } from "@wonderhome/core/context/repository";
 import type { Viewer } from "@wonderhome/core/navigation/secondary-navigation";
 import { placesReply } from "@wonderhome/core/homeplaces/answer";
@@ -814,30 +814,22 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   ) {
     // "What does Upasana like in food?": every record about her, by rules
     // (likes.ts) — what HomeTalk was told and the Meals screen's preferences.
-    const asked = { name: String(result.intent.parameters.subject ?? ""), food: result.intent.parameters.food === true };
-    const person = personNamed(asked.name, people);
-    if (!person) {
-      text = `I don't know who ${asked.name} is in your household. Check the name under Family.`;
+    // "What does the family like?" is everyone's, person by person.
+    const subject = typeof result.intent.parameters.subject === "string" ? result.intent.parameters.subject : null;
+    const asked = { name: subject, food: result.intent.parameters.food === true };
+    const person = subject ? personNamed(subject, people) : null;
+    if (subject && !person) {
+      text = `I don't know who ${subject} is in your household. Check the name under Family.`;
     } else {
       const [memories, preferences] = await Promise.all([
         listMemories(supabase, householdId).catch(() => []),
         supabase.from("food_preferences").select("member_id, kind, subject").eq("household_id", householdId).then(({ data }) => (data as { member_id: string | null; kind: string; subject: string }[] | null) ?? []),
       ]);
-      const records: LikesRecord[] = [
-        ...memories
-          .filter((memory) => memory.category === "preference" || memory.key.startsWith("pref."))
-          .flatMap((memory) => {
-            const statement = (memory.value as { statement?: unknown } | null)?.statement;
-            return typeof statement === "string" && statement.trim()
-              ? [{ kind: "memory" as const, memberId: memory.memberId, statement: statement.trim(), confirmed: memory.status === "confirmed" }]
-              : [];
-          }),
-        ...preferences.map((row) => ({ kind: "food" as const, memberId: row.member_id, preference: row.kind as "preference", subject: row.subject })),
-      ];
-      const told = composeLikes(asked, person, records);
+      const records = likesRecordsFrom(memories, preferences.map((row) => ({ memberId: row.member_id, kind: row.kind, subject: row.subject })));
+      const isChild = (id: string) => people.find((entry) => entry.id === id)?.memberType === "child";
+      const told = person ? { ...composeLikes(asked, person, records), memberIds: [person.id] } : composeFamilyLikes(asked, people, records);
       text = told.text;
-      const isChild = people.find((entry) => entry.id === person.id)?.memberType === "child";
-      carry(speaking, [...(isChild ? (["child"] as const) : []), ...(told.health ? (["health"] as const) : [])]);
+      carry(speaking, [...(told.memberIds.some(isChild) ? (["child"] as const) : []), ...(told.health ? (["health"] as const) : [])]);
     }
     composedAt = Date.now();
     brain = { source: "deterministic", factsSent: 0 };

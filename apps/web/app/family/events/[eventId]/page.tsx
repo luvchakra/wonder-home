@@ -309,7 +309,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
                   <Link href={linkPath} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
                     <Eye aria-hidden className="size-4" /> {t("events.invite.preview")}
                   </Link>
-                  <EventLinkShare path={linkPath} title={event.title} labels={{ copy: t("events.link.copy"), copied: t("events.link.copied"), share: t("events.link.share"), shareText: t("events.link.shareText", { title: "{title}" }), shareCard: t("events.link.shareCard"), saveCard: t("events.link.saveCard") }} />
+                  <EventLinkShare path={linkPath} title={event.title} labels={{ copy: t("events.link.copy"), copied: t("events.link.copied"), share: t("events.link.share"), shareText: t("events.link.shareText", { title: "{title}" }), shareTextFor: t("events.link.shareTextFor", { name: "{name}", title: "{title}" }), forLabel: t("events.link.forLabel"), forHint: t("events.link.forHint"), pickContact: t("events.link.pickContact"), shareCard: t("events.link.shareCard"), saveCard: t("events.link.saveCard") }} />
                   <div className="flex flex-wrap gap-2">
                     <EventActionButton action={createInviteLinkAction} fields={ids}>{t("events.link.new")}</EventActionButton>
                     <EventActionButton action={revokeInviteLinkAction} fields={ids} className="text-[var(--wh-risk)]">{t("events.link.off")}</EventActionButton>

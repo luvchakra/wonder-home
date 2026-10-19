@@ -9,6 +9,7 @@ import { groundIntent } from "../conversation/grounding";
 import { localDateTime, pendingWords, roleWords } from "../conversation/moment";
 import { isConsequential, type HouseholdIntent, type PendingProposal } from "../conversation/intent";
 import { focusFromProposal, readFocus, type FocusEntity } from "../conversation/references";
+import { composeFamilyLikes, composeLikes, likesRecordsFrom, personNamed } from "../conversation/likes";
 import { composeRoster } from "../conversation/roster";
 import { openScreenReply } from "../conversation/screens";
 import { permissionsFor } from "../identity/permissions";
@@ -232,6 +233,16 @@ async function composedAnswer(
     return { text: openScreenReply(intent.parameters.screen, { viewer: { permissions, tone }, hasScreen: true }).text };
   }
   if (intent.action === "ask_status" && proposal.kind === "answer") {
+    if (intent.parameters.scope === "likes") {
+      // "What does Asmi like?", "who likes what?": every record, by rules (likes.ts).
+      const people = household.members.filter((m) => m.status === "active").map((m) => ({ id: m.id, displayName: m.displayName, nickname: m.nickname ?? null }));
+      const records = likesRecordsFrom(household.records.memories ?? [], household.records.foodPreferences ?? []);
+      const subject = typeof intent.parameters.subject === "string" ? intent.parameters.subject : null;
+      const asked = { name: subject, food: intent.parameters.food === true };
+      if (!subject) return { text: composeFamilyLikes(asked, people, records).text };
+      const person = personNamed(subject, people);
+      return { text: person ? composeLikes(asked, person, records).text : `I don't know who ${subject} is in your household. Check the name under Family.` };
+    }
     if (intent.parameters.scope === "people") {
       return { text: composeRoster(household.members.filter((m) => m.status === "active"), {
         viewerMemberId: who.id,

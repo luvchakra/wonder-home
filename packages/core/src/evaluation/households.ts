@@ -226,6 +226,12 @@ const HOUSEHOLD_A: GoldenHousehold = {
     ],
     healthAppointments: [appointment("a-h-kunal", A_ID, "a-kunal", "2026-09-25T05:30:00Z", { appointmentType: "dentist", provider: "Dr. Rao" })],
     assets: [asset("a-a-washer", "Washing machine", "appliance", "a-kunal"), asset("a-a-fridge", "Fridge", "appliance", "a-kunal")],
+    // What the family told HomeTalk it likes, as HomeBrain Review holds it, and the Meals screen's own (the owner, 2026-10-19).
+    memories: [
+      { id: "a-mem-asmi-indian", scope: "member", memberId: "a-asmi", category: "preference", key: "pref.asmi.indian-food", value: { statement: "Asmi likes Indian food", subject: "Asmi", object: "Indian food", stance: "likes" }, status: "learned", confidence: 0.88, sourceType: "conversation", createdAt: "2026-09-18T00:00:00Z", updatedAt: "2026-09-18T00:00:00Z" },
+      { id: "a-mem-manan-home", scope: "member", memberId: "a-manan", category: "preference", key: "pref.manan.home-cooked-food", value: { statement: "Manan likes home-cooked food", subject: "Manan", object: "home-cooked food", stance: "likes" }, status: "confirmed", confidence: 1, sourceType: "conversation", createdAt: "2026-09-18T00:00:00Z", updatedAt: "2026-09-19T00:00:00Z" },
+    ],
+    foodPreferences: [{ id: "a-fp-upasana-mushrooms", memberId: "a-upasana", kind: "dislike", subject: "mushrooms" }],
   },
 };
 

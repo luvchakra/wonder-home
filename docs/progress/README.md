@@ -11,6 +11,8 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | [HomeTalk answers "what does the family like?" from every record; Gemini Live never answers "what do you know" from itself (04-019)](2026-10-19-family-likes-and-gemini-record.md) |
+| 2026-10-19 | [The invitation link carries the guest's name (26-015)](2026-10-19-invite-guest-name.md) |
 | 2026-10-19 | [An event's "Where" is picked from Google Maps (26-014)](2026-10-19-event-place-maps.md) |
 | 2026-10-19 | [Performance pass: membership checked once per query, fewer round trips per page](2026-10-19-performance-pass.md) |
 | 2026-10-19 | [Release notes on Get help, and the guide pointed at them](2026-10-19-release-notes.md) |

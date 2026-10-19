@@ -252,7 +252,10 @@ const RULES: readonly Rule[] = [
     pattern: /^.+$/,
     read: (_match, utterance) => {
       const likes = readLikesQuestion(utterance);
-      return likes ? { action: "ask_status", target: { kind: "member", reference: likes.name.toLowerCase() }, parameters: { scope: "likes", subject: likes.name, food: likes.food }, confidence: 0.93 } : null;
+      if (!likes) return null;
+      // "What does the family like?", "who likes what?": everyone's records, person by person.
+      if (likes.name === null) return { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "likes", food: likes.food }, confidence: 0.93 };
+      return { action: "ask_status", target: { kind: "member", reference: likes.name.toLowerCase() }, parameters: { scope: "likes", subject: likes.name, food: likes.food }, confidence: 0.93 };
     },
   },
 
