@@ -29,7 +29,7 @@ describe("extracting memory from what was said", () => {
       key: "meals.dinner",
       value: { time: "20:00" },
       sourceType: "conversation",
-      status: "learned",
+      status: "confirmed",
     });
   });
 
@@ -39,10 +39,11 @@ describe("extracting memory from what was said", () => {
     );
   });
 
-  it("never records a statement as already confirmed", () => {
+  it("records what a member says as confirmed, for an Admin to remove or correct later", () => {
     const extracted = extractMemory(intentFor("We prefer dinner at 8."), { sessionId: "s-1" });
-    // Saying something is strong evidence; certifying it is a separate act (module 05).
-    expect(extracted?.status).toBe("learned");
+    // The owner, 2026-10-19: whatever HomeBrain registers is confirmed by default.
+    expect(extracted?.status).toBe("confirmed");
+    // Confidence still says how it was learned: certainty is a person's to give.
     expect(extracted?.confidence).toBeLessThan(1);
   });
 

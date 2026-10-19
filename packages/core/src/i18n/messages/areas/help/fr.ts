@@ -318,7 +318,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.certification.title": "HomeBrain et demander « pourquoi ? »",
   "help.guide.certification.summary": "Tout ce que croit WonderHome, d’où vient chaque croyance, et comment la corriger.",
   "help.guide.certification.body.1":
-    "La HomeBrain montre ce que WonderHome croit sur votre foyer et d’où vient chaque croyance — vous le lui avez dit, il l’a observé, ou quelque chose que vous avez envoyé l’indiquait. Tout ce qu’il a de faux, vous pouvez le corriger, l’ajouter ou le supprimer.",
+    "La HomeBrain montre ce que WonderHome croit sur votre foyer et d’où vient chaque croyance — vous le lui avez dit, il l’a observé, ou quelque chose que vous avez envoyé l’indiquait. Tout ce qu’il a de faux, vous pouvez le corriger, l’ajouter ou le supprimer. Ce qu’un membre de la famille dit à WonderHome est confirmé tout de suite : cela n’attend plus dans À vérifier. Un Admin peut retirer ou corriger n’importe quoi ici à tout moment ; seul ce qui contredit une chose déjà confirmée attend encore qu’une personne décide.",
   "help.guide.certification.body.2":
     "Demandez « pourquoi ? » à HomeTalk — pourquoi il a besoin d’un accord, pourquoi il n’a pas fait quelque chose, d’où vient un fait — et la réponse vient de ce qui est réellement enregistré, pas d’une supposition.",
   "help.guide.certification.body.3":

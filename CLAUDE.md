@@ -871,6 +871,43 @@ once per statement:
 `scripts/test-setup-counts-rls.mjs` fails if a policy still uses a per-row
 helper.
 
+## Performance: what every change keeps
+The performance pass (2026-10-19, `docs/progress/2026-10-19-performance-pass.md`)
+halved most page times. Production runs beside the database (Vercel `bom1`,
+Supabase ap-south-1), so a page is as slow as its longest chain of awaits plus
+its slowest query. New code keeps both short:
+- **One wave, not a chain.** A page or action starts every independent read
+  in one `Promise.all`. It never awaits one read before starting another that
+  does not need its result. A plan check starts alongside the read it gates,
+  and the read's result is dropped if the check refuses (`_lib/agenda.ts`).
+- **Read a thing once per request.** A domain's agenda returns the rows it
+  assessed, and its page reuses them instead of reading the table again.
+  Anything several components need in one render goes through React `cache()`.
+- **One call for many counts.** Several counts or small reads that always go
+  together become one security-invoker RPC, like
+  `public.household_setup_counts`, never N requests.
+- **Every list has a bound.** A read of a table that grows (messages,
+  actions, events, notifications, history) has a `.limit()` or a date range.
+  Pages ask only for the columns they show.
+- **Index what a query filters or joins on.** Every new foreign key and every
+  column a policy or a hot query filters by gets an index in the same
+  migration. RLS policies use the set forms above.
+- **Platform data is cached per server.** Data that is the same for every
+  household (holiday regions, catalog metadata) is kept in a process-level
+  cache with a TTL, as `calendar/repository.ts`'s `holidayRegions` does. It is
+  never read on every request. Household data is never cached across requests.
+- **Work that can wait runs after the response.** Rebuilds, reconciles and
+  throttled writes go through `after()` or the delivery clock, never on the
+  request path.
+- **Nothing server-only reaches the browser.** Catalogs, help words and large
+  constants stay on the server, and a client component gets its labels as
+  props. `npm run check:bundle` guards this.
+- **Measure before and after.** For a change on a hot path, read
+  `pg_stat_statements` or the performance advisor first. `EXPLAIN ANALYZE` the
+  query as `authenticated` with a real member's claims, and compare warm
+  timings on the production build. Never time a dev server. Put the numbers in
+  the progress note.
+
 ## Database query permissions
 All SQL against the Supabase project — `mcp__Supabase__execute_sql`, `apply_migration`, and every other Supabase MCP tool — is pre-authorized. Run what the work needs (including destructive statements: dropping a constraint, deleting QA/test rows, correcting bad data) without pausing to ask first. This still means investigate before deleting real household data and keep QA cleanup scoped to what a session's own test account created, per the rest of this file — it removes the confirmation step, not the judgment.
 

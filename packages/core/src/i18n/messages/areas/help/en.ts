@@ -356,7 +356,7 @@ export const helpEn = {
   "help.guide.certification.title": "HomeBrain and asking \"why?\"",
   "help.guide.certification.summary": "Everything WonderHome believes, where each belief came from, and how to fix it.",
   "help.guide.certification.body.1":
-    "HomeBrain shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or something you sent said so. Anything it has wrong, you can correct, add or remove.",
+    "HomeBrain shows what WonderHome believes about your household and where each belief came from — you told it, it observed it, or something you sent said so. Anything it has wrong, you can correct, add or remove. What a family member tells WonderHome is confirmed straight away — it no longer waits under Needs review. An Admin can remove or correct anything here at any time; only something that contradicts what is already confirmed still waits for a person to decide.",
   "help.guide.certification.body.2":
     "Ask HomeTalk \"why?\" — why it needs approval, why it did not do something, where a fact came from — and the answer comes from what is actually on record, not from a guess.",
   "help.guide.certification.body.3":

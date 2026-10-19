@@ -318,7 +318,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.certification.title": "HomeBrain und „Warum?“ fragen",
   "help.guide.certification.summary": "Alles, was WonderHome glaubt, woher jede Annahme stammt und wie du sie korrigierst.",
   "help.guide.certification.body.1":
-    "Die HomeBrain zeigt, was WonderHome über deinen Haushalt glaubt und woher jede Annahme stammt – du hast es ihm gesagt, es hat es beobachtet, oder etwas, das du geschickt hast, hat es gesagt. Alles, was falsch ist, kannst du korrigieren, ergänzen oder entfernen.",
+    "Die HomeBrain zeigt, was WonderHome über deinen Haushalt glaubt und woher jede Annahme stammt – du hast es ihm gesagt, es hat es beobachtet, oder etwas, das du geschickt hast, hat es gesagt. Alles, was falsch ist, kannst du korrigieren, ergänzen oder entfernen. Was ein Familienmitglied WonderHome sagt, ist sofort bestätigt – es wartet nicht mehr unter „Zu prüfen“. Ein Admin kann hier jederzeit alles entfernen oder korrigieren; nur was etwas bereits Bestätigtem widerspricht, wartet noch auf die Entscheidung eines Menschen.",
   "help.guide.certification.body.2":
     "Frag HomeTalk „Warum?“ – warum es eine Freigabe braucht, warum es etwas nicht getan hat, woher eine Tatsache stammt –, und die Antwort kommt aus dem, was tatsächlich festgehalten ist, nicht aus einer Vermutung.",
   "help.guide.certification.body.3":

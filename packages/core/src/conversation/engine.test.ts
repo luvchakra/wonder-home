@@ -91,12 +91,12 @@ describe("one turn of conversation", () => {
     expect(result.text).toMatch(/nothing waiting/i);
   });
 
-  it("remembers a stated preference, but only as learned", async () => {
+  it("remembers a stated preference as confirmed, for an Admin to remove later (the owner, 2026-10-19)", async () => {
     const result = await converse(turn({ utterance: "We prefer dinner at 8." }));
 
     expect(result.kind).toBe("reply");
     if (result.kind !== "reply") return;
-    expect(result.memory?.status).toBe("learned");
+    expect(result.memory?.status).toBe("confirmed");
     expect(result.memory?.sourceType).toBe("conversation");
   });
 
