@@ -61,6 +61,10 @@
 - `apps/web/app/_lib/hometalk-turn.ts`
 - the eight `household` and `help` catalogs, `help/guide.ts`, and `scripts/verify-live-project.mjs`
 
+## Follow-up: a father shown as his children's sibling
+
+The owner's report, 2026-10-19: Kunal's details in Family read "Siblings: Older sibling of Asmi Chakraborty, Manan". `siblingOrder` (`identity/households.ts`) gave anyone with a birth date a sibling line against the children — an adult included. It now applies only to a child, compares only active children, and leaves out a child the Relationships call something other than a sibling (a cousin, say). Tests: `households.test.ts` 16 (an adult never has siblings; a removed child and a cousin are left out; a recorded brother still counts). Browser at 360px on a QA family (an adult and two children, all with birth dates): no Siblings line for the adult, "Older sibling of Manan" for Asmi, "Younger sibling of Asmi" for Manan.
+
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #248 merged (2026-10-19): QA account `0468c2b9-77f1-4e97-8a9b-3af7983f5588` and household `18e8069b-3c4b-4c56-9f5c-c5aafd3c1b62` ("QA Relations Home", with its relationship rows and guardian links) deleted. Confirmed by SQL: 0 households, members, relationship rows, guardian links, messages and auth users left for those ids; screenshots and helper scripts removed. The follow-up's QA account `b152f9b4-fd48-4aa0-a2ee-dda849cf2fbb` and household `f1142f7f-c8b0-4428-93cf-86502b3bf703` are removed after its own merge.

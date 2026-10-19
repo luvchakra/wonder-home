@@ -55,6 +55,7 @@ export function MemberDetail({
   invite,
   workPlace,
   relations,
+  relationshipRows,
 }: {
   member: HouseholdMember;
   allMembers: readonly HouseholdMember[];
@@ -82,6 +83,8 @@ export function MemberDetail({
   workPlace?: WorkPlace | null;
   /** What they are to the rest of the family, from Members & roles' Relationships ("Father of Asmi · Husband of Upasana"). */
   relations?: string | null;
+  /** The household's Relationships rows, so a child another row calls a cousin is not named a sibling. */
+  relationshipRows?: readonly { memberId: string; relation: string; relatedMemberId: string }[];
 }) {
   const t = requestT();
   const clockTime = requestFormatIn("UTC").time;
@@ -92,7 +95,7 @@ export function MemberDetail({
     member.specialOccasionLabel && member.specialOccasionDate
       ? `${member.specialOccasionLabel} — ${formatDate(timezone, new Date(member.specialOccasionDate), "long")}`
       : member.specialOccasionLabel;
-  const siblings = siblingOrder(member, allMembers);
+  const siblings = siblingOrder(member, allMembers, relationshipRows);
   // Your own profile has one editor, in Settings (the Settings consolidation):
   // here it is read, with a way there. An Admin editing someone else is
   // managing the household's people, and that stays here.

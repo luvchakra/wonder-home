@@ -206,6 +206,7 @@ export default async function FamilyPage() {
                         invite={invite}
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
                         relations={relationsLine(t, member.id, relationships, members)}
+                        relationshipRows={relationships}
                       />
                       {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
                       {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (
