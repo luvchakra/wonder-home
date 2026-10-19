@@ -14,7 +14,7 @@ import {
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
-import { listMeals, listRecipeChoices, mealAgenda } from "@wonderhome/core/meals/repository";
+import { listRecipeChoices, mealAgenda } from "@wonderhome/core/meals/repository";
 import { itemFor } from "@wonderhome/core/meals/shortfall";
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -114,11 +114,10 @@ export default async function MealsPage({
     );
   }
 
-  const [meals, agenda, members, recipeRows, preferenceRows, recipeChoices, groceries] =
+  const [agenda, members, recipeRows, preferenceRows, recipeChoices, groceries] =
     await Promise.all([
-      listMeals(supabase, householdId, { from: today, to: weekEnd }).catch(
-        () => [],
-      ),
+      // Every meal from today on, read once: the agenda assesses them and the
+      // week below is the same rows, not a second read.
       mealAgenda(supabase, householdId).catch(() => null),
       listMembers(
         supabase,
@@ -142,6 +141,7 @@ export default async function MealsPage({
       // What is at home and on the list, for each meal's shortfall (25-003a).
       listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
     ]);
+  const meals = (agenda?.rows ?? []).filter((meal) => meal.onDate >= today && meal.onDate <= weekEnd);
   const words = groceryWords(t, viewer.language);
 
   const recipes = (recipeRows.data as RecipeRow[] | null) ?? [];

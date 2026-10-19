@@ -10,7 +10,7 @@ vi.mock("../db/admin", () => ({ createAdminClient: () => { throw new Error("test
 function memberClient(features: Record<string, unknown>[]): SupabaseClient {
   const rows: Record<string, Record<string, unknown>[]> = {
     household_subscriptions: [{ plan_key: "family", status: "active", current_period_start: "2026-09-01T00:00:00Z" }],
-    plan_features: features,
+    plan_features: features.map((row) => ({ plan_key: "family", ...row })),
   };
   return {
     from(table: string) {

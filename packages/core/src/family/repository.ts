@@ -243,6 +243,8 @@ export type FamilyAgenda = {
   gifts: HomeAssessment[];
   conflicts: HomeAssessment[];
   checked: number;
+  /** Every upcoming event it assessed, so a screen that lists them needs no second read. */
+  rows: FamilyEvent[];
 };
 
 export async function familyAgenda(
@@ -291,6 +293,7 @@ export async function familyAgenda(
     gifts: gifts.map((gift) => assessGift(gift, now)).filter((assessment) => assessment.notable),
     conflicts,
     checked: events.length + gifts.length,
+    rows: events,
   };
 }
 

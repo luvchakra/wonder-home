@@ -102,7 +102,7 @@ describe("applying experiments to a plan", () => {
 function memberClient(experiments: Record<string, unknown>[], options: { experimentsFail?: boolean } = {}): SupabaseClient {
   const rows: Record<string, Record<string, unknown>[]> = {
     household_subscriptions: [],
-    plan_features: [{ feature_key: "conversation.text", enabled: true, limit_per_period: 200, period: "month" }],
+    plan_features: [{ plan_key: "free", feature_key: "conversation.text", enabled: true, limit_per_period: 200, period: "month" }],
     entitlement_experiments: experiments,
     usage_counters: [],
   };

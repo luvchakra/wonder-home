@@ -83,4 +83,6 @@ export type HouseholdMembership = {
   adminSince?: string | null;
   /** Language, region, currency, time and units — the household's and this person's own (story 22-002). */
   locale?: MembershipLocale;
+  /** Their own photo's storage path in Family, read with the membership so the header needs no second query. */
+  avatarPath?: string | null;
 };

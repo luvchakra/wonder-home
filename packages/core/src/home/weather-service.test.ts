@@ -68,7 +68,7 @@ function provider(windows: WeatherWindow[] | Error | object): WeatherProvider & 
 function tables(over: { plan?: boolean; location?: Record<string, unknown> | null } = {}): Tables {
   return {
     household_subscriptions: [{ plan_key: "pro", status: "active", current_period_start: "2026-09-01T00:00:00Z" }],
-    plan_features: [{ feature_key: "home.weather", enabled: over.plan ?? true, limit_per_period: null, period: "forever" }],
+    plan_features: [{ plan_key: "pro", feature_key: "home.weather", enabled: over.plan ?? true, limit_per_period: null, period: "forever" }],
     weather_locations:
       over.location === null
         ? []

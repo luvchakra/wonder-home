@@ -417,18 +417,19 @@ export async function homeAgenda(
   // A caller that passes a forecast (a test, an evaluation) is planned under
   // exactly that; everyone else gets the household's own weather, when it is
   // switched on, entitled and answering.
-  const weather: HouseholdWeather = options.forecast
-    ? { state: "ready", place: "", windows: [...options.forecast], fetchedAt: now, stale: false }
-    : await householdWeather(supabase, householdId, { now });
-  const conditions = dryingConditions(weather.state === "ready" ? weather.windows : []);
-
-  const [assets, requests, laundry, pets, signals] = await Promise.all([
+  // Read alongside the domain's own rows, not before them: the weather only
+  // shapes the plan once everything is in.
+  const [weather, assets, requests, laundry, pets, signals] = await Promise.all([
+    options.forecast
+      ? ({ state: "ready", place: "", windows: [...options.forecast], fetchedAt: now, stale: false } satisfies HouseholdWeather)
+      : householdWeather(supabase, householdId, { now }),
     listAssets(supabase, householdId),
     listServiceRequests(supabase, householdId),
     listLaundryNeeds(supabase, householdId),
     listPetCareNeeds(supabase, householdId),
     recentSignals(supabase, householdId, new Date(now.getTime() - 72 * 3_600_000)),
   ]);
+  const conditions = dryingConditions(weather.state === "ready" ? weather.windows : []);
 
   const open = openRequestAssetIds(requests);
   const byAsset = new Map<string, DeviceSignal[]>();

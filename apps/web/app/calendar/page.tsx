@@ -65,6 +65,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const now = new Date();
   const today = localMoment(now, timeZone).dateKey;
 
+  // What does not depend on this person's calendar settings starts now,
+  // alongside reading them.
+  const membersRead = listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []);
+  const regionsRead = holidayRegions(supabase);
   const preferences = await readCalendarPreferences(supabase, membership.memberId).catch(() => parsePreferences(null));
   const view: CalendarView = CALENDAR_VIEWS.includes(params.view as CalendarView) ? (params.view as CalendarView) : preferences.defaultView;
   const focus = isDateKey(params.date) ? params.date : today;
@@ -73,7 +77,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const words = dateWords(locale.format.locale);
 
   const [members, result, regions] = await Promise.all([
-    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    membersRead,
     calendarRange(supabase, {
       householdId,
       householdRegion: locale.preferences.region ?? null,
@@ -86,7 +90,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         occasion: (name, label) => (label ? t("calendar.entry.occasion", { name, label }) : t("calendar.entry.occasionFallback", { name })),
       },
     }).catch(() => ({ entries: [] as CalendarEntry[], failedSources: ["event" as const] })),
-    holidayRegions(supabase),
+    regionsRead,
   ]);
 
   const active = members.filter((member) => member.status !== "inactive");

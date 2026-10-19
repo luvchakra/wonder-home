@@ -55,6 +55,7 @@ type MembershipRow = {
   locale_setup_status?: string | null;
   locale_setup_step?: string | null;
   locale_prompt_dismissed_at?: string | null;
+  avatar_path?: string | null;
   // A to-one embed comes back as an object, but the client's inferred types
   // describe every embed as an array, so both shapes are accepted here rather
   // than asserted away.
@@ -127,7 +128,7 @@ export const listMemberships = cache(async (supabase: SupabaseClient): Promise<H
   const { data, error } = await supabase
     .from("household_members")
     .select(
-      "id, display_name, nickname, nickname_preferred, member_type, date_of_birth, first_seen_at, language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id, region, currency, measurement_system, default_language), household_roles(role, created_at)",
+      "id, display_name, nickname, nickname_preferred, member_type, date_of_birth, first_seen_at, avatar_path, language, date_format, time_format, measurement_system, locale_setup_status, locale_setup_step, locale_prompt_dismissed_at, households!household_members_household_id_fkey(id, name, timezone, status, owner_member_id, key_member_id, region, currency, measurement_system, default_language), household_roles(role, created_at)",
     )
     .eq("status", "active")
     .eq("profile_id", userId);
@@ -150,6 +151,7 @@ export function toMembership(row: MembershipRow): HouseholdMembership[] {
       dateOfBirth: row.date_of_birth ?? null,
       roles: (row.household_roles ?? []).map((entry) => entry.role),
       firstSeenAt: row.first_seen_at ?? null,
+      avatarPath: row.avatar_path ?? null,
       adminSince: adminSince(row.household_roles ?? []),
       household: {
         id: household.id,

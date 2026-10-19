@@ -325,6 +325,48 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
   const todayIso = now.toISOString().slice(0, 10);
 
+  // The same three tables the Househelper screen reads, so "Expected today"
+  // here means the same thing it means there. Started with the first wave
+  // (three small reads) rather than after it, and only used once there is a
+  // helper to say anything about.
+  const helperReads = Promise.all([
+    (async (): Promise<HelperProfileRow[]> => {
+      try {
+        const { data } = await supabase
+          .from("helper_profiles")
+          .select("member_id, engagement, started_on")
+          .eq("household_id", householdId);
+        return (data as HelperProfileRow[] | null) ?? [];
+      } catch {
+        return [];
+      }
+    })(),
+    (async (): Promise<AvailabilityWindowRow[]> => {
+      try {
+        const { data } = await supabase
+          .from("member_availability")
+          .select("member_id, day_of_week")
+          .eq("household_id", householdId);
+        return (data as AvailabilityWindowRow[] | null) ?? [];
+      } catch {
+        return [];
+      }
+    })(),
+    (async (): Promise<AvailabilityExceptionRow[]> => {
+      try {
+        const { data } = await supabase
+          .from("availability_exceptions")
+          .select("member_id, on_date, available, reason")
+          .eq("household_id", householdId)
+          .gte("on_date", todayIso)
+          .order("on_date");
+        return (data as AvailabilityExceptionRow[] | null) ?? [];
+      } catch {
+        return [];
+      }
+    })(),
+  ]);
+
   const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows, pets] = await Promise.all([
     householdAgenda(supabase, householdId, view),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
@@ -406,48 +448,9 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     for (const need of domain.needs) domainBySubject.set(need.subjectKey, domain.key);
   }
 
-  // Only fetched once there is a helper to say anything about — the same
-  // three tables the Househelper screen reads, so "Expected today" here
-  // means the same thing it means there.
   const [helperProfiles, helperWindows, helperExceptions] =
     helpers.length > 0
-      ? await Promise.all([
-          (async (): Promise<HelperProfileRow[]> => {
-            try {
-              const { data } = await supabase
-                .from("helper_profiles")
-                .select("member_id, engagement, started_on")
-                .eq("household_id", householdId);
-              return (data as HelperProfileRow[] | null) ?? [];
-            } catch {
-              return [];
-            }
-          })(),
-          (async (): Promise<AvailabilityWindowRow[]> => {
-            try {
-              const { data } = await supabase
-                .from("member_availability")
-                .select("member_id, day_of_week")
-                .eq("household_id", householdId);
-              return (data as AvailabilityWindowRow[] | null) ?? [];
-            } catch {
-              return [];
-            }
-          })(),
-          (async (): Promise<AvailabilityExceptionRow[]> => {
-            try {
-              const { data } = await supabase
-                .from("availability_exceptions")
-                .select("member_id, on_date, available, reason")
-                .eq("household_id", householdId)
-                .gte("on_date", todayIso)
-                .order("on_date");
-              return (data as AvailabilityExceptionRow[] | null) ?? [];
-            } catch {
-              return [];
-            }
-          })(),
-        ])
+      ? await helperReads
       : ([[], [], []] as [HelperProfileRow[], AvailabilityWindowRow[], AvailabilityExceptionRow[]]);
 
   // What each of the four counts opens onto: the real entries behind the

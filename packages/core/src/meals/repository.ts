@@ -840,7 +840,12 @@ async function bridgeToShoppingImpl(
   return { raised };
 }
 
-export type MealAgenda = { meals: HomeAssessment[]; checked: number };
+export type MealAgenda = {
+  meals: HomeAssessment[];
+  checked: number;
+  /** The meals it was assessed from (today onwards), so a screen that lists them needs no second read. */
+  rows: Meal[];
+};
 
 export async function mealAgenda(
   supabase: SupabaseClient,
@@ -860,6 +865,7 @@ export async function mealAgenda(
       .map((meal) => assessMeal(meal, { now, cookAvailable: true }))
       .filter((assessment) => assessment.notable),
     checked: meals.length,
+    rows: meals,
   };
 }
 

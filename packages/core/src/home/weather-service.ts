@@ -155,16 +155,18 @@ export async function householdWeather(
   const provider = options.provider !== undefined ? options.provider : weatherProviderFromEnv();
   if (!provider) return { state: "off", reason: "no_provider" };
 
-  let location: WeatherLocation | null;
-  try {
-    location = await loadWeatherLocation(supabase, householdId);
-  } catch {
-    return { state: "off", reason: "no_area" };
-  }
-  if (!location) return { state: "off", reason: "no_area" };
+  // The area and the plan are asked together; the order of the answers
+  // below is the order the checks are reported in.
+  const [locationRead, entitlementRead] = await Promise.allSettled([
+    loadWeatherLocation(supabase, householdId),
+    may(supabase, householdId, "home.weather", now),
+  ]);
+  if (locationRead.status === "rejected" || !locationRead.value) return { state: "off", reason: "no_area" };
+  const location: WeatherLocation = locationRead.value;
 
+  if (entitlementRead.status === "rejected") return { state: "off", reason: "not_entitled" };
   try {
-    const access = checkWeatherAccess({ entitlement: await may(supabase, householdId, "home.weather", now), provider });
+    const access = checkWeatherAccess({ entitlement: entitlementRead.value, provider });
     if (!access.allowed) return { state: "off", reason: "not_entitled" };
   } catch {
     return { state: "off", reason: "not_entitled" };

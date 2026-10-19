@@ -49,6 +49,7 @@ describe("membership mapping", () => {
         memberType: "adult",
         dateOfBirth: null,
         firstSeenAt: null,
+        avatarPath: null,
         adminSince: null,
         roles: ["head"],
         household: {
