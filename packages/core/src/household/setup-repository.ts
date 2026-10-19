@@ -2,15 +2,57 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { SetupFacts } from "./setup";
 
+const COUNT_KEYS = [
+  "members",
+  "children",
+  "childrenWithBirthdays",
+  "childrenWithGuardians",
+  "helpers",
+  "helperAvailabilityWindows",
+  "responsibilities",
+  "playbookItems",
+  "policies",
+  "homeAssets",
+  "pets",
+  "obligations",
+  "foodPreferences",
+  "recipes",
+  "schoolEnrolments",
+  "familyEvents",
+] as const;
+
 /**
  * The facts behind the setup percentage, read as counts.
  *
- * Every query is a head-only count through the member's own RLS-scoped
- * client, so this costs one round trip per domain and never reads a row's
- * content. A domain that fails to answer counts as empty: a stale number
+ * One call, `public.household_setup_counts`: every count in one statement,
+ * taken through the member's own row-level security (the function is
+ * security invoker), so nothing is counted that the member could not read.
+ * Where that function is not there yet, it falls back to one head-only count
+ * per domain. A domain that fails to answer counts as empty: a stale number
  * beats a screen that will not load.
  */
 export async function loadSetupFacts(
+  supabase: SupabaseClient,
+  household: { id: string; name: string; timezone: string },
+): Promise<SetupFacts> {
+  try {
+    const { data, error } = await supabase.rpc("household_setup_counts", { p_household_id: household.id });
+    if (!error && data && typeof data === "object") {
+      const counts = data as Record<string, unknown>;
+      const facts = { householdName: household.name, timezone: household.timezone } as SetupFacts;
+      for (const key of COUNT_KEYS) {
+        const value = Number(counts[key] ?? 0);
+        facts[key] = Number.isFinite(value) ? value : 0;
+      }
+      return facts;
+    }
+  } catch {
+    // Fall back to the per-domain counts below.
+  }
+  return loadSetupFactsByDomain(supabase, household);
+}
+
+async function loadSetupFactsByDomain(
   supabase: SupabaseClient,
   household: { id: string; name: string; timezone: string },
 ): Promise<SetupFacts> {

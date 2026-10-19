@@ -85,12 +85,16 @@ export async function buildSession(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
 ): Promise<Session> {
-  // The unread dot is the only thing the shell needs beyond the membership,
-  // and it is not worth waiting for: a failure or a slow count leaves the
-  // dot off rather than the page late.
-  const [unread] = await Promise.all([
+  // Everything the shell needs beyond the membership, in one wave: the unread
+  // dot, the first-seen mark, the reader's words and their own photo. None is
+  // worth failing the page for: a slow or failed count leaves the dot off, a
+  // missing photo leaves the initials.
+  const preferences = preferencesOf(membership.locale, membership.household.timezone);
+  const [unread, , t, avatarUrl] = await Promise.all([
     countUnread(supabase, membership.memberId).catch(() => 0),
     markFirstSeen(supabase, membership),
+    translatorFor(preferences.language),
+    ownAvatarUrl(supabase, membership.avatarPath ?? null),
   ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
@@ -100,13 +104,7 @@ export async function buildSession(
 
   // Set once for the whole request, so every date, time and amount on the
   // page — however deep — is written the way this person reads.
-  const preferences = preferencesOf(membership.locale, membership.household.timezone);
-  const t = await translatorFor(preferences.language);
   setRequestLocale(preferences, t);
-
-  // The viewer's own photo, the one their household keeps in Family: the
-  // same picture in the header as on their card, for every member.
-  const avatarUrl = await ownAvatarUrl(supabase, membership.household.id, membership.memberId);
 
   const labels: ShellLabels = {
     nav: Object.fromEntries(PRIMARY_NAVIGATION.map((item) => [item.key, t(`nav.${item.key}`)])),
@@ -203,11 +201,14 @@ export function roleWords(label: string, t: Translate): string {
   return key ? t(key) : label;
 }
 
-/** A signed URL for this member's own photo in Family, or null. Never fails the page. */
-async function ownAvatarUrl(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string, memberId: string): Promise<string | null> {
+/**
+ * A signed URL for this member's own photo in Family — the same picture in
+ * the header as on their card — or null. The path comes with the membership
+ * (`listMemberships`), so this is one storage call, and only when there is a
+ * photo. Never fails the page.
+ */
+async function ownAvatarUrl(supabase: Awaited<ReturnType<typeof createClient>>, path: string | null): Promise<string | null> {
   try {
-    const { data } = await supabase.from("household_members").select("avatar_path").eq("household_id", householdId).eq("id", memberId).maybeSingle();
-    const path = (data?.avatar_path as string | null | undefined) ?? null;
     if (!path) return null;
     return (await signAvatarPaths(supabase, [path])).get(path) ?? null;
   } catch {

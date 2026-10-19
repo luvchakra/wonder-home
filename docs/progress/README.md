@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | [Performance pass: membership checked once per query, fewer round trips per page](2026-10-19-performance-pass.md) |
 | 2026-10-19 | [Release notes on Get help, and the guide pointed at them](2026-10-19-release-notes.md) |
 | 2026-10-19 | [Meal ideas from what is at home; a child's timetable and exams (25-018, 08-015)](2026-10-19-meal-ideas-and-school-exams.md) |
 | 2026-10-18 | [HomeBrain 4.0: look deeper, the graph, inferences, goals; ingredients from the catalog (14-026 to 14-031, 25-017, 26-013)](2026-10-18-homebrain-4-deeper.md) |

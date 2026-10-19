@@ -2,7 +2,7 @@ import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, PawPrint,
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
-import { familyAgenda, listEvents } from "@wonderhome/core/family/repository";
+import { familyAgenda } from "@wonderhome/core/family/repository";
 import { listPets } from "@wonderhome/core/home/repository";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
@@ -54,9 +54,12 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, integrations, pets, enrolments, emails, offices, phones, activities] = await Promise.all([
+  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, activities] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
+    // Every upcoming event and what needs a person, read once and alongside
+    // the plan check; shown only when the plan includes family events.
+    familyAgenda(supabase, householdId, { now }).catch(() => null),
     listIntegrations(supabase, householdId).catch(() => []),
     listPets(supabase, householdId).catch(() => []),
     listEnrolments(supabase, householdId).catch(() => []),
@@ -87,12 +90,8 @@ export default async function FamilyPage() {
       .map((integration) => describeCalendarHealth({ status: integration.status, lastSuccessAt: integration.lastSuccessAt, now }))
       .find((health) => health.tone !== "silent") ?? null;
 
-  const [events, agenda] = entitlement.allowed
-    ? await Promise.all([
-        listEvents(supabase, householdId, { from: now }).catch(() => []),
-        familyAgenda(supabase, householdId).catch(() => null),
-      ])
-    : [[], null];
+  const agenda = entitlement.allowed ? familyRead : null;
+  const events = agenda?.rows ?? [];
 
   const familyMembers = members.filter((member) => member.memberType !== "helper");
   const helpers = members.filter((member) => member.memberType === "helper");

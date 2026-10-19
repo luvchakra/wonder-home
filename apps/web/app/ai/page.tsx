@@ -35,11 +35,22 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const timeStyle = { locale: locale.format.locale, hour12: locale.preferences.timeFormat === "12h" };
   const labels = assistantLabels(locale.t, timeStyle);
 
-  const [entitlement, voiceEntitlement, voiceSettings, members] = await Promise.all([
-    may(supabase, membership.household.id, "conversation.text"),
-    may(supabase, membership.household.id, "conversation.voice"),
-    loadVoiceSettings(supabase, membership.household.id),
-    listMembers(supabase, membership.household.id, membership.household.ownerMemberId).catch(() => []),
+  // Everything the screen needs that does not depend on anything else, in one
+  // wave: the plan, the voice settings, the family, where speech goes, whether
+  // Gemini Live may run, this person's conversation and the place book. Right
+  // after setup the welcome is written first, so its conversation is read
+  // after it (below), never before.
+  const householdId = membership.household.id;
+  const welcoming = welcome === "1";
+  const [entitlement, voiceEntitlement, voiceSettings, members, speechKey, gate, openSessionId, knownPlaces] = await Promise.all([
+    may(supabase, householdId, "conversation.text"),
+    may(supabase, householdId, "conversation.voice"),
+    loadVoiceSettings(supabase, householdId),
+    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    speechKeySource(householdId).catch(() => "none" as const),
+    geminiLiveGate(supabase, householdId),
+    welcoming ? Promise.resolve(null) : currentSessionId(supabase, householdId, membership.memberId).catch(() => null),
+    listHouseholdPlaces(supabase, householdId).catch(() => []),
   ]);
   const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
   // A sustained, hands-free exchange is still voice underneath — gated the
@@ -49,13 +60,13 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // Whether speech goes through a provider or stays in the browser. Both
   // have to be true: Google chosen with no key anywhere behind it would be
   // a control that does nothing.
-  const serverVoice = voiceSettings.provider === "google" && (await speechKeySource(membership.household.id)) !== "none";
+  const serverVoice = voiceSettings.provider === "google" && speechKey !== "none";
   // Gemini Live only where the household chose it and the server agrees it
   // may run now — key, consent, plan and flag. Anything else is WonderHome's
   // own live loop, so the control never leads somewhere that cannot answer.
   // A member may switch engines in the composer; the household's setting is
   // where it starts. The token route re-checks all of this per session.
-  const geminiAvailability = (await geminiLiveGate(supabase, membership.household.id)).availability;
+  const geminiAvailability = gate.availability;
   // Where it is off for a reason this person can change, the picker links straight to it and comes back here.
   const fix = geminiFix(geminiAvailability, { canManage: session.view.permissions.includes("household.manage"), returnTo: "/ai", t: locale.t });
   const geminiLive = geminiAvailability.available ? { available: true } : { available: false, reason: geminiAvailability.reason, ...(fix ? { fix } : {}) };
@@ -65,11 +76,11 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   let placeMarks: Record<string, PlaceMark> = {};
   // Straight after setup: the welcome is written into the conversation once,
   // before the history is read, so it is simply the newest messages.
-  const welcomeWords = entitlement.allowed && welcome === "1" ? await startWelcome(supabase, membership).catch(() => null) : null;
+  const welcomeWords = entitlement.allowed && welcoming ? await startWelcome(supabase, membership).catch(() => null) : null;
   if (entitlement.allowed) {
-    const sessionId = await currentSessionId(supabase, membership.household.id, membership.memberId);
+    const sessionId = welcoming ? await currentSessionId(supabase, householdId, membership.memberId) : openSessionId;
     if (sessionId) {
-      const history = await listMessages(supabase, membership.household.id, sessionId, 30).catch(() => []);
+      const history = await listMessages(supabase, householdId, sessionId, 30).catch(() => []);
       initialMessages = history
         .filter((message) => message.role !== "system")
         .map((message) => ({
@@ -81,8 +92,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           places: message.places ?? null,
         }));
       if (initialMessages.some((message) => message.places && message.places.length > 0)) {
-        const known = await listHouseholdPlaces(supabase, membership.household.id).catch(() => []);
-        placeMarks = Object.fromEntries(known.map((place) => [place.placeId, place.status]));
+        placeMarks = Object.fromEntries(knownPlaces.map((place) => [place.placeId, place.status]));
       }
     }
   }

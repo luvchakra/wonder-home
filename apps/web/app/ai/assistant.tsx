@@ -22,10 +22,8 @@ import { AiOrb, ChatDayDivider, ChatMessage, SuggestionChips } from "@wonderhome
 import { Button } from "@wonderhome/core/ui/button";
 import { safeHref, useLiveTalk } from "@wonderhome/core/ui/live-talk";
 import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-composer";
-import { en } from "@wonderhome/core/i18n/messages/en";
-import { translator } from "@wonderhome/core/i18n/translate";
 
-import { assistantLabels, type AssistantLabels, type SuggestionKey } from "./hometalk-labels";
+import type { AssistantLabels, SuggestionKey } from "./hometalk-labels";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
@@ -72,8 +70,6 @@ const SUGGESTIONS: { key: SuggestionKey; utterance: string; icon: ReactNode }[] 
   { key: "schoolRun", utterance: "Priya handles the school run from now on.", icon: <ListChecks aria-hidden className="size-4 text-[var(--wh-primary)]" /> },
 ];
 
-/** English, for a caller that passes no labels. */
-const ENGLISH_LABELS = assistantLabels(translator("en", en));
 
 export function Assistant({
   householdId,
@@ -90,7 +86,7 @@ export function Assistant({
   kids = [],
   canAddChild = false,
   timeZone = "Asia/Kolkata",
-  labels = ENGLISH_LABELS,
+  labels,
   homeSendLabels,
   placeMarks = {},
 }: {
@@ -117,9 +113,9 @@ export function Assistant({
   /** The household's own zone, which every message time and date divider is shown in. */
   timeZone?: string;
   /** The screen's own words in the viewer's language (story 22-004). */
-  labels?: AssistantLabels;
+  labels: AssistantLabels;
   /** The paperclip's HomeSend sheet in the viewer's language; English when not given. */
-  homeSendLabels?: HomeSendReviewLabels;
+  homeSendLabels: HomeSendReviewLabels;
   /** What the household already said about places (saved, not for us), by place id. */
   placeMarks?: Readonly<Record<string, PlaceMark>>;
 }) {

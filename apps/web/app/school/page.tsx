@@ -12,7 +12,7 @@ import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/it
 import { listActivities, listTeachers } from "@wonderhome/core/school/activities";
 import { listExamTypes, listExams, listTimetable } from "@wonderhome/core/school/exams";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
-import { listCommunications, listSchoolItems, schoolAgenda } from "@wonderhome/core/school/repository";
+import { schoolAgenda } from "@wonderhome/core/school/repository";
 import { mapsLink } from "@wonderhome/core/places/provider";
 import { schoolDateValue, schoolDayZone } from "@wonderhome/core/school/times";
 import { isoDateIn } from "@wonderhome/core/context/format";
@@ -80,10 +80,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, items, communications, members, integrations, enrolments, teachers, activities, periods, exams, examTypes] = await Promise.all([
+  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes] = await Promise.all([
+    // The agenda reads the household's school work and messages once; the
+    // lists below are those same rows, not a second read of them.
     schoolAgenda(supabase, householdId).catch(() => null),
-    listSchoolItems(supabase, householdId, child ? { childMemberId: child } : {}).catch(() => []),
-    listCommunications(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listIntegrations(supabase, householdId).catch(() => []),
     // Each child's school (story 24-010); RLS returns only the children this viewer may see.
@@ -96,6 +96,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     listExams(supabase, householdId).catch(() => []),
     listExamTypes(supabase, householdId).catch(() => ({ builtIn: ["Unit test", "Mid-term", "Finals"], own: [] })),
   ]);
+
+  const items = (agenda?.items ?? []).filter((item) => !child || item.childMemberId === child);
+  const communications = agenda?.communications ?? [];
 
   // A stale portal and "no homework" must never look alike (17-004): if a
   // connected school portal is not working, the screen says so up front.

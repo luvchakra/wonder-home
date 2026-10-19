@@ -124,18 +124,22 @@ async function summarize(
   }
 }
 
-/** Skips a domain the plan does not include, so nothing is promised the plan cannot keep. */
+/**
+ * Skips a domain the plan does not include, so nothing is promised the plan
+ * cannot keep. The domain's own read starts alongside the plan check rather
+ * than after it: it is the household's own rows through its own access rules,
+ * so reading them early exposes nothing, and a refused domain's answer is
+ * simply never shown.
+ */
 async function gated(
   supabase: SupabaseClient,
   householdId: string,
   feature: string,
   read: () => Promise<DomainSummary>,
 ): Promise<DomainSummary | null> {
-  try {
-    const decision = await may(supabase, householdId, feature);
-    if (!decision.allowed) return null;
-  } catch {
-    return null;
-  }
-  return read();
+  const [decision, summary] = await Promise.all([
+    may(supabase, householdId, feature).catch(() => null),
+    read(),
+  ]);
+  return decision?.allowed ? summary : null;
 }

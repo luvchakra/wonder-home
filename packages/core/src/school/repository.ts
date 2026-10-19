@@ -276,6 +276,9 @@ export type SchoolAgenda = {
   deadlines: HomeAssessment[];
   messages: HomeAssessment[];
   checked: number;
+  /** The rows it was assessed from, so a screen that lists them too needs no second read. */
+  items: SchoolItem[];
+  communications: SchoolCommunication[];
 };
 
 /**
@@ -327,7 +330,7 @@ export async function schoolAgenda(
     .map((communication) => assessCommunication(communication, now))
     .filter((assessment) => assessment.notable);
 
-  return { deadlines, messages, checked: items.length + communications.length };
+  return { deadlines, messages, checked: items.length + communications.length, items, communications };
 }
 
 /** A child's own plan: their work, their words, nothing of anybody else's. */

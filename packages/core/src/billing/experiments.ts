@@ -140,19 +140,20 @@ function termsFromRow(row: Row): ExperimentTerms {
 }
 
 /**
- * The running experiments that touch a plan, read through whatever client
- * reads the plan: a member's own session may read only these columns.
+ * The running experiments, read through whatever client reads the plan: a
+ * member's own session may read only these columns. Every plan's, so the read
+ * can start before the household's plan is known; the caller keeps the ones
+ * that name its plan.
  *
  * Unreadable means none. The household then gets its plan exactly as sold,
  * which is the answer it would have had with no experiment at all.
  */
-export async function runningExperiments(supabase: SupabaseClient, planKey: string): Promise<ExperimentTerms[]> {
+export async function runningExperiments(supabase: SupabaseClient): Promise<ExperimentTerms[]> {
   try {
     const { data, error } = await supabase
       .from("entitlement_experiments")
       .select(TERM_COLUMNS)
-      .eq("status", "running")
-      .contains("plan_keys", [planKey]);
+      .eq("status", "running");
     if (error) throw error;
     return ((data ?? []) as Row[]).map(termsFromRow);
   } catch (thrown) {

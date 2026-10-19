@@ -4,8 +4,6 @@ import { Camera, ClipboardPaste } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
-import { en } from "@wonderhome/core/i18n/messages/en";
-import { translator } from "@wonderhome/core/i18n/translate";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -20,11 +18,9 @@ import {
   type RouteHomeItemState,
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
-import { homesendReviewLabels, type HomeSendReviewLabels } from "../_lib/homesend-labels";
+import type { HomeSendReviewLabels } from "../_lib/homesend-labels";
 import { HomeSendConfirmStep, TranscriptCheck } from "./home-send-intake";
 
-/** English, for a caller that passes no labels. */
-const ENGLISH_LABELS = homesendReviewLabels(translator("en", en), "en");
 
 /**
  * HomeSend v1: the "send something to WonderHome" step of the pipeline the
@@ -43,7 +39,7 @@ export function HomeSendSheet({
   onOpenChange,
   canAddChild = false,
   onDocumentApplied,
-  labels: given,
+  labels,
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
@@ -54,9 +50,9 @@ export function HomeSendSheet({
   /** Told once a document's plan was applied here, so HomeTalk can say what it did (DDU 2.0 §32). */
   onDocumentApplied?: (itemId: string) => void;
   /** The sheet's words in the viewer's language (`homesendReviewLabels`); English when not given. */
-  labels?: HomeSendReviewLabels;
+  /** In the reader's language, built on the server (no catalog ships to the browser). */
+  labels: HomeSendReviewLabels;
 }) {
-  const labels = given ?? ENGLISH_LABELS;
   const words = labels.sheet;
   const [mode, setMode] = useState<"choose" | "upload" | "paste">("choose");
   const [uploadState, uploadAction, uploading] = useActionState<SendHomeItemState, FormData>(uploadHomeSendItemAction, {});

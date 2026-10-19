@@ -55,31 +55,39 @@ export const DEFAULT_PLAN_KEY = "free";
 /**
  * Memoised per request: a screen asks "may this household…" for each domain
  * it shows, and the subscription behind every answer is the same two rows.
+ *
+ * One round trip, not three: the subscription row, every plan's features (a
+ * few dozen platform rows) and the running experiments are read together,
+ * and this household's plan is picked from them here. Reading them in turn
+ * put three waits in front of every gated screen.
  */
 export const loadSubscription = cache(async (
   supabase: SupabaseClient,
   householdId: string,
 ): Promise<Subscription | null> => {
-  const { data: subscriptionRow, error: subscriptionError } = await supabase
-    .from("household_subscriptions")
-    .select("plan_key, status, current_period_start")
-    .eq("household_id", householdId)
-    .maybeSingle();
+  const [subscriptionResult, featureResult, experiments] = await Promise.all([
+    supabase
+      .from("household_subscriptions")
+      .select("plan_key, status, current_period_start")
+      .eq("household_id", householdId)
+      .maybeSingle(),
+    supabase.from("plan_features").select(`plan_key, ${FEATURE_COLUMNS}`),
+    runningExperiments(supabase),
+  ]);
 
+  const { data: subscriptionRow, error: subscriptionError } = subscriptionResult;
   if (subscriptionError) {
     throw new Error(`loadSubscription failed: ${subscriptionError.code ?? "unknown"}`);
   }
 
   const planKey = (subscriptionRow?.plan_key as string | undefined) ?? DEFAULT_PLAN_KEY;
 
-  const { data: featureRows, error: featureError } = await supabase
-    .from("plan_features")
-    .select(FEATURE_COLUMNS)
-    .eq("plan_key", planKey);
-
+  const { data: featureRows, error: featureError } = featureResult;
   if (featureError) throw new Error(`loadSubscription failed: ${featureError.code ?? "unknown"}`);
 
-  const planFeatures: PlanFeature[] = (featureRows ?? []).map(featureFromRow);
+  const planFeatures: PlanFeature[] = ((featureRows ?? []) as unknown as Row[])
+    .filter((row) => row.plan_key === planKey)
+    .map(featureFromRow);
 
   // No plan_features rows at all means the catalogue has not been seeded, which
   // is a deployment fault rather than a household on an empty plan. Reporting
@@ -89,7 +97,12 @@ export const loadSubscription = cache(async (
   // Running experiments on this plan (story 20-008), applied here so every
   // answer built on this subscription — `may`, `consume`, the usage screen —
   // is the same answer.
-  const features = applyExperiments(planKey, planFeatures, await runningExperiments(supabase, planKey), householdId);
+  const features = applyExperiments(
+    planKey,
+    planFeatures,
+    experiments.filter((terms) => terms.planKeys.includes(planKey)),
+    householdId,
+  );
 
   return {
     planKey,
@@ -100,6 +113,11 @@ export const loadSubscription = cache(async (
       : periodStart("month"),
   };
 });
+
+/** `usedThisPeriod` for the current moment, memoised per request. */
+const usedThisPeriodNow = cache((supabase: SupabaseClient, householdId: string, feature: string, period: PlanFeature["period"]) =>
+  usedThisPeriod(supabase, householdId, feature, period),
+);
 
 export async function usedThisPeriod(
   supabase: SupabaseClient,
@@ -185,14 +203,19 @@ export async function may(
   supabase: SupabaseClient,
   householdId: string,
   feature: FeatureKey | string,
-  now: Date = new Date(),
+  now?: Date,
 ): Promise<EntitlementDecision> {
   const subscription = await loadSubscription(supabase, householdId);
   const entry = subscription?.features.find((candidate) => candidate.featureKey === feature);
 
+  // A screen asks about the same feature more than once (HomeTalk's voice
+  // check, then the Gemini gate); asked for "now", the count is read once per
+  // request. A caller with its own clock is answered for that moment.
   const used =
     entry && entry.limitPerPeriod !== null
-      ? await usedThisPeriod(supabase, householdId, feature, entry.period, now)
+      ? now
+        ? await usedThisPeriod(supabase, householdId, feature, entry.period, now)
+        : await usedThisPeriodNow(supabase, householdId, feature, entry.period)
       : 0;
 
   return checkEntitlement({ subscription, feature, used });

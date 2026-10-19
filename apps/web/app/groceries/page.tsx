@@ -71,6 +71,19 @@ export default async function GroceriesPage({
     title: t("nav.item.groceries"),
   };
 
+  // The list is read alongside the plan check, not after it: it is the
+  // household's own rows through its own access rules, and if the plan says
+  // no, nothing read is shown.
+  const twoWeeksAgo = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+  }).format(new Date(now.getTime() - 14 * 86_400_000));
+  const lists = Promise.all([
+    listGroceries(supabase, householdId).catch(() => null),
+    listRetiredGroceries(supabase, householdId).catch(() => []),
+    view === "to-buy"
+      ? recentlyBought(supabase, householdId, twoWeeksAgo).catch(() => [])
+      : Promise.resolve([]),
+  ]);
   const entitlement = await may(supabase, householdId, "groceries.core");
   if (!entitlement.allowed) {
     return (
@@ -86,16 +99,7 @@ export default async function GroceriesPage({
   }
 
   const words = groceryWords(t, viewer.language);
-  const twoWeeksAgo = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-  }).format(new Date(now.getTime() - 14 * 86_400_000));
-  const [items, retired, bought] = await Promise.all([
-    listGroceries(supabase, householdId).catch(() => null),
-    listRetiredGroceries(supabase, householdId).catch(() => []),
-    view === "to-buy"
-      ? recentlyBought(supabase, householdId, twoWeeksAgo).catch(() => [])
-      : Promise.resolve([]),
-  ]);
+  const [items, retired, bought] = await lists;
 
   const canMarkBought = membership.memberType === "adult";
   const firstName = viewer.displayName.split(/\s+/)[0] ?? viewer.displayName;

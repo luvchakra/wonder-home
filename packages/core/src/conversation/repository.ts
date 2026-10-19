@@ -137,13 +137,19 @@ export async function listMessages(
       .from("conversation_actions")
       .select("id, message_id, action_type, approval_status, payload, result, created_at, approval_fingerprint")
       .eq("household_id", householdId)
-      .eq("session_id", sessionId),
+      .eq("session_id", sessionId)
+      // Only the actions of the messages shown: a message has at most a
+      // proposal and its correction, so the newest few times the page size
+      // covers them, however long the conversation has run.
+      .order("created_at", { ascending: false })
+      .limit(limit * 3),
   ]);
 
   if (error) throw new Error(`listMessages failed: ${error.code ?? "unknown"}`);
 
+  // Oldest first, so a message's newest action is the one kept.
   const byMessage = new Map<string, ConversationAction>();
-  for (const row of (actions as Row[] | null) ?? []) {
+  for (const row of [...((actions as Row[] | null) ?? [])].reverse()) {
     if (row.message_id) byMessage.set(row.message_id as string, toAction(row));
   }
 

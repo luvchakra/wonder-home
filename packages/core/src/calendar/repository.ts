@@ -215,8 +215,24 @@ async function readHolidays(supabase: SupabaseClient, region: string, range: { f
     .sort((a, b) => a.onDate.localeCompare(b.onDate));
 }
 
-/** The regions holidays are kept for, to offer in the filter: national first. */
-export async function holidayRegions(supabase: SupabaseClient): Promise<string[]> {
+/** How long this server keeps the list of holiday regions: it changes only when a new list is loaded. */
+const REGIONS_KEPT_MS = 60 * 60_000;
+let regionsKept: { at: number; regions: string[] } | null = null;
+
+/**
+ * The regions holidays are kept for, to offer in the filter: national first.
+ *
+ * Platform data, the same for every household, so it is read at most once an
+ * hour per server rather than on every calendar view.
+ */
+export async function holidayRegions(supabase: SupabaseClient, now = Date.now()): Promise<string[]> {
+  if (regionsKept && now - regionsKept.at < REGIONS_KEPT_MS) return regionsKept.regions;
+  const regions = await readHolidayRegions(supabase);
+  if (regions.length > 0) regionsKept = { at: now, regions };
+  return regions;
+}
+
+async function readHolidayRegions(supabase: SupabaseClient): Promise<string[]> {
   const { data, error } = await supabase.from("public_holidays").select("region, subregion").limit(2000);
   if (error) return [];
   const regions = new Set<string>();
