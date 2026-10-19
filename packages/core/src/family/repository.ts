@@ -108,6 +108,9 @@ export type CreateEventInput = {
   startsAt: string;
   endsAt: string;
   location?: string | null;
+  /** A place picked from Google Maps, re-read on the server; left out for a typed place. */
+  locationPlaceId?: string | null;
+  locationAddress?: string | null;
   protected?: boolean;
   ownerMemberId?: string | null;
   participantMemberIds?: readonly string[];
@@ -133,6 +136,8 @@ async function createEventImpl(
       starts_at: input.startsAt,
       ends_at: input.endsAt,
       location: input.location ?? null,
+      location_place_id: input.location ? (input.locationPlaceId ?? null) : null,
+      location_address: input.location ? (input.locationAddress?.trim().slice(0, 300) || null) : null,
       protected: input.protected ?? false,
       owner_member_id: input.ownerMemberId ?? null,
       all_day: input.allDay ?? false,

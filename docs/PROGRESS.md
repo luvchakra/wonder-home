@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**283 of 304 stories done — 93.1%**
+**284 of 305 stories done — 93.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 283 |
+| Done | 284 |
 | In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 12 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 10 | 10 | — |
 | 25 HomeFood | `██████░░░░` | 12 | 19 | 1 in progress, 6 not started |
-| 26 HomeEvents | `██████░░░░` | 8 | 13 | 1 in progress, 4 not started |
+| 26 HomeEvents | `██████░░░░` | 9 | 14 | 1 in progress, 4 not started |
 
 ## What is left
 
@@ -556,7 +556,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-8 of 13 done `██████░░░░`
+9 of 14 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -573,5 +573,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-011` Event cards say who is going, and use their width | P1 | Done | The owner's report, 2026-10-18 (PR #236): Home's event card showed every family member's avatar although only Asmi was going, and squeezed the title and time beside a second kind tile and the button. Now every event list (Home's card, Today's focus, Family's Upcoming, a child's Home) says when the same way — "All day" for an all-day event, never a midnight time (`_lib/event-when.ts`) — and its place; Home's card and Family's list name who is going from the event's own list ("With Asmi", or on Home "Nobody from the family is asked yet" with a button to ask), and the card gives the title the full width with the action beside who is going. Today's rows wear the event's kind, not always a heart, and no longer cut the time. Every event row tucks its kind's tile under the date leaf, so the title, time and place take the row's width and a time no longer wraps. Checked at 360px and 1280px: a school trip only Asmi goes to reads "With Asmi QA"; a birthday reads "All day" |
 | `26-012` A tall, phone-shaped invitation, and a preview before saving | P1 | Done | The owner, 2026-10-18 (PR #237): Share invitation sends the invitation as a 1080×1350 picture with the link (`e/[token]/card`, one renderer with the link preview, `render-invitation.tsx`), so it shows whole in a chat; the wide picture stays as the link preview, since a chat only shows a wide one large. Preview in the design picker shows the invitation with the design and line picked, before saving. Checked: three designs drawn tall; the wedding preview at 360px; Share invitation opened the picture where the browser can't share files |
 | `26-013` "More family time!" only on family events | P1 | Done | The owner, 2026-10-18 (PR #241): Home's event card closed every event with "More family time!", a school event or an office review included. It now shows only for family kinds (family time, outing, birthday, gathering, travel, special occasion; `momentLook.family` in `_screens/home-dashboard.tsx`). Checked at 360px: a school event has no line, a movie night does |
+| `26-014` An event's "Where" is picked from Google Maps | P1 | Done | The owner, 2026-10-19 (screenshot of Edit the plan). Adding or editing an event, an adult searches Google Maps for Where (`EventPlaceField`, the same `PlaceSearchField` as the place book). The server re-reads a picked place by its id (`eventPlaceFromForm` → `decideEventPlace`, `places/event-place.ts`) and keeps its name, address and id (`family_events.location_address`, `location_place_id`, migration `20261019130000`, live). A typed place such as Home is kept as written, and a pick that cannot be read keeps the typed words. The event page shows the address with Open in Google Maps, and the guest invitation page gives directions; a typed place has no link. Help: Calendar ¶3 in 8 languages |
 
 _Generated 2026-10-19 from 27 backlog files._

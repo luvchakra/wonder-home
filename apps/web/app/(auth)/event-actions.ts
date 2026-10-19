@@ -19,6 +19,7 @@ import { EVENT_CATEGORIES, EVENT_VISIBILITIES } from "@wonderhome/core/calendar/
 import { parseRecurrence, RECURRENCE_FREQUENCIES } from "@wonderhome/core/calendar/recurrence";
 
 import { clashesFor, eventWindow } from "../_lib/event-window";
+import { eventPlaceFromForm } from "../_lib/places";
 import type { ActionState } from "./actions";
 import type { EventActionState } from "./family-actions";
 
@@ -80,6 +81,11 @@ export async function updateEventAction(_previous: EventActionState, formData: F
       if (clashes.length > 0) return { clashes };
     }
 
+    // The place on record, so keeping it asks Google nothing.
+    const { data: had } = await supabase.from("family_events").select("location, location_place_id, location_address").eq("household_id", input.householdId).eq("id", input.eventId).maybeSingle();
+    const current = had ? { location: (had.location as string | null) ?? null, locationPlaceId: (had.location_place_id as string | null) ?? null, locationAddress: (had.location_address as string | null) ?? null } : null;
+    const place = await eventPlaceFromForm(membership, formData, current);
+
     await updateEvent(supabase, {
       householdId: input.householdId,
       eventId: input.eventId,
@@ -88,7 +94,9 @@ export async function updateEventAction(_previous: EventActionState, formData: F
         kind: input.kind,
         startsAt: when.startsAt,
         endsAt: when.endsAt,
-        location: input.location ?? null,
+        location: place.location,
+        locationPlaceId: place.locationPlaceId,
+        locationAddress: place.locationAddress,
         notes: input.notes ?? null,
         allDay: input.allDay === "on",
         category: input.category ?? null,

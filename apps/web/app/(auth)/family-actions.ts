@@ -15,6 +15,7 @@ import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 
 import { clashesFor, eventWindow } from "../_lib/event-window";
+import { eventPlaceFromForm } from "../_lib/places";
 import type { ActionState } from "./actions";
 
 /**
@@ -93,13 +94,17 @@ export async function createEventAction(_previous: EventActionState, formData: F
       if (clashes.length > 0) return { clashes };
     }
 
+    const place = await eventPlaceFromForm(membership, formData);
+
     await createEvent(supabase, {
       householdId: input.householdId,
       title: input.title,
       kind: input.kind,
       startsAt: when.startsAt,
       endsAt: when.endsAt,
-      location: input.location ?? null,
+      location: place.location,
+      locationPlaceId: place.locationPlaceId,
+      locationAddress: place.locationAddress,
       protected: input.protected === "on",
       ownerMemberId: membership.memberId,
       participantMemberIds: input.memberIds,

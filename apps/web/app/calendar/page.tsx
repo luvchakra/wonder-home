@@ -38,6 +38,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { NewEventForm } from "../_components/new-event-form";
 import { calendarHref, dateWords, entryRow, weekStartFor, whenOn, type DateWords, type EntryWords } from "../_lib/calendar-view";
 import { eventFormLabels } from "../_lib/event-form-labels";
+import { eventPlaceSearch } from "../_lib/places";
 import { formatTime, requireSession } from "../_lib/session";
 import { CalendarFilters } from "./_components/calendar-filters";
 import { CalendarGestures } from "./_components/calendar-gestures";
@@ -109,7 +110,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     view === "month" ? words.monthTitle(year, month) : view === "week" ? t("calendar.weekOf", { date: words.shortDate(range.from) }) : view === "day" ? words.dayTitle(focus) : String(year);
 
   const filterCount = activeFilterCount(preferences.filters) + (preferences.holidayRegion ? 1 : 0);
-  const formLabels = eventFormLabels(t);
+  const formLabels = eventFormLabels(t, { placeSearch: eventPlaceSearch(membership) });
   const memberChoices = active.map((member) => ({ value: member.id, label: member.displayName }));
   const household = effectiveHolidayRegion(null, locale.preferences.region ?? null);
   const holidayOptions = [

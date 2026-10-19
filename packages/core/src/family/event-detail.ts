@@ -29,6 +29,9 @@ export type EventGuest = { id: string; name: string; response: "yes" | "no" | "m
 
 export type EventDetail = FamilyEvent & {
   location: string | null;
+  /** Google Maps' id and address for a place picked from the search; null for a typed place. */
+  locationPlaceId: string | null;
+  locationAddress: string | null;
   notes: string | null;
   guests: EventGuest[];
   /** The live invite link's token, when there is one. */
@@ -47,7 +50,7 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
   const [{ data, error }, { data: guests }, { data: links }] = await Promise.all([
     supabase
       .from("family_events")
-      .select("id, title, kind, starts_at, ends_at, location, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, invite_template, invite_message, event_participants(member_id, response, required)")
+      .select("id, title, kind, starts_at, ends_at, location, location_place_id, location_address, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, invite_template, invite_message, event_participants(member_id, response, required)")
       .eq("household_id", householdId)
       .eq("id", eventId)
       .maybeSingle(),
@@ -64,6 +67,8 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
     startsAt: new Date(row.starts_at as string),
     endsAt: new Date(row.ends_at as string),
     location: (row.location as string | null) ?? null,
+    locationPlaceId: (row.location_place_id as string | null) ?? null,
+    locationAddress: (row.location_address as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     protected: row.protected as boolean,
     ownerMemberId: (row.owner_member_id as string | null) ?? null,
@@ -122,6 +127,9 @@ export type EventChanges = {
   startsAt: string;
   endsAt: string;
   location: string | null;
+  /** A place picked from Google Maps, re-read on the server (`decideEventPlace`); null or left out for a typed place. */
+  locationPlaceId?: string | null;
+  locationAddress?: string | null;
   notes: string | null;
   /** Calendar fields (story 12-009); left out, the event keeps what it had. */
   allDay?: boolean;
@@ -140,6 +148,9 @@ async function updateEventImpl(supabase: SupabaseClient, input: { householdId: s
       starts_at: input.changes.startsAt,
       ends_at: input.changes.endsAt,
       location: input.changes.location?.trim().slice(0, 200) || null,
+      // The place's id and address travel with its name: a typed place clears them.
+      location_place_id: input.changes.location?.trim() ? (input.changes.locationPlaceId ?? null) : null,
+      location_address: input.changes.location?.trim() ? (input.changes.locationAddress?.trim().slice(0, 300) || null) : null,
       notes: input.changes.notes?.trim().slice(0, 1000) || null,
       ...(input.changes.allDay === undefined ? {} : { all_day: input.changes.allDay }),
       ...(input.changes.category === undefined ? {} : { category: input.changes.category }),
@@ -267,6 +278,9 @@ export type InvitedEvent = {
   startsAt: Date;
   endsAt: Date;
   location: string | null;
+  /** The picked place's address and Google Maps id, so a guest can find it; null for a typed place. */
+  locationAddress: string | null;
+  locationPlaceId: string | null;
   allDay: boolean;
   /** The invitation's design in force (the household's pick, else the event's own). */
   template: InviteTemplate;
@@ -282,7 +296,7 @@ export async function readInviteLink(admin: SupabaseClient, token: string, now: 
   if (!TOKEN.test(token)) return null;
   const { data, error } = await admin
     .from("event_invite_links")
-    .select("id, household_id, event_id, revoked_at, family_events(title, kind, starts_at, ends_at, location, status, all_day, invite_template, invite_message), households(name, timezone, default_language, region)")
+    .select("id, household_id, event_id, revoked_at, family_events(title, kind, starts_at, ends_at, location, location_place_id, location_address, status, all_day, invite_template, invite_message), households(name, timezone, default_language, region)")
     .eq("token", token)
     .maybeSingle();
   if (error || !data) return null;
@@ -305,6 +319,8 @@ export async function readInviteLink(admin: SupabaseClient, token: string, now: 
     startsAt: new Date(event.starts_at as string),
     endsAt,
     location: (event.location as string | null) ?? null,
+    locationAddress: (event.location_address as string | null) ?? null,
+    locationPlaceId: (event.location_place_id as string | null) ?? null,
     allDay: event.all_day === true,
     template: templateFor({ inviteTemplate: (event.invite_template as string | null) ?? null, kind: event.kind as EventKind, title: event.title as string }),
     message: (event.invite_message as string | null) ?? null,

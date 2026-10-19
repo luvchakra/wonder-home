@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import { ExternalLink, MapPin } from "lucide-react";
 import Link from "next/link";
 import { cache } from "react";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { readInviteLink } from "@wonderhome/core/family/event-detail";
+import { mapsLinkFor } from "@wonderhome/core/places/event-place";
 import { translatorFor } from "@wonderhome/core/i18n/translate";
 import { DocumentLocale } from "@wonderhome/core/shell/document-locale";
 import { Wordmark } from "@wonderhome/core/ui/brand";
 import { Card } from "@wonderhome/core/ui/card";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { InvitationCard } from "@wonderhome/core/ui/invitation-card";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 
@@ -69,6 +72,8 @@ export default async function EventInvitePage({ params }: { params: Promise<{ to
 
   const words = invitationWords(t, locale.language, invited);
   const closed = invited.cancelled ? t("invite.event.cancelled") : invited.over ? t("invite.event.over") : null;
+  // A place picked from Google Maps opens there, so a guest can find the way; a typed one ("Home") has no link.
+  const directions = closed ? null : mapsLinkFor(invited);
 
   return (
     <main className="relative min-h-dvh overflow-x-clip bg-[var(--wh-background)]">
@@ -82,6 +87,24 @@ export default async function EventInvitePage({ params }: { params: Promise<{ to
 
         <h1 className="sr-only">{`${words.invited} ${invited.title}`}</h1>
         <InvitationCard template={invited.template} words={words} />
+
+        {directions ? (
+          <a
+            href={directions}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-11 items-start gap-3 rounded-[var(--wh-radius-lg)] bg-[var(--wh-surface)] p-4 shadow-[var(--wh-shadow-sm)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
+          >
+            <IconTile icon={MapPin} tone="home" size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium break-words">{invited.location}</span>
+              {invited.locationAddress ? <span className="block text-xs break-words text-[var(--wh-foreground-muted)]">{invited.locationAddress}</span> : null}
+              <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[var(--wh-primary)]">
+                {t("places.openInMaps")} <ExternalLink aria-hidden className="size-3" />
+              </span>
+            </span>
+          </a>
+        ) : null}
 
         <Card className="space-y-4 p-5">
           {closed ? (

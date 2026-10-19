@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-19 | [An event's "Where" is picked from Google Maps (26-014)](2026-10-19-event-place-maps.md) |
 | 2026-10-19 | [Performance pass: membership checked once per query, fewer round trips per page](2026-10-19-performance-pass.md) |
 | 2026-10-19 | [Release notes on Get help, and the guide pointed at them](2026-10-19-release-notes.md) |
 | 2026-10-19 | [Meal ideas from what is at home; a child's timetable and exams (25-018, 08-015)](2026-10-19-meal-ideas-and-school-exams.md) |

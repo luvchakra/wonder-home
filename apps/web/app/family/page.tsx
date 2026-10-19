@@ -35,6 +35,7 @@ import { PetDetail } from "../_components/pet-detail";
 import { childDetailWords } from "../_lib/child-detail-words";
 import { eventGoing, eventWhen } from "../_lib/event-when";
 import { eventFormLabels } from "../_lib/event-form-labels";
+import { eventPlaceSearch } from "../_lib/places";
 import { describeRoles } from "../_lib/member-role";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
@@ -386,7 +387,7 @@ export default async function FamilyPage() {
             ) : null}
 
             <section className="wh-rise" style={{ "--wh-rise-delay": "180ms" } as React.CSSProperties}>
-              <SectionHeader title={t("family.upcoming")} count={events.length} action={<NewEventForm householdId={householdId} labels={eventFormLabels(t)} />} />
+              <SectionHeader title={t("family.upcoming")} count={events.length} action={<NewEventForm householdId={householdId} labels={eventFormLabels(t, { placeSearch: eventPlaceSearch(membership) })} />} />
               {events.length === 0 ? (
                 <EmptyState icon={CalendarHeart} tone="people" title={t("family.empty.events")} description={t("family.empty.eventsLede")} />
               ) : (

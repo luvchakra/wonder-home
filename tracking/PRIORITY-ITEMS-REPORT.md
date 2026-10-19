@@ -36,9 +36,9 @@ Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 p
 | 5b | HomeTalk | 14-020 (P0) | HomeBrain 3.0 phase A, the Household Context Store: one server-only row per household with the whole context (no seven-day horizon, no twelve-to-a-list cap), event guests and their replies, every memory, food preferences, places; rebuilt after every write; a turn reads one row. Spec `design/HOMEBRAIN-3.0-HOUSEHOLD-CONTEXT.md` | Done — #230; live: guests named for a party two months out, rebuilt after a write | — |
 | 5c | HomeTalk | 14-024 (P0) | HomeBrain 4.0 phase 0, hearing it right: spoken lead-ins and wrappers cleaned before the rules read a sentence, so "Okay, so, who are the family members in this household?" gets the roster. Spec `design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md` | Done — #240 | — |
 | 5d | HomeTalk | 14-025 (P0) | HomeBrain 4.0 phase 1, do what was asked: an everyday request made in the conversation is done at once with an undo; only others' duties and guests are confirmed in the conversation, and only payments, orders and access go to the screen. Gemini in the app gets the same | Done — #240 | — |
-| 5e | HomeTalk | 14-026 (P0) | HomeBrain 4.0 phase 2, look deeper: a targeted live read before "not on record", and the store repaired from what it found | Next | — |
-| 5f | HomeTalk | 14-027 (P0) | HomeBrain 4.0 phase 3, one pass over the store (was 14-021): question-sized retrieval, one cached, streamed model call, typed p95 2.5 s to first token | Not Started | 14-026 |
-| 5g | HomeTalk | 14-028 to 14-031 (P1) | HomeBrain 4.0 phases 4–7: the household graph across modules, inferences with evidence, answers shaped by the person's goal, keep-warm hardening (was 14-022/14-023) | Not Started | 14-027 |
+| 5e | HomeTalk | 14-026 (P0) | HomeBrain 4.0 phase 2, look deeper: a targeted live read before "not on record", and the store repaired from what it found | Done — #241 | — |
+| 5f | HomeTalk | 14-027 (P0) | HomeBrain 4.0 phase 3, one pass over the store (was 14-021): question-sized retrieval, one cached, streamed model call, typed p95 2.5 s to first token | In Progress — #241 built the token budget; retrieval by question and the streamed call are left | — |
+| 5g | HomeTalk | 14-028 to 14-031 (P1) | HomeBrain 4.0 phases 4–7: the household graph across modules, inferences with evidence, answers shaped by the person's goal, keep-warm hardening | 14-028, 14-029, 14-030 Done — #241; 14-031 In Progress (keep-warm built, the rest left) | — |
 | 6 | HomeTalk | H-1 | "How much do I owe this month?": a total of the bills in the window, as arithmetic from the records (rule 9), with each bill listed | Not Started | — |
 | 7 | HomeTalk | H-2 | Corrections in the golden runner: replay "actually, make that Friday" and "not bread, eggs" against the executed action, as the route does, so `npm run eval` covers them | Not Started | — |
 | 7a | HomeTalk | H-4 | A typed paragraph of several family facts ("Manan likes home-cooked food. He doesn't like outside food and Upasana likes cooking") is split into one fact each, with "he/she" resolved to the person just named. Gemini Live already does this per tool call | Not Started | — |
@@ -115,6 +115,7 @@ Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 p
 | HomePlaces office, Add a place, work facts | 24-005, 24-006, 24-007 | Done — #216; 24-005 and 24-006 browser-checked with a real Google Maps key on 2026-10-18 |
 | WonderHome emails the member invite itself, from connect@wonderapps.biz (GoDaddy) | 01-010 | Done in code; the SMTP settings are in Vercel production. A real send is checked on production after the merge |
 | A child asking about his own private appointment hears that one is coming up and that the adults can see the details | 26-003 / HomeBrain | Done (golden HT-82, HT-83) |
+| Event "Where" from Google Maps: search and pick the place when adding or editing an event | 26-014 | Done — the address and Open in Google Maps on the event, directions for guests on the invitation page; a typed place such as Home is kept as written |
 
 ## C. Waiting only on a browser check
 
