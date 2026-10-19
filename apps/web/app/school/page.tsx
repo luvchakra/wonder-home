@@ -55,9 +55,10 @@ export const dynamic = "force-dynamic";
  * School (requirements §16): Overview, Homework and Calendar.
  *
  * Overview is the agenda — deadlines that will not fit and messages that ask
- * something. Homework is every child's live work, for a parent who wants the
- * whole picture. Guardianship is enforced underneath by RLS, so a parent sees
- * their own children and a child sees themselves.
+ * something. Homework is the child's live work. With more than one child it
+ * is always one child at a time, picked by name, the first by default.
+ * Guardianship is enforced underneath by RLS, so a parent sees their own
+ * children and a child sees themselves.
  */
 export default async function SchoolPage({ searchParams }: { searchParams: Promise<{ tab?: string; child?: string }> }) {
   const [{ tab, child }, session] = await Promise.all([searchParams, requireSession("/school")]);
@@ -97,7 +98,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     listExamTypes(supabase, householdId).catch(() => ({ builtIn: ["Unit test", "Mid-term", "Finals"], own: [] })),
   ]);
 
-  const items = (agenda?.items ?? []).filter((item) => !child || item.childMemberId === child);
+  const children = members.filter((member) => member.memberType === "child");
+  // One child at a time (the owner, 2026-10-19: no "Everyone"): the one asked for, else the first.
+  const selected = children.find((kid) => kid.id === child)?.id ?? children[0]?.id ?? null;
+  const items = (agenda?.items ?? []).filter((item) => !selected || item.childMemberId === selected);
   const communications = agenda?.communications ?? [];
 
   // A stale portal and "no homework" must never look alike (17-004): if a
@@ -112,7 +116,6 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
       .find((health) => health.tone !== "silent") ?? null;
   const admin = isHouseholdAdmin(membership);
 
-  const children = members.filter((member) => member.memberType === "child");
   const schoolOf = (childId: string) => {
     const enrolment = enrolments.find((entry) => entry.childMemberId === childId);
     return enrolment
@@ -141,7 +144,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     open: t("hometalk.places.open", { name: "{name}" }),
     search: placeSearchLabels(t, "school"),
   };
-  const shownChildren = child ? children.filter((kid) => kid.id === child) : children;
+  const shownChildren = selected ? children.filter((kid) => kid.id === selected) : children;
   const canChangeSchool = view.tone === "adult";
   const detailWords = childDetailWords(t, locale.preferences.language);
   const weekWords = schoolWeekWords(t, locale.preferences.language, examTypes);
@@ -287,9 +290,8 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
 
         {children.length > 1 ? (
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
-            <PillLink href={`/school?tab=${active}`} tone={child ? "quiet" : "primary"}>{t("school.everyone")}</PillLink>
             {children.map((kid) => (
-              <PillLink key={kid.id} href={`/school?tab=${active}&child=${kid.id}`} tone={child === kid.id ? "primary" : "quiet"}>{kid.displayName}</PillLink>
+              <PillLink key={kid.id} href={`/school?tab=${active}&child=${kid.id}`} tone={selected === kid.id ? "primary" : "quiet"}>{kid.displayName}</PillLink>
             ))}
           </div>
         ) : null}
@@ -298,9 +300,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
           label={t("school.view")}
           active={active}
           segments={[
-            { key: "overview", label: t("school.tab.overview"), href: `/school${child ? `?child=${child}` : ""}`, count: needsYou },
-            { key: "homework", label: t("school.tab.homework"), href: `/school?tab=homework${child ? `&child=${child}` : ""}`, count: live.length },
-            { key: "calendar", label: t("school.tab.calendar"), href: `/school?tab=calendar${child ? `&child=${child}` : ""}` },
+            { key: "overview", label: t("school.tab.overview"), href: `/school${selected ? `?child=${selected}` : ""}`, count: needsYou },
+            { key: "homework", label: t("school.tab.homework"), href: `/school?tab=homework${selected ? `&child=${selected}` : ""}`, count: live.length },
+            { key: "calendar", label: t("school.tab.calendar"), href: `/school?tab=calendar${selected ? `&child=${selected}` : ""}` },
           ]}
         />
 

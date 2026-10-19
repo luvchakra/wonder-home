@@ -9,7 +9,6 @@ import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/househo
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
-import { listActivities } from "@wonderhome/core/school/activities";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -32,7 +31,6 @@ import { listWorkPlaces } from "@wonderhome/core/household/work-place";
 import { MemberDetail } from "../_components/member-detail";
 import { NewEventForm } from "../_components/new-event-form";
 import { PetDetail } from "../_components/pet-detail";
-import { childDetailWords } from "../_lib/child-detail-words";
 import { eventGoing, eventWhen } from "../_lib/event-when";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
@@ -55,7 +53,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, activities] = await Promise.all([
+  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     // Every upcoming event and what needs a person, read once and alongside
@@ -70,12 +68,7 @@ export default async function FamilyPage() {
     listWorkPlaces(supabase, householdId).catch(() => []),
     // Phone numbers this viewer may read: Admins and adults see everyone's, others their own.
     readMemberPhones(supabase, householdId).catch(() => new Map<string, string>()),
-    // Children's classes outside school (08-011); RLS returns only the children this viewer may see.
-    listActivities(supabase, householdId).catch(() => null),
   ]);
-  const classWords = childDetailWords(t, locale.preferences.language);
-  const classesOf = (memberId: string) =>
-    activities === null ? null : { activities: activities.filter((activity) => activity.childMemberId === memberId), words: classWords, canChange: view.tone === "adult", language: locale.preferences.language };
   const officeOf = (memberId: string) => offices.find((office) => office.memberId === memberId) ?? null;
   // Each child's current school and its day, read beside their other details.
   const schoolOf = (memberId: string) => {
@@ -208,7 +201,6 @@ export default async function FamilyPage() {
                         phone={phones.get(member.id) ?? null}
                         invite={invite}
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
-                        classes={member.memberType === "child" ? classesOf(member.id) : null}
                       />
                       {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
                       {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (

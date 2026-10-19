@@ -84,7 +84,6 @@ export const schoolEn = {
   "school.notes.remove": "Remove {name}",
   "school.connect": "Connect school",
   "school.fixConnection": "Fix the connection",
-  "school.everyone": "Everyone",
   "school.view": "School view",
   "school.tab.overview": "Overview",
   "school.tab.homework": "Homework",
