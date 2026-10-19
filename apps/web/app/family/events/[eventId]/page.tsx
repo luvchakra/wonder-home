@@ -1,4 +1,4 @@
-import { CalendarHeart, Eye, Link2, MapPin, MessageCircle, NotebookPen, Trash2, Users } from "lucide-react";
+import { CalendarHeart, ExternalLink, Eye, Link2, MapPin, MessageCircle, NotebookPen, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -7,6 +7,7 @@ import { isOccurrenceCancelled } from "@wonderhome/core/calendar/repository";
 import { loadEvent, planningGaps, type PlanningGap } from "@wonderhome/core/family/event-detail";
 import { INVITE_TEMPLATES, inviteDesign, suggestTemplate, svgDataUri } from "@wonderhome/core/family/invite-templates";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { mapsLinkFor } from "@wonderhome/core/places/event-place";
 import { localTimeValue, schoolDateValue } from "@wonderhome/core/school/times";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
@@ -31,6 +32,7 @@ import { EventActionButton, EventEditForm, EventInviteesForm, EventLinkShare, ty
 import { InviteDesignForm, type InviteDesignOption, type InvitePreview } from "../../../_components/invite-design-form";
 import { invitationWords } from "../../../_lib/invitation-words";
 import { eventFormLabels } from "../../../_lib/event-form-labels";
+import { eventPlaceSearch } from "../../../_lib/places";
 import { formatDate, formatTime, requireSession } from "../../../_lib/session";
 
 export const metadata = { title: "Event" };
@@ -75,7 +77,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
   const gaps = planningGaps(event, now);
   const mine = event.participants.find((participant) => participant.memberId === membership.memberId);
   const ids = { householdId, eventId: event.id };
-  const formWords = eventFormLabels(t);
+  const formWords = eventFormLabels(t, { placeSearch: eventPlaceSearch(membership) });
   const editLabels: EventEditLabels = {
     edit: t("events.edit"),
     title: t("events.editTitle"),
@@ -86,6 +88,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
     ends: formWords.ends,
     where: formWords.where,
     wherePlaceholder: formWords.wherePlaceholder,
+    place: formWords.place,
     notes: t("events.notesLabel"),
     notesPlaceholder: t("events.notesPlaceholder"),
     save: t("events.save"),
@@ -103,6 +106,8 @@ export default async function EventPage({ params, searchParams }: { params: Prom
     startsAt: local(event.startsAt),
     endsAt: local(event.endsAt),
     location: event.location ?? "",
+    locationPlaceId: event.locationPlaceId,
+    locationAddress: event.locationAddress,
     notes: event.notes ?? "",
     allDay: event.allDay,
     startDate: firstDay,
@@ -142,6 +147,8 @@ export default async function EventPage({ params, searchParams }: { params: Prom
     startsAt: event.startsAt,
     endsAt: event.endsAt,
     location: event.location,
+    locationAddress: event.locationAddress,
+    locationPlaceId: event.locationPlaceId,
     allDay: event.allDay,
     template: suggested,
     message: null,
@@ -172,7 +179,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
             <IconTile icon={CalendarHeart} tone="people" />
             <dl className="grid min-w-0 flex-1 gap-2.5">
               <Fact label={t("events.fact.when")} value={when} />
-              <Fact label={t("events.fact.where")} value={event.location} />
+              <PlaceFact label={t("events.fact.where")} place={event} openLabel={t("places.openInMaps")} />
               <Fact label={t("events.fact.kind")} value={formWords.kinds[event.kind]} />
               <Fact label={t("calendar.event.category")} value={event.category ? t(`calendar.category.${event.category}`) : null} />
               <Fact label={t("calendar.event.repeats")} value={event.recurrence ? t(`calendar.form.repeat.${event.recurrence.freq}`) : null} />
@@ -350,6 +357,26 @@ export default async function EventPage({ params, searchParams }: { params: Prom
         <QuoteCard>{t("events.quote")}</QuoteCard>
       </div>
     </AppShell>
+  );
+}
+
+/** Where it is: the place, its address when it was picked from Google Maps, and a link to open it there. */
+function PlaceFact({ label, place, openLabel }: { label: string; place: { location: string | null; locationAddress: string | null; locationPlaceId: string | null }; openLabel: string }) {
+  if (!place.location) return null;
+  const href = mapsLinkFor(place);
+  return (
+    <div>
+      <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{label}</dt>
+      <dd className="text-sm break-words">{place.location}</dd>
+      {place.locationAddress ? <dd className="text-xs break-words text-[var(--wh-foreground-muted)]">{place.locationAddress}</dd> : null}
+      {href ? (
+        <dd>
+          <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+            {openLabel} <ExternalLink aria-hidden className="size-3" />
+          </a>
+        </dd>
+      ) : null}
+    </div>
   );
 }
 

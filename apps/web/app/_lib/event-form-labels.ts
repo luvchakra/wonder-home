@@ -3,6 +3,7 @@ import { RECURRENCE_FREQUENCIES } from "@wonderhome/core/calendar/recurrence";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 
 import type { EventCalendarLabels, NewEventFormLabels } from "../_components/new-event-form";
+import { placeSearchLabels } from "./place-labels";
 import { EVENT_KINDS, type EventKind } from "./event-kinds";
 
 /** The calendar fields' words (story 12-009), shared by the add sheet and the edit sheet. */
@@ -29,8 +30,11 @@ export function eventCalendarLabels(t: Translate): EventCalendarLabels {
   };
 }
 
-/** The "Add to the family calendar" sheet's words in the viewer's language (story 22-004). */
-export function eventFormLabels(t: Translate): NewEventFormLabels {
+/**
+ * The "Add to the family calendar" sheet's words in the viewer's language (story 22-004).
+ * `placeSearch` (`eventPlaceSearch`) offers Google Maps for "Where"; without it the place is typed.
+ */
+export function eventFormLabels(t: Translate, options: { placeSearch?: boolean } = {}): NewEventFormLabels {
   return {
     add: t("eventForm.add"),
     title: t("eventForm.title"),
@@ -43,6 +47,7 @@ export function eventFormLabels(t: Translate): NewEventFormLabels {
     ends: t("eventForm.ends"),
     where: t("eventForm.where"),
     wherePlaceholder: t("eventForm.wherePlaceholder"),
+    place: options.placeSearch ? placeSearchLabels(t, "event") : null,
     protect: t("eventForm.protect"),
     protectHint: t("eventForm.protectHint"),
     adding: t("eventForm.adding"),

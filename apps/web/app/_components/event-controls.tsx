@@ -15,7 +15,8 @@ import { updateEventAction } from "../(auth)/event-actions";
 import type { EventActionState } from "../(auth)/family-actions";
 import type { EventKind } from "../_lib/event-kinds";
 import { Select } from "@wonderhome/core/ui/select";
-import type { EventCalendarLabels } from "./new-event-form";
+import { EventPlaceField, type EventCalendarLabels } from "./new-event-form";
+import type { PlaceSearchLabels } from "./place-search-field";
 
 type Action = (state: ActionState, formData: FormData) => Promise<ActionState>;
 
@@ -66,6 +67,8 @@ export type EventEditLabels = {
   ends: string;
   where: string;
   wherePlaceholder: string;
+  /** Google Maps for "Where", when this person may search; null types the place. */
+  place: PlaceSearchLabels | null;
   notes: string;
   notesPlaceholder: string;
   save: string;
@@ -82,6 +85,9 @@ export type EventEditInitial = {
   startsAt: string;
   endsAt: string;
   location: string;
+  /** The picked place's Google Maps id and address, so the sheet opens on it; null for a typed place. */
+  locationPlaceId: string | null;
+  locationAddress: string | null;
   notes: string;
   allDay: boolean;
   startDate: string;
@@ -189,7 +195,13 @@ export function EventEditForm({
               <p className="text-xs text-[var(--wh-foreground-muted)]">{words.visibilityHint}</p>
             </div>
           ) : null}
-          <Field label={labels.where} name="location" defaultValue={initial.location} placeholder={labels.wherePlaceholder} autoComplete="off" />
+          <EventPlaceField
+            householdId={householdId}
+            label={labels.where}
+            placeholder={labels.wherePlaceholder}
+            search={labels.place}
+            initial={initial.location ? { text: initial.location, placeId: initial.locationPlaceId, detail: initial.locationAddress } : null}
+          />
           <div className="space-y-1.5">
             <label htmlFor="event-notes" className="block text-sm font-medium">{labels.notes}</label>
             <textarea

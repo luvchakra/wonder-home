@@ -34,6 +34,7 @@ import { Timeline, type TimelineItem } from "@wonderhome/core/ui/timeline";
 import { AgendaRow } from "../_components/agenda-row";
 import { NewEventForm } from "../_components/new-event-form";
 import { eventFormLabels } from "../_lib/event-form-labels";
+import { eventPlaceSearch } from "../_lib/places";
 import { householdAgenda } from "../_lib/agenda";
 import { formatTime, formatToday, requireSession, type Session } from "../_lib/session";
 
@@ -250,7 +251,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
           icon={Clock3}
           title={t(someDataMissing ? "today.empty.unconfirmed" : active === "mine" ? "today.empty.mine" : active === "family" ? "today.empty.family" : "today.empty.household")}
           description={t(someDataMissing ? "today.empty.unconfirmedLede" : "today.empty.lede")}
-          action={<NewEventForm householdId={householdId} label={t("today.planSomething")} labels={eventFormLabels(t)} />}
+          action={<NewEventForm householdId={householdId} label={t("today.planSomething")} labels={eventFormLabels(t, { placeSearch: eventPlaceSearch(membership) })} />}
         />
       ) : (
         <Timeline items={shown} />

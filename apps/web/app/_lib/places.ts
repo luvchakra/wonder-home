@@ -6,6 +6,7 @@ import { loadWorkPlace, removeWorkPlace, saveWorkPlace } from "@wonderhome/core/
 import { DEFAULT_PREFERENCES, resolvePreferences } from "@wonderhome/core/i18n/preferences";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
+import { decideEventPlace, needsLookup, type EventPlace } from "@wonderhome/core/places/event-place";
 import { PlacesUnavailableError, type Place } from "@wonderhome/core/places/provider";
 import { endEnrolments, listEnrolments, saveEnrolment } from "@wonderhome/core/school/enrolments";
 
@@ -17,6 +18,15 @@ import { endEnrolments, listEnrolments, saveEnrolment } from "@wonderhome/core/s
 /** Whether this deployment has a place search; without one, screens offer a plain field. */
 export function placeSearchAvailable(): boolean {
   return placesProviderFromEnv() !== null;
+}
+
+/**
+ * Whether this person's event sheets search Google Maps for "Where": the
+ * deployment has a place search, and they are an adult (searching places is
+ * an adult's, as for the place book). Anyone else types the place.
+ */
+export function eventPlaceSearch(membership: HouseholdMembership): boolean {
+  return placeSearchAvailable() && membership.roles.some((role) => role === "head" || role === "administrator" || role === "adult");
 }
 
 function preferencesOf(membership: HouseholdMembership) {
@@ -37,6 +47,21 @@ export async function pickedPlace(membership: HouseholdMembership, placeId: unkn
   if (!provider) return null;
   const token = z.uuid().safeParse(sessionToken);
   return provider.details(id.data, { sessionToken: token.success ? token.data : null, languageCode: preferencesOf(membership).language });
+}
+
+/**
+ * An event's "Where" from its form: a place picked from Google Maps, read
+ * again on the server, or what was typed. Keeping the place already on
+ * record asks the provider nothing, and a pick that cannot be read right now
+ * keeps the typed words rather than failing the save.
+ */
+export async function eventPlaceFromForm(membership: HouseholdMembership, formData: FormData, current: EventPlace | null = null): Promise<EventPlace> {
+  const posted = {
+    placeId: String(formData.get("location_place_id") ?? "").trim() || null,
+    typed: String(formData.get("location") ?? "").trim() || null,
+  };
+  const picked = needsLookup(posted, current) ? await pickedPlace(membership, posted.placeId, formData.get("location_session")).catch(() => null) : null;
+  return decideEventPlace(posted, current, picked);
 }
 
 /** Saves the home address from a form: a picked place when there is one, else the typed line. Unchanged picks cost nothing. */

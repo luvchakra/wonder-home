@@ -12,6 +12,7 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import { createEventAction, type EventActionState } from "../(auth)/family-actions";
 import { EVENT_KINDS, type EventKind } from "../_lib/event-kinds";
+import { PlaceSearchField, type PlaceSearchLabels } from "./place-search-field";
 
 /** The calendar fields' words (story 12-009). */
 export type EventCalendarLabels = {
@@ -48,6 +49,8 @@ export type NewEventFormLabels = {
   ends: string;
   where: string;
   wherePlaceholder: string;
+  /** Google Maps for "Where", when this person may search; null types the place. */
+  place: PlaceSearchLabels | null;
   protect: string;
   protectHint: string;
   adding: string;
@@ -165,7 +168,7 @@ export function NewEventForm({
             ))}
           </Select>
 
-          <Field label={labels.where} name="location" placeholder={labels.wherePlaceholder} autoComplete="off" />
+          <EventPlaceField householdId={householdId} label={labels.where} placeholder={labels.wherePlaceholder} search={labels.place} initial={null} />
 
           <details className="group space-y-4 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] px-3 py-2">
             <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">{words.more}</summary>
@@ -209,5 +212,40 @@ export function NewEventForm({
         </form>
       </Sheet>
     </>
+  );
+}
+
+/**
+ * An event's "Where": a place picked from Google Maps (the server reads it
+ * again by its id and keeps its name, address and id), or, without a search,
+ * typed. A typed answer such as "Home" is kept either way (rule 20's own way
+ * in: a place the search does not know is never a dead end).
+ */
+export function EventPlaceField({
+  householdId,
+  label,
+  placeholder,
+  search,
+  initial,
+}: {
+  householdId: string;
+  label: string;
+  placeholder: string;
+  search: PlaceSearchLabels | null;
+  initial: { text: string; placeId: string | null; detail: string | null } | null;
+}) {
+  if (!search) return <Field label={label} name="location" defaultValue={initial?.text ?? ""} placeholder={placeholder} autoComplete="off" />;
+  return (
+    <PlaceSearchField
+      householdId={householdId}
+      kind="place"
+      label={label}
+      textName="location"
+      placeName="location_place_id"
+      sessionName="location_session"
+      initial={initial}
+      available
+      labels={search}
+    />
   );
 }

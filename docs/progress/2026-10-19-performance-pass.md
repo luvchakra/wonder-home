@@ -104,8 +104,8 @@
   - Home: a 14-day events read alongside `familyAgenda`'s full future read.
 - **Overlapping permissive policies** (51 tables: a `select_member` plus an `ALL` write policy). Each is now cheap, so they were not merged.
 - **PostgREST schema reloads.** `SELECT name FROM pg_timezone_names` (335 ms) runs on every schema-cache reload; each migration's `notify pgrst` triggers one. It is not on the request path.
-- **For a person: `public.rls_auto_enable()`** is a security-definer function that `anon` and `authenticated` can execute through `/rest/v1/rpc/rls_auto_enable`. It is not in any migration, so it was created outside the repository. Revoke its `EXECUTE` from `anon` and `authenticated` (or drop it) once its purpose is confirmed.
+- **Resolved by the owner, 2026-10-19: `public.rls_auto_enable()`.** It was a security-definer function, created outside the repository, that `anon` and `authenticated` could execute. The owner revoked `EXECUTE` from both, and `has_function_privilege` confirms neither role can run it.
 
 ## QA cleanup
 
-Recorded after the merge.
+Ran after #245 merged (2026-10-19): QA account `d26846ff-1ee9-4401-b504-b0a997b3dd36` and household `f2a0c213-22bb-4d7e-8237-d166aa69e130` ("QA Speed Home", with the Pro subscription row added for timing) deleted. Confirmed by SQL: 0 households, members, subscriptions and auth users left for those ids. The local production servers and the local test database were stopped, and screenshots and helper scripts removed.
