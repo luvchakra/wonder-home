@@ -437,6 +437,8 @@ export type SuggestMealState = ActionState & {
   choice?: PlanChoice;
   lowStock?: string[];
   checkedOn?: string;
+  /** No recipes to choose from yet: the ideas from what is at home are the way in (25-018). */
+  noRecipes?: boolean;
 };
 
 const suggestSchema = z.object({
@@ -466,12 +468,7 @@ export async function suggestMealAction(
     const suggestion = await suggestMeal(supabase, parsed.data.householdId, {
       onDate: parsed.data.onDate,
     });
-    if (!suggestion) {
-      return {
-        error:
-          "Add a recipe first — WonderHome has nothing to suggest from yet.",
-      };
-    }
+    if (!suggestion) return { noRecipes: true, checkedOn: parsed.data.onDate };
 
     return {
       choice: suggestion.choice,
@@ -509,16 +506,14 @@ export async function addSuggestedMealAction(
 
   try {
     const supabase = await createClient();
-    await requireMembership(supabase, parsed.data.householdId);
+    const membership = await requireMembership(supabase, parsed.data.householdId);
 
     const created = await createMeal(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
       slot: parsed.data.slot,
       onDate: parsed.data.onDate,
-      readyBy: new Date(
-        `${parsed.data.onDate}T${parsed.data.readyByTime}:00`,
-      ).toISOString(),
+      readyBy: readyByOn(parsed.data.onDate, parsed.data.readyByTime, membership.household.timezone),
       recipeId: parsed.data.recipeId,
     });
     await attachIngredients(

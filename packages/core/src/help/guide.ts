@@ -135,14 +135,14 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "school",
     group: "Everyday use",
-    updated: "2026-10-18",
-    keywords: ["school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice", "class teacher", "subject teacher", "activity", "class", "music", "piano", "karate", "competition", "medal", "award"],
+    updated: "2026-10-19",
+    keywords: ["school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice", "class teacher", "subject teacher", "activity", "class", "music", "piano", "karate", "competition", "medal", "award", "timetable", "time table", "period", "exam", "exams", "unit test", "mid-term", "finals", "syllabus", "study material"],
   },
   {
     id: "meals-and-shopping",
     group: "Everyday use",
-    updated: "2026-10-18",
-    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients"],
+    updated: "2026-10-19",
+    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home"],
   },
   {
     id: "health",

@@ -22,6 +22,7 @@ import { listMembers } from "../identity/households";
 import { listMemberLanguages } from "../identity/member-languages";
 import { listIntegrations } from "../integrations/repository";
 import { listMeals } from "../meals/repository";
+import { listExams, listTimetable } from "../school/exams";
 import { listCommunications, listSchoolItems } from "../school/repository";
 import {
   buildContextItems,
@@ -161,11 +162,14 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
     permitted: (viewer) => may(viewer, "school.manage") || may(viewer, "school.view_own"),
     read: async (supabase, scope) => {
       const manage = may(scope.viewer, "school.manage");
-      const [schoolItems, communications] = await Promise.all([
+      const [schoolItems, communications, exams, timetable] = await Promise.all([
         listSchoolItems(supabase, scope.householdId, manage ? {} : { childMemberId: scope.viewer.memberId }),
         manage ? listCommunications(supabase, scope.householdId) : Promise.resolve(undefined),
+        // RLS keeps exams and timetables to the child, their guardians and Admins (08-015); before the migration, none.
+        listExams(supabase, scope.householdId).catch(() => []),
+        listTimetable(supabase, scope.householdId).catch(() => []),
       ]);
-      return { schoolItems, communications };
+      return { schoolItems, communications, exams, timetable };
     },
   },
   {

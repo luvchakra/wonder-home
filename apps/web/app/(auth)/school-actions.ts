@@ -442,3 +442,112 @@ export async function removeActivityNoteAction(input: { householdId: string; id:
   const { standDownActivityNote } = await import("@wonderhome/core/school/activities");
   return inHousehold(parsed.data.householdId, (supabase) => standDownActivityNote(supabase, parsed.data));
 }
+
+// --- A child's timetable and exams (08-015) ---------------------------------------
+
+const periodSchema = z.object({
+  householdId: z.uuid(),
+  childMemberId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  weekday: z.coerce.number().int().min(1, { error: "Which day is it?" }).max(7),
+  startsAt: z.string().trim().regex(/^\d{2}:\d{2}$/, { error: "When does it start?" }),
+  endsAt: z.string().trim().regex(/^\d{2}:\d{2}$/, { error: "When does it end?" }),
+  subject: z.string().trim().min(1, { error: "Which subject is it?" }).max(80),
+  teacherName: optionalText(120),
+  room: optionalText(60),
+});
+
+/** One period of a child's school week, added or changed. */
+export async function savePeriodAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = periodSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    childMemberId: field(formData, "childMemberId"),
+    id: field(formData, "id"),
+    weekday: field(formData, "weekday"),
+    startsAt: field(formData, "startsAt"),
+    endsAt: field(formData, "endsAt"),
+    subject: field(formData, "subject"),
+    teacherName: field(formData, "teacherName"),
+    room: field(formData, "room"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  if (parsed.data.startsAt >= parsed.data.endsAt) return { error: "A period has to end after it starts." };
+  const { savePeriod } = await import("@wonderhome/core/school/exams");
+  return inHousehold(parsed.data.householdId, (supabase) => savePeriod(supabase, { ...parsed.data, id: parsed.data.id || null }));
+}
+
+const examSchema = z.object({
+  householdId: z.uuid(),
+  childMemberId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  examType: z.string().trim().min(1, { error: "Which kind of exam is it?" }).max(60),
+  title: optionalText(120),
+  notes: optionalText(2000),
+});
+
+/**
+ * An exam for a child, added or changed. A kind of exam the household typed
+ * in for the first time becomes one of its own types (rule 20), so it is
+ * there to pick next time.
+ */
+export async function saveExamAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = examSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    childMemberId: field(formData, "childMemberId"),
+    id: field(formData, "id"),
+    examType: field(formData, "examType"),
+    title: field(formData, "title"),
+    notes: field(formData, "notes"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  const { addExamType, saveExam } = await import("@wonderhome/core/school/exams");
+  return inHousehold(parsed.data.householdId, async (supabase) => {
+    const { name } = await addExamType(supabase, { householdId: parsed.data.householdId, name: parsed.data.examType });
+    await saveExam(supabase, { ...parsed.data, examType: name, id: parsed.data.id || null });
+  });
+}
+
+const paperSchema = z.object({
+  householdId: z.uuid(),
+  examId: z.uuid(),
+  id: z.union([z.uuid(), z.literal("")]).optional(),
+  subject: z.string().trim().min(1, { error: "Which subject is it?" }).max(80),
+  onDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "On which day is it?" }),
+  startsAt: timeField,
+  endsAt: timeField,
+  syllabus: optionalText(4000),
+  links: z.string().max(6000).optional(),
+});
+
+/** One subject of an exam, on its day, with what it covers and links to material. */
+export async function savePaperAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = paperSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    examId: field(formData, "examId"),
+    id: field(formData, "id"),
+    subject: field(formData, "subject"),
+    onDate: field(formData, "onDate"),
+    startsAt: field(formData, "startsAt"),
+    endsAt: field(formData, "endsAt"),
+    syllabus: field(formData, "syllabus"),
+    links: field(formData, "links"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  if (parsed.data.startsAt && parsed.data.endsAt && parsed.data.startsAt >= parsed.data.endsAt) return { error: "It has to end after it starts." };
+  const { cleanLinks, MAX_EXAM_LINKS, savePaper } = await import("@wonderhome/core/school/exams");
+  const typed = (parsed.data.links ?? "").split(/\s*\n\s*/).filter(Boolean);
+  const { refused } = cleanLinks(typed);
+  if (refused.length > 0) return { error: `"${refused[0]}" is not a web address.` };
+  if (typed.length > MAX_EXAM_LINKS) return { error: `At most ${MAX_EXAM_LINKS} links.` };
+  return inHousehold(parsed.data.householdId, (supabase) => savePaper(supabase, { ...parsed.data, links: typed, id: parsed.data.id || null }));
+}
+
+const schoolRecordSchema = z.object({ householdId: z.uuid(), id: z.uuid(), kind: z.enum(["period", "exam", "paper"]) });
+
+/** A period, an exam or one of its subjects, stood down (kept, not deleted). */
+export async function removeSchoolRecordAction(input: { householdId: string; id: string; kind: "period" | "exam" | "paper" }): Promise<ActionState> {
+  const parsed = schoolRecordSchema.safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  const { standDownSchoolRecord } = await import("@wonderhome/core/school/exams");
+  return inHousehold(parsed.data.householdId, (supabase) => standDownSchoolRecord(supabase, parsed.data));
+}

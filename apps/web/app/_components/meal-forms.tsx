@@ -12,6 +12,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
+import { DishIdeas, type DishIdeaLabels } from "./dish-ideas";
 import {
   addSuggestedMealAction,
   createMealAction,
@@ -121,6 +122,8 @@ export type MealFormLabels = {
   stillNeeds: string;
   runningLow: string;
   addToPlan: string;
+  /** Ideas from what is at home (25-018). */
+  ideas: DishIdeaLabels;
 };
 
 /** Fills a label's `{placeholders}`; a value is inserted as it is, never read as a pattern. */
@@ -748,6 +751,7 @@ export function SuggestMealButton({ householdId, labels }: { householdId: string
     {},
   );
   const today = new Date().toISOString().slice(0, 10);
+  const [onDate, setOnDate] = useState(today);
 
   return (
     <>
@@ -775,10 +779,13 @@ export function SuggestMealButton({ householdId, labels }: { householdId: string
               name="onDate"
               type="date"
               required
-              defaultValue={today}
+              value={onDate}
+              onChange={(event) => setOnDate(event.target.value)}
             />
             <Submit label={labels.check} pendingLabel={labels.checking} />
           </form>
+
+          {state.noRecipes ? <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.ideas.noRecipes}</p> : null}
 
           {state.choice ? (
             <div className="rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-4">
@@ -877,6 +884,15 @@ export function SuggestMealButton({ householdId, labels }: { householdId: string
               )}
             </div>
           ) : null}
+
+          <DishIdeas
+            householdId={householdId}
+            onDate={onDate || today}
+            labels={labels.ideas}
+            slotLabels={labels.slots}
+            servesLabel={labels.serves}
+            readyByLabel={labels.readyBy}
+          />
         </div>
       </Sheet>
     </>

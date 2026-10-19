@@ -118,5 +118,21 @@ export function mealFormLabels(t: Translate, unitNames: Record<string, string>):
     stillNeeds: t("mealForm.stillNeeds", KEEP),
     runningLow: t("mealForm.runningLow", KEEP),
     addToPlan: t("mealForm.addToPlan"),
+    ideas: {
+      title: t("mealForm.ideas.title"),
+      lede: t("mealForm.ideas.lede"),
+      button: t("mealForm.ideas.button"),
+      loading: t("mealForm.ideas.loading"),
+      atHome: t("mealForm.ideas.atHome"),
+      kept: t("mealForm.ideas.kept"),
+      toBuy: t("mealForm.ideas.toBuy"),
+      planIt: t("mealForm.ideas.planIt"),
+      saveRecipe: t("mealForm.ideas.saveRecipe"),
+      alsoSave: t("mealForm.ideas.alsoSave"),
+      howTo: t("mealForm.ideas.howTo"),
+      timeServes: t("mealForm.ideas.timeServes", KEEP),
+      noRecipes: t("mealForm.ideas.noRecipes"),
+      forSlot: t("mealForm.ideas.for"),
+    },
   };
 }

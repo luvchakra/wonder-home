@@ -913,6 +913,18 @@ async function main() {
   check("migration landed: homebrain_misses", !missesProbe.error, missesProbe.error?.code ?? "ok");
   const anonMisses = await anon.from("homebrain_misses").select("id").limit(1);
   check("anonymous cannot read homebrain_misses", Boolean(anonMisses.error) || (anonMisses.data ?? []).length === 0, anonMisses.error?.code ?? "no rows");
+  // A child's timetable and exams (08-015), each only for the child, their guardians and Admins.
+  for (const [table, columns] of [
+    ["school_timetable_periods", "id, child_member_id, weekday, starts_at, ends_at, subject, active"],
+    ["school_exam_types", "id, household_id, name, active"],
+    ["school_exams", "id, child_member_id, exam_type, title, active"],
+    ["school_exam_papers", "id, exam_id, subject, on_date, starts_at, syllabus, links, active"],
+  ]) {
+    const probe = await admin.from(table).select(columns).limit(1);
+    check(`migration landed: ${table}`, !probe.error, probe.error?.code ?? "ok");
+    const anonProbe = await anon.from(table).select("id").limit(1);
+    check(`anonymous cannot read ${table}`, Boolean(anonProbe.error) || (anonProbe.data ?? []).length === 0, anonProbe.error?.code ?? "no rows");
+  }
   // A child's teachers and classes outside school (08-010 to 08-012).
   const teachersProbe = await admin.from("school_teachers").select("id, child_member_id, role, subject, name, active").limit(1);
   check("migration landed: school_teachers", !teachersProbe.error, teachersProbe.error?.code ?? "ok");

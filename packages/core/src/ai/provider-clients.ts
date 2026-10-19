@@ -30,6 +30,8 @@ export const MODEL_TIMEOUT_MS = {
   live_token: 10_000,
   /** Writing down one Gemini Live turn word for word (the chat line): a minute of audio at most. */
   transcribe: 15_000,
+  /** Ideas for a meal from what is at home (story 25-018): a person tapped and is waiting, with three short dishes to write. */
+  suggest: 25_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

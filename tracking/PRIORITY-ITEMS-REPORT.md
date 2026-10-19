@@ -98,15 +98,16 @@ Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 p
 | Event card: use the space better, and show only who is actually going (all kinds of events) | 26-011 | Done in #236 |
 | Push notifications for what a family member must know, in time, personal, and only when it makes sense | 23-013 | Done in #237: live once the owner sets the push keys and the cron secret |
 | Invitations vertical, shaped for a phone, and a preview option | 26-012 | Done in #237 |
-| Play Gemini's voice through the floating window, so switching apps floats it on its own | 04-024 | Done in #237; real-phone check is the owner's |
-| School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Next |
+| Play Gemini's voice through the floating window, so switching apps floats it on its own | 04-024 | Done in #237, but the owner's phone check (2026-10-19) says it still doesn't float on its own: 04-025 |
+| Gemini's voice floats on its own on a real phone when switching apps | 04-025 | Next: needs a real Android phone to diagnose |
+| School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Done in #243: on Kids & School, each subject on the Calendar, HomeTalk answers from them |
 | Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Done in #241: every ingredient row picks from the catalog or your own items, and empty nutrients are worked out |
 | Don't write "More family time" on school or office events, only on family events | 26-013 | Done in #241 |
 | HomeBrain 4.0: look deeper, the household graph, inferences with evidence, answers shaped by the goal | 14-026, 14-028–14-030 | Done in #241; 14-027 (one pass, streaming) and part of 14-031 open |
-| Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Next |
+| Suggest a meal from what's at home, and save it as a new recipe | 25-018 | Done in #243: Ideas from what's at home in Suggest, checked by rules, planned or saved as a recipe |
 | Plan a meal: recipe first, fills the rest; change for this meal, save to the recipe, or save as a new one | 25-019 | Done (#238) |
 | Gemini Live hears well, but the chat writes different, misspelt words: write what was actually said | 04-023 | Done in #234: each turn written down again from its audio with the listening language and family names |
-| A sheet and the keyboard open together and flicker; the keyboard hides the field | 25-016 | Done in #234: the keyboard waits for a tap, rises natively on Android, the field is kept in view |
+| A sheet and the keyboard open together and flicker; the keyboard hides the field | 25-016 | Done in #234: the keyboard waits for a tap, rises natively on Android, the field is kept in view; the owner confirmed it on their phone, 2026-10-19 |
 | The Add an item sheet hid behind the phone keyboard | 25-010 | Done: the sheet rises above the keyboard |
 | A phone number for every member and helper, and sign-in by phone | 01-011 | Done; sign-in by phone waits on an SMS provider in Supabase Auth |
 | HomeTalk said "no events in December" | 26-003 | Done, #213 |
