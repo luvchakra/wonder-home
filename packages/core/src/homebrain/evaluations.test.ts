@@ -768,12 +768,12 @@ describe("Corrections and current truth (§8, §9)", () => {
 
   it("answers from a Review belief the question paraphrases, with no model", () => {
     const { reading, relevant } = ask("When do the children go to bed?", { items });
-    expect(composeFromFacts(relevant, reading)).toContain("The children are in bed by 9pm on school nights (confirmed).");
+    expect(composeFromFacts(relevant, reading)).toContain("The children are in bed by 9pm on school nights (registered).");
   });
 
   it("reads what the household confirmed in HomeBrain Review, and says where it came from", () => {
     const { text } = ask("When do the children go to bed?", { items });
-    expect(text).toContain("The children are in bed by 9pm on school nights (confirmed).");
+    expect(text).toContain("The children are in bed by 9pm on school nights (registered).");
     const why = readWhyQuestion("Where did that come from?")!;
     const answer = explain({ ...why, items, viewerMemberId: "kunal", timezone: TZ, now: NOW, lastAssistantText: "The children are in bed by 9pm on school nights.", lastAction: null, clarifying: null });
     expect(answer.text).toContain("Something the household told WonderHome in HomeBrain, and confirmed.");

@@ -56,6 +56,8 @@ import { preferencesOf } from "@wonderhome/core/i18n/preferences";
 import { translatorFor } from "@wonderhome/core/i18n/translate";
 import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal";
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
+import { after } from "next/server";
+import { meaningForTurn, recalledMemoryIds, recordRecall } from "@wonderhome/core/homebrain/sleep/recall";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { hometalkCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { log } from "@wonderhome/core/observability/logger";
@@ -441,6 +443,10 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   const mayBeQuestion = parts.length === 1 && (routing.compose !== undefined || quick.action === "ask_status" || quick.action === "unknown");
   const brainRead = mayBeQuestion ? readBrain() : null;
   brainRead?.catch(() => undefined);
+  // What the question is close to in meaning (HomeBrain Sleep), alongside the read, bounded and never awaited past its budget.
+  const brainMeaning = mayBeQuestion
+    ? meaningForTurn(admin, { householdId, question: body.utterance, names: people.flatMap((person) => [person.displayName, person.displayName.split(/\s+/)[0] ?? ""]).filter((name) => name.length >= 2), policy: routing.policy })
+    : undefined;
 
   // Corrections (Wave 4 §9): "No, I meant Manan", "actually make that
   // Friday", "not milk, almond milk" — read against what this conversation
@@ -941,7 +947,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       agenda
         ? answerStatus(supabase, householdId, membership, result.intent, agenda).catch(() => HOME_UNREADABLE)
         : Promise.resolve(HOME_UNREADABLE),
-      askHomeBrain({ routing, question: lookAgain && previousQuestion ? previousQuestion : body.utterance, previousQuestion, people, view, membership, read: brainRead, supabase, limits, deeper: lookAgain }),
+      askHomeBrain({ routing, question: lookAgain && previousQuestion ? previousQuestion : body.utterance, previousQuestion, people, view, membership, read: brainRead, supabase, limits, deeper: lookAgain, semantic: lookAgain ? undefined : brainMeaning }),
     ]);
     composedAt = Date.now();
     brainAnswer = answered;
@@ -958,7 +964,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   ) {
     // Not a request the engine knows, and not a model outage: before saying
     // "I did not follow that", see whether the home's own facts answer it.
-    const answered = await askHomeBrain({ routing, question: lookAgain && previousQuestion ? previousQuestion : body.utterance, previousQuestion, people, view, membership, read: brainRead, supabase, limits, deeper: lookAgain });
+    const answered = await askHomeBrain({ routing, question: lookAgain && previousQuestion ? previousQuestion : body.utterance, previousQuestion, people, view, membership, read: brainRead, supabase, limits, deeper: lookAgain, semantic: lookAgain ? undefined : brainMeaning });
     composedAt = Date.now();
     const usable =
       answered?.text &&
@@ -1240,6 +1246,8 @@ async function askHomeBrain(input: {
   supabase: Supabase;
   limits?: ChannelLimits;
   deeper?: boolean;
+  /** Records close in meaning to the question (HomeBrain Sleep), started with the read. */
+  semantic?: Promise<ReadonlyMap<string, number>>;
 }): Promise<HomeBrainAnswer | null> {
   if (!input.read) return null;
   try {
@@ -1263,8 +1271,19 @@ async function askHomeBrain(input: {
       compose: input.routing.compose ?? null,
       factBudget: FACT_BUDGET,
       heldForAdults: context.snapshot.heldForAdults,
+      semantic: input.semantic,
     });
     if (answer.deepRead) recordDeepRead(input.membership.household.id, answer.deepRead);
+    // The memories this answer stood on stay strong (HomeBrain Sleep): counted after the response.
+    const recalled = recalledMemoryIds(answer.facts);
+    if (recalled.length > 0) {
+      const householdId = input.membership.household.id;
+      try {
+        after(() => recordRecall(createAdminClient(), householdId, recalled));
+      } catch {
+        void recordRecall(createAdminClient(), householdId, recalled).catch(() => undefined);
+      }
+    }
     return answer;
   } catch (thrown) {
     console.error("[conversation] HomeBrain failed", { error: thrown instanceof Error ? thrown.name : "unknown" });

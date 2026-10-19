@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**287 of 307 stories done — 93.5%**
+**289 of 309 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 287 |
+| Done | 289 |
 | In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 11 |
@@ -30,7 +30,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 23 | 25 | 1 in progress, 1 not started |
-| 05 Household Certification & Understanding | `██████████` | 10 | 10 | — |
+| 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `█████████░` | 15 | 16 | 1 not started |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `████████░░` | 26 | 31 | 2 in progress, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 27 | 32 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -184,7 +184,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 05 — Household Certification & Understanding
 
-10 of 10 done `██████████`
+11 of 11 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -198,6 +198,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-008` Certification health | P2 | Done | `certificationHealth` breaks `summarize()`'s single percentage down by risk level, so a household reading "90% understood" cannot be shown that number while the one high-risk belief driving the missing 10% sits unreviewed. Wired into `/certification`'s own summary card: the explanation line appears only when a high or critical item actually needs review, staying silent (rule: normal is silent) the rest of the time |
 | `05-009` Review many at once | P1 | Done | The owner, 2026-10-18 (PR #236): HomeBrain's list has Select; ticked items (or Select all) are confirmed, removed (after asking) or left for later together. Each goes through the same `reviewItem` path as one item's own buttons, so History, the memory HomeBrain reads and correction evidence are as if decided one by one; a correction stays one at a time. Checked at 360px: two confirmed, then the rest removed, and the review trail showed four decisions |
 | `05-010` What HomeBrain registers is registered by default | P1 | Done | The owner, 2026-10-19 (screenshot of 14 items under Needs review): whatever HomeBrain registers is registered from the start; an Admin removes or corrects it later. The owner, the same day (PR #251): "let's not have anything called confirmed" — HomeBrain Review, its notices, HomeTalk's replies and the help now say Registered and Register in all 8 languages; the stored status value stays `confirmed`, so nothing moved in the database. New memories and their HomeBrain items are written confirmed (`conversation/memory.ts`, `welcome.ts`, `remember()`); the column defaults are `confirmed` (migration `20261019150000`, live), and the 18 learned memories and items on record were brought in line. Only a statement contradicting something already confirmed (`needs_review`) still waits for a person. Replies no longer say "(you told me; not confirmed yet)". Help: HomeBrain ¶1 in 8 languages |
+| `05-011` Household understanding counts what the household keeps | P1 | Done | The owner's report, 2026-10-19 (screenshot: Family & roles, Education, Finance, Safety all 0/0 while the family was on record): the panel counted only beliefs said in HomeTalk. It now adds each category's own records, registered by definition: members, relationships and responsibilities; playbook items and policies; school enrolments; bills; food preferences and pets; allergies and medical food restrictions as Safety (`recordCountsFrom`, `withRecords`, `loadUnderstandingRecords` — one wave through the viewer's own RLS). The ring and the count line use the same arithmetic. PR #252 |
 
 ### 06 — Actionable Notification Engine
 
@@ -333,7 +334,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-26 of 31 done `████████░░`
+27 of 32 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -368,6 +369,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-029` HomeBrain 4.0 phase 5 — inferences with evidence | P1 | Done | PR #241. Built: `homebrain/insights.ts` — night_before (an evening plan before a child's exam), meal_short, away_but_assigned (the cook away), bill_before_trip, routine_gap (one owner away, no backup) and count (guests coming, the yeses added up); each is a `domain: "insight"` fact sent with its evidence, leading a decision and following the fact for a plain question. `validate.ts` gains `unsupported_inference`: a model's own "because / which means / so you'll" is refused unless it cites an inference fact; the answer prompt says so. As built: guest_food and school_kit wait on records WonderHome does not keep (a guest's food preference; what a school item needs bought), and clashes stay in `context/conflicts.ts`. Golden HT-111 in `npm run eval`; HT-108/HT-109 as unit cases. Spec §3.5 |
 | `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | P1 | Done | PR #241. Built: `homebrain/goal.ts` (`readGoal`: find_out, plan, decide, check, remember, do, by rules on the question's own words) on every reading; a plan or a decision follows two links; the rules answer is shaped by it (to decide: what the rules noticed leads; to check whether anything is there: "Yes." first; never a yes the record does not say), and the model is told the goal (`AnswerInput.goal`). Spec §3.10 |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | P1 | In Progress | PR #241 built: the database trigger safety net (`wh.mark_context_stale` on 25 domain tables, live, DB-tested), the keep-warm rebuild of stores that are behind or over an hour old on the five-minute delivery clock (`keepStoresWarm`, 4 per tick), and the AI quality page's `homeBrainKeeping` (deeper looks and what they found by part of the home, stores behind and the oldest lag). Still open: rules read the store, the agenda summary only for broad questions, and the "not on record while on record" gate. Spec §3.2, §3.8 (was 14-022 and 14-023) |
+| `14-032` HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | P1 | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
 
 ### 15 — Privacy, Security & Governance
 

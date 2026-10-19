@@ -10,6 +10,7 @@ import { isoDateIn } from "../context/format";
 import { applyFreshness } from "../context/freshness";
 import { householdMemory, setContextWriteListener } from "../context/invalidation";
 import { filterForViewer } from "../context/privacy";
+import { attachLinks, type LinkKind } from "./sleep/links";
 import { attachHomeSendEvidence } from "../context/provenance";
 import { CONTEXT_ADAPTERS, gatherHouseholdContext, listAbsences, listBeliefs, listEventGuests, listFoodPreferences, listMemories, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "../context/repository";
 import type { ContextDomain, ContextScope, ContextViewer, HouseholdContextItem } from "../context/types";
@@ -112,7 +113,9 @@ export function storeIsCurrent(stored: Pick<StoredContext, "staleSince" | "built
 export type BuildScope = { householdId: string; householdName: string; timezone: string; now: Date };
 
 /** Everything the store holds, read with the service role and built whole. Pure once the records are in hand (`buildStoreItems`). */
-export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope): Promise<{ records: ContextRecords; homeSendChanges: HomeSendChange[]; unavailable: string[] }> {
+export type StoredLink = { from: string; to: string; kind: LinkKind; reason: string };
+
+export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope): Promise<{ records: ContextRecords; homeSendChanges: HomeSendChange[]; unavailable: string[]; links: StoredLink[] }> {
   const fullScope: ContextScope = { ...scope, viewer: BUILDER };
   const from = new Date(scope.now.getTime() - STORE_PAST_DAYS * DAY_MS);
   const to = new Date(scope.now.getTime() + STORE_AHEAD_DAYS * DAY_MS);
@@ -121,6 +124,7 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
   const unavailable: string[] = [];
   const records: ContextRecords = {};
   const homeSendChanges: HomeSendChange[] = [];
+  const links: StoredLink[] = [];
 
   const guard = async <T>(label: string, read: () => Promise<T>): Promise<T | null> => {
     try {
@@ -151,6 +155,12 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
       ]);
       return { memories, beliefs, foodPreferences };
     }),
+    // What a night's sleep linked across the home (HomeBrain Sleep): no table yet is no links.
+    (async () => {
+      const { data } = await admin.from("homebrain_links").select("from_item, to_item, kind, reason").eq("household_id", scope.householdId).limit(2000);
+      for (const row of (data ?? []) as { from_item: string; to_item: string; kind: LinkKind; reason: string }[]) links.push({ from: row.from_item, to: row.to_item, kind: row.kind, reason: row.reason });
+      return null;
+    })(),
   ]);
   for (const result of results) {
     if (!result) continue;
@@ -158,13 +168,13 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
     if (changes) homeSendChanges.push(...changes);
     Object.assign(records, rest);
   }
-  return { records, homeSendChanges, unavailable };
+  return { records, homeSendChanges, unavailable, links };
 }
 
 /** Records → the store's items: whole lists, no horizon, nobody in particular asking. */
-export function buildStoreItems(records: ContextRecords, homeSendChanges: readonly HomeSendChange[], scope: BuildScope): HouseholdContextItem[] {
+export function buildStoreItems(records: ContextRecords, homeSendChanges: readonly HomeSendChange[], scope: BuildScope, links: readonly StoredLink[] = []): HouseholdContextItem[] {
   const built = buildContextItems(records, { householdId: scope.householdId, householdName: scope.householdName, timezone: scope.timezone, now: scope.now, viewerMemberId: "", limitLists: false });
-  return attachHomeSendEvidence(built, [...homeSendChanges]);
+  return attachLinks(attachHomeSendEvidence(built, [...homeSendChanges]), links);
 }
 
 /**
@@ -197,8 +207,8 @@ export function fitToCap(items: readonly HouseholdContextItem[], maxBytes: numbe
  * row behind (`stale_since` later than `built_at`).
  */
 export async function rebuildStoredContext(admin: SupabaseClient, scope: BuildScope): Promise<StoredContext> {
-  const { records, homeSendChanges, unavailable } = await readStoreRecords(admin, scope);
-  const built = buildStoreItems(records, homeSendChanges, scope);
+  const { records, homeSendChanges, unavailable, links } = await readStoreRecords(admin, scope);
+  const built = buildStoreItems(records, homeSendChanges, scope, links);
   const { items, json } = fitToCap(built);
   const sections: Record<string, { count: number; builtAt: string }> = {};
   for (const item of items) {

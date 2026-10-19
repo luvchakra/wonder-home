@@ -27,7 +27,9 @@ export type EdgeKind =
   /** A responsibility → whoever owns it, or backs it up. */
   | "responsible_for"
   /** A record → the HomeSend item it was routed from. */
-  | "routed_from";
+  | "routed_from"
+  /** Two records a night's sleep linked across the home (HomeBrain Sleep): "Asmi likes pasta" ↔ Friday's pasta dinner. */
+  | "associated";
 
 export type Edge = { from: string; to: string; kind: EdgeKind };
 
@@ -66,6 +68,12 @@ export function buildHouseholdGraph(items: readonly HouseholdContextItem[]): Hou
     for (const ref of item.evidence) {
       const to = ref.type === "homesend_intake" && ref.sourceId ? homeSendItem.get(ref.sourceId) : undefined;
       if (to && to !== item.id) edges.push({ from: item.id, to, kind: "routed_from" });
+    }
+    // A link drawn overnight, only to a record this viewer can also see (both ends in their list).
+    if (Array.isArray(item.attributes.associations)) {
+      for (const link of item.attributes.associations as { to?: unknown }[]) {
+        if (typeof link?.to === "string" && link.to !== item.id && byId.has(link.to)) edges.push({ from: item.id, to: link.to, kind: "associated" });
+      }
     }
     const date = typeof item.attributes.date === "string" ? item.attributes.date.slice(0, 10) : null;
     if (date && DATED.has(item.domain)) byDay.set(date, [...(byDay.get(date) ?? []), item.id]);

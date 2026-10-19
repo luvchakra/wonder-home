@@ -30,7 +30,7 @@ disagree again.)
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
 | 04 | Conversation, Voice & Text | 19 | 16 | 3 | 0 | 18 | In Progress |
-| 05 | Household Certification & Understanding | 8 | 6 | 1 | 1 | 6 | In Progress |
+| 05 | Household Certification & Understanding | 11 | 6 | 4 | 1 | 11 | Done |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 9 | 5 | 2 | 2 | 9 | Done |
@@ -39,7 +39,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 8 | 5 | 2 | 1 | 8 | Done |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 19 | 16 | 2 | 1 | 19 | Done |
+| 14 | AI Orchestration & Learning | 32 | 23 | 8 | 1 | 27 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -298,3 +298,5 @@ disagree again.)
 | 2026-10-19 | 05 | 05-010 | Done | memory, engine and welcome tests (updated to the owner's rule), npm test (3603 + 64), test:db 674/674, typecheck, eval 133/133; migration live (18 memories and 18 items moved, defaults confirmed) with verify:live 305/305; browser QA at 360px (a like lands under Confirmed, Needs review empty, Remove works, the reply has no "not confirmed yet") | HomeBrain items confirmed by default (`docs/progress/2026-10-19-homebrain-confirmed-by-default.md`) |
 | 2026-10-19 | 26 | 26-002 | Done | calendar modules tests 13 (54 in calendar), help and i18n 106, npm test, typecheck, lint, build; browser QA at 360px and 1280px (each module on its day, "Due" on homework and the bill, Filters "Also show" turning planned meals and responsibilities on and deliveries off, no sideways scroll, no page errors) | The rest of the home on the calendar (`docs/progress/2026-10-19-calendar-module-adapters.md`) |
 | 2026-10-19 | 05 | 05-010 | Done (wording) | conversation, household, homebrain, help and i18n tests (1178), typecheck, eval 133/133; browser QA at 360px (HomeBrain Review reads Registered, no "Confirmed" left) | HomeBrain says Registered, never Confirmed (`docs/progress/2026-10-19-homebrain-confirmed-by-default.md`) |
+| 2026-10-19 | 14 | 14-032 | Done | sleep core 27 tests (consolidation, links, profiles, speech), npm test (3644+), test:db 681/681 (homebrain_sleep 7/7, pgvector match included), eval 134/134 (HT-117), unsafe 0/18; migration live, verify:live 317/317; two real nights on a QA household (Google key: 16 records embedded, model judged 10–11 pairs, merge/split/let go/rest, rule and model links, second night changed nothing); browser at 360px (Learned → While you slept, Undo, Bring back, Connections; HomeTalk on a production build) | HomeBrain Sleep (`docs/progress/2026-10-19-homebrain-sleep.md`) |
+| 2026-10-19 | 05 | 05-011 | Done | certification tests (record counts), browser at 360px (Family & roles 3/3 for a QA family with two members and a relationship) | Household understanding counts what the household keeps (`docs/progress/2026-10-19-homebrain-sleep.md`) |

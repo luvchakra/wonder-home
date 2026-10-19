@@ -361,6 +361,43 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
     with a golden test.
   - **The goal shapes the answer** (`homebrain/goal.ts`): what decides comes
     first for "should we…?", the fact first for "when is…?".
+  Since HomeBrain Sleep (5.0, story 14-032, `packages/core/src/homebrain/sleep/`)
+  HomeBrain tidies what it remembers each night, as a brain does in sleep:
+  - **The night.** Between 2 and 5 am on each household's clock, once per local
+    day (`homebrain_runs`), on the delivery tick after its response
+    (`sleepDueHouseholds`). `planSleep` (pure) lets go of empty notes, tags
+    salience, expires what is past, reads notes into person–stance–thing,
+    merges the same thing, splits a sentence about several people, files a note
+    under its person, and rests what has gone 90 days unused. A rested note
+    wakes when it is used again. Salience 3 (health, allergy, safety) never
+    rests or expires on its own.
+  - **Only contradictions reach a person.** The same thing liked and disliked
+    goes to Needs review. Everything else applies automatically and is listed
+    under Learned → While you slept, with Undo (`undo.ts`, from the `detail`
+    each `homebrain_consolidations` row keeps). Never hard-delete a memory: a
+    merge or split supersedes it.
+  - **A model judges; rules decide.** Merging by meaning happens by rule only
+    when two notes are near-identical (0.985). Anything close goes to the model
+    (`sleep-model.ts`), which also reads sentences the rules cannot and
+    proposes links. A reading is kept only when it names a person it was shown
+    and uses the sentence's own words. A link is kept only when it joins two
+    records the model was shown.
+  - **Meaning.** `homebrain_embeddings` uses pgvector, 768 dimensions, compared
+    exactly per household (`match_homebrain_embeddings`, service role). Each
+    record is embedded with the household's Google or OpenAI key, else its
+    Gemini key, else the platform key. Only classes the data-use policy
+    allows are embedded, and every family name becomes "someone" before
+    anything is sent. On a turn, meaning starts alongside the read and gets
+    900 ms (`recall.ts`), then the turn answers by words.
+  - **Links and profiles.** Links (`homebrain_links`) ride on the store's items
+    as `attributes.associations`. The graph follows one only when both ends
+    are in the viewer's list. A person at a glance (`profiles.ts`) is built on
+    the turn from the viewer's own items, never health or money, and leads
+    "What do you know about X?". The memories an answer used are counted after
+    the response (`homebrain_recalled`), apart from `memories`, so a turn never
+    marks the store stale.
+  - **Household understanding** counts the household's own records per
+    category (`withRecords`), not only what HomeTalk was told.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the
@@ -537,7 +574,7 @@ documents and stays inert until a person creates the skill and sets
 `ALEXA_*`; Gemini Live runs only on a Google key and only where the household's
 data-use agreement allows it, re-checked on every tool call. That key is the
 household's own Gemini voice key (`household_gemini_voice_credentials`,
-voice only) if one is set, otherwise the assistant's key when that is
+voice, and HomeBrain's embeddings when the assistant key cannot make them) if one is set, otherwise the assistant's key when that is
 Google's, so an assistant on Anthropic can still talk through Gemini. No key
 table ever lets a session read `api_key` back. Each one grants SELECT on
 every column except the key, so key writes are an insert, then an update by

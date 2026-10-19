@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { recordCountsFrom, type RecordCounts } from "./certification";
 import type { SetupFacts } from "./setup";
 
 const COUNT_KEYS = [
@@ -50,6 +51,27 @@ export async function loadSetupFacts(
     // Fall back to the per-domain counts below.
   }
   return loadSetupFactsByDomain(supabase, household);
+}
+
+/**
+ * What the household keeps on its own screens, per HomeBrain category, for
+ * "Household understanding": the setup counts, plus relationships and the
+ * food restrictions that are about safety — one wave, through the member's
+ * own row-level security. A count that fails is zero.
+ */
+export async function loadUnderstandingRecords(supabase: SupabaseClient, household: { id: string; name: string; timezone: string }): Promise<RecordCounts> {
+  const head = async (table: string, kinds?: string[]) => {
+    try {
+      let query = supabase.from(table).select("id", { count: "exact", head: true }).eq("household_id", household.id);
+      if (kinds) query = query.in("kind", kinds);
+      const { count } = await query;
+      return count ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+  const [facts, relationships, safetyFoodPreferences] = await Promise.all([loadSetupFacts(supabase, household), head("member_relationships"), head("food_preferences", ["allergy", "medical"])]);
+  return recordCountsFrom({ ...facts, relationships, safetyFoodPreferences });
 }
 
 async function loadSetupFactsByDomain(

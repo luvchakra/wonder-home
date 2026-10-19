@@ -57,6 +57,10 @@ export type MemoryRecord = {
   sourceId?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  /** Faded from use overnight (HomeBrain Sleep): still on record, found when HomeBrain looks deeper, ranked below what is in use. */
+  resting?: boolean;
+  /** How much it matters (0–3), tagged overnight. */
+  salience?: number;
 };
 
 /** A belief the household holds in HomeBrain Review with no HomeTalk memory behind it — added there, or a correction made there. */
@@ -442,7 +446,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
       state(
         "attention",
         "what was checked",
-        `WonderHome checked ${agenda.checked} things across ${agenda.handled.map((entry) => entry.title.toLowerCase()).join(", ") || "the household"} and ${agenda.needsYou.length === 0 ? "nothing needs anyone right now" : `${agenda.needsYou.length} need someone`}.`,
+        `WonderHome checked ${agenda.checked} ${agenda.checked === 1 ? "thing" : "things"} across ${agenda.handled.map((entry) => entry.title.toLowerCase()).join(", ") || "the household"} and ${agenda.needsYou.length === 0 ? "nothing needs anyone right now" : `${agenda.needsYou.length} need someone`}.`,
         "general",
         1,
       );
@@ -979,12 +983,12 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         // A stated preference reads as what was said ("Asmi doesn't like
         // mushrooms"); a keyed routine keeps its label ("Meals dinner — 8pm").
         summary: memory.key.startsWith("pref.") && statementOf(memory.value)
-          ? `${capitalize(statementOf(memory.value)!.replace(/\.$/, ""))}${confirmed ? " (confirmed)" : ""}.`
-          : `${about ? `${about}: ` : ""}${humanKey(memory.key)} — ${describeValue(memory.value)}${confirmed ? " (confirmed)" : ""}.`,
+          ? `${capitalize(statementOf(memory.value)!.replace(/\.$/, ""))}${confirmed ? " (registered)" : ""}.`
+          : `${about ? `${about}: ` : ""}${humanKey(memory.key)} — ${describeValue(memory.value)}${confirmed ? " (registered)" : ""}.`,
         need: "what the household prefers",
         privacyClass: memory.scope === "member" && isChild(memory.memberId) ? "child" : "general",
         subjectMemberIds: [memory.memberId],
-        attributes: { key: memory.key, value: memory.value, status: memory.status, category: memory.category, title: humanKey(memory.key) },
+        attributes: { key: memory.key, value: memory.value, status: memory.status, category: memory.category, title: humanKey(memory.key), ...(memory.resting ? { resting: true } : {}), ...(memory.salience !== undefined ? { salience: memory.salience } : {}) },
         source: { type: memory.sourceType ? `memories (${memory.sourceType})` : "memories", sourceId: memory.sourceId ?? memory.id ?? null, capturedAt: memory.updatedAt ?? memory.createdAt ?? null },
         confidence: memory.confidence ?? (confirmed ? 1 : 0.6),
         confirmed,
@@ -992,8 +996,9 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         authority: confirmed ? 3 : memory.sourceType === "conversation" ? 2 : 1,
         freshnessAt: memory.updatedAt ?? memory.createdAt ?? nowIso,
         // A preference still held is how the home works today; only a
-        // superseded one (freshness.ts) becomes history.
-        tier: 2,
+        // superseded one (freshness.ts) becomes history. A resting one is
+        // background until a question reaches for it.
+        tier: memory.resting ? 3 : 2,
         aliases: [humanKey(memory.key), objectOf(memory.value)],
         identityKey: `memory:${memory.scope}:${memory.memberId ?? "household"}:${memory.key}`,
       });
@@ -1006,7 +1011,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         domain: "preferences",
         entityType: "belief",
         entityId: belief.id,
-        summary: `${belief.claim.replace(/\.$/, "")}${confirmed ? " (confirmed)" : ""}.`,
+        summary: `${belief.claim.replace(/\.$/, "")}${confirmed ? " (registered)" : ""}.`,
         need: "what the household has told WonderHome",
         privacyClass:
           belief.category === "finance" ? "financial" : belief.category === "education" || (belief.scope === "member" && isChild(belief.memberId)) ? "child" : "general",

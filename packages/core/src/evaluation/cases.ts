@@ -68,6 +68,12 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["No one is recorded as Manan's father yet", "Members & roles"], excludes: ["Kunal Mehta is Manan's father"] } },
   },
   {
+    id: "HT-117", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
+    description: "\"What do you know about Asmi?\" is answered from her at a glance (HomeBrain Sleep): what she likes and who she is to the family, together, from records alone.",
+    utterance: "What do you know about Asmi?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Asmi at a glance", "likes Indian food"], excludes: ["not have anything on record"] } },
+  },
+  {
     id: "HT-113", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"Who likes what?\" is the same answer for anyone in the family, and is never kept as a fact about someone called \"Who\".",
     utterance: "Who likes what?",

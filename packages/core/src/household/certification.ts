@@ -129,6 +129,51 @@ export function summarize(
   };
 }
 
+/**
+ * What the household keeps in its own screens, per HomeBrain category: each
+ * one a fact a person entered, so registered by definition (the owner,
+ * 2026-10-19 — "Family & roles 0/0" while the family was all on record).
+ * Counted through the viewer's own access, so nobody sees a count they
+ * could not read row by row.
+ */
+export type RecordCounts = Partial<Record<CertificationCategory, number>>;
+
+export function recordCountsFrom(facts: {
+  members: number;
+  relationships: number;
+  responsibilities: number;
+  playbookItems: number;
+  policies: number;
+  schoolEnrolments: number;
+  obligations: number;
+  foodPreferences: number;
+  safetyFoodPreferences: number;
+  pets: number;
+}): RecordCounts {
+  return {
+    family_roles: facts.members + facts.relationships + facts.responsibilities,
+    home_routines: facts.playbookItems + facts.policies,
+    education: facts.schoolEnrolments,
+    finance: facts.obligations,
+    lifestyle: Math.max(0, facts.foodPreferences - facts.safetyFoodPreferences) + facts.pets,
+    safety: facts.safetyFoodPreferences,
+  };
+}
+
+/** The summary with the household's own records counted in: registered, in their categories, and in the whole. */
+export function withRecords(summary: CertificationSummary, records: RecordCounts): CertificationSummary {
+  const byCategory = Object.fromEntries(
+    CERTIFICATION_CATEGORIES.map((category) => {
+      const kept = Math.max(0, records[category] ?? 0);
+      return [category, { confirmed: summary.byCategory[category].confirmed + kept, total: summary.byCategory[category].total + kept }];
+    }),
+  ) as CertificationSummary["byCategory"];
+  const added = CERTIFICATION_CATEGORIES.reduce((sum, category) => sum + Math.max(0, records[category] ?? 0), 0);
+  const confirmed = summary.confirmed + added;
+  const total = summary.confirmed + summary.learned + summary.needsReview + added;
+  return { ...summary, confirmed, byCategory, understanding: total === 0 ? 0 : Math.round((confirmed / total) * 100) };
+}
+
 export type RiskCoverage = { confirmed: number; needsReview: number; total: number };
 
 export type CertificationHealth = {

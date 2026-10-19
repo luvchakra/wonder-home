@@ -278,6 +278,18 @@ const RULES: readonly Rule[] = [
     },
   },
 
+  // --- One person, at a glance (HomeBrain Sleep) ----------------------------
+  {
+    // "What do you know about Asmi?", "tell me about Manan": a question,
+    // answered by HomeBrain from the person's own records, their profile first.
+    pattern: /^(?:what (?:do|can) you (?:know|remember|tell me)|what(?:'s| is) on record|tell me(?: all| everything)?) about ([A-Za-z][A-Za-z'-]{1,30})\??$/i,
+    read: (match) => {
+      const name = match[1]!;
+      if (/^(?:us|me|the|our|my|everyone|everybody|this|that|it|them|him|her)$/i.test(name)) return null;
+      return { action: "ask_status", target: { kind: "member", reference: name.toLowerCase() }, parameters: { scope: "person", subject: name }, confidence: 0.9 };
+    },
+  },
+
   // --- Status: what is going on ---------------------------------------------
   {
     pattern: new RegExp(

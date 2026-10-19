@@ -32,6 +32,10 @@ export const MODEL_TIMEOUT_MS = {
   transcribe: 15_000,
   /** Ideas for a meal from what is at home (story 25-018): a person tapped and is waiting, with three short dishes to write. */
   suggest: 25_000,
+  /** Turning text into meaning (HomeBrain Sleep): a question on a turn, a night's batch of records. Small and fast; a turn never waits past this. */
+  embed: 8_000,
+  /** A night's sleep (HomeBrain Sleep): nobody is waiting, but a night has many households. */
+  sleep: 45_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;
