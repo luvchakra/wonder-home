@@ -96,7 +96,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.talk-to-wonderhome.body.2":
     "Cuando pides algo cotidiano —planificar una tarde, añadir a la lista, planificar una comida, decir que no estarás— HomeTalk lo hace en el momento y te dice qué hizo; di o escribe \"deshacer\" para revertirlo. Cuando una petición afecta a otras personas, como invitar a alguien o cambiar las tareas de otra persona, pregunta una vez en la conversación, y basta con un sí dicho o escrito. Los pagos, los pedidos y los cambios sobre quién puede hacer qué siempre esperan tu aprobación en pantalla. Un Admin puede activar \"Preguntar antes de actuar según lo que digo\" en Ajustes → AI Assistant para que pregunte siempre primero.",
   "help.guide.talk-to-wonderhome.body.3":
-    "Puedes corregirlo como corregirías a una persona: “no, me refería a Manan”, “leche no, leche de almendras”, “mejor que sea el viernes”. Si el cambio aún no se había hecho, se sustituye la propuesta; si ya se había hecho, WonderHome lo deshace y hace el corregido, y ambos pasos quedan registrados.",
+    "Puedes corregirlo como corregirías a una persona: “no, me refería a Manan”, “leche no, leche de almendras”, “mejor que sea el viernes”, “que sean 2 litros” (el artículo sigue igual, solo cambia la cantidad). Si el cambio aún no se había hecho, se sustituye la propuesta; si ya se había hecho, WonderHome lo deshace y hace el corregido, y ambos pasos quedan registrados.",
   "help.guide.talk-to-wonderhome.body.4":
     "Varias peticiones en una frase se atienden una por una. Una parte posterior que depende de una anterior (“…y recuérdame comprarlos”) solo sigue adelante si la parte anterior de verdad se hizo.",
   "help.guide.talk-to-wonderhome.body.5":

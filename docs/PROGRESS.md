@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**307 of 327 stories done — 93.9%**
+**308 of 327 stories done — 94.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 307 |
+| Done | 308 |
 | In Progress | 4 |
 | Blocked | 1 |
-| Not Started | 11 |
+| Not Started | 10 |
 | Deferred | 4 |
 
 ## By module
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `██████░░░░` | 13 | 19 | 6 not started |
+| 25 HomeFood | `███████░░░` | 14 | 19 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -72,7 +72,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
 | `25-015` Change or remove a recipe and its ingredients | 25 HomeFood | P1 | Not Started |
-| `25-005` "Make that 2 litres" corrects an amount | 25 HomeFood | P2 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
@@ -537,7 +536,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-13 of 19 done `██████░░░░`
+14 of 19 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -559,7 +558,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-017` A recipe's ingredients are picked from the grocery catalog, and its nutrients add up from them | P0 | Done | PR #241. The owner, 2026-10-18: "these ingredients not to be set as free text, but should be from the same grocery catalog that is used in HomeFood". Every ingredient row (a recipe's essentials and its nice-to-haves, a meal's ingredients, the Ingredients sheet) searches the household's own items and the grocery catalog as you type (`CatalogItemField`, pictures, "At home"), with "Use … as a new item" for anything not listed; a pick starts the row in a recipe unit (kg→g, l→ml). The server resolves each pick again (`meals/ingredient-links.ts`) and makes it the very grocery item HomeFood tracks (`commerce/catalog-items.ts`, shared with Groceries' Add item). Calories, protein, carbs and fat per serving left empty are worked out from the weighed ingredients (`meals/ingredient-nutrition.ts`: IFCT first, whole numbers), and the notice says from how many. Checked at 360px and 1280px: tomato 200 g and basmati 150 g for 4 → 143 kcal, from 2 of 2 |
 | `25-018` Suggest a meal from what is at home, and save it as a recipe | P1 | Done | PR #243. The owner, 2026-10-18: with no recipes yet, or none that fit, WonderHome suggests dishes from the items at home. Suggest (Meals plan) now also offers Ideas from what's at home, even with no recipes: the household's model proposes up to three dishes from the tracked items (`ai/dish-idea-model.ts`), and the rules decide (`meals/dish-ideas.ts`): every ingredient is matched to a tracked item or marked to buy, whatever the model said; salt, oil and everyday spices are "check you have it" and count neither way; a dish with anything anyone avoids (allergy, medical, ethical, dislike) is dropped here, and allergy or medical subjects only reach the model when the household lets health leave; a dish mostly to buy, or one already a recipe, is dropped. An idea opens (rule 21) to its ingredients, each At home / Check you have it / To buy, and its method, and can be planned, saved as a recipe (nutrients worked out as 25-017 does), or both (`app/(auth)/dish-idea-actions.ts`, re-linking every item on the server). A request is spent from the HomeTalk message allowance and goes through the data-use gate (`routeToProvider`). Also: "Add to the plan" on a recipe suggestion now reads ready-by on the household's clock. Checked on the live project at 360px and 1280px with a paneer allergy and paneer at home: no idea used paneer; an idea planned and saved as a recipe; a second dinner on the same day refused plainly; a lunch planned with "Added to the plan, with its ingredients." |
 | `25-019` Plan a meal starts from the recipe | P0 | Done | PR #238. The owner, 2026-10-18: the recipe picker comes first; picking it fills the meal's name and its essential ingredients with amounts (`IngredientRows` `initial`), and "Where these ingredients apply" offers Just for this meal (`setMealEssentials`), Save to the recipe as well (`replaceRecipeEssentials`, nice-to-haves kept) or Save as a new recipe (named, then the meal is planned from it). The meal is created first, so a taken slot changes no recipe |
-| `25-005` "Make that 2 litres" corrects an amount | P2 | Not Started | `readMakeThat` in `conversation/quantity.ts` parses it, but it is not wired into `conversation/corrections.ts`, so it does not yet replace an amount just proposed or done |
+| `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 
 ### 26 — HomeEvents
 

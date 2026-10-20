@@ -90,3 +90,36 @@ describe("applying a correction to the request it corrects", () => {
     expect(describeCorrection(list, applyCorrection({ kind: "replace", from: "milk", to: "almond milk" }, list, context)!)).toBe("milk → almond milk");
   });
 });
+
+describe("\"make that 2 litres\" corrects an amount (story 25-005)", () => {
+  it("is read as a correction whose value is an amount", () => {
+    expect(readCorrection("make that 2 litres")).toEqual({ kind: "value", to: "2 litres" });
+    expect(readCorrection("Actually, make it 500 grams.")).toEqual({ kind: "value", to: "500 grams" });
+  });
+
+  it("keeps the item and changes how much, on a proposal or on what was done", () => {
+    const waiting = applyCorrection({ kind: "value", to: "2 litres" }, pending({ parameters: { item: "milk" } }), context);
+    expect(waiting).toMatchObject({ action: "add_to_list", parameters: { item: "2 litres milk" } });
+    const done = applyCorrection(
+      { kind: "value", to: "500 grams" },
+      pending({ status: "executed", parameters: { item: "1 kg rice" }, result: { items: [{ name: "Rice", consumableId: "c-rice" }] } }),
+      context,
+    );
+    expect(done).toMatchObject({ parameters: { item: "500 grams rice", corrects: { actionId: "a-1" } } });
+  });
+
+  it("works for what is at home and a purchase, and never turns the amount into an item name", () => {
+    expect(applyCorrection({ kind: "value", to: "10" }, pending({ actionType: "set_stock", outcomeKey: "stock", parameters: { item: "6 eggs" } }), context)).toMatchObject({ parameters: { item: "10 eggs" } });
+    expect(applyCorrection({ kind: "value", to: "3 packs" }, pending({ actionType: "mark_bought", parameters: { item: "2 packs bread" } }), context)).toMatchObject({ parameters: { item: "3 packs bread" } });
+  });
+
+  it("leaves a request with several items, or no amount to change, alone", () => {
+    expect(applyCorrection({ kind: "value", to: "2 litres" }, pending({ parameters: { items: ["milk", "bananas"] } }), context)).toBeNull();
+    expect(applyCorrection({ kind: "value", to: "2 litres" }, pending({ actionType: "record_absence", parameters: { when: "tomorrow" } }), context)).toBeNull();
+  });
+
+  it("the reply says what changed", () => {
+    const subject = pending({ parameters: { item: "milk" } });
+    expect(describeCorrection(subject, applyCorrection({ kind: "value", to: "2 litres" }, subject, context)!)).toBe("milk → 2 litres milk");
+  });
+});
