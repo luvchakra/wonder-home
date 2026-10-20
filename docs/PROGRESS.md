@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**329 of 352 stories done — 93.5%**
+**333 of 359 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 329 |
-| In Progress | 7 |
+| Done | 333 |
+| In Progress | 10 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -26,16 +26,16 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 12 | 12 | — |
-| 01 Identity & Family Accounts | `██████████` | 13 | 13 | — |
+| 01 Identity & Family Accounts | `█████████░` | 13 | 14 | 1 in progress |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 26 | 28 | 1 in progress, 1 not started |
-| 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
+| 04 Conversation, Voice & Text | `█████████░` | 27 | 29 | 1 in progress, 1 not started |
+| 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 11 | 11 | — |
+| 10 Meals & Cooking | `█████████░` | 11 | 12 | 1 in progress |
 | 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 9 | 10 | 1 in progress |
@@ -46,11 +46,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
-| 21 Health and Fitness | `██████████` | 8 | 8 | — |
+| 21 Health and Fitness | `██████████` | 9 | 9 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
-| 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `████████░░` | 21 | 26 | 5 not started |
+| 24 HomePlaces | `█████████░` | 11 | 12 | 1 in progress |
+| 25 HomeFood | `████████░░` | 22 | 27 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -58,11 +58,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
+| `01-014` Where each member is, by consent | 01 Identity & Family Accounts | P1 | In Progress |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
 | `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
+| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | 10 Meals & Cooking | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -71,6 +73,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | In Progress |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
+| `24-012` Added places apart from saved ones, and first | 24 HomePlaces | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
@@ -105,7 +108,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-13 of 13 done `██████████`
+13 of 14 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -122,6 +125,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-011` A phone number for every member, and sign-in by phone | P0 | Done | The owner, 2026-10-18: a helper may have no email and will mostly use a phone. `household_member_phones` (migration `20261018210000`, live): one E.164 number per member, unique in the household; Admins write it, Admins, adults and the member read it (a child or helper sees only their own). Set in a member's details (pencil) and when adding a helper (`member-phone.ts`: `normalPhone` takes an Indian number as written, any other with its country code). A verified phone sign-in becomes the member recorded with that number, keeping their role (`wh.claim_members_by_phone`, run after every sign-in alongside email: `claimMembers`). **Sign in by phone** (`/sign-in/phone`: number, then texted code; `sendPhoneCode`/`verifyPhoneCode`) appears only when `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true`, which waits on a person connecting an SMS provider (Twilio, MessageBird, Vonage or Textlocal) in Supabase Auth; until then the live project answers `phone_provider_disabled` and the page says sign-in by phone isn't available. DB-tested (`scripts/test-member-phone-rls.mjs`); browser-checked at 360px and desktop (a helper added with a number, shown as +91 98765 43210, edited to a UK number; the phone page and its refusal) |
 | `01-012` A person's details read in order, and nothing runs off the card | P1 | Done | The owner's report, 2026-10-18 (PR #234): a long sign-in email ran off a child's details. Facts are grouped by what they are about (who they are, how to reach them, their day, family), email and phone take a whole row, and every value wraps rather than overflowing (rule 15). Checked at 360px with a 60-character email: no overflow |
 | `01-013` How the family is related | P1 | Done | The owner, 2026-10-19 (screenshot of Members & roles). Relationships on Members & roles: rows "Kunal is father of Asmi", each a person, a relation and a person, all picked (32 kinds, or the household's own words, rule 20), one row per pair. `member_relationships` (migration `20261019140000`, live, set-based RLS: members read, Admins write; a trigger keeps both people this household's active family). The other way round is said, never stored, from gender where recorded (`identity/relationships.ts` `inverseOf`); a row is refused when it relates someone to themselves, repeats a pair, or makes a parent younger than the child (`checkRelationship`, named reasons in eight languages). Suggestions from guardians and children, added with one tap, never automatically. Each person's details in Family show their line. HomeTalk answers "Who is Asmi's father?", "How is Upasana related to Manan?", "How is the family related?" by rules from the rows (`conversation/relations.ts`, goldens HT-114 to HT-116), and HomeBrain gets one fact per row. Help: Members, roles ¶6 in 8 languages |
+| `01-014` Where each member is, by consent | P1 | In Progress | The owner, 2026-10-20 ("show current location of each member … consent based, located in setting of that user, for child, adult controls it"). Off until turned on: an adult or helper turns their own on in Settings → Location sharing (`/settings/location`); a child's is set by their guardian or an Admin under the child in Family, and the child sees it. The device reports only while WonderHome is open (`LocationReporter`, every 5 min while visible), rounded to ~11 m, latest only; turning it off deletes it (trigger). Adults read positions, children and helpers only their own; never given to a model. Family shows At Home / At school / Out · how long ago with Open in Maps (`location/sharing.ts`: `placeAt` within 150 m of home, schools, offices, the place book). RLS test 4/4, unit 5. Waits on migration `20261020233000_member_locations.sql` reaching the live project. |
 
 ### 02 — Household Configuration & Playbook
 
@@ -156,7 +160,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-26 of 28 done `█████████░`
+27 of 29 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -188,10 +192,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-026` A child's or helper's request goes to an adult for the final OK | P0 | Done | The owner, 2026-10-20: "such queries are fine but results should go to adult for final approval before adding to WonderHome db". HomeTalk still understands and previews a child's or helper's request, but it never writes on its own whatever the outcome's autonomy (`proposal.ts`), and their Confirm reads "Ask a grown-up". That sends the exact proposal (its fingerprint) to their guardian, else an Admin (`conversation/referral.ts`, the existing `approvals` table, one notification). The adult answers under "Asking for your OK" on Notifications: Approve carries it out through the same executor on their session (`answerReferral`), Decline leaves it; a changed or lapsed proposal (48 h) is refused. Only a guardian of the requester or an Admin may answer, checked on the server. The requester is told in their own conversation. Test in `consent.test.ts`; help ¶15 of Talk to WonderHome in all eight languages |
 | `04-027` After a change, HomeTalk opens the screen that shows it | P0 | Done | The owner, 2026-10-20 ("Add tomato to the grocery list" should land on Groceries with tomato on it). An executed action's reply links to its screen; `navigation/app-path.ts`'s `screenShowing` takes the first WonderHome link from it and the turn sends it as `navigate`, typed or spoken, in the app only (never Alexa). The browser goes there, or refreshes in place when it is already there. `appPath` is now the one path check for the server, the contract and the browser, and allows a plain query (`/groceries?view=to-buy`). Browser-checked: typed on /ai, it landed on Groceries → To buy with Tomato listed. Then the owner's report ("add milk" by voice did not show on Groceries): Gemini Live's tool path still used the old path check that refused `?view=`, and a change whose reply had no link refreshed nothing. Now both voice engines use `appPath`, and any completed action with no screen to open refreshes the page the person is on (`onChanged` in `use-gemini-live.tsx`, `changed` in `live-talk.tsx`). |
 | `04-028` Stop a reply; a long reply is heard as a short summary | P1 | Done | The owner, 2026-10-20 ("give an option to stop such a scenario"; "while reading it out, just give a concise summary"). **Stop** under the waiting bubble stops waiting for the reply (an `AbortController` on the turn's request), and HomeTalk stops by itself after 45 s (`REPLY_WAIT_MS`); either way it says so in the conversation and, since the server may already have acted, to look before asking again. **Spoken summary**: `conversation/speech.ts`'s `spokenSummary` reads a reply of 40 words or fewer whole and a longer one as its opening sentence plus what its list covers (each item's bold lead, five at most, then "N more"), then "The rest is on screen." in the reader's language — every word spoken is a word of the reply. In-app voice speaks it (`handleLiveUtterance`); Alexa and Gemini Live get it through `speechFrom` for an answer of three or more headed items. Tests: speech 3, gateway 1; `npm run eval` gates pass (voice 25/25). Words and help (Talk to WonderHome, Voice) in all eight languages. Checked at 360px: Stop appeared on a held reply and left the Stopped note. |
+| `04-029` "Tomorrow" just after midnight is the day you wake up to | P0 | Done | The owner, 2026-10-21 ("tomorrow should be 21st, why it's showing 22" — asked at 12:02 am). `conversation/temporal.ts`'s `tomorrowIn`: before 4 am (`SMALL_HOURS_END_MINUTE`) "tomorrow" is the calendar day just begun, used by `resolveTemporal` (actions), `homebrain/question.ts`'s `timeWindow` (questions, label names the date taken) and `context/resolution.ts`. Tests: temporal small hours 2, executor timezone test moved to 4:30 am to keep its intent; 3,896 unit tests pass. |
 
 ### 05 — Household Certification & Understanding
 
-11 of 11 done `██████████`
+12 of 12 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -206,6 +211,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `05-009` Review many at once | P1 | Done | The owner, 2026-10-18 (PR #236): HomeBrain's list has Select; ticked items (or Select all) are confirmed, removed (after asking) or left for later together. Each goes through the same `reviewItem` path as one item's own buttons, so History, the memory HomeBrain reads and correction evidence are as if decided one by one; a correction stays one at a time. Checked at 360px: two confirmed, then the rest removed, and the review trail showed four decisions |
 | `05-010` What HomeBrain registers is registered by default | P1 | Done | The owner, 2026-10-19 (screenshot of 14 items under Needs review): whatever HomeBrain registers is registered from the start; an Admin removes or corrects it later. The owner, the same day (PR #251): "let's not have anything called confirmed" — HomeBrain Review, its notices, HomeTalk's replies and the help now say Registered and Register in all 8 languages; the stored status value stays `confirmed`, so nothing moved in the database. New memories and their HomeBrain items are written confirmed (`conversation/memory.ts`, `welcome.ts`, `remember()`); the column defaults are `confirmed` (migration `20261019150000`, live), and the 18 learned memories and items on record were brought in line. Only a statement contradicting something already confirmed (`needs_review`) still waits for a person. Replies no longer say "(you told me; not confirmed yet)". Help: HomeBrain ¶1 in 8 languages |
 | `05-011` Household understanding counts what the household keeps | P1 | Done | The owner's report, 2026-10-19 (screenshot: Family & roles, Education, Finance, Safety all 0/0 while the family was on record): the panel counted only beliefs said in HomeTalk. It now adds each category's own records, registered by definition: members, relationships and responsibilities; playbook items and policies; school enrolments; bills; food preferences and pets; allergies and medical food restrictions as Safety (`recordCountsFrom`, `withRecords`, `loadUnderstandingRecords` — one wave through the viewer's own RLS). The ring and the count line use the same arithmetic. PR #252 |
+| `05-012` Registered first; three counts in one row | P2 | Done | The owner, 2026-10-21. HomeBrain opens on Registered, tabs read Registered · Learned · Needs review · History with counts, and the three counts sit three across as `MetricCard stacked` (rule 19's owner exceptions in CLAUDE.md). |
 
 ### 06 — Actionable Notification Engine
 
@@ -285,7 +291,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-11 of 11 done `██████████`
+11 of 12 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -300,6 +306,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-009` A meal card that does what it says: change in place, ingredients without a recipe, the right time | P0 | Done | The owner, 2026-10-18 (PR #227). **Change meal** opened HomeTalk with a sentence to retype (rule 13), and a meal could not be changed or removed at all (rule 12): it is now a sheet on the card (name, recipe, slot, day, ready by, cook; `updateMeal`, with a new recipe's ingredients replacing only those still waiting) with **Remove from the plan** (`removeMeal`, a meal still to come; what it put on the list stays). **Ingredients** on a meal with no recipe said "pick a recipe" with nowhere to pick one: it now takes the ingredients written one per line (`addMealIngredients`, amounts read as HomeTalk reads them, none said is "not measured") or one of the household's recipes. The card said "Missing … on the shopping list" for things nobody added: it now says "Still to get" for those. And a meal planned on the Meals screen was timed on the server's clock (an 8 pm dinner saved as 1:30 am): times are on the household's clock (`atLocal`). Browser-checked at 360px and 1280px |
 | `10-010` An ingredient pick you can see: the list in view, the item's picture and details | P1 | Done | The owner, 2026-10-20. The suggestion list stays clear of the keyboard without flicker: on a phone it sits in the flow, and `useKeepListInView` (`ui/keep-in-view.tsx`) scrolls just enough, in one frame, and caps the list to the space left; the place search uses it too, and a sheet no longer re-centres a field whose list is open. A picked item shows its picture in the field and a line under the row: brand, pack, what is at home (only when counted) and energy and protein per 100 g or ml when the catalog records them, IFCT credited. Checked at 360×430 as a touch phone |
 | `10-011` Plan the week: every day's breakfast, lunch and dinner, Repeat last week, and Veg / Non-veg on WonderHome's ideas | P1 | Done | The owner, 2026-10-20 (PR #273). Meals → Plan is the week, Monday to Sunday on the household's clock (`meals/week.ts`, tested): ‹ › move a week, This week comes back, and the count is the everyday slots planned out of those still to come. Each day shows Breakfast, Lunch and Dinner (a snack only when one is planned); an empty slot is a quiet "+ Lunch" that opens Plan a meal on that day and slot with its usual time. A past day shows only what was planned on it. Repeat last week plans last week's meals a week on, into empty slots not yet past, through the same `createMeal` and meal ingredients (`copyLastWeekAction`); nothing planned is moved or replaced. On Recipes, All · Veg · Non-veg under Ideas from WonderHome filters the dishes (an egg dish shows with non-veg), keeping the course picked; All was added the same day (PR #274), on its own row so it fits 360px. Words and help in all eight languages. |
+| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | In Progress | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. |
 
 ### 11 — Bills, Fees & Finance
 
@@ -489,7 +496,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 21 — Health and Fitness
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -501,6 +508,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `21-006` HomeBrain & HomeTalk health context | P0 | Done | New `health.manage` permission (head/administrator/adult only); 5 new HomeTalk rules recognizing the spec's own example utterances (record an appointment, log/resolve an issue for real; log a vital / set a fitness goal honestly "prepared, not done" — no backing write exists) plus a health-scoped `ask_status` rule ("what health appointments do I have this month?"); `health/domain-agenda.ts`'s `healthAgenda()` joins `gather-assessments.ts`'s fan-out exactly like every other domain; a new `healthSpecialist` proposes `health.notify_overdue` for an overdue checkup only, executed via `ai/executors.ts`'s `notifyOverdueHealth` (needs `run.ts`'s admin client, now passed through `runExecutor`'s new optional 4th param) using the existing `notifications` pipeline; `conversation/brain.ts`'s HomeBrain reads open appointments/issues/due-or-overdue checkups only for a viewer holding `health.manage`, tagged `contentClass: "health"` so an unrelated question never surfaces them and the household's own consent policy (default: none) decides whether a model ever sees them; live-verified 2026-09-22 |
 | `21-007` Vitals & measurement routines | P1 | Done | `health_measurement_routines` (created first, `cadence_days`/`preferred_time`/`reminder_enabled`/`next_due_on`/`last_completed_on`) and `health_vitals` (`value`/`secondary_value` for a paired reading like blood pressure, free-text `unit`, `status` active/archived, `routine_id` traces a reading back to the routine that produced it), same self-or-guardian RLS shape as every other health entity; `completeRoutine` records the real reading and advances `next_due_on` by the routine's own cadence in one step; `summarizeVitalTrend`/`describeVitalTrend` are pure verifiable arithmetic ("your last N readings were recorded over the past M weeks"), never a stated conclusion; HomeTalk's `log_vital` now actually executes via `createVital` — blood pressure/pulse/steps resolve without an explicit unit (their one conventional unit), every other type requires one or is honestly declined; day-scale reminder sweep (`routine-reminders.ts`) folded into `/platform/retention` alongside appointment/checkup reminders; add/edit/archive/reactivate UI for vitals, add/edit/complete/dismiss/reactivate UI for routines; live QA surfaced and fixed two real gaps — a dismissed routine with no completion history had no path back to "Bring back" (now included in Recent), and HomeTalk only recognized "My X was Y" phrasing (added "Log/Record my X as Y"); live-verified 2026-09-22 |
 | `21-008` Fitness & connected-health scaffolding | P1 | Done | `health_fitness_goals`/`health_fitness_sessions` (new migration, applied live, verified via direct schema/RLS introspection — no local Supabase credentials available in this session to run `verify:live`'s scripted checks), same self-or-guardian RLS shape as every other health entity; `health/health-provider.ts`'s `HealthProvider` is a real registry — manual/home_talk/home_send/calendar declared `live: true`, apple_health_kit/android_health_connect/wearable `live: false` and refused by `assertHealthProviderLive` before any write; `health/fitness.ts`'s goal (active/dismissed, mirroring measurement routines) and session (active/archived, mirroring vitals) services depend only on that abstraction, never a provider SDK. No leaderboard, no guilt messaging, no child fitness surveillance anywhere in the module — a goal or session lives only in Overview's Recent, never escalated to Needs attention. HomeTalk's `set_fitness_goal` ("I want to walk three times a week") now genuinely executes via `createFitnessGoal`, replacing the "not tracked yet" stub from 21-006; `mapFitnessActivity` maps free speech onto the known activity set or keeps the household's own words. Add/edit/dismiss/reactivate UI for goals and add/edit/archive/reactivate for sessions on `/health`, a session optionally linking to the goal it counts toward. `countSessionsInCurrentPeriod` is pure, verifiable arithmetic, never a scored conclusion. OpenAPI extended with the four new routes |
+| `21-009` One Add for Health & Fitness | P2 | Done | The owner, 2026-10-21 ("too many entry options"). Eight header pills became one Add opening a grouped sheet (Health · Doctor visits · Fitness), kit `AddMenu`; every form reachable as before. Help (Health) in all eight languages. |
 
 ### 22 — Internationalization and Localization
 
@@ -539,7 +547,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-11 of 11 done `██████████`
+11 of 12 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -554,10 +562,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-009` HomePlaces is named and placed with the AI tools | P1 | Done | The owner, 2026-10-18 (PR #232): the Places screen is now HomePlaces and sits in the nav drawer and More under AI & Smart Tools, after HomeSend (`navigation/secondary-navigation.ts`, AI tone). HomeBrain Review is now HomeBrain in the same section. Nav labels, page titles, HomeTalk's "take me to HomePlaces", the help guide and HomeTalk's own replies are renamed in all eight languages. Browser-checked at 360px and desktop |
 | `24-010` Every picked place shows in HomePlaces | P0 | Done | The owner, 2026-10-18 (PR #233): a home address added in Manage Household did not appear in HomePlaces, which only listed the place book. HomePlaces now opens with **Our places**: the home address, each child's school and each adult's office, every place picked from Google Maps anywhere in the app (`homeplaces/our-places.ts`; siblings at one school and colleagues at one office are one row). Each opens in Google Maps, and its pencil goes to its one editor: Manage Household for the home (Admins; others see no pencil), Kids & School for a school, Family for an office. An Admin with no address on record sees **Add your home address**. A child's school, which could only be set during setup, can now be picked from Google Maps (or typed) on Kids & School under **Schools**, per child (`saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`; leaving it empty retires it with `endEnrolments`, kept rather than deleted). The owner asked for the same in Family: a child's details now pick the school from Google Maps in place of the free-text "School or work location", through the same save, so the two screens always show one school; an adult's location is their Office picker, and only a helper keeps the free-text line. Event and appointment locations are typed text, not Maps picks, so they are not listed. Help ¶11 in eight languages. Browser-checked at 360px and 1280px on the live project |
 | `24-011` Destinations beside "when should we go away?" | P1 | Done | The owner, 2026-10-19: "suggest destinations for those long weekends too". A when-question about a trip (14-033/14-034) now also searches getaway places near home (`homeplaces/trip.ts`: `tripDestinationRequest`, `withDestinations`) and shows them as place cards under the free weekends, sized to the trip: the days said, three for a long weekend, two otherwise. A getaway of up to four days searches "hill station weekend getaway" (the vaguer "holiday destination" drew one travel agency live). Same budget (`places.find`), same channel gate (`find_places`), and the reply keeps its weekend list when cards are shown (`withoutList` drops only the bullets that name a card). Browser-checked at 360px with a QA household and a real Google Maps key |
+| `24-012` Added places apart from saved ones, and first | P1 | In Progress | The owner, 2026-10-21. `household_places.origin` ('added' from the place book's own search, 'suggestion' from a HomeTalk answer; existing rows told apart by `kind`). /places lists Added by you, then Saved from HomeTalk, then Not for us, with counts; `rankPlaces` gives an added place +2.5 (a saved one +1.5). Test: added outranks suggested. Waits on migration `20261021001000_household_places_origin.sql` (until then a place with no kind reads as added). |
 
 ### 25 — HomeFood
 
-21 of 26 done `████████░░`
+22 of 27 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -587,6 +596,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-026` Every recipe in Plan a meal, with pictures, calories and protein, and a diet for the family and each person | P0 | Done | The owner, 2026-10-20 (screenshot of the plain recipe dropdown). From a recipe is a picker (`RecipePicker`, `meals/recipe-picker.ts`): the household's recipes then WonderHome's not saved yet, each with its picture, kcal and protein a serving, time and serves; filters for the family's diet, a dish's label, calories (under 300/500) and protein (10/20 g+), and an order (suggested, most protein, fewest calories). Picking a WonderHome dish fills its ingredients and saves it to the household's recipes when planned. Diet (migration `20261020200000`, live): a `food_preferences` row of kind `diet`, one of vegetarian, eggetarian, non-vegetarian, vegan or Jain, one for the whole family and one per person, set under Meals → Preferences (anyone for the family and themselves, an Admin for anyone). Fit is decided by rules (`meals/diet.ts`): the catalog's own label, else the ingredients; vegan and Jain read the ingredients. The meal check (`checkPreferences`) treats a diet clash as a house rule, and the picker says who a dish does not suit and why. |
 | `25-027` Remove from the list in one tap | P1 | Done | The owner, 2026-10-20 ("add option to remove from cart, in that case make the to buy amount 0, so it moves out of to buy and stays in all tab"). **Remove** under every To buy amount takes the item off the list (`adjustListAction` kind `remove`): To buy goes to nothing, the row leaves the To buy view at once (the view follows the steppers' saved amounts) and stays under All with the cart button to put it back; a failure says so and restores the amount. Words (`grocery.stepper.remove`, `.removeLabel`) and help ¶2 in all eight languages. Checked at 360px: To buy 5 → 4, the item under All, no overflow. Same day: At home and Not counted yet are clickable — a tap shows just the items each counts (on the list or not), a second tap goes back (`MetricCard` `pressed`); checked at 360px (5 → 1 → 15 → 5 rows). Home's four counts open onto rows that each link to their page (`MetricDetailRow` `href`; 22 rows, a Meals row opened /meals). Then: on To buy a row swiped left or right comes off the list (`SwipeToDismiss` in the kit, `data-swipe="own"` so the primary-area swipe leaves it, a drag mostly up or down stays a scroll, a tap stays a tap), the first row jiggles once per device as the hint, and a long amount ("0.25 bunches") wraps rather than pushing + off the card; checked at 360px (5 → 4, the item under All). |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
+| `25-028` Recipe ticks, sharing and filter counts | P2 | Done | The owner, 2026-10-20/21. A recipe's ingredients and steps tick off on screen only (kit `TickItem`, a real checkbox, nothing saved). Each household recipe has Share: WhatsApp gets the recipe card picture (`/meals/recipe-card/[id]`, under the member's own session) with the whole recipe as the message (`meals/recipe-share.ts`, 4 tests), plus other apps, copy, email and save picture. The course and veg/non-veg filters show counts. Help (Meals and shopping) in all eight languages. |
 
 ### 26 — HomeEvents
 

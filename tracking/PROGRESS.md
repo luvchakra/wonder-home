@@ -26,11 +26,11 @@ disagree again.)
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 11 | 8 | 3 | 0 | 11 | Done |
-| 01 | Identity & Family Accounts | 9 | 5 | 3 | 1 | 9 | Done |
+| 01 | Identity & Family Accounts | 10 | 5 | 4 | 1 | 9 | In Progress (01-014 waits on its migration) |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
-| 04 | Conversation, Voice & Text | 19 | 16 | 3 | 0 | 18 | In Progress |
-| 05 | Household Certification & Understanding | 11 | 6 | 4 | 1 | 11 | Done |
+| 04 | Conversation, Voice & Text | 20 | 17 | 3 | 0 | 19 | In Progress |
+| 05 | Household Certification & Understanding | 12 | 6 | 4 | 2 | 12 | Done |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 18 | 10 | 5 | 3 | 17 | In Progress |
@@ -46,11 +46,11 @@ disagree again.)
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 10 | In Progress |
-| 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
+| 21 | Health and Fitness | 9 | 6 | 2 | 1 | 9 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
-| 24 | HomePlaces | 8 | 2 | 4 | 2 | 5 | In Progress |
-| 25 | HomeFood | 23 | 12 | 7 | 4 | 18 | In Progress |
+| 24 | HomePlaces | 9 | 2 | 5 | 2 | 5 | In Progress |
+| 25 | HomeFood | 24 | 12 | 7 | 5 | 19 | In Progress |
 | 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
 ## Execution Log
@@ -329,3 +329,9 @@ disagree again.)
 | 2026-10-21 | 13 | 13-010 | Done | Home & Upkeep redesign: Overview / Things / Requests tabs with counts, Coming up, edit/record service/retire for things, move on/edit/cancel for requests; words and help in eight languages. |
 | 2026-10-20 | 08 | 08-022 | Done | Confetti and balloons on I did it!; waiting button wraps; tab rows size to their content and scroll to the top on a tap; browser QA at 320/360/412px. |
 | 2026-10-20 | 10 | 10-012 | In Progress | Week template with several dishes per meal; WonderHome plans each week from it at once, only into empty slots, accepted unless changed (Choose again, Change meal); picker 8 unit tests, RLS 5/5; migration `20261020234000` waiting to reach the live project. |
+| 2026-10-21 | 01 | 01-014 | In Progress | Location sharing by consent: Settings → Location sharing, a child's set by a guardian in Family, adults see At Home / Out · ago with Open in Maps; RLS 4/4, unit 5; migration `20261020233000` waits for the live project. |
+| 2026-10-21 | 04 | 04-029 | Done | Just after midnight "tomorrow" is the day you wake up to (before 4 am), for actions, questions and resolution; the reply names the date; 3,896 unit tests pass. |
+| 2026-10-21 | 05 | 05-012 | Done | HomeBrain opens on Registered; tabs with counts; three counts in one row. |
+| 2026-10-21 | 21 | 21-009 | Done | Eight Health header pills became one grouped Add (kit `AddMenu`); browser QA at 360px and 1280px. |
+| 2026-10-21 | 24 | 24-012 | In Progress | Place book: Added by you first, then Saved from HomeTalk; added places rank first; migration `20261021001000` waits for the live project. |
+| 2026-10-21 | 25 | 25-028 | Done | Recipe ingredients and steps tick off on screen; Share a recipe (WhatsApp picture card + full recipe message, other apps, copy, email, picture); counts on recipe filters. |
