@@ -10,6 +10,7 @@ export const schoolHi: AreaCatalog<typeof schoolEn> = {
   "school.place.lede": "Google Maps से स्कूल चुनें, या सूची में न हो तो उसका नाम लिखें। हटाने के लिए खाली छोड़ दें।",
   "school.place.save": "स्कूल सहेजें",
   "school.place.label": "स्कूल",
+  "school.details.title": "स्कूल की जानकारी",
   "school.place.grade": "कक्षा {grade}",
   "school.place.gradeField": "कक्षा और सेक्शन (वैकल्पिक)",
   "school.place.gradePlaceholder": "5B",

@@ -10,6 +10,7 @@ export const schoolZh: AreaCatalog<typeof schoolEn> = {
   "school.place.lede": "从 Google 地图中选择学校；如果没有列出，就输入校名。留空即可移除。",
   "school.place.save": "保存学校",
   "school.place.label": "学校",
+  "school.details.title": "学校信息",
   "school.place.grade": "{grade} 班",
   "school.place.gradeField": "年级和班级（可选）",
   "school.place.gradePlaceholder": "五年级二班",

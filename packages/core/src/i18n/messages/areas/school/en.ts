@@ -9,6 +9,7 @@ export const schoolEn = {
   "school.place.lede": "Pick the school from Google Maps, or type its name if it isn't listed. Leave it empty to remove it.",
   "school.place.save": "Save school",
   "school.place.label": "School",
+  "school.details.title": "School details",
   "school.place.grade": "Class {grade}",
   "school.place.gradeField": "Class and section (optional)",
   "school.place.gradePlaceholder": "5B",

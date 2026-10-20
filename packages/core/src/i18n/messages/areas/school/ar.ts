@@ -10,6 +10,7 @@ export const schoolAr: AreaCatalog<typeof schoolEn> = {
   "school.place.lede": "اختر المدرسة من خرائط Google، أو اكتب اسمها إن لم تظهر. اتركها فارغة لإزالتها.",
   "school.place.save": "حفظ المدرسة",
   "school.place.label": "المدرسة",
+  "school.details.title": "تفاصيل المدرسة",
   "school.place.grade": "الصف {grade}",
   "school.place.gradeField": "الصف والشعبة (اختياري)",
   "school.place.gradePlaceholder": "5ب",

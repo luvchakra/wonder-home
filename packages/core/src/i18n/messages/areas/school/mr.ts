@@ -10,6 +10,7 @@ export const schoolMr: AreaCatalog<typeof schoolEn> = {
   "school.place.lede": "Google Maps मधून शाळा निवडा, किंवा यादीत नसेल तर तिचे नाव लिहा. काढण्यासाठी रिकामे ठेवा.",
   "school.place.save": "शाळा जतन करा",
   "school.place.label": "शाळा",
+  "school.details.title": "शाळेची माहिती",
   "school.place.grade": "इयत्ता {grade}",
   "school.place.gradeField": "इयत्ता आणि तुकडी (ऐच्छिक)",
   "school.place.gradePlaceholder": "5B",

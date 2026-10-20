@@ -741,7 +741,7 @@ export const householdHi: AreaCatalog<typeof householdEn> = {
   "kids.cat.nameLede": "मैं तुम्हारी बिल्ली हूँ, और तुम्हें बताऊँगी कि नया क्या है। मेरा नाम क्या रखोगे?",
   "kids.cat.nameField": "बिल्ली का नाम",
   "kids.cat.namePlaceholder": "मिष्टी",
-  "kids.cat.save": "यही मेरा नाम है",
+  "kids.cat.save": "यही मेरी बिल्ली है",
   "kids.cat.saving": "सेव हो रहा है…",
   "kids.cat.rename": "{name} का नाम बदलो",
   "kids.cat.renameTitle": "{name} के लिए नया नाम",
