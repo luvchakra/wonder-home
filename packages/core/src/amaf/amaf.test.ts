@@ -170,6 +170,14 @@ describe("reading an answer", () => {
       { memberId: PRIYA, food: "prawns" },
     ]);
     expect(readAllergies("I'm allergic to kiwi", everyone, KUNAL).entries).toEqual([{ memberId: KUNAL, food: "kiwi" }]);
+    // A name that is nobody in the family is never read as a food or pinned on anyone.
+    const stranger = readAllergies("Riaan is allergic to peanuts", everyone, KUNAL);
+    expect(stranger.entries).toEqual([]);
+    expect(stranger.unknown).toEqual(["Riaan"]);
+    expect(factByKey("household.allergies")!.read("Riaan is allergic to peanuts", { people: everyone, speakerId: KUNAL, subject: { kind: "household", id: null }, partial: {}, slot: null, today: "2026-10-21" } as never)).toEqual({
+      kind: "value",
+      value: { fact: "note", text: "Riaan is allergic to peanuts" },
+    });
   });
 
   it("reads classes, pets, schools, diets and relations", () => {

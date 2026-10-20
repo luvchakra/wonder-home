@@ -344,15 +344,24 @@ const ALLERGY_LEAD = /\b(?:is|are|'s|has an?|have an?|has|have)?\s*(?:allergic|a
  * and the foods after them; a part with foods and no one named belongs to
  * the person the last part named, or to the family when no one was.
  */
-export function readAllergies(text: string, everyone: readonly AmafPerson[], speakerId: string): { entries: { memberId: string | null; food: string }[]; ambiguous: boolean } {
+export function readAllergies(text: string, everyone: readonly AmafPerson[], speakerId: string): { entries: { memberId: string | null; food: string }[]; ambiguous: boolean; unknown: string[] } {
   const entries: { memberId: string | null; food: string }[] = [];
   let ambiguous = false;
+  // A name that is nobody in the family ("Asmi is allergic to peanuts" before Asmi is added)
+  // is never read as a food or pinned on someone else: the caller keeps the words instead.
+  const unknown: string[] = [];
+  const known = new Set(everyone.flatMap((person) => [person.name.toLowerCase(), (person.name.split(/\s+/)[0] ?? person.name).toLowerCase()]));
   const parts = text.split(/\s*(?:;|\.|\band also\b|\bwhile\b|,\s*(?=[\p{Lu}]))\s*/u).filter(Boolean);
   let last: string | null = null;
   for (const raw of parts) {
     // Split "Manan to peanuts and Asmi to milk" where a second name starts.
     const segments = raw.split(new RegExp(String.raw`\s+and\s+(?=(?:${everyone.map((person) => (person.name.split(/\s+/)[0] ?? person.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") || "zzzz"})\b)`, "i"));
     for (const segment of segments) {
+      const named = /^\s*(?:and\s+)?([\p{Lu}][\p{L}'-]+)(?=\s+(?:is|has|'s|to|can'?t|cannot|gets?|avoids?)\b)/u.exec(segment)?.[1];
+      if (named && !known.has(named.toLowerCase()) && !NOT_A_NAME.test(named)) {
+        unknown.push(named);
+        continue;
+      }
       const who = personIn(segment, everyone, speakerId);
       if (who === "ambiguous") ambiguous = true;
       const memberId: string | null = who && who !== "ambiguous" ? who.id : /\b(?:everyone|everybody|whole family|all of us|family)\b/i.test(segment) ? null : last;
@@ -369,8 +378,11 @@ export function readAllergies(text: string, everyone: readonly AmafPerson[], spe
       last = memberId;
     }
   }
-  return { entries, ambiguous };
+  return { entries, ambiguous, unknown };
 }
+
+/** Capitalised words that start an allergy answer without naming anyone. */
+const NOT_A_NAME = /^(?:i|i'm|im|the|my|our|everyone|everybody|nobody|no|yes|both|all|he|she|they|we|it|someone|somebody|whole|family|only|just|mum|mom|dad|papa|mummy|daddy)$/i;
 
 /** A list of foods from "she loves paneer, dosa and mango" — the lead-in taken off. */
 function readFoods(text: string): string[] {
@@ -460,6 +472,8 @@ export const AMAF_FACTS: readonly AmafFact[] = [
       if (isNone(answer) && !/\b(?:except|but|apart from|other than|only)\b/i.test(answer)) return { kind: "none" };
       const read = readAllergies(answer, context.people, context.speakerId);
       if (read.ambiguous) return { kind: "follow_up", slot: "who", partial: {} };
+      // Someone not in the family yet: their words are kept as a note, not guessed into the record.
+      if (read.unknown.length > 0) return { kind: "value", value: { fact: "note", text: answer.trim().replace(/\s+/g, " ").slice(0, 280) } };
       return read.entries.length > 0 ? { kind: "value", value: { fact: "household.allergies", entries: read.entries } } : { kind: "unclear" };
     },
     // A new allergy adds to the record; only "nobody" when some are on record is said back.

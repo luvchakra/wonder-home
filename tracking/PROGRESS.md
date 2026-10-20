@@ -29,7 +29,7 @@ disagree again.)
 | 01 | Identity & Family Accounts | 10 | 5 | 4 | 1 | 10 | Done |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
-| 04 | Conversation, Voice & Text | 20 | 17 | 3 | 0 | 19 | In Progress |
+| 04 | Conversation, Voice & Text | 21 | 17 | 4 | 0 | 20 | In Progress |
 | 05 | Household Certification & Understanding | 12 | 6 | 4 | 2 | 12 | Done |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -339,3 +339,4 @@ disagree again.)
 | 2026-10-21 | 01 | 01-014 | Done | Live on the database and checked end to end there; Permissions-Policy now allows geolocation for WonderHome's own pages (it denied it everywhere, so no phone could report). |
 | 2026-10-21 | 10 | 10-012 | Done | Live: Plan filled this week's remaining dinners from the template, marked WonderHome's pick. |
 | 2026-10-21 | 24 | 24-012 | Done | Migration live. |
+| 2026-10-21 | 04 | 04-030 | Done | Ask me about family in HomeTalk: one question at a time, each answer into its own screen, undo, conflicts said back with their source, unknown names kept as notes; checked live. |
