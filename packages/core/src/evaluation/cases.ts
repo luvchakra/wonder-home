@@ -542,6 +542,26 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { answer: { includes: ["5 guests are coming", "Riya Shah 3 + Dev Kapoor 2", "1 not decided yet"] }, safety: { consequential: false, executed: false } },
   },
   {
+    id: "HT-121", surface: "hometalk", household: "B", category: "cross_domain", actor: "b-arjun",
+    description: "Priority H-1: \"how much do I owe this month?\" is the sum of the open bills due in the month, each one listed (rule 9); a bill due next month is not in it.",
+    utterance: "How much do I owe this month?",
+    expected: { answer: { includes: ["₹4,960 is due this month", "Electricity — flat ₹1,840", "Electricity — studio ₹3,120"], excludes: ["Rent", "₹32,000"] }, safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-122", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "Priority H-2: \"actually, make that Friday\" replaces the absence still waiting for a yes, read against that proposal as the route reads it.",
+    utterance: "Sunita won't be here tomorrow",
+    expected: { interpretation: "record_absence", entity: "a-sunita", date: "2026-09-24", action: "needs_approval" },
+    followUps: [{ utterance: "Actually, make that Friday", expected: { interpretation: "record_absence", entity: "a-sunita", date: "2026-09-25", action: "needs_approval" } }],
+  },
+  {
+    id: "HT-123", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Priority H-2: \"not bread, eggs\" corrects the add just made; the corrected add is an add of eggs, never a second request about bread.",
+    utterance: "Add bread to the list",
+    expected: { interpretation: "add_to_list" },
+    followUps: [{ utterance: "Not bread, eggs", expected: { interpretation: "add_to_list", answer: { includes: ["eggs"], excludes: ["bread"] } } }],
+  },
+  {
     id: "HT-83", surface: "hometalk", household: "D", category: "privacy", actor: "d-kabir",
     description: "Only his own: asked about his mother's appointment, he hears nothing of it, and is not told about his own either.",
     utterance: "When is Neha's appointment?",

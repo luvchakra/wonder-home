@@ -3,6 +3,7 @@ import { DEFAULT_DATA_USE } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
 import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
+import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
 import { converse, pendingFrom, type ConversationTurn, type Understanding } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
@@ -95,9 +96,11 @@ type Carried = {
   focus: FocusEntity[];
   /** The last thing the member asked, for HomeBrain's "and Manan?". */
   previousQuestion: string | null;
+  /** The request a correction would change: the proposal waiting, or what was just done (as the route reads it back). */
+  last: CorrectableAction | null;
 };
 
-const FRESH: Carried = { pending: null, clarifying: null, history: [], focus: [], previousQuestion: null };
+const FRESH: Carried = { pending: null, clarifying: null, history: [], focus: [], previousQuestion: null, last: null };
 
 export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Promise<Observation> {
   return (await talkTurn(c, c.utterance, FRESH, models)).observed;
@@ -120,13 +123,23 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
   const who = memberOf(household, c.actor);
   const first = carried === FRESH;
   const references = first ? c.references : undefined;
+  // A correction ("actually, make that Friday", "not bread, eggs") is read against the request in
+  // hand and becomes an ordinary intent, exactly as the conversation route does it.
+  const correction = readCorrection(utterance);
+  const corrected =
+    correction && carried.last
+      ? (() => {
+          const next = applyCorrection(correction, carried.last!, { actorMemberId: who.id, channel: c.channel ?? "text", utterance, timezone: household.timezone, now: household.now });
+          return next && describeCorrection(carried.last!, next) !== null ? next : null;
+        })()
+      : null;
   const result = await converse({
     utterance,
     channel: c.channel ?? "text",
     ...(c.transcriptConfidence !== undefined && first ? { transcriptConfidence: c.transcriptConfidence } : {}),
     actor: { memberId: who.id, roles: who.roles, memberType: who.memberType },
-    pending: carried.pending,
-    clarifying: carried.clarifying,
+    pending: corrected ? null : carried.pending,
+    clarifying: corrected ? null : carried.clarifying,
     history: carried.history,
     autonomyFor: () => c.autonomy ?? "approve",
     confirmRequestedChanges: c.confirmRequestedChanges === true,
@@ -150,7 +163,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
       pending: pendingWords(carried.pending ? { summary: carried.pending.summary } : references?.proposal?.[0] ? { summary: references.proposal[0].label } : null),
       recent: [...new Set([...carried.focus.map((focus) => focus.label), ...[...(references?.conversation ?? []), ...(references?.homesend ?? [])].map((spec) => spec.label)])].slice(0, 5),
     },
-    ...(c.simulate && first ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: models.understand } : {}),
+    ...(corrected ? { understand: () => corrected } : c.simulate && first ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: models.understand } : {}),
   });
 
   const history: ConversationTurn[] = [...carried.history, { role: "member", text: utterance }];
@@ -158,7 +171,8 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     // A yes or a no settles what was waiting; nothing is waiting after it.
     return {
       observed: { ...EMPTY, action: result.kind, answer: result.text },
-      next: { ...carried, pending: null, clarifying: null, history: [...history, { role: "assistant", text: result.text }] },
+      // A yes makes what was waiting a thing that was done (a correction then undoes it); a no leaves nothing to correct.
+      next: { ...carried, pending: null, clarifying: null, history: [...history, { role: "assistant", text: result.text }], last: result.kind === "approve" && carried.last ? { ...carried.last, status: "executed", result: {} } : result.kind === "reject" ? null : carried.last },
     };
   }
   const intent = result.intent;
@@ -205,6 +219,11 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
       history: [...history, { role: "assistant", text: answer }],
       focus: [...focus, ...carried.focus],
       previousQuestion: asked ? utterance : carried.previousQuestion,
+      // What a later correction would change: an action waiting for a yes, or one that ran.
+      last:
+        !asked && (result.proposal.kind === "needs_approval" || result.proposal.kind === "executed")
+          ? { actionId: `eval-${c.id}-${history.length}`, actionType: intent.action, outcomeKey: intent.target.reference ?? null, parameters: intent.parameters, status: result.proposal.kind === "executed" ? "executed" : "proposed", result: result.proposal.kind === "executed" ? {} : null }
+          : carried.last,
     },
   };
 }

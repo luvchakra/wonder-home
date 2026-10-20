@@ -401,7 +401,7 @@ export const en = {
   "hometalk.places.undo": "Undo",
   "hometalk.places.failed": "That didn't save. Try again in a moment.",
   "hometalk.places.heading": "Places",
-  "placeBook.lede": "{name}, these are your family's places: home, school and work, the places you saved from HomeTalk, and the ones you said aren't for you. HomeTalk suggests saved places first and never brings the others back.",
+  "placeBook.lede": "{name}, these are your family's places: home, school and work, the places you saved from HomeTalk or added here, and the ones you said aren't for you. HomeTalk suggests saved places first and never brings the others back.",
   "placeBook.saved": "Saved",
   "placeBook.ours.title": "Our places",
   "placeBook.ours.home": "Home",

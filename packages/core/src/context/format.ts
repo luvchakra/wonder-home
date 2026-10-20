@@ -45,10 +45,13 @@ export function describeLocalNow(now: Date, timezone: string): string {
 
 /** Money is decimal (CLAUDE.md rule 22): minor units only ever arrive here, and leave in the major unit. */
 export function money(minor: number, currency: string): string {
+  // Whole amounts read without decimals; 42.50 is never rounded to 43.
+  const whole = Math.round(minor) % 100 === 0;
+  const digits = whole ? 0 : 2;
   try {
-    return new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(minor / 100);
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(minor / 100);
   } catch {
-    return `${currency} ${(minor / 100).toFixed(0)}`;
+    return `${currency} ${(minor / 100).toFixed(digits)}`;
   }
 }
 

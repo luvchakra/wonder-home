@@ -391,7 +391,7 @@ export const zh: Catalog = {
   "hometalk.places.undo": "撤销",
   "hometalk.places.failed": "没有保存成功，请稍后再试。",
   "hometalk.places.heading": "地点",
-  "placeBook.lede": "{name}，这些是你家的地点：家、学校和工作地点，从 HomeTalk 保存的地点，以及你们说不适合的地点。HomeTalk 会优先推荐保存的地点，并且不会再推荐其他那些。",
+  "placeBook.lede": "{name}，这些是你家的地点：家、学校和工作地点，从 HomeTalk 保存或在这里添加的地点，以及你们说不适合的地点。HomeTalk 会优先推荐保存的地点，并且不会再推荐其他那些。",
   "placeBook.saved": "已保存",
   "placeBook.ours.title": "我们的地点",
   "placeBook.ours.home": "家",
