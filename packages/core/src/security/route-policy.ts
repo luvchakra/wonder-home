@@ -32,6 +32,8 @@ const AUTHENTICATED_PREFIXES = [
   // The user guide and its search are for members (see below for what a
   // signed-out visitor can still read).
   "/help",
+  // About WonderHome: the version and how it came about, for members.
+  "/about",
 ] as const;
 
 /**

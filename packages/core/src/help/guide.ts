@@ -81,8 +81,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "accounts",
     group: "Getting started",
-    updated: "2026-10-16",
-    keywords: ["sign in", "login", "password", "forgot", "reset", "google", "account", "locked out", "log out", "sign out"],
+    updated: "2026-10-21",
+    keywords: ["sign in", "login", "password", "forgot", "reset", "google", "account", "locked out", "log out", "sign out", "about", "version", "release"],
   },
   {
     id: "language",
@@ -99,7 +99,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "voice",
     group: "Everyday use",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["voice", "speech", "microphone", "hands-free", "live", "listen", "gemini live", "alexa", "speak out loud", "pause", "open a screen", "take me to", "go to", "navigate", "glow", "getting ready", "wait", "connecting", "speak now"],
   },
   {

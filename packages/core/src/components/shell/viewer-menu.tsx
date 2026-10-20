@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleUserRound, Download, LifeBuoy, LogOut, Settings2, ShieldCheck } from "lucide-react";
+import { Download, Info, LifeBuoy, LogOut, Settings2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
 import { useState } from "react";
@@ -100,13 +100,15 @@ export function ViewerMenu({ viewer }: { viewer: ShellViewer }) {
 
           <DropdownMenu.Separator className="my-1 h-px bg-[var(--wh-border)]" />
 
+          {/* About, where "Everything else" was (the owner, 2026-10-21): the More
+              tab already leads to everything else. */}
           <DropdownMenu.Item asChild>
             <Link
-              href="/more"
+              href="/about"
               className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-[var(--wh-radius-sm)] px-2 text-sm outline-none data-[highlighted]:bg-[var(--wh-surface-muted)]"
             >
-              <CircleUserRound aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
-              Everything else
+              <Info aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+              {viewer.labels?.about ?? "About WonderHome"}
             </Link>
           </DropdownMenu.Item>
 

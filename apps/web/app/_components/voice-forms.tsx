@@ -1,16 +1,16 @@
 "use client";
 
-import { Play, Volume2 } from "lucide-react";
+import { ChevronDown, Play, Volume2, X } from "lucide-react";
 import {
   useActionState,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
 import { useFormStatus } from "react-dom";
 
-import { cn } from "@wonderhome/core/lib/cn";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
@@ -114,6 +114,22 @@ export type VoiceFormLabels = {
   enhanced: string;
   enhancedHint: string;
   applyNext: string;
+  /** The page's three plain sections and its Advanced fold (2026-10-21). */
+  simple: {
+    talking: string;
+    talkingLede: string;
+    hearing: string;
+    hearingLede: string;
+    understanding: string;
+    understandingLede: string;
+    understandingBrowser: string;
+    advanced: string;
+    advancedLede: string;
+    upToThree: string;
+    addLanguage: string;
+    /** "Remove {language}" — `{language}` is filled in here. */
+    removeLanguage: string;
+  };
   save: string;
   ownKey: {
     title: string;
@@ -179,7 +195,8 @@ export function VoiceSettingsForm({
   geminiLive: { available: boolean; reason: string | null; fix?: { href: string; label: string } | null };
   labels: VoiceFormLabels;
 }) {
-  const [state, action] = useActionState(save, {});
+  const [state, action, saving] = useActionState(save, {});
+  const formId = useId();
   const [provider, setProvider] = useState(settings.provider);
   const [language, setLanguage] = useState(settings.language);
   const [voices, setVoices] = useState<VoiceOption[]>([]);
@@ -263,15 +280,21 @@ export function VoiceSettingsForm({
 
   return (
     <div className="space-y-6">
-      <form ref={formRef} action={action} className="space-y-6">
+      {/* Three plain questions in the order people ask them — who talks, how
+          replies are heard, how it understands you — and the technical knobs
+          folded under Advanced (the owner, 2026-10-21: "made simple to
+          understand by end user"). Every field and the one save are as before
+          (rule 23); the Advanced fields belong to the same form by its id. */}
+      <form id={formId} ref={formRef} action={action} className="space-y-6">
         <input type="hidden" name="householdId" value={householdId} />
 
         {state.error ? <Alert>{state.error}</Alert> : null}
         {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
         {previewError ? <Alert>{previewError}</Alert> : null}
 
-        <section className="space-y-4">
-          <SectionHeader title={labels.live} />
+        <section className="space-y-3">
+          <SectionHeader title={labels.simple.talking} />
+          <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">{labels.simple.talkingLede}</p>
           <Select
             label={labels.liveEngine}
             name="liveEngine"
@@ -295,21 +318,23 @@ export function VoiceSettingsForm({
           ) : null}
         </section>
 
-        <section className="space-y-4">
-          <SectionHeader title={labels.who} />
-
-          <Card className="space-y-1 bg-[var(--wh-surface-muted)]/60 p-3">
-            <p className="text-sm font-semibold">{sourceTitle}</p>
-            <p className="text-xs text-[var(--wh-foreground-muted)]">
-              {sourceDetail}
-            </p>
-            {ownKey && ownKeySetOn ? (
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">
-                {labels.setOn.replace("{date}", ownKeySetOn)}
-              </p>
-            ) : null}
-          </Card>
-
+        <section className="space-y-3">
+          <SectionHeader title={labels.simple.hearing} />
+          <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">{labels.simple.hearingLede}</p>
+          <label className="flex min-h-11 items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              name="speakReplies"
+              defaultChecked={settings.speakReplies}
+              className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
+            />
+            <span>
+              {labels.speakReplies}
+              <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                {labels.speakRepliesHint}
+              </span>
+            </span>
+          </label>
           <Select
             label={labels.service}
             name="provider"
@@ -327,15 +352,6 @@ export function VoiceSettingsForm({
               <option value="google">{labels.optionGoogle}</option>
             ) : null}
           </Select>
-        </section>
-
-
-        <section className="space-y-4">
-          <SectionHeader title={labels.sounds} />
-          <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
-            {usingGoogle ? labels.soundsGoogle : labels.soundsBrowser}
-          </p>
-
           {/* Google's own voice controls only show when Google is the one
               speaking (rule 10). Hidden rather than removed, so saving the
               form never resets what was chosen for later. */}
@@ -448,22 +464,6 @@ export function VoiceSettingsForm({
           </Select>
 
           </div>
-
-          <label className="flex min-h-11 items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              name="speakReplies"
-              defaultChecked={settings.speakReplies}
-              className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
-            />
-            <span>
-              {labels.speakReplies}
-              <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                {labels.speakRepliesHint}
-              </span>
-            </span>
-          </label>
-
           {usingGoogle ? (
             <Pill
               type="button"
@@ -481,12 +481,9 @@ export function VoiceSettingsForm({
           ) : null}
         </section>
 
-        <section className={cn("space-y-4", !usingGoogle && "opacity-60")}>
-          <SectionHeader title={labels.listens} />
-          <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">
-            {labels.listensBody}
-          </p>
-
+        <section className="space-y-3">
+          <SectionHeader title={labels.simple.understanding} />
+          <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">{usingGoogle ? labels.simple.understandingLede : labels.simple.understandingBrowser}</p>
           <Select
             label={labels.spokenLanguage}
             name="recognitionLanguage"
@@ -500,47 +497,14 @@ export function VoiceSettingsForm({
               </option>
             ))}
           </Select>
-
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">
-              {labels.alternatives}
-            </legend>
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">
-              {labels.alternativesHint}
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {labels.languages.slice(0, 14).map((option) => (
-                <label
-                  key={option.code}
-                  className="flex min-h-11 items-center gap-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    name="alternativeLanguages"
-                    value={option.code}
-                    defaultChecked={settings.alternativeLanguages.includes(
-                      option.code,
-                    )}
-                    className="size-5 shrink-0 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
-                  />
-                  <span className="min-w-0">{option.label}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <Select
-            label={labels.listens}
-            name="recognitionModel"
-            defaultValue={settings.recognitionModel}
-          >
-            {RECOGNITION_MODELS.map((model) => (
-              <option key={model} value={model}>
-                {labels.models[model].name} — {labels.models[model].detail}
-              </option>
-            ))}
-          </Select>
-
+          <LanguageChips
+            label={labels.alternatives}
+            hint={labels.simple.upToThree}
+            addLabel={labels.simple.addLanguage}
+            removeLabel={labels.simple.removeLanguage}
+            languages={labels.languages}
+            initial={settings.alternativeLanguages}
+          />
           <div className="space-y-1.5">
             <label htmlFor="phraseHints" className="block text-sm font-medium">
               {labels.phrases}
@@ -557,21 +521,45 @@ export function VoiceSettingsForm({
               {labels.phrasesHint}
             </p>
           </div>
+        </section>
+      </form>
 
+      <details className="group rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] shadow-[var(--wh-shadow-card)]">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">{labels.simple.advanced}</span>
+            <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.simple.advancedLede}</span>
+          </span>
+          <ChevronDown aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--wh-border)] px-4 py-4">
+          <Select
+            label={labels.listens}
+            name="recognitionModel"
+            form={formId}
+            defaultValue={settings.recognitionModel}
+          >
+            {RECOGNITION_MODELS.map((model) => (
+              <option key={model} value={model}>
+                {labels.models[model].name} — {labels.models[model].detail}
+              </option>
+            ))}
+          </Select>
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input
               type="checkbox"
               name="automaticPunctuation"
+              form={formId}
               defaultChecked={settings.automaticPunctuation}
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
             <span>{labels.punctuation}</span>
           </label>
-
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input
               type="checkbox"
               name="profanityFilter"
+              form={formId}
               defaultChecked={settings.profanityFilter}
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
@@ -582,11 +570,11 @@ export function VoiceSettingsForm({
               </span>
             </span>
           </label>
-
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input
               type="checkbox"
               name="enhancedRecognition"
+              form={formId}
               defaultChecked={settings.enhancedRecognition}
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
             />
@@ -597,24 +585,106 @@ export function VoiceSettingsForm({
               </span>
             </span>
           </label>
-        </section>
+          <Card className="space-y-1 bg-[var(--wh-surface-muted)]/60 p-3">
+            <p className="text-sm font-semibold">{sourceTitle}</p>
+            <p className="text-xs text-[var(--wh-foreground-muted)]">
+              {sourceDetail}
+            </p>
+            {ownKey && ownKeySetOn ? (
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">
+                {labels.setOn.replace("{date}", ownKeySetOn)}
+              </p>
+            ) : null}
+          </Card>
+          <OwnKeyForm
+            householdId={householdId}
+            save={saveKey}
+            remove={removeKey}
+            configured={ownKey}
+            labels={labels}
+          />
+        </div>
+      </details>
 
-        <Card className="flex flex-wrap items-center justify-between gap-3">
-          <p className="min-w-0 text-sm text-[var(--wh-foreground-muted)]">
-            {labels.applyNext}
-          </p>
-          <Submit label={labels.save} pendingLabel={labels.saving} />
-        </Card>
-      </form>
-
-      <OwnKeyForm
-        householdId={householdId}
-        save={saveKey}
-        remove={removeKey}
-        configured={ownKey}
-        labels={labels}
-      />
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <p className="min-w-0 text-sm text-[var(--wh-foreground-muted)]">
+          {labels.applyNext}
+        </p>
+        <Button type="submit" form={formId} disabled={saving}>
+          {saving ? labels.saving : labels.save}
+        </Button>
+      </Card>
     </div>
+  );
+}
+
+/**
+ * Other languages a person may switch to mid-sentence, picked as up to three
+ * chips rather than ticked from a wall of checkboxes. Each chip is a hidden
+ * `alternativeLanguages` field, so the form and the save are unchanged.
+ */
+function LanguageChips({
+  label,
+  hint,
+  addLabel,
+  removeLabel,
+  languages,
+  initial,
+}: {
+  label: string;
+  hint: string;
+  addLabel: string;
+  /** "Remove {language}" — `{language}` is filled in here. */
+  removeLabel: string;
+  languages: readonly { code: string; label: string }[];
+  initial: readonly string[];
+}) {
+  const [picked, setPicked] = useState<string[]>(() => initial.slice(0, 3));
+  const nameOf = (code: string) => languages.find((option) => option.code === code)?.label ?? code;
+  const left = languages.filter((option) => !picked.includes(option.code));
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium">{label}</legend>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">{hint}</p>
+      {picked.length > 0 ? (
+        <ul className="flex flex-wrap gap-2">
+          {picked.map((code) => (
+            <li key={code}>
+              <input type="hidden" name="alternativeLanguages" value={code} />
+              <span className="inline-flex min-h-9 items-center gap-1 rounded-[var(--wh-radius-pill)] bg-[var(--wh-primary-soft)] py-1 ps-3 pe-1 text-sm font-medium text-[var(--wh-primary)]">
+                {nameOf(code)}
+                <button
+                  type="button"
+                  aria-label={removeLabel.replace("{language}", nameOf(code))}
+                  onClick={() => setPicked((current) => current.filter((entry) => entry !== code))}
+                  className="grid size-7 place-items-center rounded-full hover:bg-[var(--wh-surface)]"
+                >
+                  <X aria-hidden className="size-3.5" />
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {picked.length < 3 ? (
+        <select
+          aria-label={addLabel}
+          value=""
+          onChange={(event) => {
+            const code = event.target.value;
+            if (code) setPicked((current) => (current.includes(code) || current.length >= 3 ? current : [...current, code]));
+          }}
+          className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+        >
+          <option value="">{addLabel}</option>
+          {left.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </fieldset>
   );
 }
 
