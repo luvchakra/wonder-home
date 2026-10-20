@@ -151,7 +151,8 @@ export function toCatalogEntry(row: Row, supabaseUrl: string): CatalogEntry {
 
 function ladderFrom(raw: unknown, unit: string): Ladder {
   const sizes = Array.isArray(raw) ? raw.map(Number).filter((size) => Number.isFinite(size) && size > 0) : [];
-  return sizes.length > 0 ? { unit: baseOf(unit).unit, sizes } : defaultLadder(unit);
+  // Linear steps (buying-sizes.ts): a row stored with the older pack ladder steps by its first rung.
+  return sizes.length > 0 ? { unit: baseOf(unit).unit, sizes: [sizes[0]!] } : defaultLadder(unit);
 }
 
 /**

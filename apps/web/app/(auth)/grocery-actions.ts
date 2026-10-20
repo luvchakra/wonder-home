@@ -16,7 +16,8 @@ import {
   setGroceryImage,
   setUseBy,
 } from "@wonderhome/core/commerce/inventory";
-import { searchCatalog, type CatalogEntry } from "@wonderhome/core/commerce/catalog";
+import { catalogItemFor, searchCatalog, type CatalogEntry } from "@wonderhome/core/commerce/catalog";
+import { baseOf } from "@wonderhome/core/commerce/buying-sizes";
 import { householdItemForCatalog } from "@wonderhome/core/commerce/catalog-items";
 import { changeItemUnit } from "@wonderhome/core/commerce/unit-change";
 import {
@@ -351,12 +352,17 @@ export async function addGroceryItemAction(
       if (near) return { duplicate: { id: near.id, name: near.name } };
     }
 
+    // An exact catalog name or alias brings the catalog's picture and nutrition with it, as HomeTalk's adds do;
+    // only when it is counted the same way as the unit picked here.
+    const named = await catalogItemFor(supabase, name).catch(() => null);
+    const catalogId = named?.catalogId && baseOf(named.unit).unit === baseOf(preferred).unit ? named.catalogId : null;
     const { id } = await createConsumable(supabase, {
       householdId,
       name,
       category,
       unit: preferred,
       typicalQuantity: 1,
+      catalogId,
     });
     const seed = `add-${id}`;
     if (toBuy && toBuy > 0) {

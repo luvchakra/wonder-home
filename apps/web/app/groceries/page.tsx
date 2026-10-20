@@ -132,7 +132,7 @@ export default async function GroceriesPage({
     unit: item.unit,
     step: item.step,
     ...stepperOf(item),
-    imageUrl: item.imageUrl,
+    imageUrl: item.imageUrl ?? item.catalog?.imageUrl ?? null,
     nutrition: nutritionOf(item),
     status: stockStatus(item),
     stockText: item.stock
