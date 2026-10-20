@@ -740,7 +740,7 @@ export const householdEn = {
   "kids.cat.nameLede": "I'm your cat, and I'll tell you what's new. What should I be called?",
   "kids.cat.nameField": "Cat's name",
   "kids.cat.namePlaceholder": "Mishti",
-  "kids.cat.save": "That's my name",
+  "kids.cat.save": "That's my cat",
   "kids.cat.saving": "Saving…",
   "kids.cat.rename": "Change {name}'s name",
   "kids.cat.renameTitle": "A new name for {name}",

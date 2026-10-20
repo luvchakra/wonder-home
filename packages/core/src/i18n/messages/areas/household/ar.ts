@@ -789,7 +789,7 @@ export const householdAr: AreaCatalog<typeof householdEn> = {
   "kids.cat.nameLede": "أنا قطّتك، وسأخبرك بكل جديد. ماذا تحب أن تسمّيني؟",
   "kids.cat.nameField": "اسم القطة",
   "kids.cat.namePlaceholder": "مشمش",
-  "kids.cat.save": "هذا اسمي",
+  "kids.cat.save": "هذه قطتي",
   "kids.cat.saving": "جارٍ الحفظ…",
   "kids.cat.rename": "غيّر اسم {name}",
   "kids.cat.renameTitle": "اسم جديد لـ {name}",

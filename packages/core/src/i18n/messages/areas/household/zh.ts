@@ -741,7 +741,7 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "kids.cat.nameLede": "我是你的猫咪，有新鲜事我会告诉你。我该叫什么名字呢？",
   "kids.cat.nameField": "猫咪的名字",
   "kids.cat.namePlaceholder": "咪咪",
-  "kids.cat.save": "这就是我的名字",
+  "kids.cat.save": "这就是我的猫",
   "kids.cat.saving": "正在保存…",
   "kids.cat.rename": "给 {name} 改名",
   "kids.cat.renameTitle": "给 {name} 起个新名字",

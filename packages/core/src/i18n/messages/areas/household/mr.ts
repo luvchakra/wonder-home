@@ -741,7 +741,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "kids.cat.nameLede": "मी तुझी मांजर आहे, आणि काय नवीन आहे ते मी तुला सांगेन. माझं नाव काय ठेवशील?",
   "kids.cat.nameField": "मांजरीचं नाव",
   "kids.cat.namePlaceholder": "मिष्टी",
-  "kids.cat.save": "हेच माझं नाव",
+  "kids.cat.save": "हीच माझी मांजर",
   "kids.cat.saving": "सेव्ह होत आहे…",
   "kids.cat.rename": "{name} चं नाव बदल",
   "kids.cat.renameTitle": "{name} साठी नवं नाव",

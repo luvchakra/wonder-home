@@ -741,7 +741,7 @@ export const householdEs: AreaCatalog<typeof householdEn> = {
   "kids.cat.nameLede": "Soy tu gato y te contaré las novedades. ¿Cómo me vas a llamar?",
   "kids.cat.nameField": "Nombre del gato",
   "kids.cat.namePlaceholder": "Michi",
-  "kids.cat.save": "Ese es mi nombre",
+  "kids.cat.save": "Ese es mi gato",
   "kids.cat.saving": "Guardando…",
   "kids.cat.rename": "Cambiar el nombre de {name}",
   "kids.cat.renameTitle": "Un nombre nuevo para {name}",
