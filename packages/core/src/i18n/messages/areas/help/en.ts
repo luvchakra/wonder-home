@@ -173,7 +173,7 @@ export const helpEn = {
   "help.guide.today-and-home.summary": "What needs you now, and the shape of the day.",
   "help.guide.today-and-home.body.1":
     "Home leads with what needs a person, then what WonderHome handled quietly. The handled count is things it checked and found fine — the number is real, not decorative. Each card opens to the entries behind its count.",
-  "help.guide.today-and-home.body.2": "Today's plan is the day as a timeline, in three views: your day, the family's, and the household's. Open it from the Calendar's day view for today. Items are commitments and deadlines — a meal that has to be ready, a bill due, a class — never chores to tick off. The household view also looks ahead two weeks at what is likely to run out or fall due.",
+  "help.guide.today-and-home.body.2": "Today's plan is the day as a timeline, in three views: your day, the family's, and the household's. Open it from the Calendar's day view for today. Items are commitments and deadlines — a meal that has to be ready, a bill due, a class — never chores to tick off. The household view also looks ahead two weeks at what is likely to run out or fall due. Each entry opens where it lives: an event its page, a meal Meals, a bill Bills, school work Kids & School. An adult can change a meal from its pencil (another dish, time or cook) and plan a new one for today with Plan a meal.",
   "help.guide.today-and-home.body.3":
     "Plan something, on Home and Today, adds a family event without leaving the screen.",
   "help.guide.today-and-home.body.4": "On a phone, swipe left or right to move between Home, Calendar, HomeTalk, Family and More.",

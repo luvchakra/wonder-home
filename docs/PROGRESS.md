@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**324 of 346 stories done — 93.6%**
+**325 of 347 stories done — 93.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 324 |
+| Done | 325 |
 | In Progress | 6 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
 | 25 HomeFood | `████████░░` | 21 | 26 | 5 not started |
-| 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
+| 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
 ## What is left
@@ -584,7 +584,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-10 of 14 done `███████░░░`
+11 of 15 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -602,6 +602,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-012` A tall, phone-shaped invitation, and a preview before saving | P1 | Done | The owner, 2026-10-18 (PR #237): Share invitation sends the invitation as a 1080×1350 picture with the link (`e/[token]/card`, one renderer with the link preview, `render-invitation.tsx`), so it shows whole in a chat; the wide picture stays as the link preview, since a chat only shows a wide one large. Preview in the design picker shows the invitation with the design and line picked, before saving. Checked: three designs drawn tall; the wedding preview at 360px; Share invitation opened the picture where the browser can't share files |
 | `26-013` "More family time!" only on family events | P1 | Done | The owner, 2026-10-18 (PR #241): Home's event card closed every event with "More family time!", a school event or an office review included. It now shows only for family kinds (family time, outing, birthday, gathering, travel, special occasion; `momentLook.family` in `_screens/home-dashboard.tsx`). Checked at 360px: a school event has no line, a movie night does |
 | `26-014` An event's "Where" is picked from Google Maps | P1 | Done | The owner, 2026-10-19 (screenshot of Edit the plan). Adding or editing an event, an adult searches Google Maps for Where (`EventPlaceField`, the same `PlaceSearchField` as the place book). The server re-reads a picked place by its id (`eventPlaceFromForm` → `decideEventPlace`, `places/event-place.ts`) and keeps its name, address and id (`family_events.location_address`, `location_place_id`, migration `20261019130000`, live). A typed place such as Home is kept as written, and a pick that cannot be read keeps the typed words. The event page shows the address with Open in Google Maps, and the guest invitation page gives directions; a typed place has no link. Help: Calendar ¶3 in 8 languages |
+| `26-016` Today's entries open their page; a meal changes and a new one is planned from Today | P1 | Done | The owner, 2026-10-20 ("make the entry card clickable, also make the meal editable to some other meal, add option to add new meal"). Each Today entry's icon, name and line open where it lives (`TimelineItem.href`): an event its page, a meal Meals, a bill Bills, school work Kids & School; the entry's own action stays beside it. A meal entry carries a pencil (`ChangeMealButton compact`, an icon with "Change {name}" for assistive technology, so the name is never squeezed — rule 11) opening the same Change sheet as Meals; **Plan a meal** under the timeline opens the Meals planner on today, with the full recipe picker (own and WonderHome dishes). Adults only. Help ¶2 of Today & Home in all eight languages. Checked at 360px and 1280px: planned "QA Khichdi" for today, changed it to "QA Veg pulao", the entry opened /meals, no overflow. |
 
 ### 27 — Notification Channels and Events
 

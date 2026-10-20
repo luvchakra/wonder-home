@@ -1,6 +1,8 @@
-import type { Translate } from "@wonderhome/core/i18n/translate";
+import { DIET_CLASHES, DIETS, type Diet, type DietClash } from "@wonderhome/core/meals/diet";
+import type { Translate, TranslationKey } from "@wonderhome/core/i18n/translate";
 
 import type { MealFormLabels } from "../_components/meal-forms";
+import type { RecipePickerLabels } from "../_components/recipe-picker";
 
 /** Placeholders the sheets fill in on the client with a recipe's or an ingredient's own words. */
 const KEEP = { name: "{name}", minutes: "{minutes}", serves: "{serves}", items: "{items}" };
@@ -147,3 +149,41 @@ export function mealFormLabels(t: Translate, unitNames: Record<string, string>):
     removeRecipe: t("recipes.remove"),
   };
 }
+
+/** The recipe picker's words (`RecipePicker`), in the reader's language. */
+export function recipePickerLabels(t: Translate, diets: Record<Diet, string> = Object.fromEntries(DIETS.map((diet) => [diet, t(`meals.diet.${diet}` as TranslationKey)])) as Record<Diet, string>): RecipePickerLabels {
+  return {
+    label: t("mealForm.fromRecipe"),
+    oneOff: t("mealForm.oneOff"),
+    search: t("mealForm.picker.search"),
+    fits: t("mealForm.picker.fits"),
+    any: t("mealForm.picker.any"),
+    anyCalories: t("mealForm.picker.anyCalories"),
+    anyProtein: t("mealForm.picker.anyProtein"),
+    dishDiets: { veg: t("recipes.diet.veg"), egg: t("recipes.diet.egg"), non_veg: t("recipes.diet.non_veg") },
+    diets,
+    clashes: Object.fromEntries(DIET_CLASHES.map((clash) => [clash, t(`meals.dietClash.${clash}` as TranslationKey)])) as Record<DietClash, string>,
+    filterDiet: t("mealForm.picker.filterDiet"),
+    filterCalories: t("mealForm.picker.filterCalories"),
+    filterProtein: t("mealForm.picker.filterProtein"),
+    under: t("mealForm.picker.under", { kcal: "{kcal}" }),
+    atLeast: t("mealForm.picker.atLeast", { grams: "{grams}" }),
+    sort: t("mealForm.picker.sort"),
+    sortSuggested: t("mealForm.picker.sortSuggested"),
+    sortProtein: t("mealForm.picker.sortProtein"),
+    sortCalories: t("mealForm.picker.sortCalories"),
+    yours: t("mealForm.picker.yours"),
+    ready: t("mealForm.readyToCook"),
+    missing: t("mealForm.missingIngredient"),
+    fromWonderHome: t("mealForm.picker.fromWonderHome"),
+    nutrition: t("mealForm.picker.nutrition", { kcal: "{kcal}", protein: "{protein}" }),
+    caloriesOnly: t("mealForm.picker.caloriesOnly", { kcal: "{kcal}" }),
+    proteinOnly: t("mealForm.picker.proteinOnly", { protein: "{protein}" }),
+    notCounted: t("mealForm.picker.notCounted"),
+    time: t("mealForm.picker.time", { minutes: "{minutes}", serves: "{serves}" }),
+    notFor: t("mealForm.picker.notFor", { name: "{name}", diet: "{diet}", reason: "{reason}" }),
+    empty: t("mealForm.picker.empty"),
+    savedOnPlan: t("mealForm.picker.savedOnPlan", { name: "{name}" }),
+  };
+}
+

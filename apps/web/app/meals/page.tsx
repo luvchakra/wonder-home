@@ -18,7 +18,7 @@ import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
 import { listMeals, listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
 import { shiftDay, WEEK_SLOTS, weekCount, weekDays, weekFrom, weekStartOf } from "@wonderhome/core/meals/week";
-import { DIET_CLASHES, DIETS, isDiet, type Diet, type DietClash } from "@wonderhome/core/meals/diet";
+import { DIETS, isDiet, type Diet } from "@wonderhome/core/meals/diet";
 import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
 import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
 import { publicEnv } from "@wonderhome/core/config/env";
@@ -47,8 +47,7 @@ import {
   SuggestMealButton,
 } from "../_components/meal-forms";
 import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
-import { mealFormLabels } from "../_lib/meal-form-labels";
-import type { RecipePickerLabels } from "../_components/recipe-picker";
+import { mealFormLabels, recipePickerLabels } from "../_lib/meal-form-labels";
 import { DietSettings } from "./diet-settings";
 import { RepeatLastWeek } from "./week-controls";
 import { MealIngredientsSheet } from "./meal-ingredients-sheet";
@@ -612,43 +611,6 @@ const PREFERENCE_KIND_KEYS = {
   preference: "meals.prefKind.preference",
   diet: "meals.prefKind.diet",
 } as const;
-
-/** The recipe picker's words (`RecipePicker`), in the reader's language. */
-function recipePickerLabels(t: Translate, diets: Record<Diet, string>): RecipePickerLabels {
-  return {
-    label: t("mealForm.fromRecipe"),
-    oneOff: t("mealForm.oneOff"),
-    search: t("mealForm.picker.search"),
-    fits: t("mealForm.picker.fits"),
-    any: t("mealForm.picker.any"),
-    anyCalories: t("mealForm.picker.anyCalories"),
-    anyProtein: t("mealForm.picker.anyProtein"),
-    dishDiets: { veg: t("recipes.diet.veg"), egg: t("recipes.diet.egg"), non_veg: t("recipes.diet.non_veg") },
-    diets,
-    clashes: Object.fromEntries(DIET_CLASHES.map((clash) => [clash, t(`meals.dietClash.${clash}` as TranslationKey)])) as Record<DietClash, string>,
-    filterDiet: t("mealForm.picker.filterDiet"),
-    filterCalories: t("mealForm.picker.filterCalories"),
-    filterProtein: t("mealForm.picker.filterProtein"),
-    under: t("mealForm.picker.under", { kcal: "{kcal}" }),
-    atLeast: t("mealForm.picker.atLeast", { grams: "{grams}" }),
-    sort: t("mealForm.picker.sort"),
-    sortSuggested: t("mealForm.picker.sortSuggested"),
-    sortProtein: t("mealForm.picker.sortProtein"),
-    sortCalories: t("mealForm.picker.sortCalories"),
-    yours: t("mealForm.picker.yours"),
-    ready: t("mealForm.readyToCook"),
-    missing: t("mealForm.missingIngredient"),
-    fromWonderHome: t("mealForm.picker.fromWonderHome"),
-    nutrition: t("mealForm.picker.nutrition", { kcal: "{kcal}", protein: "{protein}" }),
-    caloriesOnly: t("mealForm.picker.caloriesOnly", { kcal: "{kcal}" }),
-    proteinOnly: t("mealForm.picker.proteinOnly", { protein: "{protein}" }),
-    notCounted: t("mealForm.picker.notCounted"),
-    time: t("mealForm.picker.time", { minutes: "{minutes}", serves: "{serves}" }),
-    notFor: t("mealForm.picker.notFor", { name: "{name}", diet: "{diet}", reason: "{reason}" }),
-    empty: t("mealForm.picker.empty"),
-    savedOnPlan: t("mealForm.picker.savedOnPlan", { name: "{name}" }),
-  };
-}
 
 /** A preference's kind in the reader's words; a kind the catalog does not know is shown as stored. */
 function preferenceKindWords(t: Translate, kind: string): string {

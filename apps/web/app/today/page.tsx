@@ -15,7 +15,10 @@ import { listEvents } from "@wonderhome/core/family/repository";
 import { listObligations } from "@wonderhome/core/finance/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
 import { listMembers } from "@wonderhome/core/identity/households";
-import { listMeals } from "@wonderhome/core/meals/repository";
+import { listMeals, listRecipeChoices } from "@wonderhome/core/meals/repository";
+import { listCatalogRecipes } from "@wonderhome/core/meals/recipe-catalog";
+import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
+import { publicEnv } from "@wonderhome/core/config/env";
 import { isoDateIn } from "@wonderhome/core/context/format";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { schoolDateValue, schoolTimeWords } from "@wonderhome/core/school/times";
@@ -32,6 +35,9 @@ import { Suspense } from "react";
 import { Timeline, type TimelineItem } from "@wonderhome/core/ui/timeline";
 
 import { AgendaRow } from "../_components/agenda-row";
+import { ChangeMealButton, PlanMealButton } from "../_components/meal-forms";
+import { groceryWords } from "../_lib/grocery-words";
+import { mealFormLabels, recipePickerLabels } from "../_lib/meal-form-labels";
 import { NewEventForm } from "../_components/new-event-form";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
@@ -114,7 +120,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
   const seesMoney = view.permissions.includes("finance.view");
   const seesSchool = view.permissions.includes("school.manage") || view.permissions.includes("school.view_own");
 
-  const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR, consumablesR] = await Promise.all([
+  const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR, consumablesR, recipeChoices, catalog] = await Promise.all([
     settle(listEvents(supabase, householdId, { from: dayStart, to: dayEnd }), []),
     isChild ? ok([]) : settle(listMeals(supabase, householdId, { from: today, to: today }), []),
     seesMoney ? settle(listObligations(supabase, householdId), []) : ok([]),
@@ -122,7 +128,13 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     isChild ? ok(null) : settle(householdAgenda(supabase, householdId, view), null),
     isChild ? ok([]) : settle(listConsumables(supabase, householdId), []),
+    // What a meal here can change to, or a new one be planned from (the owner, 2026-10-20).
+    isChild ? Promise.resolve([]) : listRecipeChoices(supabase, householdId).catch(() => []),
+    isChild ? Promise.resolve([]) : listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => []),
   ]);
+  const mealLabels = isChild ? null : mealFormLabels(t, groceryWords(t, locale.preferences.language).unitNames);
+  const memberOptions = members.map((member) => ({ id: member.id, displayName: member.displayName }));
+  const recipeOptions = recipeChoices.map((recipe) => ({ id: recipe.id, name: recipe.name }));
 
   const { data: events } = eventsR;
   const { data: meals } = mealsR;
@@ -152,6 +164,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       family: true,
       household: false,
       action: event.actionState && event.actionState !== "ready" ? <PillLink href={`/family/events/${event.id}`}>{t("today.action.reply")}</PillLink> : undefined,
+      href: `/family/events/${event.id}`,
     });
   }
 
@@ -173,7 +186,26 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       mine: meal.cookMemberId === membership.memberId || meal.cookMemberId === null,
       family: true,
       household: true,
-      action: meal.status === "at_risk" ? <PillLink href="/meals">{t("today.action.fix")}</PillLink> : undefined,
+      // The meal changes in place, to another dish or another time; the card opens Meals.
+      action: mealLabels ? (
+        <ChangeMealButton
+          compact
+          householdId={householdId}
+          meal={{
+            id: meal.id,
+            name: meal.name,
+            slot: meal.slot,
+            onDate: meal.onDate,
+            readyByTime: new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(meal.readyBy),
+            cookMemberId: meal.cookMemberId,
+            recipeId: meal.recipe?.id ?? null,
+          }}
+          members={memberOptions}
+          recipes={recipeOptions}
+          labels={mealLabels}
+        />
+      ) : undefined,
+      href: "/meals",
     });
   }
 
@@ -193,6 +225,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       family: false,
       household: true,
       action: obligation.status === "scheduled" ? undefined : <PillLink href="/bills" tone="primary">{t("today.action.pay")}</PillLink>,
+      href: "/bills",
     });
   }
 
@@ -215,6 +248,7 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       family: true,
       household: false,
       action: <PillLink href="/school">{t("today.action.review")}</PillLink>,
+      href: "/school",
     });
   }
 
@@ -256,6 +290,21 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
       ) : (
         <Timeline items={shown} />
       )}
+
+      {mealLabels && active !== "family" ? (
+        // A new meal for today, from here (the owner, 2026-10-20: "add option to add new meal").
+        <div className="flex justify-end">
+          <PlanMealButton
+            householdId={householdId}
+            members={memberOptions}
+            recipes={recipeChoices}
+            dishes={pickerDishes(recipeChoices, catalog)}
+            pickerLabels={recipePickerLabels(t)}
+            labels={mealLabels}
+            onDate={isoDateIn(now, timezone)}
+          />
+        </div>
+      ) : null}
 
       {householdNeeds.length > 0 ? (
         <section>
