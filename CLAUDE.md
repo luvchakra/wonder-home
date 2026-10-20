@@ -878,6 +878,43 @@ reminders about real records, never lines of text fired and forgotten.
   muted. Only channels that are on and reach someone here are offered, in Settings →
   Notifications → "What goes where". The backlog for the
   channels and the events still to come is `backlogs/27-Notification-Channels.md`.
+- **Can I trust it?** (stories 27-003, 27-009, 27-010). Under each channel
+  in Settings → Notifications a person sees whether a reminder will reach them
+  there and the plain reasons it may not (`channel-check.ts`, closed reasons:
+  off, no device or address, quiet hours, today's ceiling, not set up, the last
+  attempt failed), and "Send a test" goes to them alone through
+  `sendTestNotification`. Every notification email carries a signed one-tap
+  unsubscribe (`unsubscribe.ts`, `/email-off`, which asks first, and the
+  `List-Unsubscribe` one-click endpoint); three refusals in a row from the mail
+  server pause email with a closed `paused_reason` (`email-health.ts`). A
+  failure the channel marks retryable is queued on the job queue
+  (`retry.ts`, `retry-handler.ts`: three tries, one waiting per notification and
+  channel, never for what has since settled). Every drain knows the kind
+  (`drainJobs` falls back to `notificationJobHandlers`). Admins read counts
+  per channel under Manage Household → Notification delivery
+  (`delivery-report.ts`).
+- **Notices** (stories 27-004 to 27-014, `notices.ts`, `notices-sweep.ts`). A
+  notice is about something that happened and is still true, derived from a
+  record exactly like a reminder: one thread per record, idempotent, resolved
+  when the record settles, never fired and forgotten. Today: a HomeSend item
+  waiting for a yes or failed safely (the kind of thing only), a guest's reply
+  (one updating thread, to the owner), a helper away, an order's progress, an
+  event moved or cancelled by someone else (recorded by a database trigger into
+  `family_event_changes`; never to the editor, never to anyone off the event),
+  and rain that changes a plan where Weather is on. The sweep runs from the
+  reminder pass and, for any household whose records changed, from the
+  delivery clock. A notice needs a `source_id` and a `reminder.*` message in
+  every language. A new notice is a builder with a test, never a new writer.
+- **A second way, a summary, a fit** (stories 27-007, 27-008, 27-015). A bill,
+  school or pet reminder unanswered past the policy's wait (`channelEscalation`,
+  always shorter than the backup's) is also sent once by email or WhatsApp,
+  claimed by an `escalated` event first (`channel-escalation.ts`). A person can
+  have one morning digest per channel (`digest.ts`): once a local day, the same
+  rows as the in-app summary in their language, empty days send nothing, and a
+  channel carrying one holds ordinary reminders back to the app. A child's
+  channels and reminders keep their age's quiet hours until a guardian sets
+  their own (`child-quiet.ts`); someone with no confirmed account email is not
+  offered email.
 - **Fewer interruptions.** A child's school things due the same day are one
   reminder (`school_day`, `batchSchoolDays`), as urgent as the most urgent
   item in it. A policy that escalates tells the responsibility's backup

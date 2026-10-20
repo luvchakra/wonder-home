@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import type { NotificationDecision } from "./decide";
 import { deliverNotification } from "./deliver";
+import type { NotificationCopy } from "./message";
 import type { NotificationCategory } from "./policies";
+import type { PushReason } from "./push-gate";
 
 /**
  * Turning a decision into a row (stories 06-001 through 06-007).
@@ -29,8 +31,31 @@ export type NotifyInput = {
   body: string;
   /** What it is about (module 23), so the feed can file and filter it. */
   category?: NotificationCategory;
-  source?: { type: "health_appointment" | "health_routine" | "health_checkup" | "approval" | "payment" | "payment_refund"; id: string | null };
+  source?: { type: NotificationSourceType; id: string | null };
+  /** The words as a message, so each recipient reads them in their own language (story 22-006). */
+  copy?: NotificationCopy;
+  /** Whether it is something timed for this person or an alert about something that happened; decides if it may buzz a phone. */
+  reason?: PushReason;
+  /** A change to a thread already open brings it back as unread, without sending anything again (stories 27-005, 27-012). */
+  refreshUnread?: boolean;
+  /** Past this the notification stops being shown (the reconcile pass expires it). */
+  expiresAt?: Date;
 };
+
+/** What a notification created here can be about; each is a source type the table accepts. */
+export type NotificationSourceType =
+  | "health_appointment"
+  | "health_routine"
+  | "health_checkup"
+  | "approval"
+  | "payment"
+  | "payment_refund"
+  | "homesend_item"
+  | "event_replies"
+  | "helper_absence"
+  | "grocery_order"
+  | "event_change"
+  | "weather_plan";
 
 export async function createNotification(
   admin: SupabaseClient,
@@ -41,7 +66,7 @@ export async function createNotification(
 
   const { data: existing } = await admin
     .from("notifications")
-    .select("id")
+    .select("id, title, body, status")
     .eq("household_id", householdId)
     .eq("recipient_member_id", decision.recipientMemberId)
     .eq("thread_key", decision.threadKey)
@@ -63,10 +88,15 @@ export async function createNotification(
     category: input.category ?? "system",
     source_type: input.source?.type ?? null,
     source_id: input.source?.id ?? null,
+    ...(input.copy ? { message: input.copy } : {}),
+    ...(input.expiresAt ? { expires_at: input.expiresAt.toISOString() } : {}),
   };
 
   if (existing) {
-    const { error } = await admin.from("notifications").update(row).eq("id", existing.id);
+    const changed = existing.title !== row.title || existing.body !== row.body;
+    // Newly changed words are news again: a thread the person had read comes back unread.
+    const reopen = input.refreshUnread && changed && (existing.status === "seen" || existing.status === "delivered") ? { status: "delivered", seen_at: null } : {};
+    const { error } = await admin.from("notifications").update({ ...row, ...reopen }).eq("id", existing.id);
     if (error) return null;
     return { id: existing.id as string };
   }
@@ -89,6 +119,8 @@ export async function createNotification(
         recipientMemberId: decision.recipientMemberId,
         notification: { title, body, priority: riskLevel === "critical" ? "critical" : riskLevel === "high" ? "high" : "normal" },
         category: input.category ?? "system",
+        ...(input.copy ? { copy: input.copy } : {}),
+        ...(input.reason ? { reason: input.reason } : {}),
         now,
       },
       options.adapters,

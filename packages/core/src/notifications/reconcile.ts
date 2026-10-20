@@ -7,7 +7,9 @@ import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import { deliverNotification } from "./deliver";
 import { learnedMinuteFrom } from "./learning";
 import {
+  buildDirectory,
   backupFor,
+  isUnansweredForChannel,
   chooseReminderRecipient,
   isUnanswered,
   planEscalation,
@@ -18,6 +20,9 @@ import {
   type DirectoryMember,
 } from "./plan";
 import { REMINDER_POLICIES } from "./policies";
+import { sweepNotices } from "./notices-sweep";
+import { childQuietHours } from "./child-quiet";
+import { escalateAcrossChannels } from "./channel-escalation";
 import {
   RECONCILED_SOURCE_TYPES,
   billSubject,
@@ -191,7 +196,7 @@ async function reconcile(
         .in("status", ["proposed", "planned", "confirmed"])
         .gte("starts_at", now.toISOString())
         .lte("starts_at", horizon(2)),
-      admin.from("household_members").select("id, profile_id, member_type, status, display_name, nickname").eq("household_id", householdId),
+      admin.from("household_members").select("id, profile_id, member_type, status, display_name, nickname, date_of_birth").eq("household_id", householdId),
       admin.from("household_roles").select("member_id, role").eq("household_id", householdId),
       admin.from("responsibilities").select("outcome_key, primary_member_id, backup_member_id").eq("household_id", householdId),
       admin.from("member_guardians").select("child_member_id, guardian_member_id").eq("household_id", householdId),
@@ -233,6 +238,7 @@ async function reconcile(
     status: string;
     display_name: string;
     nickname: string | null;
+    date_of_birth: string | null;
   }[];
   const displayNames = new Map(memberRows.map((row) => [row.id, row.nickname || row.display_name]));
 
@@ -298,12 +304,17 @@ async function reconcile(
   }
   const assignments = REMINDER_POLICIES.school.batching ? batchSchoolDays(routed, schoolRows, displayNames, context) : routed;
 
+  const childQuietFor = (memberId: string): QuietHours | null => {
+    const row = memberRows.find((candidate) => candidate.id === memberId);
+    return row ? childQuietHours({ memberType: row.member_type, dateOfBirth: row.date_of_birth }, now) : null;
+  };
   const settingsFor = (memberId: string, category: ReminderSubject["category"]) => {
     const chosen = prefs.get(`${memberId}|${category}`);
     return {
       preset: chosen?.preset ?? null,
       enabled: chosen?.enabled ?? true,
-      quiet: quietByMember.has(memberId) ? quietByMember.get(memberId)! : householdQuiet,
+      // A child's own window, else their age's (27-015), else the household's.
+      quiet: quietByMember.get(memberId) ?? childQuietFor(memberId) ?? (quietByMember.has(memberId) ? null : householdQuiet),
       // A timing the person chose themselves always wins over a learned one.
       // Saving the settings writes every kind, so only a preset other than
       // the policy's own default counts as a choice.
@@ -352,6 +363,16 @@ async function reconcile(
     if (!alreadyEscalated) escalations.push({ primaryRowId: primaryOpen.id, backupId });
   }
 
+  // The person's own channel step comes before the backup: a second way to reach
+  // them, once, when their last reminder has gone unanswered (27-007).
+  const channelSteps: { row: OpenRow; category: ReminderSubject["category"]; via: readonly DeliveryChannel[] }[] = [];
+  for (const [key, want] of desired) {
+    if (want.recipientRole !== "primary") continue;
+    const step = REMINDER_POLICIES[want.category].channelEscalation;
+    const row = openByKey.get(key);
+    if (step && row && isUnansweredForChannel(want, row, now)) channelSteps.push({ row, category: want.category, via: step.via });
+  }
+
   // 3. Bring the table in line.
   const result: ReconcileResult = { ran: true, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
   const managed = new Set<string>(RECONCILED_SOURCE_TYPES);
@@ -387,6 +408,10 @@ async function reconcile(
     if (!error) result.created += 1;
   }
 
+  for (const { row, category, via } of channelSteps) {
+    await escalateAcrossChannels(admin, { householdId, row, category, via, now, ...(adapters ? { adapters } : {}) });
+  }
+
   // The trail says who it went to next, on the reminder that went unanswered.
   for (const { primaryRowId } of escalations) {
     await admin.from("notification_events").insert({
@@ -397,6 +422,9 @@ async function reconcile(
       metadata: { to: "backup" },
     });
   }
+
+  // 3b. Notices — what has happened and is still true — are brought in line the same way (module 27).
+  await sweepNotices(admin, householdId, now, adapters ? { adapters } : {});
 
   // 4. What has come due is delivered — in the app always, and on the
   //    person's other live channels when it is still fresh.
@@ -526,38 +554,6 @@ async function learnedTimes(
     if (time) learned.set(key, time.minute);
   }
   return learned;
-}
-
-export function buildDirectory(
-  members: readonly { id: string; profile_id: string | null; member_type: DirectoryMember["memberType"]; status: string }[],
-  roles: readonly { member_id: string; role: string }[],
-  responsibilities: readonly { outcome_key: string; primary_member_id: string | null; backup_member_id: string | null }[],
-  guardians: readonly { child_member_id: string; guardian_member_id: string }[],
-): Directory {
-  const rolesOf = new Map<string, Set<string>>();
-  for (const row of roles) rolesOf.set(row.member_id, (rolesOf.get(row.member_id) ?? new Set()).add(row.role));
-  const guardianMap = new Map<string, string[]>();
-  for (const row of guardians) guardianMap.set(row.child_member_id, [...(guardianMap.get(row.child_member_id) ?? []), row.guardian_member_id]);
-  return {
-    members: new Map(
-      members.map((row) => {
-        const held = rolesOf.get(row.id) ?? new Set<string>();
-        return [
-          row.id,
-          {
-            id: row.id,
-            hasAccount: row.profile_id !== null,
-            active: row.status === "active",
-            memberType: row.member_type,
-            isAdmin: held.has("head") || held.has("administrator"),
-            isHead: held.has("head"),
-          },
-        ];
-      }),
-    ),
-    responsibilities: new Map(responsibilities.map((row) => [row.outcome_key, { primary: row.primary_member_id, backup: row.backup_member_id }])),
-    guardians: guardianMap,
-  };
 }
 
 /** The household's own quiet-hours rule (set through HomeTalk), for anyone who has not set their own. */
@@ -695,3 +691,5 @@ export async function reconcileAllHouseholds(admin: SupabaseClient, now: Date = 
   }
   return summary;
 }
+
+export { buildDirectory };

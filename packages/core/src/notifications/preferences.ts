@@ -22,7 +22,13 @@ type Row = {
   quiet_from_minute: number | null;
   quiet_until_minute: number | null;
   target: string | null;
+  paused_reason?: string | null;
+  digest?: boolean | null;
+  digest_minute?: number | null;
 };
+
+/** 7:30 in the morning, on the household's clock. */
+export const DEFAULT_DIGEST_MINUTE = 450;
 
 const DEFAULT_PREFERENCE = (channel: DeliveryChannel): ChannelPreference => ({
   channel,
@@ -39,7 +45,7 @@ export async function loadChannelPreferences(
 ): Promise<ChannelPreference[]> {
   const { data, error } = await supabase
     .from("notification_preferences")
-    .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
+    .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target, paused_reason, digest, digest_minute")
     .eq("member_id", memberId);
 
   const byChannel = new Map<string, ChannelPreference>();
@@ -53,6 +59,9 @@ export async function loadChannelPreferences(
         quietFromMinute: row.quiet_from_minute ?? 0,
         quietUntilMinute: row.quiet_until_minute ?? 0,
         target: row.target,
+        ...(row.paused_reason === "address_rejected" ? { pausedReason: "address_rejected" as const } : {}),
+        digest: row.digest === true,
+        digestMinute: row.digest_minute ?? DEFAULT_DIGEST_MINUTE,
       });
     }
   }
@@ -71,6 +80,8 @@ export type SaveChannelPreferenceInput = {
   quietFromMinute?: number;
   quietUntilMinute?: number;
   target: string | null;
+  /** The morning summary on this channel. Left out, the saved choice is kept (quiet hours and device saves never touch it). */
+  digest?: { on: boolean; minute: number };
 };
 
 export async function saveChannelPreference(
@@ -88,6 +99,10 @@ export async function saveChannelPreference(
       quiet_from_minute: input.quietFromMinute ?? 0,
       quiet_until_minute: input.quietUntilMinute ?? 0,
       target: input.target,
+      // A person saving the channel has seen why it was paused (story 27-009).
+      paused_reason: null,
+      paused_at: null,
+      ...(input.digest && input.channel !== "in_app" ? { digest: input.digest.on, digest_minute: input.digest.minute } : {}),
     },
     { onConflict: "member_id,channel" },
   );

@@ -13,6 +13,7 @@ import { Button } from "@wonderhome/core/ui/button";
 import { Bell, Mail, MessageCircle, Smartphone } from "lucide-react";
 
 import type { ActionState } from "../(auth)/actions";
+import { sendTestNotificationAction } from "../(auth)/notification-preferences-actions";
 
 // A component reference cannot cross the server/client boundary as a prop
 // (React can only serialize plain data there) — so the mapping lives here,
@@ -24,6 +25,12 @@ const CHANNEL_ICONS: Record<DeliveryChannel, typeof Bell> = {
   email: Mail,
   whatsapp: MessageCircle,
 };
+
+/** Minutes after midnight as "HH:MM", the value the time picker uses. */
+function clockOf(minute: number | undefined): string {
+  const total = minute ?? 450;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
@@ -38,10 +45,50 @@ export type ChannelPreferenceLabels = {
   whatsappHint: string;
   quietFrom: string;
   quietUntil: string;
+  /** The morning summary on this channel (story 27-008). */
+  digest: string;
+  digestHint: string;
+  digestAt: string;
   off: string;
   save: string;
   saving: string;
 };
+
+/** Whether this channel will reach the person and, when it may not, why in plain words (story 27-003). */
+export type ChannelCheckView = {
+  /** Delivery switched this channel off on its own, and why (story 27-009). */
+  notice?: string;
+  ready: string;
+  problems: string;
+  reasons: string[];
+  /** A test can be sent from this card (email and WhatsApp; push has its own on this device). */
+  testable: boolean;
+  sendTest: string;
+  sending: string;
+  testSent: string;
+};
+
+function TestButton({ householdId, channel, view }: { householdId: string; channel: DeliveryChannel; view: ChannelCheckView }) {
+  const [state, action] = useActionState<ActionState, FormData>(sendTestNotificationAction, {});
+  return (
+    <form action={action} className="space-y-2">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="channel" value={channel} />
+      <TestSubmit label={view.sendTest} pendingLabel={view.sending} />
+      {state.error ? <Alert>{state.error}</Alert> : null}
+      {state.notice === "sent" ? <Alert tone="info">{view.testSent}</Alert> : null}
+    </form>
+  );
+}
+
+function TestSubmit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="quiet" disabled={pending}>
+      {pending ? pendingLabel : label}
+    </Button>
+  );
+}
 
 function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
@@ -69,6 +116,8 @@ export function ChannelPreferenceCard({
   preference,
   live,
   labels,
+  check,
+  digestTimes,
   save,
 }: {
   householdId: string;
@@ -76,6 +125,9 @@ export function ChannelPreferenceCard({
   preference: ChannelPreference;
   live: boolean;
   labels: ChannelPreferenceLabels;
+  check?: ChannelCheckView;
+  /** The times a morning summary can go, on the household's clock; offered on the channels beyond the app. */
+  digestTimes?: { value: string; label: string }[];
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
 }) {
   const [state, action] = useActionState(save, {});
@@ -145,11 +197,50 @@ export function ChannelPreferenceCard({
           </div>
         )}
 
+        {digestTimes && preference.channel !== "in_app" ? (
+          <div className="space-y-2">
+            <label className="flex min-h-11 items-start gap-3 text-sm">
+              <input type="checkbox" name="digest" defaultChecked={preference.digest === true} className="mt-0.5 size-5 shrink-0 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]" />
+              <span>
+                {labels.digest}
+                <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.digestHint}</span>
+              </span>
+            </label>
+            <Select label={labels.digestAt} name="digestAt" defaultValue={clockOf(preference.digestMinute)}>
+              {digestTimes.map((time) => (
+                <option key={time.value} value={time.value}>
+                  {time.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
+
         {state.error ? <Alert>{state.error}</Alert> : null}
         {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
 
         <Submit label={labels.save} pendingLabel={labels.saving} />
       </form>
+
+      {check?.notice ? <Alert tone="attention">{check.notice}</Alert> : null}
+
+      {check ? (
+        <div className="space-y-2 border-t border-[var(--wh-border)] pt-3 text-sm">
+          {check.reasons.length === 0 ? (
+            <p className="text-[var(--wh-foreground-muted)]">{check.ready}</p>
+          ) : (
+            <>
+              <p className="font-medium">{check.problems}</p>
+              <ul className="list-disc space-y-1 ps-5 text-[var(--wh-foreground-muted)]">
+                {check.reasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {check.testable ? <TestButton householdId={householdId} channel={preference.channel} view={check} /> : null}
+        </div>
+      ) : null}
     </Card>
   );
 }

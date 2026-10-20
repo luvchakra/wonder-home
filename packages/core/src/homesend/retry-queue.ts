@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { log } from "../observability/logger";
 import { understand, type IngestDeps } from "./ingest";
 import { getHomeSendItem } from "./repository";
+import { notificationJobHandlers } from "../notifications/retry-handler";
 
 /**
  * Persist first, retry where safe (Wave 5 §15 async processing, §16
@@ -68,7 +69,7 @@ export async function drainJobs(
   for (const job of jobs) {
     let failure: string | null = null;
     try {
-      const handler = job.kind === CLASSIFY_RETRY_KIND ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps) : options.handlers?.[job.kind];
+      const handler = job.kind === CLASSIFY_RETRY_KIND ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps) : options.handlers?.[job.kind] ?? notificationJobHandlers()[job.kind];
       if (!handler) {
         failure = "unknown job kind";
       } else {

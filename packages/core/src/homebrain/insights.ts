@@ -185,8 +185,10 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
       ];
       blocked.push({ label, reasons, evidence: [...during, ...after], date: start });
     }
+    // "Which are the next long weekends?" wants only those: the plain free weekends would bury them.
+    const longOnly = trip.noun === "long weekend";
     const length = trip.days === 1 ? "a day out" : `a ${trip.days}-day ${trip.noun}`;
-    add(
+    if (!longOnly) add(
       "free_window",
       clear.length > 0
         ? `For ${length}, nothing is on the family calendar on ${listOf(clear.slice(0, 3))}${clear.length > 3 ? `, or ${count(clear.length - 3, "later weekend")}` : ""} (the next ${TRIP_WEEKS} weekends checked).`
@@ -194,7 +196,7 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
       [],
       clear.length > 0 ? first : null,
     );
-    for (const entry of blocked) add("free_window", `${entry.label} is less free: ${entry.reasons.join("; ")}.`, entry.evidence, entry.date);
+    if (!longOnly) for (const entry of blocked) add("free_window", `${entry.label} is less free: ${entry.reasons.join("; ")}.`, entry.evidence, entry.date);
 
     // Long weekends (14-034): a public holiday on a Friday or a Monday makes
     // three days; on a Thursday or a Tuesday, four, with one day taken off.
@@ -227,12 +229,14 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
       const firstTrip = insights.findIndex((entry) => entry.rule === "free_window");
       insights.splice(firstTrip < 0 ? insights.length : firstTrip, 0, {
         rule: "free_window",
-        statement: `${LONG_WEEKENDS_LEAD} ${long.slice(0, 3).map((entry) => entry.text).join("; ")}.`,
-        evidence: long.slice(0, 3).map((entry) => entry.holiday.id),
+        statement: `${LONG_WEEKENDS_LEAD} ${long.slice(0, longOnly ? 5 : 3).map((entry) => entry.text).join("; ")}.`,
+        evidence: long.slice(0, longOnly ? 5 : 3).map((entry) => entry.holiday.id),
         subjectMemberIds: [],
         date: long[0]!.date,
         privacyClass: "general",
       });
+    } else if (longOnly) {
+      add("free_window", `No public holiday in the next six months makes a long weekend with nothing else on the family calendar.`, [], null);
     }
   }
 
@@ -253,6 +257,8 @@ const LONG_WEEKEND_AHEAD_DAYS = 183;
  */
 export function tripQuestion(question: string): { days: number; noun: string; daysSaid: boolean } | null {
   const text = question.toLowerCase();
+  // "Which are the next long weekends coming up?" asks for the long weekends themselves: three days, with no "when" word in it.
+  if (/\blong[- ]weekends?\b/.test(text) && !/\b(?:what is|what's|define|meaning of)\b/.test(text)) return { days: 3, noun: "long weekend", daysSaid: false };
   const noun = text.match(/\b(getaway|trip|vacation|holiday|outing|break|staycation|day out|road ?trip|excursion)s?\b/)?.[1];
   if (!noun) return null;
   if (!/\b(?:when|best time|good time|right time|ideal time|what time|which (?:weekend|days?|dates?|week)|free (?:weekend|days?)|(?:a |the )?free|available|go away)\b/.test(text)) return null;

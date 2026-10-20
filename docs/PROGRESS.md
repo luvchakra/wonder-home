@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**294 of 327 stories done — 89.9%**
+**306 of 327 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 294 |
+| Done | 306 |
 | In Progress | 5 |
 | Blocked | 1 |
-| Not Started | 23 |
+| Not Started | 11 |
 | Deferred | 4 |
 
 ## By module
@@ -52,7 +52,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
 | 25 HomeFood | `██████░░░░` | 12 | 19 | 1 in progress, 6 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
-| 27 Notification Channels and Events | `█░░░░░░░░░` | 2 | 15 | 1 blocked, 12 not started |
+| 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
 ## What is left
 
@@ -78,19 +78,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
 | `26-006` Google and Outlook calendars | 26 HomeEvents | P2 | Not Started |
-| `27-003` Send me a test notification, and say why one didn't arrive | 27 Notification Channels and Events | P1 | Not Started |
-| `27-004` A HomeSend item waiting for your OK tells you | 27 Notification Channels and Events | P1 | Not Started |
-| `27-005` A guest's reply to an invitation tells the host | 27 Notification Channels and Events | P1 | Not Started |
-| `27-006` A helper who won't come tells the adults | 27 Notification Channels and Events | P1 | Not Started |
-| `27-007` An unanswered reminder moves to another channel | 27 Notification Channels and Events | P1 | Not Started |
-| `27-008` A morning digest by push, email or WhatsApp | 27 Notification Channels and Events | P1 | Not Started |
-| `27-009` Email: unsubscribe, and stop on a rejected address | 27 Notification Channels and Events | P1 | Not Started |
-| `27-010` Delivery that can be seen and retried | 27 Notification Channels and Events | P1 | Not Started |
 | `27-011` WhatsApp goes live | 27 Notification Channels and Events | P1 | Blocked |
-| `27-012` A grocery order's progress tells the person who placed it | 27 Notification Channels and Events | P2 | Not Started |
-| `27-013` A moved or cancelled event tells those going | 27 Notification Channels and Events | P2 | Not Started |
-| `27-014` Weather that changes a plan tells the person it affects | 27 Notification Channels and Events | P2 | Not Started |
-| `27-015` Channels that suit a helper and a child | 27 Notification Channels and Events | P2 | Not Started |
 
 ## Every story
 
@@ -385,7 +373,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | P1 | In Progress | PR #241 built: the database trigger safety net (`wh.mark_context_stale` on 25 domain tables, live, DB-tested), the keep-warm rebuild of stores that are behind or over an hour old on the five-minute delivery clock (`keepStoresWarm`, 4 per tick), and the AI quality page's `homeBrainKeeping` (deeper looks and what they found by part of the home, stores behind and the oldest lag). Still open: rules read the store, the agenda summary only for broad questions, and the "not on record while on record" gate. Spec §3.2, §3.8 (was 14-022 and 14-023) |
 | `14-032` HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | P1 | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
 | `14-033` "When should we go away?" answered from the calendar | P1 | Done | Live finding, 2026-10-19: "what best time for 2 day getaway" fell into the wide status net and was answered with the attention summary. `homebrain/insights.ts` gains rule `free_window` (`tripQuestion` reads when and how many days): the next 8 weekends with nothing on the family calendar, and what is on the others — events, school events and exams, someone away, an exam the day after. Drawn as an insight that answers the question (`grounding.ts`), so a model may cite it and the rules answer with it. Golden case HT-118, `free-window.test.ts` (PR #254) |
-| `14-034` Long weekends from public holidays | P1 | Done | The owner, 2026-10-19: "add public holidays so it suggests long weekends". `calendar/holidays.ts` (`listHouseholdHolidays`: the household's country, national days, six months ahead) feeds HomeBrain's context as `holiday` items (calendar, general), in the store and the live read. `free_window` leads with the long weekends a holiday makes — a Friday or Monday (three days), a Thursday or Tuesday with one day taken off (four) — where nothing is on for the family, never one already begun. A rule reads "which weekend is free for a trip?" as a HomeBrain question; a trip fact is not cut to "this weekend". Golden case HT-119 (Gandhi Jayanti in household A). Help Calendar ¶10 in 8 languages (PR #255). Destinations for those weekends: 24-011 |
+| `14-034` Long weekends from public holidays | P1 | Done | The owner, 2026-10-19: "add public holidays so it suggests long weekends". `calendar/holidays.ts` (`listHouseholdHolidays`: the household's country, national days, six months ahead) feeds HomeBrain's context as `holiday` items (calendar, general), in the store and the live read. `free_window` leads with the long weekends a holiday makes — a Friday or Monday (three days), a Thursday or Tuesday with one day taken off (four) — where nothing is on for the family, never one already begun. A rule reads "which weekend is free for a trip?" as a HomeBrain question; a trip fact is not cut to "this weekend". Golden case HT-119 (Gandhi Jayanti in household A). Help Calendar ¶10 in 8 languages (PR #255). Destinations for those weekends: 24-011. "Which are the next long weekends coming up" (live, 2026-10-20) was answered with the calendar's next three months: it is now read as this question (`tripQuestion` names "long weekends", the rule pattern takes it) and answered with only the long weekends, up to five, or says there are none; golden case HT-120 |
 
 ### 15 — Privacy, Security & Governance
 
@@ -597,24 +585,24 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 27 — Notification Channels and Events
 
-2 of 15 done `█░░░░░░░░░`
+14 of 15 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `27-001` Notifications reach people by email | P0 | Done | The owner, 2026-10-20. `notifications/email.ts`: the email channel sends through the platform mailer (`channelAdaptersFromEnv`, live only where the deployment has SMTP; production has) to the confirmed email of the member's own account, by `emailWorthSending` (critical always; high up to 12 a day; normal only as a reminder, up to 6; low never) and quiet hours. The message is the notification's own title and body, an "Open in WonderHome" button and a why line, in the recipient's language (`notificationEmail.*`, 8 languages). Each attempt is a `sent` or `delivery_failed` event. Tested with a fake mailer (`email.test.ts`, 15); a real send is first seen after deploy, when a person turns Email on under Settings → Notifications. |
 | `27-002` Choose the channel for each kind of reminder | P0 | Done | The owner, 2026-10-20. Migration `20261020100000_notification_channel_mutes.sql` (live; `verify:live` 319/319): one row is one kind kept off one channel, a member's own (set-form RLS, `test-notification-mutes-rls.mjs` 6/6). `notifications/routing.ts` (`setRoute`, `loadMutes`, `channelAllowed`); `deliverNotification` takes the reminder's `category` (from `createNotification` and the delivery clock) and skips a channel the person keeps that kind off — except a critical alert, and never the in-app list. Settings → Notifications → "What goes where" (`ChannelRoutingCard`): each kind against the channels the person has on and that reach someone here, as tick boxes, everything ticked to start; saved at once. Words in 8 languages; help ¶8. Browser-checked at 360px and 1280px. |
-| `27-003` Send me a test notification, and say why one didn't arrive | P1 | Not Started | A button per channel in Settings → Notifications, and a plain reason when it fails (no device, quiet hours, not set up). |
-| `27-004` A HomeSend item waiting for your OK tells you | P1 | Not Started | A photo, forward or voice note that needs a confirm reaches the person who can confirm it. |
-| `27-005` A guest's reply to an invitation tells the host | P1 | Not Started | One thread per event, so ten replies are one updating notification. |
-| `27-006` A helper who won't come tells the adults | P1 | Not Started | From Househelper's "away" days; tells the one who looks after that duty, then the backup. |
-| `27-007` An unanswered reminder moves to another channel | P1 | Not Started | Escalation across channels per policy, not only to a backup person. |
-| `27-008` A morning digest by push, email or WhatsApp | P1 | Not Started | Opt-in. The same rows as the in-app "HomeBrain summary · Today". Shares scope with 26-004's daily digest option. |
-| `27-009` Email: unsubscribe, and stop on a rejected address | P1 | Not Started | Follows 27-001. One tap turns email off; an address the server rejects repeatedly is paused and said so. |
-| `27-010` Delivery that can be seen and retried | P1 | Not Started | Per-channel results for an Admin, retry with backoff for the failures marked retryable. |
+| `27-003` Send me a test notification, and say why one didn't arrive | P1 | Done | The owner, 2026-10-20. Settings → Notifications: under each channel, whether a reminder will reach the person there and, if not, the plain reasons (`channel-check.ts`: off, no device or address, quiet hours, today's ceiling, not set up, the last attempt failed). "Send a test" on email and WhatsApp (push keeps its own button on this phone) goes to that person only, now, through `sendTestNotification`, 8 an hour per member (`notification.test`), and answers with the reason in their language when it cannot. Tested (`channel-check.test.ts`); browser-checked at 360px and 1280px. |
+| `27-004` A HomeSend item waiting for your OK tells you | P1 | Done | The owner, 2026-10-20. `notices.ts` + `notices-sweep.ts`: one notice per HomeSend item waiting for a yes (or failed safely), to the sender when an adult, else the head Admin; names only the kind of thing, never its content; resolves when the item is confirmed, undone or dismissed. The new notice layer (migration `20261020120000_notification_notices.sql`, live): derived from records like reminders, one thread per record, idempotent, run from the reminder pass and, for any household whose records changed, by the delivery clock every 5 minutes. A dismissed notice is not told again unless its words change. |
+| `27-005` A guest's reply to an invitation tells the host | P1 | Done | The owner, 2026-10-20. One thread per event (`event-replies:<id>`), to the event's owner (else an Admin): "5 coming · 1 maybe · 1 can't come", counting people by party size, rewritten as replies arrive and brought back unread without sending again. Nothing is ever created for the guest. |
+| `27-006` A helper who won't come tells the adults | P1 | Done | The owner, 2026-10-20. One notice per helper per day away (`availability_exceptions`), to whoever backs up what that helper looks after, else the head Admin; today and coming days only; resolves when the absence is removed (next pass). |
+| `27-007` An unanswered reminder moves to another channel | P1 | Done | The owner, 2026-10-20. `channelEscalation` on the bills, school and pet policies (`policies.ts`): when the person's own last reminder has gone unanswered (90, 30, 60 minutes — before the backup's wait), it is also sent once by the first of email or WhatsApp they have on that passes the usual gates (`channel-escalation.ts`). The `escalated` event is claimed first, so it happens once; never to a second person; `maxDeliveriesFor` keeps the ceiling. |
+| `27-008` A morning digest by push, email or WhatsApp | P1 | Done | The owner, 2026-10-20. Migration `20261020130000_notification_digest.sql` (live): `digest`, `digest_minute`, `digest_last_on` on a channel's preference row. Settings → Notifications → each channel: "Send one morning summary here" and a time on the household's clock. `digest.ts` sends, once a local day (claimed first), the person's own open reminders for today in their language through `deliverNotification` as a resolved `digest` notification; an empty day sends nothing; more than 3 hours late is skipped. A channel carrying a digest holds ordinary (normal and low) reminders back to the app; urgent and critical still go. Run by the delivery clock. |
+| `27-009` Email: unsubscribe, and stop on a rejected address | P1 | Done | The owner, 2026-10-20. Migration `20261020110000_notification_email_pause.sql` (live). Every notification email carries a signed one-tap link (`unsubscribe.ts`, HMAC of the member id; `WONDERHOME_LINK_SECRET` or `CRON_SECRET`) and `List-Unsubscribe` headers (RFC 8058): the page `/email-off` asks first (a mail scanner opening it changes nothing), `POST /api/v1/notifications/email-off` is the mail app's own one-click. Three refusals in a row from the mail server pause email (`email-health.ts`): switched off with a closed `paused_reason`, and Settings says why; saving the channel clears it. |
+| `27-010` Delivery that can be seen and retried | P1 | Done | The owner, 2026-10-20. A failure the channel marks retryable is queued on the shared job queue (`retry.ts`, `retry-handler.ts`: at most 3 tries, backoff by the queue, one waiting per notification and channel, never for what has since been settled, through the same door and gates). Drained by the delivery clock and the daily sweep; every drain knows the kind. Manage Household → Notification delivery (`/household/delivery`, Admins): per channel over 7 days, sent, did not arrive and why, arrived on a retry, waiting and given up; counts only. |
 | `27-011` WhatsApp goes live | P1 | Blocked | Needs a person: a Meta business account, an approved message template and the deployment's keys. The code is complete and tested. |
-| `27-012` A grocery order's progress tells the person who placed it | P2 | Not Started | Placed, shipped, delivered, as one thread. |
-| `27-013` A moved or cancelled event tells those going | P2 | Not Started | Only a change by someone else; never an echo of your own edit. |
-| `27-014` Weather that changes a plan tells the person it affects | P2 | Not Started | Speaks only when it changes a decision (washing that won't dry, an outing in rain). Never a forecast readout. |
-| `27-015` Channels that suit a helper and a child | P2 | Not Started | A helper with a phone and no email gets WhatsApp; a child's quiet hours follow their age. |
+| `27-012` A grocery order's progress tells the person who placed it | P2 | Done | The owner, 2026-10-20. One thread per order (`order:<id>`), rewritten as it moves — placed, confirmed, shipped, delivered, cancelled, failed — to whoever approved it (else the head Admin); a draft or one awaiting approval says nothing; kept three days after it ends. |
+| `27-013` A moved or cancelled event tells those going | P2 | Done | The owner, 2026-10-20. Migration `20261020140000_family_event_changes.sql` (live): the database records an event's start moving or its cancellation, with who did it, in the same statement (trigger, however it was changed). A notice per change goes to the event's owner and those invited who have not declined, never the person who made it, never anyone off the event; only while the event is ahead and the change still stands. |
+| `27-014` Weather that changes a plan tells the person it affects | P2 | Done | The owner, 2026-10-20. `weatherNotices`: only where Weather is on (`householdWeather`: provider, area, plan) — rain likely while an outing is on (owner), or rain that makes outdoor washing miss its deadline (whoever holds `laundry.ready`); rounded to ten per cent so a nudge is no news; never a forecast readout. Runs with the reminder pass. |
+| `27-015` Channels that suit a helper and a child | P2 | Done | The owner, 2026-10-20. A helper, or anyone with no confirmed account email, is not offered email in Settings → Notifications (WhatsApp and push are). A child's channels and reminders keep their age's quiet hours until a guardian sets their own (`child-quiet.ts`: under 8 7:30 PM–7 AM, 8–12 8:30 PM–7 AM, 13–17 10 PM–7 AM, from the date of birth each time); an Admin or the child's guardian sets it in Family → the child's details. |
 
 _Generated 2026-10-20 from 28 backlog files._

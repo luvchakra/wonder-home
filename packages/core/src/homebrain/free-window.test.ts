@@ -43,6 +43,23 @@ describe("when to go away", () => {
     expect(tripQuestion("what is happening this weekend")).toBeNull();
   });
 
+  it("reads \"which are the next long weekends\" as a question about the long weekends themselves", () => {
+    for (const question of ["which are the next long weekends coming up", "any long weekends coming up?", "upcoming long weekend", "show me the long weekends this year"]) {
+      expect(tripQuestion(question)).toEqual({ days: 3, noun: "long weekend", daysSaid: false });
+    }
+    expect(tripQuestion("what is a long weekend")).toBeNull();
+  });
+
+  it("answers it with only the long weekends, or says there are none", () => {
+    const holiday = (id: string, title: string, date: string) => item(`holiday:${id}`, { title, date });
+    const holidays = [holiday("dussehra", "Dussehra", "2026-10-20"), holiday("christmas", "Christmas Day", "2026-12-25")];
+    const only = householdInsights(holidays, { timezone: TZ, today: "2026-10-19", question: "which are the next long weekends coming up" }).filter((entry) => entry.rule === "free_window");
+    expect(only).toHaveLength(1);
+    expect(only[0]!.statement).toBe("Long weekends from public holidays, with nothing on the family calendar: Fri 25 Dec to Sun 27 Dec (Christmas Day, Fri 25 Dec).");
+    const none = householdInsights([], { timezone: TZ, today: "2026-10-19", question: "which are the next long weekends coming up" }).filter((entry) => entry.rule === "free_window");
+    expect(none.map((entry) => entry.statement)).toEqual(["No public holiday in the next six months makes a long weekend with nothing else on the family calendar."]);
+  });
+
   it("names the free weekends, and says what is on the others — an exam the day after included", () => {
     const insights = householdInsights([asmi, party, maths], { timezone: TZ, today: "2026-10-19", question: "what best time for 2 day getaway" }).filter((entry) => entry.rule === "free_window");
     expect(insights[0]!.statement).toBe("For a 2-day getaway, nothing is on the family calendar on Sat 7 Nov to Sun 8 Nov, Sat 14 Nov to Sun 15 Nov or Sat 21 Nov to Sun 22 Nov, or 3 later weekends (the next 8 weekends checked).");

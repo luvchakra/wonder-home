@@ -252,6 +252,23 @@ export function isUnanswered(
   return now.getTime() - new Date(open.delivered_at).getTime() >= escalation.afterMinutes * 60_000;
 }
 
+/**
+ * The same question for the channel step (story 27-007): the person's own last
+ * reminder reached them, has stayed unanswered for the policy's wait, and has
+ * not been snoozed or acted on since.
+ */
+export function isUnansweredForChannel(
+  primary: DesiredReminder,
+  open: { reminder_seq: number; status: string; delivered_at: string | null; snooze_count: number } | undefined,
+  now: Date,
+): boolean {
+  const step = REMINDER_POLICIES[primary.category].channelEscalation;
+  if (!step || !primary.finalStage || !open || open.snooze_count > 0) return false;
+  if (open.reminder_seq !== primary.reminderSeq || (open.status !== "delivered" && open.status !== "seen")) return false;
+  if (!open.delivered_at) return false;
+  return now.getTime() - new Date(open.delivered_at).getTime() >= step.afterMinutes * 60_000;
+}
+
 const ENGLISH = translator("en", en);
 const PLAIN_FORMAT = formatterFor(DEFAULT_PREFERENCES);
 
@@ -267,3 +284,36 @@ function escalatedWords(primary: DesiredReminder, primaryName: string | null): {
   const body = renderMessage(msg("reminder.escalated", { body: primary.body, name: { msg: name } }), ENGLISH, PLAIN_FORMAT);
   return { body: body.slice(0, 500), copy };
 }
+
+export function buildDirectory(
+  members: readonly { id: string; profile_id: string | null; member_type: DirectoryMember["memberType"]; status: string }[],
+  roles: readonly { member_id: string; role: string }[],
+  responsibilities: readonly { outcome_key: string; primary_member_id: string | null; backup_member_id: string | null }[],
+  guardians: readonly { child_member_id: string; guardian_member_id: string }[],
+): Directory {
+  const rolesOf = new Map<string, Set<string>>();
+  for (const row of roles) rolesOf.set(row.member_id, (rolesOf.get(row.member_id) ?? new Set()).add(row.role));
+  const guardianMap = new Map<string, string[]>();
+  for (const row of guardians) guardianMap.set(row.child_member_id, [...(guardianMap.get(row.child_member_id) ?? []), row.guardian_member_id]);
+  return {
+    members: new Map(
+      members.map((row) => {
+        const held = rolesOf.get(row.id) ?? new Set<string>();
+        return [
+          row.id,
+          {
+            id: row.id,
+            hasAccount: row.profile_id !== null,
+            active: row.status === "active",
+            memberType: row.member_type,
+            isAdmin: held.has("head") || held.has("administrator"),
+            isHead: held.has("head"),
+          },
+        ];
+      }),
+    ),
+    responsibilities: new Map(responsibilities.map((row) => [row.outcome_key, { primary: row.primary_member_id, backup: row.backup_member_id }])),
+    guardians: guardianMap,
+  };
+}
+

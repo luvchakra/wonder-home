@@ -39,6 +39,10 @@ import { describeRoles } from "../_lib/member-role";
 import { relationsLine } from "../_lib/relationship-words";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
+import { ChildQuietControl } from "../_components/child-quiet-control";
+import { createAdminClient } from "@wonderhome/core/db/admin";
+import { childQuietHours } from "@wonderhome/core/notifications/child-quiet";
+import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
 
 export const metadata = { title: "Our Family" };
 export const dynamic = "force-dynamic";
@@ -73,6 +77,34 @@ export default async function FamilyPage() {
     // How the family is related (Members & roles), for each person's details.
     listRelationships(supabase, householdId).catch(() => []),
   ]);
+  // A child's quiet hours (story 27-015): an Admin, or the child's own guardian, sees and sets them.
+  const childIds = members.filter((member) => member.memberType === "child").map((member) => member.id);
+  const isAdminViewer = isHouseholdAdmin(membership);
+  const quietAdmin = childIds.length > 0 ? createAdminClient() : null;
+  const [guardedRows, quietRows] = quietAdmin
+    ? await Promise.all([
+        isAdminViewer
+          ? Promise.resolve({ data: [] as { child_member_id: string }[] })
+          : quietAdmin.from("member_guardians").select("child_member_id").eq("household_id", householdId).eq("guardian_member_id", membership.memberId).in("child_member_id", childIds),
+        quietAdmin.from("notification_preferences").select("member_id, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute").eq("household_id", householdId).eq("channel", "in_app").in("member_id", childIds),
+      ]).catch(() => [{ data: [] }, { data: [] }] as const)
+    : [{ data: [] }, { data: [] }];
+  const guarded = new Set(((guardedRows.data ?? []) as { child_member_id: string }[]).map((row) => row.child_member_id));
+  const quietOf = new Map(((quietRows.data ?? []) as { member_id: string; quiet_from: number | null; quiet_until: number | null; quiet_from_minute: number | null; quiet_until_minute: number | null }[]).map((row) => [row.member_id, row]));
+  const todayKey = localMoment(now, timezone).dateKey;
+  const quietTimes = Array.from({ length: 96 }, (_, index) => ({
+    value: `${String(Math.floor(index / 4)).padStart(2, "0")}:${String((index % 4) * 15).padStart(2, "0")}`,
+    label: locale.format.time(atLocal(todayKey, index * 15, timezone)),
+  }));
+  const clockOf = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+  const childQuiet = (member: (typeof members)[number]) => {
+    const row = quietOf.get(member.id);
+    const own = row && row.quiet_from !== null && row.quiet_until !== null ? { fromMinute: row.quiet_from * 60 + (row.quiet_from_minute ?? 0), untilMinute: row.quiet_until * 60 + (row.quiet_until_minute ?? 0) } : null;
+    const window = own ?? childQuietHours({ memberType: member.memberType, dateOfBirth: member.dateOfBirth }, now);
+    if (!window) return null;
+    const label = (minute: number) => locale.format.time(atLocal(todayKey, minute, timezone));
+    return { from: clockOf(window.fromMinute), until: clockOf(window.untilMinute), current: t(own ? "family.childQuiet.custom" : "family.childQuiet.default", { from: label(window.fromMinute), until: label(window.untilMinute) }) };
+  };
   const officeOf = (memberId: string) => offices.find((office) => office.memberId === memberId) ?? null;
   // Each child's current school and its day, read beside their other details.
   const schoolOf = (memberId: string) => {
@@ -216,6 +248,26 @@ export default async function FamilyPage() {
                           isAdministrator={member.roles.includes("administrator")}
                           labels={{ makeAdmin: t("manage.members.makeAdmin"), removeAdmin: t("manage.members.removeAdmin") }}
                           withLabel
+                        />
+                      ) : null}
+                      {member.memberType === "child" && (isAdminViewer || guarded.has(member.id)) && childQuiet(member) ? (
+                        <ChildQuietControl
+                          householdId={householdId}
+                          childId={member.id}
+                          from={childQuiet(member)!.from}
+                          until={childQuiet(member)!.until}
+                          times={quietTimes}
+                          labels={{
+                            title: t("family.childQuiet.title", { name: member.displayName }),
+                            current: childQuiet(member)!.current,
+                            from: t("family.childQuiet.from"),
+                            until: t("family.childQuiet.until"),
+                            save: t("common.save"),
+                            saving: t("common.saving"),
+                            useDefault: t("family.childQuiet.useDefault"),
+                            saved: t("family.childQuiet.saved"),
+                            restored: t("family.childQuiet.restored"),
+                          }}
                         />
                       ) : null}
                       {member.memberType === "child" && view.permissions.includes("school.manage") ? (

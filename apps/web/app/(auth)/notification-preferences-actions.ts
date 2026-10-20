@@ -5,15 +5,17 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { DELIVERY_CHANNELS, type DeliveryChannel } from "@wonderhome/core/notifications/channels";
-import { loadChannelPreferences, saveChannelPreference, saveSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
+import { DEFAULT_DIGEST_MINUTE, loadChannelPreferences, saveChannelPreference, saveSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
 import { TUNABLE_CATEGORIES } from "@wonderhome/core/notifications/policies";
 import { saveReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
-import { setRoute } from "@wonderhome/core/notifications/routing";
+import { sendTestNotification } from "@wonderhome/core/notifications/channel-check";
+import { ROUTABLE_CHANNELS, setRoute, type RoutableChannel } from "@wonderhome/core/notifications/routing";
 
+import { memberLocale } from "../_lib/entry-locale";
 import { reconcileRemindersNow } from "../_lib/reminders";
+import { reasonWords } from "../_lib/channel-check-words";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
-import { createWebPushAdapter, webPushConfigFromEnv } from "@wonderhome/core/notifications/web-push";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
@@ -45,6 +47,9 @@ export async function saveChannelPreferenceAction(_previous: ActionState, formDa
   const quietUntilMinute = readMinute(formData.get("quietUntilMinute"));
   const targetRaw = String(formData.get("target") ?? "").trim();
   const target = targetRaw === "" ? null : targetRaw;
+  // The morning summary on this channel (story 27-008): a tick box and a time, only on the channels that go beyond the app.
+  const digestAt = readClock(formData.get("digestAt"));
+  const digest = channel !== "in_app" && formData.has("digestAt") ? { on: formData.get("digest") === "on", minute: digestAt ? digestAt.hour * 60 + digestAt.minute : DEFAULT_DIGEST_MINUTE } : undefined;
 
   if (channel === "whatsapp" && target && !/^\+[1-9]\d{1,14}$/.test(target)) {
     return { error: "Use the full number with a country code, e.g. +15551234567." };
@@ -63,6 +68,7 @@ export async function saveChannelPreferenceAction(_previous: ActionState, formDa
       quietFromMinute,
       quietUntilMinute,
       target,
+      ...(digest ? { digest } : {}),
     });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "notifications").body.error.message };
@@ -244,33 +250,42 @@ export async function removePushSubscriptionAction(_previous: ActionState, formD
   return { notice: "off" };
 }
 
-/** A test push to every device of the signed-in member, so they can see it arrive. Throttled like any other write. */
-export async function sendTestPushAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = z.object({ householdId: z.uuid(), title: z.string().max(120), body: z.string().max(300) }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Please try again." };
+/**
+ * A test notification on one channel, to the signed-in member only (story 27-003).
+ * Throttled like any other write; when it does not arrive, the answer is the
+ * plain reason, in the person's language, never a provider's own words.
+ */
+async function testChannel(householdId: string, channel: RoutableChannel): Promise<ActionState> {
   try {
     const supabase = await createClient();
-    const membership = await requireMembership(supabase, parsed.data.householdId);
-    if (!(await hitRateLimit(createAdminClient(), "push.test", membership.memberId))) return { error: rateLimitMessage("push.test") };
-    const config = webPushConfigFromEnv();
-    if (!config) return { error: "Push notifications aren't switched on for WonderHome yet." };
-    const { data } = await supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("member_id", membership.memberId);
-    const devices = (data ?? []) as { endpoint: string; p256dh: string; auth: string }[];
-    if (devices.length === 0) return { error: "Turn push on for this device first." };
-    const adapter = createWebPushAdapter(config);
-    const results = await Promise.all(
-      devices.map((device) =>
-        adapter.send(
-          { title: parsed.data.title, body: parsed.data.body, priority: "normal", url: "/settings/notifications", tag: "wonderhome-test" },
-          JSON.stringify({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }),
-        ),
-      ),
-    );
-    const sent = results.filter((result) => result.ok).length;
-    return sent > 0 ? { notice: "sent" } : { error: "The test didn't reach any device. Turn push off and on again on this device." };
+    const membership = await requireMembership(supabase, householdId);
+    const admin = createAdminClient();
+    if (!(await hitRateLimit(admin, "notification.test", membership.memberId))) return { error: rateLimitMessage("notification.test") };
+    const { t } = await memberLocale(membership);
+    const result = await sendTestNotification(admin, {
+      memberId: membership.memberId,
+      channel,
+      notification: { title: t("push.device.testTitle"), body: t("push.device.testBody"), emailWords: { open: t("notificationEmail.open"), why: t("notificationEmail.why") } },
+    });
+    if (result.ok) return { notice: "sent" };
+    return { error: reasonWords(t, result.reason, channel) };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "notifications").body.error.message };
   }
+}
+
+/** A test push to every device of the signed-in member, so they can see it arrive. */
+export async function sendTestPushAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid() }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  return testChannel(parsed.data.householdId, "push");
+}
+
+/** A test email or WhatsApp message to the signed-in member. */
+export async function sendTestNotificationAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid(), channel: z.enum(ROUTABLE_CHANNELS) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  return testChannel(parsed.data.householdId, parsed.data.channel);
 }
 
 /**

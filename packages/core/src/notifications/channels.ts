@@ -35,6 +35,11 @@ export type ChannelPreference = {
   quietUntilMinute?: number;
   /** A phone number, subscription reference, or similar. Null for in_app/email. */
   target: string | null;
+  /** Delivery switched this channel off on its own, and why (story 27-009). */
+  pausedReason?: "address_rejected";
+  /** One morning message with the day's reminders on this channel, at `digestMinute` on the household's clock (story 27-008). */
+  digest?: boolean;
+  digestMinute?: number;
 };
 
 export type ChannelNotification = {
@@ -46,11 +51,13 @@ export type ChannelNotification = {
   /** One thread, one notification on the device: a newer word replaces the older (push). */
   tag?: string;
   /** The email's own few words, in the recipient's language (story 27-001). */
-  emailWords?: { open: string; why: string };
+  emailWords?: { open: string; why: string; off?: string };
+  /** The signed link that turns this person's email off with one tap (story 27-009). */
+  emailOff?: string;
 };
 
 export type ChannelError = {
-  code: "no_target" | "not_configured" | "unavailable" | "gone";
+  code: "no_target" | "not_configured" | "unavailable" | "gone" | "rejected";
   retryable: boolean;
   message: string;
 };

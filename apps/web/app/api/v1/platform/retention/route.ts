@@ -6,6 +6,7 @@ import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { drainJobs, type DrainOutcome } from "@wonderhome/core/homesend/retry-queue";
 import { reconcileAllHouseholds, type SweepSummary } from "@wonderhome/core/notifications/reconcile";
+import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
@@ -133,7 +134,7 @@ export async function POST(request: Request) {
       jobsSummary = await drainJobs(admin, {
         limit: 25,
         workerId: "retention",
-        handlers: whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter }) } : {},
+        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter }) } : {}) },
       });
     } catch (thrown) {
       jobsError = thrown instanceof Error ? thrown.message : "unknown";

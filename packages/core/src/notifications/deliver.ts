@@ -10,6 +10,11 @@ import { parsePushTarget } from "./web-push";
 import { emailWorthSending, pushWorthSending, type PushReason } from "./push-gate";
 import { singleRecipient } from "../email/mailer";
 import { channelAllowed, muteKey, mutesFrom } from "./routing";
+import { siteOrigin } from "./email";
+import { pauseEmailIfRejected } from "./email-health";
+import { unsubscribeUrl } from "./unsubscribe";
+import { enqueueNotificationRetry } from "./retry";
+import { childQuietHours, quietColumns } from "./child-quiet";
 
 /**
  * Sending a notification beyond the app (stories 06-008, 17-006).
@@ -38,6 +43,12 @@ export async function deliverNotification(
     reason?: PushReason;
     /** What it is about, so the channels this person keeps that kind off are skipped (story 27-002). */
     category?: string | null;
+    /** Try only this channel: a retry of the one that failed (story 27-010). */
+    only?: DeliveryChannel;
+    /** This is a retry, and says so on the event it leaves. */
+    retry?: boolean;
+    /** This is the morning digest itself, which the digest's own suppression never holds back (story 27-008). */
+    digest?: boolean;
     now?: Date;
   },
   adapters: Record<DeliveryChannel, ChannelAdapter> = channelAdaptersFromEnv(),
@@ -47,11 +58,11 @@ export async function deliverNotification(
     const [{ data }, { data: household }, { data: member }, { data: devices }, { data: muteRows }] = await Promise.all([
       admin
         .from("notification_preferences")
-        .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
+        .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target, digest")
         .eq("member_id", input.recipientMemberId)
         .neq("channel", "in_app"),
       admin.from("households").select("timezone, region, currency, measurement_system, default_language").eq("id", input.householdId).maybeSingle(),
-      admin.from("household_members").select("language, date_format, time_format, measurement_system").eq("id", input.recipientMemberId).maybeSingle(),
+      admin.from("household_members").select("language, date_format, time_format, measurement_system, member_type, date_of_birth").eq("id", input.recipientMemberId).maybeSingle(),
       adapters.push?.live
         ? admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", input.recipientMemberId)
         : Promise.resolve({ data: [] }),
@@ -59,9 +70,11 @@ export async function deliverNotification(
     ]);
     // The channels this person keeps this kind of reminder off. A critical alert ignores them.
     const kept = new Set(input.notification.priority === "critical" ? [] : mutesFrom(muteRows as { category: unknown; channel: unknown }[] | null).map((mute) => muteKey(mute.category, mute.channel)));
-    const allowed = (channel: DeliveryChannel) => channelAllowed(kept, input.category, channel);
+    const channelOn = (channel: DeliveryChannel) => channelAllowed(kept, input.category, channel);
     // Quiet hours are the household's own clock, never the server's.
     const timeZone = ((household as { timezone?: string } | null)?.timezone ?? "Asia/Kolkata") as string;
+    // A child's channels hold their age's quiet hours until a guardian sets their own (story 27-015).
+    const childQuiet = childQuietHours({ memberType: String((member as { member_type?: unknown } | null)?.member_type ?? ""), dateOfBirth: (member as { date_of_birth?: string | null } | null)?.date_of_birth ?? null }, now);
     const preferences: ChannelPreference[] = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
       channel: row.channel as DeliveryChannel,
       enabled: row.enabled === true,
@@ -70,7 +83,14 @@ export async function deliverNotification(
       quietFromMinute: (row.quiet_from_minute as number | null) ?? 0,
       quietUntilMinute: (row.quiet_until_minute as number | null) ?? 0,
       target: (row.target as string | null) ?? null,
-    }));
+      digest: row.digest === true,
+    })).map((preference) => (childQuiet && preference.quietFrom === null && preference.quietUntil === null ? { ...preference, ...quietColumns(childQuiet) } : preference));
+    // A channel that carries a morning digest does not also buzz for each ordinary reminder in it (story 27-008):
+    // those stay in the app. Anything urgent, and the digest itself, still goes.
+    const allowed = (channel: DeliveryChannel) => {
+      const digestHolds = !input.digest && input.reason === "reminder" && (input.notification.priority === "normal" || input.notification.priority === "low") && preferences.find((preference) => preference.channel === channel)?.digest === true;
+      return channelOn(channel) && !digestHolds;
+    };
     // Push reaches each device the person turned it on for (story 23-015),
     // with their push preference's quiet hours, and only when it is worth
     // the interruption (`pushWorthSending`).
@@ -100,12 +120,15 @@ export async function deliverNotification(
     }
     // Only channels that can actually reach someone; a fixture's "not
     // configured" is not an attempt.
-    const live = [...preferences.filter((preference) => preference.channel !== "push" && preference.channel !== "email" && allowed(preference.channel) && adapters[preference.channel]?.live), ...emailTargets, ...pushTargets];
+    const live = [...preferences.filter((preference) => preference.channel !== "push" && preference.channel !== "email" && allowed(preference.channel) && adapters[preference.channel]?.live), ...emailTargets, ...pushTargets].filter(
+      (preference) => !input.only || preference.channel === input.only,
+    );
     if (live.length === 0) return { sent: [], failed: [] };
 
     const translated = input.copy ? await inRecipientLanguage(input.notification, input.copy, household, member) : input.notification;
     const emailWords = emailTargets.length > 0 ? await emailWordsFor(household, member) : undefined;
-    const notification: ChannelNotification = { url: "/notifications", tag: input.notificationId, ...translated, ...(emailWords ? { emailWords } : {}) };
+    const emailOff = emailTargets.length > 0 ? unsubscribeUrl(siteOrigin(), input.recipientMemberId) : null;
+    const notification: ChannelNotification = { url: "/notifications", tag: input.notificationId, ...translated, ...(emailWords ? { emailWords } : {}), ...(emailOff ? { emailOff } : {}) };
     const attempts = await dispatchToChannels(live, notification, now, timeZone, adapters);
     await recordPushOutcomes(admin, attempts, subscriptions, now);
     const rows = attempts.map((attempt) => ({
@@ -114,12 +137,20 @@ export async function deliverNotification(
       channel: attempt.channel,
       event_type: attempt.result.ok ? "sent" : "delivery_failed",
       metadata: attempt.result.ok
-        ? attempt.result.providerMessageId
-          ? { providerMessageId: attempt.result.providerMessageId }
-          : {}
-        : { code: attempt.result.error.code, retryable: attempt.result.error.retryable },
+        ? { ...(attempt.result.providerMessageId ? { providerMessageId: attempt.result.providerMessageId } : {}), ...(input.retry ? { retry: true } : {}) }
+        : { code: attempt.result.error.code, retryable: attempt.result.error.retryable, ...(input.retry ? { retry: true } : {}) },
     }));
     if (rows.length > 0) await admin.from("notification_events").insert(rows);
+    // A failure worth another try is queued once per channel; a retry that fails is the queue's to back off (story 27-010).
+    if (!input.retry) {
+      for (const channel of new Set(attempts.filter((attempt) => !attempt.result.ok && attempt.result.error.retryable).map((attempt) => attempt.channel))) {
+        await enqueueNotificationRetry(admin, { householdId: input.householdId, notificationId: input.notificationId, channel, reason: input.reason ?? "alert", now });
+      }
+    }
+    // An address the mail server keeps refusing is paused, not retried forever (story 27-009).
+    if (attempts.some((attempt) => attempt.channel === "email" && !attempt.result.ok && attempt.result.error.code === "rejected")) {
+      await pauseEmailIfRejected(admin, input.recipientMemberId, now);
+    }
     return {
       sent: attempts.filter((attempt) => attempt.result.ok).map((attempt) => attempt.channel),
       failed: attempts.filter((attempt) => !attempt.result.ok).map((attempt) => attempt.channel),
@@ -151,7 +182,7 @@ async function inRecipientLanguage(
 }
 
 /** How many notifications this person already had on a channel in the last day (the gates' ceilings count these). */
-async function sentInLastDay(admin: SupabaseClient, memberId: string, channel: DeliveryChannel, now: Date): Promise<number> {
+export async function sentInLastDay(admin: SupabaseClient, memberId: string, channel: DeliveryChannel, now: Date): Promise<number> {
   const { count } = await admin
     .from("notification_events")
     .select("id, notifications!inner(recipient_member_id)", { count: "exact", head: true })
@@ -167,7 +198,7 @@ async function sentInLastDay(admin: SupabaseClient, memberId: string, channel: D
  * address someone else typed for them: a person's email is theirs to switch
  * on, and a member without an account has nothing to switch on.
  */
-async function emailAddressFor(admin: SupabaseClient, memberId: string): Promise<string | null> {
+export async function emailAddressFor(admin: SupabaseClient, memberId: string): Promise<string | null> {
   const { data: member } = await admin.from("household_members").select("profile_id").eq("id", memberId).maybeSingle();
   const profileId = (member as { profile_id: string | null } | null)?.profile_id;
   if (!profileId) return null;
@@ -176,20 +207,27 @@ async function emailAddressFor(admin: SupabaseClient, memberId: string): Promise
   return user?.email && user.email_confirmed_at ? singleRecipient(user.email) : null;
 }
 
-/** The email's few words in the recipient's language; English whenever that cannot be done. */
-async function emailWordsFor(household: Record<string, unknown> | null, member: Record<string, unknown> | null): Promise<{ open: string; why: string } | undefined> {
-  if (!household) return undefined;
+/** The translator for a recipient: their own language and formats, the household's behind them. Null when it cannot be built. */
+export async function translatorForRecipient(household: Record<string, unknown> | null, member: Record<string, unknown> | null) {
+  if (!household) return null;
   try {
     const preferences = resolvePreferences(member ? parseMemberChoices(member) : parseMemberChoices({}), parseHouseholdSettings({ ...household, language: household.default_language }));
-    const t = await translatorFor(preferences.language);
-    return { open: t("notificationEmail.open"), why: t("notificationEmail.why") };
+    return { t: await translatorFor(preferences.language), preferences };
   } catch {
-    return undefined;
+    return null;
   }
 }
 
+/** The email's few words in the recipient's language; English whenever that cannot be done. */
+export async function emailWordsFor(household: Record<string, unknown> | null, member: Record<string, unknown> | null): Promise<{ open: string; why: string; off: string } | undefined> {
+  const found = await translatorForRecipient(household, member);
+  if (!found) return undefined;
+  const { t } = found;
+  return { open: t("notificationEmail.open"), why: t("notificationEmail.why"), off: t("notificationEmail.off") };
+}
+
 /** A device that took the push is marked; one its push service says is gone is forgotten. */
-async function recordPushOutcomes(
+export async function recordPushOutcomes(
   admin: SupabaseClient,
   attempts: readonly ChannelAttempt[],
   subscriptions: readonly { id: string; endpoint: string }[],

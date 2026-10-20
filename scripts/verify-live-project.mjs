@@ -971,6 +971,16 @@ async function main() {
   check("migration landed: notification_channel_mutes", !mutesProbe.error, mutesProbe.error?.code ?? "ok");
   const anonMutes = await anon.from("notification_channel_mutes").select("member_id").limit(1);
   check("anonymous cannot read notification_channel_mutes", Boolean(anonMutes.error) || (anonMutes.data ?? []).length === 0, anonMutes.error?.code ?? "no rows");
+  const pauseProbe = await admin.from("notification_preferences").select("paused_reason, paused_at").limit(1);
+  check("migration landed: notification_preferences.paused_reason", !pauseProbe.error, pauseProbe.error?.code ?? "ok");
+  const digestProbe = await admin.from("notification_preferences").select("digest, digest_minute, digest_last_on").limit(1);
+  check("migration landed: notification_preferences.digest", !digestProbe.error, digestProbe.error?.code ?? "ok");
+  const changesProbe = await admin.from("family_event_changes").select("id, kind, changed_by_member_id").limit(1);
+  check("migration landed: family_event_changes", !changesProbe.error, changesProbe.error?.code ?? "ok");
+  const anonChanges = await anon.from("family_event_changes").select("id").limit(1);
+  check("anonymous cannot read family_event_changes", Boolean(anonChanges.error) || (anonChanges.data ?? []).length === 0, anonChanges.error?.code ?? "no rows");
+  const noticeProbe = await admin.from("notifications").select("id").in("source_type", ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "digest"]).limit(1);
+  check("migration landed: notice source types", !noticeProbe.error, noticeProbe.error?.code ?? "ok");
 
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);

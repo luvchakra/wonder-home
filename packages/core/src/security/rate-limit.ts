@@ -47,8 +47,8 @@ export const RATE_LIMITS = {
   "voice.tool": { max: 120, windowSeconds: 900 },
   /** Gemini Live turns written down for the chat, per member: one per turn of a lively conversation. */
   "voice.transcribe": { max: 120, windowSeconds: 900 },
-  /** "Send a test" push, per member: enough to check a few devices, never a way to spam one. */
-  "push.test": { max: 5, windowSeconds: 600 },
+  /** "Send a test" notification, per member: enough to check each channel, never a way to spam one (story 27-003). */
+  "notification.test": { max: 8, windowSeconds: 600 },
   /** Area searches for weather, per member (story 17-007): each is an outbound geocoding call. */
   "weather.search": { max: 30, windowSeconds: 600 },
   /** Address and school searches, per member: typing, debounced, each a provider call. */
