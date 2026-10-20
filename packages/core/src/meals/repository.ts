@@ -664,13 +664,15 @@ export async function ingredientNames(
   householdId: string,
   of: { mealId?: string | null; recipeId?: string | null },
 ): Promise<string[]> {
-  const query = of.mealId
-    ? supabase.from("meal_ingredient_needs").select("name").eq("household_id", householdId).eq("meal_id", of.mealId)
-    : of.recipeId
-      ? supabase.from("recipe_ingredients").select("name").eq("household_id", householdId).eq("recipe_id", of.recipeId)
-      : null;
-  if (!query) return [];
-  const { data, error } = await query;
+  // The meal's own needs first; the recipe it is named after when the meal carries none.
+  if (of.mealId) {
+    const { data, error } = await supabase.from("meal_ingredient_needs").select("name").eq("household_id", householdId).eq("meal_id", of.mealId);
+    if (error) throw new Error(`ingredientNames failed: ${error.code ?? "unknown"}`);
+    const names = ((data as Row[] | null) ?? []).map((row) => row.name as string);
+    if (names.length > 0 || !of.recipeId) return names;
+  }
+  if (!of.recipeId) return [];
+  const { data, error } = await supabase.from("recipe_ingredients").select("name").eq("household_id", householdId).eq("recipe_id", of.recipeId);
   if (error) throw new Error(`ingredientNames failed: ${error.code ?? "unknown"}`);
   return ((data as Row[] | null) ?? []).map((row) => row.name as string);
 }

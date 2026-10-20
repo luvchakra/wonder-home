@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [Integration test run 1: CORE, FAM, HH, OUT, and the child Home tabs](2026-10-20-integration-tests-run-1.md) |
 | 2026-10-20 | [HomeTalk queue: bill totals, corrections in the golden runner, place book words (H-1 to H-3)](2026-10-20-hometalk-queue-h1-h3.md) |
 | 2026-10-20 | [Make that 2 litres corrects an amount (25-005)](2026-10-20-make-that-2-litres.md) |
 | 2026-10-20 | [Use soon and depletion wording (25-003c)](2026-10-20-use-soon-wording.md) |

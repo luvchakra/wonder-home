@@ -366,7 +366,11 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     let subject: { label: string; mealId: string | null; recipeId: string | null } | null = null;
     if (anaphorOf(of) || /^(?:it|dinner|lunch|breakfast|the meal|tonight'?s dinner)$/i.test(of)) {
       const resolved = resolveAnaphor("singular", await env.references(), { kinds: ["meal"], now: env.now });
-      if (resolved.kind === "resolved") subject = { label: resolved.entities[0]!.label, mealId: resolved.entities[0]!.entityId, recipeId: null };
+      if (resolved.kind === "resolved") {
+        // The meal's own ingredients first; the recipe it is named after when the meal carries none.
+        const label = resolved.entities[0]!.label;
+        subject = { label, mealId: resolved.entities[0]!.entityId, recipeId: matchRecipe(label, (await env.recipes?.()) ?? [])?.id ?? null };
+      }
       else if (resolved.kind === "ambiguous") return clarify(grounded, "referent", resolved.question, resolved.candidates);
     } else {
       const recipe = matchRecipe(of, (await env.recipes?.()) ?? []);

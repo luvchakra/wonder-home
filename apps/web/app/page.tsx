@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
  * page for a visitor, the household dashboard for an adult, and the child
  * view for a child — a different framing, not a reduced one.
  */
-export default async function HomePage() {
-  const [supabase, user] = await Promise.all([createClient(), getVerifiedUser()]);
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const [supabase, user, { tab }] = await Promise.all([createClient(), getVerifiedUser(), searchParams]);
 
   if (!user) return <Landing />;
 
@@ -25,5 +25,5 @@ export default async function HomePage() {
 
   const session = await buildSession(supabase, memberships[0]!);
 
-  return session.view.tone === "child" ? <ChildHome session={session} /> : <HomeDashboard session={session} />;
+  return session.view.tone === "child" ? <ChildHome session={session} tab={tab} /> : <HomeDashboard session={session} />;
 }
