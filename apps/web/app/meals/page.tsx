@@ -432,30 +432,31 @@ export default async function MealsPage({
                 <SectionHeader
                   title={t("recipes.ideas")}
                   count={ideas.length}
-                  action={
-                    <div role="group" aria-label={t("recipes.food.label")} className="flex shrink-0 gap-0.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] p-0.5">
-                      {(["veg", "nonveg"] as const).map((key) => {
-                        const on = foodFilter === key;
-                        return (
-                          <Link
-                            key={key}
-                            href={ideasHref({ food: on ? null : key })}
-                            scroll={false}
-                            aria-pressed={on}
-                            className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--wh-radius-pill)] px-3 text-xs font-semibold transition-colors ${on ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]" : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)]"}`}
-                          >
-                            {/* The mark Indian packs use: a green dot for veg, a brown one (the Meals tone) for non-veg — beside the word, never instead of it. */}
-                            <span aria-hidden className={`grid size-3 place-items-center rounded-[2px] border ${key === "veg" ? "border-[var(--wh-handled)]" : "border-[var(--wh-tone-meals)]"}`}>
-                              <span className={`size-1.5 rounded-full ${key === "veg" ? "bg-[var(--wh-handled)]" : "bg-[var(--wh-tone-meals)]"}`} />
-                            </span>
-                            {t(key === "veg" ? "recipes.food.veg" : "recipes.food.nonveg")}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  }
                 />
                 <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">{t("recipes.ideasLede")}</p>
+                <div role="group" aria-label={t("recipes.food.label")} className="inline-flex gap-0.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] p-0.5">
+                  {/* All · Veg · Non-veg (the owner, 2026-10-20): one picked at a time, All by default. */}
+                  {([null, "veg", "nonveg"] as const).map((key) => {
+                    const on = foodFilter === key;
+                    return (
+                      <Link
+                        key={key ?? "all"}
+                        href={ideasHref({ food: key })}
+                        scroll={false}
+                        aria-current={on ? "true" : undefined}
+                        className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--wh-radius-pill)] px-3 text-xs font-semibold transition-colors ${on ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]" : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)]"}`}
+                      >
+                        {/* The mark Indian packs use: a green dot for veg, a brown one (the Meals tone) for non-veg — beside the word, never instead of it. */}
+                        {key ? (
+                          <span aria-hidden className={`grid size-3 place-items-center rounded-[2px] border ${key === "veg" ? "border-[var(--wh-handled)]" : "border-[var(--wh-tone-meals)]"}`}>
+                            <span className={`size-1.5 rounded-full ${key === "veg" ? "bg-[var(--wh-handled)]" : "bg-[var(--wh-tone-meals)]"}`} />
+                          </span>
+                        ) : null}
+                        {key === null ? t("recipes.course.all") : t(key === "veg" ? "recipes.food.veg" : "recipes.food.nonveg")}
+                      </Link>
+                    );
+                  })}
+                </div>
                 <nav aria-label={t("recipes.course")} className="-mx-1 flex flex-wrap gap-2 px-1">
                   {[null, ...RECIPE_COURSES].map((key) => {
                     const on = key === picked;
