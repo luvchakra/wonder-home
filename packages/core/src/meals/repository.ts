@@ -359,6 +359,8 @@ export type CreateRecipeInput = {
   essentialIngredients: IngredientLine[];
   /** Nice to have, by name only: they never become a shopping need, so no amount is kept. Linked to the household's item where one was picked (25-017). */
   optionalIngredients: readonly (string | { name: string; consumableId?: string | null })[];
+  /** The catalog dish this is a household's own version of ("Save my version", 25-022). */
+  catalogRecipeId?: string | null;
 };
 
 /**
@@ -386,6 +388,7 @@ async function createRecipeImpl(
       protein_grams: input.proteinGrams ?? null,
       carbs_grams: input.carbsGrams ?? null,
       fat_grams: input.fatGrams ?? null,
+      catalog_recipe_id: input.catalogRecipeId ?? null,
     })
     .select("id")
     .single();
@@ -572,7 +575,8 @@ async function recipesWithIngredients(
     .select(
       "id, name, active_minutes, total_minutes, serves, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
     )
-    .eq("household_id", householdId);
+    .eq("household_id", householdId)
+    .eq("active", true);
 
   if (error)
     throw new Error(
@@ -650,7 +654,7 @@ export async function listRecipeChoices(
 
 /** The household's recipes by name — what "plan pasta" can mean (Wave 4 §11). */
 export async function listRecipeNames(supabase: SupabaseClient, householdId: string): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await supabase.from("recipes").select("id, name").eq("household_id", householdId);
+  const { data, error } = await supabase.from("recipes").select("id, name").eq("household_id", householdId).eq("active", true);
   if (error) throw new Error(`listRecipeNames failed: ${error.code ?? "unknown"}`);
   return ((data as Row[] | null) ?? []).map((row) => ({ id: row.id as string, name: row.name as string }));
 }
@@ -899,3 +903,105 @@ async function markNeedsOnListImpl(supabase: SupabaseClient, input: { householdI
 export const markNeedsOnList = invalidatesContext(markNeedsOnListImpl, (_supabase, input) => input.householdId);
 export const setMealServings = invalidatesContext(setMealServingsImpl, (_supabase, input) => input.householdId);
 export const bridgeToShopping = invalidatesContext(bridgeToShoppingImpl, (_supabase, householdId) => householdId);
+
+export type RecipeForEdit = {
+  id: string;
+  name: string;
+  cuisine: string | null;
+  activeMinutes: number;
+  totalMinutes: number;
+  serves: number;
+  method: string | null;
+  caloriesPerServing: number | null;
+  proteinGrams: number | null;
+  carbsGrams: number | null;
+  fatGrams: number | null;
+  catalogRecipeId: string | null;
+  essentials: { name: string; quantity: number; unit: string }[];
+  optional: string[];
+};
+
+/** A household's current recipes, whole, for their cards and their edit form (bounded). */
+export async function listRecipesForEdit(supabase: SupabaseClient, householdId: string): Promise<RecipeForEdit[]> {
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("id, name, cuisine, active_minutes, total_minutes, serves, method, calories_per_serving, protein_grams, carbs_grams, fat_grams, catalog_recipe_id, recipe_ingredients(name, essential, quantity, unit)")
+    .eq("household_id", householdId)
+    .eq("active", true)
+    .order("name")
+    .limit(80);
+  if (error) throw new Error(`listRecipesForEdit failed: ${error.code ?? "unknown"}`);
+  const number = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+  return ((data ?? []) as Row[]).map((row) => {
+    const ingredients = (row.recipe_ingredients as Row[] | null) ?? [];
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      cuisine: (row.cuisine as string | null) ?? null,
+      activeMinutes: Number(row.active_minutes),
+      totalMinutes: Number(row.total_minutes),
+      serves: Number(row.serves),
+      method: (row.method as string | null) ?? null,
+      caloriesPerServing: number(row.calories_per_serving),
+      proteinGrams: number(row.protein_grams),
+      carbsGrams: number(row.carbs_grams),
+      fatGrams: number(row.fat_grams),
+      catalogRecipeId: (row.catalog_recipe_id as string | null) ?? null,
+      essentials: ingredients.filter((line) => line.essential === true).map((line) => ({ name: line.name as string, quantity: Number(line.quantity ?? 1), unit: (line.unit as string | null) ?? "unit" })),
+      optional: ingredients.filter((line) => line.essential !== true).map((line) => line.name as string),
+    };
+  });
+}
+
+export type UpdateRecipeInput = Omit<CreateRecipeInput, "catalogRecipeId"> & { recipeId: string };
+
+/** A household's own recipe changed (rule 12): its details, what it needs and its nice-to-haves. */
+async function updateRecipeImpl(supabase: SupabaseClient, input: UpdateRecipeInput): Promise<void> {
+  const { data, error } = await supabase
+    .from("recipes")
+    .update({
+      name: input.name,
+      cuisine: input.cuisine ?? null,
+      active_minutes: input.activeMinutes,
+      total_minutes: input.totalMinutes,
+      serves: input.serves,
+      method: input.method ?? null,
+      calories_per_serving: input.caloriesPerServing ?? null,
+      protein_grams: input.proteinGrams ?? null,
+      carbs_grams: input.carbsGrams ?? null,
+      fat_grams: input.fatGrams ?? null,
+    })
+    .eq("id", input.recipeId)
+    .eq("household_id", input.householdId)
+    .eq("active", true)
+    .select("id");
+  if (error) {
+    if (error.code === "23505") throw ApiError.conflict("A recipe with that name already exists.");
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change this household's recipes.");
+    throw new Error(`updateRecipe failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.notFound("That recipe is no longer here.");
+  await replaceRecipeEssentialsImpl(supabase, { householdId: input.householdId, recipeId: input.recipeId, lines: input.essentialIngredients });
+  const essentialNames = new Set(input.essentialIngredients.map((line) => line.name.toLowerCase()));
+  const { error: dropError } = await supabase.from("recipe_ingredients").delete().eq("household_id", input.householdId).eq("recipe_id", input.recipeId).eq("essential", false);
+  if (dropError) throw new Error(`updateRecipe failed: ${dropError.code ?? "unknown"}`);
+  const optional = input.optionalIngredients
+    .map((entry) => (typeof entry === "string" ? { name: entry, consumableId: null } : entry))
+    .filter((entry) => entry.name.trim() && !essentialNames.has(entry.name.toLowerCase()));
+  if (optional.length > 0) {
+    const { error: addError } = await supabase.from("recipe_ingredients").insert(
+      optional.map((entry) => ({ household_id: input.householdId, recipe_id: input.recipeId, consumable_id: entry.consumableId ?? null, name: entry.name, quantity: 1, unit: "unit", essential: false })),
+    );
+    if (addError) throw new Error(`updateRecipe failed: ${addError.code ?? "unknown"}`);
+  }
+}
+
+/** A recipe the household no longer wants offered: retired, never deleted, so meals that used it keep it (rule 12). */
+async function retireRecipeImpl(supabase: SupabaseClient, input: { householdId: string; recipeId: string }): Promise<void> {
+  const { data, error } = await supabase.from("recipes").update({ active: false }).eq("id", input.recipeId).eq("household_id", input.householdId).select("id");
+  if (error) throw new Error(`retireRecipe failed: ${error.code ?? "unknown"}`);
+  if (!data || data.length === 0) throw ApiError.notFound("That recipe is no longer here.");
+}
+
+export const updateRecipe = invalidatesContext(updateRecipeImpl, (_supabase, input) => input.householdId);
+export const retireRecipe = invalidatesContext(retireRecipeImpl, (_supabase, input) => input.householdId);

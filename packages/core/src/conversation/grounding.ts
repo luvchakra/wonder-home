@@ -1,6 +1,7 @@
 import { groceryCandidates } from "./grocery-actions";
 import { readItemAmount } from "./quantity";
 import type { GroceryItem } from "../commerce/inventory";
+import { matchCatalogRecipe } from "../meals/recipe-catalog";
 import { reminderMoment } from "./reminder-time";
 import { resolvePerson } from "../context/resolution";
 import type { HouseholdContextItem } from "../context/types";
@@ -50,6 +51,8 @@ export type GroundingEnv = {
   references: () => Promise<ReferenceState>;
   /** The household's recipes, read only when a plan might be a meal. */
   recipes?: () => Promise<readonly { id: string; name: string }[]>;
+  /** WonderHome's recipe catalog (25-022): a dish the household has no recipe for yet can still be planned from it. */
+  catalogRecipes?: () => Promise<readonly { slug: string; name: string }[]>;
   /** The ingredient names of a planned meal or a recipe, for "make sure we have everything". */
   ingredients?: (of: { mealId?: string | null; recipeId?: string | null }) => Promise<string[]>;
   /** Open school items, for "mark Asmi's worksheet done" and "move Manan's project to Friday". */
@@ -384,6 +387,16 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
         grounded = { ...grounded, parameters: next };
       }
     }
+    // No recipe of the household's for it: WonderHome's catalog may have the dish (25-022).
+    if (typeof grounded.parameters.recipeId !== "string" && typeof grounded.parameters.catalogSlug !== "string" && typeof grounded.parameters.mealName === "string") {
+      const recipes = (await env.recipes?.()) ?? [];
+      const own = matchRecipe(grounded.parameters.mealName, recipes);
+      if (own) grounded = { ...grounded, parameters: { ...grounded.parameters, recipeId: own.id, mealName: own.name } };
+      else {
+        const dish = matchCatalogRecipe(grounded.parameters.mealName, (await env.catalogRecipes?.()) ?? []);
+        if (dish) grounded = { ...grounded, parameters: { ...grounded.parameters, catalogSlug: dish.slug, mealName: dish.name } };
+      }
+    }
     if (typeof grounded.parameters.slot !== "string") grounded.parameters.slot = slotFor(day.window?.from ?? null);
     focus.push({ entityType: "meal", entityId: null, label: what, source: "mention", at });
   }
@@ -571,12 +584,15 @@ async function asMeal(what: string, env: GroundingEnv): Promise<Record<string, u
     .replace(/\s+/g, " ")
     .trim();
   const recipe = dish ? matchRecipe(dish, (await env.recipes?.()) ?? []) : null;
-  if (!slotWord && !recipe) return null;
-  const name = recipe?.name ?? (dish ? dish.charAt(0).toUpperCase() + dish.slice(1) : null);
+  // A dish the household has no recipe for may still be one WonderHome's catalog has (25-022).
+  const fromCatalog = dish && !recipe ? matchCatalogRecipe(dish, (await env.catalogRecipes?.()) ?? []) : null;
+  if (!slotWord && !recipe && !fromCatalog) return null;
+  const name = recipe?.name ?? fromCatalog?.name ?? (dish ? dish.charAt(0).toUpperCase() + dish.slice(1) : null);
   if (!name) return null;
   return {
     mealName: name,
     ...(recipe ? { recipeId: recipe.id } : {}),
+    ...(fromCatalog ? { catalogSlug: fromCatalog.slug } : {}),
     ...(slotWord ? { slot: SLOT_WORDS[slotWord] } : {}),
   };
 }

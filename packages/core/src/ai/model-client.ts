@@ -416,7 +416,7 @@ export function withoutServerOnly(parameters: Record<string, unknown>): Record<s
     // "corrects: true" on a preference is the model's to say ("actually,
     // dinner is at 8 now"); a corrects *record* — what to undo — never is.
     if (key === "corrects" && value !== true) continue;
-    if (key === "awaiting" || key === "candidates" || key === "referred" || key === "forMeal" || key === "groundedConfidence" || key === "groundedFrom") continue;
+    if (key === "awaiting" || key === "candidates" || key === "referred" || key === "forMeal" || key === "groundedConfidence" || key === "groundedFrom" || key === "catalogSlug") continue;
     kept[key] = value;
   }
   return kept;

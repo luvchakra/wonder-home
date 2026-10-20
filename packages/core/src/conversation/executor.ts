@@ -456,7 +456,17 @@ async function planMeal(intent: HouseholdIntent, context: ExecutionContext): Pro
   const raw = String(intent.parameters.mealName ?? intent.parameters.what ?? "").trim();
   const name = raw.charAt(0).toUpperCase() + raw.slice(1);
   if (!name) return { ok: false, reason: "What should I plan?" };
-  const recipeId = typeof intent.parameters.recipeId === "string" ? intent.parameters.recipeId : null;
+  let recipeId = typeof intent.parameters.recipeId === "string" ? intent.parameters.recipeId : null;
+  // A dish from WonderHome's catalog (25-022) is saved as the household's own recipe first, so the meal knows what it needs.
+  let fromCatalog = false;
+  if (!recipeId && typeof intent.parameters.catalogSlug === "string") {
+    const { saveCatalogRecipe } = await import("../meals/catalog-copy");
+    const saved = await saveCatalogRecipe(context.supabase, { householdId: context.householdId, slug: intent.parameters.catalogSlug, supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "" }).catch(() => null);
+    if (saved) {
+      recipeId = saved.recipeId;
+      fromCatalog = saved.created;
+    }
+  }
   const ready = READY_BY[slot];
 
   const { id } = await createMeal(context.supabase, {
@@ -472,7 +482,9 @@ async function planMeal(intent: HouseholdIntent, context: ExecutionContext): Pro
   const when = day.label ? day.label.replace(/^on /, "") : describeDate(day.date, "", context.timezone);
   const meals = linkTo("/meals", "Meals");
   const ingredients = recipeId
-    ? attached > 0
+    ? fromCatalog
+      ? ` I used WonderHome's recipe for it and saved it under your recipes, where you can change it; its ${attached} ingredient${attached === 1 ? " is" : "s are"} on the meal.`
+      : attached > 0
       ? ` Its recipe's ${attached} ingredient${attached === 1 ? " is" : "s are"} on the meal, so I can check them against the list.`
       : " Its recipe has no ingredients listed yet."
     : ` There is no recipe for it on record, so I do not know what it needs — add one under ${meals} and I can check next time.`;

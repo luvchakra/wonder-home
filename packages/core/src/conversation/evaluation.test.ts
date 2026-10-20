@@ -47,6 +47,11 @@ const env = (references: Partial<ReferenceState> = {}): GroundingEnv => ({
     { id: "r-pasta", name: "Tomato pasta" },
     { id: "r-dal", name: "Dal tadka" },
   ],
+  catalogRecipes: async () => [
+    { slug: "poha", name: "Poha" },
+    { slug: "dal-tadka", name: "Dal tadka" },
+    { slug: "masala-dosa", name: "Masala dosa" },
+  ],
   ingredients: async (of) => (of.recipeId === "r-pasta" || of.mealId === "meal-1" ? ["pasta", "tomatoes", "basil"] : []),
   schoolItems: async () => SCHOOL,
   assets: async () => [
@@ -217,6 +222,16 @@ describe("§22 evaluation matrix", () => {
     const planned: FocusEntity[] = [{ entityType: "meal", entityId: "meal-1", label: "Tomato pasta", source: "action_result", at: minutesAgo(0) }];
     const needs = await kindOf("make sure we have everything", { autonomyFor: () => "execute", references: { conversation: planned } });
     expect(needs.intent?.parameters).toMatchObject({ items: ["pasta", "tomatoes", "basil"], forMeal: "Tomato pasta" });
+  });
+
+  it("recipe catalog (25-022): a dish the household has no recipe for is planned from WonderHome's, its own recipe wins", async () => {
+    const poha = await kindOf("Plan poha for breakfast tomorrow");
+    expect(poha.intent).toMatchObject({ action: "plan_meal", parameters: expect.objectContaining({ catalogSlug: "poha", mealName: "Poha" }) });
+    expect(poha.intent?.parameters.recipeId).toBeUndefined();
+    // The household's own dal tadka stands before the catalog's.
+    const dal = await kindOf("Plan dal tadka for dinner tomorrow");
+    expect(dal.intent?.parameters).toMatchObject({ recipeId: "r-dal" });
+    expect(dal.intent?.parameters.catalogSlug).toBeUndefined();
   });
 
   it("HomeSend-created context: what a notice asked for is what \"that\" means", async () => {

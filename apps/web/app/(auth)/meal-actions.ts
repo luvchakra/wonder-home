@@ -646,3 +646,80 @@ export async function searchIngredientChoicesAction(householdId: string, query: 
     return { ok: false };
   }
 }
+
+/**
+ * A household's own recipe changed (rule 12; "Save my version" copies are
+ * changed the same way): its details, what it needs and its nice-to-haves.
+ * Nutrients left empty are worked out again from the ingredients.
+ */
+export async function updateRecipeAction(_previous: RecipeActionState, formData: FormData): Promise<RecipeActionState> {
+  const recipeId = z.uuid().safeParse(formData.get("recipeId"));
+  const parsed = recipeSchema.safeParse({
+    householdId: formData.get("householdId"),
+    name: formData.get("name"),
+    cuisine: formData.get("cuisine") || undefined,
+    activeMinutes: formData.get("activeMinutes"),
+    totalMinutes: formData.get("totalMinutes"),
+    serves: formData.get("serves"),
+    method: formData.get("method") || undefined,
+    caloriesPerServing: formData.get("caloriesPerServing") || undefined,
+    proteinGrams: formData.get("proteinGrams") || undefined,
+    carbsGrams: formData.get("carbsGrams") || undefined,
+    fatGrams: formData.get("fatGrams") || undefined,
+  });
+  if (!recipeId.success || !parsed.success) return { error: parsed.success ? "Please try again." : (parsed.error.issues[0]?.message ?? "Please check the details above.") };
+  if (parsed.data.totalMinutes < parsed.data.activeMinutes) return { error: "Total time can't be less than active cooking time." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const { lines: essentials, entries } = await linkIngredients(supabase, {
+      householdId: parsed.data.householdId,
+      lines: ingredientLinesFrom(ingredientRowsOf(formData, "essential")),
+      supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL,
+    });
+    const { lines: optional } = await linkIngredients(supabase, {
+      householdId: parsed.data.householdId,
+      lines: ingredientLinesFrom(ingredientRowsOf(formData, "optional")),
+      supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL,
+    });
+    const worked = nutritionPerServing(essentials, entries, parsed.data.serves);
+    const given = (value: number | "" | undefined) => (value === "" || value === undefined ? null : value);
+    const { updateRecipe } = await import("@wonderhome/core/meals/repository");
+    await updateRecipe(supabase, {
+      recipeId: recipeId.data,
+      householdId: parsed.data.householdId,
+      name: parsed.data.name,
+      cuisine: parsed.data.cuisine || null,
+      activeMinutes: parsed.data.activeMinutes,
+      totalMinutes: parsed.data.totalMinutes,
+      serves: parsed.data.serves,
+      method: parsed.data.method || null,
+      caloriesPerServing: given(parsed.data.caloriesPerServing) ?? worked?.caloriesPerServing ?? null,
+      proteinGrams: given(parsed.data.proteinGrams) ?? worked?.proteinGrams ?? null,
+      carbsGrams: given(parsed.data.carbsGrams) ?? worked?.carbsGrams ?? null,
+      fatGrams: given(parsed.data.fatGrams) ?? worked?.fatGrams ?? null,
+      essentialIngredients: essentials,
+      optionalIngredients: optional.map((line) => ({ name: line.name, consumableId: line.consumableId ?? null })),
+    });
+    revalidatePath("/meals");
+    return { notice: "Saved.", recipeId: recipeId.data, recipeName: parsed.data.name };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}
+
+/** A recipe the household no longer wants offered: retired, never deleted (rule 12). */
+export async function retireRecipeAction(input: { householdId: string; recipeId: string }): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid(), recipeId: z.uuid() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const { retireRecipe } = await import("@wonderhome/core/meals/repository");
+    await retireRecipe(supabase, parsed.data);
+    revalidatePath("/meals");
+    return { notice: "Removed from your recipes." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}

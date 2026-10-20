@@ -398,3 +398,6 @@ wheat-grain,A020,exact,
 wood-apple,E067,exact,
 zucchini-green,D077,exact,
 zucchini-yellow,D078,exact,
+besan,B001,close,"IFCT Bengal gram dal; besan is that dal, ground"
+milk-full-cream,L002,close,"IFCT whole cow milk"
+lemon,E033,close,"IFCT lemon juice, as a recipe uses it"

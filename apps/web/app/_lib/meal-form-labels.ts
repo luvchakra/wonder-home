@@ -140,5 +140,10 @@ export function mealFormLabels(t: Translate, unitNames: Record<string, string>):
       noRecipes: t("mealForm.ideas.noRecipes"),
       forSlot: t("mealForm.ideas.for"),
     },
+    editRecipe: t("recipes.edit", KEEP),
+    editRecipeTitle: t("recipes.editTitle", KEEP),
+    editRecipeDescription: t("recipes.editDescription"),
+    saveRecipe: t("recipes.saveChanges"),
+    removeRecipe: t("recipes.remove"),
   };
 }

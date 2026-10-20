@@ -41,13 +41,50 @@ describe("nutrients per serving, added up from the ingredients (25-017)", () => 
     );
     // (333×5 + 360×4) ÷ 4 = (1665 + 1440) ÷ 4 = 776.25
     // Fat: (1×5 + 0.5×4) ÷ 4 = 1.75, kept whole as a recipe keeps it: 2.
-    expect(result).toEqual({ caloriesPerServing: 776, proteinGrams: 37, carbsGrams: 154, fatGrams: 2, counted: 2, total: 3 });
+    expect(result).toEqual({ caloriesPerServing: 776, proteinGrams: 37, carbsGrams: 154, fatGrams: 2, counted: 2, total: 3, missing: ["Onion"] });
   });
 
   it("leaves out what cannot be weighed, and says nothing when nothing could be", () => {
     const entries = new Map([["egg", entry({ energy_kcal: 155 })]]);
     expect(nutritionPerServing([{ name: "Eggs", quantity: 6, unit: "pcs", consumableId: "egg" }], entries, 2)).toBeNull();
     expect(nutritionPerServing([{ name: "Salt", quantity: 1, unit: "unit", consumableId: "egg" }], entries, 2)).toBeNull();
+  });
+
+  it("weighs a liquid kept per 100 g at its density: oil at 0.92 g a ml", () => {
+    const entries = new Map([
+      ["oil", entry({ energy_kcal: 900, fat_g: 100 }, { category: "Oils & ghee", ifct: { code: "T012", name: "Oil", match: "exact", note: null, nutrients: { energy_kcal: 900, fat_g: 100 }, energyComputed: false } })],
+    ]);
+    // 100 ml × 0.92 = 92 g; 92 × 900 ÷ 100 = 828 kcal, ÷ 2 servings = 414.
+    expect(nutritionPerServing([{ name: "Oil", quantity: 100, unit: "ml", consumableId: "oil" }], entries, 2)?.caloriesPerServing).toBe(414);
+  });
+
+  it("gives no figures when a rich ingredient could not be counted", () => {
+    const entries = new Map([["potato", entry({ energy_kcal: 80 })]]);
+    expect(
+      nutritionPerServing(
+        [
+          { name: "Potato", quantity: 900, unit: "g", consumableId: "potato" },
+          { name: "Butter, Salted", quantity: 60, unit: "g", consumableId: null },
+        ],
+        entries,
+        4,
+      ),
+    ).toBeNull();
+  });
+
+  it("gives no figures when what was counted is too small a part of the dish, and names what was left out", () => {
+    const entries = new Map([["spice", entry({ energy_kcal: 300 })]]);
+    // 10 g counted out of 510 g weighable: far below the share needed.
+    expect(
+      nutritionPerServing(
+        [
+          { name: "Spice", quantity: 10, unit: "g", consumableId: "spice" },
+          { name: "Curd", quantity: 500, unit: "g", consumableId: null },
+        ],
+        entries,
+        2,
+      ),
+    ).toBeNull();
   });
 
   it("prefers the Indian Food Composition Tables where an item has them", () => {
