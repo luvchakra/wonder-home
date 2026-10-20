@@ -112,7 +112,7 @@ export const helpEn = {
   "help.guide.talk-to-wonderhome.body.2":
     "When you ask for something everyday — plan an evening, add to the list, plan a meal, say you're away — HomeTalk does it straight away and tells you what it did; say or type \"undo\" to take it back. When a request involves other people, such as inviting guests or changing someone else's duties, it asks once in the conversation, and a spoken or typed yes is enough. Payments, orders and changes to who can do what always wait for your OK on screen. An Admin can turn on \"Ask before acting on what I say\" in Settings → AI Assistant to be asked first every time.",
   "help.guide.talk-to-wonderhome.body.3":
-    "You can correct it the way you would a person: \"no, I meant Manan\", \"not milk, almond milk\", \"actually, make that Friday\". If the change had not happened yet, the proposal is replaced; if it had, WonderHome undoes it and makes the corrected one, and both steps stay on record.",
+    "You can correct it the way you would a person: \"no, I meant Manan\", \"not milk, almond milk\", \"actually, make that Friday\", \"make that 2 litres\" (the item stays, only the amount changes). If the change had not happened yet, the proposal is replaced; if it had, WonderHome undoes it and makes the corrected one, and both steps stay on record.",
   "help.guide.talk-to-wonderhome.body.4":
     "Several requests in one sentence are handled one by one. A later part that leans on an earlier one (\"…and remind me to buy them\") only goes ahead if the earlier part actually happened.",
   "help.guide.talk-to-wonderhome.body.5":

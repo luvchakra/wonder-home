@@ -1,4 +1,5 @@
 import type { HouseholdIntent, IntentTarget } from "./intent";
+import { readItemAmount } from "./quantity";
 import { resolveTemporal } from "./temporal";
 
 /**
@@ -71,6 +72,9 @@ export const TARGET_KIND_FOR_ACTION: Record<string, IntentTarget["kind"]> = {
   set_fitness_goal: "member",
 };
 
+/** The grocery requests that carry an amount in their item ("6 eggs"), so "make that 2 litres" can change it. */
+const AMOUNT_ACTIONS = new Set(["add_to_list", "order_items", "set_stock", "use_stock", "mark_bought"]);
+
 /** Whether an utterance is a correction, and of what shape. */
 export function readCorrection(utterance: string): Correction | null {
   const text = utterance.trim().replace(/[.!]+$/, "");
@@ -141,6 +145,19 @@ export function applyCorrection(
   // A day said about a request with no day in it is not a correction of it
   // — "make that Friday" never turns milk into an item called "Friday".
   if (asDay) return null;
+
+  // "Make that 2 litres" — a new amount for the one item in a grocery request
+  // (story 25-005). The name stays; only what was said about how much changes.
+  const spoken = readItemAmount(correction.to);
+  const isAmount = spoken.amount !== null && !spoken.item && !spoken.amount.more;
+  if (isAmount && AMOUNT_ACTIONS.has(subject.actionType)) {
+    const items = itemsOf(subject.parameters);
+    if (items.length !== 1) return null;
+    const name = readItemAmount(items[0]!).item || items[0]!;
+    return finish(currentTarget, { ...parameters, item: `${correction.to} ${name}`, items: undefined });
+  }
+  // An amount said about a request that has none ("make that 2 litres" after an absence) is not a person.
+  if (isAmount) return null;
 
   // "I meant Manan" — a person, for a request about one.
   if (targetKind === "member") {
