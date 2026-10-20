@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [Use soon and depletion wording (25-003c)](2026-10-20-use-soon-wording.md) |
 | 2026-10-20 | [Notification events, the cross-channel step, the digest, delivery you can see (27-003 to 27-015)](2026-10-20-notification-events-and-trust.md) |
 | 2026-10-20 | [What goes where: the channel for each kind of reminder (27-002)](2026-10-20-notification-routing.md) |
 | 2026-10-20 | [Notifications by email, and the notification backlog (27-001)](2026-10-20-notification-email.md) |

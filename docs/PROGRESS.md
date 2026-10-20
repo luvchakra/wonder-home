@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**306 of 327 stories done — 93.6%**
+**307 of 327 stories done — 93.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 306 |
-| In Progress | 5 |
+| Done | 307 |
+| In Progress | 4 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `██████░░░░` | 12 | 19 | 1 in progress, 6 not started |
+| 25 HomeFood | `██████░░░░` | 13 | 19 | 6 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -67,7 +67,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | In Progress |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
-| `25-003` Meals, receipts and use-soon reconcile with stock | 25 HomeFood | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
@@ -538,13 +537,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-12 of 19 done `██████░░░░`
+13 of 19 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `25-001` One Groceries list: what's at home and what to buy | P0 | Done | Formerly 09-010. #207, Phase 1 (design/GROCERIES-PANTRY-HOMETALK-PHASE0.md, approved 2026-10-17): stock and to-buy are separate amounts with unit-safe arithmetic, written only through three database functions; item page, add-item search, mark bought, use soon; groceries on every plan |
 | `25-002` HomeTalk manages groceries | P0 | Done | Formerly 09-011. #209, Phase 2: quantities and units in HomeTalk ("add 6 more", "we have 10 eggs", "bought 2 kg potatoes"), the same service as the screens (`conversation/quantity.ts`, `conversation/grocery-actions.ts`; actions `set_stock`, `use_stock`, `mark_bought`); dialogues A–H as evaluation cases |
-| `25-003` Meals, receipts and use-soon reconcile with stock | P1 | In Progress | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. **b (receipts into stock) done 2026-10-18:** `commerce/receipt-stock.ts` (`receiptStockLine`: each kept line's stock before → after and the list amount it takes off, in the item's unit, never across dimensions; add-to-stock off by default when a person counted the item after the receipt's day; `duplicateReceipt`: same shop, day and total as a recorded receipt), the receipt review's **Add to what's at home** and **Take it off the list** per line, the server recomputing both before writing through `changeStock`/`adjustListEntry` with keys tied to the purchase, undo reversing the purchase, the stock and the list together (`recordedChange`), and a duplicate flagged with a required **Record it again**; browser-checked at 360px and desktop against the live project. Still to do: **c** use-soon and depletion wording never claims stock |
+| `25-003` Meals, receipts and use-soon reconcile with stock | P1 | Done | Formerly 09-012. Phase 3. **a (meal shortfalls) done 2026-10-18:** `meals/shortfall.ts` (needs scaled to servings, less stock and what is on the list, units-safe; estimate when stock is unknown; one usual pack when the recipe gives no amount), `meals.servings` (migration `20261018170000`, live), the meal's Ingredients sheet with **Add n to the list** (`addMealShortfallsAction` recomputes on the server, list source `meal`), browser-checked at 360px and desktop. **b (receipts into stock) done 2026-10-18:** `commerce/receipt-stock.ts` (`receiptStockLine`: each kept line's stock before → after and the list amount it takes off, in the item's unit, never across dimensions; add-to-stock off by default when a person counted the item after the receipt's day; `duplicateReceipt`: same shop, day and total as a recorded receipt), the receipt review's **Add to what's at home** and **Take it off the list** per line, the server recomputing both before writing through `changeStock`/`adjustListEntry` with keys tied to the purchase, undo reversing the purchase, the stock and the list together (`recordedChange`), and a duplicate flagged with a required **Record it again**; browser-checked at 360px and desktop against the live project. **c (use-soon and depletion wording) done 2026-10-20:** `commerce/use-soon.ts` (`useSoon`: **Use first** lists only a date someone knows — printed on the pack or entered — soonest first, with the basis said, a passed date saying "check it before using" and never "still fine"; an estimated date is never listed or turned into a suggestion, only noted as left out; **Running low** lists items at or below the level the household set, sorted none first then oldest, each saying whether the amount was counted or worked out from what was bought and used, and noting one not counted in 30 days or more), the Use soon view rewired to it, words in all eight languages, Help "Meals, groceries and running out of things" ¶2; browser-checked at 360px and desktop. |
 | `25-004` Send to Cook over WhatsApp | P1 | Not Started | Formerly 09-013. Phase 4: an approved meal plan sent to a consenting helper through the official WhatsApp template; inert until the template is approved |
 | `25-006` A shared grocery catalog with quick-commerce search | P0 | Done | 2026-10-18, browser-checked at 360px and desktop. `grocery_catalog` (migrations `20261018190000`, `20261018200000`, live): one platform table every household reads and none writes, each row's `id` its catalog id. **Items:** 1,559 generic things WonderHome curated itself across 29 categories (`supabase/seed/grocery-catalog/items.csv`, loaded by `npm run catalog:seed`), each with its other names (Hindi in both scripts, regional names, spellings). **Products:** packed products from Open Food Facts India (Indian barcode, brand, pack and picture required; no alcohol), pictures copied into WonderHome's own storage, label nutrients as stated, credited (ODbL/CC BY-SA). Search ranks in the database (`public.search_grocery_catalog`). **Add an item** shows the household's own items, then the catalog; picking one creates or reuses the household's item, linked. The item page shows the catalog picture and label nutrition. `usda_foods` holds USDA foods with a `catalog_id` link, empty and linked later (25-007) |
 | `25-007` USDA nutrition for catalog items, linked in phases | P2 | Not Started | The owner, 2026-10-18: lower priority, linking is research done in phases. `usda_foods.catalog_id` is the link (candidate until a person approves). Phase 1 load Foundation + SR Legacy; phase 2 candidates by the structured matcher (`design/grocery-catalog/USDA_NUTRITION_MATCHING_STUDY.md`); phase 3 a review screen; phase 4 approved values shown as "approximate" where they are |

@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-18 (HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 phases B–D; HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
+Last updated: 2026-10-20 (25-003c Use soon wording done; HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 phases B–D; HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
 
 ---
 
