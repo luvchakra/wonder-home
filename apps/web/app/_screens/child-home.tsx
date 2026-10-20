@@ -20,12 +20,14 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { CompanionCard } from "../_components/companion-card";
 import { KidDoneButton } from "../_components/kid-done-button";
+import { ScrollToSection } from "../_components/scroll-to-section";
 import { eventWhen } from "../_lib/event-when";
-import { formatDate, type Session } from "../_lib/session";
+import { formatDate, formatTime, type Session } from "../_lib/session";
 
 const TABS = ["today", "school", "goals", "fun"] as const;
 type Tab = (typeof TABS)[number];
@@ -95,6 +97,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
     activeGoalIds: new Set(goals.filter((goal) => goal.active).map((goal) => goal.id)),
     checkIns,
     schoolDoneOn: doneItems.map((item) => dayOf(item.completedAt!)),
+    schoolDone: doneItems.map((item) => ({ id: item.id, onDay: dayOf(item.completedAt!) })),
     today,
   });
   const doneToday = doneItems.filter((item) => dayOf(item.completedAt!) === today);
@@ -104,7 +107,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const upcoming = events.filter((event) => event.endsAt >= now);
   const fun = upcoming.filter((event) => FUN_KINDS.has(event.kind));
   const happeningToday = upcoming.filter((event) => dayOf(event.startsAt) <= today && dayOf(new Date(event.endsAt.getTime() - 1)) >= today);
-  const missionGoals = progress.goals.filter((standing) => standing.goal.period !== "once" || !standing.met || standing.doneToday);
+  // A goal set from school work is that work's own mission, already listed: not a second one.
+  const missionGoals = progress.goals.filter((standing) => standing.goal.source?.kind !== "school_item" && (standing.goal.period !== "once" || !standing.met || standing.doneToday));
   const missionsLeft = school.today.length + missionGoals.filter((standing) => !standing.doneToday && !standing.met).length;
   const missionCount = school.today.length + doneToday.length + missionGoals.length;
 
@@ -193,7 +197,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
 
         {active === "today" ? (
           <>
-            <section>
+            <section id="missions" className="scroll-mt-20">
               <SectionHeader title={t("kids.today.missions")} count={missionCount || undefined} />
               {missionCount === 0 ? (
                 <EmptyState icon={Star} tone="school" title={t("kids.today.noMissions")} description={t("kids.today.noMissionsLede")} />
@@ -240,7 +244,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
 
         {active === "school" ? (
           <>
-            <section>
+            <section id="due-today" className="scroll-mt-20">
               <SectionHeader title={t("homeScreen.child.todaysHomework")} count={school.today.length || undefined} />
               {school.today.length === 0 && doneToday.length === 0 ? (
                 <EmptyState icon={Star} tone="school" title={t("homeScreen.child.nothingDue")} description={t("homeScreen.child.nothingDueLede")} />
@@ -252,7 +256,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
                 </div>
               )}
             </section>
-            <section>
+            <section id="coming-up" className="scroll-mt-20">
               <SectionHeader title={t("homeScreen.child.comingUp")} count={school.soon.length || undefined} />
               {school.soon.length === 0 ? (
                 <EmptyState icon={BookOpen} tone="school" title={t("homeScreen.child.caughtUp")} description={t("homeScreen.child.caughtUpLede")} />
@@ -270,7 +274,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         {active === "goals" ? (
           <>
             <EarnStars progress={progress} t={t} />
-            <section>
+            <section id="goals" className="scroll-mt-20">
               <SectionHeader title={t("kids.goals.title")} count={progress.goals.length || undefined} />
               {progress.goals.length === 0 ? (
                 <EmptyState icon={Target} tone="care" title={t("kids.goals.empty")} description={t("kids.goals.emptyLede")} />
@@ -287,7 +291,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         ) : null}
 
         {active === "fun" ? (
-          <section>
+          <section id="fun" className="scroll-mt-20">
             <SectionHeader title={t("homeScreen.child.funComingUp")} count={fun.length || undefined} />
             {fun.length === 0 ? (
               <EmptyState icon={PartyPopper} tone="people" title={t("homeScreen.child.nothingPlanned")} description={t("homeScreen.child.nothingPlannedLede")} />
@@ -306,6 +310,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         </Card>
 
         <QuoteCard>{t("homeScreen.child.quote")}</QuoteCard>
+        <ScrollToSection key={active} />
       </div>
     </AppShell>
   );
@@ -430,9 +435,17 @@ function GoalCard({
 }) {
   const { goal } = standing;
   const how =
-    goal.period === "week" ? t("kids.goal.weekly", { done: standing.done, target: standing.needed }) : goal.period === "once" ? t("kids.goal.once") : t("kids.goal.daily");
+    goal.source?.kind === "school_item"
+      ? t("kids.goal.byWork")
+      : goal.period === "week"
+        ? t("kids.goal.weekly", { done: standing.done, target: standing.needed })
+        : goal.period === "once"
+          ? t("kids.goal.once")
+          : t("kids.goal.daily");
+  // A goal set from school work is met by marking that work done, never tapped on its own.
+  const byWork = goal.source?.kind === "school_item";
   // A one-off goal already kept on an earlier day is done; there is nothing left to tap.
-  const offerTap = !(goal.period === "once" && standing.met && !standing.doneToday) && !(goal.period === "week" && standing.met && !standing.doneToday);
+  const offerTap = !byWork && !(goal.period === "once" && standing.met && !standing.doneToday) && !(goal.period === "week" && standing.met && !standing.doneToday);
   return (
     <Card className="wh-kid-card p-4 [--wh-kid-accent:var(--wh-tone-care)]">
       <div className="flex items-start gap-3">
@@ -461,35 +474,76 @@ function GoalCard({
         </div>
         {offerTap ? (
           <KidDoneButton target={{ kind: "goal", householdId, goalId: goal.id, childMemberId }} done={standing.doneToday} stars={goal.stars} labels={labels} />
-        ) : (
+        ) : standing.met ? (
           <span className="shrink-0 rounded-full bg-[var(--wh-handled-soft)] px-3 py-1.5 text-xs font-bold text-[var(--wh-handled)]">{t("kids.goal.met")}</span>
-        )}
+        ) : null}
       </div>
     </Card>
   );
 }
 
+/**
+ * One piece of school work. The row opens under its chevron (rule 21) to
+ * everything on record about it — what kind of thing it is, the subject,
+ * the teacher's note, when it is due and how long it may take — and the
+ * Done button stays beside it, one tap, whether it is open or not.
+ */
 function SchoolCard({ item, householdId, timezone, t, labels }: { item: SchoolItem; householdId: string; timezone: string; t: Translate; labels: { doIt: string; done: string; undo: string; earned: string } }) {
   const done = item.status === "done" || item.status === "submitted";
+  const zone = schoolDayZone(item, timezone);
+  // Events and notices are things to know, not things to do: no button, which is itself the message.
+  const doable = item.kind !== "event" && item.kind !== "notice";
   const meta = [
     item.subject,
-    item.dueAt ? t("homeScreen.child.due", { date: formatDate(schoolDayZone(item, timezone), item.dueAt, "long") }) : null,
+    item.dueAt ? t("homeScreen.child.due", { date: formatDate(zone, item.dueAt, "long") }) : null,
     item.estimatedMinutes ? t("homeScreen.child.aboutMinutes", { count: item.estimatedMinutes }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
-  // Events and notices are things to know, not things to do: no button, which is itself the message.
-  const doable = item.kind !== "event" && item.kind !== "notice";
+  const when = item.dueAt
+    ? item.dueTimeKnown
+      ? `${formatDate(zone, item.dueAt, "long")}, ${item.endsAt ? `${formatTime(timezone, item.dueAt)} – ${formatTime(timezone, item.endsAt)}` : formatTime(timezone, item.dueAt)}`
+      : `${formatDate(zone, item.dueAt, "long")} · ${t("school.allDay")}`
+    : t("school.noDueDate");
+  const facts: { label: string; value: string }[] = [
+    { label: t("kids.school.detail.kind"), value: t(`school.kind.${item.kind}`) },
+    ...(item.subject ? [{ label: t("kids.school.detail.subject"), value: item.subject }] : []),
+    { label: t("kids.school.detail.when"), value: when },
+    ...(item.estimatedMinutes ? [{ label: t("kids.school.detail.time"), value: t("homeScreen.child.aboutMinutes", { count: item.estimatedMinutes }) }] : []),
+    ...(doable ? [{ label: t("kids.school.detail.status"), value: done ? t("kids.school.detail.done") : t("kids.school.detail.toDo") }] : []),
+  ];
   return (
-    <Card className="wh-kid-card p-4 [--wh-kid-accent:var(--wh-tone-school)]">
-      <div className="flex items-start gap-3">
-        <IconTile icon={item.kind === "event" ? CalendarHeart : BookOpen} tone="school" size="lg" />
-        <div className="min-w-0 flex-1">
-          <p className="font-bold break-words">{item.title}</p>
-          {meta ? <p className="text-xs text-[var(--wh-foreground-muted)]">{meta}</p> : null}
-          {doable && !done ? <p className="mt-1 text-xs font-semibold text-[var(--wh-tone-meals)]">{t("kids.school.star")}</p> : null}
-        </div>
-        {doable ? <KidDoneButton target={{ kind: "school", householdId, id: item.id }} done={done} stars={1} labels={labels} /> : null}
+    <Card className="wh-kid-card p-2 [--wh-kid-accent:var(--wh-tone-school)]">
+      <div className="flex items-start gap-1">
+        <ul className="min-w-0 flex-1">
+          <ExpandableRow
+            summary={
+              <>
+                <IconTile icon={item.kind === "event" ? CalendarHeart : BookOpen} tone="school" size="lg" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold break-words">{item.title}</span>
+                  {meta ? <span className="block text-xs text-[var(--wh-foreground-muted)]">{meta}</span> : null}
+                  {doable && !done ? <span className="mt-1 block text-xs font-semibold text-[var(--wh-tone-meals)]">{t("kids.school.star")}</span> : null}
+                </span>
+              </>
+            }
+          >
+            <dl className="space-y-1.5 text-sm">
+              {facts.map((fact) => (
+                <div key={fact.label} className="flex flex-wrap gap-x-2">
+                  <dt className="text-[var(--wh-foreground-muted)]">{fact.label}</dt>
+                  <dd className="font-medium break-words">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {item.detail ? <p className="mt-2 text-sm break-words whitespace-pre-line">{item.detail}</p> : null}
+          </ExpandableRow>
+        </ul>
+        {doable ? (
+          <div className="shrink-0 pt-2.5 pe-1">
+            <KidDoneButton target={{ kind: "school", householdId, id: item.id }} done={done} stars={1} labels={labels} />
+          </div>
+        ) : null}
       </div>
     </Card>
   );

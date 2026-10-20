@@ -13,7 +13,7 @@ import { GOAL_PERIODS, type ChildGoal, type GoalCheckIn, type GoalPeriod } from 
  */
 
 type Row = Record<string, unknown>;
-const GOAL_COLUMNS = "id, child_member_id, title, kind, emoji, period, target, stars, reward, ends_on, active";
+const GOAL_COLUMNS = "id, child_member_id, title, kind, emoji, period, target, stars, reward, ends_on, active, source_kind, source_id";
 /** Enough for years of a child ticking things off; stars are counted from these rows. */
 const CHECKIN_LIMIT = 3000;
 
@@ -31,6 +31,7 @@ function toGoal(row: Row): StoredGoal {
     stars: Number(row.stars),
     reward: (row.reward as string | null) ?? null,
     endsOn: (row.ends_on as string | null) ?? null,
+    source: row.source_kind && row.source_id ? { kind: row.source_kind as "activity" | "school_item", id: row.source_id as string } : null,
     active: Boolean(row.active),
   };
 }
@@ -97,6 +98,8 @@ export type GoalInput = {
   reward?: string | null;
   endsOn?: string | null;
   createdBy?: string | null;
+  /** The class or school work it was set from; null for a goal of its own. */
+  source?: { kind: "activity" | "school_item"; id: string } | null;
 };
 
 async function saveGoalImpl(supabase: SupabaseClient, input: GoalInput): Promise<{ id: string }> {
@@ -115,6 +118,8 @@ async function saveGoalImpl(supabase: SupabaseClient, input: GoalInput): Promise
     stars: Math.min(5, Math.max(1, Math.round(input.stars))),
     reward: input.reward?.trim().slice(0, 120) || null,
     ends_on: input.endsOn || null,
+    source_kind: input.source?.kind ?? null,
+    source_id: input.source?.id ?? null,
   };
   const query = input.id
     ? supabase.from("child_goals").update(row).eq("id", input.id).eq("household_id", input.householdId).select("id").single()

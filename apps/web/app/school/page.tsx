@@ -47,7 +47,7 @@ import { ChildClasses } from "../_components/child-classes";
 import { ChildSchoolWeek } from "../_components/child-school-week";
 import { StandDownButton, TeacherSheet } from "./child-details";
 import { ChildSchoolActions, type ChildSchoolLabels } from "./child-school";
-import { GoalsTab } from "./goals-tab";
+import { ChildScore, GoalsTab, kidProgress } from "./goals-tab";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
@@ -98,9 +98,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     listTimetable(supabase, householdId).catch(() => []),
     listExams(supabase, householdId).catch(() => []),
     listExamTypes(supabase, householdId).catch(() => ({ builtIn: ["Unit test", "Mid-term", "Finals"], own: [] })),
-    // Each child's goals and the days kept (08-017), only for the tab that shows them.
-    active === "goals" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
-    active === "goals" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    // Each child's goals and the days kept (08-017): the Goals tab, and each child's score on the Overview.
+    active === "goals" || active === "overview" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    active === "goals" || active === "overview" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
   ]);
 
   const children = members.filter((member) => member.memberType === "child");
@@ -324,6 +324,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
               return (
                 <section key={kid.id} className="space-y-2">
                   <SectionHeader title={kid.displayName} />
+                  <ChildScore name={kid.displayName} progress={kidProgress({ kidId: kid.id, goals, checkIns, items: agenda?.items ?? [], timezone })} t={t} />
                   <Card className="px-3 pb-1">
                     <ul className="divide-y divide-[var(--wh-border)]">
                       <ActionRow
@@ -478,6 +479,8 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             kids={shownChildren.map((kid) => ({ id: kid.id, name: kid.displayName }))}
             goals={goals}
             checkIns={checkIns}
+            items={agenda?.items ?? []}
+            activities={activities}
             timezone={timezone}
             canChange={canChangeSchool}
             t={t}

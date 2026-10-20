@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { childProgress, goalStandings, streakOf, type ChildGoal } from "./goals";
+import { childProgress, goalStandings, goalStarts, streakOf, type ChildGoal } from "./goals";
 
 const goal = (over: Partial<ChildGoal> = {}): ChildGoal => ({
   id: "read",
@@ -76,5 +76,38 @@ describe("the streak", () => {
     expect(streakOf(["2026-10-19", "2026-10-18"], today)).toBe(2);
     expect(streakOf(["2026-10-20", "2026-10-18"], today)).toBe(1);
     expect(streakOf([], today)).toBe(0);
+  });
+});
+
+describe("a goal set from school work (the owner, 2026-10-20)", () => {
+  it("is met, with its stars, the day that work is marked done, with no check-in of its own", () => {
+    const goal = { id: "g-maths", childMemberId: "c1", title: "Finish the maths worksheet", kind: "learning", emoji: "📚", period: "once" as const, target: 1, stars: 3, reward: "Ice cream", endsOn: null, source: { kind: "school_item" as const, id: "item-1" } };
+    const before = childProgress({ goals: [goal], activeGoalIds: new Set(["g-maths"]), checkIns: [], schoolDoneOn: [], schoolDone: [], today: "2026-10-20" });
+    expect(before.goals[0]).toMatchObject({ met: false, done: 0 });
+    const after = childProgress({ goals: [goal], activeGoalIds: new Set(["g-maths"]), checkIns: [], schoolDoneOn: ["2026-10-20"], schoolDone: [{ id: "item-1", onDay: "2026-10-20" }], today: "2026-10-20" });
+    expect(after.goals[0]).toMatchObject({ met: true, done: 1 });
+    expect(after.stars).toBe(4);
+    expect(after.fromGoals).toBe(3);
+  });
+});
+
+describe("goalStarts", () => {
+  it("offers each class as a weekly goal, as often as it meets, and open school work as a one-off", () => {
+    const starts = goalStarts({
+      activities: [
+        { id: "piano", name: "Piano", kind: "music", days: [2, 4] },
+        { id: "chess", name: "Chess club", kind: "unknown", days: [] },
+      ],
+      work: [
+        { id: "maths", title: "Maths worksheet", kind: "homework", status: "pending", dueOn: "2026-10-22" },
+        { id: "trip", title: "Field trip", kind: "event", status: "pending", dueOn: "2026-10-23" },
+        { id: "old", title: "Spelling", kind: "homework", status: "done", dueOn: "2026-10-01" },
+      ],
+    });
+    expect(starts).toEqual([
+      { source: { kind: "activity", id: "piano" }, name: "Piano", goalKind: "practice", emoji: "🎹", period: "week", target: 2, endsOn: null },
+      { source: { kind: "activity", id: "chess" }, name: "Chess club", goalKind: "practice", emoji: "⭐", period: "week", target: 1, endsOn: null },
+      { source: { kind: "school_item", id: "maths" }, name: "Maths worksheet", goalKind: "learning", emoji: "📚", period: "once", target: 1, endsOn: "2026-10-22" },
+    ]);
   });
 });
