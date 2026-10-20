@@ -1,7 +1,15 @@
 "use client";
 
 import { CircleCheck, CircleHelp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+
+import { SwipeToDismiss } from "@wonderhome/core/ui/swipe-to-dismiss";
+
+import { adjustListAction } from "../../(auth)/grocery-actions";
+import { newKey } from "./amounts";
+
+const SWIPE_HINT_KEY = "wh.groceries.swipeHint";
 
 import {
   GroceryRow,
@@ -62,6 +70,7 @@ export function GroceryList({
   /** The household's own date, for "Bought on". */
   today: string;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   // At home and Not counted yet are ways in (the owner, 2026-10-20: "make the cards clickable"):
@@ -113,8 +122,38 @@ export function GroceryList({
     baseUnit: item.toBuy!.unit,
   }));
 
-  const row = (item: ListItem) => (
+  // On To buy, a row swiped left or right comes off the list (the owner,
+  // 2026-10-20): To buy goes to nothing, it leaves this view and stays under
+  // All. The first row jiggles once per device so the swipe can be found.
+  const takeOff = async (item: ListItem): Promise<boolean> => {
+    const result = await adjustListAction({ householdId, itemId: item.id, kind: "remove", key: newKey("swipe") });
+    if (!result.ok) return false;
+    setOnList((current) => ({ ...current, [item.id]: 0 }));
+    router.refresh();
+    return true;
+  };
+  const [hintShown] = useState(() => {
+    try {
+      const seen = window.localStorage.getItem(SWIPE_HINT_KEY) === "1";
+      if (!seen) window.localStorage.setItem(SWIPE_HINT_KEY, "1");
+      return seen;
+    } catch {
+      return true;
+    }
+  });
+
+  const row = (item: ListItem, index = 0) =>
+    view === "to-buy" ? (
+      <SwipeToDismiss key={`${item.id}:${item.unit}`} label={words.stepper.remove} hint={!hintShown && index === 0} onDismiss={() => takeOff(item)}>
+        {rowBody(item, "div")}
+      </SwipeToDismiss>
+    ) : (
+      rowBody(item, "li")
+    );
+
+  const rowBody = (item: ListItem, as: "li" | "div") => (
     <GroceryRow
+      as={as}
       // A new unit is a new stepper: its amounts are in another base (25-012).
       key={`${item.id}:${item.unit}`}
       name={item.name}
@@ -268,7 +307,7 @@ export function GroceryList({
         )
       ) : (
         <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-2 shadow-[var(--wh-shadow-card)]">
-          {shown.map(row)}
+          {shown.map((item, index) => row(item, index))}
         </ul>
       )}
     </div>

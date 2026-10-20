@@ -107,6 +107,8 @@ export type GroceryRowProps = {
   /** "155 kcal · 13 g protein per 100 g", from the catalog's credited source, or nothing (25-012). */
   nutrition?: string | null;
   className?: string;
+  /** "div" when a wrapper (`SwipeToDismiss`) is the list item itself. */
+  as?: "li" | "div";
 };
 
 export function GroceryRow({
@@ -124,11 +126,12 @@ export function GroceryRow({
   openLabel,
   nutrition,
   className,
+  as: Tag = "li",
 }: GroceryRowProps) {
   const icon = groceryIcon(name, category);
   const label = "text-[0.6875rem] font-semibold tracking-wide whitespace-nowrap text-[var(--wh-foreground-subtle)] uppercase";
   return (
-    <li
+    <Tag
       className={cn(
         // Phone: picture · name · chevron, then the amounts across the whole
         // card. Wider: one line, amounts before the chevron.
@@ -195,6 +198,6 @@ export function GroceryRow({
       >
         <ChevronRight aria-hidden className="size-5" />
       </Link>
-    </li>
+    </Tag>
   );
 }

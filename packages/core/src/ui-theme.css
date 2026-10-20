@@ -691,6 +691,21 @@
 
 /* A goal kept (the owner, 2026-10-20): confetti falls and balloons rise for a
    couple of seconds, over everything and catching no taps (\`Celebration\`). */
+/* A swipeable row shows it can be swiped: one small nudge each way (\`SwipeToDismiss\`). */
+@keyframes wh-swipe-hint {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-28px); }
+  45% { transform: translateX(0); }
+  65% { transform: translateX(18px); }
+  85% { transform: translateX(0); }
+}
+.wh-swipe-hint {
+  animation: wh-swipe-hint 1100ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wh-swipe-hint { animation: none; }
+}
+
 @keyframes wh-confetti-fall {
   0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
   100% { transform: translate3d(var(--wh-drift, 0px), 105vh, 0) rotate(var(--wh-spin, 540deg)); opacity: 0.9; }

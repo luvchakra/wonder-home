@@ -204,7 +204,7 @@ export function ToBuyStepper({
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label={fill(words.stepper.amount, { name: item.name })}
-            className="min-h-9 min-w-[4rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm font-semibold whitespace-nowrap tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+            className="min-h-9 min-w-[3.5rem] max-w-[5.5rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm leading-tight font-semibold break-words tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
           >
             {amountText}
           </button>
