@@ -50,7 +50,7 @@ disagree again.)
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 9 | 2 | 5 | 2 | 5 | In Progress |
-| 25 | HomeFood | 24 | 12 | 7 | 5 | 19 | In Progress |
+| 25 | HomeFood | 25 | 12 | 8 | 5 | 20 | In Progress |
 | 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
 ## Execution Log
@@ -335,3 +335,4 @@ disagree again.)
 | 2026-10-21 | 21 | 21-009 | Done | Eight Health header pills became one grouped Add (kit `AddMenu`); browser QA at 360px and 1280px. |
 | 2026-10-21 | 24 | 24-012 | In Progress | Place book: Added by you first, then Saved from HomeTalk; added places rank first; migration `20261021001000` waits for the live project. |
 | 2026-10-21 | 25 | 25-028 | Done | Recipe ingredients and steps tick off on screen; Share a recipe (WhatsApp picture card + full recipe message, other apps, copy, email, picture); counts on recipe filters. |
+| 2026-10-21 | 25 | 25-029 | Done | 26 non-veg and egg dishes added to the WonderHome recipe catalog through the 25-022 seed (catalog 60: 33 veg, 5 egg, 22 non-veg); every ingredient linked to the grocery catalog, nutrients from `nutritionPerServing`, 25 Commons pictures with licence and author (chicken biryani has none); seeded live with `seed.mts --apply`. |
