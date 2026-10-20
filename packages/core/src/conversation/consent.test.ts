@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { consentTier, decideForRequest, isUndo } from "./consent";
+import { replyFor } from "./engine";
 import type { HouseholdIntent } from "./intent";
 import { proposeFromIntent } from "./proposal";
 import { readPlan } from "./rules";
@@ -38,6 +39,13 @@ describe("conversational consent (HomeBrain 4.0 §3.9)", () => {
     expect(consentTier(intent("plan_event"), child)).toBeNull();
     const asked = proposeFromIntent(intent("plan_event", { what: "sleepover" }), { actor: child, autonomy: "observe", entitled: true, requestedBy: "person" });
     expect(asked.kind).not.toBe("executed");
+  });
+
+  it("a child's request never writes on its own: an adult gives the final OK, even where the outcome would execute", () => {
+    const asked = proposeFromIntent(intent("add_to_list", { items: ["eggs"] }, { kind: "list", reference: "groceries" }), { actor: child, autonomy: "execute", entitled: true, requestedBy: "person" });
+    expect(asked.kind).toBe("needs_approval");
+    expect(replyFor(asked, true)).toMatch(/grown-up/);
+    expect(replyFor(asked)).toMatch(/Shall I go ahead\?/);
   });
 
   it("a plan the person asked for runs, whatever the outcome's autonomy says", () => {

@@ -343,7 +343,7 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
     kind: "reply",
     intent,
     proposal: settled,
-    text: replyFor(settled),
+    text: replyFor(settled, input.actor.memberType === "child" || input.actor.memberType === "helper"),
     record: needsRecording(intent, settled),
     memory: extractMemory(intent, { sessionId: input.sessionId }),
     clarification:
@@ -371,7 +371,7 @@ function sameQuestion(question: string, pending: PendingClarification): boolean 
 }
 
 /** What the assistant says, by what it is prepared to do. Short on purpose. */
-export function replyFor(proposal: Proposal): string {
+export function replyFor(proposal: Proposal, needsAdult = false): string {
   switch (proposal.kind) {
     case "clarify":
       return proposal.question;
@@ -382,7 +382,10 @@ export function replyFor(proposal: Proposal): string {
     case "prepared":
       return `I have prepared this, and not done it: ${lower(proposal.preview.summary)}. It is waiting for you.`;
     case "needs_approval":
-      return `Here is what I would do — ${lower(proposal.preview.summary)}. Shall I go ahead?`;
+      // A child's or helper's request goes to an adult for the final OK (`referral.ts`).
+      return needsAdult
+        ? `Here is what I would do — ${lower(proposal.preview.summary)}. Shall I send it to a grown-up to OK?`
+        : `Here is what I would do — ${lower(proposal.preview.summary)}. Shall I go ahead?`;
     case "executed":
       return `Done: ${lower(proposal.preview.summary)}.`;
   }

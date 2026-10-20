@@ -46,6 +46,11 @@ export type ConversationAction = {
   fingerprint?: string | null;
   /** Set when an approval was refused, and why. Nothing ran. */
   refused?: "expired" | "changed" | "stale";
+  /**
+   * A child's or helper's request sent to an adult for the final OK
+   * (`referral.ts`): who it waits on. Nothing runs until they approve.
+   */
+  awaitingAdult?: string | null;
 };
 
 export type ConversationMessage = {
@@ -332,7 +337,7 @@ export async function pendingClarification(
 export async function loadAction(
   admin: SupabaseClient,
   input: { householdId: string; actionId: string },
-): Promise<{ id: string; actionType: string; outcomeKey: string | null; parameters: Record<string, unknown>; status: ConversationAction["status"] } | null> {
+): Promise<{ id: string; actionType: string; outcomeKey: string | null; parameters: Record<string, unknown>; status: ConversationAction["status"]; preview: ActionPreview | null } | null> {
   const { data } = await admin
     .from("conversation_actions")
     .select("id, action_type, outcome_key, payload, approval_status")
@@ -348,6 +353,7 @@ export async function loadAction(
     outcomeKey: (data.outcome_key as string | null) ?? null,
     parameters: ((payload.parameters as Record<string, unknown> | undefined) ?? {}),
     status: data.approval_status as ConversationAction["status"],
+    preview: (payload.preview as ActionPreview | null | undefined) ?? null,
   };
 }
 
@@ -625,7 +631,7 @@ export async function recordProposal(
  */
 export async function decideAction(
   admin: SupabaseClient,
-  input: { householdId: string; actionId: string; memberId: string; decision: "approved" | "rejected"; seen?: string | null; now?: Date },
+  input: { householdId: string; actionId: string; memberId: string; decision: "approved" | "rejected"; seen?: string | null; now?: Date; ttlMinutes?: number },
 ): Promise<ConversationAction | null> {
   if (input.decision === "approved") {
     const { data: row } = await admin
@@ -646,7 +652,7 @@ export async function decideAction(
       },
       seen: input.seen ?? null,
       now: input.now ?? new Date(),
-      ttlMinutes: APPROVAL_TTL_MINUTES,
+      ttlMinutes: input.ttlMinutes ?? APPROVAL_TTL_MINUTES,
     });
     if (!check.ok) {
       const { data: closed } = await admin
@@ -814,6 +820,7 @@ function toAction(row: Row): ConversationAction {
     createdAt: new Date(row.created_at as string),
     fingerprint: (row.approval_fingerprint as string | null | undefined) ?? null,
     ...(unchangedResult(row.result) ? { unchanged: true } : {}),
+    ...(payload.referral && typeof (payload.referral as Row).approverName === "string" ? { awaitingAdult: (payload.referral as Row).approverName as string } : {}),
   };
 }
 

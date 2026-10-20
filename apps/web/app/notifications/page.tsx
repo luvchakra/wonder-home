@@ -1,6 +1,7 @@
-import { BellOff, CalendarClock, Settings2 } from "lucide-react";
+import { BellOff, CalendarClock, HandHeart, Settings2 } from "lucide-react";
 import Link from "next/link";
 
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { markNotificationsSeen } from "@wonderhome/core/notifications/actions";
 import { localizeReminder } from "@wonderhome/core/notifications/message";
@@ -13,9 +14,11 @@ import { Card } from "@wonderhome/core/ui/card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { cn } from "@wonderhome/core/lib/cn";
 
 import { ReminderDigest, ReminderRow, type ReminderRowLabels } from "../_components/reminder-row";
+import { RequestAnswer } from "../_components/request-answer";
 import { PRESET_KEYS, type SnoozePreset } from "../_lib/snooze-presets";
 import { reconcileRemindersNow } from "../_lib/reminders";
 import {
@@ -62,7 +65,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   const endOfTomorrow = atLocal(shiftDate(localMoment(now, timeZone).dateKey, 2), 0, timeZone);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const [{ data: openData }, { data: closedData }, { data: digestPref }] = await Promise.all([
+  const [{ data: openData }, { data: closedData }, { data: digestPref }, requests] = await Promise.all([
     supabase
       .from("notifications")
       .select(REMINDER_COLUMNS)
@@ -80,11 +83,19 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       .order("updated_at", { ascending: false })
       .limit(40),
     supabase.from("notification_preferences").select("daily_digest").eq("member_id", membership.memberId).eq("channel", "in_app").maybeSingle(),
+    // A child's or helper's requests waiting on this adult's OK (conversation/referral.ts).
+    membership.memberType === "adult"
+      ? import("@wonderhome/core/conversation/referral").then(({ pendingApprovalsFor }) =>
+          pendingApprovalsFor(createAdminClient(), { householdId: membership.household.id, memberId: membership.memberId, now }).catch(() => []),
+        )
+      : Promise.resolve([]),
   ]);
+  const asked = new Set(requests.map((request) => request.id));
 
   // Each reminder in the viewer's own language; the stored English when it has no message this build can read.
   const inTheirLanguage = (row: ReminderRowData) => localizeReminder(row, locale.t, format);
-  const openRows = ((openData ?? []) as ReminderRowData[]).map(inTheirLanguage);
+  // A request shown with its own Approve and Decline is not listed twice.
+  const openRows = ((openData ?? []) as ReminderRowData[]).filter((row) => !(row.source_type === "approval" && row.source_id && asked.has(row.source_id))).map(inTheirLanguage);
   const closedRows = ((closedData ?? []) as ReminderRowData[]).map(inTheirLanguage);
   const due = openRows.filter((row) => Date.parse(row.scheduled_for) <= now.getTime());
   const upcoming = openRows.filter((row) => Date.parse(row.scheduled_for) > now.getTime());
@@ -173,6 +184,29 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         </header>
 
         {confirmation ? <Alert tone="info">{confirmation}</Alert> : null}
+
+        {requests.length > 0 ? (
+          <section className="space-y-2">
+            <h2 className="text-base font-semibold">{t("notifications.requests.title")}</h2>
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("notifications.requests.lede")}</p>
+            {requests.map((request) => (
+              <Card key={request.id} className="space-y-3 p-4">
+                <div className="flex items-start gap-3">
+                  <IconTile icon={HandHeart} tone="people" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold break-words">{request.summary}</p>
+                    <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("notifications.requests.until", { date: format.date(request.expiresAt, "long"), time: format.time(request.expiresAt) })}</p>
+                  </div>
+                </div>
+                <RequestAnswer
+                  householdId={membership.household.id}
+                  approvalId={request.id}
+                  labels={{ approve: t("notifications.requests.approve"), decline: t("notifications.requests.decline"), working: t("common.saving") }}
+                />
+              </Card>
+            ))}
+          </section>
+        ) : null}
 
         {digest.length > 1 ? (
           <ReminderDigest title={t("notifications.digest.title")} lede={t("notifications.digest.body", { count: digest.length, name: firstName })} items={digest} />

@@ -88,7 +88,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           role: message.role as "member" | "assistant",
           text: shownText(message),
           at: message.createdAt.toISOString(),
-          action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null } : null,
+          action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null, awaitingAdult: message.action.awaitingAdult ?? null } : null,
           places: message.places ?? null,
         }));
       if (initialMessages.some((message) => message.places && message.places.length > 0)) {
@@ -128,6 +128,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           liveEngine={liveEngine}
           geminiLive={geminiLive}
           kids={kids}
+          needsAdult={membership.memberType !== "adult"}
           canAddChild={isHouseholdAdmin(membership)}
           timeZone={membership.household.timezone}
           labels={labels}
