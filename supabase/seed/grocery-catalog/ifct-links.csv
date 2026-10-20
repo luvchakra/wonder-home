@@ -73,6 +73,11 @@ chana-dal,B001,exact,
 cherry,E014,exact,
 chhena,L003,close,IFCT Paneer entry lists Chhena as local name; chhena is moister
 chhuara,E017,exact,
+chicken-biryani-cut,N002,close,Large bone-in pieces; IFCT thigh as middle cut
+chicken-boneless,N003,close,Boneless chicken is mostly breast; IFCT breast
+chicken-curry-cut,N002,close,Mixed curry pieces; IFCT thigh as middle cut
+chicken-keema,N002,close,Mince of mixed cuts; IFCT thigh as middle cut
+chicken-whole,N002,close,Whole bird edible portion; IFCT thigh as middle cut
 chicken-breast,N003,exact,
 chicken-curry-cut-skinless,N002,close,Mixed skinless curry pieces; IFCT thigh as middle cut
 chicken-drumsticks,N001,close,"Drumstick; IFCT chicken leg, skinless"
@@ -281,6 +286,7 @@ mutton-biryani-cut,O001,close,Mixed large goat pieces; IFCT goat shoulder
 mutton-boneless,O003,close,Boneless goat usually from leg; IFCT goat legs
 mutton-chops,O002,exact,
 mutton-curry-cut,O001,close,Mixed goat curry pieces; IFCT goat shoulder
+mutton-keema,O001,close,Goat mince is mostly shoulder; IFCT goat shoulder
 mutton-liver,O008,exact,
 nectarine,E050,close,IFCT peach (lists nectarine)
 onion,G017,exact,
@@ -319,6 +325,7 @@ pork-curry-cut,O048,close,Mixed pork pieces; IFCT pork shoulder
 potato,F006,close,"IFCT variety: brown skin, big"
 potato-baby,F007,close,"IFCT variety: brown skin, small"
 potato-new,F007,close,"IFCT variety: brown skin, small"
+prawns-medium,Q007,close,Medium marine prawns; IFCT brown tiger prawns (Solenocera)
 prawns-small,S009,close,IFCT small prawns are freshwater Macrobrachium
 prawns-tiger,Q008,exact,
 pumpkin,D066,close,"IFCT variety: orange, round"
