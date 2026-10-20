@@ -67,7 +67,9 @@ export function securityHeaders(options: SecurityHeaderOptions = {}): HeaderTupl
     {
       key: "Permissions-Policy",
       // Voice is a product requirement (module 04), so microphone stays self-permitted.
-      value: "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)",
+      // Location sharing (story 01-014) is consent-based and reports from WonderHome's own
+      // pages only, so geolocation is self-permitted too — never to an embedded frame.
+      value: "camera=(), geolocation=(self), payment=(), usb=(), microphone=(self)",
     },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "X-DNS-Prefetch-Control", value: "off" },

@@ -36,3 +36,16 @@
 - Location sharing can't be exercised end to end until its tables exist.
 - A HomeTalk answer described a waiting dinner without its day. The meal fact carries its date, so the line came from the waiting-item fact; it is not yet traced.
 - Parallel work still running: the Voice settings simplification and the About page.
+
+## Later the same day: live
+- The owner ran the migrations. The cat's sayings ran as smaller pieces, but the Supabase editor miscounted apostrophes inside the dollar-quoted text, so the last 102 of 154 were loaded through the service-role client from the same list instead. The live table has 154.
+- Checked end to end against the live database (a local production build), at 360px:
+  - **Week template:** opening Plan filled this week's 4 remaining dinners, each marked WonderHome's pick with Choose again.
+  - **Location sharing:**
+    - an adult turns theirs on in Settings and a guardian turns the child's on in Family;
+    - both phones' positions are stored, and Family reads "Out · this minute";
+    - the child sees that a grown-up turned it on and has no Stop button;
+    - Stop deletes the position.
+  - **Cat:** the child's cat showed 4 sayings from the table and recorded each as heard.
+- The run found a real defect. The Permissions-Policy header denied geolocation everywhere (`geolocation=()`), so no phone could ever report. It is now `geolocation=(self)` (`security/headers.ts`, test updated), alongside `microphone=(self)` for voice. Embedded frames are still denied.
+- 01-014, 10-012 and 24-012 are now Done.

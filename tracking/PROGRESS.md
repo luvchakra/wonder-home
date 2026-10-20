@@ -26,7 +26,7 @@ disagree again.)
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 11 | 8 | 3 | 0 | 11 | Done |
-| 01 | Identity & Family Accounts | 10 | 5 | 4 | 1 | 9 | In Progress (01-014 waits on its migration) |
+| 01 | Identity & Family Accounts | 10 | 5 | 4 | 1 | 10 | Done |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
 | 04 | Conversation, Voice & Text | 20 | 17 | 3 | 0 | 19 | In Progress |
@@ -35,7 +35,7 @@ disagree again.)
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 18 | 10 | 5 | 3 | 17 | In Progress |
 | 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done (grocery pantry stories moved to 25 HomeFood) |
-| 10 | Meals & Cooking | 12 | 6 | 4 | 2 | 11 | In Progress (10-012 waits on its migration) |
+| 10 | Meals & Cooking | 12 | 6 | 4 | 2 | 12 | Done |
 | 11 | Bills, Fees & Finance | 11 | 6 | 3 | 2 | 10 | In Progress (11-011 left) |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
@@ -49,7 +49,7 @@ disagree again.)
 | 21 | Health and Fitness | 9 | 6 | 2 | 1 | 9 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
-| 24 | HomePlaces | 9 | 2 | 5 | 2 | 5 | In Progress |
+| 24 | HomePlaces | 9 | 2 | 5 | 2 | 6 | In Progress |
 | 25 | HomeFood | 25 | 12 | 8 | 5 | 20 | In Progress |
 | 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
@@ -336,3 +336,6 @@ disagree again.)
 | 2026-10-21 | 24 | 24-012 | In Progress | Place book: Added by you first, then Saved from HomeTalk; added places rank first; migration `20261021001000` waits for the live project. |
 | 2026-10-21 | 25 | 25-028 | Done | Recipe ingredients and steps tick off on screen; Share a recipe (WhatsApp picture card + full recipe message, other apps, copy, email, picture); counts on recipe filters. |
 | 2026-10-21 | 25 | 25-029 | Done | 26 non-veg and egg dishes added to the WonderHome recipe catalog through the 25-022 seed (catalog 60: 33 veg, 5 egg, 22 non-veg); every ingredient linked to the grocery catalog, nutrients from `nutritionPerServing`, 25 Commons pictures with licence and author (chicken biryani has none); seeded live with `seed.mts --apply`. |
+| 2026-10-21 | 01 | 01-014 | Done | Live on the database and checked end to end there; Permissions-Policy now allows geolocation for WonderHome's own pages (it denied it everywhere, so no phone could report). |
+| 2026-10-21 | 10 | 10-012 | Done | Live: Plan filled this week's remaining dinners from the template, marked WonderHome's pick. |
+| 2026-10-21 | 24 | 24-012 | Done | Migration live. |
