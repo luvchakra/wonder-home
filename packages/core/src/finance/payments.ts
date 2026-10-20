@@ -424,11 +424,20 @@ export function auditMetadata(input: {
 }
 
 /** The next due date of a recurring bill, clamped to the month's last day (31 Jan → 28 Feb). */
+/** The due date one period before, the same way `nextDueDate` steps forward (the 31st falls back to a shorter month's last day). */
+export function previousDueDate(dueOn: string, recurrence: string | null): string | null {
+  return shiftDueDate(dueOn, recurrence, -1);
+}
+
 export function nextDueDate(dueOn: string, recurrence: string | null): string | null {
+  return shiftDueDate(dueOn, recurrence, 1);
+}
+
+function shiftDueDate(dueOn: string, recurrence: string | null, direction: 1 | -1): string | null {
   const months = recurrence === "monthly" ? 1 : recurrence === "quarterly" ? 3 : recurrence === "yearly" ? 12 : 0;
   if (months === 0) return null;
   const [year, month, day] = dueOn.split("-").map(Number) as [number, number, number];
-  const target = new Date(Date.UTC(year, month - 1 + months, 1));
+  const target = new Date(Date.UTC(year, month - 1 + direction * months, 1));
   const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
   target.setUTCDate(Math.min(day, lastDay));
   return target.toISOString().slice(0, 10);

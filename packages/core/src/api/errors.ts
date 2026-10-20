@@ -87,8 +87,13 @@ export function toErrorBody(thrown: unknown, requestId: string): { status: numbe
       body: errorBody(thrown.code, thrown.message, requestId, thrown.details),
     };
   }
+  // A screen's action passes its area ("finance") rather than a request id;
+  // it gets a short reference of its own, said in the message and written to
+  // the server log beside the error, so "quote it" has something to quote.
+  const reference = /\d/.test(requestId) && requestId.length >= 8 ? requestId : `${requestId}-${Math.random().toString(36).slice(2, 8)}`;
+  console.error(`[${reference}]`, thrown instanceof Error ? thrown.message : thrown);
   return {
     status: 500,
-    body: errorBody("internal", "Something went wrong. Quote the request id if you report this.", requestId),
+    body: errorBody("internal", `Something went wrong (reference ${reference}). Quote it if you report this.`, reference),
   };
 }

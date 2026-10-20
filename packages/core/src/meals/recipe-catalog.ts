@@ -36,6 +36,8 @@ export type CatalogRecipeSummary = {
   fatGrams: number | null;
   nutritionCounted: number | null;
   nutritionTotal: number | null;
+  /** What it is made of, by name: what a vegan or Jain diet is checked against (`diet.ts`). */
+  ingredientNames: string[];
 };
 
 export type CatalogRecipeIngredient = {
@@ -79,6 +81,7 @@ function toSummary(row: Row, supabaseUrl: string): CatalogRecipeSummary {
     fatGrams: number(row.fat_grams),
     nutritionCounted: number(row.nutrition_counted),
     nutritionTotal: number(row.nutrition_total),
+    ingredientNames: ((row.recipe_catalog_ingredients as Row[] | null) ?? []).map((line) => String(line.name)),
   };
 }
 
@@ -89,7 +92,7 @@ let cached: { at: number; url: string; value: Promise<CatalogRecipeSummary[]> } 
 export function listCatalogRecipes(supabase: SupabaseClient, supabaseUrl: string): Promise<CatalogRecipeSummary[]> {
   if (cached && cached.url === supabaseUrl && Date.now() - cached.at < TTL_MS) return cached.value;
   const value = (async () => {
-    const { data, error } = await supabase.from("recipe_catalog").select(SUMMARY_COLUMNS).eq("active", true).order("name").limit(500);
+    const { data, error } = await supabase.from("recipe_catalog").select(`${SUMMARY_COLUMNS}, recipe_catalog_ingredients(name)`).eq("active", true).order("name").limit(500);
     if (error) throw new Error(`listCatalogRecipes failed: ${error.code ?? "unknown"}`);
     return ((data ?? []) as Row[]).map((row) => toSummary(row, supabaseUrl));
   })();

@@ -1,4 +1,4 @@
-import { nextDueDate } from "./payments";
+import { nextDueDate, previousDueDate } from "./payments";
 
 /**
  * A recurring bill's periods, made ahead (backlog 11-010; the owner,
@@ -11,9 +11,15 @@ import { nextDueDate } from "./payments";
  * the bill's history; an amount someone gave ahead (`obligation_periods`); or
  * nothing yet, with the last amount paid offered as what it usually is —
  * always said to be that, never shown as the bill's own figure (rule 9).
+ *
+ * The owner, the same evening: "just show 1 month in advance. show 3
+ * previous months, if not entered then user should enter". So one period is
+ * made ahead, and the three before the current one are shown too: paid, from
+ * the history, or "not entered" with the same fill-in to say what it was.
  */
 
-export type PeriodState = "paid" | "due" | "upcoming";
+/** `earlier`: a period before the current one with no payment on record — the household fills it in. */
+export type PeriodState = "paid" | "due" | "upcoming" | "earlier";
 
 export type BillPeriod = {
   /** "2026-11" — the month the period's due date falls in. */
@@ -42,19 +48,47 @@ export type PeriodBill = {
 export type PaidPeriod = { periodLabel: string; amountMinor: number; currency: string; paidOn: string | null };
 export type GivenPeriod = { periodLabel: string; amountMinor: number; currency: string };
 
-/** How many periods past the current one are made ahead: about three months' worth, at least one. */
+/** How many periods past the current one are made ahead: one, for any bill that recurs. */
 export function periodsAhead(recurrence: string | null): number {
-  return recurrence === "monthly" ? 3 : recurrence === "quarterly" ? 1 : recurrence === "yearly" ? 1 : 0;
+  return recurrence === "monthly" || recurrence === "quarterly" || recurrence === "yearly" ? 1 : 0;
 }
+
+/** How many periods before the current one the bill's screen shows, to be filled in where nobody has. */
+export const PERIODS_BEHIND = 3;
 
 const OPEN = new Set(["expected", "received", "scheduled", "overdue"]);
 
-export function billPeriods(bill: PeriodBill, paid: readonly PaidPeriod[], given: readonly GivenPeriod[], ahead = periodsAhead(bill.recurrence)): BillPeriod[] {
+export function billPeriods(bill: PeriodBill, paid: readonly PaidPeriod[], given: readonly GivenPeriod[], ahead = periodsAhead(bill.recurrence), behind = 0): BillPeriod[] {
   if (!bill.dueOn || !OPEN.has(bill.status)) return [];
   const paidBy = new Map(paid.map((row) => [row.periodLabel, row]));
   const givenBy = new Map(given.map((row) => [row.periodLabel, row]));
   const latest = [...paid].sort((a, b) => b.periodLabel.localeCompare(a.periodLabel))[0] ?? null;
   const periods: BillPeriod[] = [];
+  // The months before this one, oldest first: paid, or waiting to be filled in.
+  const earlier: BillPeriod[] = [];
+  let back = previousDueDate(bill.dueOn, bill.recurrence);
+  for (let index = 0; back && index < behind; index += 1) {
+    const label = back.slice(0, 7);
+    const done = paidBy.get(label);
+    const known = givenBy.get(label);
+    earlier.unshift(
+      done
+        ? { periodLabel: label, dueOn: back, state: "paid", current: false, amountMinor: done.amountMinor, currency: done.currency, amountFrom: "paid", paidOn: done.paidOn, usualMinor: null }
+        : {
+            periodLabel: label,
+            dueOn: back,
+            state: "earlier",
+            current: false,
+            amountMinor: known?.amountMinor ?? null,
+            currency: known?.currency ?? latest?.currency ?? bill.currency,
+            amountFrom: known ? "given" : null,
+            paidOn: null,
+            usualMinor: null,
+          },
+    );
+    back = previousDueDate(back, bill.recurrence);
+  }
+  periods.push(...earlier);
   let dueOn: string | null = bill.dueOn;
   for (let index = 0; dueOn && index <= ahead; index += 1) {
     const label = dueOn.slice(0, 7);

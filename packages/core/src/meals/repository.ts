@@ -19,6 +19,7 @@ import {
 } from "./meals";
 import { invalidatesContext } from "../context/invalidation";
 import type { IngredientLine } from "./ingredient-lines";
+import type { Diet } from "./diet";
 
 /**
  * Reading and writing meals (module 10).
@@ -554,9 +555,38 @@ async function createFoodPreferenceImpl(
   return { id: (data as Row).id as string };
 }
 
+/**
+ * A diet for the whole household (memberId null) or one person, or none
+ * (the owner, 2026-10-20). One per scope: the old one is taken away and the
+ * new one written, under the same `food_preferences` policies as any
+ * preference — the household or the caller's own member, an Admin for anybody.
+ */
+async function setDietImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string | null; diet: Diet | null },
+): Promise<void> {
+  let clear = supabase.from("food_preferences").delete().eq("household_id", input.householdId).eq("kind", "diet");
+  clear = input.memberId ? clear.eq("member_id", input.memberId) : clear.is("member_id", null);
+  const { error: clearError } = await clear;
+  if (clearError) throw dietRefused(clearError);
+  if (!input.diet) return;
+  const { error } = await supabase
+    .from("food_preferences")
+    .insert({ household_id: input.householdId, member_id: input.memberId, kind: "diet", subject: input.diet, source: "member_stated" });
+  if (error) throw dietRefused(error);
+}
+
+function dietRefused(error: { code?: string }): Error {
+  if (error.code === "42501") return ApiError.forbidden("You can set the diet for yourself or the whole household; an Admin can set anyone's.");
+  if (error.code === "23503") return ApiError.badRequest("That member is not part of this household.");
+  return new Error(`setDiet failed: ${error.code ?? "unknown"}`);
+}
+
 /** One recipe with its ingredient list, for building `PlanCandidate`s. */
 type RecipeWithIngredients = {
   recipe: Recipe;
+  /** The WonderHome catalog dish it was saved from, if any. */
+  catalogRecipeId: string | null;
   ingredients: {
     name: string;
     consumableId: string | null;
@@ -573,7 +603,7 @@ async function recipesWithIngredients(
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, name, active_minutes, total_minutes, serves, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
+      "id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, catalog_recipe_id, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
     )
     .eq("household_id", householdId)
     .eq("active", true);
@@ -590,7 +620,10 @@ async function recipesWithIngredients(
       activeMinutes: Number(row.active_minutes),
       totalMinutes: Number(row.total_minutes),
       serves: Number(row.serves),
+      caloriesPerServing: row.calories_per_serving === null || row.calories_per_serving === undefined ? null : Number(row.calories_per_serving),
+      proteinGrams: row.protein_grams === null || row.protein_grams === undefined ? null : Number(row.protein_grams),
     },
+    catalogRecipeId: (row.catalog_recipe_id as string | null) ?? null,
     ingredients: ((row.recipe_ingredients as Row[] | null) ?? []).map(
       (ingredient) => ({
         name: ingredient.name as string,
@@ -612,6 +645,13 @@ export type RecipeChoice = {
   available: boolean;
   /** What it needs, essentials only, with amounts: what "Plan a meal" fills in when the recipe is picked (25-019). */
   ingredients: IngredientLine[];
+  /** Per serving, as recorded on the recipe; null when nobody counted. */
+  caloriesPerServing: number | null;
+  proteinGrams: number | null;
+  /** The WonderHome dish it was saved from: its picture and its veg/egg/non-veg label. */
+  catalogRecipeId: string | null;
+  /** Every ingredient by name, nice-to-haves too: what a diet is checked against. */
+  ingredientNames: string[];
 };
 
 /**
@@ -633,7 +673,7 @@ export async function listRecipeChoices(
 
   const consumableIds = new Set(consumables.map((consumable) => consumable.id));
 
-  const choices: RecipeChoice[] = recipes.map(({ recipe, ingredients }) => {
+  const choices: RecipeChoice[] = recipes.map(({ recipe, catalogRecipeId, ingredients }) => {
     const missingEssential = ingredients.some(
       (ingredient) => ingredient.essential && ingredient.consumableId && !consumableIds.has(ingredient.consumableId),
     );
@@ -644,6 +684,10 @@ export async function listRecipeChoices(
       serves: recipe.serves,
       available: !missingEssential,
       ingredients: ingredients.filter((ingredient) => ingredient.essential).map((ingredient) => ({ name: ingredient.name, quantity: ingredient.quantity, unit: ingredient.unit })),
+      caloriesPerServing: recipe.caloriesPerServing ?? null,
+      proteinGrams: recipe.proteinGrams ?? null,
+      catalogRecipeId,
+      ingredientNames: ingredients.map((ingredient) => ingredient.name),
     };
   });
 
@@ -880,6 +924,7 @@ export async function mealAgenda(
 export const createMeal = invalidatesContext(createMealImpl, (_supabase, input) => input.householdId);
 export const createRecipe = invalidatesContext(createRecipeImpl, (_supabase, input) => input.householdId);
 export const createFoodPreference = invalidatesContext(createFoodPreferenceImpl, (_supabase, input) => input.householdId);
+export const setDiet = invalidatesContext(setDietImpl, (_supabase, input) => input.householdId);
 export const attachIngredients = invalidatesContext(attachIngredientsImpl, (_supabase, householdId) => householdId);
 export const attachRecipeToMeal = invalidatesContext(attachRecipeToMealImpl, (_supabase, householdId) => householdId);
 export const updateMeal = invalidatesContext(updateMealImpl, (_supabase, input) => input.householdId);

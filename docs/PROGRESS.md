@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**319 of 339 stories done — 94.1%**
+**321 of 341 stories done — 94.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 319 |
+| Done | 321 |
 | In Progress | 4 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -36,7 +36,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 08 Kids & School Intelligence | `█████████░` | 16 | 17 | 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 10 | 10 | — |
-| 11 Bills, Fees & Finance | `█████████░` | 10 | 11 | 1 not started |
+| 11 Bills, Fees & Finance | `█████████░` | 11 | 12 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `███████░░░` | 19 | 24 | 5 not started |
+| 25 HomeFood | `████████░░` | 20 | 25 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -294,7 +294,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 11 — Bills, Fees & Finance
 
-10 of 11 done `█████████░`
+11 of 12 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -309,6 +309,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-009` Bills & Finance's three counts side by side | P1 | Done | The owner, 2026-10-20: Need you, Upcoming and Settled sit three across as `ExpandableMetricRow`, the same as Kids & School (08-014), with the open tile's bills in one full-width panel below. CLAUDE.md rule 19 names it as the second written exception. Checked at 360px and 1280px, no sideways scroll |
 | `11-010` Bills picked not typed, payees by home location, earlier bills, months made ahead, and HomeTalk/HomeBrain in control | P0 | Done | The owner, 2026-10-20. **Picked:** Add a bill starts from 22 typical bills (`finance/bill-catalog.ts`: electricity, water, piped gas, LPG, rent, maintenance, mobile, broadband, DTH, streaming, newspaper, gym, school fees, tuition, home/car/personal loan EMI, credit card, life/health/vehicle insurance, property tax) or Something else; picking fills kind and how often, and `obligations.bill_type` keeps it. Who in the family pays it is a picker; recurrence is editable. **Payees by location:** `finance/payees.ts` reads the state and city from the address saved under Manage Household (by name, never coordinates) and offers that city's and state's companies first (discoms, water boards, city gas, municipal corporations), then national ones (telecom, broadband, DTH, streaming, banks, cards, insurers); Add a new payee stays. **Earlier bills:** rows on the add form, each a history row. **Made ahead:** `finance/periods.ts` works out this month and the next three (one for quarterly/yearly) from the due date; each says paid, the amount given, or Usually and the last paid, never a guess; the pencil fills one in (`fillBillPeriodAction`): an amount (`obligation_periods`, migration `20261020170000`, live) or a paid day (current month moves the bill on; a later month is paid ahead and skipped, `nextOpenDueDate`); the monthly spend stops at this month. **HomeTalk:** `add_bill` (asked once), `record_bill_payment` and `set_bill_amount` (done at once, undoable, the consumed advance amount restored) in `conversation/bill-talk.ts`, grounded to the household's own bills (`matchBill`; two that fit are one question), financial reply class, capability `bill_records` (in-app voice, never Alexa), golden HT-129–131 and the §21 table. **HomeBrain:** paid months and coming months are facts (`bill_payment`, `bill_period`). No money moves; paying stays `make_payment`. Help ¶7–9 in all eight languages. |
 | `11-011` Payees beyond the catalogue's cities, and outside India | P2 | Not Started | Left open by 11-010: the payee list covers each state's electricity company and the larger cities' water, gas and property tax; smaller cities and other countries show the national list and Add a new payee. Grow the list by city, and add per-country lists once a household outside India asks. |
+| `11-012` Month by month, budgets per line item, and a bill form that asks once | P0 | Done | The owner, 2026-10-20, from phone screenshots. A recurring bill shows Month by month: its last three months (Paid from the history, or Not entered with the pencil to say what it came to and when it was paid), this month and one ahead (`billPeriods` with `PERIODS_BEHIND`, `previousDueDate`). Budgets are per line item — electricity, water, piped gas, cooking gas, petrol and diesel (new `fuel` bill type), rent… — picked from a list grouped by kind like the bill picker, and count the payments of bills of that type (`budgetSpend` by `billType`); a budget set earlier for a whole kind keeps counting it. Add a bill asks for the amount and the due date once, under This bill; the Earlier bills rows are gone (the months are filled in on the bill). Saving a bill with no amount no longer fails: a currency is kept only with an amount (`obligations_amount_has_currency`). An unexpected error now carries a real reference in its message and the server log (`toErrorBody`). |
 
 ### 12 — Family Time & Social Activities
 
@@ -544,7 +545,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-19 of 24 done `███████░░░`
+20 of 25 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -571,6 +572,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-023` The recipe catalog in every language, and more dishes | P2 | Not Started | Left open by 25-022: dish names, descriptions and steps are English for now (the UI around them is in all eight languages). Translate each dish's text into the catalog's languages, keep the dish name a name, and grow the catalog beyond 34 with the same rules (original short steps, Commons pictures with credit, catalog-linked ingredients). |
 | `25-024` The Groceries screen reads left to right: three cards, one list, two steppers | P0 | Done | The owner, 2026-10-20, from phone screenshots. Header: Add item on the left (Go to cart was there too, then retired with the cart, 25-021). Above the To buy list, three cards in one row: At home, Not counted yet and Mark as bought (the card is the action; the separate full-width button is gone). The list has no category headings. Every row has In stock and To buy as two equal cells, each with its own − amount + (`StockStepper` sets what is at home, `stated`, adults only; the same write as Update stock). No scrollbar line under the category pills. Browser-checked at 360px and 1280px. |
 | `25-025` "Saved under your recipes" links to them | P1 | Done | The owner, 2026-10-20: after Save my version on a catalog dish, the words "your recipes" in the note open Meals → Recipes (`recipes.savedLink`, eight languages); while the note shows, the separate Open your recipes button waits, so there is one way in. Browser-checked on Idli. |
+| `25-026` Every recipe in Plan a meal, with pictures, calories and protein, and a diet for the family and each person | P0 | Done | The owner, 2026-10-20 (screenshot of the plain recipe dropdown). From a recipe is a picker (`RecipePicker`, `meals/recipe-picker.ts`): the household's recipes then WonderHome's not saved yet, each with its picture, kcal and protein a serving, time and serves; filters for the family's diet, a dish's label, calories (under 300/500) and protein (10/20 g+), and an order (suggested, most protein, fewest calories). Picking a WonderHome dish fills its ingredients and saves it to the household's recipes when planned. Diet (migration `20261020200000`, live): a `food_preferences` row of kind `diet`, one of vegetarian, eggetarian, non-vegetarian, vegan or Jain, one for the whole family and one per person, set under Meals → Preferences (anyone for the family and themselves, an Admin for anyone). Fit is decided by rules (`meals/diet.ts`): the catalog's own label, else the ingredients; vegan and Jain read the ingredients. The meal check (`checkPreferences`) treats a diet clash as a house rule, and the picker says who a dish does not suit and why. |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 
 ### 26 — HomeEvents

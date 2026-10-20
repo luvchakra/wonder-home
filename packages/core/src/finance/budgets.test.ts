@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { budgetPeriodStart, budgetSpend, type BudgetPayment } from "./budgets";
+import { BUDGET_CATEGORIES, budgetPeriodStart, budgetSpend, isBudgetCategory, type BudgetPayment } from "./budgets";
 
 const pay = (over: Partial<BudgetPayment>): BudgetPayment => ({ kind: "utility", currency: "INR", amountMinor: 100_00, paidOn: null, periodLabel: "2026-09", ...over });
 
@@ -38,5 +38,21 @@ describe("budgetSpend (22-007): never adds one currency to another", () => {
   it("a quarterly budget reaches back to the quarter's first month", () => {
     const spend = budgetSpend({ ...budget, period: "quarter" }, [pay({ periodLabel: "2026-07" }), pay({ periodLabel: "2026-06" })], "2026-09-25");
     expect(spend.spentMinor).toBe(100_00);
+  });
+});
+
+describe("a budget for one line item (the owner, 2026-10-20)", () => {
+  it("counts the payments of bills of that type, and a budget for a whole kind still counts its kind", () => {
+    const payments = [
+      { kind: "utility", billType: "electricity", currency: "INR", amountMinor: 250_000, paidOn: "2026-10-04", periodLabel: "2026-10" },
+      { kind: "utility", billType: "water", currency: "INR", amountMinor: 40_000, paidOn: "2026-10-06", periodLabel: "2026-10" },
+      { kind: "other", billType: "fuel", currency: "INR", amountMinor: 300_000, paidOn: "2026-10-09", periodLabel: "2026-10" },
+    ];
+    expect(budgetSpend({ category: "electricity", period: "month", currency: "INR" }, payments, "2026-10-20").spentMinor).toBe(250_000);
+    expect(budgetSpend({ category: "fuel", period: "month", currency: "INR" }, payments, "2026-10-20").spentMinor).toBe(300_000);
+    expect(budgetSpend({ category: "utility", period: "month", currency: "INR" }, payments, "2026-10-20").spentMinor).toBe(290_000);
+    expect(BUDGET_CATEGORIES).toContain("fuel");
+    expect(isBudgetCategory("utility")).toBe(true);
+    expect(isBudgetCategory("holiday")).toBe(false);
   });
 });

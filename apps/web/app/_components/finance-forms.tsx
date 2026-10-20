@@ -24,6 +24,7 @@ import {
   updateObligationAction,
 } from "../(auth)/finance-actions";
 import { BILL_KINDS } from "../_lib/bill-kinds";
+import { BILL_TYPES } from "@wonderhome/core/finance/bill-catalog";
 import { CurrencyField, type CurrencyFieldLabels } from "./currency-field";
 
 const KINDS = BILL_KINDS;
@@ -51,6 +52,9 @@ export type BillFormLabels = {
   recurs: string;
   payee: string;
   payeePlaceholder: string;
+  thisBill: string;
+  thisBillHint: string;
+  monthsAfterAdd: string;
   amountOptional: string;
   dueOptional: string;
   edit: string;
@@ -106,13 +110,6 @@ export type BillFormLabels = {
   /** `{place}` is the home's city or state. */
   payeesNear: string;
   payeesAnywhere: string;
-  earlierTitle: string;
-  earlierHint: string;
-  earlierMonth: string;
-  earlierAmount: string;
-  earlierPaidOn: string;
-  earlierAdd: string;
-  earlierRemove: string;
 };
 
 /** What the bill form offers, worked out on the server from the home's location and the household's own bills. */
@@ -182,7 +179,6 @@ function ObligationFields({
   const [name, setName] = useState(initial?.name ?? (type ? (labels.types[type.key] ?? "") : ""));
   const [nameTouched, setNameTouched] = useState(Boolean(initial));
   const [recurrence, setRecurrence] = useState(initial?.recurrence ?? type?.recurrence ?? "monthly");
-  const [earlier, setEarlier] = useState(0);
   const listed = type ? (choices.payees[type.payees] ?? { near: [], others: [] }) : { near: [], others: [] };
   // Nearest first, then the rest of this kind's list; the household's own
   // payees lead only where the kind has no list of its own (a landlord, a
@@ -281,6 +277,11 @@ function ObligationFields({
         newValuePlaceholder={labels.payeePlaceholder}
         hint={listed.near.length > 0 && choices.place ? fill(labels.payeesNear, { place: choices.place }) : listed.others.length > 0 ? labels.payeesAnywhere : undefined}
       />
+      {/* The bill as it is now: what it comes to and when it is due, asked once (the owner, 2026-10-20). */}
+      <fieldset className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-3">
+        <legend className="sr-only">{labels.thisBill}</legend>
+        <p className="text-sm font-semibold">{labels.thisBill}</p>
+        <p className="-mt-2 text-xs text-[var(--wh-foreground-subtle)]">{labels.thisBillHint}</p>
       <div className="grid grid-cols-2 gap-3">
         <Field
           label={labels.amountOptional}
@@ -295,14 +296,15 @@ function ObligationFields({
         />
         <CurrencyField value={initial?.currency ?? defaultCurrency} labels={labels.currency} />
       </div>
-      {/* Full width on a phone: "No one in particular" and the date are never cut (rule 15). */}
-      <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label={labels.dueOptional}
           name="dueOn"
           type="date"
           defaultValue={initial?.dueOn ?? undefined}
         />
+      </fieldset>
+      {/* Full width on a phone: "No one in particular" is never cut (rule 15). */}
+      <div className="grid gap-3 sm:grid-cols-2">
         <Select label={labels.whoPays} name="responsibleMemberId" defaultValue={initial?.responsibleMemberId ?? ""}>
           <option value="">{labels.noOne}</option>
           {choices.members.map((member) => (
@@ -313,30 +315,8 @@ function ObligationFields({
         </Select>
       </div>
       {initial ? null : (
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">{labels.earlierTitle}</legend>
-          <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.earlierHint}</p>
-          {Array.from({ length: earlier }, (_, index) => (
-            <div key={index} className="grid grid-cols-2 gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-2 sm:grid-cols-3">
-              {/* The month reads whole ("September 2026"), so it has the row to itself on a phone. */}
-              <div className="col-span-2 sm:col-span-1">
-                <Field label={labels.earlierMonth} name={`earlier.${index}.month`} type="month" required />
-              </div>
-              <Field label={labels.earlierAmount} name={`earlier.${index}.amount`} type="number" min={0} step="0.01" inputMode="decimal" required />
-              <Field label={labels.earlierPaidOn} name={`earlier.${index}.paidOn`} type="date" />
-            </div>
-          ))}
-          <div className="flex flex-wrap gap-2">
-            <Pill type="button" tone="quiet" className="gap-1.5" onClick={() => setEarlier((count) => Math.min(24, count + 1))}>
-              <Plus aria-hidden className="size-3.5" /> {labels.earlierAdd}
-            </Pill>
-            {earlier > 0 ? (
-              <Pill type="button" tone="quiet" onClick={() => setEarlier((count) => Math.max(0, count - 1))}>
-                {labels.earlierRemove}
-              </Pill>
-            ) : null}
-          </div>
-        </fieldset>
+        // The months before this one are filled in on the bill itself, once it is added (Month by month).
+        <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.monthsAfterAdd}</p>
       )}
     </>
   );
@@ -843,12 +823,25 @@ function BudgetFields({
           <label htmlFor="budget-category" className="block text-sm font-medium">
             {labels.budgetFor}
           </label>
-          <select id="budget-category" name="category" defaultValue={initial?.category ?? "utility"} className={selectClass}>
-            {KINDS.map((k) => (
-              <option key={k.value} value={k.value}>
-                {labels.kinds[k.value] ?? k.label}
-              </option>
-            ))}
+          {/* One budget per line item, grouped by kind like the bill picker (the owner, 2026-10-20). */}
+          <select id="budget-category" name="category" defaultValue={initial?.category ?? "electricity"} className={selectClass}>
+            {initial && !BILL_TYPES.some((type) => type.key === initial.category) && initial.category !== "other" ? (
+              // A budget set earlier for a whole kind stays as it was until changed.
+              <option value={initial.category}>{labels.kinds[initial.category] ?? initial.category}</option>
+            ) : null}
+            {KINDS.map((kind) => {
+              const items = BILL_TYPES.filter((type) => type.kind === kind.value);
+              return items.length > 0 ? (
+                <optgroup key={kind.value} label={labels.kinds[kind.value] ?? kind.label}>
+                  {items.map((type) => (
+                    <option key={type.key} value={type.key}>
+                      {labels.types[type.key] ?? type.key}
+                    </option>
+                  ))}
+                  {kind.value === "other" ? <option value="other">{labels.kinds.other ?? "Other"}</option> : null}
+                </optgroup>
+              ) : null;
+            })}
           </select>
         </div>
         <div className="space-y-1.5">
@@ -924,7 +917,7 @@ export function BudgetRowControls({
   const [editState, editAction] = useActionState<ActionState, FormData>(saveBudgetAction, {});
   const [removeState, removeAction, removing] = useActionState<ActionState, FormData>(retireBudgetAction, {});
   // A stored kind this screen does not know is shown as it was saved, never translated.
-  const kind = labels.kinds[budget.category] ?? budget.category;
+  const kind = labels.types[budget.category] ?? labels.kinds[budget.category] ?? budget.category;
   const name = fill(labels.budgetName, { kind });
   const editLabel = fill(labels.edit, { name });
   const removeLabel = fill(labels.removeNamed, { name });
@@ -945,7 +938,7 @@ export function BudgetRowControls({
       <ConfirmationSheet
         open={removeOpen}
         onOpenChange={setRemoveOpen}
-        title={fill(labels.budgetRemoveTitle, { kind: labels.kindsInSentence[budget.category] ?? budget.category })}
+        title={fill(labels.budgetRemoveTitle, { kind: labels.kindsInSentence[budget.category] ?? labels.types[budget.category] ?? budget.category })}
         description={labels.budgetRemoveDescription}
         confirmLabel={labels.remove}
         destructive

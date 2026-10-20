@@ -58,6 +58,8 @@ export const BILL_TYPES = [
   { key: "health_insurance", kind: "insurance", recurrence: "yearly", payees: "health_insurance" },
   { key: "vehicle_insurance", kind: "insurance", recurrence: "yearly", payees: "vehicle_insurance" },
   { key: "property_tax", kind: "tax", recurrence: "yearly", payees: "municipal" },
+  // The owner, 2026-10-20: a budget per line item, petrol included.
+  { key: "fuel", kind: "other", recurrence: "monthly", payees: "none" },
 ] as const satisfies readonly BillType[];
 
 export type BillTypeKey = (typeof BILL_TYPES)[number]["key"];
@@ -90,6 +92,7 @@ export const BILL_TYPE_NAMES: Record<BillTypeKey, string> = {
   health_insurance: "Health insurance",
   vehicle_insurance: "Vehicle insurance",
   property_tax: "Property tax",
+  fuel: "Petrol and diesel",
 };
 
 /** Words a person uses for each type ("light bill", "EMI", "wifi"), for HomeTalk and for reading an old bill's name. */
@@ -116,6 +119,7 @@ const TYPE_WORDS: readonly [BillTypeKey, RegExp][] = [
   ["health_insurance", /\b(health insurance|mediclaim)\b/i],
   ["vehicle_insurance", /\b(car insurance|bike insurance|vehicle insurance|motor insurance)\b/i],
   ["property_tax", /\bproperty tax\b/i],
+  ["fuel", /\b(petrol|diesel|fuel|cng)\b/i],
 ];
 
 /** The type a bill's name or a spoken phrase most plainly is, or null when nothing fits. */

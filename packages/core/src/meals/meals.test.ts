@@ -272,3 +272,14 @@ describe("replanning", () => {
     expect(replanMeal(meal(), {})).toMatchObject({ kind: "keep" });
   });
 });
+
+describe("a diet in the meal check (the owner, 2026-10-20)", () => {
+  it("rules out a dish that does not fit the diet of someone eating it, and nobody else's", () => {
+    const prefs = [{ memberId: "asmi", kind: "diet" as const, subject: "vegan", source: "member_stated" as const }];
+    const verdict = checkPreferences([{ name: "Paneer" }, { name: "Peas" }], prefs, ["asmi"]);
+    expect(verdict).toMatchObject({ allowed: false, severity: "unacceptable", affects: ["asmi"] });
+    expect(verdict.allowed ? "" : verdict.because).toBe("Not vegan: it has dairy.");
+    expect(checkPreferences([{ name: "Paneer" }], prefs, ["kunal"])).toEqual({ allowed: true });
+    expect(checkPreferences([{ name: "Poha" }], prefs, ["asmi"])).toEqual({ allowed: true });
+  });
+});

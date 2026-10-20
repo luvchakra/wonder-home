@@ -1,4 +1,5 @@
 import { isoDate, silent, type HomeAssessment } from "../home/assessment";
+import { dietClash, dishDietOf, isDiet, type Diet, type DietClash } from "./diet";
 
 /**
  * Meals as readiness outcomes (stories 10-001 through 10-005).
@@ -190,6 +191,8 @@ export const PREFERENCE_KINDS = [
   "ethical",
   "dislike",
   "preference",
+  // One of `DIETS` as its subject, one per household and one per member (`diet.ts`).
+  "diet",
 ] as const;
 
 export type Preference = {
@@ -199,6 +202,10 @@ export type Preference = {
   subject: string;
   source: "member_stated" | "observed" | "imported";
 };
+
+/** The English record's words for a diet and a clash; screens use the `meals.diet.*` catalog keys. */
+const DIET_WORDS: Record<Diet, string> = { vegetarian: "vegetarian", eggetarian: "eggetarian", non_vegetarian: "non-vegetarian", vegan: "vegan", jain: "Jain" };
+const CLASH_WORDS: Record<DietClash, string> = { meat: "it has meat or fish", egg: "it has egg", dairy: "it has dairy", honey: "it has honey", onion_garlic: "it has onion or garlic", root: "it has root vegetables" };
 
 export type PreferenceVerdict =
   | { allowed: true }
@@ -229,8 +236,10 @@ export function checkPreferences(
       preference.memberId === null || eating.includes(preference.memberId),
   );
 
-  const hits = relevant.filter((preference) =>
-    names.some((name) => name.includes(preference.subject.toLowerCase())),
+  const hits = relevant.filter(
+    (preference) =>
+      preference.kind !== "diet" &&
+      names.some((name) => name.includes(preference.subject.toLowerCase())),
   );
 
   const unsafe = hits.filter(
@@ -242,6 +251,19 @@ export function checkPreferences(
       severity: "unsafe",
       because: `Contains ${unsafe.map((hit) => hit.subject).join(", ")}.`,
       affects: unsafe.map((hit) => hit.memberId ?? "household"),
+    };
+  }
+
+  // A diet rules a dish out the way a house rule does (the owner, 2026-10-20):
+  // read from what the dish is made of, by rules (`diet.ts`).
+  const dish = { diet: dishDietOf({ ingredients: names }), ingredients: names };
+  const clashes = relevant.filter((preference) => preference.kind === "diet" && isDiet(preference.subject) && dietClash(preference.subject, dish) !== null);
+  if (clashes.length > 0) {
+    return {
+      allowed: false,
+      severity: "unacceptable",
+      because: `Not ${clashes.map((clash) => DIET_WORDS[clash.subject as Diet]).join(" or ")}: ${CLASH_WORDS[dietClash(clashes[0]!.subject as Diet, dish)!]}.`,
+      affects: clashes.map((clash) => clash.memberId ?? "household"),
     };
   }
 

@@ -22,6 +22,9 @@ import { mealShortfalls, servingScale } from "@wonderhome/core/meals/shortfall";
 import { linkIngredients } from "@wonderhome/core/meals/ingredient-links";
 import { nutritionPerServing, type ServingNutrition } from "@wonderhome/core/meals/ingredient-nutrition";
 import { publicEnv } from "@wonderhome/core/config/env";
+import { DIETS } from "@wonderhome/core/meals/diet";
+import { saveCatalogRecipe } from "@wonderhome/core/meals/catalog-copy";
+import { getCatalogRecipe } from "@wonderhome/core/meals/recipe-catalog";
 import {
   listMeals,
   markNeedsOnList,
@@ -30,6 +33,7 @@ import {
   addMealIngredients,
   attachRecipeToMeal,
   createFoodPreference,
+  setDiet,
   createMeal,
   createRecipe,
   removeMeal,
@@ -59,9 +63,23 @@ const schema = z.object({
   readyByTime: z.string().regex(/^\d{2}:\d{2}$/, { error: "Choose a time." }),
   cookMemberId: z.union([z.uuid(), z.literal("")]).optional(),
   recipeId: z.union([z.uuid(), z.literal("")]).optional(),
+  // A WonderHome dish picked in the recipe picker: saved to the household's recipes first.
+  catalogSlug: z.union([z.string().regex(/^[a-z0-9-]{1,80}$/), z.literal("")]).optional(),
   ingredientsFor: z.enum(["meal", "recipe", "new"]).default("meal"),
   newRecipeName: z.string().trim().max(120).optional(),
 });
+
+/** What a WonderHome dish needs, essentials with amounts, to fill Plan a meal's rows when it is picked. */
+export async function catalogDishLinesAction(slug: string): Promise<{ name: string; quantity: number; unit: string }[]> {
+  if (!/^[a-z0-9-]{1,80}$/.test(slug)) return [];
+  try {
+    const supabase = await createClient();
+    const dish = await getCatalogRecipe(supabase, slug, publicEnv().NEXT_PUBLIC_SUPABASE_URL);
+    return (dish?.ingredients ?? []).filter((line) => !line.optional).map((line) => ({ name: line.name, quantity: line.quantity, unit: line.unit }));
+  } catch {
+    return [];
+  }
+}
 
 export async function createMealAction(
   _previous: ActionState,
@@ -75,6 +93,7 @@ export async function createMealAction(
     readyByTime: formData.get("readyByTime"),
     cookMemberId: formData.get("cookMemberId") || undefined,
     recipeId: formData.get("recipeId") || undefined,
+    catalogSlug: formData.get("catalogSlug") || undefined,
     ingredientsFor: formData.get("ingredientsFor") || undefined,
     newRecipeName: formData.get("newRecipeName") || undefined,
   });
@@ -85,7 +104,8 @@ export async function createMealAction(
     };
   }
   const typed = ingredientLinesFrom(ingredientRowsOf(formData, "essential"));
-  const scope = parsed.data.ingredientsFor === "recipe" && !parsed.data.recipeId ? "meal" : parsed.data.ingredientsFor;
+  const hasRecipe = Boolean(parsed.data.recipeId || parsed.data.catalogSlug);
+  const scope = parsed.data.ingredientsFor === "recipe" && !hasRecipe ? "meal" : parsed.data.ingredientsFor;
   if (scope === "new" && !parsed.data.newRecipeName) {
     return { error: "Name the new recipe." };
   }
@@ -93,6 +113,11 @@ export async function createMealAction(
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
+    // A WonderHome dish becomes the household's own recipe, as Save my version does, and is planned from there.
+    if (!parsed.data.recipeId && parsed.data.catalogSlug && scope !== "new") {
+      const saved = await saveCatalogRecipe(supabase, { householdId: parsed.data.householdId, slug: parsed.data.catalogSlug, supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL });
+      parsed.data.recipeId = saved.recipeId;
+    }
     // Each row is the household's own grocery item where it was picked (25-017).
     const { lines, entries } = await linkIngredients(supabase, { householdId: parsed.data.householdId, lines: typed, supabaseUrl: publicEnv().NEXT_PUBLIC_SUPABASE_URL });
 
@@ -393,9 +418,31 @@ export async function createRecipeAction(
 const preferenceSchema = z.object({
   householdId: z.uuid(),
   memberId: z.union([z.uuid(), z.literal("")]).optional(),
-  kind: z.enum(PREFERENCE_KINDS),
+  // A diet has its own picker (`setDietAction`): never typed in here.
+  kind: z.enum(PREFERENCE_KINDS).refine((kind) => kind !== "diet"),
   subject: z.string().trim().min(1, { error: "Say what it's about." }).max(120),
 });
+
+const dietSchema = z.object({
+  householdId: z.uuid(),
+  memberId: z.uuid().nullable(),
+  diet: z.enum(DIETS).nullable(),
+});
+
+/** The family's diet, or one person's, picked on Meals → Preferences; null takes it away (the owner, 2026-10-20). */
+export async function setDietAction(input: z.input<typeof dietSchema>): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = dietSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please pick a diet from the list." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await setDiet(supabase, parsed.data);
+    revalidatePath("/meals");
+    return { ok: true };
+  } catch (thrown) {
+    return { ok: false, error: toErrorBody(thrown, "meals").body.error.message };
+  }
+}
 
 /** A preference told to WonderHome by hand — member, timing or recipe preferences all fit the same shape (whom it's about, what kind, and the detail itself). */
 export async function createPreferenceAction(
