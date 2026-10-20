@@ -436,6 +436,12 @@ const RULES: readonly Rule[] = [
     read: (match) => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: match[1] ? item(match[1]) : "that" }, confidence: 0.86 }),
   },
   {
+    // "Add what it needs to the list", "get the ingredients", "buy everything for it" —
+    // the meal just discussed, as "make sure we have everything" reads it.
+    pattern: new RegExp(`^(?:add|get|buy|put)\\s+(?:what (?:it|that|this|the meal|dinner|lunch|breakfast) needs|what we need for (?:it|that|this)|everything (?:it|that|this) needs|everything for (?:it|that|this)|(?:all )?the ingredients(?: for (?:it|that|this))?|everything we need)(?:\\s+(?:to|on) (?:the |my |our )?(?:${LIST_WORDS}))?$`, "i"),
+    read: () => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: "that" }, confidence: 0.86 }),
+  },
+  {
     pattern: new RegExp(`^(?:add|get|buy|put)\\s+(?:everything|all the ingredients|the ingredients|what we need)(?: we need)? (?:for|to make) (.+?)(?:\\s+(?:to|on) (?:the |my |our )?(?:${LIST_WORDS}))?$`, "i"),
     read: (match) => ({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { ingredientsOf: item(match[1]!) }, confidence: 0.9 }),
   },
@@ -689,12 +695,16 @@ const RULES: readonly Rule[] = [
   },
   {
     pattern: /^(?:make|put|assign)\s+([A-Za-z]+)\s+(?:responsible for|in charge of|on)\s+(.+)$/i,
-    read: (match) => ({
+    // "Put it on the calendar" names no person and no duty: not an assignment.
+    read: (match) =>
+      /^(?:it|that|this|them|those|these|something|everything)$/i.test(match[1]!) || /^(?:the |my |our )?(?:calendar|diary|schedule|list|grocery list|shopping list)$/i.test(match[2]!.trim())
+        ? null
+        : {
       action: "assign_responsibility",
       target: { kind: "member", reference: lowerName(match[1]!) },
       parameters: { outcomeKey: slug(match[2]!) },
       confidence: 0.86,
-    }),
+    },
   },
 
   // --- Health (story 21-006) ------------------------------------------------------

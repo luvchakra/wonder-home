@@ -1,6 +1,6 @@
 # HomeTalk × HomeBrain — Integration Test Cases
 
-**Status:** Draft for the owner's review (2026-10-20). Nothing in this document has been run yet; the **Result** column of every case reads `Not run` until it has been.
+**Status:** Being run (2026-10-20). Results are filled in area by area; see the run log at the end. A case the harness cannot drive (it lives in the route, or needs a live setting) says so and waits for the live run.
 
 **What this is.** One test per thing a household can say to WonderHome, across every module, with the whole conversation written out and what must happen at each turn. It checks the integration of HomeTalk (`/ai`, the conversation engine) and HomeBrain (`homebrain/`, the reasoning and the household context):
 
@@ -66,6 +66,8 @@ These are the words used in **Expected** (HomeBrain 4.0 §3.9, `conversation/con
 2. **Live run (manual).** Create a QA household that mirrors the household with `node scripts/qa-test-user.mjs create`, seed its records, and type or speak each turn in `/ai` at 360px and on desktop. Check the reply, then the screen the change belongs to (the list, the calendar, Family…), then the record. Delete the QA data afterwards (CLAUDE.md, *Cleaning up test data*).
 3. **With the configured model.** `npm run eval -- --provider configured` runs the golden cases through the real model. Every case below must also hold there: the model only reads and proposes, and the rules and gates decide.
 
+**The harness.** `npx tsx scripts/itc/run.mts scripts/itc/<area>.json [ID prefix]` runs an area's conversations through the golden runner, split into requests as the route splits them. With `ITC_PROVIDER=google` each turn goes through the configured model the way the route does it: a plain question the rules read never reaches the model. It uses the QA Gemini key in `apps/web/.env.local`. Undo, "Nothing to change" and the executor's own replies live in the route and wait for the live run.
+
 A failure is fixed in the product, given a golden case, and the case's **Result** is updated with the PR.
 
 ### Contents
@@ -103,34 +105,34 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 
 | ID | Actor | Conversation | Expected | Never | Golden | Result |
 |---|---|---|---|---|---|---|
-| IT-CORE-01 | A/Kunal | **U:** "Hi" | `greet`. A warm hello with Kunal's name and one line about what he can ask | "I didn't understand"; any record read aloud | new | Not run |
-| IT-CORE-02 | A/Kunal | **U:** "What can you do?" | `greet` (capabilities). Plain examples drawn from the modules his plan includes | A feature that is not built, or not on his plan | new | Not run |
-| IT-CORE-03 | A/Kunal | **U:** "Thanks!" | `greet`. A short acknowledgement | A new action; asking a question | new | Not run |
-| IT-CORE-04 | A/Kunal | **U:** "Okay, so, um, can you please add milk to the list?" | Normalised to "add milk to the list". `add_to_list` {item: milk}. **Done + undo**: milk's own step is added to the list (shopping list service). The record keeps the person's own words | The list item being called "okay so um milk" | new | Not run |
-| IT-CORE-05 | A/Kunal | **U:** "I am planning a movie night on Friday" | Normalised to "plan a movie night on Friday". `plan_event`, date grounded to Fri 25 Sep in Asia/Kolkata. A plan for the family is **Done + undo**; one that names other people is **Ask once** | A date computed in UTC; Thursday | HT (plan_event) | Not run |
-| IT-CORE-06 | A/Kunal | **U:** "Add eggs and bread to the list and remind me to buy them tomorrow" | Split into two parts (`decompose.ts`): `add_to_list` {items: eggs, bread} → done; `set_reminder` with "them" = eggs and bread, tomorrow (Thu 24 Sep) at the default time → done. One reply naming both, with undo | A reminder about "them"; the reminder going ahead when the add was refused | new | Not run |
-| IT-CORE-07 | A/Asmi (child) | **U:** "Add chips to the list and remind me to buy them" | The add follows the outcome's autonomy for a child. If the add is only proposed, the reminder that leans on it waits too, and the reply says why | A reminder for something that was never added | new | Not run |
-| IT-CORE-08 | A/Kunal | **U:** "What's for dinner?" → **W:** answer → **U:** "Add what it needs to the list" | Turn 1 `ask_status`: "Pasta arrabbiata, cooked by Sunita." Turn 2: "it" = that meal (from the focus). `add_to_list` with the meal's ingredients less what is at home and on the list, `forMeal` set | Adding ingredients for a different meal | new | Not run |
-| IT-CORE-09 | A/Kunal | **U:** "Add milk" → **W:** done → **U:** "Not milk, almond milk" | Turn 2 is a correction of the executed add: milk comes off through the list service, almond milk goes on. Both stay on the record. The reply says "milk → almond milk" | Two items on the list; a silent overwrite | evaluation.test | Not run |
-| IT-CORE-10 | A/Kunal | **U:** "Sunita won't be here tomorrow" → **W:** asks → **U:** "No, I meant Friday" | Turn 1: `record_absence` for Sunita on Thu 24 Sep; it touches someone else's day, so **Ask once**. Turn 2 replaces the waiting proposal with Fri 25 Sep, and the earlier one is closed as rejected | Thursday recorded; two absences | HT-01 | Not run |
-| IT-CORE-11 | A/Kunal | **U:** "Asmi is away tomorrow" → **W:** done → **U:** "No, I meant Manan" | The executed absence for Asmi is undone and one for Manan is made. The reply says "Asmi → Manan" | Both children marked away | new | Not run |
-| IT-CORE-12 | A/Kunal | **U:** "Add 1 litre milk" → **W:** done → **U:** "Make that 2 litres" | Story 25-005: the item keeps its name and the amount becomes "2 litres milk". The earlier add is taken off and redone | An item called "2 litres" | corrections.test | Not run |
-| IT-CORE-13 | A/Kunal | **U:** "Add milk" → **U:** "Make that Friday" | A day said about a request that has no day is not a correction of it. Read as a fresh request, which needs a question ("What should happen on Friday?") | An item called "Friday" | corrections.test | Not run |
-| IT-CORE-14 | A/Kunal | **U:** "Remind me to call the plumber" → **W:** "When?" → **U:** "later today" | Turn 1: clarify (no time). Turn 2 answers that question: a reminder later today, never in the past | Asking the same question twice | evaluation.test | Not run |
-| IT-CORE-15 | A/Kunal | **U:** "Remind me to call mum today at 9am" (said at 10:00) | Clarify: "9am today has already passed. Tomorrow at 9am?" → **U:** "tomorrow" → reminder Thu 24 Sep, 9am | A reminder that is already overdue | evaluation.test | Not run |
-| IT-CORE-16 | A/Kunal | **U:** "Add milk" → **W:** done → **U:** "Undo" | `undoExecuted` through the list service: milk comes off. The reply says it was taken back | A raw delete; nothing to undo said wrongly | new | Not run |
-| IT-CORE-17 | A/Kunal | **U:** "Undo" (nothing done in this conversation) | "There's nothing from this conversation to take back." | Undoing something from another conversation or another person | new | Not run |
-| IT-CORE-18 | A/Kunal, Setup: Admin turned on "Ask before acting on what I say" | **U:** "Add milk" → **W:** asks → **U:** "Yes" | Turn 1 is a question first. Turn 2 approves exactly that proposal (`approval.ts` fingerprint), and milk is added | Milk added on turn 1 | new | Not run |
+| IT-CORE-01 | A/Kunal | **U:** "Hi" | `greet`. A warm hello with Kunal's name and one line about what he can ask | "I didn't understand"; any record read aloud | new | Pass |
+| IT-CORE-02 | A/Kunal | **U:** "What can you do?" | `greet` (capabilities). Plain examples drawn from the modules his plan includes | A feature that is not built, or not on his plan | new | Pass |
+| IT-CORE-03 | A/Kunal | **U:** "Thanks!" | `greet`. A short acknowledgement | A new action; asking a question | new | Pass |
+| IT-CORE-04 | A/Kunal | **U:** "Okay, so, um, can you please add milk to the list?" | Normalised to "add milk to the list". `add_to_list` {item: milk}. **Done + undo**: milk's own step is added to the list (shopping list service). The record keeps the person's own words | The list item being called "okay so um milk" | new | Pass |
+| IT-CORE-05 | A/Kunal | **U:** "I am planning a movie night on Friday" | Normalised to "plan a movie night on Friday". `plan_event`, date grounded to Fri 25 Sep in Asia/Kolkata. A plan for the family is **Done + undo**; one that names other people is **Ask once** | A date computed in UTC; Thursday | HT (plan_event) | Pass |
+| IT-CORE-06 | A/Kunal | **U:** "Add eggs and bread to the list and remind me to buy them tomorrow" | Split into two parts (`decompose.ts`): `add_to_list` {items: eggs, bread} → done; `set_reminder` with "them" = eggs and bread, tomorrow (Thu 24 Sep) at the default time → done. One reply naming both, with undo | A reminder about "them"; the reminder going ahead when the add was refused | new | Pass |
+| IT-CORE-07 | A/Asmi (child) | **U:** "Add chips to the list and remind me to buy them" | A list add is a draft anyone may make (`decideAutonomy`'s harmless class), so it is added. The reminder that leans on it asks when. If an add is only proposed, the reminder waits too, and the reply says why | A reminder for something that was never added | new | Pass (expectation corrected: a list add is a draft anyone may make) |
+| IT-CORE-08 | A/Kunal | **U:** "What's for dinner?" → **W:** answer → **U:** "Add what it needs to the list" | Turn 1 `ask_status`: "Pasta arrabbiata, cooked by Sunita." Turn 2: "it" = that meal (from the focus). `add_to_list` with the meal's ingredients less what is at home and on the list, `forMeal` set | Adding ingredients for a different meal | new | Fail → fixed in #262 |
+| IT-CORE-09 | A/Kunal | **U:** "Add milk" → **W:** done → **U:** "Not milk, almond milk" | Turn 2 is a correction of the executed add: milk comes off through the list service, almond milk goes on. Both stay on the record. The reply says "milk → almond milk" | Two items on the list; a silent overwrite | evaluation.test | Pass |
+| IT-CORE-10 | A/Kunal | **U:** "Sunita won't be here tomorrow" → **W:** asks → **U:** "No, I meant Friday" | Turn 1: `record_absence` for Sunita on Thu 24 Sep; it touches someone else's day, so **Ask once**. Turn 2 replaces the waiting proposal with Fri 25 Sep, and the earlier one is closed as rejected | Thursday recorded; two absences | HT-01 | Pass |
+| IT-CORE-11 | A/Kunal | **U:** "Asmi is away tomorrow" → **W:** done → **U:** "No, I meant Manan" | The executed absence for Asmi is undone and one for Manan is made. The reply says "Asmi → Manan" | Both children marked away | new | Pass |
+| IT-CORE-12 | A/Kunal | **U:** "Add 1 litre milk" → **W:** done → **U:** "Make that 2 litres" | Story 25-005: the item keeps its name and the amount becomes "2 litres milk". The earlier add is taken off and redone | An item called "2 litres" | corrections.test | Pass |
+| IT-CORE-13 | A/Kunal | **U:** "Add milk" → **U:** "Make that Friday" | A day said about a request that has no day is not a correction of it. Read as a fresh request, which needs a question ("What should happen on Friday?") | An item called "Friday" | corrections.test | Fail (open): a vague "Which one did you mean?" |
+| IT-CORE-14 | A/Kunal | **U:** "Remind me to call the plumber" → **W:** "When?" → **U:** "later today" | Turn 1: clarify (no time). Turn 2 answers that question: a reminder later today, never in the past | Asking the same question twice | evaluation.test | Pass |
+| IT-CORE-15 | A/Kunal | **U:** "Remind me to call mum today at 9am" (said at 10:00) | Clarify: "9am today has already passed. Tomorrow at 9am?" → **U:** "tomorrow" → reminder Thu 24 Sep, 9am | A reminder that is already overdue | evaluation.test | Pass |
+| IT-CORE-16 | A/Kunal | **U:** "Add milk" → **W:** done → **U:** "Undo" | `undoExecuted` through the list service: milk comes off. The reply says it was taken back | A raw delete; nothing to undo said wrongly | new | Not run (undo is the route's; live run) |
+| IT-CORE-17 | A/Kunal | **U:** "Undo" (nothing done in this conversation) | "There's nothing from this conversation to take back." | Undoing something from another conversation or another person | new | Not run (route; live run) |
+| IT-CORE-18 | A/Kunal, Setup: Admin turned on "Ask before acting on what I say" | **U:** "Add milk" → **W:** asks → **U:** "Yes" | Turn 1 is a question first. Turn 2 approves exactly that proposal (`approval.ts` fingerprint), and milk is added | Milk added on turn 1 | new | Pass |
 | IT-CORE-19 | A/Kunal | Proposal waiting (Sunita away Thursday). The proposal is edited elsewhere, then **U:** "Yes" | The fingerprint no longer matches, so the approval is refused and closed, and the reply says it changed | Carrying out the changed proposal on an old yes | approval.test | Not run |
 | IT-CORE-20 | A/Kunal | Proposal waiting for more than its time limit, then **U:** "Yes" | Refused as stale, with an offer to ask again | Carrying out a stale proposal | approval.test | Not run |
-| IT-CORE-21 | A/Kunal | **U:** "Add milk" → **U:** "Add milk" | The second add finds nothing new: "Nothing to change — milk is already on the list" (or the amount goes up if he said an amount) | "Done" for a no-op | new | Not run |
-| IT-CORE-22 | A/Kunal | **U:** "Take me to the grocery list" | `open_screen` → `/groceries?view=to-buy`. The conversation carries on | Changing any record | HT-84…87 | Not run |
-| IT-CORE-23 | A/Asmi (child) | **U:** "Open the bills" | `open_screen` refused for a child, with a kind sentence | Opening `/bills`; revealing amounts | HT-84…87 | Not run |
-| IT-CORE-24 | A/Kunal | **U:** "Asdfgh qwerty" | `unknown`. One line saying it wasn't understood, with two examples | A guess at an action | new | Not run |
-| IT-CORE-25 | A/Kunal | **U:** "Put it on the calendar" (nothing discussed) | Clarify: "What should I put on the calendar?" | Inventing an event | new | Not run |
-| IT-CORE-26 | A/Kunal | **U:** "Add the same milk we bought last week" | `add_to_list`, grounded to the tracked Milk item (its usual amount) | A new item called "the same milk" | HT (add) | Not run |
-| IT-CORE-27 | A/Kunal | **U:** "We're out of atta" | `add_to_list` {item: atta}. Atta's stock is set to none only if he says so; the add is done | Changing stock without the words | HT (out of) | Not run |
-| IT-CORE-28 | A/Kunal | Several turns, then **U:** "What did I just ask you to do?" | Answered from this conversation's own record (the actions it took) | Things from another session | new | Not run |
+| IT-CORE-21 | A/Kunal | **U:** "Add milk" → **U:** "Add milk" | The second add finds nothing new: "Nothing to change — milk is already on the list" (or the amount goes up if he said an amount) | "Done" for a no-op | new | Not run (route; live run) |
+| IT-CORE-22 | A/Kunal | **U:** "Take me to the grocery list" | `open_screen` → `/groceries?view=to-buy`. The conversation carries on | Changing any record | HT-84…87 | Pass |
+| IT-CORE-23 | A/Asmi (child) | **U:** "Open the bills" | `open_screen` refused for a child, with a kind sentence | Opening `/bills`; revealing amounts | HT-84…87 | Pass |
+| IT-CORE-24 | A/Kunal | **U:** "Asdfgh qwerty" | `unknown`. One line saying it wasn't understood, with two examples | A guess at an action | new | Pass |
+| IT-CORE-25 | A/Kunal | **U:** "Put it on the calendar" (nothing discussed) | Clarify: "What should I put on the calendar?" | Inventing an event | new | Fail (open): the model path prepares an event called "it" |
+| IT-CORE-26 | A/Kunal | **U:** "Add the same milk we bought last week" | `add_to_list`, grounded to the tracked Milk item (its usual amount) | A new item called "the same milk" | HT (add) | Fail (open): the model path keeps "the same milk we bought last week" as the name |
+| IT-CORE-27 | A/Kunal | **U:** "We're out of atta" | `add_to_list` {item: atta}. Atta's stock is set to none only if he says so; the add is done | Changing stock without the words | HT (out of) | Pass |
+| IT-CORE-28 | A/Kunal | Several turns, then **U:** "What did I just ask you to do?" | Answered from this conversation's own record (the actions it took) | Things from another session | new | Fail (open): answers with unrelated records |
 | IT-CORE-29 | A/Kunal | **U:** "Search my messages for plumber" | Message search over his own conversations only | Other members' conversations | message-search.test | Not run |
 | IT-CORE-30 | A/Kunal | A reply that contains a date, an amount and a link, read aloud | The spoken text goes through `speakable`: no arrows, no markdown, amounts as words a person says | "Asterisk asterisk"; a URL read out | speech.test | Not run |
 
@@ -140,20 +142,20 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 
 | ID | Actor | Conversation | Expected | Never | Golden | Result |
 |---|---|---|---|---|---|---|
-| IT-FAM-01 | A/Kunal | **U:** "Who is in the family?" | Answered by rules from the whole member list (`roster.ts`): Kunal, Upasana, Asmi, Manan, Sunita (helper), and Bruno the dog | A member left out because the model was not shown them; a household name read as a person | HT (roster) | Not run |
-| IT-FAM-02 | A/Kunal | **U:** "Okay, so, who are the family members in this household?" | Same as FAM-01 after the lead-in is taken off | The attention summary | HT (14-024) | Not run |
-| IT-FAM-03 | A/Asmi (child) | **U:** "Who lives with us?" | The same roster, in a child's words | Anyone's phone, email, or health | new | Not run |
-| IT-FAM-04 | C/Ravi | **U:** "When is Paati's birthday?" | "Paati" is Lakshmi's nickname → 14 March | "I don't know who Paati is" | new | Not run |
-| IT-FAM-05 | C/Ravi | **U:** "How old is Thatha?" | Venkat, born 2 Nov 1949 → 76, as arithmetic | A rounded or invented age | new | Not run |
-| IT-FAM-06 | A/Kunal | **U:** "Who is Asmi's father?" | From the relationship rows, both ways round (`relations.ts`): Kunal | A guess from surnames | HT (relations) | Not run |
-| IT-FAM-07 | A/Kunal | **U:** "How is Manan related to Upasana?" | "Manan is Upasana's son" | — | HT (relations) | Not run |
-| IT-FAM-08 | C/Priya | **U:** "Who is Pinky?" | Priyanka, Ravi's sister | — | new | Not run |
-| IT-FAM-09 | E/Harpreet | **U:** "Tell me about the kids" | A person at a glance for each child (`profiles.ts`), from the viewer's own items | Health or money in a profile | new | Not run |
-| IT-FAM-10 | A/Kunal | **U:** "What do you know about Asmi?" | Profile first: school, upcoming things, likes (Indian food). Every line from a record | A health detail; anything the model "remembers" on its own | HT (profiles) | Not run |
-| IT-FAM-11 | A/Kunal | **U:** "Make Upasana an admin" | Role changes are not a HomeTalk action. The reply points to Family → Members & roles, where any Admin can do it | Changing a role from a sentence | new | Not run |
-| IT-FAM-12 | A/Kunal | **U:** "Add a new family member called Riya" | Not a HomeTalk action: a link to Family → Add a member | Creating a member from a sentence | new | Not run |
-| IT-FAM-13 | A/Kunal | **U:** "Who is Rohan?" (not in household A) | "I don't know who Rohan is in your household. Check the name under Family." | Reading household D's Rohan | new | Not run |
-| IT-FAM-14 | A/Sunita (helper) | **U:** "Who is in the family?" | The roster without phone numbers or emails | Private details | new | Not run |
+| IT-FAM-01 | A/Kunal | **U:** "Who is in the family?" | Answered by rules from the whole member list (`roster.ts`): Kunal, Upasana, Asmi, Manan, Sunita (helper), and Bruno the dog | A member left out because the model was not shown them; a household name read as a person | HT (roster) | Pass |
+| IT-FAM-02 | A/Kunal | **U:** "Okay, so, who are the family members in this household?" | Same as FAM-01 after the lead-in is taken off | The attention summary | HT (14-024) | Pass |
+| IT-FAM-03 | A/Asmi (child) | **U:** "Who lives with us?" | The same roster, in a child's words | Anyone's phone, email, or health | new | Pass |
+| IT-FAM-04 | C/Ravi | **U:** "When is Paati's birthday?" | "Paati" is Lakshmi's nickname → 14 March | "I don't know who Paati is" | new | Fail → fixed in #262 |
+| IT-FAM-05 | C/Ravi | **U:** "How old is Thatha?" | Venkat, born 2 Nov 1949 → 76, as arithmetic | A rounded or invented age | new | Fail (open): age on record but not used in the answer |
+| IT-FAM-06 | A/Kunal | **U:** "Who is Asmi's father?" | From the relationship rows, both ways round (`relations.ts`): Kunal | A guess from surnames | HT (relations) | Pass |
+| IT-FAM-07 | A/Kunal | **U:** "How is Manan related to Upasana?" | "Manan is Upasana's son" | — | HT (relations) | Pass (honest: not on record) |
+| IT-FAM-08 | C/Priya | **U:** "Who is Pinky?" | Priyanka, Ravi's sister | — | new | Fail → fixed in #262 |
+| IT-FAM-09 | E/Harpreet | **U:** "Tell me about the kids" | A person at a glance for each child (`profiles.ts`), from the viewer's own items | Health or money in a profile | new | Pass |
+| IT-FAM-10 | A/Kunal | **U:** "What do you know about Asmi?" | Profile first: school, upcoming things, likes (Indian food). Every line from a record | A health detail; anything the model "remembers" on its own | HT (profiles) | Pass |
+| IT-FAM-11 | A/Kunal | **U:** "Make Upasana an admin" | Role changes are not a HomeTalk action. The reply points to Family → Members & roles, where any Admin can do it | Changing a role from a sentence | new | Fail (open): no pointer to Members & roles |
+| IT-FAM-12 | A/Kunal | **U:** "Add a new family member called Riya" | Not a HomeTalk action: a link to Family → Add a member | Creating a member from a sentence | new | Fail (open): adds "new family member called Riya" to the groceries |
+| IT-FAM-13 | A/Kunal | **U:** "Who is Rohan?" (not in household A) | "I don't know who Rohan is in your household. Check the name under Family." | Reading household D's Rohan | new | Fail (open): a generic reply, not "I don't know who Rohan is" |
+| IT-FAM-14 | A/Sunita (helper) | **U:** "Who is in the family?" | The roster without phone numbers or emails | Private details | new | Pass |
 
 ---
 
@@ -161,20 +163,20 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 
 | ID | Actor | Conversation | Expected | Never | Golden | Result |
 |---|---|---|---|---|---|---|
-| IT-HH-01 | A/Kunal | **U:** "Who is responsible for the bills?" | Answered from responsibilities: the bill owner and any backup | Reading "Who" as a person's name | HT (who is responsible) | Not run |
-| IT-HH-02 | A/Kunal | **U:** "Make Upasana responsible for groceries" | `assign_responsibility` to Upasana. It touches another person's duty → **Ask once** → yes → written | Done without asking | new | Not run |
-| IT-HH-03 | A/Kunal | **U:** "Give the dog walking to Manan" | `assign_responsibility` for pet care to a child. **Ask once**; the reply names what Manan will be reminded about | — | new | Not run |
-| IT-HH-04 | A/Asmi (child) | **U:** "Make Manan do the dishes" | A child cannot assign duties: refused with a kind reason, or sent to an adult for approval | Writing a responsibility | new | Not run |
-| IT-HH-05 | A/Kunal | **U:** "What does Sunita do?" | Her responsibilities and arrangement, from records | Productivity scores or tracking | new | Not run |
-| IT-HH-06 | A/Kunal | **U:** "Who backs up Sunita when she's away?" | The backup from responsibilities, or "nobody is set as a backup" with a link | Inventing a backup | new | Not run |
-| IT-HH-07 | A/Kunal | **U:** "What's the rule for screen time?" | From the playbook, when one is recorded; otherwise "not on record" and where to add it | A generic parenting rule as the household's | new | Not run |
-| IT-HH-08 | A/Kunal | **U:** "Dinner is at 8 now" | `set_preference` with `corrects: true`. The new time replaces the old one in memory, and both stay in the history | Two dinner times kept as current | fixtures | Not run |
-| IT-HH-09 | A/Kunal | **U:** "Stop asking me before you do things" | Not a HomeTalk setting change: the reply links Manage Household → AI autonomy and Settings → AI Assistant | Changing autonomy from a sentence | new | Not run |
+| IT-HH-01 | A/Kunal | **U:** "Who is responsible for the bills?" | Answered from responsibilities: the bill owner and any backup | Reading "Who" as a person's name | HT (who is responsible) | Partial (open): the answer is there, after unrelated lines |
+| IT-HH-02 | A/Kunal | **U:** "Make Upasana responsible for groceries" | `assign_responsibility` to Upasana. It touches another person's duty → **Ask once** → yes → written | Done without asking | new | Fail (open): the model path loses the person ("make groceries responsible for groceries") |
+| IT-HH-03 | A/Kunal | **U:** "Give the dog walking to Manan" | `assign_responsibility` for pet care to a child. **Ask once**; the reply names what Manan will be reminded about | — | new | Fail (open): same as HH-02 |
+| IT-HH-04 | A/Asmi (child) | **U:** "Make Manan do the dishes" | A child cannot assign duties: refused with a kind reason, or sent to an adult for approval | Writing a responsibility | new | Pass |
+| IT-HH-05 | A/Kunal | **U:** "What does Sunita do?" | Her responsibilities and arrangement, from records | Productivity scores or tracking | new | Partial (open): her cooking duty is not said |
+| IT-HH-06 | A/Kunal | **U:** "Who backs up Sunita when she's away?" | The backup from responsibilities, or "nobody is set as a backup" with a link | Inventing a backup | new | Fail (open): the name is repeated ("Sunita or Sunita") |
+| IT-HH-07 | A/Kunal | **U:** "What's the rule for screen time?" | From the playbook, when one is recorded; otherwise "not on record" and where to add it | A generic parenting rule as the household's | new | Fail (open): food likes listed instead of "not on record" |
+| IT-HH-08 | A/Kunal | **U:** "Dinner is at 8 now" | `set_preference` with `corrects: true`. The new time replaces the old one in memory, and both stay in the history | Two dinner times kept as current | fixtures | Pass |
+| IT-HH-09 | A/Kunal | **U:** "Stop asking me before you do things" | Not a HomeTalk setting change: the reply links Manage Household → AI autonomy and Settings → AI Assistant | Changing autonomy from a sentence | new | Fail (open): read as a preference and "Which one did you mean?" |
 | IT-HH-10 | A/Kunal, Setup: groceries autonomy is "observe" | **U:** "Add milk" | Kunal is an adult speaking for himself, so §3.9 applies and it is done with undo. Autonomy governs agents and children, not his own clear request | Treating his own request as an agent's | consent.test | Not run |
-| IT-HH-11 | A/Asmi (child), Setup: groceries autonomy is "observe" | **U:** "Add chocolate to the list" | By autonomy: observed only. The reply says an adult will see it | Adding it to the list | consent.test | Not run |
-| IT-HH-12 | A/Asmi (child), Setup: groceries autonomy is "execute" | **U:** "Add chocolate to the list" | Done, with undo | — | consent.test | Not run |
+| IT-HH-11 | A/Asmi (child), Setup: groceries autonomy is "observe" | **U:** "Add chocolate to the list" | Added: a list add is a draft, which every autonomy level allows (an order from the list still needs an adult) | Ordering it | consent.test | Pass (expectation corrected) |
+| IT-HH-12 | A/Asmi (child), Setup: groceries autonomy is "execute" | **U:** "Add chocolate to the list" | Done, with undo | — | consent.test | Pass (expectation corrected) |
 | IT-HH-13 | A/Kunal, Setup: the autonomy lookup errors | Any agent-run step | "observe" on any error, timeout or unknown value | Defaulting to "execute" | autonomy-lookup.test | Not run |
-| IT-HH-14 | A/Kunal | **U:** "What's our address?" | From the household's saved address, for an adult | The address read to a guest channel | new | Not run |
+| IT-HH-14 | A/Kunal | **U:** "What's our address?" | From the household's saved address, for an adult | The address read to a guest channel | new | Pass |
 
 ---
 
@@ -182,14 +184,14 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 
 | ID | Actor | Conversation | Expected | Never | Golden | Result |
 |---|---|---|---|---|---|---|
-| IT-OUT-01 | A/Kunal | **U:** "Check on things" | `check_agents`: a real `runHouseholdAgents` run. The headline says what was executed, what awaits approval and what was refused | A summary made up without a run | new | Not run |
-| IT-OUT-02 | A/Kunal | **U:** "How is the home doing?" | The attention summary built from every domain's agenda: only what needs someone, with one line of reason each | Routine items that need nobody ("normal routines are silent") | HT (status) | Not run |
-| IT-OUT-03 | A/Kunal | **U:** "What needs my attention today?" | Things owned by Kunal or waiting on him, today | Things owned by others with nothing for him to do | new | Not run |
-| IT-OUT-04 | A/Kunal | **U:** "Is anything overdue?" | The overdue items across domains, or "nothing is overdue" | — | new | Not run |
+| IT-OUT-01 | A/Kunal | **U:** "Check on things" | `check_agents`: a real `runHouseholdAgents` run. The headline says what was executed, what awaits approval and what was refused | A summary made up without a run | new | Fail (open): the model path reads it as a question; no agent run |
+| IT-OUT-02 | A/Kunal | **U:** "How is the home doing?" | The attention summary built from every domain's agenda: only what needs someone, with one line of reason each | Routine items that need nobody ("normal routines are silent") | HT (status) | Fail (open): "nothing pending" with bills and homework due |
+| IT-OUT-03 | A/Kunal | **U:** "What needs my attention today?" | Things owned by Kunal or waiting on him, today | Things owned by others with nothing for him to do | new | Pass |
+| IT-OUT-04 | A/Kunal | **U:** "Is anything overdue?" | The overdue items across domains, or "nothing is overdue" | — | new | Fail (open): claims there are no records of bills |
 | IT-OUT-05 | A/Kunal | Two "Check on things" at once (double tap) | One agent pass runs, and the second is refused as a duplicate | Two runs | hardening.test | Not run |
-| IT-OUT-06 | A/Asmi (child) | **U:** "Check on things" | Refused or narrowed to what a child may run | A household-wide agent run by a child | new | Not run |
-| IT-OUT-07 | A/Kunal | **U:** "What did the agents do last night?" | From recorded agent runs, with each step's outcome | Inventing a run | new | Not run |
-| IT-OUT-08 | A/Kunal | **U:** "Why did you suggest buying atta?" | `why.ts`: answered from recorded evidence (the rate, the last purchase) | A model's own explanation | why.test | Not run |
+| IT-OUT-06 | A/Asmi (child) | **U:** "Check on things" | Refused or narrowed to what a child may run | A household-wide agent run by a child | new | Fail (open): to check — a child's "check on things" |
+| IT-OUT-07 | A/Kunal | **U:** "What did the agents do last night?" | From recorded agent runs, with each step's outcome | Inventing a run | new | Pass |
+| IT-OUT-08 | A/Kunal | **U:** "Why did you suggest buying atta?" | `why.ts`: answered from recorded evidence (the rate, the last purchase) | A model's own explanation | why.test | Partial (open): the record is shown, not why |
 
 ---
 
@@ -763,4 +765,4 @@ Each run adds one row. A failing case links the PR that fixed it.
 
 | Date | Run | Cases | Pass | Fail | Fixed in |
 |---|---|---|---|---|---|
-| — | — | — | — | — | — |
+| 2026-10-20 | CORE, FAM, HH, OUT through the golden runner with the QA Gemini key (the route's rules-first order) | 59 run (13 need the route or a live setting) | 36 (3 after a fix) | 20 open | #262 (CORE-08, FAM-04, FAM-08) |

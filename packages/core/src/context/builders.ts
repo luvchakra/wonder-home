@@ -138,7 +138,7 @@ export type AgendaInput = {
 /** What setup learned about a person, said plainly after who they are (story 02-009). Empty when nothing was said. */
 function setupDetail(member: HouseholdMember, schools: readonly string[]): string {
   const parts: string[] = [];
-  if (member.ageYears !== null && member.ageYears !== undefined && member.memberType === "child") parts.push(`${member.displayName} is ${member.ageYears}`);
+  if (member.ageYears !== null && member.ageYears !== undefined && member.memberType === "child" && !member.dateOfBirth) parts.push(`${member.displayName} is ${member.ageYears}`);
   if (schools.length > 0) parts.push(`goes to ${schools.join(" and ")}`);
   if (member.workArrangement) {
     const how = { office: "works from the office", home: "works from home", hybrid: "works partly from home", not_working: "is not working at the moment" }[member.workArrangement];
@@ -146,6 +146,28 @@ function setupDetail(member: HouseholdMember, schools: readonly string[]): strin
   }
   if (member.memberType === "adult" && member.workHours) parts.push(`${member.displayName}'s working day is usually ${member.workHours.starts} to ${member.workHours.ends}`);
   return parts.length > 0 ? ` ${capitalize(parts.join(", "))}.` : "";
+}
+
+/**
+ * What anyone in the household would know about a person: what the family
+ * calls them, and their birthday and age, worked out from the date of birth
+ * on the household's own day (rule 9: an age is arithmetic, never a guess).
+ */
+function personalDetail(member: HouseholdMember, today: string): string {
+  const parts: string[] = [];
+  if (member.nickname && member.nickname !== member.displayName) parts.push(`${member.displayName} is also called ${member.nickname}`);
+  const born = typeof member.dateOfBirth === "string" && /^\d{4}-\d{2}-\d{2}/.test(member.dateOfBirth) ? member.dateOfBirth.slice(0, 10) : null;
+  if (born) {
+    const [year, month, day] = born.split("-").map(Number) as [number, number, number];
+    const [nowYear, nowMonth, nowDay] = today.split("-").map(Number) as [number, number, number];
+    const age = nowYear - year - (nowMonth < month || (nowMonth === month && nowDay < day) ? 1 : 0);
+    const birthday = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${born}T00:00:00Z`));
+    const thisYear = `${nowYear}-${born.slice(5)}`;
+    const next = thisYear >= today ? thisYear : `${nowYear + 1}-${born.slice(5)}`;
+    const nextLabel = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${next}T00:00:00Z`));
+    parts.push(`${member.displayName}'s birthday is ${birthday} (born ${year}, ${age} years old); the next one is ${nextLabel}`);
+  }
+  return parts.length > 0 ? ` ${parts.join(". ")}.` : "";
 }
 
 export type ContextRecords = {
@@ -318,8 +340,8 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         entityType: "member",
         entityId: member.id,
         summary: helper
-          ? `${member.displayName} is a househelper.`
-          : `${member.displayName} is ${kind}${roles.length > 0 ? ` and ${roles.join(" and ")}` : ""}${member.id === options.viewerMemberId ? " (the person asking)" : ""}.${setupDetail(member, schoolsOf(member.id))}`,
+          ? `${member.displayName} is a househelper${member.occupation ? ` (${member.occupation.toLowerCase()})` : ""}.${personalDetail(member, isoDateIn(options.now, options.timezone))}`
+          : `${member.displayName} is ${kind}${roles.length > 0 ? ` and ${roles.join(" and ")}` : ""}${member.id === options.viewerMemberId ? " (the person asking)" : ""}.${setupDetail(member, schoolsOf(member.id))}${personalDetail(member, isoDateIn(options.now, options.timezone))}`,
         need: helper ? "who helps the household" : "who is in the household",
         privacyClass: member.memberType === "child" ? "child" : "general",
         subjectMemberIds: [member.id],

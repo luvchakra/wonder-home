@@ -562,6 +562,19 @@ const CONNECTED: HomeTalkCase[] = [
     followUps: [{ utterance: "Not bread, eggs", expected: { interpretation: "add_to_list", answer: { includes: ["eggs"], excludes: ["bread"] } } }],
   },
   {
+    id: "HT-124", surface: "hometalk", household: "C", category: "entity_resolution", actor: "c-ravi",
+    description: "Integration test IT-FAM-04: a nickname finds the person, and the birthday comes from the date of birth on record.",
+    utterance: "When is Paati's birthday?",
+    expected: { answer: { includes: ["14 March", "Paati"] }, safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-125", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Integration test IT-CORE-08: \"get the ingredients\" after planning a meal adds what its recipe needs, never an item called \"the ingredients\".",
+    utterance: "Plan pasta for tonight",
+    expected: { interpretation: "plan_meal" },
+    followUps: [{ utterance: "Get the ingredients", expected: { interpretation: "add_to_list", answer: { includes: ["pasta, tomatoes and basil"] } } }],
+  },
+  {
     id: "HT-83", surface: "hometalk", household: "D", category: "privacy", actor: "d-kabir",
     description: "Only his own: asked about his mother's appointment, he hears nothing of it, and is not told about his own either.",
     utterance: "When is Neha's appointment?",
