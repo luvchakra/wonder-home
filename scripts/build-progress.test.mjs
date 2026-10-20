@@ -74,3 +74,9 @@ test("says plainly when nothing is left", () => {
 
   assert.match(output, /Every story in every backlog is done\./);
 });
+
+test("leaves a story the owner retired out of every count", () => {
+  const retired = BACKLOG.replace("| 3 | P0 | 17-003 | Email | Not Started | |", "| 3 | P0 | 17-003 | Email | Retired | the owner removed it |");
+  const { stories } = parseBacklog("17-External-Integrations.md", retired);
+  assert.equal(stories.some((story) => story.id === "17-003"), false);
+});

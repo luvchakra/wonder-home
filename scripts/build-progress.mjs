@@ -47,6 +47,8 @@ export function parseBacklog(filename, source) {
     if (!row) continue;
 
     const [, index, priority, id, name, status, notes] = row;
+    // A story the owner retired is no longer part of the application: its row stays as the record, and nothing counts it.
+    if (status === "Retired") continue;
     stories.push({
       index: Number(index),
       priority,

@@ -55,6 +55,11 @@ test("the child names their cat, once, and renames it", () => {
   asProfile(KID, `update public.child_companions set name = 'Biscuit' where member_id = '${child}';`, options);
   assert.equal(psql(`select name from public.child_companions;`, options), "Biscuit");
   assert.throws(() => asProfile(KID, `update public.child_companions set name = '' where member_id = '${child}';`, options), /check constraint/);
+  // The colour they pick (08-018): ginger until picked, one of the coats only.
+  assert.equal(psql(`select coat from public.child_companions;`, options), "ginger");
+  asProfile(KID, `update public.child_companions set coat = 'calico' where member_id = '${child}';`, options);
+  assert.equal(psql(`select coat from public.child_companions;`, options), "calico");
+  assert.throws(() => asProfile(KID, `update public.child_companions set coat = 'purple' where member_id = '${child}';`, options), /check constraint/);
 });
 
 test("their guardian reads it; the guardian cannot rename it for them", () => {

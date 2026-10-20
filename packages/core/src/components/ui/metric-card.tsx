@@ -19,10 +19,25 @@ export type Metric = {
   tone?: IconTone;
   /** Where tapping the metric goes, when it goes anywhere. */
   href?: string;
+  /** What tapping the metric does, when it is the action itself ("Mark as bought"). */
+  onClick?: () => void;
+  disabled?: boolean;
 };
 
-export function MetricCard({ label, value, icon, tone = "primary", href }: Metric) {
-  const body = (
+/**
+ * `stacked` sets icon, number and label one under another, for a narrow
+ * tile whose label must wrap rather than be cut (rules 15, 18) — Groceries'
+ * three To buy cards, the owner's exception to rule 19 (2026-10-20).
+ * `onClick` makes the card the action itself (Groceries' "Mark as bought").
+ */
+export function MetricCard({ label, value, icon, tone = "primary", href, onClick, disabled, stacked = false }: Metric & { stacked?: boolean }) {
+  const body = stacked ? (
+    <>
+      {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
+      <span className="block text-xl font-semibold leading-none tracking-tight">{value}</span>
+      <span className="block text-[0.6875rem] font-medium break-words text-[var(--wh-foreground-muted)]">{label}</span>
+    </>
+  ) : (
     <>
       {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
       <span className="min-w-0 flex-1">
@@ -37,8 +52,27 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
     </>
   );
 
-  const className =
-    "flex items-center gap-2.5 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]";
+  const className = cn(
+    stacked ? "flex h-full flex-col items-start gap-1.5" : "flex items-center gap-2.5",
+    "rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]",
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          className,
+          "w-full text-left transition-colors enabled:hover:border-[var(--wh-primary)] enabled:hover:bg-[var(--wh-primary-soft)]/30 disabled:opacity-60",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]",
+        )}
+      >
+        {body}
+      </button>
+    );
+  }
 
   return href ? (
     <Link

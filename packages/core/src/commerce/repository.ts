@@ -533,29 +533,3 @@ export const recordPurchase = invalidatesContext(recordPurchaseImpl, (_supabase,
 export const removePurchase = invalidatesContext(removePurchaseImpl, (_supabase, input) => input.householdId);
 export const refreshSuggestions = invalidatesContext(refreshSuggestionsImpl, (_supabase, householdId) => householdId);
 export const prepareOrder = invalidatesContext(prepareOrderImpl, (_supabase, input) => input.householdId);
-
-/**
- * The latest purchases that recorded a cost, for the items on the cart (one
- * read, bounded): what the cart's prices are worked out from (`cart.ts`).
- */
-export async function pricedPurchases(supabase: SupabaseClient, householdId: string, itemIds: readonly string[]): Promise<import("./cart").PricedPurchase[]> {
-  if (itemIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from("consumable_purchases")
-    .select("consumable_id, quantity, unit, unit_cost_minor, currency, purchased_on, merchant")
-    .eq("household_id", householdId)
-    .in("consumable_id", itemIds.slice(0, 200))
-    .not("unit_cost_minor", "is", null)
-    .order("purchased_on", { ascending: false })
-    .limit(400);
-  if (error) throw new Error(`pricedPurchases failed: ${error.code ?? "unknown"}`);
-  return ((data ?? []) as Row[]).map((row) => ({
-    itemId: row.consumable_id as string,
-    quantity: Number(row.quantity),
-    unit: (row.unit as string | null) ?? null,
-    unitCostMinor: Number(row.unit_cost_minor),
-    currency: row.currency as string,
-    purchasedOn: row.purchased_on as string,
-    merchant: (row.merchant as string | null) ?? null,
-  }));
-}

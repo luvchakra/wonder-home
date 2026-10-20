@@ -10,6 +10,8 @@
  * change that did not happen.
  */
 
+import { appPath } from "../navigation/app-path";
+
 export const HOMETALK_CHANNELS = ["web", "mobile", "gemini_voice", "alexa"] as const;
 export type HomeTalkChannel = (typeof HOMETALK_CHANNELS)[number];
 
@@ -61,7 +63,7 @@ export type TurnReply = {
  *   - Everything else is `answered`.
  */
 export function toHomeTalkResponse(requestId: string, reply: TurnReply): HomeTalkResponse {
-  const navigate = typeof reply.navigate === "string" && /^\/(?!\/)[a-z0-9/_-]*$/i.test(reply.navigate) ? reply.navigate : null;
+  const navigate = appPath(reply.navigate);
   const base = { requestId, displayText: reply.text, speech: speechFrom(reply.text), ...(navigate ? { navigate } : {}) };
   const action = reply.action;
   switch (reply.proposal) {

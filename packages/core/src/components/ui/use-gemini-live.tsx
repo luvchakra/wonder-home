@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { appPath } from "../../navigation/app-path";
 import { base64ToBytes, bytesToBase64, downsample, floatToPcm16, LIVE_INPUT_RATE, LIVE_OUTPUT_RATE, pcm16ToFloat } from "../../voice/pcm";
 import { LIVE_TRANSCRIBE_MAX_BYTES, LiveTranscript, readLiveMessage, type LiveToolCall } from "../../voicelink/live-messages";
 
@@ -51,6 +52,8 @@ export function useGeminiLive(input: {
   onError?: (message: string) => void;
   /** A tool answer that opens a screen ("take me to the grocery list"): the app follows it. */
   onNavigate?: (href: string) => void;
+  /** A tool call changed something and opened no screen: the page shows the change (the owner, 2026-10-20). */
+  onChanged?: () => void;
 }): {
   state: GeminiLiveState;
   active: boolean;
@@ -64,13 +67,13 @@ export function useGeminiLive(input: {
   /** The voice back to the speaker, as before the floating window took it. */
   releaseVoice: () => void;
 } {
-  const { householdId, onTranscript, onTranscriptRevised, onError, onNavigate } = input;
+  const { householdId, onTranscript, onTranscriptRevised, onError, onNavigate, onChanged } = input;
   const [state, setState] = useState<GeminiLiveState>("idle");
   const [active, setActive] = useState(false);
   const [paused, setPaused] = useState(false);
 
-  const callbacks = useRef({ onTranscript, onTranscriptRevised, onError, onNavigate });
-  callbacks.current = { onTranscript, onTranscriptRevised, onError, onNavigate };
+  const callbacks = useRef({ onTranscript, onTranscriptRevised, onError, onNavigate, onChanged });
+  callbacks.current = { onTranscript, onTranscriptRevised, onError, onNavigate, onChanged };
   /** The microphone audio sent since the person's last line, kept so that line can be written down properly. */
   const turnAudioRef = useRef<{ chunks: Uint8Array[]; bytes: number }>({ chunks: [], bytes: 0 });
 
@@ -183,7 +186,9 @@ export function useGeminiLive(input: {
               // Where to go is the app's business, not the model's: it is followed here and not passed on.
               const { navigate, ...rest } = payload as Record<string, unknown>;
               response = rest;
-              if (typeof navigate === "string" && /^\/(?!\/)[a-z0-9/_-]*$/i.test(navigate)) callbacks.current.onNavigate?.(navigate);
+              const href = appPath(navigate);
+              if (href) callbacks.current.onNavigate?.(href);
+              else if (rest.status === "completed") callbacks.current.onChanged?.();
             }
             else if (payload?.error?.message) response = { ...FAILED_TOOL, userMessage: `${payload.error.message} Nothing was changed.` };
           } catch {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { CatCoat } from "@wonderhome/core/school/companion";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
@@ -114,17 +115,17 @@ export async function markSchoolWorkAction(input: { householdId: string; id: str
   );
 }
 
-/** The child names their cat companion (story 08-018) — only ever their own, as RLS holds. */
-export async function nameCompanionAction(input: { householdId: string; name: string }): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
-  const parsed = z.object({ householdId: z.uuid(), name: z.string().max(80) }).safeParse(input);
+/** The child names their cat companion and picks its colour (story 08-018) — only ever their own, as RLS holds. */
+export async function nameCompanionAction(input: { householdId: string; name: string; coat: string }): Promise<{ ok: true; name: string; coat: CatCoat } | { ok: false; error: string }> {
+  const parsed = z.object({ householdId: z.uuid(), name: z.string().max(80), coat: z.string().max(20) }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Try a shorter name." };
   try {
     const supabase = await createClient();
     const actor = await requireMembership(supabase, parsed.data.householdId);
-    const { saveCompanionName } = await import("@wonderhome/core/school/companion");
-    const name = await saveCompanionName(supabase, { householdId: parsed.data.householdId, memberId: actor.memberId, name: parsed.data.name });
+    const { saveCompanion } = await import("@wonderhome/core/school/companion");
+    const saved = await saveCompanion(supabase, { householdId: parsed.data.householdId, memberId: actor.memberId, name: parsed.data.name, coat: parsed.data.coat });
     revalidatePath("/");
-    return { ok: true, name };
+    return { ok: true, ...saved };
   } catch (error) {
     if (error instanceof Error && error.message === "companion_name_empty") return { ok: false, error: "Type a name first." };
     return { ok: false, error: toErrorBody(error, "school").body.error.message };

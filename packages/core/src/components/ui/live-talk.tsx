@@ -11,6 +11,7 @@ import { setTalkActivity } from "../shell/talk-activity";
 import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, shouldArmFloat, type FloatMode, type FloatPalette } from "./live-float";
 import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
+import { appPath } from "../../navigation/app-path";
 
 /**
  * A live HomeTalk conversation that goes where the person goes.
@@ -112,15 +113,17 @@ const LiveTalkContext = createContext<LiveTalk | null>(null);
 
 /** Only same-app paths are ever followed: a reply cannot send anyone off the app. */
 export function safeHref(href: unknown): string | null {
-  return typeof href === "string" && /^\/(?!\/)[a-z0-9/_-]*$/i.test(href) ? href : null;
+  return appPath(href);
 }
+
+type LiveReply = { text?: string; navigate?: string; action?: { status?: string } | null };
 
 /** The HomeTalk endpoint, from anywhere: one live turn, its reply as words to say, and where it asks to go. */
 async function liveTurnHere(
   householdId: string,
   utterance: string,
   confidence: number,
-): Promise<{ text: string; navigate: string | null; memberMessageId: string | null }> {
+): Promise<{ text: string; navigate: string | null; changed: boolean; memberMessageId: string | null }> {
   const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
     method: "POST",
     headers: { "content-type": "application/json", "idempotency-key": `live-${Date.now()}-${Math.random().toString(36).slice(2)}` },
@@ -128,16 +131,17 @@ async function liveTurnHere(
   });
   const payload = (await response.json().catch(() => null)) as {
     memberMessageId?: string;
-    reply?: { text?: string; navigate?: string };
-    replies?: { text?: string; navigate?: string }[];
+    reply?: LiveReply;
+    replies?: LiveReply[];
     error?: { message?: string };
   } | null;
-  if (!response.ok || !payload) return { text: payload?.error?.message ?? "", navigate: null, memberMessageId: null };
+  if (!response.ok || !payload) return { text: payload?.error?.message ?? "", navigate: null, changed: false, memberMessageId: null };
   const replies = Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : payload.reply ? [payload.reply] : [];
   const navigate = replies.map((reply) => safeHref(reply.navigate)).find(Boolean) ?? null;
   return {
     text: replies.map((reply) => reply.text ?? "").filter(Boolean).join("\n\n"),
     navigate,
+    changed: replies.some((reply) => reply.action?.status === "executed"),
     memberMessageId: typeof payload.memberMessageId === "string" ? payload.memberMessageId : null,
   };
 }
@@ -359,7 +363,10 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback(
     (href: string) => {
       const safe = safeHref(href);
-      if (safe) router.push(safe);
+      if (!safe) return;
+      // Already there ("add tomato" said on Groceries): show the change in place.
+      if (`${window.location.pathname}${window.location.search}` === safe) router.refresh();
+      else router.push(safe);
     },
     [router],
   );
@@ -378,15 +385,17 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       const current = configRef.current;
       if (!current) return "";
       try {
-        const { text, navigate: href, memberMessageId } = await liveTurnHere(current.householdId, transcript, confidence);
+        const { text, navigate: href, changed, memberMessageId } = await liveTurnHere(current.householdId, transcript, confidence);
         if (memberMessageId && !startMessageId.current) startMessageId.current = memberMessageId;
+        // Somewhere to go, or a change to show where the person already is.
         if (href) navigate(href);
+        else if (changed) router.refresh();
         return said(text ? plainText(text) : "");
       } catch {
         return said("");
       }
     },
-    [navigate, paint],
+    [navigate, paint, router],
   );
 
   // Gemini Live speaks for itself; its transcript is what the window shows.
@@ -412,7 +421,7 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
 
   const server = useMemo(() => (config?.serverVoice ? { householdId: config.householdId } : null), [config?.serverVoice, config?.householdId]);
   const own = useLiveVoice({ lang: config?.lang ?? "en-IN", server, onUtterance, onError });
-  const gemini = useGeminiLive({ householdId: config?.householdId ?? "", onTranscript, onTranscriptRevised, onError, onNavigate: navigate });
+  const gemini = useGeminiLive({ householdId: config?.householdId ?? "", onTranscript, onTranscriptRevised, onError, onNavigate: navigate, onChanged: () => router.refresh() });
   // The floating video takes Gemini's voice only while Gemini is the one talking.
   const geminiVoice = gemini.voiceStream;
   const geminiRelease = gemini.releaseVoice;

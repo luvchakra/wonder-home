@@ -33,6 +33,8 @@ export type CatalogActionLabels = {
   saved: string;
   inYours: string;
   openYours: string;
+  /** The words in `saved` that open the household's recipes. */
+  savedLink: string;
 };
 
 function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
@@ -71,15 +73,27 @@ export function CatalogRecipeActions({
   const [saving, setSaving] = useState(false);
   const [kept, setKept] = useState(saved);
   const [message, setMessage] = useState<{ tone: "info" | "risk"; text: string } | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
 
   return (
     <div className="space-y-2">
-      {message ? <Alert tone={message.tone === "info" ? "info" : undefined}>{message.text}</Alert> : null}
+      {justSaved ? (
+        // "Saved under your recipes": the words themselves open them (the owner, 2026-10-20).
+        <Alert tone="info">
+          {labels.saved.split("{link}")[0]}
+          <Link href="/meals?tab=recipes" className="font-semibold underline underline-offset-2">
+            {labels.savedLink}
+          </Link>
+          {labels.saved.split("{link}")[1] ?? ""}
+        </Alert>
+      ) : message ? (
+        <Alert tone={message.tone === "info" ? "info" : undefined}>{message.text}</Alert>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Pill type="button" tone="primary" className="gap-1.5" onClick={() => setOpen(true)}>
           <CalendarPlus aria-hidden className="size-4" /> {labels.plan}
         </Pill>
-        {kept ? (
+        {kept && justSaved ? null : kept ? (
           <Link
             href="/meals?tab=recipes"
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-medium text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
@@ -98,7 +112,8 @@ export function CatalogRecipeActions({
               setSaving(false);
               if (result.ok) {
                 setKept(true);
-                setMessage({ tone: "info", text: labels.saved });
+                setMessage(null);
+                setJustSaved(true);
               } else setMessage({ tone: "risk", text: result.error });
             }}
           >

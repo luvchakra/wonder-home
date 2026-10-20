@@ -99,7 +99,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "voice",
     group: "Everyday use",
-    updated: "2026-10-18",
+    updated: "2026-10-20",
     keywords: ["voice", "speech", "microphone", "hands-free", "live", "listen", "gemini live", "alexa", "speak out loud", "pause", "open a screen", "take me to", "go to", "navigate", "glow", "getting ready", "wait", "connecting", "speak now"],
   },
   {
@@ -142,7 +142,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "meals-and-shopping",
     group: "Everyday use",
     updated: "2026-10-20",
-    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "cart", "prices", "instamart", "swiggy", "buy online", "recipe ideas", "indian recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps"],
+    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "recipe ideas", "indian recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps"],
   },
   {
     id: "health",

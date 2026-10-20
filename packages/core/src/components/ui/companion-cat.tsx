@@ -2,12 +2,13 @@ import { cn } from "../../lib/cn";
 
 /**
  * The child's companion cat (story 08-018), drawn in the kit so every screen
- * that shows it shows the same cat. Decoration: it carries no meaning of its
+ * that shows it shows the same cat, in the coat the child picked (`data-coat`,
+ * whose colours are the theme's `--wh-cat-*` tokens). Decoration: it carries no meaning of its
  * own — the card's words do (rule 3) — so it is hidden from screen readers.
  */
-export function CompanionCat({ className }: { className?: string }) {
+export function CompanionCat({ className, coat = "ginger" }: { className?: string; coat?: string }) {
   return (
-    <svg viewBox="0 0 120 120" aria-hidden className={cn("shrink-0", className)}>
+    <svg viewBox="0 0 120 120" aria-hidden data-coat={coat} className={cn("wh-cat shrink-0", className)}>
       <g className="wh-cat-tail">
         <path d="M86 98c16-2 26-14 22-30-2-8-10-10-12-3 3 10-2 20-14 22z" fill="var(--wh-cat-fur)" stroke="var(--wh-cat-fur-dark)" strokeWidth="2" />
       </g>
@@ -16,11 +17,25 @@ export function CompanionCat({ className }: { className?: string }) {
       <path d="M30 34 26 10l20 14z" fill="var(--wh-cat-fur)" stroke="var(--wh-cat-fur-dark)" strokeWidth="2" strokeLinejoin="round" />
       <path d="M86 34 90 10 70 24z" fill="var(--wh-cat-fur)" stroke="var(--wh-cat-fur-dark)" strokeWidth="2" strokeLinejoin="round" />
       <path d="M32 28 31 17l9 7zM84 28l1-11-9 7z" fill="var(--wh-cat-blush)" />
+      <g className="wh-cat-patches">
+        <path d="M34 80c6-8 18-8 20 2-4 8-16 10-20-2z" fill="var(--wh-cat-patch)" />
+        <path d="M70 96c4-8 14-8 16 0-4 6-12 6-16 0z" fill="var(--wh-cat-patch-dark)" />
+      </g>
+      <g className="wh-cat-stripes" stroke="var(--wh-cat-fur-dark)" strokeWidth="3" strokeLinecap="round" fill="none">
+        <path d="M36 82c4 2 6 6 6 10M78 80c-4 2-6 6-6 10M50 76c2 3 2 6 1 9" />
+      </g>
       <circle cx="58" cy="48" r="30" fill="var(--wh-cat-fur)" stroke="var(--wh-cat-fur-dark)" strokeWidth="2" />
+      <g className="wh-cat-patches">
+        <path d="M30 40c2-12 12-18 22-16-2 10-10 18-22 16z" fill="var(--wh-cat-patch)" />
+        <path d="M70 24c10 0 16 8 16 16-8 0-16-6-16-16z" fill="var(--wh-cat-patch-dark)" />
+      </g>
+      <g className="wh-cat-stripes" stroke="var(--wh-cat-fur-dark)" strokeWidth="2.5" strokeLinecap="round" fill="none">
+        <path d="M58 20v8M50 22l2 7M66 22l-2 7M30 46h6M80 46h6" />
+      </g>
       <path d="M50 22c2 5 6 7 8 7s6-2 8-7" fill="none" stroke="var(--wh-cat-fur-dark)" strokeWidth="2.5" strokeLinecap="round" />
       <g className="wh-cat-eyes">
-        <ellipse cx="46" cy="46" rx="4.5" ry="6" fill="var(--wh-cat-ink)" />
-        <ellipse cx="70" cy="46" rx="4.5" ry="6" fill="var(--wh-cat-ink)" />
+        <ellipse cx="46" cy="46" rx="4.5" ry="6" fill="var(--wh-cat-eye)" />
+        <ellipse cx="70" cy="46" rx="4.5" ry="6" fill="var(--wh-cat-eye)" />
         <circle cx="47.5" cy="43.5" r="1.6" fill="var(--wh-cat-shine)" />
         <circle cx="71.5" cy="43.5" r="1.6" fill="var(--wh-cat-shine)" />
       </g>

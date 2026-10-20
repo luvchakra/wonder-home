@@ -714,6 +714,44 @@
   --wh-cat-ink: oklch(0.27 0.03 255);
   --wh-cat-blush: oklch(0.82 0.1 10);
   --wh-cat-shine: oklch(1 0 0);
+  --wh-cat-eye: oklch(0.27 0.03 255);
+  --wh-cat-patch: oklch(0.7 0.16 55);
+  --wh-cat-patch-dark: oklch(0.3 0.02 60);
+}
+/* The coat the child picked (`child_companions.coat`). Each is only fur and a stroke; calico adds patches and brown its stripes. */
+.wh-cat[data-coat="grey"] {
+  --wh-cat-fur: oklch(0.72 0.02 250);
+  --wh-cat-fur-dark: oklch(0.52 0.02 250);
+  --wh-cat-cream: oklch(0.93 0.01 250);
+}
+.wh-cat[data-coat="black"] {
+  --wh-cat-fur: oklch(0.3 0.02 270);
+  --wh-cat-fur-dark: oklch(0.2 0.02 270);
+  --wh-cat-cream: oklch(0.42 0.02 270);
+  --wh-cat-eye: oklch(0.85 0.16 115);
+}
+.wh-cat[data-coat="white"] {
+  --wh-cat-fur: oklch(0.98 0.005 90);
+  --wh-cat-fur-dark: oklch(0.78 0.02 80);
+  --wh-cat-cream: oklch(0.93 0.02 80);
+}
+.wh-cat[data-coat="brown"] {
+  --wh-cat-fur: oklch(0.6 0.08 60);
+  --wh-cat-fur-dark: oklch(0.42 0.07 55);
+  --wh-cat-cream: oklch(0.88 0.04 75);
+}
+.wh-cat[data-coat="calico"] {
+  --wh-cat-fur: oklch(0.97 0.01 85);
+  --wh-cat-fur-dark: oklch(0.6 0.08 55);
+  --wh-cat-cream: oklch(0.99 0.005 85);
+}
+.wh-cat .wh-cat-patches,
+.wh-cat .wh-cat-stripes {
+  display: none;
+}
+.wh-cat[data-coat="calico"] .wh-cat-patches,
+.wh-cat[data-coat="brown"] .wh-cat-stripes {
+  display: inline;
 }
 .wh-cat-tail {
   transform-origin: 78% 82%;

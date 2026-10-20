@@ -1,18 +1,20 @@
 "use client";
 
-import { Search, ShoppingBasket } from "lucide-react";
+import { CircleCheck, CircleHelp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
   GroceryRow,
   type GroceryStatus,
 } from "@wonderhome/core/ui/grocery-row";
+import { MetricCard } from "@wonderhome/core/ui/metric-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import type { Ladder } from "@wonderhome/core/commerce/buying-sizes";
 
 import type { GroceryWords } from "../../_lib/grocery-words";
 import { fill } from "./amounts";
 import { MarkBoughtButton } from "./mark-bought";
+import { StockStepper } from "./stock-stepper";
 import { ToBuyStepper } from "./to-buy-stepper";
 
 export type ListItem = {
@@ -30,14 +32,18 @@ export type ListItem = {
   nutrition: string | null;
   status: GroceryStatus;
   stockText: string;
+  /** What is at home, in the item's base unit; null when nobody has counted it. */
+  stock: number | null;
   toBuy: { entryId: string; quantity: number; unit: string } | null;
 };
 
 /**
  * The one Groceries list (design §3.1): search, a category filter and a
- * row per item with what is at home and what to buy side by side. "To buy"
- * is the same rows, narrowed to what is on the list and grouped by
- * category, with "Mark as bought" — never a second source of truth.
+ * row per item with what is at home and what to buy side by side, each with
+ * its own − amount + (an adult changes what is at home right here). "To buy"
+ * is the same rows, narrowed to what is on the list — one list, no category
+ * headings (the owner, 2026-10-20) — under three cards: At home, Not
+ * counted yet, and Mark as bought, which is the action itself.
  */
 export function GroceryList({
   householdId,
@@ -51,6 +57,7 @@ export function GroceryList({
   items: ListItem[];
   view: "all" | "to-buy";
   words: GroceryWords;
+  /** An adult: marks things bought and changes what is at home. */
   canMarkBought: boolean;
   /** The household's own date, for "Bought on". */
   today: string;
@@ -82,18 +89,20 @@ export function GroceryList({
         )),
   );
 
-  const groups =
-    view === "to-buy"
-      ? categories
-          .map((name) => ({
-            name,
-            rows: shown.filter((item) => item.category === name),
-          }))
-          .filter((group) => group.rows.length > 0)
-      : [{ name: "", rows: shown }];
   const toBuyNow = items.filter(
     (item) => item.toBuy && (onList[item.id] ?? 0) > 0,
   );
+
+  const atHome = items.filter((item) => item.stock !== null && item.stock > 0).length;
+  const notCounted = items.filter((item) => item.stock === null).length;
+  const boughtLines = toBuyNow.map((item) => ({
+    entryId: item.toBuy!.entryId,
+    itemId: item.id,
+    name: item.name,
+    unit: item.unit,
+    quantity: onList[item.id] ?? item.toBuy!.quantity,
+    baseUnit: item.toBuy!.unit,
+  }));
 
   const row = (item: ListItem) => (
     <GroceryRow
@@ -108,6 +117,11 @@ export function GroceryList({
       statusLabel={words.status[item.status]}
       stockLabel={words.inStock}
       stockText={item.stockText}
+      stockControl={
+        canMarkBought ? (
+          <StockStepper householdId={householdId} item={item} initial={item.stock} words={words} />
+        ) : undefined
+      }
       toBuyLabel={words.toBuy}
       openLabel={fill(words.open, { name: item.name })}
       stepper={
@@ -130,6 +144,33 @@ export function GroceryList({
 
   return (
     <div className="space-y-3">
+      {view === "to-buy" && items.length > 0 ? (
+        // Three across, by the owner's call (an exception to rule 19): labels wrap, never cut.
+        <ul className="grid grid-cols-3 gap-2.5">
+          <li className="min-w-0">
+            <MetricCard stacked label={words.summary.atHome} value={atHome} icon={CircleCheck} tone="handled" />
+          </li>
+          <li className="min-w-0">
+            <MetricCard stacked label={words.summary.notCounted} value={notCounted} icon={CircleHelp} tone="attention" />
+          </li>
+          <li className="min-w-0">
+            {canMarkBought && toBuyNow.length > 0 ? (
+              <MarkBoughtButton
+                householdId={householdId}
+                today={today}
+                words={words}
+                lines={boughtLines}
+                trigger={(open) => (
+                  <MetricCard stacked label={words.bought.open} value={toBuyNow.length} icon={ShoppingCart} tone="primary" onClick={open} />
+                )}
+              />
+            ) : (
+              <MetricCard stacked label={words.bought.open} value={toBuyNow.length} icon={ShoppingCart} tone="primary" />
+            )}
+          </li>
+        </ul>
+      ) : null}
+
       <div className="relative">
         <label htmlFor="grocery-search" className="sr-only">
           {words.search}
@@ -153,7 +194,7 @@ export function GroceryList({
         <div
           role="group"
           aria-label={words.filterLegend}
-          className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+          className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {[null, ...categories].map((name) => {
             const pressed = category === name;
@@ -174,22 +215,6 @@ export function GroceryList({
             );
           })}
         </div>
-      ) : null}
-
-      {view === "to-buy" && canMarkBought && toBuyNow.length > 0 ? (
-        <MarkBoughtButton
-          householdId={householdId}
-          today={today}
-          words={words}
-          lines={toBuyNow.map((item) => ({
-            entryId: item.toBuy!.entryId,
-            itemId: item.id,
-            name: item.name,
-            unit: item.unit,
-            quantity: onList[item.id] ?? item.toBuy!.quantity,
-            baseUnit: item.toBuy!.unit,
-          }))}
-        />
       ) : null}
 
       {shown.length === 0 ? (
@@ -215,22 +240,9 @@ export function GroceryList({
           />
         )
       ) : (
-        groups.map((group) => (
-          <section
-            key={group.name || "all"}
-            aria-label={group.name || undefined}
-            className="space-y-1"
-          >
-            {group.name ? (
-              <h3 className="px-1 pt-1 text-sm font-semibold text-[var(--wh-foreground-muted)] first-letter:uppercase">
-                {group.name}
-              </h3>
-            ) : null}
-            <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-2 shadow-[var(--wh-shadow-card)]">
-              {group.rows.map(row)}
-            </ul>
-          </section>
-        ))
+        <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-2 shadow-[var(--wh-shadow-card)]">
+          {shown.map(row)}
+        </ul>
       )}
     </div>
   );
