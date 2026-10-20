@@ -10,6 +10,7 @@ import {
   choosePlan,
   type IngredientNeed,
   type Meal,
+  type MealOrigin,
   type MealSlot,
   type MealStatus,
   type PlanCandidate,
@@ -38,21 +39,21 @@ export async function listMeals(
   householdId: string,
   options: { from?: string; to?: string } = {},
 ): Promise<Meal[]> {
-  let query = supabase
-    .from("meals")
-    .select(
-      "id, name, slot, on_date, ready_by, cook_member_id, status, ready_at, servings, recipes(id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, carbs_grams, fat_grams), meal_ingredient_needs(name, consumable_id, quantity, unit, essential, status, substitute_name)",
-    )
-    .eq("household_id", householdId)
-    .order("ready_by", { ascending: true });
+  const columns =
+    "id, name, slot, on_date, ready_by, cook_member_id, status, ready_at, servings, recipes(id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, carbs_grams, fat_grams), meal_ingredient_needs(name, consumable_id, quantity, unit, essential, status, substitute_name)";
+  const read = (select: string) => {
+    let query = supabase.from("meals").select(select).eq("household_id", householdId).order("ready_by", { ascending: true });
+    if (options.from) query = query.gte("on_date", options.from);
+    if (options.to) query = query.lte("on_date", options.to);
+    return query;
+  };
 
-  if (options.from) query = query.gte("on_date", options.from);
-  if (options.to) query = query.lte("on_date", options.to);
-
-  const { data, error } = await query;
+  // `origin` (the week template) where the database has it yet; the meals without it otherwise.
+  let { data, error } = await read(`${columns}, origin`);
+  if (error && MISSING_COLUMN.has(error.code ?? "")) ({ data, error } = await read(columns));
   if (error) throw new Error(`listMeals failed: ${error.code ?? "unknown"}`);
 
-  return (data ?? []).map((row: Row) => {
+  return ((data ?? []) as unknown as Row[]).map((row: Row) => {
     // PostgREST types a to-one embed as an array; normalising here keeps the
     // domain shape clean rather than leaking the client's quirk outwards.
     const embedded = row.recipes as Row | Row[] | null;
@@ -112,9 +113,13 @@ export async function listMeals(
       recipe,
       ingredients,
       servings: row.servings === null || row.servings === undefined ? null : Number(row.servings),
+      origin: row.origin === "week_template" ? "week_template" : "person",
     };
   });
 }
+
+/** A column or table this database does not have yet: a migration the owner has still to run. */
+const MISSING_COLUMN = new Set(["42703", "PGRST204"]);
 
 /** How many a meal is for (25-003a): 1–50, or null for as many as the recipe serves. */
 async function setMealServingsImpl(supabase: SupabaseClient, input: { householdId: string; mealId: string; servings: number | null }): Promise<void> {
@@ -132,25 +137,26 @@ export type CreateMealInput = {
   readyBy: string;
   recipeId?: string | null;
   cookMemberId?: string | null;
+  /** Who picked it: WonderHome from the week template, or a person (the default). */
+  origin?: MealOrigin;
 };
 
 async function createMealImpl(
   supabase: SupabaseClient,
   input: CreateMealInput,
 ): Promise<{ id: string }> {
-  const { data, error } = await supabase
-    .from("meals")
-    .insert({
-      household_id: input.householdId,
-      name: input.name,
-      slot: input.slot,
-      on_date: input.onDate,
-      ready_by: input.readyBy,
-      recipe_id: input.recipeId ?? null,
-      cook_member_id: input.cookMemberId ?? null,
-    })
-    .select("id")
-    .single();
+  const row = {
+    household_id: input.householdId,
+    name: input.name,
+    slot: input.slot,
+    on_date: input.onDate,
+    ready_by: input.readyBy,
+    recipe_id: input.recipeId ?? null,
+    cook_member_id: input.cookMemberId ?? null,
+  };
+  const insert = (values: Row) => supabase.from("meals").insert(values).select("id").single();
+  let { data, error } = await insert(input.origin ? { ...row, origin: input.origin } : row);
+  if (error && input.origin && MISSING_COLUMN.has(error.code ?? "")) ({ data, error } = await insert(row));
 
   if (error) {
     if (error.code === "23505") {
@@ -185,18 +191,18 @@ async function updateMealImpl(supabase: SupabaseClient, input: UpdateMealInput):
     .maybeSingle();
   if (readError) throw new Error(`updateMeal failed: ${readError.code ?? "unknown"}`);
   if (!before) throw ApiError.notFound("That meal is no longer on the plan.");
-  const { error } = await supabase
-    .from("meals")
-    .update({
-      name: input.name,
-      slot: input.slot,
-      on_date: input.onDate,
-      ready_by: input.readyBy,
-      recipe_id: input.recipeId ?? null,
-      cook_member_id: input.cookMemberId ?? null,
-    })
-    .eq("household_id", input.householdId)
-    .eq("id", input.mealId);
+  const changes = {
+    name: input.name,
+    slot: input.slot,
+    on_date: input.onDate,
+    ready_by: input.readyBy,
+    recipe_id: input.recipeId ?? null,
+    cook_member_id: input.cookMemberId ?? null,
+  };
+  const update = (values: Row) => supabase.from("meals").update(values).eq("household_id", input.householdId).eq("id", input.mealId);
+  // A person's change makes the meal theirs; "Choose again" keeps it WonderHome's.
+  let { error } = await update({ ...changes, origin: input.origin ?? "person" });
+  if (error && MISSING_COLUMN.has(error.code ?? "")) ({ error } = await update(changes));
   if (error) {
     if (error.code === "23505") throw ApiError.conflict("That slot already has a meal planned. Change or remove that one first.");
     if (error.code === "42501") throw ApiError.forbidden("You cannot change this meal.");

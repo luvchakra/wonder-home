@@ -20,6 +20,8 @@ import { listMeals, listRecipeChoices, listRecipesForEdit, mealAgenda } from "@w
 import { shiftDay, WEEK_SLOTS, weekCount, weekDays, weekFrom, weekStartOf } from "@wonderhome/core/meals/week";
 import { DIETS, isDiet, type Diet } from "@wonderhome/core/meals/diet";
 import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
+import { nextOption, weekdayOf, type TemplateOption } from "@wonderhome/core/meals/week-template";
+import { listTemplateOptions, planWeekFromTemplate, weekPlanned } from "@wonderhome/core/meals/week-template-repository";
 import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
 import { publicEnv } from "@wonderhome/core/config/env";
 import { itemFor } from "@wonderhome/core/meals/shortfall";
@@ -53,6 +55,7 @@ import { mealFormLabels, recipePickerLabels } from "../_lib/meal-form-labels";
 import { DietSettings } from "./diet-settings";
 import { RepeatLastWeek } from "./week-controls";
 import { MealIngredientsSheet } from "./meal-ingredients-sheet";
+import { ChooseAgainButton, WeekPlanCard, WeekTemplateEditor } from "./week-template";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Meals & Cooking" };
@@ -95,7 +98,7 @@ export default async function MealsPage({
   const thisWeek = weekStartOf(today);
 
   const entitlement = await may(supabase, householdId, "meals.planning");
-  const active = tab === "recipes" || tab === "preferences" ? tab : "plan";
+  const active = tab === "recipes" || tab === "preferences" || tab === "template" ? tab : "plan";
   const shell = {
     active: "more" as const,
     viewer,
@@ -119,7 +122,7 @@ export default async function MealsPage({
     );
   }
 
-  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, weekMeals] =
+  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, firstWeekMeals, templateOptions, weekRecord] =
     await Promise.all([
       // Every meal from today on, read once: the agenda assesses them and the
       // week below is the same rows, not a second read.
@@ -145,7 +148,24 @@ export default async function MealsPage({
         : Promise.resolve([]),
       // The week being planned, past days included, bounded to its seven days.
       active === "plan" ? listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => [] as Meal[]) : Promise.resolve([] as Meal[]),
+      // The week template (the owner, 2026-10-20): its options, and whether WonderHome has planned this week from it.
+      active === "plan" || active === "template" ? listTemplateOptions(supabase, householdId).catch(() => [] as TemplateOption[]) : Promise.resolve([] as TemplateOption[]),
+      active === "plan" ? weekPlanned(supabase, householdId, weekStart) : Promise.resolve(null),
     ]);
+  const adult = membership.memberType === "adult";
+  // Each week WonderHome picks from the template and plans it, accepted by
+  // default: the first time an adult opens a week not yet past that it has
+  // not planned. Only empty slots are filled; the week is claimed once, so a
+  // meal someone removed afterwards is not put back.
+  let weekMeals = firstWeekMeals;
+  let planned = weekRecord ? weekRecord.planned : null;
+  if (active === "plan" && adult && templateOptions.length > 0 && weekRecord === false && weekDates[6]! >= today) {
+    const filled = await planWeekFromTemplate(supabase, { householdId, week: weekStart, today, timezone, memberId: membership.memberId, once: true }).catch(() => null);
+    if (filled) {
+      planned = filled.planned;
+      if (filled.planned > 0) weekMeals = await listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => firstWeekMeals);
+    }
+  }
   const meals = weekMeals;
   const words = groceryWords(t, viewer.language);
   // Sharing a household recipe (the owner, 2026-10-20): the whole recipe as a message, and its picture card for WhatsApp.
@@ -275,7 +295,7 @@ export default async function MealsPage({
                 members={memberOptions}
                 labels={formLabels}
               />
-            ) : (
+            ) : active === "template" ? null : (
               <>
                 <SuggestMealButton householdId={householdId} labels={formLabels} />
                 <PlanMealButton
@@ -299,6 +319,11 @@ export default async function MealsPage({
               label: t("meals.tab.plan"),
               href: "/meals",
               count: agenda?.meals.length,
+            },
+            {
+              key: "template",
+              label: t("meals.tab.template"),
+              href: "/meals?tab=template",
             },
             {
               key: "recipes",
@@ -367,6 +392,28 @@ export default async function MealsPage({
                   ) : null}
                 </div>
               </div>
+              {weekDates[6]! >= today ? (
+                <WeekPlanCard
+                  householdId={householdId}
+                  week={weekStart}
+                  hasTemplate={templateOptions.length > 0}
+                  canEdit={adult}
+                  planned={planned}
+                  labels={{
+                    title: weekStart === thisWeek ? t("meals.template.planTitle") : t("meals.template.planTitleWeek", { date: weekLabel }),
+                    planned: t("meals.template.planned", { count: "{count}" }),
+                    plannedOne: t("meals.template.plannedOne"),
+                    plannedNone: t("meals.template.plannedNone"),
+                    fill: t("meals.template.fill"),
+                    filling: t("meals.template.filling"),
+                    filled: t("meals.template.filled", { count: "{count}" }),
+                    filledOne: t("meals.template.filledOne"),
+                    filledNone: t("meals.template.filledNone"),
+                    setUp: t("meals.template.setUp"),
+                    setUpLede: t("meals.template.setUpLede"),
+                  }}
+                />
+              ) : null}
               <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {days
                   .filter((day) => !day.past || day.meals.length > 0)
@@ -392,6 +439,7 @@ export default async function MealsPage({
                                   labels={formLabels}
                                   groceries={groceries}
                                   words={words}
+                                  chooseAgain={meal.origin === "week_template" && nextOption({ options: templateOptions, weekday: weekdayOf(meal.onDate), slot: meal.slot, current: meal.recipe?.id ?? null }) !== null}
                                 />
                               ));
                             if (day.past) return null;
@@ -417,6 +465,44 @@ export default async function MealsPage({
               </div>
             </section>
           </>
+        ) : null}
+
+        {active === "template" ? (
+          <WeekTemplateEditor
+            householdId={householdId}
+            canEdit={adult}
+            options={templateOptions}
+            picker={plan}
+            labels={{
+              title: t("meals.template.title"),
+              lede: t("meals.template.lede"),
+              add: t("meals.template.add"),
+              addTitle: t("meals.template.addTitle"),
+              addLede: t("meals.template.addLede"),
+              editTitle: t("meals.template.editTitle"),
+              days: t("meals.template.days"),
+              every: t("meals.template.every"),
+              weekdays: t("meals.template.weekdays"),
+              weekend: t("meals.template.weekend"),
+              day: t("meals.template.day"),
+              meal: t("meals.template.meal"),
+              save: t("meals.template.save"),
+              saving: t("meals.template.saving"),
+              remove: t("meals.template.remove"),
+              removeLabel: t("meals.template.removeLabel", { name: "{name}", day: "{day}", slot: "{slot}" }),
+              editLabel: t("meals.template.editLabel", { name: "{name}", day: "{day}", slot: "{slot}" }),
+              added: t("meals.template.added"),
+              pickDish: t("meals.template.pickDish"),
+              emptyTitle: t("meals.template.emptyTitle"),
+              emptyLede: t("meals.template.emptyLede"),
+              adultsOnly: t("meals.template.adultsOnly"),
+              slotEmpty: t("meals.template.slotEmpty"),
+              addToSlot: t("meals.template.addToSlot", { slot: "{slot}" }),
+              // Monday first; 2026-10-19 is a Monday.
+              dayNames: Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(viewer.language, { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 9, 19 + index, 12)))),
+              slots: formLabels.slots,
+            }}
+          />
         ) : null}
 
         {active === "recipes" ? (
@@ -696,7 +782,10 @@ function MealCard({
   labels,
   groceries,
   words,
+  chooseAgain,
 }: {
+  /** WonderHome picked it from the week template, and the template lists another dish for it. */
+  chooseAgain: boolean;
   meal: Meal;
   cook: string | null;
   timezone: string;
@@ -743,6 +832,7 @@ function MealCard({
         <div className="min-w-0 flex-1">
           <p className="text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
             {labels.slots[meal.slot]}
+            {meal.origin === "week_template" ? <span className="font-medium normal-case tracking-normal text-[var(--wh-primary)]"> · {t("meals.template.pick")}</span> : null}
           </p>
           <p className="text-sm font-semibold">{meal.name}</p>
           <p className="text-xs text-[var(--wh-foreground-muted)]">
@@ -849,6 +939,14 @@ function MealCard({
           recipes={recipes}
           labels={labels}
         />
+        {chooseAgain ? (
+          <ChooseAgainButton
+            householdId={householdId}
+            mealId={meal.id}
+            onDate={meal.onDate}
+            labels={{ action: t("meals.template.chooseAgain"), working: t("meals.template.choosing"), label: t("meals.template.chooseAgainLabel", { slot: labels.slots[meal.slot] }) }}
+          />
+        ) : null}
       </div>
     </Card>
   );
