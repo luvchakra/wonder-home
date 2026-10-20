@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**334 of 360 stories done — 92.8%**
+**337 of 360 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 334 |
-| In Progress | 10 |
+| Done | 337 |
+| In Progress | 7 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 12 | 12 | — |
-| 01 Identity & Family Accounts | `█████████░` | 13 | 14 | 1 in progress |
+| 01 Identity & Family Accounts | `██████████` | 14 | 14 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 27 | 29 | 1 in progress, 1 not started |
@@ -35,7 +35,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `█████████░` | 11 | 12 | 1 in progress |
+| 10 Meals & Cooking | `██████████` | 12 | 12 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 9 | 10 | 1 in progress |
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 9 | 9 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
-| 24 HomePlaces | `█████████░` | 11 | 12 | 1 in progress |
+| 24 HomePlaces | `██████████` | 12 | 12 | — |
 | 25 HomeFood | `████████░░` | 23 | 28 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
@@ -58,13 +58,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
-| `01-014` Where each member is, by consent | 01 Identity & Family Accounts | P1 | In Progress |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
 | `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
-| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | 10 Meals & Cooking | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -73,7 +71,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | In Progress |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | In Progress |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
-| `24-012` Added places apart from saved ones, and first | 24 HomePlaces | P1 | In Progress |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
@@ -108,7 +105,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-13 of 14 done `█████████░`
+14 of 14 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -125,7 +122,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-011` A phone number for every member, and sign-in by phone | P0 | Done | The owner, 2026-10-18: a helper may have no email and will mostly use a phone. `household_member_phones` (migration `20261018210000`, live): one E.164 number per member, unique in the household; Admins write it, Admins, adults and the member read it (a child or helper sees only their own). Set in a member's details (pencil) and when adding a helper (`member-phone.ts`: `normalPhone` takes an Indian number as written, any other with its country code). A verified phone sign-in becomes the member recorded with that number, keeping their role (`wh.claim_members_by_phone`, run after every sign-in alongside email: `claimMembers`). **Sign in by phone** (`/sign-in/phone`: number, then texted code; `sendPhoneCode`/`verifyPhoneCode`) appears only when `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true`, which waits on a person connecting an SMS provider (Twilio, MessageBird, Vonage or Textlocal) in Supabase Auth; until then the live project answers `phone_provider_disabled` and the page says sign-in by phone isn't available. DB-tested (`scripts/test-member-phone-rls.mjs`); browser-checked at 360px and desktop (a helper added with a number, shown as +91 98765 43210, edited to a UK number; the phone page and its refusal) |
 | `01-012` A person's details read in order, and nothing runs off the card | P1 | Done | The owner's report, 2026-10-18 (PR #234): a long sign-in email ran off a child's details. Facts are grouped by what they are about (who they are, how to reach them, their day, family), email and phone take a whole row, and every value wraps rather than overflowing (rule 15). Checked at 360px with a 60-character email: no overflow |
 | `01-013` How the family is related | P1 | Done | The owner, 2026-10-19 (screenshot of Members & roles). Relationships on Members & roles: rows "Kunal is father of Asmi", each a person, a relation and a person, all picked (32 kinds, or the household's own words, rule 20), one row per pair. `member_relationships` (migration `20261019140000`, live, set-based RLS: members read, Admins write; a trigger keeps both people this household's active family). The other way round is said, never stored, from gender where recorded (`identity/relationships.ts` `inverseOf`); a row is refused when it relates someone to themselves, repeats a pair, or makes a parent younger than the child (`checkRelationship`, named reasons in eight languages). Suggestions from guardians and children, added with one tap, never automatically. Each person's details in Family show their line. HomeTalk answers "Who is Asmi's father?", "How is Upasana related to Manan?", "How is the family related?" by rules from the rows (`conversation/relations.ts`, goldens HT-114 to HT-116), and HomeBrain gets one fact per row. Help: Members, roles ¶6 in 8 languages |
-| `01-014` Where each member is, by consent | P1 | In Progress | The owner, 2026-10-20 ("show current location of each member … consent based, located in setting of that user, for child, adult controls it"). Off until turned on: an adult or helper turns their own on in Settings → Location sharing (`/settings/location`); a child's is set by their guardian or an Admin under the child in Family, and the child sees it. The device reports only while WonderHome is open (`LocationReporter`, every 5 min while visible), rounded to ~11 m, latest only; turning it off deletes it (trigger). Adults read positions, children and helpers only their own; never given to a model. Family shows At Home / At school / Out · how long ago with Open in Maps (`location/sharing.ts`: `placeAt` within 150 m of home, schools, offices, the place book). RLS test 4/4, unit 5. Waits on migration `20261020233000_member_locations.sql` reaching the live project. |
+| `01-014` Where each member is, by consent | P1 | Done | The owner, 2026-10-20 ("show current location of each member … consent based, located in setting of that user, for child, adult controls it"). Off until turned on: an adult or helper turns their own on in Settings → Location sharing (`/settings/location`); a child's is set by their guardian or an Admin under the child in Family, and the child sees it. The device reports only while WonderHome is open (`LocationReporter`, every 5 min while visible), rounded to ~11 m, latest only; turning it off deletes it (trigger). Adults read positions, children and helpers only their own; never given to a model. Family shows At Home / At school / Out · how long ago with Open in Maps (`location/sharing.ts`: `placeAt` within 150 m of home, schools, offices, the place book). RLS test 4/4, unit 5. Waits on migration `20261020233000_member_locations.sql` reaching the live project. Live 2026-10-21: migration on the live project; checked end to end there (an adult and a guardian turned sharing on, both phones reported, Family read Out · this minute, the child had no Stop, Stop deleted the position). That run found the Permissions-Policy header denying geolocation; it is now `geolocation=(self)`. |
 
 ### 02 — Household Configuration & Playbook
 
@@ -291,7 +288,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-11 of 12 done `█████████░`
+12 of 12 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -306,7 +303,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-009` A meal card that does what it says: change in place, ingredients without a recipe, the right time | P0 | Done | The owner, 2026-10-18 (PR #227). **Change meal** opened HomeTalk with a sentence to retype (rule 13), and a meal could not be changed or removed at all (rule 12): it is now a sheet on the card (name, recipe, slot, day, ready by, cook; `updateMeal`, with a new recipe's ingredients replacing only those still waiting) with **Remove from the plan** (`removeMeal`, a meal still to come; what it put on the list stays). **Ingredients** on a meal with no recipe said "pick a recipe" with nowhere to pick one: it now takes the ingredients written one per line (`addMealIngredients`, amounts read as HomeTalk reads them, none said is "not measured") or one of the household's recipes. The card said "Missing … on the shopping list" for things nobody added: it now says "Still to get" for those. And a meal planned on the Meals screen was timed on the server's clock (an 8 pm dinner saved as 1:30 am): times are on the household's clock (`atLocal`). Browser-checked at 360px and 1280px |
 | `10-010` An ingredient pick you can see: the list in view, the item's picture and details | P1 | Done | The owner, 2026-10-20. The suggestion list stays clear of the keyboard without flicker: on a phone it sits in the flow, and `useKeepListInView` (`ui/keep-in-view.tsx`) scrolls just enough, in one frame, and caps the list to the space left; the place search uses it too, and a sheet no longer re-centres a field whose list is open. A picked item shows its picture in the field and a line under the row: brand, pack, what is at home (only when counted) and energy and protein per 100 g or ml when the catalog records them, IFCT credited. Checked at 360×430 as a touch phone |
 | `10-011` Plan the week: every day's breakfast, lunch and dinner, Repeat last week, and Veg / Non-veg on WonderHome's ideas | P1 | Done | The owner, 2026-10-20 (PR #273). Meals → Plan is the week, Monday to Sunday on the household's clock (`meals/week.ts`, tested): ‹ › move a week, This week comes back, and the count is the everyday slots planned out of those still to come. Each day shows Breakfast, Lunch and Dinner (a snack only when one is planned); an empty slot is a quiet "+ Lunch" that opens Plan a meal on that day and slot with its usual time. A past day shows only what was planned on it. Repeat last week plans last week's meals a week on, into empty slots not yet past, through the same `createMeal` and meal ingredients (`copyLastWeekAction`); nothing planned is moved or replaced. On Recipes, All · Veg · Non-veg under Ideas from WonderHome filters the dishes (an egg dish shows with non-veg), keeping the course picked; All was added the same day (PR #274), on its own row so it fits 360px. Words and help in all eight languages. |
-| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | In Progress | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. |
+| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | Done | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. Live 2026-10-21: migration on the live project; opening Plan planned this week's 4 remaining dinners from the template, each marked WonderHome's pick with Choose again. |
 
 ### 11 — Bills, Fees & Finance
 
@@ -547,7 +544,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-11 of 12 done `█████████░`
+12 of 12 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -562,7 +559,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-009` HomePlaces is named and placed with the AI tools | P1 | Done | The owner, 2026-10-18 (PR #232): the Places screen is now HomePlaces and sits in the nav drawer and More under AI & Smart Tools, after HomeSend (`navigation/secondary-navigation.ts`, AI tone). HomeBrain Review is now HomeBrain in the same section. Nav labels, page titles, HomeTalk's "take me to HomePlaces", the help guide and HomeTalk's own replies are renamed in all eight languages. Browser-checked at 360px and desktop |
 | `24-010` Every picked place shows in HomePlaces | P0 | Done | The owner, 2026-10-18 (PR #233): a home address added in Manage Household did not appear in HomePlaces, which only listed the place book. HomePlaces now opens with **Our places**: the home address, each child's school and each adult's office, every place picked from Google Maps anywhere in the app (`homeplaces/our-places.ts`; siblings at one school and colleagues at one office are one row). Each opens in Google Maps, and its pencil goes to its one editor: Manage Household for the home (Admins; others see no pencil), Kids & School for a school, Family for an office. An Admin with no address on record sees **Add your home address**. A child's school, which could only be set during setup, can now be picked from Google Maps (or typed) on Kids & School under **Schools**, per child (`saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`; leaving it empty retires it with `endEnrolments`, kept rather than deleted). The owner asked for the same in Family: a child's details now pick the school from Google Maps in place of the free-text "School or work location", through the same save, so the two screens always show one school; an adult's location is their Office picker, and only a helper keeps the free-text line. Event and appointment locations are typed text, not Maps picks, so they are not listed. Help ¶11 in eight languages. Browser-checked at 360px and 1280px on the live project |
 | `24-011` Destinations beside "when should we go away?" | P1 | Done | The owner, 2026-10-19: "suggest destinations for those long weekends too". A when-question about a trip (14-033/14-034) now also searches getaway places near home (`homeplaces/trip.ts`: `tripDestinationRequest`, `withDestinations`) and shows them as place cards under the free weekends, sized to the trip: the days said, three for a long weekend, two otherwise. A getaway of up to four days searches "hill station weekend getaway" (the vaguer "holiday destination" drew one travel agency live). Same budget (`places.find`), same channel gate (`find_places`), and the reply keeps its weekend list when cards are shown (`withoutList` drops only the bullets that name a card). Browser-checked at 360px with a QA household and a real Google Maps key |
-| `24-012` Added places apart from saved ones, and first | P1 | In Progress | The owner, 2026-10-21. `household_places.origin` ('added' from the place book's own search, 'suggestion' from a HomeTalk answer; existing rows told apart by `kind`). /places lists Added by you, then Saved from HomeTalk, then Not for us, with counts; `rankPlaces` gives an added place +2.5 (a saved one +1.5). Test: added outranks suggested. Waits on migration `20261021001000_household_places_origin.sql` (until then a place with no kind reads as added). |
+| `24-012` Added places apart from saved ones, and first | P1 | Done | The owner, 2026-10-21. `household_places.origin` ('added' from the place book's own search, 'suggestion' from a HomeTalk answer; existing rows told apart by `kind`). /places lists Added by you, then Saved from HomeTalk, then Not for us, with counts; `rankPlaces` gives an added place +2.5 (a saved one +1.5). Test: added outranks suggested. Waits on migration `20261021001000_household_places_origin.sql` (until then a place with no kind reads as added). Live 2026-10-21: migration on the live project. |
 
 ### 25 — HomeFood
 

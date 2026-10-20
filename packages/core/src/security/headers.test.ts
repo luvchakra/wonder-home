@@ -27,11 +27,13 @@ describe("security headers", () => {
     expect(csp).not.toMatch(/connect-src[^;]* ws:/);
   });
 
-  it("keeps microphone available for voice but denies camera, geolocation and payment", () => {
+  it("keeps microphone and geolocation to WonderHome's own pages, and denies camera and payment", () => {
     const policy = asMap()["Permissions-Policy"];
     expect(policy).toContain("microphone=(self)");
+    // Location sharing (01-014) asks the browser only from our own origin, never from a frame.
+    expect(policy).toContain("geolocation=(self)");
+    expect(policy).not.toContain("geolocation=*");
     expect(policy).toContain("camera=()");
-    expect(policy).toContain("geolocation=()");
     expect(policy).toContain("payment=()");
   });
 
