@@ -47,7 +47,7 @@ import { ChildClasses } from "../_components/child-classes";
 import { ChildSchoolWeek } from "../_components/child-school-week";
 import { StandDownButton, TeacherSheet } from "./child-details";
 import { ChildSchoolActions, type ChildSchoolLabels } from "./child-school";
-import { ChildScore, GoalsTab, kidProgress } from "./goals-tab";
+import { GoalsTab } from "./goals-tab";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
@@ -98,9 +98,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     listTimetable(supabase, householdId).catch(() => []),
     listExams(supabase, householdId).catch(() => []),
     listExamTypes(supabase, householdId).catch(() => ({ builtIn: ["Unit test", "Mid-term", "Finals"], own: [] })),
-    // Each child's goals and the days kept (08-017): the Goals tab, and each child's score on the Overview.
-    active === "goals" || active === "overview" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
-    active === "goals" || active === "overview" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    // Each child's goals and the days kept (08-017), only for the tab that shows them (with each child's score).
+    active === "goals" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    active === "goals" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
   ]);
 
   const children = members.filter((member) => member.memberType === "child");
@@ -156,6 +156,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const clock = new Intl.DateTimeFormat(locale.preferences.language, { hour: "numeric", minute: "2-digit", timeZone: "UTC" });
   const clockOf = (time: string) => clock.format(Date.UTC(2026, 0, 1, Number(time.slice(0, 2)), Number(time.slice(3, 5))));
   const childOptions = children.map((kid) => ({ id: kid.id, displayName: kid.displayName }));
+  // The child picker says first names (the owner, 2026-10-20); two children who share one keep their full names.
+  const firstOf = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+  const pickerName = (name: string) => (children.filter((kid) => firstOf(kid.displayName) === firstOf(name)).length > 1 ? name : firstOf(name));
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? t("school.unknownChild");
   const formLabels = schoolFormLabels(t, locale.preferences.language);
   // A stored kind is shown in the reader's words; the value itself never changes.
@@ -296,7 +299,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
         {children.length > 1 ? (
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
             {children.map((kid) => (
-              <PillLink key={kid.id} href={`/school?tab=${active}&child=${kid.id}`} tone={selected === kid.id ? "primary" : "quiet"}>{kid.displayName}</PillLink>
+              <PillLink key={kid.id} href={`/school?tab=${active}&child=${kid.id}`} tone={selected === kid.id ? "primary" : "quiet"}>{pickerName(kid.displayName)}</PillLink>
             ))}
           </div>
         ) : null}
@@ -324,7 +327,6 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
               return (
                 <section key={kid.id} className="space-y-2">
                   <SectionHeader title={kid.displayName} />
-                  <ChildScore name={kid.displayName} progress={kidProgress({ kidId: kid.id, goals, checkIns, items: agenda?.items ?? [], timezone })} t={t} />
                   <Card className="px-3 pb-1">
                     <ul className="divide-y divide-[var(--wh-border)]">
                       <ActionRow
@@ -358,6 +360,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                   <ChildSchoolWeek
                     householdId={householdId}
                     child={childRef}
+                    teachers={[...new Set(theirTeachers.map((teacher) => teacher.name))]}
                     periods={periods}
                     exams={exams.filter((exam) => exam.childMemberId === kid.id)}
                     canChange={canChangeSchool}

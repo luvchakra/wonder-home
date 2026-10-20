@@ -108,6 +108,7 @@ export function schoolWeekWords(t: Translate, language: string, examTypes: { bui
       startsAt: t("school.timetable.startsAt"),
       endsAt: t("school.timetable.endsAt"),
       teacher: t("school.timetable.teacher"),
+      noTeacher: t("school.timetable.noTeacher"),
       room: t("school.timetable.room"),
       save: t("school.timetable.save"),
     },

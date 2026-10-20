@@ -244,6 +244,7 @@ export const schoolZh: AreaCatalog<typeof schoolEn> = {
   "school.timetable.startsAt": "开始",
   "school.timetable.endsAt": "结束",
   "school.timetable.teacher": "老师（可选）",
+  "school.timetable.noTeacher": "未设置老师",
   "school.timetable.room": "教室（可选）",
   "school.timetable.save": "保存这节课",
   "school.timetable.free": "没有课",

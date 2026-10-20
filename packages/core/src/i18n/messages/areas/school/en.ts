@@ -244,6 +244,7 @@ export const schoolEn = {
   "school.timetable.startsAt": "Starts",
   "school.timetable.endsAt": "Ends",
   "school.timetable.teacher": "Teacher (optional)",
+  "school.timetable.noTeacher": "No teacher set",
   "school.timetable.room": "Room (optional)",
   "school.timetable.save": "Save period",
   "school.timetable.free": "No periods",

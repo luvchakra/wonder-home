@@ -252,6 +252,7 @@ export const schoolAr: AreaCatalog<typeof schoolEn> = {
   "school.timetable.startsAt": "تبدأ",
   "school.timetable.endsAt": "تنتهي",
   "school.timetable.teacher": "المعلّم (اختياري)",
+  "school.timetable.noTeacher": "لم يُحدَّد معلم",
   "school.timetable.room": "القاعة (اختياري)",
   "school.timetable.save": "احفظ الحصة",
   "school.timetable.free": "لا توجد حصص",

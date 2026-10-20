@@ -244,6 +244,7 @@ export const schoolMr: AreaCatalog<typeof schoolEn> = {
   "school.timetable.startsAt": "सुरू",
   "school.timetable.endsAt": "संपते",
   "school.timetable.teacher": "शिक्षक (ऐच्छिक)",
+  "school.timetable.noTeacher": "शिक्षक ठरवलेले नाहीत",
   "school.timetable.room": "खोली (ऐच्छिक)",
   "school.timetable.save": "तास जतन करा",
   "school.timetable.free": "तास नाहीत",
