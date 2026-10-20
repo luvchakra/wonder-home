@@ -121,6 +121,8 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.channel.in_app.description": "WonderHome मधील घंटी — जे सांगितले त्याची कायमची नोंद.",
   "settingsPage.notifications.channel.push.description": "तुमच्या फोनवर सूचना, तुम्ही WonderHome ॲप म्हणून इन्स्टॉल केल्यास.",
   "settingsPage.notifications.channel.email.description": "तुमच्या खात्यावरील पत्त्यावर पाठवले जाते.",
+  "notificationEmail.open": "WonderHome मध्ये उघडा",
+  "notificationEmail.why": "तुम्हाला हे यासाठी मिळत आहे कारण तुमच्या WonderHome सूचना सेटिंग्जमध्ये ईमेल चालू आहे. हे तुम्ही केव्हाही सेटिंग्ज → सूचना मध्ये बदलू शकता.",
   "settingsPage.notifications.channel.whatsapp.description": "खालील नंबरवर एक संदेश.",
   "settingsPage.notifications.notConnected": "या डिप्लॉयमेंटसाठी अजून जोडलेले नाही — ते जोडले जाईल तेव्हासाठी तुमची निवड सेव्ह केली आहे.",
   "settingsPage.notifications.sendHere": "इथे पाठवा",

@@ -116,6 +116,8 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.channel.in_app.description": "WonderHome 里的铃铛——始终记录着说过的内容。",
   "settingsPage.notifications.channel.push.description": "如果你把 WonderHome 安装为应用，会在手机上收到通知。",
   "settingsPage.notifications.channel.email.description": "发送到你账户中的邮箱地址。",
+  "notificationEmail.open": "在 WonderHome 中打开",
+  "notificationEmail.why": "你收到这封邮件，是因为你在 WonderHome 的通知设置里开启了电子邮件。你可以随时在“设置 → 通知”中更改。",
   "settingsPage.notifications.channel.whatsapp.description": "发送到下方号码的一条消息。",
   "settingsPage.notifications.notConnected": "此部署尚未接通——你的偏好已保存，接通后即可生效。",
   "settingsPage.notifications.sendHere": "发送到这里",

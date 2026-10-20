@@ -33,3 +33,23 @@ export function pushWorthSending(input: {
   if (input.priority === "normal") return input.reason === "reminder" && input.sentToday < PUSH_DAILY_LIMIT.normal;
   return false;
 }
+
+/**
+ * The same question for email (story 27-001). An inbox is less of an
+ * interruption than a buzzing phone, so the ceilings are higher, but the
+ * shape is the same: critical always goes, high within a ceiling, normal only
+ * when it is a reminder timed for this person, low never.
+ */
+export const EMAIL_DAILY_LIMIT = { high: 12, normal: 6 } as const;
+
+export function emailWorthSending(input: {
+  priority: "low" | "normal" | "high" | "critical";
+  reason: PushReason;
+  /** Emails this person already had in the last 24 hours. */
+  sentToday: number;
+}): boolean {
+  if (input.priority === "critical") return true;
+  if (input.priority === "high") return input.sentToday < EMAIL_DAILY_LIMIT.high;
+  if (input.priority === "normal") return input.reason === "reminder" && input.sentToday < EMAIL_DAILY_LIMIT.normal;
+  return false;
+}

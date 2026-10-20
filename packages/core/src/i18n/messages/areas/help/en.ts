@@ -208,6 +208,7 @@ export const helpEn = {
   "help.guide.notifications.body.5":
     "Reminders appear in the app. Other channels show whether they are connected for your WonderHome; where one is not yet, your choice is saved for when it is.",
   "help.guide.notifications.body.6": "Push on this phone, in Settings → Notifications, lets WonderHome reach that device when it has push switched on. A push goes only to the person a reminder is for, at the time chosen for them and in their language: anything critical always, something urgent, and reminders timed for you — a bill due, school things to pack, the cook's list — up to a few a day. Everything else waits in the app, a settled reminder never arrives, and quiet hours hold except for something critical. Send a test shows what it looks like; Turn off forgets that device only. On an iPhone, add WonderHome to your Home Screen first.",
+  "help.guide.notifications.body.7": "Email, where your WonderHome has it set up, sends a reminder to the address of your own account — the one you sign in with — by the same rules as push: anything critical always, something urgent up to a dozen a day, and reminders timed for you up to a few. Each email has a button back into WonderHome and says why it came. Turn it on under Settings → Notifications → Email. It is off until you do, and someone with no confirmed email address on their own account gets none.",
 
   // Bills and money
   "help.guide.bills.title": "Bills and money",

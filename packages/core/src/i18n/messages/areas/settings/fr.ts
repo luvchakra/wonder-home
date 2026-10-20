@@ -122,6 +122,8 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.channel.in_app.description": "La cloche dans WonderHome : toujours la trace de ce qui a été dit.",
   "settingsPage.notifications.channel.push.description": "Une notification sur votre téléphone, si vous installez WonderHome comme application.",
   "settingsPage.notifications.channel.email.description": "Envoyé à l’adresse de votre compte.",
+  "notificationEmail.open": "Ouvrir dans WonderHome",
+  "notificationEmail.why": "Vous recevez ce message parce que l’e-mail est activé dans les paramètres de notification de WonderHome. Vous pouvez le modifier à tout moment dans Paramètres → Notifications.",
   "settingsPage.notifications.channel.whatsapp.description": "Un message au numéro ci-dessous.",
   "settingsPage.notifications.notConnected": "Pas encore connecté pour ce déploiement ; votre préférence est enregistrée pour le moment où il le sera.",
   "settingsPage.notifications.sendHere": "Envoyer ici",

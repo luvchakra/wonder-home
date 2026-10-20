@@ -124,6 +124,8 @@ export const settingsEn = {
   "settingsPage.notifications.channel.in_app.description": "The bell in WonderHome — always the record of what was said.",
   "settingsPage.notifications.channel.push.description": "A notification on your phone, if you install WonderHome as an app.",
   "settingsPage.notifications.channel.email.description": "Sent to the address on your account.",
+  "notificationEmail.open": "Open in WonderHome",
+  "notificationEmail.why": "You are getting this because email is on in your WonderHome notification settings. You can change that any time under Settings → Notifications.",
   "settingsPage.notifications.channel.whatsapp.description": "A message to the number below.",
   "settingsPage.notifications.notConnected": "Not connected for this deployment yet — your preference is saved for when it is.",
   "settingsPage.notifications.sendHere": "Send here",

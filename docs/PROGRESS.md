@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**292 of 312 stories done — 93.6%**
+**293 of 327 stories done — 89.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 292 |
+| Done | 293 |
 | In Progress | 5 |
-| Blocked | 0 |
-| Not Started | 11 |
+| Blocked | 1 |
+| Not Started | 24 |
 | Deferred | 4 |
 
 ## By module
@@ -52,6 +52,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
 | 25 HomeFood | `██████░░░░` | 12 | 19 | 1 in progress, 6 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
+| 27 Notification Channels and Events | `░░░░░░░░░░` | 1 | 15 | 1 blocked, 13 not started |
 
 ## What is left
 
@@ -77,6 +78,20 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
 | `26-006` Google and Outlook calendars | 26 HomeEvents | P2 | Not Started |
+| `27-002` Choose the channel for each kind of reminder | 27 Notification Channels and Events | P0 | Not Started |
+| `27-003` Send me a test notification, and say why one didn't arrive | 27 Notification Channels and Events | P1 | Not Started |
+| `27-004` A HomeSend item waiting for your OK tells you | 27 Notification Channels and Events | P1 | Not Started |
+| `27-005` A guest's reply to an invitation tells the host | 27 Notification Channels and Events | P1 | Not Started |
+| `27-006` A helper who won't come tells the adults | 27 Notification Channels and Events | P1 | Not Started |
+| `27-007` An unanswered reminder moves to another channel | 27 Notification Channels and Events | P1 | Not Started |
+| `27-008` A morning digest by push, email or WhatsApp | 27 Notification Channels and Events | P1 | Not Started |
+| `27-009` Email: unsubscribe, and stop on a rejected address | 27 Notification Channels and Events | P1 | Not Started |
+| `27-010` Delivery that can be seen and retried | 27 Notification Channels and Events | P1 | Not Started |
+| `27-011` WhatsApp goes live | 27 Notification Channels and Events | P1 | Blocked |
+| `27-012` A grocery order's progress tells the person who placed it | 27 Notification Channels and Events | P2 | Not Started |
+| `27-013` A moved or cancelled event tells those going | 27 Notification Channels and Events | P2 | Not Started |
+| `27-014` Weather that changes a plan tells the person it affects | 27 Notification Channels and Events | P2 | Not Started |
+| `27-015` Channels that suit a helper and a child | 27 Notification Channels and Events | P2 | Not Started |
 
 ## Every story
 
@@ -581,4 +596,26 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-013` "More family time!" only on family events | P1 | Done | The owner, 2026-10-18 (PR #241): Home's event card closed every event with "More family time!", a school event or an office review included. It now shows only for family kinds (family time, outing, birthday, gathering, travel, special occasion; `momentLook.family` in `_screens/home-dashboard.tsx`). Checked at 360px: a school event has no line, a movie night does |
 | `26-014` An event's "Where" is picked from Google Maps | P1 | Done | The owner, 2026-10-19 (screenshot of Edit the plan). Adding or editing an event, an adult searches Google Maps for Where (`EventPlaceField`, the same `PlaceSearchField` as the place book). The server re-reads a picked place by its id (`eventPlaceFromForm` → `decideEventPlace`, `places/event-place.ts`) and keeps its name, address and id (`family_events.location_address`, `location_place_id`, migration `20261019130000`, live). A typed place such as Home is kept as written, and a pick that cannot be read keeps the typed words. The event page shows the address with Open in Google Maps, and the guest invitation page gives directions; a typed place has no link. Help: Calendar ¶3 in 8 languages |
 
-_Generated 2026-10-19 from 27 backlog files._
+### 27 — Notification Channels and Events
+
+1 of 15 done `░░░░░░░░░░`
+
+| Story | Priority | Status | Notes |
+|---|---|---|---|
+| `27-001` Notifications reach people by email | P0 | Done | The owner, 2026-10-20. `notifications/email.ts`: the email channel sends through the platform mailer (`channelAdaptersFromEnv`, live only where the deployment has SMTP; production has) to the confirmed email of the member's own account, by `emailWorthSending` (critical always; high up to 12 a day; normal only as a reminder, up to 6; low never) and quiet hours. The message is the notification's own title and body, an "Open in WonderHome" button and a why line, in the recipient's language (`notificationEmail.*`, 8 languages). Each attempt is a `sent` or `delivery_failed` event. Tested with a fake mailer (`email.test.ts`, 15); a real send is first seen after deploy, when a person turns Email on under Settings → Notifications. |
+| `27-002` Choose the channel for each kind of reminder | P0 | Not Started | Today a channel is on or off per person. A person says "bills by WhatsApp, school by push, everything else in the app". |
+| `27-003` Send me a test notification, and say why one didn't arrive | P1 | Not Started | A button per channel in Settings → Notifications, and a plain reason when it fails (no device, quiet hours, not set up). |
+| `27-004` A HomeSend item waiting for your OK tells you | P1 | Not Started | A photo, forward or voice note that needs a confirm reaches the person who can confirm it. |
+| `27-005` A guest's reply to an invitation tells the host | P1 | Not Started | One thread per event, so ten replies are one updating notification. |
+| `27-006` A helper who won't come tells the adults | P1 | Not Started | From Househelper's "away" days; tells the one who looks after that duty, then the backup. |
+| `27-007` An unanswered reminder moves to another channel | P1 | Not Started | Escalation across channels per policy, not only to a backup person. |
+| `27-008` A morning digest by push, email or WhatsApp | P1 | Not Started | Opt-in. The same rows as the in-app "HomeBrain summary · Today". Shares scope with 26-004's daily digest option. |
+| `27-009` Email: unsubscribe, and stop on a rejected address | P1 | Not Started | Follows 27-001. One tap turns email off; an address the server rejects repeatedly is paused and said so. |
+| `27-010` Delivery that can be seen and retried | P1 | Not Started | Per-channel results for an Admin, retry with backoff for the failures marked retryable. |
+| `27-011` WhatsApp goes live | P1 | Blocked | Needs a person: a Meta business account, an approved message template and the deployment's keys. The code is complete and tested. |
+| `27-012` A grocery order's progress tells the person who placed it | P2 | Not Started | Placed, shipped, delivered, as one thread. |
+| `27-013` A moved or cancelled event tells those going | P2 | Not Started | Only a change by someone else; never an echo of your own edit. |
+| `27-014` Weather that changes a plan tells the person it affects | P2 | Not Started | Speaks only when it changes a decision (washing that won't dry, an outing in rain). Never a forecast readout. |
+| `27-015` Channels that suit a helper and a child | P2 | Not Started | A helper with a phone and no email gets WhatsApp; a child's quiet hours follow their age. |
+
+_Generated 2026-10-20 from 28 backlog files._

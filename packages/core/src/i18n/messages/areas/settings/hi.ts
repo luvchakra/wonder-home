@@ -121,6 +121,8 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.channel.in_app.description": "WonderHome की घंटी — जो कहा गया उसका हमेशा का रिकॉर्ड।",
   "settingsPage.notifications.channel.push.description": "आपके फ़ोन पर सूचना, अगर आप WonderHome को ऐप की तरह इंस्टॉल करते हैं।",
   "settingsPage.notifications.channel.email.description": "आपके खाते के पते पर भेजी जाती है।",
+  "notificationEmail.open": "WonderHome में खोलें",
+  "notificationEmail.why": "आपको यह इसलिए मिल रहा है क्योंकि आपकी WonderHome नोटिफ़िकेशन सेटिंग्स में ईमेल चालू है। आप इसे कभी भी सेटिंग्स → नोटिफ़िकेशन में बदल सकते हैं।",
   "settingsPage.notifications.channel.whatsapp.description": "नीचे दिए नंबर पर एक संदेश।",
   "settingsPage.notifications.notConnected": "इस डिप्लॉयमेंट के लिए अभी जुड़ा नहीं है — आपकी पसंद तब के लिए सहेज ली गई है जब यह जुड़ेगा।",
   "settingsPage.notifications.sendHere": "यहाँ भेजें",

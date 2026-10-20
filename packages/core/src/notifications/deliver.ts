@@ -7,7 +7,8 @@ import { log } from "../observability/logger";
 import { renderCopy, type NotificationCopy } from "./message";
 import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type ChannelAttempt, type ChannelNotification, type ChannelPreference, type DeliveryChannel } from "./channels";
 import { parsePushTarget } from "./web-push";
-import { pushWorthSending, type PushReason } from "./push-gate";
+import { emailWorthSending, pushWorthSending, type PushReason } from "./push-gate";
+import { singleRecipient } from "../email/mailer";
 
 /**
  * Sending a notification beyond the app (stories 06-008, 17-006).
@@ -47,9 +48,7 @@ export async function deliverNotification(
         .eq("member_id", input.recipientMemberId)
         .neq("channel", "in_app"),
       admin.from("households").select("timezone, region, currency, measurement_system, default_language").eq("id", input.householdId).maybeSingle(),
-      input.copy
-        ? admin.from("household_members").select("language, date_format, time_format, measurement_system").eq("id", input.recipientMemberId).maybeSingle()
-        : Promise.resolve({ data: null }),
+      admin.from("household_members").select("language, date_format, time_format, measurement_system").eq("id", input.recipientMemberId).maybeSingle(),
       adapters.push?.live
         ? admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", input.recipientMemberId)
         : Promise.resolve({ data: [] }),
@@ -72,7 +71,7 @@ export async function deliverNotification(
     const pushPreference = preferences.find((preference) => preference.channel === "push");
     let pushTargets: ChannelPreference[] = [];
     if (subscriptions.length > 0 && pushPreference?.enabled !== false) {
-      const sentToday = await pushesInLastDay(admin, input.recipientMemberId, now);
+      const sentToday = await sentInLastDay(admin, input.recipientMemberId, "push", now);
       if (pushWorthSending({ priority: input.notification.priority, reason: input.reason ?? "alert", sentToday })) {
         pushTargets = subscriptions.map((device) => ({
           ...(pushPreference ?? { channel: "push" as const, enabled: true, quietFrom: null, quietUntil: null }),
@@ -82,13 +81,24 @@ export async function deliverNotification(
         }));
       }
     }
+    // Email goes to the address of the person's own account, and only when it
+    // earns an inbox (story 27-001): the same gate shape as push, a higher ceiling.
+    const emailPreference = preferences.find((preference) => preference.channel === "email");
+    let emailTargets: ChannelPreference[] = [];
+    if (emailPreference?.enabled && adapters.email?.live) {
+      const sentToday = await sentInLastDay(admin, input.recipientMemberId, "email", now);
+      if (emailWorthSending({ priority: input.notification.priority, reason: input.reason ?? "alert", sentToday })) {
+        emailTargets = [{ ...emailPreference, target: await emailAddressFor(admin, input.recipientMemberId) }];
+      }
+    }
     // Only channels that can actually reach someone; a fixture's "not
     // configured" is not an attempt.
-    const live = [...preferences.filter((preference) => preference.channel !== "push" && adapters[preference.channel]?.live), ...pushTargets];
+    const live = [...preferences.filter((preference) => preference.channel !== "push" && preference.channel !== "email" && adapters[preference.channel]?.live), ...emailTargets, ...pushTargets];
     if (live.length === 0) return { sent: [], failed: [] };
 
     const translated = input.copy ? await inRecipientLanguage(input.notification, input.copy, household, member) : input.notification;
-    const notification: ChannelNotification = { url: "/notifications", tag: input.notificationId, ...translated };
+    const emailWords = emailTargets.length > 0 ? await emailWordsFor(household, member) : undefined;
+    const notification: ChannelNotification = { url: "/notifications", tag: input.notificationId, ...translated, ...(emailWords ? { emailWords } : {}) };
     const attempts = await dispatchToChannels(live, notification, now, timeZone, adapters);
     await recordPushOutcomes(admin, attempts, subscriptions, now);
     const rows = attempts.map((attempt) => ({
@@ -133,16 +143,42 @@ async function inRecipientLanguage(
   }
 }
 
-/** How many pushes reached this person in the last day (the push gate's ceiling counts these). */
-async function pushesInLastDay(admin: SupabaseClient, memberId: string, now: Date): Promise<number> {
+/** How many notifications this person already had on a channel in the last day (the gates' ceilings count these). */
+async function sentInLastDay(admin: SupabaseClient, memberId: string, channel: DeliveryChannel, now: Date): Promise<number> {
   const { count } = await admin
     .from("notification_events")
     .select("id, notifications!inner(recipient_member_id)", { count: "exact", head: true })
-    .eq("channel", "push")
+    .eq("channel", channel)
     .eq("event_type", "sent")
     .eq("notifications.recipient_member_id", memberId)
     .gte("created_at", new Date(now.getTime() - 86_400_000).toISOString());
   return count ?? 0;
+}
+
+/**
+ * The address of the member's own account, when it is confirmed. Never an
+ * address someone else typed for them: a person's email is theirs to switch
+ * on, and a member without an account has nothing to switch on.
+ */
+async function emailAddressFor(admin: SupabaseClient, memberId: string): Promise<string | null> {
+  const { data: member } = await admin.from("household_members").select("profile_id").eq("id", memberId).maybeSingle();
+  const profileId = (member as { profile_id: string | null } | null)?.profile_id;
+  if (!profileId) return null;
+  const { data } = await admin.auth.admin.getUserById(profileId);
+  const user = data?.user;
+  return user?.email && user.email_confirmed_at ? singleRecipient(user.email) : null;
+}
+
+/** The email's few words in the recipient's language; English whenever that cannot be done. */
+async function emailWordsFor(household: Record<string, unknown> | null, member: Record<string, unknown> | null): Promise<{ open: string; why: string } | undefined> {
+  if (!household) return undefined;
+  try {
+    const preferences = resolvePreferences(member ? parseMemberChoices(member) : parseMemberChoices({}), parseHouseholdSettings({ ...household, language: household.default_language }));
+    const t = await translatorFor(preferences.language);
+    return { open: t("notificationEmail.open"), why: t("notificationEmail.why") };
+  } catch {
+    return undefined;
+  }
 }
 
 /** A device that took the push is marked; one its push service says is gone is forgotten. */
