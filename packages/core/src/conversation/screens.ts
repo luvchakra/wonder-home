@@ -128,10 +128,25 @@ export function mayOpenScreen(key: ScreenKey, viewer: Viewer): boolean {
  * What HomeTalk says, and where the browser goes. A voice speaker with no
  * screen of its own (Alexa) is told where to find it instead.
  */
-export function openScreenReply(key: unknown, options: { viewer: Viewer; hasScreen: boolean }): { text: string; navigate: string | null } {
+/**
+ * Requests HomeTalk does not carry out itself — roles, new people, how it
+ * asks — said once, plainly, with the screen where it is done (integration
+ * tests IT-FAM-11, IT-FAM-12, IT-HH-09). A closed set of keys, never text
+ * from the conversation.
+ */
+export const DONE_ON_SCREEN = {
+  admin: "Making someone an Admin, or stepping one back, is done in Manage Household → Members & roles, where any Admin can do it.",
+  add_member: "A new family member is added in Family, so their details and sign-in are set up properly.",
+  add_helper: "A new helper is added in Househelper, with their days and what they do.",
+  asking: "Whether I ask before acting is set in Settings → AI Assistant, and an outcome's autonomy in Manage Household.",
+} as const;
+export type DoneOnScreen = keyof typeof DONE_ON_SCREEN;
+
+export function openScreenReply(key: unknown, options: { viewer: Viewer; hasScreen: boolean; because?: unknown }): { text: string; navigate: string | null } {
   const screen = screenFor(key);
+  const lead = typeof options.because === "string" && options.because in DONE_ON_SCREEN ? `${DONE_ON_SCREEN[options.because as DoneOnScreen]} ` : "";
   if (!screen) return { text: "I can open Home, Calendar, Groceries, Meals, Family and the other WonderHome screens. Which one would you like?", navigate: null };
-  if (!mayOpenScreen(screen.key, options.viewer)) return { text: `${screen.label} isn't one of your screens, so I've stayed here.`, navigate: null };
-  if (!options.hasScreen) return { text: `There's no screen here to show ${screen.label} on. Open it in the WonderHome app.`, navigate: null };
-  return { text: `Opening ${screen.label}.`, navigate: screen.href };
+  if (!mayOpenScreen(screen.key, options.viewer)) return { text: `${lead}${screen.label} isn't one of your screens, so I've stayed here.`, navigate: null };
+  if (!options.hasScreen) return { text: `${lead}There's no screen here to show ${screen.label} on. Open it in the WonderHome app.`, navigate: null };
+  return { text: `${lead}Opening ${screen.label}.`, navigate: screen.href };
 }

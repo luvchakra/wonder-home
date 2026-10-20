@@ -250,7 +250,7 @@ async function composedAnswer(
     // The screen's name and its path, by rules, for what this member is offered.
     const permissions = [...permissionsFor({ roles: who.roles, memberType: who.memberType })];
     const tone = who.memberType === "child" ? "child" : who.memberType === "helper" ? "helper" : "adult";
-    return { text: openScreenReply(intent.parameters.screen, { viewer: { permissions, tone }, hasScreen: true }).text };
+    return { text: openScreenReply(intent.parameters.screen, { viewer: { permissions, tone }, hasScreen: true, because: intent.parameters.because }).text };
   }
   if (intent.action === "ask_status" && proposal.kind === "answer") {
     if (intent.parameters.scope === "likes") {

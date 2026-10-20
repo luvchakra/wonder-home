@@ -168,6 +168,9 @@ const FEATURE_FOR_ACTION: Partial<
 
 export type HomeTalkBody = z.infer<typeof bodySchema>;
 
+/** What the rules read with certainty, so no model is asked to read it again. */
+const RULES_SETTLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["ask_status", "greet", "find_places", "open_screen", "check_agents"]);
+
 /** What "undo" can take back (`undoExecuted`), so the reply offers it only where it works. */
 const UNDOABLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "set_reminder", "record_absence", "plan_event", "plan_meal"]);
 const UNDO_LINE = "Say **undo** to take it back.";
@@ -412,9 +415,11 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // A plain question about the home, or a hello, is read by the rules with
   // certainty; asking a model to confirm it is a round trip that changes
   // nothing downstream, because the answer comes from the HomeBrain
-  // either way. Everything else still goes to the model to be understood.
+  // either way. "Check on things" is the same: it takes no parameters, and a
+  // model once read it as a question, so no check ran (integration test
+  // IT-OUT-01). Everything else still goes to the model to be understood.
   const quick = resolveDeterministicIntent(body.utterance, { actorMemberId: membership.memberId, channel: body.channel });
-  const plainQuestion = (quick.action === "ask_status" || quick.action === "greet" || quick.action === "find_places" || quick.action === "open_screen") && quick.confidence >= 0.8;
+  const plainQuestion = RULES_SETTLE.has(quick.action) && quick.confidence >= 0.8;
   const rulesRead = input.rulesFirst === true && quick.action !== "unknown" && quick.confidence >= 0.8;
 
   // The HomeBrain reads the home while the request is being
@@ -1830,5 +1835,5 @@ async function recordShown(admin: ReturnType<typeof createAdminClient>, messageI
 
 /** "Take me to the grocery list" (conversation/screens.ts): what to say, and the screen, when this person is offered it. */
 function screenReply(intent: HouseholdIntent, view: Viewer, source: string): { text: string; navigate: string | null } {
-  return openScreenReply(intent.parameters.screen, { viewer: { permissions: view.permissions, tone: view.tone }, hasScreen: source !== "alexa" });
+  return openScreenReply(intent.parameters.screen, { viewer: { permissions: view.permissions, tone: view.tone }, hasScreen: source !== "alexa", because: intent.parameters.because });
 }

@@ -166,6 +166,10 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
   }
 
   // --- People (§6): a mention → one member, or one question ----------------
+  // A duty given to nobody ("make groceries responsible for groceries"): ask who, never write it.
+  if (grounded.action === "assign_responsibility" && grounded.target.kind !== "member") {
+    return clarify(grounded, "member", "Who should look after it?", []);
+  }
   if (MEMBER_TARGET.has(grounded.action) && grounded.target.kind === "member") {
     const said = (grounded.target.reference ?? "").trim();
     const given = typeof grounded.parameters.memberId === "string" ? grounded.parameters.memberId : null;
@@ -222,6 +226,13 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
       grounded.parameters = { ...grounded.parameters, item: "that" };
       delete grounded.parameters.items;
     }
+  }
+
+  // --- "The same milk we bought last week" is milk (integration test IT-CORE-26)
+  if (grounded.action === "add_to_list" || grounded.action === "order_items") {
+    const tidy = (name: string) => name.replace(/^(?:the\s+)?same\s+(?:one\s+|kind of\s+|type of\s+)?/i, "").replace(/\s+(?:that|which)?\s*(?:we|i|you)\s+(?:bought|got|ordered|had|used)\b.*$/i, "").replace(/\s+(?:as|like)\s+(?:last|before)\b.*$/i, "").trim() || name;
+    if (typeof grounded.parameters.item === "string") grounded.parameters = { ...grounded.parameters, item: tidy(grounded.parameters.item) };
+    if (Array.isArray(grounded.parameters.items)) grounded.parameters = { ...grounded.parameters, items: (grounded.parameters.items as unknown[]).map((name) => (typeof name === "string" ? tidy(name) : name)) };
   }
 
   // --- References (§8): "put that on the list" ------------------------------
@@ -302,6 +313,23 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     }
     grounded.parameters = { ...grounded.parameters, assetName: asset.name, ...(asset.id ? { assetId: asset.id } : {}) };
     if (asset.id) focus.push({ entityType: "home_asset", entityId: asset.id, label: asset.name, source: "mention", at });
+  }
+
+  // --- "Put it on the calendar" (integration test IT-CORE-25) ----------------
+  // A plan named only by a pronoun is what the conversation was about, or a question — never an event called "it".
+  if (grounded.action === "plan_event") {
+    const what = typeof grounded.parameters.what === "string" ? grounded.parameters.what.trim() : "";
+    const pointer = /^(?:it|that|this|them|those|these|the same|one)$/i.test(what) || (!what && !grounded.parameters.window && !grounded.parameters.when);
+    if (pointer) {
+      const resolved = what ? resolveAnaphor(anaphorOf(what) ?? "singular", await env.references(), { kinds: ["event", "meal", "thing", "school_item"], now: env.now }) : null;
+      if (resolved?.kind === "resolved") {
+        grounded.parameters = { ...grounded.parameters, what: resolved.entities[0]!.label, referred: what };
+      } else if (resolved?.kind === "ambiguous") {
+        return clarify(grounded, "referent", resolved.question, resolved.candidates);
+      } else {
+        return clarify(grounded, "item", "What should I put on the calendar, and when?", []);
+      }
+    }
   }
 
   // --- Protected time (§21): "protect Saturday evening for family time" -----

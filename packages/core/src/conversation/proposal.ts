@@ -286,7 +286,7 @@ function summarize(intent: HouseholdIntent): string {
     case "order_items":
       return "Place the order";
     case "assign_responsibility":
-      return `Make ${groundedName(intent, "them")} responsible for ${String(intent.parameters.outcomeKey ?? "this")}`;
+      return `Make ${groundedName(intent, "them")} responsible for ${String(intent.parameters.outcomeKey ?? "this").replace(/[._-]+/g, " ")}`;
     case "record_health_appointment":
       return `Book a ${String(intent.parameters.typeText ?? "health")} appointment`;
     case "log_health_issue":

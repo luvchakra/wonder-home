@@ -226,6 +226,31 @@ const RULES: readonly Rule[] = [
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "help" }, confidence: 0.99 }),
   },
 
+  // --- "Put it on the calendar": what the conversation was about, or one question (IT-CORE-25)
+  {
+    pattern: /^(?:please\s+)?(?:put|add|schedule|save)\s+(it|that|this|them)\s+(?:on|in|to|into)\s+(?:the\s+|my\s+|our\s+)?(?:family\s+)?(?:calendar|diary|schedule)$/i,
+    read: (match) => ({ action: "plan_event", target: { kind: "event" }, parameters: { what: match[1]!.toLowerCase() }, confidence: 0.86 }),
+  },
+
+  // --- Done on a screen, not here (integration tests IT-FAM-11/12, IT-HH-09) ------
+  {
+    pattern: /^(?:please\s+)?(?:make|set|turn)\s+([A-Za-z]+)\s+(?:into\s+)?(?:an?\s+)?(?:admin|administrator)$|^(?:please\s+)?(?:remove|take away|revoke)\s+([A-Za-z]+)'?s?\s+admin(?:istrator)?(?: (?:role|rights|access))?$/i,
+    read: () => ({ action: "open_screen", target: { kind: "unspecified" }, parameters: { screen: "manage", because: "admin" }, confidence: 0.95 }),
+  },
+  {
+    // A person, not a thing: "add a new family member called Riya", never "add a child's lunchbox to the list".
+    pattern: /^(?:please\s+)?add\s+(?:a\s+)?(?:new\s+)?(?:family\s+)?(?:member|person|relative|child|kid|baby)(?:\s+(?:called|named)\s+.+|\s+to\s+(?:the\s+)?(?:family|household)|\s+for\s+.+)?$/i,
+    read: () => ({ action: "open_screen", target: { kind: "unspecified" }, parameters: { screen: "family", because: "add_member" }, confidence: 0.95 }),
+  },
+  {
+    pattern: /^(?:please\s+)?add\s+(?:a\s+)?(?:new\s+)?(?:house\s?helper|helper|maid|cook|driver|nanny|gardener)(?:\s+(?:called|named)\s+.+|\s+for\s+.+)?$/i,
+    read: () => ({ action: "open_screen", target: { kind: "unspecified" }, parameters: { screen: "househelper", because: "add_helper" }, confidence: 0.95 }),
+  },
+  {
+    pattern: /^(?:please\s+)?(?:stop|don'?t|do not|never)\s+ask(?:ing)?\s+(?:me\s+)?(?:before|first)\b|^(?:always\s+)?ask\s+(?:me\s+)?(?:first\s+)?before\s+(?:you\s+)?(?:do|act|change)\b|^(?:just\s+)?do (?:things|it) without asking\b/i,
+    read: () => ({ action: "open_screen", target: { kind: "unspecified" }, parameters: { screen: "settings", because: "asking" }, confidence: 0.95 }),
+  },
+
   // --- Opening a screen ---------------------------------------------------------
   {
     // "Take me to the grocery list", "open the calendar", "go back to

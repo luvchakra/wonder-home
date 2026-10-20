@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import type { PlaceSearchKind } from "@wonderhome/core/places/provider";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
+import { useKeepListInView } from "@wonderhome/core/ui/keep-in-view";
 
 import { searchPlacesAction, type PlaceOption } from "../(auth)/places-actions";
 
@@ -82,7 +83,9 @@ export function PlaceSearchField({
   const [problem, setProblem] = useState<string | null>(null);
   const [session, setSession] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const latest = useRef(0);
+  useKeepListInView(open && options.length > 0, inputRef, listRef, options.length);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -214,7 +217,7 @@ export function PlaceSearchField({
           />
           {busy ? <Loader2 aria-label={labels.searching} className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-[var(--wh-foreground-subtle)] motion-reduce:animate-none" /> : null}
           {open && options.length > 0 ? (
-            <ul id={listId} role="listbox" aria-label={label} className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1 shadow-[var(--wh-shadow-md)]">
+            <ul ref={listRef} id={listId} role="listbox" aria-label={label} className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto pointer-coarse:static rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1 shadow-[var(--wh-shadow-md)]">
               {options.map((option, index) => (
                 <li
                   key={option.placeId}

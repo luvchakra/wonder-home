@@ -267,7 +267,7 @@ For every grocery action, keep any amount the person said inside the item text e
 - set_preference: state a preference or fact about the household or a person, including correcting an earlier statement. parameters.statement is the fact in plain words; parameters.time a 24h "HH:MM" if a time was stated; parameters.corrects true when it corrects something said earlier. target.reference is a short key like "meals.dinner" or "kids.bedtime".
 - make_payment: pay a bill.
 - order_items: place or prepare an order.
-- assign_responsibility: change who owns an outcome. parameters.outcomeKey is a short dotted key for the outcome ("school.run").
+- assign_responsibility: change who owns an outcome ("make Child A responsible for groceries", "give the dog walking to Child B"). target.kind is "member" and target.reference is the placeholder of the person who will own it; parameters.outcomeKey is a short dotted key for the outcome ("groceries", "pet.walking", "school.run").
 - find_places: asking for real places to go nearby — somewhere to eat, a cafe, a park, somewhere to hang out with the children ("suggest places for dinner tonight", "where can we go near school after school?"). No parameters are needed; the place search reads the sentence itself.
 - open_screen: asking to go to, open or switch to one of WonderHome's screens ("take me to the grocery list", "open the calendar", "go back to HomeTalk"). parameters.screen is exactly one of: ${SCREEN_KEYS.join(", ")}. A question about what is on a screen ("what's on the grocery list?") is ask_status, not open_screen.
 - greet: a hello, a thank-you, or "what can you do?". parameters.kind is "greeting", "thanks" or "help".
