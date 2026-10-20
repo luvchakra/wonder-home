@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**333 of 359 stories done — 92.8%**
+**334 of 360 stories done — 92.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 333 |
+| Done | 334 |
 | In Progress | 10 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `█████████░` | 11 | 12 | 1 in progress |
-| 25 HomeFood | `████████░░` | 22 | 27 | 5 not started |
+| 25 HomeFood | `████████░░` | 23 | 28 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -566,7 +566,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-22 of 27 done `████████░░`
+23 of 28 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -597,6 +597,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-027` Remove from the list in one tap | P1 | Done | The owner, 2026-10-20 ("add option to remove from cart, in that case make the to buy amount 0, so it moves out of to buy and stays in all tab"). **Remove** under every To buy amount takes the item off the list (`adjustListAction` kind `remove`): To buy goes to nothing, the row leaves the To buy view at once (the view follows the steppers' saved amounts) and stays under All with the cart button to put it back; a failure says so and restores the amount. Words (`grocery.stepper.remove`, `.removeLabel`) and help ¶2 in all eight languages. Checked at 360px: To buy 5 → 4, the item under All, no overflow. Same day: At home and Not counted yet are clickable — a tap shows just the items each counts (on the list or not), a second tap goes back (`MetricCard` `pressed`); checked at 360px (5 → 1 → 15 → 5 rows). Home's four counts open onto rows that each link to their page (`MetricDetailRow` `href`; 22 rows, a Meals row opened /meals). Then: on To buy a row swiped left or right comes off the list (`SwipeToDismiss` in the kit, `data-swipe="own"` so the primary-area swipe leaves it, a drag mostly up or down stays a scroll, a tap stays a tap), the first row jiggles once per device as the hint, and a long amount ("0.25 bunches") wraps rather than pushing + off the card; checked at 360px (5 → 4, the item under All). |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 | `25-028` Recipe ticks, sharing and filter counts | P2 | Done | The owner, 2026-10-20/21. A recipe's ingredients and steps tick off on screen only (kit `TickItem`, a real checkbox, nothing saved). Each household recipe has Share: WhatsApp gets the recipe card picture (`/meals/recipe-card/[id]`, under the member's own session) with the whole recipe as the message (`meals/recipe-share.ts`, 4 tests), plus other apps, copy, email and save picture. The course and veg/non-veg filters show counts. Help (Meals and shopping) in all eight languages. |
+| `25-029` More non-veg dishes in WonderHome's recipe list | P1 | Done | The owner, 2026-10-21 ("get more non veg recipes in the WonderHome recipe list"). 26 dishes added to `scripts/recipe-catalog/recipes.ts` through the same seed as 25-022 (catalog now 60: 33 veg, 5 egg, 22 non-veg): egg bhurji, masala omelette, egg paratha, keema paratha; chicken curry, butter chicken, chicken tikka masala, kadai chicken, chicken korma, Chettinad chicken, mutton curry, rogan josh, keema matar, macher jhol, Goan fish curry, Kerala meen curry, prawn masala; fish fry; chicken, mutton and egg biryani, prawn pulao; chicken 65, tandoori chicken, chicken seekh kebab, fish tikka. Every ingredient links to an existing grocery-catalog item (no new items needed); nutrients per serving come from `nutritionPerServing` and stay empty where too little is known about the items (e.g. chicken cuts, prawns). 25 Wikimedia Commons pictures with licence and author in `pictures.tsv` (CC BY / BY-SA / CC0 only); chicken biryani has none, since no correctly licensed picture of that dish turned up. Seeded to the live catalog with `seed.mts --apply`; no schema change (`diet` already allowed `non_veg`). |
 
 ### 26 — HomeEvents
 
