@@ -41,6 +41,8 @@ export type AssistantLabels = {
   preview: ActionPreviewLabels;
   /** HomePlaces cards; `{name}` is filled per place on the client. */
   places: PlaceCardLabels;
+  /** Ask me about family: the quiet way in and the line under a waiting question. `left` keeps `{count}`. */
+  amaf: { start: string; mode: string; leftOne: string; left: string; skip: string; stop: string };
 };
 
 /** The most results one search returns (`searchMessages` caps its limit at 50). */
@@ -77,6 +79,14 @@ const PREVIEW_STATES = ["prepared", "needs_approval", "approved", "rejected", "e
 export function assistantLabels(t: Translate, time: Pick<MessageTimeStyle, "locale" | "hour12"> = {}): AssistantLabels {
   const key = (name: string) => name as TranslationKey;
   return {
+    amaf: {
+      start: t(key("amaf.ui.start")),
+      mode: t(key("amaf.ui.mode")),
+      leftOne: t(key("amaf.ui.left"), { count: 1 }),
+      left: t(key("amaf.ui.left"), { count: 7 }).replace("7", "{count}"),
+      skip: t(key("amaf.ui.skip")),
+      stop: t(key("amaf.ui.stop")),
+    },
     greeting: t("hometalk.ui.greeting", { name: "{name}" }),
     helpQuestion: t("hometalk.ui.helpQuestion"),
     intro: t("hometalk.ui.intro"),

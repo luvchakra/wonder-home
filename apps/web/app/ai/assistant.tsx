@@ -10,7 +10,9 @@ import {
   Sparkles,
   Wallet,
   X,
+  Users,
 } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
@@ -56,6 +58,8 @@ export type AssistantMessage = {
   at?: string;
   /** Places a HomePlaces answer offered, shown as cards under it. */
   places?: PlaceSuggestion[] | null;
+  /** An Ask me about family question still waiting: the part of the app it fills. */
+  amaf?: { section: string; href: string; left: number } | null;
 };
 
 /** Far enough back to be deliberate rather than a stray touch. */
@@ -240,6 +244,7 @@ export function Assistant({
           proposal?: string;
           places?: PlaceSuggestion[];
           navigate?: string;
+          amaf?: AssistantMessage["amaf"];
         }[] = Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : [payload.reply];
         setMessages((current) =>
           current
@@ -254,6 +259,7 @@ export function Assistant({
                 preview: reply.preview ?? null,
                 proposal: reply.proposal,
                 places: reply.places ?? null,
+                amaf: reply.amaf ?? null,
                 speaker: speaker?.assistant,
                 at: new Date().toISOString(),
               })),
@@ -424,6 +430,9 @@ export function Assistant({
   }, [initialQuery, send]);
 
   const quiet = messages.length === 0;
+  // Ask me about family is waiting on an answer only while its question is the last thing said.
+  const lastMessage = messages.at(-1);
+  const amafNow = lastMessage && lastMessage.role === "assistant" && !lastMessage.pending ? (lastMessage.amaf ?? null) : null;
 
   // The one message that may still be reworded: the household's own last
   // word, and only while nothing has come of it yet — an approved or
@@ -465,7 +474,10 @@ export function Assistant({
             {labels.suggestionsHeading}
           </p>
           <SuggestionChips
-            suggestions={SUGGESTIONS.map(({ key, utterance, icon }) => ({ label: labels.suggestions[key], utterance, icon }))} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
+            suggestions={[
+              ...SUGGESTIONS.map(({ key, utterance, icon }) => ({ label: labels.suggestions[key], utterance, icon })),
+              ...(needsAdult ? [] : [{ label: labels.amaf.start, utterance: "Ask me about my family", icon: <Users aria-hidden className="size-4 text-[var(--wh-tone-people)]" /> }]),
+            ]} onPick={(utterance) => void send(utterance, "text")} className="justify-center" />
         </div>
         </div>
       ) : (
@@ -584,6 +596,41 @@ export function Assistant({
           >
             <ArrowDown aria-hidden className="size-5" />
           </button>
+        ) : null}
+        {/* Ask me about family (the owner, 2026-10-20): subtle — one quiet line. While a
+            question waits it says which part of the app the answer fills, how many are
+            left, and offers Skip and Stop; otherwise, for an adult, one small way in. */}
+        {!editing && !voiceInProgress ? (
+          amafNow ? (
+            <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-[var(--wh-foreground-muted)]">
+              <Users aria-hidden className="size-3.5 shrink-0 text-[var(--wh-tone-people)]" />
+              <span className="font-semibold text-[var(--wh-foreground)]">{labels.amaf.mode}</span>
+              <span aria-hidden>·</span>
+              <Link href={amafNow.href} className="underline-offset-2 hover:underline">
+                {amafNow.section}
+              </Link>
+              {amafNow.left > 0 ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{amafNow.left === 1 ? labels.amaf.leftOne : labels.amaf.left.replace("{count}", String(amafNow.left))}</span>
+                </>
+              ) : null}
+              <span className="ms-auto flex gap-1">
+                <button type="button" disabled={busy} onClick={() => void send("skip", "text")} className="min-h-8 rounded-full px-2.5 font-semibold text-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)] disabled:opacity-50">
+                  {labels.amaf.skip}
+                </button>
+                <button type="button" disabled={busy} onClick={() => void send("stop", "text")} className="min-h-8 rounded-full px-2.5 font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] disabled:opacity-50">
+                  {labels.amaf.stop}
+                </button>
+              </span>
+            </div>
+          ) : !needsAdult && !quiet ? (
+            <div className="mb-1 px-1">
+              <button type="button" disabled={busy} onClick={() => void send("Ask me about my family", "text")} className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-50">
+                <Users aria-hidden className="size-3.5 text-[var(--wh-tone-people)]" /> {labels.amaf.start}
+              </button>
+            </div>
+          ) : null
         ) : null}
         {editing ? (
           <div className="mb-2 flex items-center justify-between rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--wh-primary)]">
