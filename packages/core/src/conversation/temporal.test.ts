@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveCalendarSpan, resolveDay, resolveTemporal } from "./temporal";
+import { resolveCalendarSpan, resolveDay, resolveTemporal, tomorrowIn } from "./temporal";
 
 // Wednesday 23 September 2026, 10:00 in Kolkata.
 const WED = { timezone: "Asia/Kolkata", now: new Date("2026-09-23T04:30:00Z") };
@@ -104,5 +104,22 @@ describe("calendar spans — month-sized questions", () => {
 
   it("leaves day- and week-sized phrases to resolveTemporal", () => {
     for (const phrase of ["today", "next week", "friday", "this weekend", "nonsense"]) expect(span(phrase), phrase).toBeNull();
+  });
+});
+
+describe("tomorrow in the small hours", () => {
+  // 12:02 am on Wed 21 Oct in Kolkata is 18:32 UTC on the 20th.
+  const justAfterMidnight = new Date("2026-10-20T18:32:00Z");
+  const evening = new Date("2026-10-20T16:30:00Z"); // 10 pm on Tue 20 Oct
+  it("is the day just begun before 4 am, the next day after", () => {
+    expect(tomorrowIn(justAfterMidnight, "Asia/Kolkata")).toEqual({ date: "2026-10-21", smallHours: true });
+    expect(tomorrowIn(evening, "Asia/Kolkata")).toEqual({ date: "2026-10-21", smallHours: false });
+    expect(tomorrowIn(new Date("2026-10-20T23:00:00Z"), "Asia/Kolkata")).toEqual({ date: "2026-10-22", smallHours: false }); // 4:30 am
+  });
+  it("resolves \"tomorrow\" and \"day after tomorrow\" from it", () => {
+    expect(resolveTemporal("tomorrow", { timezone: "Asia/Kolkata", now: justAfterMidnight })?.date).toBe("2026-10-21");
+    expect(resolveTemporal("tomorrow evening", { timezone: "Asia/Kolkata", now: justAfterMidnight })?.date).toBe("2026-10-21");
+    expect(resolveTemporal("day after tomorrow", { timezone: "Asia/Kolkata", now: justAfterMidnight })?.date).toBe("2026-10-22");
+    expect(resolveTemporal("today", { timezone: "Asia/Kolkata", now: justAfterMidnight })?.date).toBe("2026-10-21");
   });
 });

@@ -410,6 +410,8 @@ export const hi: Catalog = {
   "hometalk.places.heading": "जगहें",
   "placeBook.lede": "{name}, ये आपके परिवार की जगहें हैं: घर, स्कूल और काम, HomeTalk से सहेजी या यहाँ जोड़ी गई जगहें, और वे जिन्हें आपने अपने लिए नहीं कहा। HomeTalk सहेजी जगहें पहले सुझाता है और बाकी को दोबारा नहीं लाता।",
   "placeBook.saved": "सहेजी गईं",
+  "placeBook.added": "आपके जोड़े हुए",
+  "placeBook.suggested": "HomeTalk से सेव किए गए",
   "placeBook.ours.title": "हमारी जगहें",
   "placeBook.ours.home": "घर",
   "placeBook.ours.school": "स्कूल · {names}",

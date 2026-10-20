@@ -108,8 +108,9 @@ describe("turning a household's own wall-clock time into a UTC instant", () => {
 });
 
 describe("which day 'tomorrow' is, in the household's own timezone", () => {
-  // 20:30 UTC on the 20th is already the 21st in Kolkata.
-  const now = new Date("2026-09-20T20:30:00.000Z");
+  // 23:00 UTC on the 20th is already 4:30 am on the 21st in Kolkata — past the
+  // small hours, so "tomorrow" is the 22nd (before 4 am it is the 21st: `tomorrowIn`).
+  const now = new Date("2026-09-20T23:00:00.000Z");
 
   it("reads today and tomorrow where the household lives", () => {
     expect(resolveWhen("today", now, "Asia/Kolkata")).toBe("2026-09-21");

@@ -410,6 +410,8 @@ export const fr: Catalog = {
   "hometalk.places.heading": "Lieux",
   "placeBook.lede": "{name}, voici les lieux de votre famille : la maison, l’école et le travail, les lieux enregistrés depuis HomeTalk ou ajoutés ici, et ceux que vous avez écartés. HomeTalk propose d’abord les lieux enregistrés et ne ramène jamais les autres.",
   "placeBook.saved": "Enregistrés",
+  "placeBook.added": "Ajoutés par vous",
+  "placeBook.suggested": "Enregistrés depuis HomeTalk",
   "placeBook.ours.title": "Nos lieux",
   "placeBook.ours.home": "Maison",
   "placeBook.ours.school": "École · {names}",

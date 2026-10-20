@@ -1,10 +1,9 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Archive, Pause, Pencil, Play, type LucideIcon } from "lucide-react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -29,12 +28,24 @@ export type PlaybookControlLabels = {
  * on screen with nothing anywhere that could set it.
  */
 
-function Submit({ label, tone = "quiet" }: { label: string; tone?: "quiet" | "soft" | "primary" }) {
+// Icon actions with their words as the accessible name (rule 11): the row's room belongs to the name, not to text buttons.
+const ICON_BUTTON =
+  "grid size-9 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-50";
+
+function Submit({ label, icon: Icon }: { label: string; icon: LucideIcon }) {
   const { pending } = useFormStatus();
   return (
-    <Pill type="submit" tone={tone} disabled={pending}>
-      {pending ? "…" : label}
-    </Pill>
+    <button type="submit" aria-label={label} title={label} disabled={pending} className={ICON_BUTTON}>
+      <Icon aria-hidden className="size-4" />
+    </button>
+  );
+}
+
+function EditButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" aria-label={label} title={label} onClick={onClick} className={ICON_BUTTON}>
+      <Pencil aria-hidden className="size-4" />
+    </button>
   );
 }
 
@@ -61,15 +72,13 @@ export function PlaybookRowControls({
   const [state, toggle] = useActionState<ActionState, FormData>(setPlaybookActiveAction, {});
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="gap-1.5">
-        <Pencil aria-hidden className="size-3.5" /> {labels.edit}
-      </Pill>
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5">
+      <EditButton label={labels.edit} onClick={() => setOpen(true)} />
       <form action={toggle}>
         <input type="hidden" name="householdId" value={householdId} />
         <input type="hidden" name="outcomeKey" value={item.outcomeKey} />
         <input type="hidden" name="active" value={active ? "false" : "true"} />
-        <Submit label={active ? labels.pause : labels.resume} tone={active ? "quiet" : "soft"} />
+        <Submit label={active ? labels.pause : labels.resume} icon={active ? Pause : Play} />
       </form>
       <Feedback state={state} />
 
@@ -85,14 +94,12 @@ export function PolicyRowControls({ householdId, policyId, policy, labels }: { h
   const [state, retire] = useActionState<ActionState, FormData>(retirePolicyAction, {});
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} className="gap-1.5">
-        <Pencil aria-hidden className="size-3.5" /> {labels.edit}
-      </Pill>
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5">
+      <EditButton label={labels.edit} onClick={() => setOpen(true)} />
       <form action={retire}>
         <input type="hidden" name="householdId" value={householdId} />
         <input type="hidden" name="policyId" value={policyId} />
-        <Submit label={labels.standDown} />
+        <Submit label={labels.standDown} icon={Archive} />
       </form>
       <Feedback state={state} />
 

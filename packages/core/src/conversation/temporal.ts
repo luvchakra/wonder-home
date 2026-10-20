@@ -83,7 +83,8 @@ export function resolveTemporal(phrase: string, options: { timezone: string; now
   // "friday evening". Split the part off first so both halves resolve.
   const { dayText, part } = splitPartOfDay(text);
 
-  const day = dayFrom(dayText, today);
+  // In the small hours "tomorrow" is the day just begun (`tomorrowIn`).
+  const day = dayFrom(dayText, today, tomorrowIn(options.now, options.timezone).smallHours);
   if (!day) return null;
 
   if (part) {
@@ -118,6 +119,25 @@ export function localClock(now: Date, timezone: string): { date: string; minute:
   const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
   const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
   return { date: isoDateIn(now, timezone), minute: (hour % 24) * 60 + minute };
+}
+
+/**
+ * Before this minute of the night, a person is still in yesterday's evening:
+ * at 12:30 am "tomorrow" is the day they will wake up to, which by the
+ * calendar is already today (the owner, 2026-10-21: "tomorrow should be
+ * 21st, why it's showing 22"). Four o'clock is where most people's night ends.
+ */
+export const SMALL_HOURS_END_MINUTE = 4 * 60;
+
+/**
+ * The day "tomorrow" means right now, in the household's zone: the next
+ * calendar day, except in the small hours, when it is the day just begun.
+ * `smallHours` lets a reply say which day it took.
+ */
+export function tomorrowIn(now: Date, timezone: string): { date: string; smallHours: boolean } {
+  const clock = localClock(now, timezone);
+  const smallHours = clock.minute < SMALL_HOURS_END_MINUTE;
+  return { date: smallHours ? clock.date : addDays(clock.date, 1), smallHours };
 }
 
 /** "Later today" when nothing more is said: about an hour from now, on the quarter hour, before the day is over. */
@@ -209,7 +229,7 @@ export function splitTrailingWhen(what: string): { what: string; when: string } 
 
 type Day = { precision: TemporalPrecision; date: string; endDate: string; window: { from: string; to: string } | null; label: string };
 
-function dayFrom(text: string, today: string): Day | null {
+function dayFrom(text: string, today: string, smallHours = false): Day | null {
   // No day named ("after school" alone, "tonight"): today.
   if (text === "" || text === "today" || text === "now") return single(today, `today (${short(today)})`);
   if (text === "tonight") return { ...single(today, `tonight (${short(today)})`), precision: "part_of_day", window: { ...pick("night") } };
@@ -217,8 +237,10 @@ function dayFrom(text: string, today: string): Day | null {
     const part = text.replace("this ", "");
     return { ...single(today, `this ${part} (${short(today)})`), precision: "part_of_day", window: pick(part) };
   }
-  if (text === "tomorrow" || text === "tmrw" || text === "tmr") return single(addDays(today, 1), `tomorrow (${short(addDays(today, 1))})`);
-  if (text === "day after tomorrow" || text === "the day after tomorrow") return single(addDays(today, 2), short(addDays(today, 2)));
+  // Past midnight but before the night is over, "tomorrow" is the day they will wake up to — already today by the calendar.
+  const tomorrow = smallHours ? today : addDays(today, 1);
+  if (text === "tomorrow" || text === "tmrw" || text === "tmr") return single(tomorrow, `tomorrow (${short(tomorrow)})`);
+  if (text === "day after tomorrow" || text === "the day after tomorrow") return single(addDays(tomorrow, 1), short(addDays(tomorrow, 1)));
   if (text === "yesterday") return single(addDays(today, -1), `yesterday (${short(addDays(today, -1))})`);
 
   const weekdayOfToday = weekdayOf(today);

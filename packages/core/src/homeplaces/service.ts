@@ -225,13 +225,15 @@ function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor
   }
 }
 
-/** Best first: the family's own saves, then open-and-good, then near. Never a place they turned down. */
+/** Best first: the family's own places (added by hand, then saved from a suggestion), then open-and-good, then near. Never a place they turned down. */
 export function rankPlaces(
   found: readonly PlaceResult[],
   options: { anchor: LatLng; window: Pick<Window, "day" | "minute" | "forMinutes" | "now" | "anyHours">; known: readonly HouseholdPlace[]; radiusMeters: number; perKm?: number; minMeters?: number },
 ): PlaceSuggestion[] {
   const rejected = new Set(options.known.filter((place) => place.status === "not_for_us").map((place) => place.placeId));
   const saved = new Set(options.known.filter((place) => place.status === "saved").map((place) => place.placeId));
+  // A place someone added by hand ranks above one they saved from a suggestion (the owner, 2026-10-21).
+  const added = new Set(options.known.filter((place) => place.status === "saved" && place.origin === "added").map((place) => place.placeId));
   const likedKinds = new Set(options.known.filter((place) => place.status === "saved" && place.kind).map((place) => place.kind!.toLowerCase()));
 
   const scored: { place: PlaceSuggestion; score: number }[] = [];
@@ -247,7 +249,7 @@ export function rankPlaces(
     score += Math.min(Math.log10((place.ratingCount ?? 0) + 1), 4) * 0.15;
     score -= (distanceMeters / 1000) * (options.perKm ?? 0.12);
     if (open === null && !options.window.anyHours) score -= 0.4;
-    if (saved.has(place.placeId)) score += 1.5;
+    if (saved.has(place.placeId)) score += added.has(place.placeId) ? 2.5 : 1.5;
     if (place.kind && likedKinds.has(place.kind.toLowerCase())) score += 0.3;
 
     scored.push({

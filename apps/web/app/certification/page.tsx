@@ -18,7 +18,7 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { CertificationItem } from "@wonderhome/core/ui/certification-item";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
-import { MetricGrid } from "@wonderhome/core/ui/metric-card";
+import { MetricCard } from "@wonderhome/core/ui/metric-card";
 import { ProgressRing } from "@wonderhome/core/ui/progress-ring";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -72,7 +72,7 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
-  const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "review";
+  const active = tab === "confirmed" || tab === "learned" || tab === "review" || tab === "history" ? tab : "confirmed";
   const shell = { active: "more" as const, viewer, secondary, pathname: "/certification", back: { href: "/more", label: t("common.back") }, title: t("nav.item.certification") };
 
   const admin = isHouseholdAdmin(membership);
@@ -182,21 +182,27 @@ export default async function CertificationPage({ searchParams }: { searchParams
           </div>
         </Card>
 
-        <MetricGrid
-          metrics={[
-            { label: t("review.metric.confirmed"), value: summary.confirmed, icon: CircleCheck, tone: "handled", href: "/certification?tab=confirmed" },
-            { label: t("review.metric.learned"), value: summary.learned, icon: Sparkles, tone: "ai", href: "/certification?tab=learned" },
-            { label: t("review.metric.needReview"), value: summary.needsReview, icon: TriangleAlert, tone: "attention", href: "/certification?tab=review" },
-          ]}
-        />
+        {/* One row of three on every screen (the owner, 2026-10-21): stacked tiles whose labels wrap, never cut (rule 19's exceptions). */}
+        <ul className="grid grid-cols-3 gap-2.5">
+          {[
+            { label: t("review.metric.confirmed"), value: summary.confirmed, icon: CircleCheck, tone: "handled" as const, href: "/certification?tab=confirmed" },
+            { label: t("review.metric.learned"), value: summary.learned, icon: Sparkles, tone: "ai" as const, href: "/certification?tab=learned" },
+            { label: t("review.metric.needReview"), value: summary.needsReview, icon: TriangleAlert, tone: "attention" as const, href: "/certification?tab=review" },
+          ].map((metric) => (
+            <li key={metric.label} className="min-w-0">
+              <MetricCard {...metric} stacked />
+            </li>
+          ))}
+        </ul>
 
         <SegmentedControl
           label={t("review.view")}
           active={active}
           segments={[
+            // What WonderHome knows first (the owner, 2026-10-21: "registered tab should come first").
+            { key: "confirmed", label: t("review.tab.confirmed"), href: "/certification?tab=confirmed", count: summary.confirmed },
+            { key: "learned", label: t("review.tab.learned"), href: "/certification?tab=learned", count: summary.learned },
             { key: "review", label: t("review.tab.review"), href: "/certification?tab=review", count: summary.needsReview },
-            { key: "learned", label: t("review.tab.learned"), href: "/certification?tab=learned" },
-            { key: "confirmed", label: t("review.tab.confirmed"), href: "/certification?tab=confirmed" },
             { key: "history", label: t("review.tab.history"), href: "/certification?tab=history" },
           ]}
         />

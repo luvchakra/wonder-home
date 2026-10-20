@@ -47,6 +47,8 @@ import {
   SuggestMealButton,
 } from "../_components/meal-forms";
 import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
+import { recipeShareText } from "@wonderhome/core/meals/recipe-share";
+import { RecipeShareButton, type RecipeShareLabels } from "./recipe-share-button";
 import { mealFormLabels, recipePickerLabels } from "../_lib/meal-form-labels";
 import { DietSettings } from "./diet-settings";
 import { RepeatLastWeek } from "./week-controls";
@@ -146,11 +148,51 @@ export default async function MealsPage({
     ]);
   const meals = weekMeals;
   const words = groceryWords(t, viewer.language);
+  // Sharing a household recipe (the owner, 2026-10-20): the whole recipe as a message, and its picture card for WhatsApp.
+  const shareNumber = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 2 });
+  const shareWords = {
+    timeServes: t("meals.recipe.timeServes", { minutes: "{minutes}", serves: "{serves}" }),
+    perServing: t("recipes.share.perServing", { kcal: "{kcal}", protein: "{protein}" }),
+    kcalOnly: t("recipes.share.kcalOnly", { kcal: "{kcal}" }),
+    needs: t("recipes.share.needs"),
+    optional: t("recipes.optional"),
+    steps: t("recipes.steps"),
+    closing: t("recipes.share.closing"),
+    unitName: (unit: string) => words.unitNames[unit] ?? unit,
+    number: (value: number) => shareNumber.format(value),
+  };
+  const shareLabels = (name: string): RecipeShareLabels => ({
+    share: t("recipes.share.share"),
+    shareLabel: t("recipes.share.shareLabel", { name }),
+    title: t("recipes.share.title", { name }),
+    lede: t("recipes.share.lede"),
+    preview: t("recipes.share.preview"),
+    whatsapp: "WhatsApp",
+    whatsappMeta: t("recipes.share.whatsappMeta"),
+    more: t("recipes.share.more"),
+    moreMeta: t("recipes.share.moreMeta"),
+    copy: t("recipes.share.copy"),
+    copyMeta: t("recipes.share.copyMeta"),
+    copied: t("recipes.share.copied"),
+    email: t("recipes.share.email"),
+    emailMeta: t("recipes.share.emailMeta"),
+    picture: t("recipes.share.picture"),
+    pictureMeta: t("recipes.share.pictureMeta"),
+  });
 
   const picked = RECIPE_COURSES.includes(course as RecipeCourse) ? (course as RecipeCourse) : null;
   // Veg / Non-veg beside WonderHome's ideas (the owner, 2026-10-20). An egg dish is not veg, so it shows with non-veg.
   const foodFilter = food === "veg" || food === "nonveg" ? food : null;
   const ideas = catalog.filter((dish) => (!picked || dish.course === picked) && (!foodFilter || (foodFilter === "veg" ? dish.diet === "veg" : dish.diet !== "veg")));
+  // How many ideas each filter would show, alongside the other filter as it stands (the owner, 2026-10-20: "add counts for each tab").
+  const foodMatches = (dish: (typeof catalog)[number], key: "veg" | "nonveg" | null) => !key || (key === "veg" ? dish.diet === "veg" : dish.diet !== "veg");
+  const courseCount = (key: RecipeCourse | null) => catalog.filter((dish) => (!key || dish.course === key) && foodMatches(dish, foodFilter)).length;
+  const foodCount = (key: "veg" | "nonveg" | null) => catalog.filter((dish) => (!picked || dish.course === picked) && foodMatches(dish, key)).length;
+  const countBadge = (count: number, on: boolean) => (
+    <span className={`grid min-w-5 shrink-0 place-items-center rounded-full px-1 text-[0.625rem] font-bold ${on ? "bg-[var(--wh-primary-foreground)]/20 text-[var(--wh-primary-foreground)]" : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-muted)]"}`}>
+      {count}
+    </span>
+  );
   const ideasHref = (next: { course?: RecipeCourse | null; food?: "veg" | "nonveg" | null }) => {
     const params = new URLSearchParams({ tab: "recipes" });
     const courseKey = next.course === undefined ? picked : next.course;
@@ -417,7 +459,15 @@ export default async function MealsPage({
                               </p>
                             ) : null}
                           </div>
-                          <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
+                          <div className="flex shrink-0 flex-col items-center">
+                            <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
+                            <RecipeShareButton
+                              name={recipe.name}
+                              message={recipeShareText(recipe, shareWords)}
+                              cardPath={`/meals/recipe-card/${recipe.id}?lang=${viewer.language}`}
+                              labels={shareLabels(recipe.name)}
+                            />
+                          </div>
                         </div>
                       </Card>
                     );
@@ -452,6 +502,7 @@ export default async function MealsPage({
                           </span>
                         ) : null}
                         {key === null ? t("recipes.course.all") : t(key === "veg" ? "recipes.food.veg" : "recipes.food.nonveg")}
+                        {countBadge(foodCount(key), on)}
                       </Link>
                     );
                   })}
@@ -468,6 +519,7 @@ export default async function MealsPage({
                         scroll={false}
                       >
                         {key ? t(`recipes.course.${key}`) : t("recipes.course.all")}
+                        {countBadge(courseCount(key), on)}
                       </PillLink>
                     );
                   })}

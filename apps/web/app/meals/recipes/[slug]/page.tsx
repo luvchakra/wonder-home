@@ -5,6 +5,7 @@ import { publicEnv } from "@wonderhome/core/config/env";
 import { getCatalogRecipe } from "@wonderhome/core/meals/recipe-catalog";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
+import { TICK_STRIKE, TickItem } from "@wonderhome/core/ui/tick-item";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -94,7 +95,8 @@ export default async function CatalogRecipePage({ params }: { params: Promise<{ 
   const extras = dish.ingredients.filter((line) => line.optional);
 
   const ingredientRow = (line: (typeof dish.ingredients)[number], index: number) => (
-    <li key={`${line.name}-${index}`} className="flex items-center gap-3 py-2.5">
+    // Ticked off as it is set out (the owner, 2026-10-20) — on screen only, nothing saved.
+    <TickItem key={`${line.name}-${index}`} label={line.name} className="py-2.5">
       {line.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- the shared catalog's own picture, from public storage
         <img src={line.imageUrl} alt="" loading="lazy" className="size-10 shrink-0 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] object-contain" />
@@ -102,13 +104,13 @@ export default async function CatalogRecipePage({ params }: { params: Promise<{ 
         <IconTile icon={CookingPot} tone="meals" size="sm" />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium break-words">{line.name}</p>
+        <p className={`text-sm font-medium break-words ${TICK_STRIKE}`}>{line.name}</p>
         {line.note ? (
           <p className="text-xs text-[var(--wh-foreground-subtle)]">{line.note === FRYING_NOTE ? t("recipes.forFrying") : line.note}</p>
         ) : null}
       </div>
       <p className="shrink-0 text-sm text-[var(--wh-foreground-muted)] tabular-nums">{amount(line.quantity, line.unit)}</p>
-    </li>
+    </TickItem>
   );
 
   return (
@@ -235,15 +237,10 @@ export default async function CatalogRecipePage({ params }: { params: Promise<{ 
             <Card className="p-4">
               <ol className="space-y-4">
                 {dish.steps.map((step, index) => (
-                  <li key={index} className="flex gap-3">
-                    <span
-                      aria-hidden
-                      className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--wh-surface-muted)] text-xs font-bold text-[var(--wh-foreground)]"
-                    >
-                      {index + 1}
-                    </span>
-                    <p className="pt-0.5 text-sm leading-relaxed">{step}</p>
-                  </li>
+                  // A step done turns its number into a tick — on screen only, nothing saved.
+                  <TickItem key={index} marker={index + 1} label={t("recipes.stepDone", { number: index + 1 })}>
+                    <p className={`pt-0.5 text-sm leading-relaxed ${TICK_STRIKE}`}>{step}</p>
+                  </TickItem>
                 ))}
               </ol>
             </Card>

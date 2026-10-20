@@ -420,6 +420,8 @@ export const en = {
   "hometalk.places.heading": "Places",
   "placeBook.lede": "{name}, these are your family's places: home, school and work, the places you saved from HomeTalk or added here, and the ones you said aren't for you. HomeTalk suggests saved places first and never brings the others back.",
   "placeBook.saved": "Saved",
+  "placeBook.added": "Added by you",
+  "placeBook.suggested": "Saved from HomeTalk",
   "placeBook.ours.title": "Our places",
   "placeBook.ours.home": "Home",
   "placeBook.ours.school": "School · {names}",

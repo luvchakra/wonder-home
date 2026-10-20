@@ -424,6 +424,8 @@ export const ar: Catalog = {
   "hometalk.places.heading": "أماكن",
   "placeBook.lede": "{name}، هذه أماكن عائلتك: المنزل والمدرسة والعمل، والأماكن التي حفظتموها من HomeTalk أو أضفتموها هنا، وتلك التي قلتم إنها ليست لكم. يقترح HomeTalk الأماكن المحفوظة أولًا ولا يعيد الأخرى أبدًا.",
   "placeBook.saved": "المحفوظة",
+  "placeBook.added": "أضفتها أنت",
+  "placeBook.suggested": "محفوظة من HomeTalk",
   "placeBook.ours.title": "أماكننا",
   "placeBook.ours.home": "المنزل",
   "placeBook.ours.school": "المدرسة · {names}",

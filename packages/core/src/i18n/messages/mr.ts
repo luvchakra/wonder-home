@@ -410,6 +410,8 @@ export const mr: Catalog = {
   "hometalk.places.heading": "ठिकाणे",
   "placeBook.lede": "{name}, ही तुमच्या कुटुंबाची ठिकाणे आहेत: घर, शाळा आणि काम, HomeTalk मधून जतन केलेली किंवा इथे जोडलेली ठिकाणे, आणि जी तुम्ही आपल्यासाठी नाहीत असे सांगितले. HomeTalk जतन केलेली ठिकाणे आधी सुचवते आणि बाकी पुन्हा आणत नाही.",
   "placeBook.saved": "जतन केलेली",
+  "placeBook.added": "तुम्ही जोडलेली",
+  "placeBook.suggested": "HomeTalk मधून जतन केलेली",
   "placeBook.ours.title": "आमची ठिकाणे",
   "placeBook.ours.home": "घर",
   "placeBook.ours.school": "शाळा · {names}",
