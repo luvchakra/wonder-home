@@ -3,16 +3,15 @@
  * step through on the list and in Add an item, so the next amount is always
  * one a shop sells and a person would say.
  *
- * The ladders follow how Indian quick-commerce and online grocers sell each
- * kind of thing (Blinkit, Zepto, Swiggy Instamart, BigBasket, 2026):
- * - loose vegetables, fruit, meat and fish are weighed — 250 g, 500 g,
- *   750 g, 1 kg, 1.25 kg, 1.5 kg … — and small aromatics come by 50–250 g;
- * - staples come in the packs on the shelf: atta and rice 1, 2, 5, 10 kg;
- *   dal 500 g, 1, 2, 3, 5 kg; spices 50, 100, 200, 500 g; oil 500 ml, 1, 2,
- *   3, 5 l; milk by the half litre;
+ * Every ladder is linear (the owner, 2026-10-20: "it should be linear"): it
+ * starts at the smallest amount a shop sells that kind of thing in and goes up
+ * by that same amount, so + and − always move by one even step:
+ * - loose vegetables, fruit, meat and fish by 250 g; small aromatics by 50 g;
+ * - atta, rice, sugar and salt by 1 kg; dal, flours and grains by 500 g;
+ *   spices by 50 g, whole spices by 25 g; oil and milk by 500 ml;
  * - anything counted — eggs, coconuts, packets, bottles, bunches — goes up
  *   one at a time, never a dozen at a time.
- * Past the last rung a ladder carries on by its last gap.
+ * A ladder of one rung carries on by that rung.
  *
  * Pure and import-free, so the catalog seed (`scripts/catalog-seed.ts`)
  * computes the same ladders with Node's own type stripping. Amounts are in
@@ -37,27 +36,27 @@ export function baseOf(unit: string): { unit: string; factor: number } {
 const round = (value: number) => Math.round(value * 1000) / 1000;
 
 export const LADDERS = {
-  loose: [250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000, 5000],
-  small: [50, 100, 200, 250, 500, 750, 1000],
-  staple: [1000, 2000, 5000, 10000],
-  rice: [1000, 2000, 5000, 10000, 25000],
-  dal: [500, 1000, 2000, 3000, 5000],
-  flour: [500, 1000, 2000, 5000],
-  grain: [500, 1000, 2000],
-  sugar: [1000, 2000, 5000],
-  jaggery: [500, 1000, 2000],
-  salt: [1000, 2000],
-  spice: [50, 100, 200, 500, 1000],
-  wholeSpice: [25, 50, 100, 200, 500],
-  dryFruit: [100, 200, 250, 500, 1000],
-  tea: [100, 250, 500, 1000],
-  coffee: [50, 100, 200, 500],
-  dairy: [200, 400, 500, 1000],
-  ghee: [200, 500, 1000],
-  packed: [100, 200, 250, 500, 1000],
-  oil: [500, 1000, 2000, 3000, 5000],
-  milk: [500, 1000, 1500, 2000, 2500, 3000],
-  liquid: [250, 500, 1000, 1500, 2000, 3000, 5000],
+  loose: [250],
+  small: [50],
+  staple: [1000],
+  rice: [1000],
+  dal: [500],
+  flour: [500],
+  grain: [500],
+  sugar: [1000],
+  jaggery: [500],
+  salt: [1000],
+  spice: [50],
+  wholeSpice: [25],
+  dryFruit: [100],
+  tea: [100],
+  coffee: [50],
+  dairy: [200],
+  ghee: [200],
+  packed: [100],
+  oil: [500],
+  milk: [500],
+  liquid: [250],
   one: [1],
 } as const satisfies Record<string, readonly number[]>;
 
