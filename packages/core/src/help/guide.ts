@@ -93,7 +93,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "talk-to-wonderhome",
     group: "Everyday use",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["approve", "approval", "ask a grown-up", "child request", "helper request", "decline", "after school", "after work", "office hours", "school hours", "place book", "saved places", "ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces", "welcome", "getting to know", "vacation", "getaway", "trip", "weekend", "holiday", "look again", "check again", "database", "how many", "guests coming", "should we", "noticed", "likes", "food preferences", "who likes what", "what do you know"],
   },
   {
@@ -141,7 +141,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "meals-and-shopping",
     group: "Everyday use",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "recipe ideas", "indian recipes", "diet", "vegetarian", "vegan", "jain", "eggetarian", "non-veg", "calories", "protein", "filter recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps", "week", "weekly plan", "meal plan", "repeat last week", "veg", "non-veg", "week template", "template", "weekly menu", "choose again", "options", "rotate"],
   },
   {
@@ -165,7 +165,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "family",
     group: "Your household",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["invite", "sign in", "email", "phone", "phone number", "sms", "code", "login", "share link", "family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
   },
   {

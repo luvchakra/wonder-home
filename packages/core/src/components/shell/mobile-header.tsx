@@ -1,8 +1,9 @@
-import { Bell, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
+import { NotificationsBell } from "./notifications-bell";
 import type { InstallBannerLabels } from "../../pwa/install-labels";
 import type { PrimaryNavKey } from "../../navigation/primary-navigation";
 import type { SecondaryNavGroup } from "../../navigation/secondary-navigation";
@@ -141,16 +142,7 @@ export function MobileHeader({
                   {viewer.stars.count}
                 </Link>
               ) : null}
-              <Link
-                href="/notifications"
-                aria-label={viewer.unread ? `Notifications, ${viewer.unread} unread` : "Notifications"}
-                className="relative grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
-              >
-                <Bell className="size-5" />
-                {viewer.unread ? (
-                  <span aria-hidden className="absolute end-2.5 top-2.5 size-2 rounded-full bg-[var(--wh-attention)] ring-2 ring-[var(--wh-surface)]" />
-                ) : null}
-              </Link>
+              <NotificationsBell unread={viewer.unread ?? 0} label={viewer.unread ? `Notifications, ${viewer.unread} unread` : "Notifications"} />
               {viewer.stars ? (
                 // On a phone the count rides on the avatar, so the wordmark keeps its room (rule 15).
                 <span className="relative">
