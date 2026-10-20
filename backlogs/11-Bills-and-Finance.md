@@ -12,6 +12,7 @@
 | 6 | P1 | 11-006 | Anomaly detection | Done | an anomaly carries its comparison and is a review, never a block |
 | 7 | P1 | 11-007 | Budget planning | Done | a budget describes intent; it never stops the rent being paid. Since 2026-09-25 an Admin sets, changes and removes (retires) a budget per kind of bill on Bills & Finance; what it has used is the period's payments in its own currency (`finance/budgets.ts`) — before that the screen read a column that does not exist and always showed the empty state |
 | 8 | P2 | 11-008 | Autonomous recurring payments | Done | policy and idempotency in place; no payment provider is live |
+| 9 | P1 | 11-009 | Bills & Finance's three counts side by side | Done | The owner, 2026-10-20: Need you, Upcoming and Settled sit three across as `ExpandableMetricRow`, the same as Kids & School (08-014), with the open tile's bills in one full-width panel below. CLAUDE.md rule 19 names it as the second written exception. Checked at 360px and 1280px, no sideways scroll |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

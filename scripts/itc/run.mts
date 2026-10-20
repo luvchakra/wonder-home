@@ -12,7 +12,7 @@ const key = process.env.ITC_PROVIDER === "google" ? readFileSync("apps/web/.env.
 const configured = key ? modelsFor({ provider: "google", key }).models : {};
 // As the route does (hometalk-turn.ts): a plain question the rules read is never sent to the model.
 const models = configured.understand
-  ? { ...configured, understand: (utterance: string, ctx: any) => { const quick = resolveDeterministicIntent(utterance, { actorMemberId: ctx.actorMemberId, channel: ctx.channel }); const plain = ["ask_status", "greet", "find_places", "open_screen"].includes(quick.action) && quick.confidence >= 0.8; return plain ? quick : configured.understand!(utterance, ctx); } }
+  ? { ...configured, understand: (utterance: string, ctx: any) => { const quick = resolveDeterministicIntent(utterance, { actorMemberId: ctx.actorMemberId, channel: ctx.channel }); const plain = ["ask_status", "greet", "find_places", "open_screen", "check_agents"].includes(quick.action) && quick.confidence >= 0.8; return plain ? quick : configured.understand!(utterance, ctx); } }
   : configured;
 for (const s of spec) {
   if (only && !s.id.startsWith(only)) continue;

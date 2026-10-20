@@ -70,6 +70,8 @@ const FIELD = "input:not([type=hidden]):not([type=checkbox]):not([type=radio]), 
 /** Brings the field being typed in to the middle of what is still visible, once the keyboard has settled. */
 function revealField(element: Element | null) {
   if (!(element instanceof HTMLElement) || !element.matches(FIELD)) return;
+  // A field with its list open is kept in view by the list itself (keep-in-view.ts); a second scroll here is the flicker.
+  if (element.getAttribute("aria-expanded") === "true") return;
   const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   element.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
 }

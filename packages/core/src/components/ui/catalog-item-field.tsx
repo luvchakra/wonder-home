@@ -4,6 +4,7 @@ import { Check, Plus, ShoppingBasket } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { cn } from "../../lib/cn";
+import { useKeepListInView } from "./keep-in-view";
 import type { IngredientChoice, IngredientSearch, IngredientSearchLabels } from "./ingredient-rows";
 
 const INPUT =
@@ -26,6 +27,7 @@ export function CatalogItemField({
   name,
   value,
   linked,
+  picked = null,
   onType,
   onPick,
   search,
@@ -37,6 +39,8 @@ export function CatalogItemField({
   value: string;
   /** The row is already linked to an item: the field says so with a tick. */
   linked: boolean;
+  /** The choice just picked, so the row shows its picture and what the catalog knows about it. */
+  picked?: IngredientChoice | null;
   onType: (value: string) => void;
   onPick: (choice: IngredientChoice) => void;
   search: IngredientSearch;
@@ -44,6 +48,8 @@ export function CatalogItemField({
   placeholder?: string;
 }) {
   const listId = useId();
+  const fieldRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
   const [found, setFound] = useState<{ query: string; choices: IngredientChoice[] } | null>(null);
   const [active, setActive] = useState(-1);
@@ -76,6 +82,9 @@ export function CatalogItemField({
   const typedIsChoice = choices.some((choice) => choice.name.toLowerCase() === needle.toLowerCase());
   const options = showing ? [...choices, ...(typedIsChoice ? [] : [null])] : [];
 
+  useKeepListInView(showing, fieldRef, listRef, `${options.length}:${searching}`);
+  const shown = linked && picked ? picked : null;
+
   const choose = (index: number) => {
     const option = options[index];
     if (option) onPick(option);
@@ -86,7 +95,12 @@ export function CatalogItemField({
   return (
     <div className="relative">
       <div className="relative">
+        {shown?.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from storage, already sized
+          <img src={shown.imageUrl} alt="" className="pointer-events-none absolute start-2 top-1/2 size-8 -translate-y-1/2 rounded-md object-cover" />
+        ) : null}
         <input
+          ref={fieldRef}
           id={id}
           name={name}
           value={value}
@@ -121,15 +135,17 @@ export function CatalogItemField({
           placeholder={placeholder}
           autoComplete="off"
           maxLength={120}
-          className={cn(INPUT, linked && "pe-10")}
+          className={cn(INPUT, linked && "pe-10", shown?.imageUrl && "ps-12")}
         />
         {linked ? <Check aria-hidden className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-[var(--wh-handled)]" /> : null}
       </div>
       {showing ? (
         <ul
+          ref={listRef}
           id={listId}
           role="listbox"
-          className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1 shadow-[var(--wh-shadow-card)]"
+          // On a phone the list is part of the page, so the page can scroll it clear of the keyboard (keep-in-view.ts).
+          className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 pointer-coarse:static overflow-y-auto rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1 shadow-[var(--wh-shadow-card)]"
         >
           {searching && choices.length === 0 ? (
             <li className="px-3 py-2 text-sm text-[var(--wh-foreground-muted)]" role="status">
@@ -178,4 +194,19 @@ export function CatalogItemField({
       ) : null}
     </div>
   );
+}
+
+/** What a picked item shows under its name: brand, pack, what is at home, and its nutrition, each only when recorded. */
+export function choiceFacts(choice: IngredientChoice, labels: IngredientSearchLabels): string[] {
+  const facts: string[] = [];
+  if (choice.detail) facts.push(choice.detail);
+  if (choice.pack && labels.pack) facts.push(labels.pack.replace("{amount}", choice.pack));
+  if (choice.own) facts.push(choice.stock && labels.atHomeAmount ? labels.atHomeAmount.replace("{amount}", choice.stock) : labels.atHome);
+  const n = choice.nutrition;
+  if (n) {
+    const fill = (text: string) => text.replace("{kcal}", String(Math.round(n.kcal ?? 0))).replace("{protein}", String(Math.round((n.protein ?? 0) * 10) / 10)).replace("{per}", n.per);
+    const line = n.kcal !== null && n.protein !== null ? labels.energyProtein : n.kcal !== null ? labels.energy : labels.protein;
+    if (line) facts.push(`${fill(line)}${n.source === "ifct" && labels.ifctCredit ? ` (${labels.ifctCredit})` : ""}`);
+  }
+  return facts;
 }

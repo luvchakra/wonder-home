@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**308 of 327 stories done — 94.2%**
+**310 of 329 stories done — 94.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 308 |
+| Done | 310 |
 | In Progress | 4 |
 | Blocked | 1 |
 | Not Started | 10 |
@@ -35,8 +35,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `█████████░` | 15 | 16 | 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 9 | 9 | — |
-| 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
+| 10 Meals & Cooking | `██████████` | 10 | 10 | — |
+| 11 Bills, Fees & Finance | `██████████` | 9 | 9 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
@@ -273,7 +273,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-9 of 9 done `██████████`
+10 of 10 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -286,10 +286,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-007` Advanced nutrition | P2 | Done | preference scope and source kept so a dislike never becomes a house rule |
 | `10-008` Cooking automation hooks | P2 | Done | readiness accepts an observed source, so an appliance signal has somewhere to land |
 | `10-009` A meal card that does what it says: change in place, ingredients without a recipe, the right time | P0 | Done | The owner, 2026-10-18 (PR #227). **Change meal** opened HomeTalk with a sentence to retype (rule 13), and a meal could not be changed or removed at all (rule 12): it is now a sheet on the card (name, recipe, slot, day, ready by, cook; `updateMeal`, with a new recipe's ingredients replacing only those still waiting) with **Remove from the plan** (`removeMeal`, a meal still to come; what it put on the list stays). **Ingredients** on a meal with no recipe said "pick a recipe" with nowhere to pick one: it now takes the ingredients written one per line (`addMealIngredients`, amounts read as HomeTalk reads them, none said is "not measured") or one of the household's recipes. The card said "Missing … on the shopping list" for things nobody added: it now says "Still to get" for those. And a meal planned on the Meals screen was timed on the server's clock (an 8 pm dinner saved as 1:30 am): times are on the household's clock (`atLocal`). Browser-checked at 360px and 1280px |
+| `10-010` An ingredient pick you can see: the list in view, the item's picture and details | P1 | Done | The owner, 2026-10-20. The suggestion list stays clear of the keyboard without flicker: on a phone it sits in the flow, and `useKeepListInView` (`ui/keep-in-view.tsx`) scrolls just enough, in one frame, and caps the list to the space left; the place search uses it too, and a sheet no longer re-centres a field whose list is open. A picked item shows its picture in the field and a line under the row: brand, pack, what is at home (only when counted) and energy and protein per 100 g or ml when the catalog records them, IFCT credited. Checked at 360×430 as a touch phone |
 
 ### 11 — Bills, Fees & Finance
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -301,6 +302,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-006` Anomaly detection | P1 | Done | an anomaly carries its comparison and is a review, never a block |
 | `11-007` Budget planning | P1 | Done | a budget describes intent; it never stops the rent being paid. Since 2026-09-25 an Admin sets, changes and removes (retires) a budget per kind of bill on Bills & Finance; what it has used is the period's payments in its own currency (`finance/budgets.ts`) — before that the screen read a column that does not exist and always showed the empty state |
 | `11-008` Autonomous recurring payments | P2 | Done | policy and idempotency in place; no payment provider is live |
+| `11-009` Bills & Finance's three counts side by side | P1 | Done | The owner, 2026-10-20: Need you, Upcoming and Settled sit three across as `ExpandableMetricRow`, the same as Kids & School (08-014), with the open tile's bills in one full-width panel below. CLAUDE.md rule 19 names it as the second written exception. Checked at 360px and 1280px, no sideways scroll |
 
 ### 12 — Family Time & Social Activities
 

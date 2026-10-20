@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 
 import { UNIT_CHOICES } from "../../commerce/units";
 import { cn } from "../../lib/cn";
-import { CatalogItemField } from "./catalog-item-field";
+import { CatalogItemField, choiceFacts } from "./catalog-item-field";
 import { ComboboxField } from "./combobox-field";
 
 export type IngredientRowsLabels = {
@@ -25,7 +25,7 @@ export type IngredientRowsLabels = {
   chooseUnit: string;
 };
 
-type Row = { key: number; name: string; quantity?: string; unit?: string; ref?: string };
+type Row = { key: number; name: string; quantity?: string; unit?: string; ref?: string; picked?: IngredientChoice };
 
 /** One thing an item field offers (25-017): the household's own grocery item, or a catalog entry. */
 export type IngredientChoice = {
@@ -38,6 +38,12 @@ export type IngredientChoice = {
   imageUrl: string | null;
   /** Already one of the household's items. */
   own: boolean;
+  /** The catalog's pack, as it is sold ("1 kg"), when known. */
+  pack?: string | null;
+  /** Energy and protein per 100 g or ml, from the catalog — only what it actually records. */
+  nutrition?: { kcal: number | null; protein: number | null; per: "g" | "ml"; source: "ifct" | "label" } | null;
+  /** How much the household has at home, when someone counted it ("2 kg"). */
+  stock?: string | null;
 };
 
 export type IngredientSearch = (query: string) => Promise<{ ok: true; choices: IngredientChoice[] } | { ok: false }>;
@@ -48,6 +54,16 @@ export type IngredientSearchLabels = {
   searching: string;
   /** Beside the household's own items. */
   atHome: string;
+  /** "{amount} at home". */
+  atHomeAmount?: string;
+  /** "Pack of {amount}". */
+  pack?: string;
+  /** "{kcal} kcal per 100 {per}", "{kcal} kcal, {protein} g protein per 100 {per}", "{protein} g protein per 100 {per}". */
+  energy?: string;
+  energyProtein?: string;
+  protein?: string;
+  /** The credit for Indian nutrition figures (IFCT 2017, ICMR–NIN). */
+  ifctCredit?: string;
 };
 
 /**
@@ -116,9 +132,9 @@ export function IngredientRows({
   const remove = (key: number) =>
     setRows((current) => (current.length > 1 ? current.filter((row) => row.key !== key) : [{ key: next, name: "" }]));
   // Typing over a pick unlinks it: the row is then a name, not that item.
-  const rename = (key: number, name: string) => setRows((current) => current.map((row) => (row.key === key ? { ...row, name, ref: undefined } : row)));
+  const rename = (key: number, name: string) => setRows((current) => current.map((row) => (row.key === key ? { ...row, name, ref: undefined, picked: undefined } : row)));
   const pick = (key: number, choice: IngredientChoice) =>
-    setRows((current) => current.map((row) => (row.key === key ? { ...row, name: choice.name, ref: choice.ref, unit: recipeUnit(choice.unit) ?? row.unit } : row)));
+    setRows((current) => current.map((row) => (row.key === key ? { ...row, name: choice.name, ref: choice.ref, picked: choice, unit: recipeUnit(choice.unit) ?? row.unit } : row)));
 
   return (
     <fieldset className={cn("space-y-2", className)}>
@@ -141,6 +157,7 @@ export function IngredientRows({
                       name={`${prefix}Name`}
                       value={row.name}
                       linked={Boolean(row.ref)}
+                      picked={row.picked ?? null}
                       onType={(value) => rename(row.key, value)}
                       onPick={(choice) => pick(row.key, choice)}
                       search={search}
@@ -169,6 +186,9 @@ export function IngredientRows({
                   <X aria-hidden className="size-4" />
                 </button>
               </div>
+              {row.picked && row.ref && searchLabels && choiceFacts(row.picked, searchLabels).length > 0 ? (
+                <p className="text-xs text-[var(--wh-foreground-muted)]">{choiceFacts(row.picked, searchLabels).join(" · ")}</p>
+              ) : null}
               {namesOnly ? (
                 <>
                   <input type="hidden" name={`${prefix}Quantity`} value="" />

@@ -179,11 +179,12 @@ work, and hold new work against these:
     - **Touch targets stay comfortable and text stays readable** at that
       width: nothing shrinks its type or its tap area to make a row fit.
       If it would have to, it was not a two-up row.
-    - **The one exception, the owner's call (2026-10-18):** Kids & School's
-      three Overview counts sit three across as `ExpandableMetricRow` —
-      stacked tiles whose labels wrap, never cut, with the open tile's
-      entries in a full-width panel below. It is not precedent for any
-      other grid.
+    - **The exceptions, the owner's calls:** Kids & School's three
+      Overview counts (2026-10-18) and Bills & Finance's three Overview
+      counts — Need you, Upcoming, Settled (2026-10-20) — sit three across
+      as `ExpandableMetricRow`: stacked tiles whose labels wrap, never cut,
+      with the open tile's entries in a full-width panel below. They are
+      not precedent for any other grid; a new one is the owner's call.
 20. **A choice is picked, not typed.** Wherever a field's answer is one of a
     known set — a category, a relationship, a unit, a status, a frequency —
     it is a dropdown/select, a tag picker, a radio group or a checkbox list,

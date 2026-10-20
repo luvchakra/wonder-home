@@ -103,8 +103,8 @@ export function ExpandableMetricGrid({
 }
 
 /**
- * Three counts side by side on every screen size (the owner's call for Kids &
- * School, 2026-10-18 — rule 19's one written exception). Each tile stacks its
+ * Three counts side by side on every screen size (the owner's calls for Kids &
+ * School, 2026-10-18, and Bills & Finance, 2026-10-20 — rule 19's written exceptions). Each tile stacks its
  * icon, number and label so the label has the tile's whole width and wraps
  * rather than being cut (rule 15). Opening a tile shows its entries in one
  * full-width panel under the row, so a list is never squeezed into a third of

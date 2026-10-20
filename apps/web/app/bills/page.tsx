@@ -32,7 +32,7 @@ import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import {
-  ExpandableMetricGrid,
+  ExpandableMetricRow,
   MetricDetailEmpty,
   type ExpandableMetric,
 } from "@wonderhome/core/ui/expandable-metric-card";
@@ -402,7 +402,7 @@ export default async function BillsPage({
 
         {active === "overview" ? (
           <>
-            <ExpandableMetricGrid metrics={metrics} />
+            <ExpandableMetricRow metrics={metrics} />
 
             <section>
               <SectionHeader title={t("bills.upcoming")} count={upcoming.length} />

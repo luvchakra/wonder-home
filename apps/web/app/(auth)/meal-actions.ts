@@ -12,7 +12,7 @@ import {
   type PlanChoice,
 } from "@wonderhome/core/meals/meals";
 import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
-import { searchCatalog } from "@wonderhome/core/commerce/catalog";
+import { cardNutrition, searchCatalog } from "@wonderhome/core/commerce/catalog";
 import type { IngredientChoice } from "@wonderhome/core/ui/ingredient-rows";
 import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
@@ -592,6 +592,17 @@ export async function addMealShortfallsAction(input: z.input<typeof shortfallSch
   }
 }
 
+/** A number for a person to read: whole, or to two decimals at most (rule 22). */
+function roundForShow(value: number): string {
+  return String(Math.round(value * 100) / 100);
+}
+
+/** Energy and protein per 100 g or ml, as the catalog records them (the same figures a grocery card shows). */
+function choiceNutrition(entry: Parameters<typeof cardNutrition>[0]): IngredientChoice["nutrition"] {
+  const facts = cardNutrition(entry);
+  return facts ? { kcal: facts.energyKcal, protein: facts.proteinG, per: facts.basis === "100ml" ? "ml" : "g", source: facts.source } : null;
+}
+
 /** One choice for an ingredient row's item (25-017): the household's own item, or a catalog entry. */
 export type IngredientChoiceResult = { ok: true; choices: IngredientChoice[] } | { ok: false };
 
@@ -615,11 +626,20 @@ export async function searchIngredientChoicesAction(householdId: string, query: 
     const mine = own.filter((item) => [item.name, ...item.aliases].some((name) => name.toLowerCase().includes(needle))).slice(0, 4);
     const tracked = new Set(own.map((item) => item.catalog?.id).filter(Boolean));
     const choices: IngredientChoice[] = [
-      ...mine.map((item) => ({ ref: `item:${item.id}`, name: item.name, detail: null, unit: item.unit, imageUrl: item.imageUrl ?? item.catalog?.imageUrl ?? null, own: true })),
+      ...mine.map((item) => ({
+        ref: `item:${item.id}`,
+        name: item.name,
+        detail: null,
+        unit: item.unit,
+        imageUrl: item.imageUrl ?? item.catalog?.imageUrl ?? null,
+        own: true,
+        // What is at home, only when someone counted it; an uncounted item claims nothing (25-003c).
+        stock: item.stock && item.stock.quantity > 0 ? `${roundForShow(item.stock.quantity)} ${item.stock.unit}` : null,
+      })),
       ...catalog
         .filter((entry) => !tracked.has(entry.id))
         .slice(0, 6)
-        .map((entry) => ({ ref: `catalog:${entry.id}`, name: entry.name, detail: entry.brand, unit: entry.unit, imageUrl: entry.imageUrl, own: false })),
+        .map((entry) => ({ ref: `catalog:${entry.id}`, name: entry.name, detail: entry.brand, unit: entry.unit, imageUrl: entry.imageUrl, own: false, pack: entry.pack ? `${roundForShow(entry.pack.quantity)} ${entry.pack.unit}` : null, nutrition: choiceNutrition(entry) })),
     ];
     return { ok: true, choices };
   } catch {

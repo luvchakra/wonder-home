@@ -575,6 +575,24 @@ const CONNECTED: HomeTalkCase[] = [
     followUps: [{ utterance: "Get the ingredients", expected: { interpretation: "add_to_list", answer: { includes: ["pasta, tomatoes and basil"] } } }],
   },
   {
+    id: "HT-126", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Integration test IT-FAM-12: adding a person is done in Family, said once with the screen; never an item called \"new family member called Riya\" on the groceries.",
+    utterance: "Add a new family member called Riya",
+    expected: { interpretation: "open_screen", answer: { includes: ["added in Family"], excludes: ["groceries"] }, safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-127", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Integration test IT-CORE-25: \"put it on the calendar\" with nothing discussed is one question, never an event called \"it\" and never a duty given to \"it\".",
+    utterance: "Put it on the calendar",
+    expected: { answer: { includes: ["What should I put on the calendar"] }, safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-128", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Integration test IT-HH-02: the person a duty is given to is the person named; asked once, since it changes someone else's duty.",
+    utterance: "Make Upasana responsible for groceries",
+    expected: { interpretation: "assign_responsibility", entity: "a-upasana", action: "needs_approval" },
+  },
+  {
     id: "HT-83", surface: "hometalk", household: "D", category: "privacy", actor: "d-kabir",
     description: "Only his own: asked about his mother's appointment, he hears nothing of it, and is not told about his own either.",
     utterance: "When is Neha's appointment?",
