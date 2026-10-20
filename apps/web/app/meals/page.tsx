@@ -1,5 +1,7 @@
 import {
   ChefHat,
+  ChevronLeft,
+  ChevronRight,
   CookingPot,
   Heart,
   ShoppingBasket,
@@ -14,7 +16,8 @@ import {
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
-import { listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
+import { listMeals, listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
+import { shiftDay, WEEK_SLOTS, weekCount, weekDays, weekFrom, weekStartOf } from "@wonderhome/core/meals/week";
 import { DIET_CLASHES, DIETS, isDiet, type Diet, type DietClash } from "@wonderhome/core/meals/diet";
 import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
 import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
@@ -47,6 +50,7 @@ import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
 import { mealFormLabels } from "../_lib/meal-form-labels";
 import type { RecipePickerLabels } from "../_components/recipe-picker";
 import { DietSettings } from "./diet-settings";
+import { RepeatLastWeek } from "./week-controls";
 import { MealIngredientsSheet } from "./meal-ingredients-sheet";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
@@ -72,9 +76,9 @@ const SLOT_ORDER = ["breakfast", "lunch", "snack", "dinner"] as const;
 export default async function MealsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; course?: string }>;
+  searchParams: Promise<{ tab?: string; course?: string; week?: string; food?: string }>;
 }) {
-  const [{ tab, course }, session] = await Promise.all([
+  const [{ tab, course, week, food }, session] = await Promise.all([
     searchParams,
     requireSession("/meals"),
   ]);
@@ -83,10 +87,11 @@ export default async function MealsPage({
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const weekEnd = new Date(now.getTime() + 7 * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  // The household's own day, and the week (Monday to Sunday) being planned.
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
+  const weekStart = weekFrom(week, today);
+  const weekDates = weekDays(weekStart);
+  const thisWeek = weekStartOf(today);
 
   const entitlement = await may(supabase, householdId, "meals.planning");
   const active = tab === "recipes" || tab === "preferences" ? tab : "plan";
@@ -113,7 +118,7 @@ export default async function MealsPage({
     );
   }
 
-  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog] =
+  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, weekMeals] =
     await Promise.all([
       // Every meal from today on, read once: the agenda assesses them and the
       // week below is the same rows, not a second read.
@@ -137,12 +142,24 @@ export default async function MealsPage({
       active !== "preferences"
         ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])
         : Promise.resolve([]),
+      // The week being planned, past days included, bounded to its seven days.
+      active === "plan" ? listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => [] as Meal[]) : Promise.resolve([] as Meal[]),
     ]);
-  const meals = (agenda?.rows ?? []).filter((meal) => meal.onDate >= today && meal.onDate <= weekEnd);
+  const meals = weekMeals;
   const words = groceryWords(t, viewer.language);
 
   const picked = RECIPE_COURSES.includes(course as RecipeCourse) ? (course as RecipeCourse) : null;
-  const ideas = picked ? catalog.filter((dish) => dish.course === picked) : catalog;
+  // Veg / Non-veg beside WonderHome's ideas (the owner, 2026-10-20). An egg dish is not veg, so it shows with non-veg.
+  const foodFilter = food === "veg" || food === "nonveg" ? food : null;
+  const ideas = catalog.filter((dish) => (!picked || dish.course === picked) && (!foodFilter || (foodFilter === "veg" ? dish.diet === "veg" : dish.diet !== "veg")));
+  const ideasHref = (next: { course?: RecipeCourse | null; food?: "veg" | "nonveg" | null }) => {
+    const params = new URLSearchParams({ tab: "recipes" });
+    const courseKey = next.course === undefined ? picked : next.course;
+    const foodKey = next.food === undefined ? foodFilter : next.food;
+    if (courseKey) params.set("course", courseKey);
+    if (foodKey) params.set("food", foodKey);
+    return `/meals?${params.toString()}`;
+  };
   const pictureOf = new Map(catalog.map((dish) => [dish.id, dish.imageUrl]));
   const allPreferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
   // A diet has its own section and its own picker; the list below is everything else.
@@ -175,17 +192,14 @@ export default async function MealsPage({
   });
   const plan = { dishes, familyDiet, people: dietPeople, pickerLabels };
 
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now.getTime() + index * 86_400_000);
-    const key = date.toISOString().slice(0, 10);
+  const tomorrow = shiftDay(today, 1);
+  const dayWords = (date: Date) => new Intl.DateTimeFormat(viewer.language, { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }).format(date);
+  const days = weekDates.map((key) => {
+    const date = new Date(`${key}T12:00:00Z`);
     return {
       key,
-      label:
-        index === 0
-          ? t("meals.today")
-          : index === 1
-            ? t("meals.tomorrow")
-            : formatDate(timezone, date, "long"),
+      past: key < today,
+      label: key === today ? `${t("meals.today")} · ${dayWords(date)}` : key === tomorrow ? `${t("meals.tomorrow")} · ${dayWords(date)}` : dayWords(date),
       meals: meals
         .filter((meal) => meal.onDate === key)
         .sort(
@@ -193,6 +207,9 @@ export default async function MealsPage({
         ),
     };
   });
+
+  const count = weekCount(weekDates, meals, today);
+  const weekLabel = t("meals.week.label", { date: new Intl.DateTimeFormat(viewer.language, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${weekStart}T12:00:00Z`)) });
 
   return (
     <AppShell {...shell}>
@@ -279,56 +296,85 @@ export default async function MealsPage({
               </section>
             ) : null}
 
-            {meals.length === 0 ? (
-              <EmptyState
-                icon={Utensils}
-                tone="meals"
-                title={t("meals.empty.title")}
-                description={t("meals.empty.lede")}
-                action={
-                  <PlanMealButton
-                    householdId={householdId}
-                    members={memberOptions}
-                    recipes={recipeChoices}
-                    {...plan}
-                    labels={formLabels}
-                  />
-                }
-              />
-            ) : (
+            {/* The week (the owner, 2026-10-20: weekly meal planning): every day's breakfast, lunch and dinner, an empty slot one tap from planned. */}
+            <section aria-label={weekLabel} className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1">
+                  <Link href={`/meals?week=${shiftDay(weekStart, -7)}`} aria-label={t("meals.week.previous")} className="grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]" scroll={false}>
+                    <ChevronLeft aria-hidden className="size-5" />
+                  </Link>
+                  <div className="min-w-0 px-1">
+                    <h2 className="text-base font-semibold">{weekStart === thisWeek ? t("meals.week.thisWeek") : weekLabel}</h2>
+                    <p className="text-xs text-[var(--wh-foreground-muted)]">{t("meals.week.planned", { planned: count.planned, total: count.total })}</p>
+                  </div>
+                  <Link href={`/meals?week=${shiftDay(weekStart, 7)}`} aria-label={t("meals.week.next")} className="grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]" scroll={false}>
+                    <ChevronRight aria-hidden className="size-5" />
+                  </Link>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {weekStart !== thisWeek ? (
+                    <PillLink href="/meals" tone="quiet" scroll={false}>
+                      {t("meals.week.backToThis")}
+                    </PillLink>
+                  ) : null}
+                  {weekDates[6]! >= today ? (
+                    <RepeatLastWeek
+                      householdId={householdId}
+                      week={weekStart}
+                      labels={{ action: t("meals.week.repeat"), working: t("meals.week.repeating"), copied: t("meals.week.copied", { count: "{count}" }), copiedOne: t("meals.week.copiedOne"), none: t("meals.week.copyNone") }}
+                    />
+                  ) : null}
+                </div>
+              </div>
               <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {days
-                  .filter((day) => day.meals.length > 0 || day.key === today)
-                  .map((day) => (
-                    <section key={day.key}>
-                      <SectionHeader title={day.label} />
-                      {day.meals.length === 0 ? (
-                        <Card className="p-4 text-sm text-[var(--wh-foreground-muted)]">
-                          {t("meals.nothingPlannedYet")}
-                        </Card>
-                      ) : (
+                  .filter((day) => !day.past || day.meals.length > 0)
+                  .map((day) => {
+                    const slots = [...WEEK_SLOTS, ...(day.meals.some((meal) => meal.slot === "snack") ? (["snack"] as const) : [])].sort((a, b) => SLOT_ORDER.indexOf(a) - SLOT_ORDER.indexOf(b));
+                    return (
+                      <section key={day.key} className={day.past ? "opacity-70" : undefined}>
+                        <SectionHeader title={day.label} count={day.meals.length || undefined} />
                         <div className="space-y-2">
-                          {day.meals.map((meal) => (
-                            <MealCard
-                              key={meal.id}
-                              meal={meal}
-                              cook={nameOf(meal.cookMemberId)}
-                              timezone={timezone}
-                              householdId={householdId}
-                              recipes={recipeOptions}
-                              members={memberOptions}
-                              t={t}
-                              labels={formLabels}
-                              groceries={groceries}
-                              words={words}
-                            />
-                          ))}
+                          {slots.map((slot) => {
+                            const planned = day.meals.filter((meal) => meal.slot === slot);
+                            if (planned.length > 0)
+                              return planned.map((meal) => (
+                                <MealCard
+                                  key={meal.id}
+                                  meal={meal}
+                                  cook={nameOf(meal.cookMemberId)}
+                                  timezone={timezone}
+                                  householdId={householdId}
+                                  recipes={recipeOptions}
+                                  members={memberOptions}
+                                  t={t}
+                                  labels={formLabels}
+                                  groceries={groceries}
+                                  words={words}
+                                />
+                              ));
+                            if (day.past) return null;
+                            return (
+                              <PlanMealButton
+                                key={slot}
+                                householdId={householdId}
+                                members={memberOptions}
+                                recipes={recipeChoices}
+                                {...plan}
+                                labels={formLabels}
+                                trigger="slot"
+                                slot={slot}
+                                onDate={day.key}
+                                triggerLabel={t("meals.week.planSlot", { slot: formLabels.slots[slot], day: day.label })}
+                              />
+                            );
+                          })}
                         </div>
-                      )}
-                    </section>
-                  ))}
+                      </section>
+                    );
+                  })}
               </div>
-            )}
+            </section>
           </>
         ) : null}
 
@@ -383,7 +429,32 @@ export default async function MealsPage({
 
             {catalog.length > 0 ? (
               <section className="space-y-3">
-                <SectionHeader title={t("recipes.ideas")} count={catalog.length} />
+                <SectionHeader
+                  title={t("recipes.ideas")}
+                  count={ideas.length}
+                  action={
+                    <div role="group" aria-label={t("recipes.food.label")} className="flex shrink-0 gap-0.5 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] p-0.5">
+                      {(["veg", "nonveg"] as const).map((key) => {
+                        const on = foodFilter === key;
+                        return (
+                          <Link
+                            key={key}
+                            href={ideasHref({ food: on ? null : key })}
+                            scroll={false}
+                            aria-pressed={on}
+                            className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--wh-radius-pill)] px-3 text-xs font-semibold transition-colors ${on ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]" : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)]"}`}
+                          >
+                            {/* The mark Indian packs use: a green dot for veg, a brown one (the Meals tone) for non-veg — beside the word, never instead of it. */}
+                            <span aria-hidden className={`grid size-3 place-items-center rounded-[2px] border ${key === "veg" ? "border-[var(--wh-handled)]" : "border-[var(--wh-tone-meals)]"}`}>
+                              <span className={`size-1.5 rounded-full ${key === "veg" ? "bg-[var(--wh-handled)]" : "bg-[var(--wh-tone-meals)]"}`} />
+                            </span>
+                            {t(key === "veg" ? "recipes.food.veg" : "recipes.food.nonveg")}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  }
+                />
                 <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">{t("recipes.ideasLede")}</p>
                 <nav aria-label={t("recipes.course")} className="-mx-1 flex flex-wrap gap-2 px-1">
                   {[null, ...RECIPE_COURSES].map((key) => {
@@ -391,7 +462,7 @@ export default async function MealsPage({
                     return (
                       <PillLink
                         key={key ?? "all"}
-                        href={key ? `/meals?tab=recipes&course=${key}` : "/meals?tab=recipes"}
+                        href={ideasHref({ course: key })}
                         tone={on ? "primary" : "quiet"}
                         aria-current={on ? "page" : undefined}
                         scroll={false}

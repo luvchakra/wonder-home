@@ -13,6 +13,7 @@ import { eventsFr } from "./areas/events/fr";
 import { calendarFr } from "./areas/calendar/fr";
 import { memberInviteFr } from "./areas/memberinvite/fr";
 import { whatsNewFr } from "./areas/whatsnew/fr";
+import { amafFr } from "./areas/amaf/fr";
 import { groceryFr } from "./areas/grocery/fr";
 import { welcomeFr } from "./areas/welcome/fr";
 
@@ -652,6 +653,18 @@ export const fr: Catalog = {
   "meals.empty.title": "Rien de prévu cette semaine",
   "meals.empty.lede": "Prévoyez un repas : WonderHome vérifie les ingrédients, le temps de la personne qui cuisine et les préférences de chacun — puis vous dit ce qui manque.",
   "meals.nothingPlannedYet": "Rien de prévu pour l’instant.",
+  "meals.week.label": "Semaine du {date}",
+  "meals.week.thisWeek": "Cette semaine",
+  "meals.week.backToThis": "Revenir à cette semaine",
+  "meals.week.previous": "Semaine précédente",
+  "meals.week.next": "Semaine suivante",
+  "meals.week.planned": "{planned} repas prévus sur {total}",
+  "meals.week.planSlot": "Prévoir {slot} le {day}",
+  "meals.week.repeat": "Reprendre la semaine dernière",
+  "meals.week.repeating": "Copie en cours…",
+  "meals.week.copied": "{count} repas de la semaine dernière copiés dans les créneaux libres.",
+  "meals.week.copiedOne": "1 repas de la semaine dernière copié dans un créneau libre.",
+  "meals.week.copyNone": "Rien à copier de la semaine dernière : les créneaux sont déjà prévus ou la semaine dernière était vide.",
   "meals.recipes.emptyTitle": "Pas encore de recettes",
   "meals.recipes.emptyLede": "Une recette garde les ingrédients et les temps, pour qu’un repas prévu sache ce qu’il lui faut et quand commencer.",
   "meals.recipe.timeServes": "{minutes} min · pour {serves}",
@@ -852,6 +865,7 @@ export const fr: Catalog = {
   ...eventsFr,
   ...calendarFr,
   ...whatsNewFr,
+  ...amafFr,
   ...memberInviteFr,
   ...groceryFr,
   ...welcomeFr,

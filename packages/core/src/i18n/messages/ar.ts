@@ -13,6 +13,7 @@ import { eventsAr } from "./areas/events/ar";
 import { calendarAr } from "./areas/calendar/ar";
 import { memberInviteAr } from "./areas/memberinvite/ar";
 import { whatsNewAr } from "./areas/whatsnew/ar";
+import { amafAr } from "./areas/amaf/ar";
 import { groceryAr } from "./areas/grocery/ar";
 import { welcomeAr } from "./areas/welcome/ar";
 
@@ -670,6 +671,18 @@ export const ar: Catalog = {
   "meals.empty.title": "لا شيء مخطط له هذا الأسبوع",
   "meals.empty.lede": "خطّط لوجبة وسيتحقق WonderHome من المكونات ووقت من يطبخ وتفضيلات الجميع — ثم يخبرك بما ينقص.",
   "meals.nothingPlannedYet": "لا شيء مخطط له بعد.",
+  "meals.week.label": "أسبوع {date}",
+  "meals.week.thisWeek": "هذا الأسبوع",
+  "meals.week.backToThis": "العودة إلى هذا الأسبوع",
+  "meals.week.previous": "الأسبوع السابق",
+  "meals.week.next": "الأسبوع التالي",
+  "meals.week.planned": "{planned} من {total} وجبات مخططة",
+  "meals.week.planSlot": "خطّط {slot} يوم {day}",
+  "meals.week.repeat": "كرّر الأسبوع الماضي",
+  "meals.week.repeating": "جارٍ النسخ…",
+  "meals.week.copied": "نُسخت {count} وجبات من الأسبوع الماضي إلى الخانات الفارغة.",
+  "meals.week.copiedOne": "نُسخت وجبة واحدة من الأسبوع الماضي إلى خانة فارغة.",
+  "meals.week.copyNone": "لا شيء يُنسخ من الأسبوع الماضي — الخانات مخططة بالفعل أو كان الأسبوع الماضي فارغًا.",
   "meals.recipes.emptyTitle": "لا وصفات بعد",
   "meals.recipes.emptyLede": "تحفظ الوصفات المكونات والتوقيت، لتعرف الوجبة المخطط لها ما تحتاجه ومتى تبدأ.",
   "meals.recipe.timeServes": "{minutes} د · تكفي {serves}",
@@ -872,6 +885,7 @@ export const ar: Catalog = {
   ...eventsAr,
   ...calendarAr,
   ...whatsNewAr,
+  ...amafAr,
   ...memberInviteAr,
   ...groceryAr,
   ...welcomeAr,

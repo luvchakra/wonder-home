@@ -22,6 +22,7 @@ import { eventsEn } from "./areas/events/en";
 import { calendarEn } from "./areas/calendar/en";
 import { memberInviteEn } from "./areas/memberinvite/en";
 import { whatsNewEn } from "./areas/whatsnew/en";
+import { amafEn } from "./areas/amaf/en";
 import { groceryEn } from "./areas/grocery/en";
 import { welcomeEn } from "./areas/welcome/en";
 
@@ -662,6 +663,18 @@ export const en = {
   "meals.empty.title": "Nothing planned this week",
   "meals.empty.lede": "Plan a meal and WonderHome checks the ingredients, the cook's time and everyone's preferences — then tells you what's missing.",
   "meals.nothingPlannedYet": "Nothing planned yet.",
+  "meals.week.label": "Week of {date}",
+  "meals.week.thisWeek": "This week",
+  "meals.week.backToThis": "Back to this week",
+  "meals.week.previous": "Previous week",
+  "meals.week.next": "Next week",
+  "meals.week.planned": "{planned} of {total} meals planned",
+  "meals.week.planSlot": "Plan {slot} on {day}",
+  "meals.week.repeat": "Repeat last week",
+  "meals.week.repeating": "Copying…",
+  "meals.week.copied": "Copied {count} meals from last week into the empty slots.",
+  "meals.week.copiedOne": "Copied 1 meal from last week into an empty slot.",
+  "meals.week.copyNone": "Nothing from last week to copy — the slots are already planned or last week was empty.",
   "meals.recipes.emptyTitle": "No recipes yet",
   "meals.recipes.emptyLede": "Recipes hold ingredients and timing, so a planned meal knows what it needs and when to start.",
   "meals.recipe.timeServes": "{minutes} min · serves {serves}",
@@ -862,6 +875,7 @@ export const en = {
   ...eventsEn,
   ...calendarEn,
   ...whatsNewEn,
+  ...amafEn,
   ...memberInviteEn,
   ...groceryEn,
   ...welcomeEn,

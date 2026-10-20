@@ -13,6 +13,7 @@ import { eventsDe } from "./areas/events/de";
 import { calendarDe } from "./areas/calendar/de";
 import { memberInviteDe } from "./areas/memberinvite/de";
 import { whatsNewDe } from "./areas/whatsnew/de";
+import { amafDe } from "./areas/amaf/de";
 import { groceryDe } from "./areas/grocery/de";
 import { welcomeDe } from "./areas/welcome/de";
 
@@ -652,6 +653,18 @@ export const de: Catalog = {
   "meals.empty.title": "Diese Woche ist nichts geplant",
   "meals.empty.lede": "Plane eine Mahlzeit, und WonderHome prüft die Zutaten, die Zeit der Person am Herd und die Vorlieben aller — und sagt dir, was fehlt.",
   "meals.nothingPlannedYet": "Noch nichts geplant.",
+  "meals.week.label": "Woche vom {date}",
+  "meals.week.thisWeek": "Diese Woche",
+  "meals.week.backToThis": "Zurück zu dieser Woche",
+  "meals.week.previous": "Vorige Woche",
+  "meals.week.next": "Nächste Woche",
+  "meals.week.planned": "{planned} von {total} Mahlzeiten geplant",
+  "meals.week.planSlot": "{slot} am {day} planen",
+  "meals.week.repeat": "Letzte Woche wiederholen",
+  "meals.week.repeating": "Wird kopiert…",
+  "meals.week.copied": "{count} Mahlzeiten aus der letzten Woche in die freien Plätze kopiert.",
+  "meals.week.copiedOne": "1 Mahlzeit aus der letzten Woche in einen freien Platz kopiert.",
+  "meals.week.copyNone": "Nichts aus der letzten Woche zu kopieren – die Plätze sind schon geplant oder die letzte Woche war leer.",
   "meals.recipes.emptyTitle": "Noch keine Rezepte",
   "meals.recipes.emptyLede": "Rezepte halten Zutaten und Zeiten fest, damit eine geplante Mahlzeit weiß, was sie braucht und wann es losgeht.",
   "meals.recipe.timeServes": "{minutes} Min. · für {serves}",
@@ -852,6 +865,7 @@ export const de: Catalog = {
   ...eventsDe,
   ...calendarDe,
   ...whatsNewDe,
+  ...amafDe,
   ...memberInviteDe,
   ...groceryDe,
   ...welcomeDe,

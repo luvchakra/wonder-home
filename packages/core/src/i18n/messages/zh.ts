@@ -13,6 +13,7 @@ import { eventsZh } from "./areas/events/zh";
 import { calendarZh } from "./areas/calendar/zh";
 import { memberInviteZh } from "./areas/memberinvite/zh";
 import { whatsNewZh } from "./areas/whatsnew/zh";
+import { amafZh } from "./areas/amaf/zh";
 import { groceryZh } from "./areas/grocery/zh";
 import { welcomeZh } from "./areas/welcome/zh";
 
@@ -652,6 +653,18 @@ export const zh: Catalog = {
   "meals.empty.title": "本周还没有安排",
   "meals.empty.lede": "安排一顿饭，WonderHome 会检查食材、做饭人的时间和每个人的偏好——然后告诉你还缺什么。",
   "meals.nothingPlannedYet": "还没有安排。",
+  "meals.week.label": "{date} 这一周",
+  "meals.week.thisWeek": "本周",
+  "meals.week.backToThis": "回到本周",
+  "meals.week.previous": "上一周",
+  "meals.week.next": "下一周",
+  "meals.week.planned": "已安排 {planned}/{total} 顿",
+  "meals.week.planSlot": "在{day}安排{slot}",
+  "meals.week.repeat": "重复上周",
+  "meals.week.repeating": "正在复制…",
+  "meals.week.copied": "已把上周的 {count} 顿饭复制到空着的时段。",
+  "meals.week.copiedOne": "已把上周的 1 顿饭复制到空着的时段。",
+  "meals.week.copyNone": "上周没有可复制的——这些时段已经安排好了，或者上周是空的。",
   "meals.recipes.emptyTitle": "还没有食谱",
   "meals.recipes.emptyLede": "食谱记录食材和时间，这样安排好的饭菜就知道需要什么、什么时候开始做。",
   "meals.recipe.timeServes": "{minutes} 分钟 · {serves} 人份",
@@ -852,6 +865,7 @@ export const zh: Catalog = {
   ...eventsZh,
   ...calendarZh,
   ...whatsNewZh,
+  ...amafZh,
   ...memberInviteZh,
   ...groceryZh,
   ...welcomeZh,

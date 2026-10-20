@@ -43,6 +43,7 @@ import {
   updateMeal,
 } from "@wonderhome/core/meals/repository";
 import { atLocal } from "@wonderhome/core/notifications/timing";
+import { copyLastWeek, shiftDay, weekDays, weekStartOf } from "@wonderhome/core/meals/week";
 
 import type { ActionState } from "./actions";
 
@@ -183,6 +184,48 @@ function nutritionFields(worked: ServingNutrition | null) {
 function readyByOn(onDate: string, time: string, timezone: string): string {
   const [hours, minutes] = time.split(":").map(Number);
   return atLocal(onDate, (hours ?? 0) * 60 + (minutes ?? 0), timezone).toISOString();
+}
+
+/**
+ * "Repeat last week" on the meal week (the owner, 2026-10-20): last week's
+ * meals planned again a week on, each into the same day and slot, only where
+ * that slot is still empty and not past — the same `createMeal` and the same
+ * ingredients a planned meal carries, through the household member's own
+ * session. Nothing already planned is moved or replaced.
+ */
+export async function copyLastWeekAction(input: { householdId: string; week: string }): Promise<{ ok: true; copied: number } | { ok: false; error: string }> {
+  const parsed = z.object({ householdId: z.uuid(), week: z.iso.date() }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const householdId = parsed.data.householdId;
+    const start = weekStartOf(parsed.data.week);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: membership.household.timezone }).format(new Date());
+    const [previous, current] = await Promise.all([
+      listMeals(supabase, householdId, { from: shiftDay(start, -7), to: shiftDay(start, -1) }),
+      listMeals(supabase, householdId, { from: start, to: weekDays(start).at(-1)! }),
+    ]);
+    const copies = copyLastWeek({
+      from: previous.map((meal) => ({ id: meal.id, name: meal.name, slot: meal.slot, onDate: meal.onDate, readyBy: meal.readyBy, cookMemberId: meal.cookMemberId, recipeId: meal.recipe?.id ?? null })),
+      taken: current,
+      today,
+    });
+    let copied = 0;
+    for (const copy of copies) {
+      const created = await createMeal(supabase, { householdId, name: copy.name, slot: copy.slot, onDate: copy.onDate, readyBy: copy.readyBy.toISOString(), cookMemberId: copy.cookMemberId, recipeId: copy.recipeId }).catch(() => null);
+      if (!created) continue;
+      copied += 1;
+      // The meal needs what last week's did: its own essentials, as they were written.
+      const source = previous.find((meal) => meal.id === copy.sourceId);
+      const lines = (source?.ingredients ?? []).filter((need) => need.essential).map((need) => ({ name: need.name, quantity: need.quantity, unit: need.unit, consumableId: need.consumableId }));
+      if (lines.length > 0) await addMealIngredients(supabase, { householdId, mealId: created.id, lines });
+    }
+    revalidatePath("/meals");
+    return { ok: true, copied };
+  } catch (thrown) {
+    return { ok: false, error: toErrorBody(thrown, "meals").body.error.message };
+  }
 }
 
 /** "Change meal" on a meal's card: the same fields as planning one, changed in place. */
