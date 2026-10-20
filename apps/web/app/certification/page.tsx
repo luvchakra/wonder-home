@@ -134,7 +134,19 @@ export default async function CertificationPage({ searchParams }: { searchParams
   const alerts = alertsFor(items, now, 50);
   const alertIds = new Set(alerts.map((alert) => alert.itemId));
   const live = items.filter((item) => item.status !== "removed" && item.status !== "corrected");
-  const shown = active === "review" ? live.filter((item) => alertIds.has(item.id)) : active === "confirmed" ? live.filter((item) => item.status === "confirmed" && !alertIds.has(item.id)) : live.filter((item) => item.status === "learned" && !alertIds.has(item.id));
+  // Learned is what WonderHome learned lately. Since a belief is registered the
+  // moment someone says it (05-010), almost nothing stays "learned" for long,
+  // so the tab lists the last 30 days' beliefs, newest first, whatever their
+  // status (the owner, 2026-10-20: "why is the knows section empty").
+  const recentSince = now.getTime() - 30 * 86_400_000;
+  const shown =
+    active === "review"
+      ? live.filter((item) => alertIds.has(item.id))
+      : active === "confirmed"
+        ? live.filter((item) => item.status === "confirmed" && !alertIds.has(item.id))
+        : live
+            .filter((item) => !alertIds.has(item.id) && (item.status === "learned" || (learnedAt.get(item.id)?.getTime() ?? 0) >= recentSince))
+            .sort((a, b) => (learnedAt.get(b.id)?.getTime() ?? 0) - (learnedAt.get(a.id)?.getTime() ?? 0));
   const canReview = view.tone !== "child";
   const itemLabels = certificationItemLabels(t);
   const controlLabels = certificationControlLabels(t);
