@@ -391,7 +391,7 @@ export const hi: Catalog = {
   "hometalk.places.undo": "वापस लें",
   "hometalk.places.failed": "यह सेव नहीं हुआ। थोड़ी देर में फिर कोशिश करें।",
   "hometalk.places.heading": "जगहें",
-  "placeBook.lede": "{name}, ये आपके परिवार की जगहें हैं: घर, स्कूल और काम, HomeTalk से सहेजी गई जगहें, और वे जिन्हें आपने अपने लिए नहीं कहा। HomeTalk सहेजी जगहें पहले सुझाता है और बाकी को दोबारा नहीं लाता।",
+  "placeBook.lede": "{name}, ये आपके परिवार की जगहें हैं: घर, स्कूल और काम, HomeTalk से सहेजी या यहाँ जोड़ी गई जगहें, और वे जिन्हें आपने अपने लिए नहीं कहा। HomeTalk सहेजी जगहें पहले सुझाता है और बाकी को दोबारा नहीं लाता।",
   "placeBook.saved": "सहेजी गईं",
   "placeBook.ours.title": "हमारी जगहें",
   "placeBook.ours.home": "घर",

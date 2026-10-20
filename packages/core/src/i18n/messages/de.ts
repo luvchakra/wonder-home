@@ -391,7 +391,7 @@ export const de: Catalog = {
   "hometalk.places.undo": "Rückgängig",
   "hometalk.places.failed": "Das wurde nicht gespeichert. Versuch es gleich noch einmal.",
   "hometalk.places.heading": "Orte",
-  "placeBook.lede": "{name}, das sind die Orte Ihrer Familie: Zuhause, Schule und Arbeit, die aus HomeTalk gespeicherten Orte und die, die Sie abgelehnt haben. HomeTalk schlägt gespeicherte Orte zuerst vor und bringt die anderen nie wieder.",
+  "placeBook.lede": "{name}, das sind die Orte Ihrer Familie: Zuhause, Schule und Arbeit, die aus HomeTalk gespeicherten oder hier hinzugefügten Orte und die, die Sie abgelehnt haben. HomeTalk schlägt gespeicherte Orte zuerst vor und bringt die anderen nie wieder.",
   "placeBook.saved": "Gespeichert",
   "placeBook.ours.title": "Unsere Orte",
   "placeBook.ours.home": "Zuhause",

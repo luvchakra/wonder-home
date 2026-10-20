@@ -16,7 +16,7 @@ Within a module, P0 comes before P1, and P1 before P2. The owner's own direct as
 - "Done" needs a browser check at 360px and on desktop (CLAUDE.md). Until a session has QA credentials, a story whose code is complete stays **In Progress — browser check**. It is listed in section C, not re-queued.
 - A row that waits on a person (a decision, a credential, a Meta template) says so in "Needs". Skip it, and don't build around it.
 
-Last updated: 2026-10-20 (25-003c Use soon wording and 25-005 "make that 2 litres" done; HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 phases B–D; HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
+Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as WhatsApp is parked by the owner; HomeBrain 4.0 designed: 14-024 to 14-031 replace 3.0 phases B–D; HomeBrain 3.0 phases A–D queued as 5b–5e, phase A in #230; 04-021 getting-ready state; 04-018 HomeTalk across screens done; 25-006 grocery catalog and 01-011 member phone numbers done; USDA linking queued as 25-007 at the owner's lower priority).
 
 ---
 
@@ -40,10 +40,10 @@ Last updated: 2026-10-20 (25-003c Use soon wording and 25-005 "make that 2 litre
 | 5f | HomeTalk | 14-027 (P0) | HomeBrain 4.0 phase 3, one pass over the store (was 14-021): question-sized retrieval, one cached, streamed model call, typed p95 2.5 s to first token | In Progress — #241 built the token budget; retrieval by question and the streamed call are left | — |
 | 5g | HomeTalk | 14-028 to 14-031 (P1) | HomeBrain 4.0 phases 4–7: the household graph across modules, inferences with evidence, answers shaped by the person's goal, keep-warm hardening | 14-028, 14-029, 14-030 Done — #241; 14-031 In Progress (keep-warm built, the rest left) | — |
 | 5h | HomeTalk | 14-032 (P1) | HomeBrain Sleep: a nightly tidy-up (merge, split, file, let go, rest), meaning with pgvector, links across the home, a person at a glance, spoken lists that fit; Household understanding counts the household's own records (05-011) | Done — #252 | — |
-| 6 | HomeTalk | H-1 | "How much do I owe this month?": a total of the bills in the window, as arithmetic from the records (rule 9), with each bill listed | Not Started | — |
-| 7 | HomeTalk | H-2 | Corrections in the golden runner: replay "actually, make that Friday" and "not bread, eggs" against the executed action, as the route does, so `npm run eval` covers them | Not Started | — |
+| 6 | HomeTalk | H-1 | "How much do I owe this month?": a total of the bills in the window, as arithmetic from the records (rule 9), with each bill listed | Done — 2026-10-20 | `homebrain/insights.ts` rule `total`; golden HT-121 |
+| 7 | HomeTalk | H-2 | Corrections in the golden runner: replay "actually, make that Friday" and "not bread, eggs" against the executed action, as the route does, so `npm run eval` covers them | Done — 2026-10-20 | The runner carries the last action and applies corrections as the route does; golden HT-122, HT-123 |
 | 7a | HomeTalk | H-4 | A typed paragraph of several family facts ("Manan likes home-cooked food. He doesn't like outside food and Upasana likes cooking") is split into one fact each, with "he/she" resolved to the person just named. Gemini Live already does this per tool call | Not Started | — |
-| 8 | HomeTalk | H-3 | The place book's lede still says places come "from HomeTalk". Reword it in 8 languages to include **Add a place** | Not Started | — |
+| 8 | HomeTalk | H-3 | The place book's lede still says places come "from HomeTalk". Reword it in 8 languages to include **Add a place** | Done — 2026-10-20 | — |
 | 9 | HomeEvents | 26-002 (P0) | Calendar module adapters: school, meals, bills, health ("Busy" for others), helpers, upkeep, outcomes and orders on the calendar, each through its own visibility rules, deduped by source | Done — #251 | — |
 | 10 | HomeEvents | 26-003 (rest) | HomeTalk plans with the calendar (C3): `plan_event` with participants and clash checks, find free time, move and cancel events, answers read from the projection. The read half is done | In Progress | — |
 | 11 | HomeEvents | 26-004 | Calendar reminders to every participant, an optional daily digest, and a holiday region in Settings → Language & Region | Not Started | — |

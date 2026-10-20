@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [HomeTalk queue: bill totals, corrections in the golden runner, place book words (H-1 to H-3)](2026-10-20-hometalk-queue-h1-h3.md) |
 | 2026-10-20 | [Make that 2 litres corrects an amount (25-005)](2026-10-20-make-that-2-litres.md) |
 | 2026-10-20 | [Use soon and depletion wording (25-003c)](2026-10-20-use-soon-wording.md) |
 | 2026-10-20 | [Notification events, the cross-channel step, the digest, delivery you can see (27-003 to 27-015)](2026-10-20-notification-events-and-trust.md) |

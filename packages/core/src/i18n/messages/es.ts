@@ -391,7 +391,7 @@ export const es: Catalog = {
   "hometalk.places.undo": "Deshacer",
   "hometalk.places.failed": "No se guardó. Inténtalo de nuevo en un momento.",
   "hometalk.places.heading": "Lugares",
-  "placeBook.lede": "{name}, estos son los lugares de tu familia: casa, colegio y trabajo, los lugares que guardasteis desde HomeTalk y los que dijisteis que no son para vosotros. HomeTalk sugiere primero los guardados y nunca vuelve a traer los otros.",
+  "placeBook.lede": "{name}, estos son los lugares de tu familia: casa, colegio y trabajo, los lugares que guardasteis desde HomeTalk o añadisteis aquí y los que dijisteis que no son para vosotros. HomeTalk sugiere primero los guardados y nunca vuelve a traer los otros.",
   "placeBook.saved": "Guardados",
   "placeBook.ours.title": "Nuestros lugares",
   "placeBook.ours.home": "Casa",

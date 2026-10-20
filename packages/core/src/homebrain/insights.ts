@@ -1,3 +1,4 @@
+import { money } from "../context/format";
 import type { HouseholdContextItem, PrivacyClass } from "../context/types";
 
 /**
@@ -24,7 +25,7 @@ import type { HouseholdContextItem, PrivacyClass } from "../context/types";
  * the meal-cook case of `away_but_assigned` is here.
  */
 
-export type InsightRule = "night_before" | "meal_short" | "away_but_assigned" | "bill_before_trip" | "routine_gap" | "count" | "free_window";
+export type InsightRule = "night_before" | "meal_short" | "away_but_assigned" | "bill_before_trip" | "routine_gap" | "count" | "free_window" | "total";
 
 export type Insight = {
   rule: InsightRule;
@@ -128,6 +129,38 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
         `${count(coming, "guest")} ${coming === 1 ? "is" : "are"} coming to ${event.attributes.title}${yes.length > 0 ? ` (${breakdown})` : ""}, from ${count(guests.length, "reply", "replies")}${waiting > 0 ? `; ${waiting} not decided yet` : ""}.`,
         [event],
         String(event.attributes.date ?? "") || null,
+      );
+    }
+  }
+
+  // total: "how much do I owe this month?" is arithmetic over the open bills
+  // due in the window (rule 9), each one listed beside the sum. A bill with no
+  // amount on record is said apart, never counted as nothing.
+  if (options.question && BILL_TOTAL_QUESTION.test(options.question)) {
+    const window = billWindow(options.question, options.today);
+    const due = usable.filter(
+      (item) =>
+        item.entityType === "bill" &&
+        item.attributes.status !== "paid" &&
+        item.attributes.status !== "cancelled" &&
+        typeof item.attributes.dueOn === "string" &&
+        item.attributes.dueOn >= window.from &&
+        item.attributes.dueOn <= window.to,
+    );
+    if (due.length > 0) {
+      const priced = due.filter((bill) => typeof bill.attributes.amountMinor === "number" && typeof bill.attributes.currency === "string");
+      const totals = new Map<string, number>();
+      for (const bill of priced) totals.set(String(bill.attributes.currency), (totals.get(String(bill.attributes.currency)) ?? 0) + Number(bill.attributes.amountMinor));
+      const sum = listOf([...totals].map(([currency, minor]) => money(minor, currency)));
+      const lines = priced.map((bill) => `${bill.attributes.title} ${money(Number(bill.attributes.amountMinor), String(bill.attributes.currency))} (due ${weekday(String(bill.attributes.dueOn))} ${dayOfMonth(String(bill.attributes.dueOn))})`);
+      const unpriced = due.length - priced.length;
+      add(
+        "total",
+        priced.length === 0
+          ? `${count(due.length, "bill")} ${due.length === 1 ? "is" : "are"} due ${window.label}, with no amount on record.`
+          : `${sum} is due ${window.label}, across ${count(priced.length, "bill")}: ${lines.join("; ")}.${unpriced > 0 ? ` ${count(unpriced, "more bill")} ${unpriced === 1 ? "has" : "have"} no amount on record, so ${unpriced === 1 ? "it is" : "they are"} not in that sum.` : ""}`,
+        due,
+        null,
       );
     }
   }
@@ -334,4 +367,17 @@ function weekday(day: string): string {
 
 function dayOfMonth(day: string): string {
   return new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${day.slice(0, 10)}T00:00:00Z`)).replace(/(\w+) (\d+)/, "$2 $1");
+}
+
+/** "How much do I owe this month?" / "what do we owe in bills" / "total of the bills due". */
+const BILL_TOTAL_QUESTION = /\bhow much\b.*\b(?:owe|owed|due|pay|bills?)\b|\bwhat (?:do|does|will) (?:i|we)\b.*\bowe\b|\btotal\b.*\bbills?\b|\bbills?\b.*\btotal\b/i;
+
+/** The days a total of bills covers: this month unless the question says next month or this week. */
+function billWindow(question: string, today: string): { from: string; to: string; label: string } {
+  if (/\bthis week\b/i.test(question)) return { from: today, to: addDays(today, 6), label: "in the next 7 days" };
+  const next = /\bnext month\b/i.test(question);
+  const first = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
+  if (next) first.setUTCMonth(first.getUTCMonth() + 1);
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0));
+  return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10), label: next ? "next month" : "this month" };
 }

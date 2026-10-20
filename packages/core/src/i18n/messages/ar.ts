@@ -405,7 +405,7 @@ export const ar: Catalog = {
   "hometalk.places.undo": "تراجع",
   "hometalk.places.failed": "لم يتم الحفظ. حاول مرة أخرى بعد قليل.",
   "hometalk.places.heading": "أماكن",
-  "placeBook.lede": "{name}، هذه أماكن عائلتك: المنزل والمدرسة والعمل، والأماكن التي حفظتموها من HomeTalk، وتلك التي قلتم إنها ليست لكم. يقترح HomeTalk الأماكن المحفوظة أولًا ولا يعيد الأخرى أبدًا.",
+  "placeBook.lede": "{name}، هذه أماكن عائلتك: المنزل والمدرسة والعمل، والأماكن التي حفظتموها من HomeTalk أو أضفتموها هنا، وتلك التي قلتم إنها ليست لكم. يقترح HomeTalk الأماكن المحفوظة أولًا ولا يعيد الأخرى أبدًا.",
   "placeBook.saved": "المحفوظة",
   "placeBook.ours.title": "أماكننا",
   "placeBook.ours.home": "المنزل",

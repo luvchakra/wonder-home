@@ -93,11 +93,14 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
   // first and what the rules noticed about it after — except a count, which
   // is the fact. To decide, what the rules noticed leads: it is what decides.
   // A count, and when the family is free for a trip, are the facts themselves.
+  // A sum of the bills due is the same: the figure first, then each bill that makes it up.
+  const isTotal = (fact: GroundedFact) => fact.domain === "insight" && fact.reasons.some((reason) => reason.startsWith("inference (total)"));
   const noticed = (fact: GroundedFact) => fact.domain === "insight" && !fact.reasons.some((reason) => reason.startsWith("inference (count)")) && !isTripFact(fact);
+  const ordered = [...answering.filter(isTotal), ...answering.filter((fact) => !isTotal(fact))];
   const pool =
     reading.goal === "decide"
-      ? [...answering.filter(noticed), ...answering.filter((fact) => !noticed(fact))]
-      : [...answering.filter((fact) => !noticed(fact)).slice(0, limit - Math.min(2, answering.filter(noticed).length)), ...answering.filter(noticed).slice(0, 2)];
+      ? [...ordered.filter(noticed), ...ordered.filter((fact) => !noticed(fact))]
+      : [...ordered.filter((fact) => !noticed(fact)).slice(0, limit - Math.min(2, ordered.filter(noticed).length)), ...ordered.filter(noticed).slice(0, 2)];
 
   // "For Kunal" would undersell an answer that also carries his children's plans.
   const who = (reading.dependants ?? []).length > 0 ? "" : reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
@@ -144,9 +147,13 @@ function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading):
   });
 }
 
-/** What the free-window rule worked out for "when should we go away?" (14-033, 14-034). */
+/**
+ * What a rule worked out over a window of its own: the free weekends for "when
+ * should we go away?" (14-033, 14-034) and the sum of the bills due this month
+ * (H-1). They carry no single day, so the day filter must not drop them.
+ */
 function isTripFact(fact: GroundedFact): boolean {
-  return fact.domain === "insight" && fact.reasons.some((reason) => reason.startsWith("inference (free_window)"));
+  return fact.domain === "insight" && fact.reasons.some((reason) => reason.startsWith("inference (free_window)") || reason.startsWith("inference (total)"));
 }
 
 /** What to say when nothing on record answers the question. Honest, specific, and never padded. */

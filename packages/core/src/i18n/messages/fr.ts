@@ -391,7 +391,7 @@ export const fr: Catalog = {
   "hometalk.places.undo": "Annuler",
   "hometalk.places.failed": "Ce n'est pas enregistré. Réessayez dans un instant.",
   "hometalk.places.heading": "Lieux",
-  "placeBook.lede": "{name}, voici les lieux de votre famille : la maison, l’école et le travail, les lieux enregistrés depuis HomeTalk, et ceux que vous avez écartés. HomeTalk propose d’abord les lieux enregistrés et ne ramène jamais les autres.",
+  "placeBook.lede": "{name}, voici les lieux de votre famille : la maison, l’école et le travail, les lieux enregistrés depuis HomeTalk ou ajoutés ici, et ceux que vous avez écartés. HomeTalk propose d’abord les lieux enregistrés et ne ramène jamais les autres.",
   "placeBook.saved": "Enregistrés",
   "placeBook.ours.title": "Nos lieux",
   "placeBook.ours.home": "Maison",
