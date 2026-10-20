@@ -29,7 +29,7 @@ export function platformMailConfig(env: Record<string, string | undefined> = pro
   return { host, port, secure: port === 465, user, password, from: env.WONDERHOME_SMTP_FROM?.trim() || `WonderHome <${user}>` };
 }
 
-export type OutgoingMail = { to: string; subject: string; text: string; html: string };
+export type OutgoingMail = { to: string; subject: string; text: string; html: string; headers?: Record<string, string> };
 
 export type SendResult = { ok: true } | { ok: false; reason: "rejected" | "unreachable" };
 
@@ -53,7 +53,7 @@ export function smtpMailer(config: MailConfig): Mailer {
   return {
     async send(mail) {
       try {
-        await transport.sendMail({ from: config.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html });
+        await transport.sendMail({ from: config.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html, ...(mail.headers ? { headers: mail.headers } : {}) });
         return { ok: true };
       } catch (error) {
         const code = (error as { responseCode?: unknown }).responseCode;

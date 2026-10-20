@@ -86,6 +86,12 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Long weekends from public holidays", "Fri 2 Oct to Sun 4 Oct (Gandhi Jayanti, Fri 2 Oct)"], excludes: ["things across"] } },
   },
   {
+    id: "HT-120", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"Which are the next long weekends coming up\" (live, 2026-10-20) is answered with the long weekends public holidays make, never a list of the next three months' events.",
+    utterance: "which are the next long weekends coming up",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Long weekends from public holidays", "Gandhi Jayanti"], excludes: ["on the calendar for the next", "things across"] } },
+  },
+  {
     id: "HT-113", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"Who likes what?\" is the same answer for anyone in the family, and is never kept as a fact about someone called \"Who\".",
     utterance: "Who likes what?",

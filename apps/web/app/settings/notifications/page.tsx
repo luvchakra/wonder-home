@@ -9,7 +9,10 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { channelAdaptersFromEnv } from "@wonderhome/core/notifications/channels";
 import { webPushPublicKey } from "@wonderhome/core/notifications/web-push";
 import { loadChannelPreferences, loadSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
-import { loadMutes, muteKey, ROUTABLE_CHANNELS } from "@wonderhome/core/notifications/routing";
+import { loadMutes, muteKey, ROUTABLE_CHANNELS, type RoutableChannel } from "@wonderhome/core/notifications/routing";
+import { loadChannelChecks } from "@wonderhome/core/notifications/channel-check";
+import { createAdminClient } from "@wonderhome/core/db/admin";
+import { emailAddressFor } from "@wonderhome/core/notifications/deliver";
 import { NOTIFICATION_CATEGORIES, REMINDER_POLICIES } from "@wonderhome/core/notifications/policies";
 import { loadReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
 import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
@@ -26,6 +29,7 @@ import { PushDeviceCard } from "../../_components/push-device-card";
 import { QuietHoursCard, ReminderPreferencesCard, SmartRemindersCard } from "../../_components/reminder-settings-form";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
+import { reasonWords } from "../../_lib/channel-check-words";
 import { channelPreferenceLabels, reminderPresetLabel, reminderSettingsLabels } from "../../_lib/settings-labels";
 
 export const metadata = { title: "Notifications" };
@@ -86,6 +90,32 @@ export default async function NotificationSettingsPage() {
   // Which channels actually reach someone on this deployment (story 17-006):
   // WhatsApp once its Cloud API is configured, in-app always.
   const adapters = channelAdaptersFromEnv();
+  // Will each channel reach this person, and if not, why (story 27-003).
+  const admin = createAdminClient();
+  const [checks, accountEmail] = await Promise.all([
+    loadChannelChecks(admin, { memberId: membership.memberId, timeZone }, adapters).catch(() => []),
+    emailAddressFor(admin, membership.memberId).catch(() => null),
+  ]);
+  // Email goes only to the confirmed address of the person's own account (story 27-001). Someone
+  // with none, a helper who signs in by phone, is not offered it: WhatsApp and push are theirs (27-015).
+  const emailOffered = accountEmail !== null;
+  const checkFor = (channel: RoutableChannel) => {
+    const check = checks.find((row) => row.channel === channel);
+    if (!check || !adapters[channel].live) return undefined;
+    const reasons = check.blocks.map((block) => reasonWords(t, block, channel));
+    if (check.lastFailure) reasons.push(check.lastFailure === "rejected" ? t("channelCheck.lastFailure.rejected") : t("channelCheck.lastFailure"));
+    const paused = preferences.find((preference) => preference.channel === channel)?.pausedReason;
+    return {
+      ...(paused ? { notice: t("channelCheck.paused") } : {}),
+      ready: t("channelCheck.ready"),
+      problems: t("channelCheck.problems"),
+      reasons: [...new Set(reasons)],
+      testable: channel !== "push",
+      sendTest: t("channelCheck.sendTest"),
+      sending: t("channelCheck.sending"),
+      testSent: t("channelCheck.testSent"),
+    };
+  };
 
   return (
     <AppShell
@@ -182,7 +212,7 @@ export default async function NotificationSettingsPage() {
         <ChannelRoutingCard
           householdId={membership.household.id}
           kinds={NOTIFICATION_CATEGORIES.map((category) => ({ category, name: t(`notifications.category.${category}` as TranslationKey) }))}
-          channels={ROUTABLE_CHANNELS.filter((channel) => adapters[channel].live && preferences.find((preference) => preference.channel === channel)?.enabled).map((channel) => ({ channel, name: t(`settingsPage.notifications.channel.${channel}` as TranslationKey) }))}
+          channels={ROUTABLE_CHANNELS.filter((channel) => (channel !== "email" || emailOffered) && adapters[channel].live && preferences.find((preference) => preference.channel === channel)?.enabled).map((channel) => ({ channel, name: t(`settingsPage.notifications.channel.${channel}` as TranslationKey) }))}
           keptOff={mutes.map((mute) => muteKey(mute.category, mute.channel))}
           labels={{
             title: t("channelRouting.title"),
@@ -194,14 +224,17 @@ export default async function NotificationSettingsPage() {
         />
 
         <h2 className="pt-2 text-base font-semibold">{t("settingsPage.notifications.channels")}</h2>
+        {emailOffered ? null : <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.noEmail")}</p>}
         <div className="space-y-4">
-          {preferences.map((preference) => (
+          {preferences.filter((preference) => preference.channel !== "email" || emailOffered).map((preference) => (
             <ChannelPreferenceCard
               key={preference.channel}
               householdId={membership.household.id}
               tone="attention"
               preference={preference}
               live={adapters[preference.channel].live}
+              check={preference.channel === "in_app" ? undefined : checkFor(preference.channel)}
+              digestTimes={preference.channel === "in_app" ? undefined : times}
               labels={channelPreferenceLabels(t, preference.channel)}
               save={saveChannelPreferenceAction}
             />

@@ -284,7 +284,7 @@ const RULES: readonly Rule[] = [
     // "Which weekend is free for a trip?", "what's the best time for a 2-day
     // getaway?": a question HomeBrain answers from the calendar and the public
     // holidays. "Suggest a getaway" (where) is not this, and stays HomePlaces'.
-    pattern: /^(?:what|when|which|is|are|any|how)\b.*\b(?:getaways?|trips?|vacations?|holidays?|outings?|breaks?|staycations?|day out)\b/i,
+    pattern: /^(?:what|when|which|is|are|any|how|show|upcoming|next)\b.*\b(?:getaways?|trips?|vacations?|holidays?|outings?|breaks?|staycations?|day out|long[- ]weekends?)\b/i,
     read: (_match, text) => (tripQuestion(text) ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "home" }, confidence: 0.9 } : null),
   },
 

@@ -90,6 +90,13 @@ export type ReminderPolicy = {
    * ever once. Null for kinds where a second person would just be noise.
    */
   escalation: { afterMinutes: number } | null;
+  /**
+   * The step before the backup (story 27-007): when the person's own last
+   * reminder has gone unanswered this long, it is also sent by the first of
+   * these channels they have on and that can reach them. Once, and never to
+   * anyone else. Null where a second channel would just be noise.
+   */
+  channelEscalation: { afterMinutes: number; via: readonly ("email" | "whatsapp")[] } | null;
   /** Whether the time a person usually acts may move the first reminder (story 23-012). */
   learnsTiming: boolean;
 };
@@ -103,6 +110,15 @@ export function maxRemindersFor(category: TunableCategory, preset: string | null
   return presetFor(category, preset).stages.length + (REMINDER_POLICIES[category].escalation ? 1 : 0);
 }
 
+/**
+ * Most times one thing can be delivered to its person: each reminder, the
+ * backup's one, and the one extra channel step (story 27-007). The channel
+ * step re-sends the last reminder; it is not another reminder.
+ */
+export function maxDeliveriesFor(category: TunableCategory, preset: string | null | undefined): number {
+  return maxRemindersFor(category, preset) + (REMINDER_POLICIES[category].channelEscalation ? 1 : 0);
+}
+
 const hm = (hour: number, minute = 0) => hour * 60 + minute;
 
 export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
@@ -112,6 +128,7 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     batching: false,
     quietHours: "defer",
     escalation: { afterMinutes: 180 },
+    channelEscalation: { afterMinutes: 90, via: ["email", "whatsapp"] },
     learnsTiming: true,
     presets: [
       {
@@ -148,6 +165,7 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     batching: true,
     quietHours: "defer",
     escalation: { afterMinutes: 60 },
+    channelEscalation: { afterMinutes: 30, via: ["email", "whatsapp"] },
     learnsTiming: true,
     presets: [
       {
@@ -168,6 +186,7 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     batching: false,
     quietHours: "defer",
     escalation: null,
+    channelEscalation: null,
     learnsTiming: false,
     presets: [
       // `before` here counts back from when cooking has to start, not from the meal.
@@ -182,6 +201,7 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     batching: true,
     quietHours: "defer",
     escalation: null,
+    channelEscalation: null,
     learnsTiming: true,
     presets: [
       { key: "late_afternoon", label: "Late afternoon (5 PM)", stages: [{ key: "list_needs_attention", at: { kind: "dayOf", atMinute: hm(17) } }] },
@@ -195,6 +215,7 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     batching: false,
     quietHours: "defer",
     escalation: { afterMinutes: 120 },
+    channelEscalation: { afterMinutes: 60, via: ["email", "whatsapp"] },
     learnsTiming: true,
     presets: [
       { key: "on_time", label: "On the day (8 AM)", stages: [{ key: "due_today", at: { kind: "dayOf", atMinute: hm(8) } }] },
@@ -214,6 +235,7 @@ export const REMINDER_POLICIES: Record<TunableCategory, ReminderPolicy> = {
     batching: false,
     quietHours: "defer",
     escalation: null,
+    channelEscalation: null,
     learnsTiming: false,
     presets: [
       { key: "hour_before", label: "An hour before", stages: [{ key: "starts_soon", at: { kind: "before", minutes: 60 } }] },

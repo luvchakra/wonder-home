@@ -52,6 +52,9 @@ const AUTHENTICATED_PREFIXES = [
  * - `/e/<token>` — a family event's invite link, for people outside the
  *   household. The token is the only credential: it shows that one event's
  *   title, time, place and the household's name, and takes a reply.
+ * - `/email-off` — the page behind the unsubscribe link in a notification
+ *   email. A signed token for one member is the only credential, and the
+ *   only thing it can do is switch that person's email channel off.
  *
  * The user guide (`/help`) is not on this list: it is for members.
  */

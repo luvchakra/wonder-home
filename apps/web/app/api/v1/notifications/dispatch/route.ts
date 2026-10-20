@@ -3,7 +3,13 @@ import { after } from "next/server";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { keepStoresWarm } from "@wonderhome/core/homebrain/context-store";
 import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
+import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
+import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
+import { sendDueDigests } from "@wonderhome/core/notifications/digest";
+import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 import { deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
+import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
+import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -55,6 +61,25 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("dispatch failed for a household", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   }
+  // Notices (module 27): a household whose records a notice reads from changed since the last
+  // tick is swept now, so the notice lands within minutes whether or not anyone has the app open.
+  let noticed = 0;
+  try {
+    const changed = await householdsWithNoticeChanges(admin, new Date(now.getTime() - 6 * 60_000), 50);
+    for (const householdId of changed) {
+      const swept = await sweepNotices(admin, householdId, now);
+      noticed += swept.created + swept.updated + swept.resolved;
+    }
+  } catch (thrown) {
+    log.warn("notice sweep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
+  // Morning digests (story 27-008): each one whose time has come on its household's clock.
+  let digests = 0;
+  try {
+    digests = await sendDueDigests(admin, now);
+  } catch (thrown) {
+    log.warn("digest tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
   // The same clock keeps HomeBrain's stored household contexts whole (14-031):
   // a few that are behind or over an hour old are rebuilt per tick.
   let warmed = 0;
@@ -64,6 +89,17 @@ async function dispatch(request: Request): Promise<Response> {
     log.warn("context keep-warm failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
   after(async () => {
+    // Deliveries that failed for a reason worth another try (story 27-010), worked by the same clock.
+    try {
+      const whatsapp = whatsappConfigFromEnv();
+      await drainJobs(admin, {
+        limit: 10,
+        workerId: "dispatch",
+        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter }) } : {}) },
+      });
+    } catch (thrown) {
+      log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+    }
     try {
       await sleepDueHouseholds(admin, now);
     } catch (thrown) {
