@@ -5,7 +5,7 @@ import type { HomeAssessment } from "./assessment";
 import { maintenanceAgenda, type AssetCategory, type HomeAsset } from "./assets";
 import { assessLaundry, type LaundryNeed, type LaundryState } from "./laundry";
 import { petAgenda, type Pet, type PetCareKind, type PetCareNeed } from "./pets";
-import { assessServiceRequest, openRequestAssetIds, type ServiceRequest, type ServiceStatus } from "./services";
+import { assessServiceRequest, openRequestAssetIds, transition, type ServiceRequest, type ServiceStatus } from "./services";
 import type { DeviceSignal, SignalKind } from "./signals";
 import { dryingConditions, type DryingConditions, type WeatherWindow } from "./weather";
 import { householdWeather, type HouseholdWeather } from "./weather-service";
@@ -383,6 +383,9 @@ export async function recentSignals(
 }
 
 export type HomeAgenda = {
+  /** The rows assessed, for a screen that lists them too (read once per request). */
+  assets: HomeAsset[];
+  requests: ServiceRequest[];
   maintenance: HomeAssessment[];
   laundry: HomeAssessment[];
   pets: HomeAssessment[];
@@ -445,6 +448,8 @@ export async function homeAgenda(
 
   return {
     checked,
+    assets,
+    requests,
     maintenance: maintenanceAgenda(assets, {
       now,
       signalsFor: (assetId) => byAsset.get(assetId) ?? [],
@@ -496,9 +501,158 @@ async function markPetCareDoneImpl(
 
 // Every write forgets the household's cached context once it succeeds, so
 // the next HomeTalk answer sees the change (Wave 1 §14).
+export type UpdateAssetInput = {
+  name?: string;
+  category?: AssetCategory;
+  location?: string | null;
+  serviceIntervalDays?: number | null;
+  lastServicedOn?: string | null;
+  warrantyExpiresOn?: string | null;
+  amcExpiresOn?: string | null;
+};
+
+/**
+ * Changing what the household said about a thing in the house (rule 12): its
+ * name, kind, place, service interval, last service and cover dates. An Admin
+ * may change any; the member responsible for it may too (the table's policy).
+ */
+async function updateAssetImpl(supabase: SupabaseClient, householdId: string, assetId: string, input: UpdateAssetInput): Promise<void> {
+  const patch: Row = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.category !== undefined) patch.category = input.category;
+  if (input.location !== undefined) patch.location = input.location;
+  if (input.serviceIntervalDays !== undefined) patch.service_interval_days = input.serviceIntervalDays;
+  if (input.lastServicedOn !== undefined) patch.last_serviced_on = input.lastServicedOn;
+  if (input.warrantyExpiresOn !== undefined) patch.warranty_expires_on = input.warrantyExpiresOn;
+  if (input.amcExpiresOn !== undefined) patch.amc_expires_on = input.amcExpiresOn;
+  if (Object.keys(patch).length === 0) return;
+  const { data, error } = await supabase.from("home_assets").update(patch).eq("household_id", householdId).eq("id", assetId).select("id");
+  if (error) throw new Error(`updateAsset failed: ${error.code ?? "unknown"}`);
+  if ((data ?? []).length === 0) throw ApiError.forbidden("Only an Admin, or whoever looks after it, can change this.");
+}
+
+/**
+ * Retiring a thing (sold, replaced, gone) or bringing it back. Never a delete:
+ * its service history and the requests raised against it stay readable.
+ */
+async function setAssetStatusImpl(supabase: SupabaseClient, householdId: string, assetId: string, status: "active" | "retired"): Promise<void> {
+  const { data, error } = await supabase.from("home_assets").update({ status }).eq("household_id", householdId).eq("id", assetId).select("id");
+  if (error) throw new Error(`setAssetStatus failed: ${error.code ?? "unknown"}`);
+  if ((data ?? []).length === 0) throw ApiError.forbidden("Only an Admin, or whoever looks after it, can change this.");
+}
+
+/**
+ * "Serviced" on a thing: the visit goes into its history (`asset_service_events`)
+ * and the next service is counted from that day.
+ */
+async function recordAssetServiceImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; assetId: string; occurredOn: string; kind?: "service" | "repair" | "inspection" | "replacement"; providerName?: string | null },
+): Promise<void> {
+  const { error } = await supabase.from("asset_service_events").insert({
+    household_id: input.householdId,
+    asset_id: input.assetId,
+    kind: input.kind ?? "service",
+    occurred_on: input.occurredOn,
+    provider_name: input.providerName ?? null,
+  });
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot record a service for this household.");
+    throw new Error(`recordAssetService failed: ${error.code ?? "unknown"}`);
+  }
+  await updateAssetImpl(supabase, input.householdId, input.assetId, { lastServicedOn: input.occurredOn });
+}
+
+export type AssetServiceEvent = { id: string; assetId: string; kind: string; occurredOn: string; providerName: string | null };
+
+/** The most recent visits to a household's things, newest first, for each thing's history. */
+export async function listAssetServiceEvents(supabase: SupabaseClient, householdId: string): Promise<AssetServiceEvent[]> {
+  const { data, error } = await supabase
+    .from("asset_service_events")
+    .select("id, asset_id, kind, occurred_on, provider_name")
+    .eq("household_id", householdId)
+    .order("occurred_on", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(`listAssetServiceEvents failed: ${error.code ?? "unknown"}`);
+  return ((data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    assetId: row.asset_id as string,
+    kind: row.kind as string,
+    occurredOn: row.occurred_on as string,
+    providerName: (row.provider_name as string | null) ?? null,
+  }));
+}
+
+export type UpdateServiceRequestInput = {
+  status?: ServiceStatus;
+  subject?: string;
+  providerName?: string | null;
+  providerContact?: string | null;
+  scheduledFor?: Date | null;
+  nextAction?: string | null;
+  nextActionBy?: "household" | "provider" | null;
+};
+
+/**
+ * Moving a service request on (booked, in progress, waiting for parts, done,
+ * cancelled) or correcting what it says. A status change goes through the
+ * same `transition` rules the agents use, so a finished request never reopens
+ * and a settled one never keeps a next action. Cancelling is how a request is
+ * taken back; it stays on record.
+ */
+async function updateServiceRequestImpl(
+  supabase: SupabaseClient,
+  householdId: string,
+  requestId: string,
+  input: UpdateServiceRequestInput,
+  now = new Date(),
+): Promise<void> {
+  const current = (await listServiceRequests(supabase, householdId)).find((request) => request.id === requestId);
+  if (!current) throw ApiError.notFound("That request isn't here any more.");
+  let next: ServiceRequest = current;
+  if (input.status && input.status !== current.status) {
+    const moved = transition(current, input.status, {
+      at: now,
+      scheduledFor: input.scheduledFor,
+      nextAction: input.nextAction,
+      nextActionBy: input.nextActionBy,
+    });
+    if (!moved.ok) throw ApiError.badRequest(moved.reason);
+    next = moved.request;
+  } else if (current.status !== "completed" && current.status !== "cancelled") {
+    next = {
+      ...current,
+      scheduledFor: input.scheduledFor !== undefined ? input.scheduledFor : current.scheduledFor,
+      nextAction: input.nextAction !== undefined ? input.nextAction : current.nextAction,
+      nextActionBy: input.nextActionBy !== undefined ? input.nextActionBy : current.nextActionBy,
+    };
+  }
+  const { error } = await supabase
+    .from("service_requests")
+    .update({
+      status: next.status,
+      subject: input.subject ?? current.subject,
+      provider_name: input.providerName !== undefined ? input.providerName : current.providerName,
+      provider_contact: input.providerContact !== undefined ? input.providerContact : current.providerContact,
+      scheduled_for: next.scheduledFor ? next.scheduledFor.toISOString() : null,
+      next_action: next.nextAction,
+      next_action_by: next.nextActionBy,
+    })
+    .eq("household_id", householdId)
+    .eq("id", requestId);
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You cannot change requests for this household.");
+    throw new Error(`updateServiceRequest failed: ${error.code ?? "unknown"}`);
+  }
+}
+
 export const createAsset = invalidatesContext(createAssetImpl, (_supabase, input) => input.householdId);
 export const createServiceRequest = invalidatesContext(createServiceRequestImpl, (_supabase, input) => input.householdId);
 export const createPet = invalidatesContext(createPetImpl, (_supabase, input) => input.householdId);
 export const updatePet = invalidatesContext(updatePetImpl, (_supabase, householdId) => householdId);
 export const setPetActive = invalidatesContext(setPetActiveImpl, (_supabase, householdId) => householdId);
 export const markPetCareDone = invalidatesContext(markPetCareDoneImpl, (_supabase, input) => input.householdId);
+export const updateAsset = invalidatesContext(updateAssetImpl, (_supabase, householdId) => householdId);
+export const setAssetStatus = invalidatesContext(setAssetStatusImpl, (_supabase, householdId) => householdId);
+export const recordAssetService = invalidatesContext(recordAssetServiceImpl, (_supabase, input) => input.householdId);
+export const updateServiceRequest = invalidatesContext(updateServiceRequestImpl, (_supabase, householdId) => householdId);

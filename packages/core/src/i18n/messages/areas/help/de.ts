@@ -277,10 +277,15 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.summary": "Wartung, Dienstleistungen, Wäsche und Haustiere – nur was einen Menschen braucht.",
   "help.guide.home-upkeep.body.1":
     "„Haus & Instandhaltung“ bringt Wartung, Serviceanfragen, Wäsche und Tierpflege zusammen und zeigt nur, was jemanden braucht. Wenn nichts jemanden braucht, sagt es das.",
-  "help.guide.home-upkeep.body.2": "Ein Admin erfasst die Haushaltsgeräte; jeder Erwachsene kann eine Serviceanfrage stellen.",
+  "help.guide.home-upkeep.body.2":
+    "Zuhause & Instandhaltung hat drei Reiter. Überblick zeigt zuerst, was jemanden braucht, dann, was in den nächsten 60 Tagen ansteht – eine fällige Wartung, eine endende Garantie oder ein endender Wartungsvertrag. Dinge listet jedes Gerät, jede Installation und jedes Fahrzeug; Anfragen jede Serviceanfrage.",
   "help.guide.home-upkeep.body.3":
     "Das Wetter meldet sich nur, wenn es eine Entscheidung ändert – zum Beispiel Wäsche, die heute draußen nicht trocknen wird –, und nie als Wetterbericht. Es nutzt den Bereich, den ein Admin gewählt hat, nur auf etwa einen Kilometer genau gespeichert.",
   "help.guide.home-upkeep.body.4": "Das Wetter wird nur genutzt, wo es für dein WonderHome eingeschaltet ist; Einstellungen → Verbundene Konten zeigt, ob das so ist.",
+  "help.guide.home-upkeep.body.5":
+    "Ein Admin fügt Dinge mit „Gegenstand hinzufügen“ hinzu. Ein Admin oder das Mitglied, das sich darum kümmert, kann es ändern, eine Wartung eintragen (die nächste zählt ab diesem Tag) oder es ausmustern. Ausmustern stoppt die Erinnerungen und behält den Verlauf.",
+  "help.guide.home-upkeep.body.6":
+    "Jeder Erwachsene kann eine Serviceanfrage stellen, sie weiterbringen – gebucht, in Arbeit, wartet auf Teile, erledigt –, ändern, wer sie wann übernimmt, oder sie absagen. Eine erledigte oder abgesagte Anfrage bleibt erhalten und wird nie wieder geöffnet.",
 
   "help.guide.household-and-roles.title": "Mitglieder, Rollen und was jede Person sieht",
   "help.guide.household-and-roles.summary": "Ein Haushalt, mehrere Identitäten und für jede eine eigene Ansicht.",

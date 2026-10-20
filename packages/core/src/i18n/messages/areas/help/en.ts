@@ -303,10 +303,14 @@ export const helpEn = {
   "help.guide.home-upkeep.body.1":
     "Home & Upkeep brings together maintenance, service requests, laundry and pet care, and shows only what needs somebody. When nothing does, it says so.",
   "help.guide.home-upkeep.body.2":
-    "An Admin records the home's appliances; any adult can raise a service request.",
+    "Home & Upkeep has three tabs. Overview shows what needs somebody first, then what is coming up in the next 60 days — a service falling due, a warranty or AMC ending. Things lists every appliance, fixture and vehicle; Requests lists every service request.",
   "help.guide.home-upkeep.body.3":
     "Weather speaks only when it changes a decision — washing that will not dry outside today, for example — and never as a forecast readout. It uses the area an Admin chose, kept only to about a kilometre.",
   "help.guide.home-upkeep.body.4": "Weather is used only where it is switched on for your WonderHome; Settings → Connected accounts shows whether it is.",
+  "help.guide.home-upkeep.body.5":
+    "An Admin adds things with Add an asset. An Admin, or the member who looks after a thing, can change it, record a service (the next one counts from that day) or retire it. Retiring stops its reminders and keeps its history.",
+  "help.guide.home-upkeep.body.6":
+    "Any adult can raise a service request, move it on — booked, being worked on, waiting for parts, done — change who is doing it and when, or cancel it. A done or cancelled request stays on record and never reopens.",
 
   // Members, roles and what each person sees
   "help.guide.household-and-roles.title": "Members, roles and what each person sees",

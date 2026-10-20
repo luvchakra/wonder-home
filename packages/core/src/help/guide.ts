@@ -153,8 +153,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "home-upkeep",
     group: "Everyday use",
-    updated: "2026-09-26",
-    keywords: ["maintenance", "appliance", "repair", "service", "laundry", "pets", "weather", "upkeep", "device"],
+    updated: "2026-10-21",
+    keywords: ["maintenance", "appliance", "repair", "service", "laundry", "pets", "weather", "upkeep", "device", "things", "requests", "warranty", "amc", "retire", "record a service", "serviced", "technician", "cancel request", "coming up"],
   },
   {
     id: "household-and-roles",

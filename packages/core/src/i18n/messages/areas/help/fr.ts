@@ -277,10 +277,15 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.summary": "Entretien, services, linge et animaux — uniquement ce qui a besoin d’une personne.",
   "help.guide.home-upkeep.body.1":
     "Maison et entretien réunit l’entretien, les demandes d’intervention, le linge et les soins des animaux, et ne montre que ce qui a besoin de quelqu’un. Quand rien n’en a besoin, il le dit.",
-  "help.guide.home-upkeep.body.2": "Un Admin enregistre les appareils de la maison ; tout adulte peut faire une demande d’intervention.",
+  "help.guide.home-upkeep.body.2":
+    "Maison et entretien a trois onglets. Aperçu montre d'abord ce qui demande quelqu'un, puis ce qui arrive dans les 60 prochains jours : un entretien à prévoir, une garantie ou un contrat qui se termine. Équipements liste chaque appareil, installation et véhicule ; Demandes, chaque demande d'intervention.",
   "help.guide.home-upkeep.body.3":
     "La météo ne se manifeste que lorsqu’elle change une décision — du linge qui ne séchera pas dehors aujourd’hui, par exemple — et jamais sous forme de bulletin. Elle utilise la zone choisie par un Admin, conservée seulement à environ un kilomètre près.",
   "help.guide.home-upkeep.body.4": "La météo n'est utilisée que là où elle est activée pour votre WonderHome ; Paramètres → Comptes connectés indique si c'est le cas.",
+  "help.guide.home-upkeep.body.5":
+    "Un administrateur ajoute des équipements avec Ajouter un équipement. Un administrateur, ou le membre qui s'en occupe, peut le modifier, noter un entretien (le suivant compte à partir de ce jour) ou le retirer. Le retirer arrête ses rappels et garde son historique.",
+  "help.guide.home-upkeep.body.6":
+    "Tout adulte peut faire une demande, la faire avancer — réservée, en cours, en attente de pièces, terminée —, changer qui s'en charge et quand, ou l'annuler. Une demande terminée ou annulée reste enregistrée et ne se rouvre jamais.",
 
   "help.guide.household-and-roles.title": "Membres, rôles et ce que voit chacun",
   "help.guide.household-and-roles.summary": "Un foyer, plusieurs identités, et une vue différente pour chacune.",

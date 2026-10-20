@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**328 of 352 stories done — 93.2%**
+**329 of 352 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 328 |
-| In Progress | 8 |
+| Done | 329 |
+| In Progress | 7 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -35,10 +35,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `█████████░` | 11 | 12 | 1 in progress |
+| 10 Meals & Cooking | `██████████` | 11 | 11 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
-| 13 Maintenance, Laundry & Pet Care | `████████░░` | 8 | 9 | 1 in progress |
+| 13 Maintenance, Laundry & Pet Care | `█████████░` | 9 | 10 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
@@ -63,7 +63,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
 | `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
-| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | 10 Meals & Cooking | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -286,7 +285,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-11 of 12 done `█████████░`
+11 of 11 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -301,7 +300,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-009` A meal card that does what it says: change in place, ingredients without a recipe, the right time | P0 | Done | The owner, 2026-10-18 (PR #227). **Change meal** opened HomeTalk with a sentence to retype (rule 13), and a meal could not be changed or removed at all (rule 12): it is now a sheet on the card (name, recipe, slot, day, ready by, cook; `updateMeal`, with a new recipe's ingredients replacing only those still waiting) with **Remove from the plan** (`removeMeal`, a meal still to come; what it put on the list stays). **Ingredients** on a meal with no recipe said "pick a recipe" with nowhere to pick one: it now takes the ingredients written one per line (`addMealIngredients`, amounts read as HomeTalk reads them, none said is "not measured") or one of the household's recipes. The card said "Missing … on the shopping list" for things nobody added: it now says "Still to get" for those. And a meal planned on the Meals screen was timed on the server's clock (an 8 pm dinner saved as 1:30 am): times are on the household's clock (`atLocal`). Browser-checked at 360px and 1280px |
 | `10-010` An ingredient pick you can see: the list in view, the item's picture and details | P1 | Done | The owner, 2026-10-20. The suggestion list stays clear of the keyboard without flicker: on a phone it sits in the flow, and `useKeepListInView` (`ui/keep-in-view.tsx`) scrolls just enough, in one frame, and caps the list to the space left; the place search uses it too, and a sheet no longer re-centres a field whose list is open. A picked item shows its picture in the field and a line under the row: brand, pack, what is at home (only when counted) and energy and protein per 100 g or ml when the catalog records them, IFCT credited. Checked at 360×430 as a touch phone |
 | `10-011` Plan the week: every day's breakfast, lunch and dinner, Repeat last week, and Veg / Non-veg on WonderHome's ideas | P1 | Done | The owner, 2026-10-20 (PR #273). Meals → Plan is the week, Monday to Sunday on the household's clock (`meals/week.ts`, tested): ‹ › move a week, This week comes back, and the count is the everyday slots planned out of those still to come. Each day shows Breakfast, Lunch and Dinner (a snack only when one is planned); an empty slot is a quiet "+ Lunch" that opens Plan a meal on that day and slot with its usual time. A past day shows only what was planned on it. Repeat last week plans last week's meals a week on, into empty slots not yet past, through the same `createMeal` and meal ingredients (`copyLastWeekAction`); nothing planned is moved or replaced. On Recipes, All · Veg · Non-veg under Ideas from WonderHome filters the dishes (an egg dish shows with non-veg), keeping the course picked; All was added the same day (PR #274), on its own row so it fits 360px. Words and help in all eight languages. |
-| `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | In Progress | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. |
 
 ### 11 — Bills, Fees & Finance
 
@@ -340,7 +338,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 13 — Maintenance, Laundry & Pet Care
 
-8 of 9 done `████████░░`
+9 of 10 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -353,6 +351,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `13-007` Pet care outcomes | P1 | Done | outcome-based; medication never looks like grooming |
 | `13-008` Smart-home signals | P2 | Done | optional signals, server-ingested only; members cannot write evidence |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | P1 | In Progress | The owner, 2026-10-20 ("add like, dislikes, favourite food, favourite places etc for pets"). `pet_preferences` (migration `20261020232000`): kind (like, dislike, favourite food, treat, place, toy, fear, allergy, or one the household names — picked with its own Add new, rule 20), what, an optional note; every member reads, an Admin adds, changes and removes (RLS, `test-pet-preferences-rls.mjs` 3/3); HomeBrain is told on every change. Each pet's details in Family list them under **Likes & favourites** grouped by kind, change and remove as icons (rule 11). `listPets` reads them in the same wave; the pet's HomeBrain fact carries them (`petPreferenceSentence`: "Bruno likes chicken; favourite place: the park; dislikes baths."), so HomeTalk answers "what does Bruno like?" from the record. Tests 3. Words and help (Family ¶4) in all eight languages. **Waiting on:** the migration reaching the live project; until then the list reads empty. |
+| `13-010` Home & Upkeep laid out like the other modules: Overview, Things, Requests | P1 | Done | The owner, 2026-10-21 ("design and develop this page based on other modules"). `/household/home` now has a greeting header, the add/raise actions always reachable (rule 12) and three tabs with counts: **Overview** (the four metric cards, weather when it changes a plan, what needs a person, then **Coming up** — services due and warranty/AMC ends in the next 60 days, never repeating a thing already flagged; `home/upkeep-view.ts`, 4 golden tests); **Things** (every asset in use, then Retired, each an `ExpandableRow` with category, place and its next dated fact; open it for servicing interval, last and next service, cover, the last three visits; an Admin or the member responsible records a service, changes every field — now including warranty and AMC dates — or retires/brings back; never a delete); **Requests** (open, then done and cancelled; status moved on through the same `transition` rules the agents use, picked from only the steps that can follow, cancelling is the take-back; subject, provider, contact, visit day and next step editable). New writes `updateAsset`, `setAssetStatus`, `recordAssetService`, `updateServiceRequest` (all `invalidatesContext`); `homeAgenda` now carries the rows it assessed so the page reads them once. No migration: the existing policies already allow these writes. Words and help (Home and upkeep ¶2, ¶5, ¶6) in all eight languages. |
 
 ### 14 — AI Orchestration & Learning
 

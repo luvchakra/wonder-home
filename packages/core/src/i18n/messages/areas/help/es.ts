@@ -277,10 +277,15 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.summary": "Mantenimiento, servicios, colada y mascotas: solo lo que necesita a una persona.",
   "help.guide.home-upkeep.body.1":
     "Hogar y mantenimiento reúne el mantenimiento, las solicitudes de servicio, la colada y el cuidado de las mascotas, y muestra solo lo que necesita a alguien. Cuando nada lo necesita, lo dice.",
-  "help.guide.home-upkeep.body.2": "Un Admin registra los electrodomésticos de la casa; cualquier adulto puede pedir un servicio.",
+  "help.guide.home-upkeep.body.2":
+    "Casa y mantenimiento tiene tres pestañas. Resumen muestra primero lo que necesita a alguien y luego lo que llega en los próximos 60 días: una revisión que toca, una garantía o un contrato de mantenimiento que termina. Cosas lista cada electrodoméstico, instalación y vehículo; Solicitudes, cada solicitud de servicio.",
   "help.guide.home-upkeep.body.3":
     "El tiempo solo habla cuando cambia una decisión —la colada que hoy no se secará fuera, por ejemplo— y nunca como una lectura del pronóstico. Usa la zona que eligió un Admin, guardada solo con una precisión de un kilómetro, más o menos.",
   "help.guide.home-upkeep.body.4": "El tiempo solo se usa donde está activado para tu WonderHome; Ajustes → Cuentas conectadas muestra si lo está.",
+  "help.guide.home-upkeep.body.5":
+    "Un administrador añade cosas con Añadir un artículo. Un administrador, o el miembro que se ocupa de algo, puede cambiarlo, anotar una revisión (la siguiente cuenta desde ese día) o retirarlo. Retirarlo detiene sus avisos y conserva su historial.",
+  "help.guide.home-upkeep.body.6":
+    "Cualquier adulto puede pedir un servicio, avanzarlo —reservado, en curso, esperando piezas, hecho—, cambiar quién lo hace y cuándo, o cancelarlo. Una solicitud hecha o cancelada se conserva y nunca se reabre.",
 
   "help.guide.household-and-roles.title": "Miembros, roles y lo que ve cada persona",
   "help.guide.household-and-roles.summary": "Un hogar, varias identidades y una vista distinta para cada una.",
