@@ -16,6 +16,11 @@ import {
   stockStatus,
   type GroceryItem,
 } from "@wonderhome/core/commerce/inventory";
+import {
+  useSoon,
+  type RunningEntry,
+  type UseFirstEntry,
+} from "@wonderhome/core/commerce/use-soon";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -238,7 +243,13 @@ export default async function GroceriesPage({
             ) : null}
 
             {view === "use-soon" ? (
-              <UseSoon items={items} words={words} t={t} timezone={timezone} />
+              <UseSoon
+                items={items}
+                words={words}
+                t={t}
+                timezone={timezone}
+                today={today}
+              />
             ) : (
               <GroceryList
                 householdId={householdId}
@@ -300,40 +311,51 @@ export default async function GroceriesPage({
   );
 }
 
-/** Use soon (design §3.6): dates someone read off the pack, and what is at or below its low level — never mixed, never estimated. */
+/**
+ * Use soon (design §3.6, story 25-003c): dates someone knows, and what is at or
+ * below its low level — never mixed. The rules are `commerce/use-soon.ts`: an
+ * estimated date is never listed, a passed date says "check it before using",
+ * and an amount says whether it was counted or worked out.
+ */
 function UseSoon({
   items,
   words,
   t,
   timezone,
+  today,
 }: {
   items: GroceryItem[];
   words: ReturnType<typeof groceryWords>;
   t: Translate;
   timezone: string;
+  today: string;
 }) {
-  const dated = items
-    .filter((item) => item.stock?.useBy && item.stock.quantity > 0)
-    .sort((a, b) => a.stock!.useBy!.localeCompare(b.stock!.useBy!));
-  const low = items.filter((item) => {
-    const status = stockStatus(item);
-    return status === "low" || (status === "none" && item.lowLevel !== null);
-  });
+  const { useFirst, running, estimatedHidden } = useSoon(items, today, timezone);
+  const dayOn = (day: string) => formatDate(timezone, new Date(`${day}T12:00:00Z`));
+  const amountOf = (item: GroceryItem) =>
+    sayAmount(words, { quantity: item.stock!.quantity, unit: item.stock!.unit }, item.unit);
 
-  if (dated.length === 0 && low.length === 0) {
+  if (useFirst.length === 0 && running.length === 0) {
     return (
-      <EmptyState
-        icon={CalendarClock}
-        tone="care"
-        title={t("grocery.useSoon.empty")}
-        description={t("grocery.useSoon.emptyLede")}
-      />
+      <div className="space-y-3">
+        <EmptyState
+          icon={CalendarClock}
+          tone="care"
+          title={t("grocery.useSoon.empty")}
+          description={t("grocery.useSoon.emptyLede")}
+        />
+        {estimatedHidden > 0 ? (
+          <p className="text-sm text-[var(--wh-foreground-muted)]">
+            {t("grocery.useSoon.estimatedNote")}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
   const row = (
     item: GroceryItem,
-    line: string,
+    lines: string[],
     tone: "attention" | "risk" | "care",
   ) => (
     <li key={item.id}>
@@ -350,9 +372,14 @@ function UseSoon({
           <span className="block text-sm font-medium break-words">
             {item.name}
           </span>
-          <span className="block text-xs text-[var(--wh-foreground-muted)]">
-            {line}
-          </span>
+          {lines.map((line) => (
+            <span
+              key={line}
+              className="block text-xs text-[var(--wh-foreground-muted)]"
+            >
+              {line}
+            </span>
+          ))}
         </span>
         <ChevronRight
           aria-hidden
@@ -362,47 +389,80 @@ function UseSoon({
     </li>
   );
 
+  const dateLine = (entry: UseFirstEntry) => {
+    const date = dayOn(entry.useBy);
+    const basis = t(`grocery.useSoon.basis.${entry.basis}`);
+    if (entry.state === "passed")
+      return t("grocery.useSoon.datePassed", { date, basis });
+    if (entry.state === "today") return t("grocery.useSoon.dateToday", { basis });
+    if (entry.days === 1) return t("grocery.useSoon.dateTomorrow", { basis });
+    return t("grocery.useSoon.dateLater", { date, basis });
+  };
+
+  const amountLine = (entry: RunningEntry) => {
+    const asOf = dayOn(entry.asOf);
+    if (entry.status === "none") {
+      return entry.knowledge === "counted"
+        ? t("grocery.useSoon.noneCounted", { date: asOf })
+        : t("grocery.useSoon.noneWorked");
+    }
+    return entry.knowledge === "counted"
+      ? t("grocery.useSoon.amountCounted", { amount: amountOf(entry.item), date: asOf })
+      : t("grocery.useSoon.amountWorked", { amount: amountOf(entry.item) });
+  };
+
   return (
     <div className="space-y-5">
-      {dated.length > 0 ? (
+      {useFirst.length > 0 ? (
         <section className="space-y-2">
           <SectionHeader title={t("grocery.useSoon.useFirst")} />
           <p className="text-sm text-[var(--wh-foreground-muted)]">
             {t("grocery.useSoon.useFirstLede")}
           </p>
           <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
-            {dated.map((item) =>
+            {useFirst.map((entry) =>
               row(
-                item,
-                `${t("grocery.useSoon.useBy", { date: formatDate(timezone, new Date(`${item.stock!.useBy}T12:00:00Z`)) })} · ${t("grocery.useSoon.left", { amount: sayAmount(words, { quantity: item.stock!.quantity, unit: item.stock!.unit }, item.unit) })}`,
-                "care",
+                entry.item,
+                [
+                  dateLine(entry),
+                  ...(entry.knowledge === "counted"
+                    ? [t("grocery.useSoon.left", { amount: amountOf(entry.item) })]
+                    : []),
+                ],
+                entry.state === "passed"
+                  ? "risk"
+                  : entry.state === "today" || entry.state === "soon"
+                    ? "attention"
+                    : "care",
               ),
             )}
           </ul>
         </section>
       ) : null}
-      {low.length > 0 ? (
+      {running.length > 0 ? (
         <section className="space-y-2">
           <SectionHeader title={t("grocery.useSoon.running")} />
           <p className="text-sm text-[var(--wh-foreground-muted)]">
             {t("grocery.useSoon.runningLede")}
           </p>
           <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
-            {low.map((item) =>
+            {running.map((entry) =>
               row(
-                item,
-                t("grocery.useSoon.left", {
-                  amount: sayAmount(
-                    words,
-                    { quantity: item.stock!.quantity, unit: item.stock!.unit },
-                    item.unit,
-                  ),
-                }),
-                item.stock!.quantity <= 0 ? "risk" : "attention",
+                entry.item,
+                [
+                  amountLine(entry),
+                  ...(entry.old ? [t("grocery.useSoon.old")] : []),
+                ],
+                entry.status === "none" ? "risk" : "attention",
               ),
             )}
           </ul>
         </section>
+      ) : null}
+      {estimatedHidden > 0 ? (
+        <p className="text-sm text-[var(--wh-foreground-muted)]">
+          {t("grocery.useSoon.estimatedNote")}
+        </p>
       ) : null}
     </div>
   );

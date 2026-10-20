@@ -106,7 +106,7 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("homebrain sleep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   });
-  return Response.json({ ok: true, households: households.length, delivered, warmed }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, households: households.length, delivered, noticed, digests, warmed }, { headers: { "cache-control": "no-store" } });
 }
 
 export const POST = dispatch;
