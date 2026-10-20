@@ -64,6 +64,9 @@ export function GroceryList({
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  // At home and Not counted yet are ways in (the owner, 2026-10-20: "make the cards clickable"):
+  // a tap shows just the items they count, a second tap goes back to the list.
+  const [stockFilter, setStockFilter] = useState<"home" | "uncounted" | null>(null);
   // What the steppers have saved since the page was read, so "To buy" and its button follow along.
   const [onList, setOnList] = useState<Record<string, number>>(() =>
     Object.fromEntries(
@@ -82,7 +85,12 @@ export function GroceryList({
   const shown = items.filter(
     (item) =>
       // To buy follows the steppers: an item taken off the list leaves this view at once and stays under All.
-      (view === "all" || (onList[item.id] ?? 0) > 0) &&
+      // A card's filter shows every item it counts, on the list or not, as its number does.
+      (stockFilter === "home"
+        ? item.stock !== null && item.stock > 0
+        : stockFilter === "uncounted"
+          ? item.stock === null
+          : view === "all" || (onList[item.id] ?? 0) > 0) &&
       (!category || item.category === category) &&
       (!needle ||
         [item.name, item.category, ...item.aliases].some((text) =>
@@ -149,10 +157,28 @@ export function GroceryList({
         // Three across, by the owner's call (an exception to rule 19): labels wrap, never cut.
         <ul className="grid grid-cols-3 gap-2.5">
           <li className="min-w-0">
-            <MetricCard stacked label={words.summary.atHome} value={atHome} icon={CircleCheck} tone="handled" />
+            <MetricCard
+              stacked
+              label={words.summary.atHome}
+              value={atHome}
+              icon={CircleCheck}
+              tone="handled"
+              pressed={stockFilter === "home"}
+              disabled={atHome === 0}
+              onClick={() => setStockFilter((current) => (current === "home" ? null : "home"))}
+            />
           </li>
           <li className="min-w-0">
-            <MetricCard stacked label={words.summary.notCounted} value={notCounted} icon={CircleHelp} tone="attention" />
+            <MetricCard
+              stacked
+              label={words.summary.notCounted}
+              value={notCounted}
+              icon={CircleHelp}
+              tone="attention"
+              pressed={stockFilter === "uncounted"}
+              disabled={notCounted === 0}
+              onClick={() => setStockFilter((current) => (current === "uncounted" ? null : "uncounted"))}
+            />
           </li>
           <li className="min-w-0">
             {canMarkBought && toBuyNow.length > 0 ? (

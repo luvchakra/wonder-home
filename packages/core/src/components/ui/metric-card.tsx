@@ -21,6 +21,8 @@ export type Metric = {
   href?: string;
   /** What tapping the metric does, when it is the action itself ("Mark as bought"). */
   onClick?: () => void;
+  /** With `onClick`, a card that toggles a filter: on, it is marked and says so (`aria-pressed`). */
+  pressed?: boolean;
   disabled?: boolean;
 };
 
@@ -28,9 +30,11 @@ export type Metric = {
  * `stacked` sets icon, number and label one under another, for a narrow
  * tile whose label must wrap rather than be cut (rules 15, 18) — Groceries'
  * three To buy cards, the owner's exception to rule 19 (2026-10-20).
- * `onClick` makes the card the action itself (Groceries' "Mark as bought").
+ * `onClick` makes the card the action itself (Groceries' "Mark as bought");
+ * with `pressed` it toggles a filter instead (Groceries' At home and Not
+ * counted yet show just those items).
  */
-export function MetricCard({ label, value, icon, tone = "primary", href, onClick, disabled, stacked = false }: Metric & { stacked?: boolean }) {
+export function MetricCard({ label, value, icon, tone = "primary", href, onClick, pressed, disabled, stacked = false }: Metric & { stacked?: boolean }) {
   const body = stacked ? (
     <>
       {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
@@ -63,9 +67,11 @@ export function MetricCard({ label, value, icon, tone = "primary", href, onClick
         type="button"
         onClick={onClick}
         disabled={disabled}
+        aria-pressed={pressed}
         className={cn(
           className,
           "w-full text-left transition-colors enabled:hover:border-[var(--wh-primary)] enabled:hover:bg-[var(--wh-primary-soft)]/30 disabled:opacity-60",
+          pressed && "border-[var(--wh-primary)] bg-[var(--wh-primary-soft)] ring-1 ring-[var(--wh-primary)]",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]",
         )}
       >
