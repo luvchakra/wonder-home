@@ -195,6 +195,45 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
       clear.length > 0 ? first : null,
     );
     for (const entry of blocked) add("free_window", `${entry.label} is less free: ${entry.reasons.join("; ")}.`, entry.evidence, entry.date);
+
+    // Long weekends (14-034): a public holiday on a Friday or a Monday makes
+    // three days; on a Thursday or a Tuesday, four, with one day taken off.
+    // Over the next six months, and only where nothing is on for the family.
+    const holidays = usable
+      .filter((item) => item.entityType === "holiday" && typeof item.attributes.date === "string")
+      .filter((item) => daysBetween(options.today, String(item.attributes.date)) > 0 && daysBetween(options.today, String(item.attributes.date)) <= LONG_WEEKEND_AHEAD_DAYS)
+      .sort((a, b) => String(a.attributes.date).localeCompare(String(b.attributes.date)));
+    const long: { text: string; holiday: HouseholdContextItem; date: string }[] = [];
+    const seen = new Set<string>();
+    for (const holiday of holidays) {
+      const day = String(holiday.attributes.date);
+      const weekdayIndex = new Date(`${day}T00:00:00Z`).getUTCDay();
+      // [first day, last day, the day to take off]
+      const shape: Record<number, [number, number, number | null]> = { 5: [0, 2, null], 1: [-2, 0, null], 4: [0, 3, 1], 2: [-3, 0, -1] };
+      const window = shape[weekdayIndex];
+      if (!window) continue;
+      const start = addDays(day, window[0]);
+      const end = addDays(day, window[1]);
+      // A long weekend that has already begun is not one to plan.
+      if (seen.has(start) || daysBetween(options.today, start) <= 0) continue;
+      const span = Array.from({ length: daysBetween(start, end) + 1 }, (_, index) => addDays(start, index));
+      if (span.some((entry) => (on.get(entry) ?? []).length > 0)) continue;
+      seen.add(start);
+      const off = window[2] === null ? "" : ` if ${shortDay(addDays(day, window[2]))} is taken off`;
+      long.push({ text: `${shortDay(start)} to ${shortDay(end)}${off} (${holiday.attributes.title}, ${shortDay(day)})`, holiday, date: start });
+    }
+    if (long.length > 0) {
+      // A long weekend leads: it is the best answer to "when?" when there is one.
+      const firstTrip = insights.findIndex((entry) => entry.rule === "free_window");
+      insights.splice(firstTrip < 0 ? insights.length : firstTrip, 0, {
+        rule: "free_window",
+        statement: `${LONG_WEEKENDS_LEAD} ${long.slice(0, 3).map((entry) => entry.text).join("; ")}.`,
+        evidence: long.slice(0, 3).map((entry) => entry.holiday.id),
+        subjectMemberIds: [],
+        date: long[0]!.date,
+        privacyClass: "general",
+      });
+    }
   }
 
   return insights;
@@ -202,24 +241,30 @@ export function householdInsights(items: readonly HouseholdContextItem[], option
 
 /** How many coming weekends a "when should we go?" question looks across. */
 const TRIP_WEEKS = 8;
+/** How the long-weekend fact begins; the destinations after it are sized by it (`homeplaces/trip.ts`). */
+export const LONG_WEEKENDS_LEAD = "Long weekends from public holidays, with nothing on the family calendar:";
+/** How far ahead a public holiday can make a long weekend worth naming. */
+const LONG_WEEKEND_AHEAD_DAYS = 183;
 
 /**
  * "What's the best time for a 2-day getaway?", "when can we go on a trip?",
  * "which weekend is free for a vacation?": a question about when, for a trip
  * of a number of days. "Suggest a getaway" (where) is HomePlaces' question.
  */
-export function tripQuestion(question: string): { days: number; noun: string } | null {
+export function tripQuestion(question: string): { days: number; noun: string; daysSaid: boolean } | null {
   const text = question.toLowerCase();
   const noun = text.match(/\b(getaway|trip|vacation|holiday|outing|break|staycation|day out|road ?trip|excursion)s?\b/)?.[1];
   if (!noun) return null;
   if (!/\b(?:when|best time|good time|right time|ideal time|what time|which (?:weekend|days?|dates?|week)|free (?:weekend|days?)|(?:a |the )?free|available|go away)\b/.test(text)) return null;
   // "When is the next holiday?" asks about the holiday, not a trip.
   if (noun === "holiday" && /\b(?:next|public|school|bank|upcoming|national|festival) holidays?\b/.test(text)) return null;
+  // "When is the Diwali holiday?" is about the day; "a holiday", "for a 3-day holiday", "go on holiday" is a trip.
+  if (noun === "holiday" && !/\b(?:a|for|on|take|family)\s+(?:[\w-]+\s+){0,2}holidays?\b/.test(text)) return null;
   if (/\b(?:where|suggest|recommend|places?|destinations?|ideas?)\b/.test(text) && !/\b(?:when|time|weekend|dates?)\b/.test(text)) return null;
   const said = text.match(/\b(\d|one|two|three|four|five)[ -]?(?:day|night)s?\b/)?.[1];
   const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
   const days = said ? (words[said] ?? Number(said)) : /\bweekend\b/.test(text) ? 2 : noun === "day out" ? 1 : 2;
-  return { days: Math.min(Math.max(days, 1), 5), noun: noun === "day out" ? "trip" : noun };
+  return { days: Math.min(Math.max(days, 1), 5), noun: noun === "day out" ? "trip" : noun, daysSaid: Boolean(said) };
 }
 
 function listOf(things: readonly string[]): string {

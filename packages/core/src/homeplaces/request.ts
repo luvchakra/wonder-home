@@ -88,7 +88,9 @@ export function readPlaceRequest(utterance: string): PlaceRequest | null {
       // "getaway destinations" alone brings back travel agencies.
       // "Hill station weekend getaway" drew Mahabaleshwar, Matheran and
       // Bhandardara from Pune when tried; vaguer words drew resorts and agencies.
-      query: `${forChildren ? "family friendly " : ""}${days <= 2 ? "hill station weekend getaway" : "holiday destination"}`,
+      // A long weekend (three or four days, 14-035) is still a weekend away:
+      // "holiday destination" drew one travel agency for it when tried live.
+      query: `${forChildren ? "family friendly " : ""}${days <= 4 ? "hill station weekend getaway" : "holiday destination"}`,
       placeType: "tourist_attraction",
       label: `a ${days}-day getaway`,
       forChildren,

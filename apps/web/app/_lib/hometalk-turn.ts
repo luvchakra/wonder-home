@@ -80,7 +80,8 @@ import { listMembers } from "@wonderhome/core/identity/households";
 import { listMemories } from "@wonderhome/core/context/repository";
 import type { Viewer } from "@wonderhome/core/navigation/secondary-navigation";
 import { placesReply } from "@wonderhome/core/homeplaces/answer";
-import { readPlaceRequest } from "@wonderhome/core/homeplaces/request";
+import { readPlaceRequest, type PlaceRequest } from "@wonderhome/core/homeplaces/request";
+import { tripDestinationRequest, withDestinations } from "@wonderhome/core/homeplaces/trip";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
 import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "@wonderhome/core/calendar/answer";
@@ -955,6 +956,20 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     // The answer carries what it rests on; the agenda summary rests on the whole home.
     carry(speaking, answered?.text ? classesOf(answered) : EVERY_SENSITIVE_CLASS);
     brain = answered?.text ? { source: answered.source, factsSent: answered.factsSent } : { source: "deterministic", factsSent: answered?.factsSent ?? 0 };
+    // "When should we go away?" (14-033, 14-034) is answered from the calendar;
+    // where to go comes with it (14-035), by the same place search a place
+    // question uses: budgeted, near home, only where this channel may search.
+    const trip = answered?.text && (!limits || channelAllowsAction("find_places", limits)) ? tripDestinationRequest(body.utterance, answered.text) : null;
+    if (trip) {
+      const where = await findPlaces({ supabase, admin, householdId, membership, people, utterance: body.utterance, said: null, request: trip });
+      composedAt = Date.now();
+      // Only what the search found, or the one thing the household can fix: the rest would be noise after a good answer.
+      if (where.kind === "found" || where.kind === "needs_home") {
+        text = withDestinations(text, where.text);
+        places = where.places;
+        carry(speaking, ["location"]);
+      }
+    }
   } else if (
     result.kind === "reply" &&
     result.intent.action === "unknown" &&
@@ -1406,10 +1421,12 @@ async function findPlaces(input: {
   people: readonly (Person & PersonLike)[];
   utterance: string;
   said: unknown;
-}): Promise<{ text: string; places: PlaceSuggestion[] | null }> {
-  const request = (typeof input.said === "string" ? readPlaceRequest(input.said) : null) ?? readPlaceRequest(input.utterance);
-  if (!request) return { text: "Tell me what kind of place you have in mind, like somewhere for dinner tonight or a park near school, and I'll look nearby.", places: null };
-  if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null };
+  /** A request already read (destinations beside "when should we go?"), instead of reading the words. */
+  request?: PlaceRequest;
+}): Promise<{ text: string; places: PlaceSuggestion[] | null; kind: "found" | "none" | "needs_home" | "other" | "limited" | "unread" }> {
+  const request = input.request ?? (typeof input.said === "string" ? readPlaceRequest(input.said) : null) ?? readPlaceRequest(input.utterance);
+  if (!request) return { text: "Tell me what kind of place you have in mind, like somewhere for dinner tonight or a park near school, and I'll look nearby.", places: null, kind: "unread" };
+  if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null, kind: "limited" };
   const preferences = preferencesOf(input.membership.locale, input.membership.household.timezone);
   const [enrolments, speaker, offices] = await Promise.all([
     listEnrolments(input.supabase, input.householdId).catch(() => []),
@@ -1441,7 +1458,7 @@ async function findPlaces(input: {
     log.warn("hometalk.places_failed", { householdId: input.householdId, error: error instanceof Error ? error.name : "unknown" });
     return { kind: "unavailable" } as const;
   });
-  return { text: placesReply(request, outcome), places: outcome.kind === "found" ? outcome.places : null };
+  return { text: placesReply(request, outcome), places: outcome.kind === "found" ? outcome.places : null, kind: outcome.kind === "found" || outcome.kind === "none" || outcome.kind === "needs_home" ? outcome.kind : "other" };
 }
 
 async function listPeople(supabase: Supabase, householdId: string): Promise<(Person & PersonLike)[]> {

@@ -92,7 +92,8 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
   // The goal's shape (HomeBrain 4.0 §3.10). To find out, the fact comes
   // first and what the rules noticed about it after — except a count, which
   // is the fact. To decide, what the rules noticed leads: it is what decides.
-  const noticed = (fact: GroundedFact) => fact.domain === "insight" && !fact.reasons.some((reason) => reason.startsWith("inference (count)"));
+  // A count, and when the family is free for a trip, are the facts themselves.
+  const noticed = (fact: GroundedFact) => fact.domain === "insight" && !fact.reasons.some((reason) => reason.startsWith("inference (count)")) && !isTripFact(fact);
   const pool =
     reading.goal === "decide"
       ? [...answering.filter(noticed), ...answering.filter((fact) => !noticed(fact))]
@@ -100,7 +101,9 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
 
   // "For Kunal" would undersell an answer that also carries his children's plans.
   const who = (reading.dependants ?? []).length > 0 ? "" : reading.people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
-  const plainLead = who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
+  const plainLead = answering.every(isTripFact)
+    ? "Here is when the family calendar is free:"
+    : who && reading.time ? `Here is what is on record for ${who} ${reading.time.label}:` : who ? `Here is what is on record for ${who}:` : reading.time ? `Here is what is on record ${reading.time.label}:` : "Here is what WonderHome has on record:";
   // Yes or no first, then the evidence; and what decides it, said as that.
   // "Yes" only where a fact's being there is the answer ("is there anything on
   // Thursday?"); "did Kunal pay it?" or "do we have milk?" is answered by
@@ -135,9 +138,15 @@ function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading):
     if (fact.domain !== "conflict" && fact.domain !== "insight" && fact.domain !== "profile" && BACKGROUND.has(fact.domain) && !reading.focus.has(fact.domain)) return false;
     // A question about a day is answered with what falls on it: an undated
     // standing fact is never presented as "tomorrow".
-    if (reading.time && !(fact.date && inWindow(fact.date, reading.time))) return false;
+    // "Which weekend is free?" names a weekend but asks about all of them.
+    if (reading.time && !isTripFact(fact) && !(fact.date && inWindow(fact.date, reading.time))) return false;
     return true;
   });
+}
+
+/** What the free-window rule worked out for "when should we go away?" (14-033, 14-034). */
+function isTripFact(fact: GroundedFact): boolean {
+  return fact.domain === "insight" && fact.reasons.some((reason) => reason.startsWith("inference (free_window)"));
 }
 
 /** What to say when nothing on record answers the question. Honest, specific, and never padded. */

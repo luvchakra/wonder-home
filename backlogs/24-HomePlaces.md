@@ -14,6 +14,7 @@
 | 8 | P0 | 24-008 | Getaways: "a two-day vacation plan" answered with places worth the trip | Done | The owner, 2026-10-18 (PR #228). `homeplaces/request.ts` reads a getaway (vacation, holiday, trip, weekend away; the days from "two-day", "a weekend", "4 day"): `purpose: "getaway"`, anchored at home, `when: { kind: "trip", days }`, radius 200 km (80 km for one day). The search asks for tourist attractions ("hill station weekend getaway" for a weekend; vaguer words drew resorts and travel agencies when tried) and is kept within the area (`NearbyQuery.within` → a `locationRestriction` rectangle, `includedType` with strict type filtering in `places/google.ts`); day-trip distances (under 25 km) are left out; no opening hours are checked; distance costs little in the ranking. The reply says "worth the trip from home, the best rated first" and to check the drive, weather and stay. Live check from Pune: Mahabaleshwar, Louisa Point, Naneghat, the Wai hills. Gemini Live answers it where location may reach Google |
 | 9 | P1 | 24-009 | HomePlaces is named and placed with the AI tools | Done | The owner, 2026-10-18 (PR #232): the Places screen is now HomePlaces and sits in the nav drawer and More under AI & Smart Tools, after HomeSend (`navigation/secondary-navigation.ts`, AI tone). HomeBrain Review is now HomeBrain in the same section. Nav labels, page titles, HomeTalk's "take me to HomePlaces", the help guide and HomeTalk's own replies are renamed in all eight languages. Browser-checked at 360px and desktop |
 | 10 | P0 | 24-010 | Every picked place shows in HomePlaces | Done | The owner, 2026-10-18 (PR #233): a home address added in Manage Household did not appear in HomePlaces, which only listed the place book. HomePlaces now opens with **Our places**: the home address, each child's school and each adult's office, every place picked from Google Maps anywhere in the app (`homeplaces/our-places.ts`; siblings at one school and colleagues at one office are one row). Each opens in Google Maps, and its pencil goes to its one editor: Manage Household for the home (Admins; others see no pencil), Kids & School for a school, Family for an office. An Admin with no address on record sees **Add your home address**. A child's school, which could only be set during setup, can now be picked from Google Maps (or typed) on Kids & School under **Schools**, per child (`saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`; leaving it empty retires it with `endEnrolments`, kept rather than deleted). The owner asked for the same in Family: a child's details now pick the school from Google Maps in place of the free-text "School or work location", through the same save, so the two screens always show one school; an adult's location is their Office picker, and only a helper keeps the free-text line. Event and appointment locations are typed text, not Maps picks, so they are not listed. Help ¶11 in eight languages. Browser-checked at 360px and 1280px on the live project |
+| 11 | P1 | 24-011 | Destinations beside "when should we go away?" | Done | The owner, 2026-10-19: "suggest destinations for those long weekends too". A when-question about a trip (14-033/14-034) now also searches getaway places near home (`homeplaces/trip.ts`: `tripDestinationRequest`, `withDestinations`) and shows them as place cards under the free weekends, sized to the trip: the days said, three for a long weekend, two otherwise. A getaway of up to four days searches "hill station weekend getaway" (the vaguer "holiday destination" drew one travel agency live). Same budget (`places.find`), same channel gate (`find_places`), and the reply keeps its weekend list when cards are shown (`withoutList` drops only the bullets that name a card). Browser-checked at 360px with a QA household and a real Google Maps key |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -61,6 +62,17 @@ HomePlaces answers "where should we go?" from the household's own record: where 
 **Epic:** HomePlaces
 **Priority:** P2
 **Goal:** A member's work arrangement and hours show in Family's member detail, where they can be changed.
+
+### Story 24-011 — Destinations beside "when should we go away?"
+**Epic:** HomePlaces
+**Priority:** P1
+**Goal:** When HomeTalk answers when the family is free for a trip, it also offers places worth the drive, sized to that trip.
+
+**Acceptance criteria**
+- A when-question about a trip adds up to five getaway places near home as cards, after the free and long weekends.
+- The trip is three days when a holiday makes a long weekend, the days the person said when they said them, otherwise two.
+- It uses the one place search: the household's hourly budget, the home address, and the channel's `find_places` allowance. A refusal adds nothing after a good answer, and a missing home address says where to add it.
+- The weekend list stays readable beside the cards.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

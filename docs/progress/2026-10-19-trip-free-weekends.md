@@ -23,7 +23,7 @@
 
 ## Still open
 
-- Public holidays and occasions are not in HomeBrain's context yet, so a long weekend is not suggested. They belong with HomeTalk reading the calendar projection (26-003).
+- Public holidays now suggest long weekends: see `2026-10-19-long-weekends.md` (14-034).
 - Where to go is still HomePlaces' answer ("suggest a 2-day getaway").
 
 ## Where the code lives

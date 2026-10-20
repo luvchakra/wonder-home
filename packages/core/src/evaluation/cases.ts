@@ -80,6 +80,12 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["For a 2-day getaway, nothing is on the family calendar on Sat 3 Oct", "Sports Day (Sat 26 Sep)"], excludes: ["things across", "nothing needs anyone"] } },
   },
   {
+    id: "HT-119", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-upasana",
+    description: "\"Which weekend is free for a trip?\" leads with the long weekend a public holiday makes (14-034): Gandhi Jayanti on a Friday, with nothing on for the family.",
+    utterance: "Which weekend is free for a trip?",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Long weekends from public holidays", "Fri 2 Oct to Sun 4 Oct (Gandhi Jayanti, Fri 2 Oct)"], excludes: ["things across"] } },
+  },
+  {
     id: "HT-113", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"Who likes what?\" is the same answer for anyone in the family, and is never kept as a fact about someone called \"Who\".",
     utterance: "Who likes what?",

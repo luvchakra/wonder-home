@@ -1,5 +1,6 @@
 import { assessConsumable, type Consumable } from "../commerce/consumables";
 import type { Order } from "../commerce/orders";
+import type { HolidayRecord } from "../calendar/projection";
 import type { FamilyEvent } from "../family/schedule";
 import type { Obligation } from "../finance/payments";
 import type { HealthAppointment } from "../health/appointments";
@@ -161,6 +162,8 @@ export type ContextRecords = {
   memories?: readonly MemoryRecord[];
   beliefs?: readonly BeliefRecord[];
   events?: readonly FamilyEvent[];
+  /** The country's public holidays ahead (14-034): days off that make a long weekend. */
+  holidays?: readonly HolidayRecord[];
   /** Guests' replies to events' invite links; read with the events (HomeBrain 3.0). */
   eventGuests?: readonly EventGuestRecord[];
   absences?: readonly AbsenceRecord[];
@@ -455,6 +458,25 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   }
 
   // --- Calendar ---------------------------------------------------------------
+  if (records.holidays) {
+    for (const holiday of records.holidays) {
+      const ahead = holiday.onDate >= today;
+      add({
+        domain: "calendar",
+        entityType: "holiday",
+        entityId: holiday.id,
+        summary: ahead ? `${holiday.name} is a public holiday on ${formatDate(new Date(`${holiday.onDate}T12:00:00Z`), "UTC")}.` : `${holiday.name} was a public holiday on ${formatDate(new Date(`${holiday.onDate}T12:00:00Z`), "UTC")}.`,
+        need: "which days are public holidays",
+        privacyClass: "general",
+        subjectMemberIds: [],
+        attributes: { title: holiday.name, date: holiday.onDate },
+        source: { type: "public_holidays", sourceId: holiday.id },
+        freshness: ahead ? "current" : "historical",
+        tier: ahead ? 2 : 3,
+        aliases: [holiday.name, "holiday", "public holiday"],
+      });
+    }
+  }
   if (records.events) {
     const upcoming = records.events.filter((event) => event.status !== "cancelled" && event.endsAt.getTime() >= options.now.getTime() - DAY_MS);
     for (const event of records.events) {

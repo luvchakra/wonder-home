@@ -321,6 +321,7 @@ function drawInferences(
   options: { timezone: string; today: string; question: string },
 ): void {
   const byItem = new Map(drafts.filter((draft) => draft.itemId).map((draft) => [draft.itemId as string, draft]));
+  let tripOrder = 0;
   for (const insight of householdInsights(items, options)) {
     // "When should we go away?" is answered by the calendar as a whole: the
     // free weekends rest on there being nothing, and what is on the others is
@@ -333,7 +334,8 @@ function drawInferences(
         confidence: 1,
         privacyClass: insight.privacyClass,
         relevant: true,
-        score: insight.evidence.length === 0 ? 0.97 : 0.93,
+        // In the rule's own order: the long weekends, the free weekends, then the busy ones.
+        score: Math.max(0.9, 0.98 - 0.01 * tripOrder++),
         itemId: null,
         domain: "insight",
         subjectMemberIds: insight.subjectMemberIds,

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**290 of 310 stories done — 93.5%**
+**292 of 312 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 290 |
+| Done | 292 |
 | In Progress | 5 |
 | Blocked | 0 |
 | Not Started | 11 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████████` | 8 | 8 | — |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
-| 14 AI Orchestration & Learning | `████████░░` | 28 | 33 | 2 in progress, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `██████████` | 8 | 8 | — |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
-| 24 HomePlaces | `██████████` | 10 | 10 | — |
+| 24 HomePlaces | `██████████` | 11 | 11 | — |
 | 25 HomeFood | `██████░░░░` | 12 | 19 | 1 in progress, 6 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 
@@ -334,7 +334,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-28 of 33 done `████████░░`
+29 of 34 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -370,7 +370,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | P1 | Done | PR #241. Built: `homebrain/goal.ts` (`readGoal`: find_out, plan, decide, check, remember, do, by rules on the question's own words) on every reading; a plan or a decision follows two links; the rules answer is shaped by it (to decide: what the rules noticed leads; to check whether anything is there: "Yes." first; never a yes the record does not say), and the model is told the goal (`AnswerInput.goal`). Spec §3.10 |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | P1 | In Progress | PR #241 built: the database trigger safety net (`wh.mark_context_stale` on 25 domain tables, live, DB-tested), the keep-warm rebuild of stores that are behind or over an hour old on the five-minute delivery clock (`keepStoresWarm`, 4 per tick), and the AI quality page's `homeBrainKeeping` (deeper looks and what they found by part of the home, stores behind and the oldest lag). Still open: rules read the store, the agenda summary only for broad questions, and the "not on record while on record" gate. Spec §3.2, §3.8 (was 14-022 and 14-023) |
 | `14-032` HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | P1 | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
-| `14-033` "When should we go away?" answered from the calendar | P1 | Done | Live finding, 2026-10-19: "what best time for 2 day getaway" fell into the wide status net and was answered with the attention summary. `homebrain/insights.ts` gains rule `free_window` (`tripQuestion` reads when and how many days): the next 8 weekends with nothing on the family calendar, and what is on the others — events, school events and exams, someone away, an exam the day after. Drawn as an insight that answers the question (`grounding.ts`), so a model may cite it and the rules answer with it. Golden case HT-118, `free-window.test.ts` |
+| `14-033` "When should we go away?" answered from the calendar | P1 | Done | Live finding, 2026-10-19: "what best time for 2 day getaway" fell into the wide status net and was answered with the attention summary. `homebrain/insights.ts` gains rule `free_window` (`tripQuestion` reads when and how many days): the next 8 weekends with nothing on the family calendar, and what is on the others — events, school events and exams, someone away, an exam the day after. Drawn as an insight that answers the question (`grounding.ts`), so a model may cite it and the rules answer with it. Golden case HT-118, `free-window.test.ts` (PR #254) |
+| `14-034` Long weekends from public holidays | P1 | Done | The owner, 2026-10-19: "add public holidays so it suggests long weekends". `calendar/holidays.ts` (`listHouseholdHolidays`: the household's country, national days, six months ahead) feeds HomeBrain's context as `holiday` items (calendar, general), in the store and the live read. `free_window` leads with the long weekends a holiday makes — a Friday or Monday (three days), a Thursday or Tuesday with one day taken off (four) — where nothing is on for the family, never one already begun. A rule reads "which weekend is free for a trip?" as a HomeBrain question; a trip fact is not cut to "this weekend". Golden case HT-119 (Gandhi Jayanti in household A). Help Calendar ¶10 in 8 languages (PR #255). Destinations for those weekends: 24-011 |
 
 ### 15 — Privacy, Security & Governance
 
@@ -517,7 +518,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-10 of 10 done `██████████`
+11 of 11 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -531,6 +532,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-008` Getaways: "a two-day vacation plan" answered with places worth the trip | P0 | Done | The owner, 2026-10-18 (PR #228). `homeplaces/request.ts` reads a getaway (vacation, holiday, trip, weekend away; the days from "two-day", "a weekend", "4 day"): `purpose: "getaway"`, anchored at home, `when: { kind: "trip", days }`, radius 200 km (80 km for one day). The search asks for tourist attractions ("hill station weekend getaway" for a weekend; vaguer words drew resorts and travel agencies when tried) and is kept within the area (`NearbyQuery.within` → a `locationRestriction` rectangle, `includedType` with strict type filtering in `places/google.ts`); day-trip distances (under 25 km) are left out; no opening hours are checked; distance costs little in the ranking. The reply says "worth the trip from home, the best rated first" and to check the drive, weather and stay. Live check from Pune: Mahabaleshwar, Louisa Point, Naneghat, the Wai hills. Gemini Live answers it where location may reach Google |
 | `24-009` HomePlaces is named and placed with the AI tools | P1 | Done | The owner, 2026-10-18 (PR #232): the Places screen is now HomePlaces and sits in the nav drawer and More under AI & Smart Tools, after HomeSend (`navigation/secondary-navigation.ts`, AI tone). HomeBrain Review is now HomeBrain in the same section. Nav labels, page titles, HomeTalk's "take me to HomePlaces", the help guide and HomeTalk's own replies are renamed in all eight languages. Browser-checked at 360px and desktop |
 | `24-010` Every picked place shows in HomePlaces | P0 | Done | The owner, 2026-10-18 (PR #233): a home address added in Manage Household did not appear in HomePlaces, which only listed the place book. HomePlaces now opens with **Our places**: the home address, each child's school and each adult's office, every place picked from Google Maps anywhere in the app (`homeplaces/our-places.ts`; siblings at one school and colleagues at one office are one row). Each opens in Google Maps, and its pencil goes to its one editor: Manage Household for the home (Admins; others see no pencil), Kids & School for a school, Family for an office. An Admin with no address on record sees **Add your home address**. A child's school, which could only be set during setup, can now be picked from Google Maps (or typed) on Kids & School under **Schools**, per child (`saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`; leaving it empty retires it with `endEnrolments`, kept rather than deleted). The owner asked for the same in Family: a child's details now pick the school from Google Maps in place of the free-text "School or work location", through the same save, so the two screens always show one school; an adult's location is their Office picker, and only a helper keeps the free-text line. Event and appointment locations are typed text, not Maps picks, so they are not listed. Help ¶11 in eight languages. Browser-checked at 360px and 1280px on the live project |
+| `24-011` Destinations beside "when should we go away?" | P1 | Done | The owner, 2026-10-19: "suggest destinations for those long weekends too". A when-question about a trip (14-033/14-034) now also searches getaway places near home (`homeplaces/trip.ts`: `tripDestinationRequest`, `withDestinations`) and shows them as place cards under the free weekends, sized to the trip: the days said, three for a long weekend, two otherwise. A getaway of up to four days searches "hill station weekend getaway" (the vaguer "holiday destination" drew one travel agency live). Same budget (`places.find`), same channel gate (`find_places`), and the reply keeps its weekend list when cards are shown (`withoutList` drops only the bullets that name a card). Browser-checked at 360px with a QA household and a real Google Maps key |
 
 ### 25 — HomeFood
 
