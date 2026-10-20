@@ -183,8 +183,11 @@ work, and hold new work against these:
       Overview counts (2026-10-18) and Bills & Finance's three Overview
       counts — Need you, Upcoming, Settled (2026-10-20) — sit three across
       as `ExpandableMetricRow`: stacked tiles whose labels wrap, never cut,
-      with the open tile's entries in a full-width panel below. They are
-      not precedent for any other grid; a new one is the owner's call.
+      with the open tile's entries in a full-width panel below.
+      Groceries' three To buy counts — To buy, At home, Not counted yet
+      (2026-10-20) — sit three across as `MetricGrid`'s `row`, stacked the
+      same way. They are not precedent for any other grid; a new one is
+      the owner's call.
 20. **A choice is picked, not typed.** Wherever a field's answer is one of a
     known set — a category, a relationship, a unit, a status, a frequency —
     it is a dropdown/select, a tag picker, a radio group or a checkbox list,

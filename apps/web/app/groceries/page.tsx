@@ -171,13 +171,8 @@ export default async function GroceriesPage({
               {t("grocery.lede")}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-          {toBuyCount > 0 ? (
-            <ButtonLink variant="secondary" href="/groceries/cart">
-              <ShoppingCart aria-hidden className="size-4" />
-              {t("grocery.cart.open")} ({toBuyCount})
-            </ButtonLink>
-          ) : null}
+          {/* Add item on the left, the cart on the right (the owner, 2026-10-20). */}
+          <div className="flex w-full items-center gap-3">
           <AddItemButton
             householdId={householdId}
             items={(items ?? []).map((item) => ({
@@ -194,6 +189,12 @@ export default async function GroceriesPage({
             categories={categories}
             words={words}
           />
+          {toBuyCount > 0 ? (
+            <ButtonLink variant="secondary" href="/groceries/cart" className="ml-auto">
+              <ShoppingCart aria-hidden className="size-4" />
+              {t("grocery.cart.open")} ({toBuyCount})
+            </ButtonLink>
+          ) : null}
           </div>
         </header>
 
@@ -232,6 +233,7 @@ export default async function GroceriesPage({
           <>
             {view === "to-buy" && items.length > 0 ? (
               <StatChips
+                row
                 stats={[
                   {
                     label: t("grocery.summary.toBuy"),

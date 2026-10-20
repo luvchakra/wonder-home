@@ -21,8 +21,14 @@ export type Metric = {
   href?: string;
 };
 
-export function MetricCard({ label, value, icon, tone = "primary", href }: Metric) {
-  const body = (
+export function MetricCard({ label, value, icon, tone = "primary", href, stacked = false }: Metric & { stacked?: boolean }) {
+  const body = stacked ? (
+    <>
+      {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
+      <span className="block text-xl font-semibold leading-none tracking-tight">{value}</span>
+      <span className="block text-[0.6875rem] font-medium break-words text-[var(--wh-foreground-muted)]">{label}</span>
+    </>
+  ) : (
     <>
       {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
       <span className="min-w-0 flex-1">
@@ -37,8 +43,10 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
     </>
   );
 
-  const className =
-    "flex items-center gap-2.5 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]";
+  const className = cn(
+    stacked ? "flex h-full flex-col items-start gap-1.5" : "flex items-center gap-2.5",
+    "rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3.5 py-3 shadow-[var(--wh-shadow-card)]",
+  );
 
   return href ? (
     <Link
@@ -67,28 +75,34 @@ export function MetricCard({ label, value, icon, tone = "primary", href }: Metri
  * caller has checked fits at half width. It is opt-in precisely so that
  * adding a longer label somewhere else cannot quietly re-create the
  * truncation this layout exists to prevent.
+ *
+ * `row` is the owner's other exception (rule 19): three short counts side
+ * by side on a phone as stacked tiles — icon, number, then a label that
+ * wraps rather than being cut. Groceries' To buy counts use it (2026-10-20).
  */
 export function MetricGrid({
   metrics,
   pairs = false,
+  row = false,
   className,
 }: {
   metrics: readonly Metric[];
   pairs?: boolean;
+  row?: boolean;
   className?: string;
 }) {
   return (
     <ul
       className={cn(
         "grid gap-2.5",
-        pairs ? "grid-cols-2" : "grid-cols-1",
-        metrics.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3",
+        row ? "grid-cols-3" : pairs ? "grid-cols-2" : "grid-cols-1",
+        row ? null : metrics.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3",
         className,
       )}
     >
       {metrics.map((metric) => (
         <li key={metric.label} className="min-w-0">
-          <MetricCard {...metric} />
+          <MetricCard {...metric} stacked={row} />
         </li>
       ))}
     </ul>

@@ -153,7 +153,7 @@ export function GroceryList({
         <div
           role="group"
           aria-label={words.filterLegend}
-          className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+          className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {[null, ...categories].map((name) => {
             const pressed = category === name;

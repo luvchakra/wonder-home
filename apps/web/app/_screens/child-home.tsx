@@ -4,13 +4,15 @@ import { listEvents } from "@wonderhome/core/family/repository";
 import type { FamilyEvent } from "@wonderhome/core/family/schedule";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { localizeReminder } from "@wonderhome/core/notifications/message";
-import { companionLines, loadCompanion } from "@wonderhome/core/school/companion";
+import { listActivities } from "@wonderhome/core/school/activities";
+import { CAT_COATS, companionLines, loadCompanion, nextClassToday } from "@wonderhome/core/school/companion";
+import { listTimetable } from "@wonderhome/core/school/exams";
 import { listCheckIns, listGoals } from "@wonderhome/core/school/goal-repository";
 import { childProgress, STARS_PER_LEVEL, type ChildProgress, type GoalStanding } from "@wonderhome/core/school/goals";
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { childView, type SchoolItem } from "@wonderhome/core/school/items";
-import { schoolDayZone } from "@wonderhome/core/school/times";
+import { localInstant, schoolDayZone } from "@wonderhome/core/school/times";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
@@ -48,7 +50,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const [items, events, goals, checkIns, companion, newest] = await Promise.all([
+  const [items, events, goals, checkIns, companion, newest, activities, periods, duties] = await Promise.all([
     listSchoolItems(supabase, householdId, { childMemberId: memberId }).catch(() => [] as SchoolItem[]),
     listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => [] as FamilyEvent[]),
     listGoals(supabase, householdId, memberId).catch(() => []),
@@ -67,6 +69,22 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
           .maybeSingle()
           .then(({ data }) => data as { title: string; body: string; message?: unknown } | null)
       : Promise.resolve(null),
+    // What the cat reminds them of: today's classes and what they look after.
+    listActivities(supabase, householdId).catch(() => []),
+    listTimetable(supabase, householdId).catch(() => []),
+    supabase
+      .from("responsibilities")
+      .select("outcome_key, playbook_items(name)")
+      .eq("household_id", householdId)
+      .eq("primary_member_id", memberId)
+      .order("priority")
+      .limit(2)
+      .then(({ data }) =>
+        ((data ?? []) as { outcome_key: string; playbook_items: { name: string } | { name: string }[] | null }[]).map((row) => {
+          const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
+          return item?.name ?? row.outcome_key.replace(/[._]/g, " ");
+        }),
+      ),
   ]);
 
   const school = childView(items, now);
@@ -92,6 +110,14 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
 
   // What the cat says, most useful first, each line in the child's words (08-018).
   const nextFun = fun[0] ?? null;
+  const nowHHMM = new Intl.DateTimeFormat("en-GB", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+  const weekday = ((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7) + 1;
+  const nextClass = nextClassToday({ childMemberId: memberId, today, weekday, nowHHMM, activities, periods });
+  const openWork = [...school.today, ...school.soon].sort((a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity))[0];
+  const clockFor = (at: string) => {
+    const instant = localInstant(today, at, timezone);
+    return instant ? session.locale.format.time(instant) : at;
+  };
   const almost = progress.goals.find((standing) => !standing.met && standing.needed - standing.done === 1 && !standing.doneToday);
   const catLines = companionLines({
     unread: viewer.unread ?? 0,
@@ -104,6 +130,10 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
     nextLevel: progress.level + 1,
     nextFun: nextFun ? { title: nextFun.title, inDays: Math.max(0, Math.round((Date.parse(`${dayOf(nextFun.startsAt)}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000)) } : null,
     today,
+    ageBand: view.ageBand,
+    homework: openWork ? { title: openWork.title, dueToday: school.today.includes(openWork) } : null,
+    nextClass: nextClass ? { name: nextClass.name, at: clockFor(nextClass.at) } : null,
+    duties,
   }).map((line) => ({ text: t(line.key as TranslationKey, line.values), ...(line.href ? { href: line.href } : {}) }));
 
   const doneLabels = (name: string, stars: number) => ({
@@ -128,8 +158,10 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         <GameCard progress={progress} t={t} />
 
         <CompanionCard
+          key={active}
           householdId={householdId}
           name={companion?.name ?? null}
+          coat={companion?.coat ?? "ginger"}
           lines={catLines}
           labels={{
             says: t("kids.cat.says", { name: "{name}" }),
@@ -143,6 +175,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
             rename: t("kids.cat.rename", { name: "{name}" }),
             another: t("kids.cat.another"),
             show: t("kids.cat.show"),
+            colour: t("kids.cat.colour"),
+            coats: Object.fromEntries(CAT_COATS.map((coat) => [coat, t(`kids.cat.coat.${coat}`)])) as Record<(typeof CAT_COATS)[number], string>,
           }}
         />
 

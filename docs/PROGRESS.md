@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `█████████░` | 17 | 18 | 1 not started |
+| 08 Kids & School Intelligence | `█████████░` | 16 | 17 | 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 10 | 10 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 10 | 11 | 1 not started |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `███████░░░` | 18 | 23 | 5 not started |
+| 25 HomeFood | `███████░░░` | 19 | 24 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -236,7 +236,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-17 of 18 done `█████████░`
+16 of 17 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -257,7 +257,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-015` School timetable and exams | P0 | Done | PR #243. The owner, 2026-10-18. On each child's card on Kids & School: **School timetable** (one folded row per school day with its subjects, opening to each period with its time, teacher and room) and **Exams** (each exam by its kind, Unit test / Mid-term / Finals or the household's own, which any adult adds and is then there to pick; each opens to its subjects, each on its day and time with syllabus and links to material, web addresses only). Every subject is on the Calendar on its day (`examEntries`, source `school`), and HomeBrain reads papers and timetable days (`exam_paper`, `timetable_day` items), so HomeTalk answers "when is Asmi's maths exam and what does it cover?"; the night-before inference now also fires for an exam paper. Migration `20261019100000` (four tables, access as a child's classes: the child, guardians and Admins read; guardians and Admins write; stood down, never deleted; marks HomeBrain's store stale), live, `verify:live` 302/302, DB test 6/6. A sheet that refuses a save keeps what was typed. Checked on the live project at 360px: a period, a Mid-term with Maths on 26 Oct with syllabus and a link (a bad link refused, the rest kept), on the Calendar's day view, and answered by HomeTalk |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | P2 | Not Started | Follow-up of 08-015 (PR #243): Family's child details show classes outside school (08-013) but not yet the timetable and exams; Calendar shows exam papers, not the school day's periods |
 | `08-017` A child's goals, and a brighter, game-like WonderHome for children | P1 | Done | The owner, 2026-10-20. **Goals** on Kids & School (a fourth tab): a guardian or an Admin sets, changes and retires a goal with a child — title, kind (picked, with its own way to add one), picture, every day / some days a week / once, stars each time, an optional reward and end date (`child_goals`, `child_goal_checkins`, RLS: the child and guardians read, guardians write goals, the child or a guardian ticks off today; `scripts/test-child-goals-rls.mjs`). **The child's Home** opens with a game card — level (every 20 stars, named), stars and streak, and where the stars came from — and the tabs Today, School (was Homework), Goals and Fun. Today holds the day's missions (goals and school work due), what is on the family calendar today and the next fun thing; "I did it!" ticks off a goal or marks school work done, a second tap takes it back. Stars, levels, streaks and badges are counted, never stored (`school/goals.ts`, tested). **Every screen a child opens** carries `data-audience="child"`: a brighter page, rounder cards and a star counter beside the bell; nothing an adult sees changes. Fun is the family calendar's outings, family time, gatherings, trips, birthdays and occasions, and the Goals tab says so with a link to Calendar. Help ¶8–9 of School in all eight languages |
-| `08-018` A cat companion for the child, and clear ways to earn stars | P1 | Done | The owner, 2026-10-20. Under the game card the child's own cat (`CompanionCat` in the kit, `--wh-cat-*` tokens, tail and blink still under reduced motion) says one thing at a time, worked out from the child's own records by `school/companion.ts`, never stored: something new under their bell (the newest unread one's title, in their language), missions left, a streak to keep, a goal one tick away, stars to the next level, the next fun plan, then a saying and an idea of the day (12 each, changing daily). Show me opens what a line is about; Tell me another moves on. The child names the cat and renames it (`child_companions`, migration `20261020180000`, live; written only by the child, read by the child, guardians and Admins; `scripts/test-child-companions-rls.mjs` 4/4). Ways to earn stars, on Today and Goals, lists each of the child's goals with its stars, one star for each piece of school work marked done, a level every 20 stars and the streak, the same rules `childProgress` counts by. Words in all eight languages, help ¶10. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -544,7 +543,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-18 of 23 done `███████░░░`
+19 of 24 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -570,6 +569,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-021` The cart, priced from receipts, with Swiggy Instamart | P1 | Done | The owner, 2026-10-20: Go to cart (with the to-buy count) beside Add item opens `/groceries/cart`: every to-buy line with its picture and amount, priced only from the household's last receipt with a cost (`commerce/cart.ts` `buildCart`: cost per base unit × the amount on the list when the units convert, else "last paid … for a different amount", else "no price on record"), a total over the priced lines with how many are priced, and receipt lines now keep their unit. Swiggy Instamart has no public ordering API: `commerce/instamart.ts` is inert until `SWIGGY_INSTAMART_PARTNER_KEY` and an https `SWIGGY_INSTAMART_API_URL` exist; each line opens Instamart's own search. Help ¶14 in all eight languages |
 | `25-022` WonderHome's recipe catalog: Indian dishes to plan and keep as your own | P0 | Done | The owner, 2026-10-20. 34 everyday Indian dishes (`recipe_catalog`, `recipe_catalog_ingredients`, migration `20261020160000`, live; platform data, read by every member, written only by `scripts/recipe-catalog/seed.mts`). Recipe sites' text and photos are copyrighted, so the steps are short and written for WonderHome, and the pictures are Wikimedia Commons CC BY-SA, copied to storage with author, licence and file page shown under each. Every ingredient is a grocery catalog item (the seed refuses a name the catalog lacks); nutrients per serving are the seed's arithmetic over IFCT 2017 (`nutritionPerServing`: liquids by density, deep-frying oil left out, pieces by stated weight, none below 80% coverage or when a fat, sugar or nut is unknown), with 'from n of m ingredients'. Meals → Recipes: Your recipes (edit, remove: 25-015) and Ideas from WonderHome by course; `/meals/recipes/[slug]`: picture and credit, prep/cook/serves, one serving, what you need with grocery pictures, numbered steps, Plan this and Save my version (`meals/catalog-copy.ts`, finds an existing copy rather than a second one). HomeTalk 'plan poha for breakfast tomorrow' uses the household's own recipe first, else the catalog dish (`grounding.ts` `catalogRecipes`, `catalogSlug` server-only), saved as the household's copy when it runs; golden case in `conversation/evaluation.test.ts`. Help ¶15–16 and the `recipes.*` words in all eight languages. 22 of 34 dishes have figures; the rest wait on sugar, curd, butter and cream data (25-007). |
 | `25-023` The recipe catalog in every language, and more dishes | P2 | Not Started | Left open by 25-022: dish names, descriptions and steps are English for now (the UI around them is in all eight languages). Translate each dish's text into the catalog's languages, keep the dish name a name, and grow the catalog beyond 34 with the same rules (original short steps, Commons pictures with credit, catalog-linked ingredients). |
+| `25-024` The Groceries header reads left to right, its counts sit in one row | P0 | Done | The owner, 2026-10-20, from a phone screenshot: Add item on the left and Go to cart on the right with a gap between them; the three To buy counts (To buy, At home, Not counted yet) in one row of three cards instead of three rows (`MetricGrid`'s `row`, stacked tiles whose labels wrap, an owner's exception to rule 19); and no scrollbar line under the category pills. Browser-checked at 360px and 1280px. |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 
 ### 26 — HomeEvents
