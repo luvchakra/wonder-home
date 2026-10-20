@@ -67,7 +67,11 @@ export type Meal = {
   ingredients: IngredientNeed[];
   /** How many it is planned for; null means as many as the recipe serves (25-003a). */
   servings?: number | null;
+  /** "week_template" when WonderHome picked it from the week template; a person's own otherwise. */
+  origin?: MealOrigin;
 };
+
+export type MealOrigin = "person" | "week_template";
 
 /** When cooking has to start for this to be ready in time. */
 export function startBy(meal: Meal): Date | null {

@@ -35,7 +35,7 @@ disagree again.)
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 18 | 10 | 5 | 3 | 17 | In Progress |
 | 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done (grocery pantry stories moved to 25 HomeFood) |
-| 10 | Meals & Cooking | 9 | 5 | 2 | 2 | 9 | Done |
+| 10 | Meals & Cooking | 12 | 6 | 4 | 2 | 11 | In Progress (10-012 waits on its migration) |
 | 11 | Bills, Fees & Finance | 11 | 6 | 3 | 2 | 10 | In Progress (11-011 left) |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
@@ -327,3 +327,4 @@ disagree again.)
 | 2026-10-20 | 11 | 11-013 | Done | Monthly spend as line charts, all bills and each bill, with axes, dots, tap-for-amount and a table view; browser QA at 360px and 1280px. |
 | 2026-10-20 | 13 | 13-009 | In Progress | Pet likes and favourites: table, RLS (3/3), Family UI, HomeBrain fact, words, help; migration `20261020232000` waiting to reach the live project. |
 | 2026-10-20 | 08 | 08-022 | Done | Confetti and balloons on I did it!; waiting button wraps; tab rows size to their content and scroll to the top on a tap; browser QA at 320/360/412px. |
+| 2026-10-20 | 10 | 10-012 | In Progress | Week template with several dishes per meal; WonderHome plans each week from it at once, only into empty slots, accepted unless changed (Choose again, Change meal); picker 8 unit tests, RLS 5/5; migration `20261020234000` waiting to reach the live project. |
