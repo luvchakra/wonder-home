@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**338 of 361 stories done — 93.6%**
+**339 of 363 stories done — 93.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 338 |
+| Done | 339 |
 | In Progress | 7 |
 | Blocked | 1 |
-| Not Started | 11 |
+| Not Started | 12 |
 | Deferred | 4 |
 
 ## By module
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 12 | 12 | — |
-| 25 HomeFood | `████████░░` | 23 | 28 | 5 not started |
+| 25 HomeFood | `████████░░` | 24 | 30 | 6 not started |
 | 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -76,6 +76,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
 | `25-023` The recipe catalog in every language, and more dishes | 25 HomeFood | P2 | Not Started |
+| `25-031` Nutrients for dairy, sugar and pastes that IFCT does not list | 25 HomeFood | P2 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
@@ -564,7 +565,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-23 of 28 done `████████░░`
+24 of 30 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -596,6 +597,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 | `25-028` Recipe ticks, sharing and filter counts | P2 | Done | The owner, 2026-10-20/21. A recipe's ingredients and steps tick off on screen only (kit `TickItem`, a real checkbox, nothing saved). Each household recipe has Share: WhatsApp gets the recipe card picture (`/meals/recipe-card/[id]`, under the member's own session) with the whole recipe as the message (`meals/recipe-share.ts`, 4 tests), plus other apps, copy, email and save picture. The course and veg/non-veg filters show counts. Help (Meals and shopping) in all eight languages. |
 | `25-029` More non-veg dishes in WonderHome's recipe list | P1 | Done | The owner, 2026-10-21 ("get more non veg recipes in the WonderHome recipe list"). 26 dishes added to `scripts/recipe-catalog/recipes.ts` through the same seed as 25-022 (catalog now 60: 33 veg, 5 egg, 22 non-veg): egg bhurji, masala omelette, egg paratha, keema paratha; chicken curry, butter chicken, chicken tikka masala, kadai chicken, chicken korma, Chettinad chicken, mutton curry, rogan josh, keema matar, macher jhol, Goan fish curry, Kerala meen curry, prawn masala; fish fry; chicken, mutton and egg biryani, prawn pulao; chicken 65, tandoori chicken, chicken seekh kebab, fish tikka. Every ingredient links to an existing grocery-catalog item (no new items needed); nutrients per serving come from `nutritionPerServing` and stay empty where too little is known about the items (e.g. chicken cuts, prawns). 25 Wikimedia Commons pictures with licence and author in `pictures.tsv` (CC BY / BY-SA / CC0 only); chicken biryani has none, since no correctly licensed picture of that dish turned up. Seeded to the live catalog with `seed.mts --apply`; no schema change (`diet` already allowed `non_veg`). |
+| `25-030` Nutrients for chicken, mutton and prawn cuts | P1 | Done | The owner, 2026-10-21 ("add nutrition data for chicken, mutton and prawns"). Seven grocery-catalog items had no IFCT 2017 link, so the 25-029 dishes made from them showed no nutrients. Linked in `ifct-links.csv`, all `close` with a note: chicken biryani cut, curry cut, keema and whole to N002 (thigh, the middle cut, as the skinless curry cut already was); chicken boneless to N003 (breast); mutton keema to O001 (goat shoulder); medium prawns to Q007 (brown tiger prawns, *Solenocera*). Mutton paya stays unlinked: IFCT has no trotters. Applied live with `npm run catalog:ifct -- --apply` (7 links changed) and the recipe catalog re-seeded: keema paratha, chicken curry, kadai chicken, chicken korma, keema matar, prawn masala, chicken biryani, chicken 65 and seekh kebab now carry kcal and protein. Butter chicken, chicken tikka masala, Chettinad chicken and prawn pulao still don't: their curd, butter, cream, coconut milk and some spices have no data (25-031). |
+| `25-031` Nutrients for dairy, sugar and pastes that IFCT does not list | P2 | Not Started | Follow-up from 25-030. IFCT 2017 has no curd, butter, fresh cream, sugar, coconut milk, ginger-garlic paste or masala blends, so 17 catalog dishes (e.g. butter chicken, dal makhani, palak paneer, kheer, idli) fall under the 80% coverage `nutritionPerServing` needs. Reviewed `usda_foods` links exist (`usda_foods.catalog_id`) but recipe nutrients read only IFCT or the item's own nutrients; decide whether a reviewed USDA match may supply them, then re-seed. |
 
 ### 26 — HomeEvents
 

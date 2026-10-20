@@ -336,6 +336,7 @@ disagree again.)
 | 2026-10-21 | 24 | 24-012 | In Progress | Place book: Added by you first, then Saved from HomeTalk; added places rank first; migration `20261021001000` waits for the live project. |
 | 2026-10-21 | 25 | 25-028 | Done | Recipe ingredients and steps tick off on screen; Share a recipe (WhatsApp picture card + full recipe message, other apps, copy, email, picture); counts on recipe filters. |
 | 2026-10-21 | 25 | 25-029 | Done | 26 non-veg and egg dishes added to the WonderHome recipe catalog through the 25-022 seed (catalog 60: 33 veg, 5 egg, 22 non-veg); every ingredient linked to the grocery catalog, nutrients from `nutritionPerServing`, 25 Commons pictures with licence and author (chicken biryani has none); seeded live with `seed.mts --apply`. |
+| 2026-10-21 | 25 | 25-030 | Done | IFCT links for chicken (biryani cut, curry cut, keema, whole, boneless), mutton keema and medium prawns; applied live and the recipe catalog re-seeded, so 9 more non-veg dishes carry kcal and protein. Follow-up 25-031 (dairy, sugar, pastes) opened. |
 | 2026-10-21 | 01 | 01-014 | Done | Live on the database and checked end to end there; Permissions-Policy now allows geolocation for WonderHome's own pages (it denied it everywhere, so no phone could report). |
 | 2026-10-21 | 10 | 10-012 | Done | Live: Plan filled this week's remaining dinners from the template, marked WonderHome's pick. |
 | 2026-10-21 | 24 | 24-012 | Done | Migration live. |
