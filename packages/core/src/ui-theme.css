@@ -705,3 +705,50 @@
     radial-gradient(40rem 30rem at 95% 95%, oklch(0.35 0.08 285 / 0.4), transparent 65%),
     var(--wh-background);
 }
+
+/* The child's companion cat (08-018): a ginger cat whose tail sways and who blinks now and then. Still where motion is reduced. */
+:root {
+  --wh-cat-fur: oklch(0.74 0.15 55);
+  --wh-cat-fur-dark: oklch(0.6 0.15 45);
+  --wh-cat-cream: oklch(0.95 0.04 80);
+  --wh-cat-ink: oklch(0.27 0.03 255);
+  --wh-cat-blush: oklch(0.82 0.1 10);
+  --wh-cat-shine: oklch(1 0 0);
+}
+.wh-cat-tail {
+  transform-origin: 78% 82%;
+  animation: wh-cat-tail 3.2s ease-in-out infinite;
+}
+.wh-cat-eyes {
+  transform-origin: 50% 42%;
+  animation: wh-cat-blink 5s ease-in-out infinite;
+}
+.wh-cat-bubble {
+  animation: wh-rise var(--wh-duration) var(--wh-ease);
+}
+@keyframes wh-cat-tail {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+@keyframes wh-cat-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wh-cat-tail,
+  .wh-cat-eyes,
+  .wh-cat-bubble {
+    animation: none;
+  }
+}

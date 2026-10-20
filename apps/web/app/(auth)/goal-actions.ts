@@ -113,3 +113,20 @@ export async function markSchoolWorkAction(input: { householdId: string; id: str
     parsed.data.done ? completeSchoolItem(supabase, parsed.data.id) : reopenSchoolItem(supabase, parsed.data.householdId, parsed.data.id),
   );
 }
+
+/** The child names their cat companion (story 08-018) — only ever their own, as RLS holds. */
+export async function nameCompanionAction(input: { householdId: string; name: string }): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
+  const parsed = z.object({ householdId: z.uuid(), name: z.string().max(80) }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Try a shorter name." };
+  try {
+    const supabase = await createClient();
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    const { saveCompanionName } = await import("@wonderhome/core/school/companion");
+    const name = await saveCompanionName(supabase, { householdId: parsed.data.householdId, memberId: actor.memberId, name: parsed.data.name });
+    revalidatePath("/");
+    return { ok: true, name };
+  } catch (error) {
+    if (error instanceof Error && error.message === "companion_name_empty") return { ok: false, error: "Type a name first." };
+    return { ok: false, error: toErrorBody(error, "school").body.error.message };
+  }
+}

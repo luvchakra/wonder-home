@@ -3,8 +3,11 @@ import { BookOpen, CalendarHeart, Flame, PartyPopper, Sparkles, Star, Target, Tr
 import { listEvents } from "@wonderhome/core/family/repository";
 import type { FamilyEvent } from "@wonderhome/core/family/schedule";
 import type { Translate } from "@wonderhome/core/i18n/translate";
+import { localizeReminder } from "@wonderhome/core/notifications/message";
+import { companionLines, loadCompanion } from "@wonderhome/core/school/companion";
 import { listCheckIns, listGoals } from "@wonderhome/core/school/goal-repository";
-import { childProgress, type ChildProgress, type GoalStanding } from "@wonderhome/core/school/goals";
+import { childProgress, STARS_PER_LEVEL, type ChildProgress, type GoalStanding } from "@wonderhome/core/school/goals";
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { childView, type SchoolItem } from "@wonderhome/core/school/items";
 import { schoolDayZone } from "@wonderhome/core/school/times";
@@ -17,6 +20,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { CompanionCard } from "../_components/companion-card";
 import { KidDoneButton } from "../_components/kid-done-button";
 import { eventWhen } from "../_lib/event-when";
 import { formatDate, type Session } from "../_lib/session";
@@ -44,11 +48,25 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const [items, events, goals, checkIns] = await Promise.all([
+  const [items, events, goals, checkIns, companion, newest] = await Promise.all([
     listSchoolItems(supabase, householdId, { childMemberId: memberId }).catch(() => [] as SchoolItem[]),
     listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => [] as FamilyEvent[]),
     listGoals(supabase, householdId, memberId).catch(() => []),
     listCheckIns(supabase, householdId, memberId).catch(() => []),
+    // The cat (08-018): its name, and the newest thing waiting under the child's own bell.
+    loadCompanion(supabase, householdId, memberId).catch(() => null),
+    (viewer.unread ?? 0) > 0
+      ? supabase
+          .from("notifications")
+          .select("title, body, message")
+          .eq("recipient_member_id", memberId)
+          .in("status", ["generated", "delivered"])
+          .lte("scheduled_for", now.toISOString())
+          .order("scheduled_for", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }) => data as { title: string; body: string; message?: unknown } | null)
+      : Promise.resolve(null),
   ]);
 
   const school = childView(items, now);
@@ -72,6 +90,22 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const missionsLeft = school.today.length + missionGoals.filter((standing) => !standing.doneToday && !standing.met).length;
   const missionCount = school.today.length + doneToday.length + missionGoals.length;
 
+  // What the cat says, most useful first, each line in the child's words (08-018).
+  const nextFun = fun[0] ?? null;
+  const almost = progress.goals.find((standing) => !standing.met && standing.needed - standing.done === 1 && !standing.doneToday);
+  const catLines = companionLines({
+    unread: viewer.unread ?? 0,
+    newestTitle: newest ? localizeReminder(newest, t, session.locale.format).title : null,
+    missionsLeft,
+    streak: progress.streak,
+    activeToday: doneToday.length > 0 || checkIns.some((checkIn) => checkIn.onDay === today),
+    almostGoal: almost?.goal.title ?? null,
+    starsToNextLevel: progress.levelSize - progress.intoLevel,
+    nextLevel: progress.level + 1,
+    nextFun: nextFun ? { title: nextFun.title, inDays: Math.max(0, Math.round((Date.parse(`${dayOf(nextFun.startsAt)}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000)) } : null,
+    today,
+  }).map((line) => ({ text: t(line.key as TranslationKey, line.values), ...(line.href ? { href: line.href } : {}) }));
+
   const doneLabels = (name: string, stars: number) => ({
     doIt: t("kids.do"),
     done: t("kids.done"),
@@ -92,6 +126,25 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         </header>
 
         <GameCard progress={progress} t={t} />
+
+        <CompanionCard
+          householdId={householdId}
+          name={companion?.name ?? null}
+          lines={catLines}
+          labels={{
+            says: t("kids.cat.says", { name: "{name}" }),
+            noName: t("kids.cat.noName"),
+            nameMe: t("kids.cat.nameMe"),
+            nameLede: t("kids.cat.nameLede"),
+            nameField: t("kids.cat.nameField"),
+            namePlaceholder: t("kids.cat.namePlaceholder"),
+            save: t("kids.cat.save"),
+            saving: t("kids.cat.saving"),
+            rename: t("kids.cat.rename", { name: "{name}" }),
+            another: t("kids.cat.another"),
+            show: t("kids.cat.show"),
+          }}
+        />
 
         <SegmentedControl
           label={t("homeScreen.child.view")}
@@ -130,6 +183,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
                 </div>
               )}
             </section>
+
+            <EarnStars progress={progress} t={t} />
 
             <section>
               <SectionHeader title={t("kids.today.plans")} count={happeningToday.length || undefined} />
@@ -180,6 +235,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
 
         {active === "goals" ? (
           <>
+            <EarnStars progress={progress} t={t} />
             <section>
               <SectionHeader title={t("kids.goals.title")} count={progress.goals.length || undefined} />
               {progress.goals.length === 0 ? (
@@ -256,6 +312,71 @@ function GameCard({ progress, t }: { progress: ChildProgress; t: Translate }) {
         </div>
         <p className="text-xs opacity-90">{t("kids.hero.where", { goals: progress.fromGoals, school: progress.fromSchool })}</p>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Ways to earn stars (08-018; the owner: "tell them clearly the list of
+ * activities which can bring them stars"). The same rules `childProgress`
+ * counts by, said plainly: each of their own goals with its stars, school
+ * work at one star each, and what levels and streaks are made of.
+ */
+function EarnStars({ progress, t }: { progress: ChildProgress; t: Translate }) {
+  const goals = progress.goals;
+  return (
+    <section aria-labelledby="earn-stars">
+      <Card className="wh-kid-card p-4 [--wh-kid-accent:var(--wh-tone-meals)]">
+        <h2 id="earn-stars" className="flex items-center gap-2 text-base font-bold">
+          <span aria-hidden>⭐</span> {t("kids.earn.title")}
+        </h2>
+        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("kids.earn.lede")}</p>
+        <ul className="mt-3 space-y-2">
+          {goals.map((standing) => (
+            <li key={standing.goal.id} className="flex items-start gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)] p-2.5">
+              <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-care-soft)] text-lg">
+                {standing.goal.emoji}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold break-words">{standing.goal.title}</span>
+                <span className="block text-xs text-[var(--wh-foreground-muted)]">
+                  {standing.goal.period === "week"
+                    ? t("kids.earn.goal.week", { count: standing.goal.stars, target: standing.goal.target })
+                    : standing.goal.period === "once"
+                      ? t("kids.earn.goal.once", { count: standing.goal.stars })
+                      : t("kids.earn.goal.day", { count: standing.goal.stars })}
+                </span>
+              </span>
+              <span className="shrink-0 text-sm font-bold">+{standing.goal.stars} ⭐</span>
+            </li>
+          ))}
+          {goals.length === 0 ? (
+            <li className="flex items-start gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)] p-2.5">
+              <IconTile icon={Target} tone="care" size="sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{t("kids.earn.noGoals")}</span>
+                <span className="block text-xs text-[var(--wh-foreground-muted)]">{t("kids.earn.noGoalsHow")}</span>
+              </span>
+            </li>
+          ) : null}
+          <li className="flex items-start gap-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface)] p-2.5">
+            <IconTile icon={BookOpen} tone="school" size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">{t("kids.earn.school")}</span>
+              <span className="block text-xs text-[var(--wh-foreground-muted)]">{t("kids.earn.schoolHow")}</span>
+            </span>
+            <span className="shrink-0 text-sm font-bold">+1 ⭐</span>
+          </li>
+        </ul>
+        <ul className="mt-3 space-y-1 text-xs text-[var(--wh-foreground-muted)]">
+          <li className="flex items-center gap-2">
+            <Trophy aria-hidden className="size-4 shrink-0" /> {t("kids.earn.level", { count: STARS_PER_LEVEL })}
+          </li>
+          <li className="flex items-center gap-2">
+            <Flame aria-hidden className="size-4 shrink-0" /> {t("kids.earn.streak")}
+          </li>
+        </ul>
+      </Card>
     </section>
   );
 }
