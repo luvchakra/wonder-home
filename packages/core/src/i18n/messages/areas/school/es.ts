@@ -10,6 +10,7 @@ export const schoolEs: AreaCatalog<typeof schoolEn> = {
   "school.place.lede": "Elige el colegio en Google Maps, o escribe su nombre si no aparece. Déjalo vacío para quitarlo.",
   "school.place.save": "Guardar colegio",
   "school.place.label": "Colegio",
+  "school.details.title": "Datos del colegio",
   "school.place.grade": "Curso {grade}",
   "school.place.gradeField": "Curso y grupo (opcional)",
   "school.place.gradePlaceholder": "5.º B",

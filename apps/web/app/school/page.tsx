@@ -327,7 +327,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
               const childRef = { id: kid.id, name: kid.displayName };
               return (
                 <section key={kid.id} className="space-y-2">
-                  <SectionHeader title={kid.displayName} />
+                  <SectionHeader title={t("school.details.title")} />
                   <Card className="px-3 pb-1">
                     <ul className="divide-y divide-[var(--wh-border)]">
                       <ActionRow
