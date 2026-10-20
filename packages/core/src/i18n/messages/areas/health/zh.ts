@@ -243,4 +243,20 @@ export const healthZh: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "记录读数",
   "healthForm.vital.description": "一次测量——始终是你实际记录的数值。",
   "healthForm.vital.editTitle": "编辑读数",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "添加",
+  "healthForm.menu.title": "添加到健康与健身",
+  "healthForm.menu.description": "选择要添加的内容。每一项都保持你选择的隐私设置。",
+  "healthForm.menu.group.health": "健康",
+  "healthForm.menu.group.visits": "就诊",
+  "healthForm.menu.group.fitness": "健身",
+  "healthForm.menu.meta.issue": "你注意到的情况，比如喉咙痛",
+  "healthForm.menu.meta.vital": "一次测量，比如体重或血压",
+  "healthForm.menu.meta.routine": "按计划进行的测量",
+  "healthForm.menu.meta.record": "化验结果、处方或类似文件",
+  "healthForm.menu.meta.appointment": "在指定日期和时间的就诊",
+  "healthForm.menu.meta.checkup": "定期检查，比如洗牙——到期时再预约",
+  "healthForm.menu.meta.session": "你今天实际做了什么",
+  "healthForm.menu.meta.goal": "你希望多久坚持一次",
 };

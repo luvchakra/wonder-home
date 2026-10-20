@@ -36,19 +36,20 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AppointmentStatusActions, BookAppointmentButton } from "../_components/health-appointment-forms";
-import { AddCheckupButton, CheckupActions } from "../_components/health-checkup-forms";
+import { HealthAddMenu } from "../_components/health-add-menu";
+import { AppointmentStatusActions } from "../_components/health-appointment-forms";
+import { CheckupActions } from "../_components/health-checkup-forms";
 import {
   GrantHealthConsentButton,
   HealthAiAssistanceToggle,
   PrivacyScopeForm,
   RevokeHealthConsentButton,
 } from "../_components/health-forms";
-import { AddFitnessGoalButton, GoalActions, LogFitnessSessionButton, SessionActions } from "../_components/health-fitness-forms";
-import { AddIssueButton, EditIssueButton, IssueStatusActions } from "../_components/health-issue-forms";
-import { AddRoutineButton, RoutineActions } from "../_components/health-measurement-routine-forms";
-import { AddRecordButton, RecordActions } from "../_components/health-record-forms";
-import { AddVitalButton, VitalActions } from "../_components/health-vital-forms";
+import { GoalActions, SessionActions } from "../_components/health-fitness-forms";
+import { EditIssueButton, IssueStatusActions } from "../_components/health-issue-forms";
+import { RoutineActions } from "../_components/health-measurement-routine-forms";
+import { RecordActions } from "../_components/health-record-forms";
+import { VitalActions } from "../_components/health-vital-forms";
 import { healthFormLabels } from "../_lib/health-form-labels";
 import { requireSession } from "../_lib/session";
 
@@ -197,16 +198,30 @@ export default async function HealthPage({
             <p className="text-sm text-[var(--wh-foreground-muted)]">{t("health.lede")}</p>
           </div>
           {active === "overview" ? (
-            <div className="flex flex-wrap gap-2">
-              <AddIssueButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-              <AddCheckupButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-              <AddVitalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-              <AddRoutineButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-              <AddFitnessGoalButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-              <LogFitnessSessionButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} goals={activeFitnessGoals} labels={formLabels} />
-              <AddRecordButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-              <BookAppointmentButton householdId={householdId} members={memberList} defaultPrivacyScope={currentScope} labels={formLabels} />
-            </div>
+            // One Add for all eight kinds (the owner, 2026-10-21: "too many entry options"), grouped by what is being decided.
+            <HealthAddMenu
+              householdId={householdId}
+              members={memberList}
+              defaultPrivacyScope={currentScope}
+              goals={activeFitnessGoals}
+              labels={formLabels}
+              words={{
+                label: t("healthForm.menu.label"),
+                title: t("healthForm.menu.title"),
+                description: t("healthForm.menu.description"),
+                groups: { health: t("healthForm.menu.group.health"), visits: t("healthForm.menu.group.visits"), fitness: t("healthForm.menu.group.fitness") },
+                meta: {
+                  issue: t("healthForm.menu.meta.issue"),
+                  vital: t("healthForm.menu.meta.vital"),
+                  routine: t("healthForm.menu.meta.routine"),
+                  record: t("healthForm.menu.meta.record"),
+                  appointment: t("healthForm.menu.meta.appointment"),
+                  checkup: t("healthForm.menu.meta.checkup"),
+                  session: t("healthForm.menu.meta.session"),
+                  goal: t("healthForm.menu.meta.goal"),
+                },
+              }}
+            />
           ) : null}
         </header>
 

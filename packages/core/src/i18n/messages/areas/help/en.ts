@@ -289,7 +289,7 @@ export const helpEn = {
   "help.guide.health.title": "Health and fitness",
   "help.guide.health.summary": "Records, vitals and routines, private to each person unless they share them.",
   "help.guide.health.body.1":
-    "Health & Fitness keeps each adult's issues, checkups, appointments, vitals (weight, blood pressure, steps and more, or your own measurement), health records such as lab results and prescriptions, fitness goals and routines. It shows what needs attention and what is coming up — never a health score.",
+    "Health & Fitness keeps each adult's issues, checkups, appointments, vitals (weight, blood pressure, steps and more, or your own measurement), health records such as lab results and prescriptions, fitness goals and routines. It shows what needs attention and what is coming up — never a health score. Everything you can add starts from the one Add button at the top, grouped into Health, Doctor visits and Fitness.",
   "help.guide.health.body.2":
     "Health information is private to its person by default. They can share it with people they choose, or share only the practical part with the whole household (\"unavailable 5–6pm\"), and take it back at any time. Being in the same household never by itself gives anyone access. A guardian can always see their child's.",
   "help.guide.health.body.3":

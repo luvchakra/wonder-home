@@ -265,7 +265,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.health.title": "Santé et forme",
   "help.guide.health.summary": "Dossiers, constantes et routines, privés pour chacun sauf s’il les partage.",
   "help.guide.health.body.1":
-    "Santé et forme conserve les problèmes, bilans, rendez-vous, constantes (poids, tension artérielle, pas et plus encore, ou votre propre mesure), dossiers de santé comme les analyses et les ordonnances, objectifs et routines de forme de chaque adulte. Il montre ce qui demande de l’attention et ce qui arrive — jamais un score de santé.",
+    "Santé et forme conserve les problèmes, bilans, rendez-vous, constantes (poids, tension artérielle, pas et plus encore, ou votre propre mesure), dossiers de santé comme les analyses et les ordonnances, objectifs et routines de forme de chaque adulte. Il montre ce qui demande de l’attention et ce qui arrive — jamais un score de santé. Tout ce que vous pouvez ajouter part du seul bouton Ajouter en haut, regroupé en Santé, Visites médicales et Forme.",
   "help.guide.health.body.2":
     "Les informations de santé sont privées pour leur titulaire par défaut. Il peut les partager avec les personnes de son choix, ou ne partager que la partie pratique avec tout le foyer (« indisponible de 17 h à 18 h »), et les reprendre à tout moment. Vivre dans le même foyer ne donne à personne un accès en soi. Un parent référent peut toujours voir celles de son enfant.",
   "help.guide.health.body.3":
