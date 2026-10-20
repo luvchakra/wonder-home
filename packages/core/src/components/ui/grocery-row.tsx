@@ -36,10 +36,10 @@ import { IconTile } from "./icon-tile";
  * colour is never the only signal. Low stock is red or amber; "unknown" is
  * grey, because nobody has said how much there is and the row never guesses.
  *
- * The name wraps rather than truncating (rule 11). At phone width the
- * amounts sit on one short line under the name — in stock on the left, the
- * stepper on the right — so a row is compact without squeezing either
- * (25-012). Under the name, beside the category, the item's energy and
+ * The name wraps rather than truncating (rule 11). Under the name the
+ * amounts sit as two equal cells — In stock, then To buy — each its label
+ * over its own − amount + stepper, so they line up row after row (the
+ * owner, 2026-10-20; 25-012 before it). Under the name, beside the category, the item's energy and
  * protein per 100 g when its catalog source has them. The stepper is the
  * caller's (it writes); the row is only the layout.
  */
@@ -96,6 +96,8 @@ export type GroceryRowProps = {
   stockLabel: string;
   /** "1.5 kg", or a dash when unknown. */
   stockText: string;
+  /** The in-stock stepper, when this reader may change what is at home — the caller's, because it writes. */
+  stockControl?: ReactNode;
   /** "To buy", in the reader's language. */
   toBuyLabel: string;
   /** The to-buy stepper — the caller's, because it writes. */
@@ -116,6 +118,7 @@ export function GroceryRow({
   statusLabel,
   stockLabel,
   stockText,
+  stockControl,
   toBuyLabel,
   stepper,
   openLabel,
@@ -173,15 +176,17 @@ export function GroceryRow({
         </span>
         <span className="sr-only">{statusLabel}</span>
       </Link>
-      <div className="col-span-3 row-start-2 flex items-center justify-between gap-3 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:justify-end sm:gap-5">
-        <span className="flex items-baseline gap-1.5 text-sm">
+      {/* In stock and To buy as two equal cells, each its label over its
+          control, so the two steppers line up under each other row to row. */}
+      <div className="col-span-3 row-start-2 grid grid-cols-2 gap-3 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:grid-cols-[9.5rem_9.5rem]">
+        <div className="flex min-w-0 flex-col items-start gap-1">
           <span className={label}>{stockLabel}</span>
-          <span className="font-semibold tabular-nums">{stockText}</span>
-        </span>
-        <span className="flex items-center gap-2">
+          {stockControl ?? <span className="flex min-h-9 items-center text-sm font-semibold tabular-nums">{stockText}</span>}
+        </div>
+        <div className="flex min-w-0 flex-col items-start gap-1">
           <span className={label}>{toBuyLabel}</span>
           {stepper}
-        </span>
+        </div>
       </div>
       <Link
         href={href}

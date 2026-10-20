@@ -29,7 +29,6 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
-import { StatChips } from "@wonderhome/core/ui/stat-chips";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { groceryWords } from "../_lib/grocery-words";
@@ -111,10 +110,6 @@ export default async function GroceriesPage({
   const canMarkBought = membership.memberType === "adult";
   const firstName = viewer.displayName.split(/\s+/)[0] ?? viewer.displayName;
   const toBuyCount = (items ?? []).filter((item) => item.toBuy).length;
-  const atHomeCount = (items ?? []).filter(
-    (item) => item.stock && item.stock.quantity > 0,
-  ).length;
-  const notCounted = (items ?? []).filter((item) => !item.stock).length;
   // Energy and protein per 100 g under each name, from the source the item page credits (25-012).
   const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
   const nutritionOf = (item: GroceryItem): string | null => {
@@ -144,6 +139,7 @@ export default async function GroceriesPage({
           item.unit,
         )
       : "—",
+    stock: item.stock ? item.stock.quantity : null,
     toBuy: item.toBuy
       ? {
           entryId: item.toBuy.entryId,
@@ -231,29 +227,6 @@ export default async function GroceriesPage({
           />
         ) : (
           <>
-            {view === "to-buy" && items.length > 0 ? (
-              <StatChips
-                row
-                stats={[
-                  {
-                    label: t("grocery.summary.toBuy"),
-                    value: toBuyCount,
-                    tone: "info",
-                  },
-                  {
-                    label: t("grocery.summary.atHome"),
-                    value: atHomeCount,
-                    tone: "handled",
-                  },
-                  {
-                    label: t("grocery.summary.notCounted"),
-                    value: notCounted,
-                    tone: "attention",
-                  },
-                ]}
-              />
-            ) : null}
-
             {view === "use-soon" ? (
               <UseSoon
                 items={items}

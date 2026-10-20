@@ -79,6 +79,18 @@ export function groceryWords(translate: Translate, language: string | undefined)
       conflict: t("grocery.stepper.conflict"),
       failed: t("grocery.stepper.failed"),
     },
+    summary: {
+      atHome: t("grocery.summary.atHome"),
+      notCounted: t("grocery.summary.notCounted"),
+    },
+    stockStepper: {
+      less: t("grocery.stock.less"),
+      more: t("grocery.stock.more"),
+      amount: t("grocery.stock.amount"),
+      now: t("grocery.stock.now"),
+      none: t("grocery.stock.none"),
+      title: t("grocery.stock.title"),
+    },
     amountSheet: {
       title: t("grocery.amount.title"),
       amount: t("grocery.amount.amount"),

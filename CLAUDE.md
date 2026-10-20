@@ -184,9 +184,9 @@ work, and hold new work against these:
       counts — Need you, Upcoming, Settled (2026-10-20) — sit three across
       as `ExpandableMetricRow`: stacked tiles whose labels wrap, never cut,
       with the open tile's entries in a full-width panel below.
-      Groceries' three To buy counts — To buy, At home, Not counted yet
-      (2026-10-20) — sit three across as `MetricGrid`'s `row`, stacked the
-      same way. They are not precedent for any other grid; a new one is
+      Groceries' three To buy cards — At home, Not counted yet and Mark
+      as bought, the last one the action itself (2026-10-20) — sit three
+      across as `MetricCard stacked`, labels wrapping the same way. They are not precedent for any other grid; a new one is
       the owner's call.
 20. **A choice is picked, not typed.** Wherever a field's answer is one of a
     known set — a category, a relationship, a unit, a status, a frequency —

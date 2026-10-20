@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**318 of 338 stories done — 94.1%**
+**320 of 340 stories done — 94.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 318 |
+| Done | 320 |
 | In Progress | 4 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 13 | 13 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 24 | 26 | 1 in progress, 1 not started |
+| 04 Conversation, Voice & Text | `█████████░` | 25 | 27 | 1 in progress, 1 not started |
 | 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `███████░░░` | 19 | 24 | 5 not started |
+| 25 HomeFood | `████████░░` | 20 | 25 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -153,7 +153,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-24 of 26 done `█████████░`
+25 of 27 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -183,6 +183,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-024` Gemini's voice plays through the floating window, so leaving the app floats it | P1 | Done | The owner's yes, 2026-10-18 (PR #237): Chrome floats on its own only media that is audibly playing, and the armed window was a silent picture, so it never floated by itself. Gemini's voice now passes through one node (`use-gemini-live.tsx`, `voiceStream`/`releaseVoice`) that plays into the armed video's stream instead of the speaker (`live-talk.tsx`, `attachVoice`), heard once either way; where sound may not play, the video stays muted and the voice returns to the speaker. Checked in Chromium: an audio track added to the playing picture after a tap plays unmuted. A real-phone check of the automatic float is the owner's |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | P1 | Not Started | The owner, 2026-10-19, after 04-024: "doesnt work yet". On their phone, switching apps during Gemini Live still does not float the window on its own (Chromium in the cloud plays the voice through the armed video, but a real phone's automatic picture-in-picture needs checking: Chrome's auto-PiP rules for installed PWAs, the media session, and whether the voice track is audible to the browser's heuristic). Needs a real Android phone to diagnose |
 | `04-026` A child's or helper's request goes to an adult for the final OK | P0 | Done | The owner, 2026-10-20: "such queries are fine but results should go to adult for final approval before adding to WonderHome db". HomeTalk still understands and previews a child's or helper's request, but it never writes on its own whatever the outcome's autonomy (`proposal.ts`), and their Confirm reads "Ask a grown-up". That sends the exact proposal (its fingerprint) to their guardian, else an Admin (`conversation/referral.ts`, the existing `approvals` table, one notification). The adult answers under "Asking for your OK" on Notifications: Approve carries it out through the same executor on their session (`answerReferral`), Decline leaves it; a changed or lapsed proposal (48 h) is refused. Only a guardian of the requester or an Admin may answer, checked on the server. The requester is told in their own conversation. Test in `consent.test.ts`; help ¶15 of Talk to WonderHome in all eight languages |
+| `04-027` After a change, HomeTalk opens the screen that shows it | P0 | Done | The owner, 2026-10-20 ("Add tomato to the grocery list" should land on Groceries with tomato on it). An executed action's reply links to its screen; `navigation/app-path.ts`'s `screenShowing` takes the first WonderHome link from it and the turn sends it as `navigate`, typed or spoken, in the app only (never Alexa). The browser goes there, or refreshes in place when it is already there. `appPath` is now the one path check for the server, the contract and the browser, and allows a plain query (`/groceries?view=to-buy`). Browser-checked: typed on /ai, it landed on Groceries → To buy with Tomato listed. |
 
 ### 05 — Household Certification & Understanding
 
@@ -543,7 +544,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-19 of 24 done `███████░░░`
+20 of 25 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -569,7 +570,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-021` The cart, priced from receipts, with Swiggy Instamart | P1 | Done | The owner, 2026-10-20: Go to cart (with the to-buy count) beside Add item opens `/groceries/cart`: every to-buy line with its picture and amount, priced only from the household's last receipt with a cost (`commerce/cart.ts` `buildCart`: cost per base unit × the amount on the list when the units convert, else "last paid … for a different amount", else "no price on record"), a total over the priced lines with how many are priced, and receipt lines now keep their unit. Swiggy Instamart has no public ordering API: `commerce/instamart.ts` is inert until `SWIGGY_INSTAMART_PARTNER_KEY` and an https `SWIGGY_INSTAMART_API_URL` exist; each line opens Instamart's own search. Help ¶14 in all eight languages |
 | `25-022` WonderHome's recipe catalog: Indian dishes to plan and keep as your own | P0 | Done | The owner, 2026-10-20. 34 everyday Indian dishes (`recipe_catalog`, `recipe_catalog_ingredients`, migration `20261020160000`, live; platform data, read by every member, written only by `scripts/recipe-catalog/seed.mts`). Recipe sites' text and photos are copyrighted, so the steps are short and written for WonderHome, and the pictures are Wikimedia Commons CC BY-SA, copied to storage with author, licence and file page shown under each. Every ingredient is a grocery catalog item (the seed refuses a name the catalog lacks); nutrients per serving are the seed's arithmetic over IFCT 2017 (`nutritionPerServing`: liquids by density, deep-frying oil left out, pieces by stated weight, none below 80% coverage or when a fat, sugar or nut is unknown), with 'from n of m ingredients'. Meals → Recipes: Your recipes (edit, remove: 25-015) and Ideas from WonderHome by course; `/meals/recipes/[slug]`: picture and credit, prep/cook/serves, one serving, what you need with grocery pictures, numbered steps, Plan this and Save my version (`meals/catalog-copy.ts`, finds an existing copy rather than a second one). HomeTalk 'plan poha for breakfast tomorrow' uses the household's own recipe first, else the catalog dish (`grounding.ts` `catalogRecipes`, `catalogSlug` server-only), saved as the household's copy when it runs; golden case in `conversation/evaluation.test.ts`. Help ¶15–16 and the `recipes.*` words in all eight languages. 22 of 34 dishes have figures; the rest wait on sugar, curd, butter and cream data (25-007). |
 | `25-023` The recipe catalog in every language, and more dishes | P2 | Not Started | Left open by 25-022: dish names, descriptions and steps are English for now (the UI around them is in all eight languages). Translate each dish's text into the catalog's languages, keep the dish name a name, and grow the catalog beyond 34 with the same rules (original short steps, Commons pictures with credit, catalog-linked ingredients). |
-| `25-024` The Groceries header reads left to right, its counts sit in one row | P0 | Done | The owner, 2026-10-20, from a phone screenshot: Add item on the left and Go to cart on the right with a gap between them; the three To buy counts (To buy, At home, Not counted yet) in one row of three cards instead of three rows (`MetricGrid`'s `row`, stacked tiles whose labels wrap, an owner's exception to rule 19); and no scrollbar line under the category pills. Browser-checked at 360px and 1280px. |
+| `25-024` The Groceries screen reads left to right: three cards, one list, two steppers | P0 | Done | The owner, 2026-10-20, from phone screenshots. Header: Add item on the left and Go to cart on the right with a gap between them. Above the To buy list, three cards in one row: At home, Not counted yet and Mark as bought (the card is the action; the separate full-width button is gone). The list has no category headings. Every row has In stock and To buy as two equal cells, each with its own − amount + (`StockStepper` sets what is at home, `stated`, adults only; the same write as Update stock). No scrollbar line under the category pills. Browser-checked at 360px and 1280px. |
+| `25-025` "Saved under your recipes" links to them | P1 | Done | The owner, 2026-10-20: after Save my version on a catalog dish, the words "your recipes" in the note open Meals → Recipes (`recipes.savedLink`, eight languages); while the note shows, the separate Open your recipes button waits, so there is one way in. Browser-checked on Idli. |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 
 ### 26 — HomeEvents

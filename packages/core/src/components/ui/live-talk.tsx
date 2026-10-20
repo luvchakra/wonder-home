@@ -11,6 +11,7 @@ import { setTalkActivity } from "../shell/talk-activity";
 import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, shouldArmFloat, type FloatMode, type FloatPalette } from "./live-float";
 import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
+import { appPath } from "../../navigation/app-path";
 
 /**
  * A live HomeTalk conversation that goes where the person goes.
@@ -112,7 +113,7 @@ const LiveTalkContext = createContext<LiveTalk | null>(null);
 
 /** Only same-app paths are ever followed: a reply cannot send anyone off the app. */
 export function safeHref(href: unknown): string | null {
-  return typeof href === "string" && /^\/(?!\/)[a-z0-9/_-]*$/i.test(href) ? href : null;
+  return appPath(href);
 }
 
 /** The HomeTalk endpoint, from anywhere: one live turn, its reply as words to say, and where it asks to go. */
@@ -359,7 +360,10 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback(
     (href: string) => {
       const safe = safeHref(href);
-      if (safe) router.push(safe);
+      if (!safe) return;
+      // Already there ("add tomato" said on Groceries): show the change in place.
+      if (`${window.location.pathname}${window.location.search}` === safe) router.refresh();
+      else router.push(safe);
     },
     [router],
   );

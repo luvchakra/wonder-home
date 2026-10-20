@@ -77,6 +77,7 @@ import { listAssets } from "@wonderhome/core/home/repository";
 import { listSchoolItems } from "@wonderhome/core/school/repository";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { openScreenReply } from "@wonderhome/core/conversation/screens";
+import { screenShowing } from "@wonderhome/core/navigation/app-path";
 import { composeFamilyLikes, composeLikes, likesRecordsFrom, personNamed } from "@wonderhome/core/conversation/likes";
 import { composeRelations } from "@wonderhome/core/conversation/relations";
 import { listRelationships } from "@wonderhome/core/identity/relationships";
@@ -726,7 +727,9 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
           action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
         }
       }
-      replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode, ...(opened?.navigate ? { navigate: opened.navigate } : {}) });
+      // A part that opened a screen goes there; a part that changed something goes to the screen showing it.
+      const goTo = opened?.navigate ?? (outcome?.status === "executed" && source !== "alexa" ? screenShowing(text) : null);
+      replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode, ...(goTo ? { navigate: goTo } : {}) });
       earlier.push({ part, outcome: partOutcome });
       if (partOutcome === "asked") break;
     }
@@ -1035,6 +1038,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     if (done.ok) forgetHouseholdContext(householdId);
     // Done because it was asked: said with how to take it back (HomeBrain 4.0 §3.9).
     if (done.ok && UNDOABLE.has(result.intent.action) && !unchangedResult(done.result)) text = `${text} ${UNDO_LINE}`;
+    // Then to the screen that shows it, refreshed (the owner, 2026-10-20): "add tomato" lands on the list with tomato on it.
+    if (done.ok && source !== "alexa") navigate = screenShowing(text);
   } else if (result.kind === "reply" && result.memory) {
     await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
     forgetHouseholdContext(householdId);

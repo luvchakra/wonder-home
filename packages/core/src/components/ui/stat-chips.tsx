@@ -20,11 +20,10 @@ const PRESENTATION: Record<Stat["tone"], Pick<Metric, "icon" | "tone">> = {
   info: { icon: Sparkles, tone: "ai" },
 };
 
-export function StatChips({ stats, row, className }: { stats: readonly Stat[]; row?: boolean; className?: string }) {
+export function StatChips({ stats, className }: { stats: readonly Stat[]; className?: string }) {
   return (
     <MetricGrid
       className={className}
-      row={row}
       metrics={stats.map((stat) => ({ label: stat.label, value: stat.value, ...PRESENTATION[stat.tone] }))}
     />
   );

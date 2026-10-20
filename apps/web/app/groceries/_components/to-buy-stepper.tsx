@@ -144,7 +144,7 @@ export function ToBuyStepper({
   const buttonSize = size === "lg" ? "size-11" : "size-9";
 
   return (
-    <div className="flex flex-col items-end">
+    <div className="flex flex-col items-start">
       {quantity <= 0 ? (
         // Not on the list: one cart button, not an empty "− 0 kg +". A tap
         // puts one step on the list and the stepper takes its place.
@@ -197,7 +197,7 @@ export function ToBuyStepper({
       {error ? (
         <p
           role="alert"
-          className="mt-1 max-w-[16rem] text-right text-xs text-[var(--wh-risk)]"
+          className="mt-1 max-w-[16rem] text-xs text-[var(--wh-risk)]"
         >
           {error}
         </p>

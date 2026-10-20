@@ -167,7 +167,8 @@ export default async function CatalogRecipePage({ params }: { params: Promise<{ 
               readyBy: t("mealForm.readyBy"),
               save: t("recipes.save"),
               saving: t("recipes.saving"),
-              saved: t("recipes.saved"),
+              saved: t("recipes.saved", { link: "{link}" }),
+              savedLink: t("recipes.savedLink"),
               inYours: t("recipes.inYours"),
               openYours: t("recipes.openYours"),
             }}

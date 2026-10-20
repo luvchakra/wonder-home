@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   displayAmount,
@@ -41,11 +41,14 @@ export function MarkBoughtButton({
   lines,
   words,
   today,
+  trigger,
 }: {
   householdId: string;
   lines: BoughtLine[];
   words: GroceryWords;
   today: string;
+  /** What opens the sheet — the list's own "Mark as bought" card; a full-width button otherwise. */
+  trigger?: (open: () => void) => ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -145,9 +148,13 @@ export function MarkBoughtButton({
 
   return (
     <div className="space-y-2">
-      <Button type="button" onClick={start} className="w-full gap-2">
-        <Check aria-hidden className="size-4" /> {words.bought.open}
-      </Button>
+      {trigger ? (
+        trigger(start)
+      ) : (
+        <Button type="button" onClick={start} className="w-full gap-2">
+          <Check aria-hidden className="size-4" /> {words.bought.open}
+        </Button>
+      )}
       {message && !open ? (
         <p
           role="status"
