@@ -56,7 +56,7 @@ import { DietSettings } from "./diet-settings";
 import { RepeatLastWeek } from "./week-controls";
 import { MealIngredientsSheet } from "./meal-ingredients-sheet";
 import { ChooseAgainButton, WeekPlanCard, WeekTemplateEditor } from "./week-template";
-import { formatDate, formatTime, requireSession } from "../_lib/session";
+import { formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Meals & Cooking" };
 export const dynamic = "force-dynamic";
