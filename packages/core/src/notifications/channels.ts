@@ -16,6 +16,8 @@
  */
 
 import { inQuietHours, quietHoursFrom } from "./timing";
+import { createEmailAdapter } from "./email";
+import { platformMailer, type Mailer } from "../email/mailer";
 import { createWebPushAdapter, webPushConfigFromEnv } from "./web-push";
 import { createWhatsAppAdapter, whatsappConfigFromEnv } from "./whatsapp";
 
@@ -43,6 +45,8 @@ export type ChannelNotification = {
   url?: string;
   /** One thread, one notification on the device: a newer word replaces the older (push). */
   tag?: string;
+  /** The email's own few words, in the recipient's language (story 27-001). */
+  emailWords?: { open: string; why: string };
 };
 
 export type ChannelError = {
@@ -127,13 +131,15 @@ export const CHANNEL_ADAPTERS: Record<DeliveryChannel, ChannelAdapter> = {
  * is configured (story 17-006), Web Push once its key pair is set (story
  * 23-015), the fixtures otherwise.
  */
-export function channelAdaptersFromEnv(env: Record<string, string | undefined> = process.env): Record<DeliveryChannel, ChannelAdapter> {
+export function channelAdaptersFromEnv(env: Record<string, string | undefined> = process.env, mailer: Mailer | null = platformMailer(env)): Record<DeliveryChannel, ChannelAdapter> {
   const whatsapp = whatsappConfigFromEnv(env);
   const push = webPushConfigFromEnv(env);
   return {
     ...CHANNEL_ADAPTERS,
     ...(whatsapp ? { whatsapp: createWhatsAppAdapter(whatsapp.adapter) } : {}),
     ...(push ? { push: createWebPushAdapter(push) } : {}),
+    // The platform mailer, where the deployment has one (story 27-001); inert otherwise.
+    ...(mailer ? { email: createEmailAdapter(mailer, env) } : {}),
   };
 }
 

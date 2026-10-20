@@ -124,6 +124,8 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.channel.in_app.description": "الجرس في WonderHome — السجل الدائم لما قيل.",
   "settingsPage.notifications.channel.push.description": "إشعار على هاتفك، إذا ثبّت WonderHome كتطبيق.",
   "settingsPage.notifications.channel.email.description": "يُرسل إلى العنوان المسجّل في حسابك.",
+  "notificationEmail.open": "افتح في WonderHome",
+  "notificationEmail.why": "تصلك هذه الرسالة لأن البريد الإلكتروني مفعّل في إعدادات إشعارات WonderHome. يمكنك تغيير ذلك في أي وقت من الإعدادات ← الإشعارات.",
   "settingsPage.notifications.channel.whatsapp.description": "رسالة إلى الرقم أدناه.",
   "settingsPage.notifications.notConnected": "غير متصل بعد في هذا التثبيت — تفضيلك محفوظ إلى أن يتصل.",
   "settingsPage.notifications.sendHere": "الإرسال هنا",

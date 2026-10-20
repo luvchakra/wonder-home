@@ -864,6 +864,14 @@ reminders about real records, never lines of text fired and forgotten.
   the database holds the cron secret in Vault as `cron_secret`. A device the
   push service calls gone is forgotten. Never push from anywhere but
   `deliverNotification`.
+- **Email** (story 27-001, `notifications/email.ts`). The same `deliverNotification`
+  sends it, through the platform mailer (`email/mailer.ts`, GoDaddy SMTP) where the
+  deployment has one, to the confirmed email of the recipient's own account, never one
+  an Admin typed. It earns an inbox by `emailWorthSending` (critical always, high up to
+  12 a day, a reminder timed for the person up to 6, low never) and holds for quiet
+  hours except critical. Each attempt is a closed-word `notification_events` row. Never
+  mail a notification from anywhere but `deliverNotification`. The backlog for the
+  channels and the events still to come is `backlogs/27-Notification-Channels.md`.
 - **Fewer interruptions.** A child's school things due the same day are one
   reminder (`school_day`, `batchSchoolDays`), as urgent as the most urgent
   item in it. A policy that escalates tells the responsibility's backup
