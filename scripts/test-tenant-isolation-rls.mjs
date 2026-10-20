@@ -39,6 +39,8 @@ const NON_TENANT_TABLES = new Set([
   "public_holidays", // a sourced, read-only list of a country's holidays; the same for every household
   "billing_reconciliation_runs", // one reconciliation pass per provider across every household; its findings carry household_id
   "grocery_catalog", // the shared grocery catalog (HomeFood 25-006): every household reads it, none writes it
+  "recipe_catalog", // WonderHome's recipe catalog (HomeFood 25-022): every household reads it, only the seed writes it
+  "recipe_catalog_ingredients", // each catalog dish's ingredients, the same platform data
   "usda_foods", // USDA FoodData Central reference foods, linked to the catalog by review; service role only
   "ifct_foods", // IFCT 2017 (ICMR-NIN) Indian reference foods, linked from the catalog; every member reads
 ]);
