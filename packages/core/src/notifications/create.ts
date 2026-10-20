@@ -88,6 +88,7 @@ export async function createNotification(
         notificationId: id,
         recipientMemberId: decision.recipientMemberId,
         notification: { title, body, priority: riskLevel === "critical" ? "critical" : riskLevel === "high" ? "high" : "normal" },
+        category: input.category ?? "system",
         now,
       },
       options.adapters,

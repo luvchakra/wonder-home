@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**293 of 327 stories done — 89.6%**
+**294 of 327 stories done — 89.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 293 |
+| Done | 294 |
 | In Progress | 5 |
 | Blocked | 1 |
-| Not Started | 24 |
+| Not Started | 23 |
 | Deferred | 4 |
 
 ## By module
@@ -52,7 +52,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
 | 25 HomeFood | `██████░░░░` | 12 | 19 | 1 in progress, 6 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
-| 27 Notification Channels and Events | `░░░░░░░░░░` | 1 | 15 | 1 blocked, 13 not started |
+| 27 Notification Channels and Events | `█░░░░░░░░░` | 2 | 15 | 1 blocked, 12 not started |
 
 ## What is left
 
@@ -78,7 +78,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
 | `26-006` Google and Outlook calendars | 26 HomeEvents | P2 | Not Started |
-| `27-002` Choose the channel for each kind of reminder | 27 Notification Channels and Events | P0 | Not Started |
 | `27-003` Send me a test notification, and say why one didn't arrive | 27 Notification Channels and Events | P1 | Not Started |
 | `27-004` A HomeSend item waiting for your OK tells you | 27 Notification Channels and Events | P1 | Not Started |
 | `27-005` A guest's reply to an invitation tells the host | 27 Notification Channels and Events | P1 | Not Started |
@@ -598,12 +597,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 27 — Notification Channels and Events
 
-1 of 15 done `░░░░░░░░░░`
+2 of 15 done `█░░░░░░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
 | `27-001` Notifications reach people by email | P0 | Done | The owner, 2026-10-20. `notifications/email.ts`: the email channel sends through the platform mailer (`channelAdaptersFromEnv`, live only where the deployment has SMTP; production has) to the confirmed email of the member's own account, by `emailWorthSending` (critical always; high up to 12 a day; normal only as a reminder, up to 6; low never) and quiet hours. The message is the notification's own title and body, an "Open in WonderHome" button and a why line, in the recipient's language (`notificationEmail.*`, 8 languages). Each attempt is a `sent` or `delivery_failed` event. Tested with a fake mailer (`email.test.ts`, 15); a real send is first seen after deploy, when a person turns Email on under Settings → Notifications. |
-| `27-002` Choose the channel for each kind of reminder | P0 | Not Started | Today a channel is on or off per person. A person says "bills by WhatsApp, school by push, everything else in the app". |
+| `27-002` Choose the channel for each kind of reminder | P0 | Done | The owner, 2026-10-20. Migration `20261020100000_notification_channel_mutes.sql` (live; `verify:live` 319/319): one row is one kind kept off one channel, a member's own (set-form RLS, `test-notification-mutes-rls.mjs` 6/6). `notifications/routing.ts` (`setRoute`, `loadMutes`, `channelAllowed`); `deliverNotification` takes the reminder's `category` (from `createNotification` and the delivery clock) and skips a channel the person keeps that kind off — except a critical alert, and never the in-app list. Settings → Notifications → "What goes where" (`ChannelRoutingCard`): each kind against the channels the person has on and that reach someone here, as tick boxes, everything ticked to start; saved at once. Words in 8 languages; help ¶8. Browser-checked at 360px and 1280px. |
 | `27-003` Send me a test notification, and say why one didn't arrive | P1 | Not Started | A button per channel in Settings → Notifications, and a plain reason when it fails (no device, quiet hours, not set up). |
 | `27-004` A HomeSend item waiting for your OK tells you | P1 | Not Started | A photo, forward or voice note that needs a confirm reaches the person who can confirm it. |
 | `27-005` A guest's reply to an invitation tells the host | P1 | Not Started | One thread per event, so ten replies are one updating notification. |

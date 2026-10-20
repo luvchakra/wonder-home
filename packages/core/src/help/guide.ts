@@ -124,7 +124,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "notifications",
     group: "Everyday use",
     updated: "2026-10-20",
-    keywords: ["notification", "alert", "reminder", "quiet hours", "push", "notify", "snooze", "remind me later", "summary", "timing", "email"],
+    keywords: ["notification", "alert", "reminder", "quiet hours", "push", "notify", "snooze", "remind me later", "summary", "timing", "email", "what goes where", "channel"],
   },
   {
     id: "bills",

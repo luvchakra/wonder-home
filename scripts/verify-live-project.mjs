@@ -966,6 +966,12 @@ async function main() {
   const vectorProbe = await admin.rpc("match_homebrain_embeddings", { p_household_id: "00000000-0000-0000-0000-000000000000", p_model: "none", p_query: `[${new Array(768).fill(0).join(",")}]`, p_limit: 1 });
   check("meaning search is there (pgvector)", !vectorProbe.error, vectorProbe.error?.code ?? "ok");
 
+  // Which channel carries which kind of reminder (20261020100000, story 27-002).
+  const mutesProbe = await admin.from("notification_channel_mutes").select("member_id, category, channel").limit(1);
+  check("migration landed: notification_channel_mutes", !mutesProbe.error, mutesProbe.error?.code ?? "ok");
+  const anonMutes = await anon.from("notification_channel_mutes").select("member_id").limit(1);
+  check("anonymous cannot read notification_channel_mutes", Boolean(anonMutes.error) || (anonMutes.data ?? []).length === 0, anonMutes.error?.code ?? "no rows");
+
   for (const { name, ok, detail } of results) {
     console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
   }
