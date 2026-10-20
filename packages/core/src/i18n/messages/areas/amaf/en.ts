@@ -35,7 +35,7 @@ export const amafEn = {
   "amaf.q.member.work.you": "What do you do for work, and what are your usual hours? Office, home or a mix?",
   "amaf.q.member.work.check": "What are {name}'s working hours these days — and is it office, home or a mix?",
   "amaf.q.member.work.you.check": "What are your working hours these days — and is it office, home or a mix?",
-  "amaf.q.bill": "Do you pay a {bill} bill? If you do — who to, roughly how much, and which day of the month is it due?",
+  "amaf.q.bill": "Is there a bill for {bill} at home? If there is — who it goes to, roughly how much, and which day of the month it is due.",
   "amaf.q.member.relationship": "How is {name} related to you — your daughter, mother, husband…?",
   "amaf.q.member.phone": "What's {name}'s phone number? It helps when someone needs to reach them quickly.",
   "amaf.q.member.phone.you": "What's your phone number? It helps when someone needs to reach you quickly.",

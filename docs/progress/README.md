@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | [Ask me about family ships](2026-10-21-ask-me-about-family.md) |
 | 2026-10-21 | [Location sharing, recipe ticks and sharing, a week template, "tomorrow" after midnight](2026-10-21-location-recipes-tomorrow.md) |
 | 2026-10-20 | [A child's Done waits for a grown-up; the cat's sayings list; Remove from the list](2026-10-20-goal-verification-cat-sayings.md) |
 | 2026-10-20 | [A cat companion for the child, and clear ways to earn stars](2026-10-20-child-cat-companion.md) |
