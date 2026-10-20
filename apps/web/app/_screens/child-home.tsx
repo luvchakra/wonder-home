@@ -162,7 +162,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
         <GameCard progress={progress} t={t} />
 
         <CompanionCard
-          key={active}
+          visit={active}
           householdId={householdId}
           name={companion?.name ?? null}
           coat={companion?.coat ?? "ginger"}

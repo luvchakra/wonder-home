@@ -71,8 +71,11 @@ export function CompanionCard({
   coat: savedCoat,
   lines,
   labels,
+  visit,
 }: {
   householdId: string;
+  /** Which tab is open: opening another one moves the cat on to its next line, in the same card. */
+  visit?: string;
   name: string | null;
   coat: CatCoat;
   lines: { text: string; href?: string }[];
@@ -103,7 +106,7 @@ export function CompanionCard({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIndex(turn);
     setReady(true);
-  }, []);
+  }, [visit]);
   const fill = (template: string) =>
     template.replace("{name}", shown ?? labels.noName);
 
