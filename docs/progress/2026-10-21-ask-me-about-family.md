@@ -16,7 +16,7 @@
 
 ## Verified
 - **Tests and gates.**
-  - Unit tests 3,925 (amaf 26 assertions groups); eval gates pass (unsafe 0/19).
+  - Unit tests 3,925 passed, including the AMAF suite with the new unknown-name case; eval gates pass (unsafe 0/19).
   - Typecheck, lint on changed files, bundle check, help links and tracker check all pass.
 - **On the live database** (local production build, 360px): the birthday and address were saved to Family and Home, a twice-unclear diet answer was kept as a note, Stop counted 3 learned, the mode line read "12 questions left" with Skip and Stop, and there was no overflow.
 - **The table** `amaf_answers` was already live (owner's SQL).
