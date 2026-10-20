@@ -108,3 +108,64 @@ export function speechChunks(text: string, options: { first?: number; rest?: num
   if (piece) chunks.push(piece);
   return chunks;
 }
+
+/** A reply this many spoken words or fewer is read out whole. */
+export const SPOKEN_WHOLE_WORDS = 40;
+/** At most this many of a list's items are named when a long reply is summarised. */
+const SUMMARY_ITEMS = 5;
+
+/**
+ * A long reply, heard (the owner, 2026-10-20: "writing a message like this is
+ * okay, but while reading it out, just give a concise summary").
+ *
+ * The written reply stays whole on screen; only what is spoken shrinks. A
+ * short reply is read as it is. A longer one is read as its opening sentence
+ * and then what its list is about — each item's bold lead ("Today", "Food",
+ * "Birthday") or, without one, its words up to a dash or colon — named once,
+ * five at most, then `tail` ("The rest is on screen.") in the reader's own
+ * language. Nothing is invented: every word spoken is a word of the reply.
+ */
+export function spokenSummary(text: string, options: { language?: string; tail?: string; more?: (count: number) => string } = {}): string {
+  const whole = speakable(text);
+  if (whole.split(/\s+/).filter(Boolean).length <= SPOKEN_WHOLE_WORDS) return whole;
+
+  const blocks = parseReply(text);
+  const firstParagraph = blocks.find((block) => block.kind === "paragraph");
+  const opening = firstParagraph && firstParagraph.kind === "paragraph" ? tidy(inlineText(firstParagraph.inlines)) : "";
+  // The opening sentence only, and never more than about thirty words of it.
+  const firstSentence = opening.match(/^.*?[.!?:](?=\s|$)/)?.[0] ?? opening;
+  const lead = firstSentence.split(/\s+/).length > 30 ? `${firstSentence.split(/\s+/).slice(0, 30).join(" ")}…` : firstSentence;
+
+  const heads: string[] = [];
+  for (const block of blocks) {
+    if (block.kind !== "list") continue;
+    for (const item of block.items) {
+      const first = item[0];
+      const head = first && first.kind === "bold" ? first.text : (inlineText(item).split(/\s+[—–-]\s+|:\s/)[0] ?? "").split(/\s+/).slice(0, 6).join(" ");
+      const said = tidy(head).replace(/[.,;:]+$/, "");
+      if (said && !heads.includes(said)) heads.push(said);
+    }
+  }
+  if (heads.length === 0) {
+    // No list to name: the opening and the tail, or the first sentences up to the limit.
+    const sentences = whole.match(/[^.!?]+[.!?]+/g) ?? [whole];
+    let spoken = "";
+    for (const sentence of sentences) {
+      const next = `${spoken} ${sentence.trim()}`.trim();
+      if (next.split(/\s+/).length > SPOKEN_WHOLE_WORDS && spoken) break;
+      spoken = next;
+    }
+    return [spoken, options.tail].filter(Boolean).join(" ");
+  }
+
+  const named = heads.slice(0, SUMMARY_ITEMS);
+  const left = heads.length - named.length;
+  let list: string;
+  try {
+    list = new Intl.ListFormat(options.language ?? "en", { style: "long", type: "conjunction" }).format(left > 0 && options.more ? [...named, options.more(left)] : named);
+  } catch {
+    list = named.join(", ");
+  }
+  const leadSaid = lead ? (/[.!?:]$/.test(lead) ? lead : `${lead}:`) : "";
+  return [leadSaid, `${list}.`, options.tail].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}

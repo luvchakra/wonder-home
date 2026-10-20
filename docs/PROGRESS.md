@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**325 of 347 stories done — 93.7%**
+**328 of 351 stories done — 93.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 325 |
-| In Progress | 6 |
+| Done | 328 |
+| In Progress | 7 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -29,16 +29,16 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 13 | 13 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 25 | 27 | 1 in progress, 1 not started |
+| 04 Conversation, Voice & Text | `█████████░` | 26 | 28 | 1 in progress, 1 not started |
 | 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 17 | 20 | 2 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 11 | 11 | — |
-| 11 Bills, Fees & Finance | `█████████░` | 11 | 12 | 1 not started |
+| 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
-| 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
+| 13 Maintenance, Laundry & Pet Care | `████████░░` | 8 | 9 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
@@ -64,6 +64,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
+| `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
@@ -155,7 +156,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-25 of 27 done `█████████░`
+26 of 28 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -186,6 +187,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-025` Leaving the app floats Gemini's voice on a real phone | P1 | Not Started | The owner, 2026-10-19, after 04-024: "doesnt work yet". On their phone, switching apps during Gemini Live still does not float the window on its own (Chromium in the cloud plays the voice through the armed video, but a real phone's automatic picture-in-picture needs checking: Chrome's auto-PiP rules for installed PWAs, the media session, and whether the voice track is audible to the browser's heuristic). Needs a real Android phone to diagnose |
 | `04-026` A child's or helper's request goes to an adult for the final OK | P0 | Done | The owner, 2026-10-20: "such queries are fine but results should go to adult for final approval before adding to WonderHome db". HomeTalk still understands and previews a child's or helper's request, but it never writes on its own whatever the outcome's autonomy (`proposal.ts`), and their Confirm reads "Ask a grown-up". That sends the exact proposal (its fingerprint) to their guardian, else an Admin (`conversation/referral.ts`, the existing `approvals` table, one notification). The adult answers under "Asking for your OK" on Notifications: Approve carries it out through the same executor on their session (`answerReferral`), Decline leaves it; a changed or lapsed proposal (48 h) is refused. Only a guardian of the requester or an Admin may answer, checked on the server. The requester is told in their own conversation. Test in `consent.test.ts`; help ¶15 of Talk to WonderHome in all eight languages |
 | `04-027` After a change, HomeTalk opens the screen that shows it | P0 | Done | The owner, 2026-10-20 ("Add tomato to the grocery list" should land on Groceries with tomato on it). An executed action's reply links to its screen; `navigation/app-path.ts`'s `screenShowing` takes the first WonderHome link from it and the turn sends it as `navigate`, typed or spoken, in the app only (never Alexa). The browser goes there, or refreshes in place when it is already there. `appPath` is now the one path check for the server, the contract and the browser, and allows a plain query (`/groceries?view=to-buy`). Browser-checked: typed on /ai, it landed on Groceries → To buy with Tomato listed. Then the owner's report ("add milk" by voice did not show on Groceries): Gemini Live's tool path still used the old path check that refused `?view=`, and a change whose reply had no link refreshed nothing. Now both voice engines use `appPath`, and any completed action with no screen to open refreshes the page the person is on (`onChanged` in `use-gemini-live.tsx`, `changed` in `live-talk.tsx`). |
+| `04-028` Stop a reply; a long reply is heard as a short summary | P1 | Done | The owner, 2026-10-20 ("give an option to stop such a scenario"; "while reading it out, just give a concise summary"). **Stop** under the waiting bubble stops waiting for the reply (an `AbortController` on the turn's request), and HomeTalk stops by itself after 45 s (`REPLY_WAIT_MS`); either way it says so in the conversation and, since the server may already have acted, to look before asking again. **Spoken summary**: `conversation/speech.ts`'s `spokenSummary` reads a reply of 40 words or fewer whole and a longer one as its opening sentence plus what its list covers (each item's bold lead, five at most, then "N more"), then "The rest is on screen." in the reader's language — every word spoken is a word of the reply. In-app voice speaks it (`handleLiveUtterance`); Alexa and Gemini Live get it through `speechFrom` for an answer of three or more headed items. Tests: speech 3, gateway 1; `npm run eval` gates pass (voice 25/25). Words and help (Talk to WonderHome, Voice) in all eight languages. Checked at 360px: Stop appeared on a held reply and left the Stopped note. |
 
 ### 05 — Household Certification & Understanding
 
@@ -239,7 +241,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-17 of 20 done `████████░░`
+18 of 21 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -263,6 +265,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-019` Each child's score on Kids & School, goals set from classes and school work with a reward, and a child's school work that opens to its details | P1 | Done | The owner, 2026-10-20 (PR #272). **Score:** under each child's name on the Overview — level, stars (from goals and from school work), streak, goals met now of all, and each reward earned — counted by `childProgress` exactly as the child's Home counts it (`kidProgress`, `ChildScore` in `school/goals-tab.tsx`); the Goals tab shows the same card. **Start from:** adding a goal lists the child's classes outside school and open school work (`goalStarts`, tested). A class fills a weekly goal, as many times as it meets; school work fills a one-off goal ending on its due date, met the day the work is marked done (`child_goals.source_kind`/`source_id`, migration `20261020210000`, live; `childProgress` counts the work's done day as the goal's tick; the server checks the source is that child's). Adults set it; the child sees it, with no separate tick for a work goal and no second mission. **Child Home fixes:** each school row opens under its chevron (`ExpandableRow`) to its kind, subject, when, time it takes, status and the teacher's note, with "I did it!" still one tap; the cat's Show me scrolls to the section it means, also on the tab already open. Words in all eight languages, help ¶11. Follow-ups the same day (PR #273): the score card stays on Goals only (the owner took it off the Overview); the child picker says first names (a full name only when two children share one); the tab row fits a 320px screen with no scroll (`SegmentedControl` labels wrap, the count drops under its label); a timetable period's teacher is picked from the child's teachers, with No teacher set and its own Add new; an event is no longer homework — it is kept under the Overview's Coming up only, out of the Homework tab, its count and Live work. |
 | `08-020` A child's Done on a goal waits for a grown-up | P0 | In Progress | The owner, 2026-10-20 ("send this to adult for verification before making done"). A check-in the child makes is kept unverified (`child_goal_checkins.verified_at`/`verified_by`, migration `20261020230000`): the child sees **Waiting for a grown-up** (amber, hourglass; a second tap takes it back), and it earns no stars, streak or reward until verified (`goalStandings`/`childProgress` count only verified ticks; `waitingToday`). The child's guardian, else an Admin, gets a notice (`goalCheckInNotices`, source `goal_checkin`, one per waiting tick, resolved when answered). Kids & School → Goals shows **Waiting for you** first, each with **Yes, done** (verifies, in their own name) and **Not yet** (takes the tick back) — `answerCheckInAction`. A guardian's or Admin's own tick is verified as made; RLS lets only them verify, and the child can no longer take back a verified tick. Rows from before stay counted. Tests: goals 2, notices 3, RLS 2 (`test-child-goals-rls.mjs` 10/10). Words and help ¶11 in all eight languages. **Waiting on:** the migration reaching the live project (the database tool's calls were cancelled; until it runs, ticks count as before). |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | P1 | In Progress | The owner, 2026-10-20 ("store a long list of such quotes in a table, tag with age, gender etc. use that to display, never repeat these for a child"). `companion_sayings` holds 154 facts, sayings, ideas, jokes and riddles (`school/companion-sayings.json`, the migration's seed, kept equal by `companion-sayings.test.ts`), each tagged with ages (4–7, 8–12, 13–17, or all), a gender when chosen for one, and topics, in all eight languages. `companion_sayings_for` (security invoker) picks unheard ones for the child's age and gender from their own member row; each line the cat shows is recorded in `companion_sayings_heard` (`heardSayingAction`), so it never comes back, and Tell me another skips any already shown. When every saying is heard, the cat keeps to reminders; without the table it keeps the built-in daily lines. Also fixed: each tab press added another cat card (PR #276). Tests: companion 2, sayings 4, RLS 4 (`test-companion-sayings-rls.mjs`). Help ¶10 in all eight languages. **Waiting on:** migration `20261020231000` reaching the live project. |
+| `08-022` Confetti and balloons when a child does something | P2 | Done | The owner, 2026-10-20 ("on goal completion show confetti and balloons going up as celebration"). `Celebration` in the kit (`ui/celebration.tsx`, keyframes in `ui-theme.css`): about three seconds of confetti falling and balloons rising over the screen in the domain tones, catching no taps, hidden from assistive technology (the button already announces it) and not shown under reduced motion. It plays each time I did it! is tapped on a goal or school work. The Waiting for a grown-up button now wraps in a narrow width so a goal's name is never squeezed (rule 11). Also the same day, every tab row (`SegmentedControl`): tabs size to their own label and count so a count stays beside it (it drops under only when the row truly cannot fit, 320px Kids & School), and a tapped tab brings its row to the top of the screen (`SegmentInView`, `scroll-margin-top`, reduced motion jumps). Checked at 320/360/412px: no tab row scrolls, no two-line tab at 360; a tab tap put the row at 64px. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -300,7 +303,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 11 — Bills, Fees & Finance
 
-11 of 12 done `█████████░`
+12 of 13 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -316,6 +319,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-010` Bills picked not typed, payees by home location, earlier bills, months made ahead, and HomeTalk/HomeBrain in control | P0 | Done | The owner, 2026-10-20. **Picked:** Add a bill starts from 22 typical bills (`finance/bill-catalog.ts`: electricity, water, piped gas, LPG, rent, maintenance, mobile, broadband, DTH, streaming, newspaper, gym, school fees, tuition, home/car/personal loan EMI, credit card, life/health/vehicle insurance, property tax) or Something else; picking fills kind and how often, and `obligations.bill_type` keeps it. Who in the family pays it is a picker; recurrence is editable. **Payees by location:** `finance/payees.ts` reads the state and city from the address saved under Manage Household (by name, never coordinates) and offers that city's and state's companies first (discoms, water boards, city gas, municipal corporations), then national ones (telecom, broadband, DTH, streaming, banks, cards, insurers); Add a new payee stays. **Earlier bills:** rows on the add form, each a history row. **Made ahead:** `finance/periods.ts` works out this month and the next three (one for quarterly/yearly) from the due date; each says paid, the amount given, or Usually and the last paid, never a guess; the pencil fills one in (`fillBillPeriodAction`): an amount (`obligation_periods`, migration `20261020170000`, live) or a paid day (current month moves the bill on; a later month is paid ahead and skipped, `nextOpenDueDate`); the monthly spend stops at this month. **HomeTalk:** `add_bill` (asked once), `record_bill_payment` and `set_bill_amount` (done at once, undoable, the consumed advance amount restored) in `conversation/bill-talk.ts`, grounded to the household's own bills (`matchBill`; two that fit are one question), financial reply class, capability `bill_records` (in-app voice, never Alexa), golden HT-129–131 and the §21 table. **HomeBrain:** paid months and coming months are facts (`bill_payment`, `bill_period`). No money moves; paying stays `make_payment`. Help ¶7–9 in all eight languages. |
 | `11-011` Payees beyond the catalogue's cities, and outside India | P2 | Not Started | Left open by 11-010: the payee list covers each state's electricity company and the larger cities' water, gas and property tax; smaller cities and other countries show the national list and Add a new payee. Grow the list by city, and add per-country lists once a household outside India asks. |
 | `11-012` Month by month, budgets per line item, and a bill form that asks once | P0 | Done | The owner, 2026-10-20, from phone screenshots. A recurring bill shows Month by month: its last three months (Paid from the history, or Not entered with the pencil to say what it came to and when it was paid), this month and one ahead (`billPeriods` with `PERIODS_BEHIND`, `previousDueDate`). Budgets are per line item — electricity, water, piped gas, cooking gas, petrol and diesel (new `fuel` bill type), rent… — picked from a list grouped by kind like the bill picker, and count the payments of bills of that type (`budgetSpend` by `billType`); a budget set earlier for a whole kind keeps counting it. Add a bill asks for the amount and the due date once, under This bill; the Earlier bills rows are gone (the months are filled in on the bill). Saving a bill with no amount no longer fails: a currency is kept only with an amount (`obligations_amount_has_currency`). An unexpected error now carries a real reference in its message and the server log (`toErrorBody`). |
+| `11-013` Monthly spend as line charts, all bills and each bill | P1 | Done | The owner, 2026-10-20 ("show line graph for each type, show data points on x and y axis, decide best way to plot it"). The bar strip became `bills/spend-lines.tsx`: the household's total first, then one small chart per bill (small multiples, two up from `sm`, one per row on a phone), all on the same six calendar months ending at the newest on record. Each chart is one series (title, no legend); y axis is money from zero with three nice ticks; x axis the months (with the year when they span two); a dot per month on record, a month with nothing breaks the line (never interpolated); the newest amount labelled; tap, hover or focus a dot for its amount; Show as table gives the same numbers. Domain tone `--wh-tone-money`, 2 px line, dots with a surface ring, recessive grid. Words in all eight languages, help ¶1. Checked at 360px and 1280px, no overflow. |
 
 ### 12 — Family Time & Social Activities
 
@@ -334,7 +338,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 13 — Maintenance, Laundry & Pet Care
 
-8 of 8 done `██████████`
+8 of 9 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -346,6 +350,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `13-006` Service coordination | P1 | Done | next_action_by makes an open request actionable, not informational |
 | `13-007` Pet care outcomes | P1 | Done | outcome-based; medication never looks like grooming |
 | `13-008` Smart-home signals | P2 | Done | optional signals, server-ingested only; members cannot write evidence |
+| `13-009` A pet's likes, dislikes, favourites, fears and allergies | P1 | In Progress | The owner, 2026-10-20 ("add like, dislikes, favourite food, favourite places etc for pets"). `pet_preferences` (migration `20261020232000`): kind (like, dislike, favourite food, treat, place, toy, fear, allergy, or one the household names — picked with its own Add new, rule 20), what, an optional note; every member reads, an Admin adds, changes and removes (RLS, `test-pet-preferences-rls.mjs` 3/3); HomeBrain is told on every change. Each pet's details in Family list them under **Likes & favourites** grouped by kind, change and remove as icons (rule 11). `listPets` reads them in the same wave; the pet's HomeBrain fact carries them (`petPreferenceSentence`: "Bruno likes chicken; favourite place: the park; dislikes baths."), so HomeTalk answers "what does Bruno like?" from the record. Tests 3. Words and help (Family ¶4) in all eight languages. **Waiting on:** the migration reaching the live project; until then the list reads empty. |
 
 ### 14 — AI Orchestration & Learning
 

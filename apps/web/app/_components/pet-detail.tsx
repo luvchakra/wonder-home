@@ -3,6 +3,10 @@ import { completedYears, parseDateOfBirth } from "@wonderhome/core/identity/age"
 import { requestT } from "@wonderhome/core/i18n/request";
 
 import { formatDate } from "../_lib/session";
+import { PET_PREFERENCE_KINDS } from "@wonderhome/core/home/pet-preferences";
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
+
+import { PetPreferences } from "./pet-preferences";
 import { PetProfileForm } from "./pet-profile-form";
 import { RetirePetControl } from "./retire-pet-control";
 import { MemberAvatarControl, type AvatarLabels } from "./member-avatar-control";
@@ -50,6 +54,31 @@ export function PetDetail({
         <Fact label={t("family.fact.notes")} value={pet.notes ?? null} />
         <Fact label={t("family.fact.status")} value={pet.active === false ? t("family.retired") : null} />
       </dl>
+      <PetPreferences
+        householdId={householdId}
+        petId={pet.id}
+        petName={pet.name}
+        entries={(pet.preferences ?? []).map((entry) => ({ id: entry.id, kind: entry.kind, subject: entry.subject, note: entry.note }))}
+        editable={editable}
+        words={{
+          title: t("family.petPrefs.title"),
+          empty: t("family.petPrefs.empty", { name: "{name}" }),
+          add: t("family.petPrefs.add"),
+          sheetAdd: t("family.petPrefs.sheetAdd", { name: "{name}" }),
+          sheetEdit: t("family.petPrefs.sheetEdit", { name: "{name}" }),
+          kind: t("family.petPrefs.kind"),
+          subject: t("family.petPrefs.subject"),
+          subjectHint: t("family.petPrefs.subjectHint"),
+          note: t("family.petPrefs.note"),
+          save: t("family.petPrefs.save"),
+          saving: t("common.saving"),
+          edit: t("family.petPrefs.edit", { name: "{name}" }),
+          remove: t("family.petPrefs.remove", { name: "{name}" }),
+          addNew: t("common.addNew"),
+          chooseExisting: t("common.chooseExisting"),
+          kinds: Object.fromEntries(PET_PREFERENCE_KINDS.map((kind) => [kind, t(`family.petPrefs.kind.${kind}` as TranslationKey)])),
+        }}
+      />
       {editable ? (
         <div className="flex flex-wrap gap-2">
           <PetProfileForm

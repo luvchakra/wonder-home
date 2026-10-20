@@ -280,3 +280,51 @@ export async function removePetPhotoAction(_previous: ActionState, formData: For
     return { error: toErrorBody(thrown, "home").body.error.message };
   }
 }
+
+const petPreferenceSchema = z.object({
+  householdId: z.uuid(),
+  petId: z.uuid(),
+  id: z.uuid().optional().or(z.literal("")),
+  kind: z.string().trim().min(1).max(40),
+  subject: z.string().trim().min(1).max(120),
+  note: z.string().max(300).optional(),
+});
+
+/** A pet's like, dislike, favourite, fear or allergy, added or changed (the owner, 2026-10-20). An Admin's, like the pet itself. */
+export async function savePetPreferenceAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = petPreferenceSchema.safeParse({
+    householdId: formData.get("householdId"),
+    petId: formData.get("petId"),
+    id: formData.get("id") ?? undefined,
+    kind: formData.get("kind"),
+    subject: formData.get("subject"),
+    note: formData.get("note") ?? undefined,
+  });
+  if (!parsed.success) return { error: "Say what kind it is and what it is." };
+  try {
+    const supabase = await createClient();
+    const actor = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const { savePetPreference } = await import("@wonderhome/core/home/pet-preferences");
+    await savePetPreference(supabase, { ...parsed.data, id: parsed.data.id || null, createdBy: actor.memberId });
+    revalidatePath("/family");
+    return { notice: "Saved." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/** One of a pet's likes taken away. */
+export async function removePetPreferenceAction(input: { householdId: string; id: string }): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid(), id: z.uuid() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const { removePetPreference } = await import("@wonderhome/core/home/pet-preferences");
+    await removePetPreference(supabase, parsed.data);
+    revalidatePath("/family");
+    return { notice: "Removed." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}

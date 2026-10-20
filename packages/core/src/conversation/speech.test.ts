@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { pickVoice } from "../components/ui/use-live-voice";
-import { speakable, speechChunks, voiceQuality } from "./speech";
+import { speakable, speechChunks, voiceQuality, spokenSummary } from "./speech";
 
 describe("a reply said out loud", () => {
   it("gives directions through screens instead of reading the arrow", () => {
@@ -61,5 +61,33 @@ describe("speechChunks", () => {
   it("returns one piece for one sentence, and none for nothing", () => {
     expect(speechChunks("Nothing is due today")).toEqual(["Nothing is due today"]);
     expect(speechChunks("   ")).toEqual([]);
+  });
+});
+
+describe("a long reply is heard as a short summary", () => {
+  const long = [
+    "Here is what I know about Asmi. She goes to Podar International Thane (school day 08:00 to 14:30).",
+    "",
+    "- **Today** — Science paper of the Unit test, 10:00am to 11:00am, covering Chapter 1-4 → [School](/school)",
+    "- **Thu 22 Oct** — Bounce School Trip at 8:00am, protected family time → [Family](/family)",
+    "- **Food** — eats vegetarian; likes Indian food, pink pasta, pasta, garlic bread and pizza → [Meals](/meals)",
+    "- **Birthday** — 9 December, next on Wed, 9 Dec 2026 → [Family](/family)",
+    "- **Routines** — morning routine, room tidy, school bag and homework are looked after by Asmi",
+    "- **Classes** — piano on Saturdays",
+  ].join("\n");
+
+  it("says the opening sentence, names what the list covers and points to the screen", () => {
+    expect(spokenSummary(long, { language: "en", tail: "The rest is on screen.", more: (count) => `${count} more` })).toBe(
+      "Here is what I know about Asmi. Today, Thu 22 Oct, Food, Birthday, Routines, and 1 more. The rest is on screen.",
+    );
+  });
+
+  it("reads a short reply whole", () => {
+    expect(spokenSummary("Added milk to the list. Say undo to take it back.", { tail: "The rest is on screen." })).toBe("Added milk to the list. Say undo to take it back.");
+  });
+
+  it("never speaks a word the reply did not have, apart from the tail", () => {
+    const said = spokenSummary(long, { language: "en" });
+    for (const word of said.replace(/[.,:]/g, "").split(/\s+/).filter((w) => w !== "and")) expect(long).toContain(word);
   });
 });

@@ -323,3 +323,7 @@ disagree again.)
 | 2026-10-20 | 08 | 08-021 | In Progress | The cat's sayings from a 154-line list by age and gender, never repeated (`companion-sayings.test.ts` 4, `companion.test.ts` 10, `test-companion-sayings-rls.mjs` 4/4); migration `20261020231000` waiting to reach the live project. One cat card per tab (PR #276). |
 | 2026-10-20 | 25 | 25-027 | Done | Remove from the list in one tap: the item leaves To buy and stays under All; browser QA at 360px (To buy 5 → 4, no overflow); typecheck. |
 | 2026-10-20 | 26 | 26-016 | Done | Today's entries open their page; a meal changes (pencil) and a new one is planned (Plan a meal) from Today; typecheck, lint; browser QA at 360px and 1280px on the QA household (planned, changed, opened). |
+| 2026-10-20 | 04 | 04-028 | Done | Stop a reply (and a 45 s self-stop); a long reply heard as a short summary in-app and over Alexa/Gemini; speech and gateway tests, eval gates pass; browser QA at 360px. |
+| 2026-10-20 | 11 | 11-013 | Done | Monthly spend as line charts, all bills and each bill, with axes, dots, tap-for-amount and a table view; browser QA at 360px and 1280px. |
+| 2026-10-20 | 13 | 13-009 | In Progress | Pet likes and favourites: table, RLS (3/3), Family UI, HomeBrain fact, words, help; migration `20261020232000` waiting to reach the live project. |
+| 2026-10-20 | 08 | 08-022 | Done | Confetti and balloons on I did it!; waiting button wraps; tab rows size to their content and scroll to the top on a tap; browser QA at 320/360/412px. |

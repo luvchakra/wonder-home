@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { cn } from "@wonderhome/core/lib/cn";
+import { Celebration } from "@wonderhome/core/ui/celebration";
 
 import { checkInGoalAction, markSchoolWorkAction } from "../(auth)/goal-actions";
 
@@ -43,6 +44,8 @@ export function KidDoneButton({
   const settled = Boolean(review) && done;
   const pendingNow = Boolean(review) && optimistic && !done;
   const [burst, setBurst] = useState(0);
+  // Confetti and balloons each time something is done (the owner, 2026-10-20).
+  const [party, setParty] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const toggle = () => {
@@ -50,6 +53,7 @@ export function KidDoneButton({
     setOptimistic(next);
     setError(null);
     if (next && !review) setBurst((count) => count + 1);
+    if (next) setParty((count) => count + 1);
     startTransition(async () => {
       const result =
         target.kind === "goal"
@@ -64,6 +68,7 @@ export function KidDoneButton({
 
   return (
     <span className="relative inline-flex shrink-0">
+      <Celebration play={party} />
       <button
         type="button"
         onClick={settled ? undefined : toggle}
@@ -74,7 +79,8 @@ export function KidDoneButton({
         className={cn(
           "inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-70",
           pendingNow
-            ? "border-2 border-[var(--wh-attention)] bg-[var(--wh-attention-soft)] text-[var(--wh-foreground)]"
+            ? // Waiting wraps within a narrow width, so the goal's own name keeps the room (rule 11).
+              "max-w-[8.5rem] border-2 border-[var(--wh-attention)] bg-[var(--wh-attention-soft)] py-1.5 text-left leading-tight text-[var(--wh-foreground)]"
             : optimistic
             ? "wh-kid-pop bg-[var(--wh-handled)] text-white disabled:opacity-100"
             : "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)] shadow-[0_6px_16px_-6px_var(--wh-primary-glow)] hover:bg-[var(--wh-primary-hover)]",

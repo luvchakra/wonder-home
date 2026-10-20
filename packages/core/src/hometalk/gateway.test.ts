@@ -211,3 +211,10 @@ describe("every turn leaves one closed-word event for the channel metrics (voice
     expect(response.status).toBe("completed");
   });
 });
+
+describe("a long answer of headed items is heard as a summary", () => {
+  it("says the opening and what the items are about, not every detail", () => {
+    const text = "Here is what I know about Asmi.\n\n- **Today** — Science paper of the unit test, 10:00am to 11:00am, covering chapters one to four → [School](/school)\n- **Food** — eats vegetarian; likes Indian food, pink pasta, garlic bread and pizza; doesn't like Assamese food → [Meals](/meals)\n- **Birthday** — 9 December, next on Wednesday → [Family](/family)\n- **Routines** — morning routine, room tidy and school bag are looked after by Asmi";
+    expect(speechFrom(text)).toBe("Here is what I know about Asmi. Today, Food, Birthday, and Routines. The rest is on the screen.");
+  });
+});

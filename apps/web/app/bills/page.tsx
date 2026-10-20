@@ -21,6 +21,7 @@ import {
   type Obligation,
 } from "@wonderhome/core/finance/payments";
 import { BILL_TYPES } from "@wonderhome/core/finance/bill-catalog";
+import { SpendLines, type SpendSeries } from "./spend-lines";
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { homePlaceFrom, payeesFor } from "@wonderhome/core/finance/payees";
 import { billPeriods, PERIODS_BEHIND, type BillPeriod } from "@wonderhome/core/finance/periods";
@@ -275,7 +276,42 @@ export default async function BillsPage({
   const change = lastPeriod
     ? Math.round(((thisPeriod - lastPeriod) / lastPeriod) * 100)
     : null;
-  const max = Math.max(1, ...periods.map(([, value]) => value));
+  // The same months as lines (the owner, 2026-10-20: "line graph for each type"):
+  // six calendar months ending at the newest on record, so a month with nothing
+  // shows as a gap, never a guess; the total first, then each bill.
+  const lineMonths = (() => {
+    const newest = periods[periods.length - 1]?.[0];
+    if (!newest) return [] as string[];
+    const [year, month] = newest.split("-").map(Number) as [number, number];
+    return Array.from({ length: 6 }, (_, back) => {
+      const date = new Date(Date.UTC(year, month - 1 - (5 - back), 1));
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    });
+  })();
+  const spansYears = new Set(lineMonths.map((label) => label.slice(0, 4))).size > 1;
+  const monthWords = lineMonths.map((label) =>
+    new Intl.DateTimeFormat(viewer.language, { month: "short", ...(spansYears ? { year: "2-digit" } : {}), timeZone: "UTC" }).format(new Date(`${label}-15T00:00:00Z`)),
+  );
+  const niceTicks = (values: (number | null)[]) => {
+    const peak = Math.max(0, ...values.map((value) => value ?? 0));
+    if (peak === 0) return [{ value: 0, text: formatMoney(0, currency) }];
+    const rough = peak / 2;
+    const magnitude = 10 ** Math.floor(Math.log10(rough));
+    const step = [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((candidate) => candidate * 2 >= peak) ?? 10 * magnitude;
+    return [0, step, step * 2].map((value) => ({ value, text: formatMoney(value, currency) }));
+  };
+  const seriesOf = (key: string, name: string, rows: HistoryRow[]): SpendSeries => {
+    const byMonth = new Map<string, number>();
+    for (const row of rows) byMonth.set(row.period_label, (byMonth.get(row.period_label) ?? 0) + Number(row.amount_minor));
+    const values = lineMonths.map((label) => byMonth.get(label) ?? null);
+    return { key, name, values, texts: values.map((value) => (value === null ? null : formatMoney(value, currency))), ticks: niceTicks(values) };
+  };
+  const billName = new Map(obligations.map((o) => [o.id, o.name]));
+  const inWindow = trendRows.filter((row) => lineMonths.includes(row.period_label));
+  const billSeries = [...new Set(inWindow.map((row) => row.obligation_id))]
+    .map((id) => seriesOf(id, billName.get(id) ?? inWindow.find((row) => row.obligation_id === id)?.payee ?? t("bills.spend.all"), inWindow.filter((row) => row.obligation_id === id)))
+    .sort((a, b) => b.values.reduce<number>((sum, value) => sum + (value ?? 0), 0) - a.values.reduce<number>((sum, value) => sum + (value ?? 0), 0) || a.name.localeCompare(b.name));
+  const spendSeries = [seriesOf("all", t("bills.spend.all"), inWindow), ...billSeries];
 
   // What each Overview count opens onto: the same real rows the sections
   // below already render (never a second, thinner list invented for the
@@ -513,7 +549,7 @@ export default async function BillsPage({
             ) : null}
 
             <section className="grid gap-4 sm:grid-cols-2">
-              <Card>
+              <Card className="sm:col-span-2">
                 <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
                   {t("bills.spend")}
                 </p>
@@ -541,22 +577,9 @@ export default async function BillsPage({
                         {t("bills.spend.change", { percent: Math.abs(change) })}
                       </p>
                     ) : null}
-                    <div
-                      className="mt-3 flex h-16 items-end gap-1.5"
-                      role="img"
-                      aria-label={t("bills.spend.chart", { count: periods.length })}
-                    >
-                      {periods.map(([label, value]) => (
-                        <span
-                          key={label}
-                          title={`${label}: ${formatMoney(value, currency)}`}
-                          className="flex-1 rounded-t-md bg-[var(--wh-tone-money)]/70"
-                          style={{
-                            height: `${Math.max(8, (value / max) * 100)}%`,
-                          }}
-                        />
-                      ))}
-                    </div>
+                    <section className="mt-4" aria-label={t("bills.spend.chart", { count: lineMonths.length })}>
+                      <SpendLines months={lineMonths} monthWords={monthWords} series={spendSeries} tableLabel={t("bills.spend.table")} monthHeading={t("bills.spend.month")} />
+                    </section>
                   </>
                 )}
                 {otherCurrencyCounts.size > 0 ? (

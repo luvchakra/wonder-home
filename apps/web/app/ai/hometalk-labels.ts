@@ -28,6 +28,13 @@ export type AssistantLabels = {
   change: string;
   cancel: string;
   alreadyOnRecord: string;
+  stop: string;
+  restOnScreen: string;
+  /** "{count} more", the browser fills the count. */
+  andMore: string;
+  stopLabel: string;
+  stopped: string;
+  tooLong: string;
   editAria: string;
   edit: string;
   tryAgain: string;
@@ -88,6 +95,12 @@ export function assistantLabels(t: Translate, time: Pick<MessageTimeStyle, "loca
     change: t("hometalk.ui.change"),
     cancel: t("hometalk.ui.cancel"),
     alreadyOnRecord: t("hometalk.ui.alreadyOnRecord"),
+    stop: t("hometalk.ui.stop"),
+    restOnScreen: t("hometalk.ui.restOnScreen"),
+    andMore: t("hometalk.ui.andMore", { count: "{count}" }),
+    stopLabel: t("hometalk.ui.stopLabel"),
+    stopped: t("hometalk.ui.stopped"),
+    tooLong: t("hometalk.ui.tooLong"),
     editAria: t("hometalk.ui.editAria"),
     edit: t("hometalk.ui.edit"),
     tryAgain: t("hometalk.ui.tryAgain"),

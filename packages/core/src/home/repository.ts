@@ -11,6 +11,7 @@ import { dryingConditions, type DryingConditions, type WeatherWindow } from "./w
 import { householdWeather, type HouseholdWeather } from "./weather-service";
 import { invalidatesContext } from "../context/invalidation";
 import { signAvatarPaths } from "../identity/households";
+import { listPetPreferences } from "./pet-preferences";
 
 /**
  * Reading and writing the home domain (module 13).
@@ -241,7 +242,8 @@ export async function listPets(
     .order("name", { ascending: true });
   if (!options?.includeRetired) query = query.eq("active", true);
 
-  const { data, error } = await query;
+  // Each pet's likes come in the same wave (the owner, 2026-10-20); none before the table exists.
+  const [{ data, error }, preferences] = await Promise.all([query, listPetPreferences(supabase, householdId)]);
   if (error) throw new Error(`listPets failed: ${error.code ?? "unknown"}`);
 
   const rows = (data ?? []) as Row[];
@@ -261,6 +263,7 @@ export async function listPets(
     notes: (row.notes as string | null) ?? null,
     active: row.active as boolean,
     photoUrl: row.photo_path ? (photoUrls.get(row.photo_path as string) ?? null) : null,
+    preferences: preferences.filter((entry) => entry.petId === row.id),
   }));
 }
 

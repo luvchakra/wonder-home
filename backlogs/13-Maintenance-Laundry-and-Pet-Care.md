@@ -12,6 +12,7 @@
 | 6 | P1 | 13-006 | Service coordination | Done | next_action_by makes an open request actionable, not informational |
 | 7 | P1 | 13-007 | Pet care outcomes | Done | outcome-based; medication never looks like grooming |
 | 8 | P2 | 13-008 | Smart-home signals | Done | optional signals, server-ingested only; members cannot write evidence |
+| 9 | P1 | 13-009 | A pet's likes, dislikes, favourites, fears and allergies | In Progress | The owner, 2026-10-20 ("add like, dislikes, favourite food, favourite places etc for pets"). `pet_preferences` (migration `20261020232000`): kind (like, dislike, favourite food, treat, place, toy, fear, allergy, or one the household names — picked with its own Add new, rule 20), what, an optional note; every member reads, an Admin adds, changes and removes (RLS, `test-pet-preferences-rls.mjs` 3/3); HomeBrain is told on every change. Each pet's details in Family list them under **Likes & favourites** grouped by kind, change and remove as icons (rule 11). `listPets` reads them in the same wave; the pet's HomeBrain fact carries them (`petPreferenceSentence`: "Bruno likes chicken; favourite place: the park; dislikes baths."), so HomeTalk answers "what does Bruno like?" from the record. Tests 3. Words and help (Family ¶4) in all eight languages. **Waiting on:** the migration reaching the live project; until then the list reads empty. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
