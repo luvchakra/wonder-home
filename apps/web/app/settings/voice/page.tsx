@@ -6,6 +6,7 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { platformSpeechKey, resolveSpeechKey } from "@wonderhome/core/voice/platform-key";
 import { loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
 import { AudioLines, ChevronRight, Lightbulb, MicVocal, Sparkles } from "lucide-react";
@@ -64,7 +65,6 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
   // exists; otherwise the phone's own voice.
   const geminiTalks = settings.liveEngine === "gemini_live" && gemini.availability.available;
   const googleSpeaks = settings.provider === "google" && speechAvailable;
-  const readAloud = googleSpeaks ? t("settingsPage.voice.now.readAloud.google", { voice: voiceSummary(t, settings, preferences.language) }) : t("settingsPage.voice.now.readAloud.browser");
   const liveConversation = flags().voice_conversation;
 
   return (
@@ -95,12 +95,18 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
             {/* What is actually speaking, never what a setting would choose
                 if a service were there (the owner, 2026-10-18: it said
                 "WaveNet … Browser" while Gemini was the voice). */}
+            {/* What happens today, in two plain sentences (the owner, 2026-10-21: "made simple to understand"). */}
             <Card className="flex items-start gap-3">
               <IconTile icon={geminiTalks ? AudioLines : MicVocal} tone="ai" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{geminiTalks ? t("settingsPage.voice.now.gemini.title") : t("settingsPage.voice.rightNow")}</p>
+                <p className="text-sm font-semibold">{t("settingsPage.voice.rightNow")}</p>
                 <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-                  {geminiTalks ? t("settingsPage.voice.now.gemini.detail", { readAloud }) : googleSpeaks ? voiceSummary(t, settings, preferences.language) : t("settingsPage.voice.summary.browser")}
+                  {geminiTalks ? t("settingsPage.voice.simple.summaryGemini") : t("settingsPage.voice.simple.summaryWonderHome")}{" "}
+                  {!settings.speakReplies
+                    ? t("settingsPage.voice.simple.hearOff")
+                    : googleSpeaks
+                      ? t("settingsPage.voice.simple.hearGoogle", { voice: voiceSummary(t, settings, preferences.language) })
+                      : t("settingsPage.voice.simple.hearPhone")}
                 </p>
                 {!liveConversation ? <p className="mt-2 text-xs text-[var(--wh-attention)]">{t("settingsPage.voice.liveOff")}</p> : null}
               </div>
@@ -115,22 +121,28 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
               </Badge>
             </Card>
 
-            <Card className="space-y-3">
-              <div className="flex items-start gap-3">
-                <IconTile icon={Lightbulb} tone="primary" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{t("settingsPage.voice.use.title")}</p>
-                  <ul className="mt-1.5 space-y-1.5 text-sm text-[var(--wh-foreground-muted)]">
-                    <li>{t("settingsPage.voice.use.start")}</li>
-                    <li>{t("settingsPage.voice.use.act")}</li>
-                    <li>{t("settingsPage.voice.use.float")}</li>
-                  </ul>
-                </div>
-              </div>
-              <Link href="/settings/voice-assistants" className="flex min-h-11 items-center justify-between gap-2 rounded-[var(--wh-radius-sm)] text-sm font-semibold text-[var(--wh-primary)]">
-                {t("settingsPage.voice.use.alexa")}
-                <ChevronRight aria-hidden className="size-4" />
-              </Link>
+            {/* The how-to, folded: worth a look once, not on every visit. */}
+            <Card className="p-2">
+              <ul>
+              <ExpandableRow
+                summary={
+                  <>
+                    <IconTile icon={Lightbulb} tone="primary" size="sm" />
+                    <span className="min-w-0 flex-1 text-sm font-semibold">{t("settingsPage.voice.simple.howToUse")}</span>
+                  </>
+                }
+              >
+                <ul className="space-y-1.5 text-sm text-[var(--wh-foreground-muted)]">
+                  <li>{t("settingsPage.voice.use.start")}</li>
+                  <li>{t("settingsPage.voice.use.act")}</li>
+                  <li>{t("settingsPage.voice.use.float")}</li>
+                </ul>
+                <Link href="/settings/voice-assistants" className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[var(--wh-radius-sm)] text-sm font-semibold text-[var(--wh-primary)]">
+                  {t("settingsPage.voice.use.alexa")}
+                  <ChevronRight aria-hidden className="size-4" />
+                </Link>
+              </ExpandableRow>
+              </ul>
             </Card>
 
             {isAdmin ? (

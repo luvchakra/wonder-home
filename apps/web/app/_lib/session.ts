@@ -116,6 +116,7 @@ export async function buildSession(
     settings: t("nav.settings"),
     household: t("settings.section.household"),
     logout: t("nav.logout"),
+    about: t("nav.about"),
     talking: t("nav.talking"),
     install: installBannerLabels(t, preferences.language),
   };

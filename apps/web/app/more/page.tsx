@@ -1,4 +1,4 @@
-import { ChevronRight, LifeBuoy, LogOut } from "lucide-react";
+import { ChevronRight, Info, LifeBuoy, LogOut } from "lucide-react";
 
 import Link from "next/link";
 
@@ -105,6 +105,19 @@ export default async function MorePage() {
                 <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                   {t("more.getHelpHint")}
                 </span>
+              </span>
+              <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+            </Link>
+            <Link
+              href="/about"
+              className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 transition-colors hover:bg-[var(--wh-surface-muted)]"
+            >
+              <span className="grid size-10 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-muted)]">
+                <Info className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{t("about.title")}</span>
+                <span className="block text-xs text-[var(--wh-foreground-subtle)]">{t("about.lede")}</span>
               </span>
               <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
             </Link>
