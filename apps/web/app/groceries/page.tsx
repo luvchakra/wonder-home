@@ -3,7 +3,6 @@ import {
   ChevronRight,
   PackageCheck,
   ShoppingBasket,
-  ShoppingCart,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,7 +23,6 @@ import {
 } from "@wonderhome/core/commerce/use-soon";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { ButtonLink } from "@wonderhome/core/ui/button";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -167,7 +165,7 @@ export default async function GroceriesPage({
               {t("grocery.lede")}
             </p>
           </div>
-          {/* Add item on the left, the cart on the right (the owner, 2026-10-20). */}
+          {/* One way to add; To buy is the shopping list itself (the owner retired the cart, 2026-10-20). */}
           <div className="flex w-full items-center gap-3">
           <AddItemButton
             householdId={householdId}
@@ -185,12 +183,6 @@ export default async function GroceriesPage({
             categories={categories}
             words={words}
           />
-          {toBuyCount > 0 ? (
-            <ButtonLink variant="secondary" href="/groceries/cart" className="ml-auto">
-              <ShoppingCart aria-hidden className="size-4" />
-              {t("grocery.cart.open")} ({toBuyCount})
-            </ButtonLink>
-          ) : null}
           </div>
         </header>
 
