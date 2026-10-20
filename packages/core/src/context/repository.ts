@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { listConsumables, listOrders } from "../commerce/repository";
 import { listHouseholdHolidays } from "../calendar/holidays";
 import { listEvents } from "../family/repository";
-import { listObligations } from "../finance/repository";
+import { listGivenPeriods, listObligations } from "../finance/repository";
 import { countUpcomingAppointments, listAppointments } from "../health/appointments";
 import { listCheckups } from "../health/checkups";
 import { listFitnessGoals } from "../health/fitness";
@@ -164,7 +164,26 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
   },
   { domain: "groceries", label: "groceries", permitted: notChild, read: async (supabase, scope) => ({ consumables: await listConsumables(supabase, scope.householdId) }) },
   { domain: "orders", label: "orders", permitted: notChild, read: async (supabase, scope) => ({ orders: await listOrders(supabase, scope.householdId) }) },
-  { domain: "bills", label: "bills", permitted: (viewer) => may(viewer, "finance.view"), read: async (supabase, scope) => ({ obligations: await listObligations(supabase, scope.householdId) }) },
+  {
+    domain: "bills",
+    label: "bills",
+    permitted: (viewer) => may(viewer, "finance.view"),
+    read: async (supabase, scope) => {
+      // The bills, the last year and a half of paid months, and amounts given ahead (11-010) — one wave, each bounded.
+      const since = new Date(Date.now() - 548 * 86_400_000).toISOString().slice(0, 7);
+      const [obligations, paid, ahead] = await Promise.all([
+        listObligations(supabase, scope.householdId),
+        supabase.from("obligation_history").select("obligation_id, period_label, amount_minor, currency, paid_on").eq("household_id", scope.householdId).gte("period_label", since).order("period_label", { ascending: false }).limit(400),
+        listGivenPeriods(supabase, scope.householdId).catch(() => new Map<string, { periodLabel: string; amountMinor: number; currency: string }[]>()),
+      ]);
+      const rows = (paid.data ?? []) as { obligation_id: string; period_label: string; amount_minor: number; currency: string; paid_on: string | null }[];
+      return {
+        obligations,
+        billPayments: rows.map((row) => ({ obligationId: row.obligation_id, periodLabel: row.period_label, amountMinor: Number(row.amount_minor), currency: row.currency, paidOn: row.paid_on })),
+        billAhead: [...ahead.entries()].flatMap(([obligationId, periods]) => periods.map((period) => ({ obligationId, ...period }))),
+      };
+    },
+  },
   {
     domain: "school",
     label: "school work",

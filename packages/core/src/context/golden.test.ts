@@ -482,3 +482,25 @@ describe("what setup records reaches HomeBrain (story 02-009)", () => {
     expect(about("aarav").attributes).not.toHaveProperty("school");
   });
 });
+
+describe("Bills made ahead (11-010): paid months and coming months are records HomeBrain answers from", () => {
+  const list = items({
+    obligations: [bill("b-elec", "Electricity", { payee: "BESCOM", dueOn: "2026-10-05", recurrence: "monthly" }), bill("b-rent", "Rent", { kind: "rent", dueOn: "2026-10-01", recurrence: "monthly", amountMinor: 2_500_000 })],
+    billPayments: [{ obligationId: "b-elec", periodLabel: "2026-09", amountMinor: 234_000, currency: "INR", paidOn: "2026-09-04" }],
+    billAhead: [{ obligationId: "b-rent", periodLabel: "2026-11", amountMinor: 2_600_000, currency: "INR" }],
+  });
+
+  it("knows what last month's electricity bill came to, and when it was paid", () => {
+    const paid = list.find((item) => item.entityType === "bill_payment");
+    expect(paid?.summary).toMatch(/^Electricity for September 2026 came to .*2,340.*, paid 2026-09-04\.$/);
+    const facts = factsForQuestion({ items: list }, "how much was the electricity bill last month?");
+    expect(facts.some((fact) => fact.text.includes("September 2026"))).toBe(true);
+  });
+
+  it("knows next month's rent as given ahead, and the electricity's usual amount without inventing it", () => {
+    const rent = list.find((item) => item.entityType === "bill_period" && item.entityId === "b-rent:2026-11");
+    expect(rent?.summary).toMatch(/Rent for November 2026 is due 2026-11-01 \(.*26,000.*as given ahead\)/);
+    const power = list.find((item) => item.entityType === "bill_period" && item.entityId === "b-elec:2026-11");
+    expect(power?.summary).toMatch(/amount not in yet; it was .*2,340.* last time/);
+  });
+});

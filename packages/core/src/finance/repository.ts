@@ -16,6 +16,7 @@ import {
   nextDueDate,
 } from "./payments";
 import { invalidatesContext } from "../context/invalidation";
+import { nextOpenDueDate, type GivenPeriod } from "./periods";
 
 /**
  * Reading bills and preparing payments (module 11).
@@ -35,7 +36,7 @@ export async function listObligations(
   const { data, error } = await supabase
     .from("obligations")
     .select(
-      "id, name, kind, payee, amount_minor, currency, due_on, responsible_member_id, status, requires_review, updated_at",
+      "id, name, kind, payee, amount_minor, currency, due_on, recurrence, bill_type, responsible_member_id, status, requires_review, updated_at",
     )
     .eq("household_id", householdId)
     .order("due_on", { ascending: true, nullsFirst: false });
@@ -51,6 +52,8 @@ export async function listObligations(
     amountMinor: row.amount_minor === null ? null : Number(row.amount_minor),
     currency: (row.currency as string | null) ?? null,
     dueOn: (row.due_on as string | null) ?? null,
+    recurrence: (row.recurrence as Obligation["recurrence"]) ?? null,
+    billType: (row.bill_type as string | null) ?? null,
     responsibleMemberId: (row.responsible_member_id as string | null) ?? null,
     status: row.status as ObligationStatus,
     requiresReview: row.requires_review as boolean,
@@ -68,6 +71,8 @@ export type CreateObligationInput = {
   dueOn?: string | null;
   recurrence?: "monthly" | "quarterly" | "yearly" | "one_off" | null;
   responsibleMemberId?: string | null;
+  /** Which typical bill it is (`bill-catalog.ts`), or null for "something else". */
+  billType?: string | null;
 };
 
 /**
@@ -90,6 +95,7 @@ async function createObligationImpl(
       due_on: input.dueOn ?? null,
       recurrence: input.recurrence ?? null,
       responsible_member_id: input.responsibleMemberId ?? null,
+      bill_type: input.billType ?? null,
       status: "received",
     })
     .select("id")
@@ -118,6 +124,8 @@ export type UpdateObligationInput = {
   currency?: string | null;
   dueOn?: string | null;
   recurrence?: "monthly" | "quarterly" | "yearly" | "one_off" | null;
+  responsibleMemberId?: string | null;
+  billType?: string | null;
 };
 
 /** Changing what a hand-typed bill says — the other half of `createObligation` (CLAUDE.md's "every entity can be added, updated and removed"). */
@@ -133,6 +141,8 @@ async function updateObligationImpl(
   if (input.currency !== undefined) patch.currency = input.currency;
   if (input.dueOn !== undefined) patch.due_on = input.dueOn;
   if (input.recurrence !== undefined) patch.recurrence = input.recurrence;
+  if (input.responsibleMemberId !== undefined) patch.responsible_member_id = input.responsibleMemberId;
+  if (input.billType !== undefined) patch.bill_type = input.billType;
 
   const { error } = await supabase
     .from("obligations")
@@ -364,8 +374,15 @@ async function recordAmountImpl(
  */
 async function markObligationPaidImpl(
   supabase: SupabaseClient,
-  input: { householdId: string; obligationId: string; paidOn: string },
-): Promise<{ nextDueOn: string | null }> {
+  input: {
+    householdId: string;
+    obligationId: string;
+    paidOn: string;
+    /** What was paid, when the person says; otherwise the bill's own amount. */
+    amountMinor?: number | null;
+    currency?: string | null;
+  },
+): Promise<PaidBill> {
   const { data, error } = await supabase
     .from("obligations")
     .select("id, status, due_on, recurrence, amount_minor, currency, payee, kind, responsible_member_id")
@@ -380,13 +397,16 @@ async function markObligationPaidImpl(
   }
 
   const dueOn = (bill.due_on as string | null) ?? null;
-  if (bill.amount_minor !== null && bill.currency) {
+  const periodLabel = (dueOn ?? input.paidOn).slice(0, 7);
+  const amountMinor = input.amountMinor ?? (bill.amount_minor === null ? null : Number(bill.amount_minor));
+  const currency = input.currency ?? ((bill.currency as string | null) ?? null);
+  if (amountMinor !== null && currency) {
     await recordAmountImpl(supabase, {
       householdId: input.householdId,
       obligationId: input.obligationId,
-      periodLabel: (dueOn ?? input.paidOn).slice(0, 7),
-      amountMinor: Number(bill.amount_minor),
-      currency: bill.currency as string,
+      periodLabel,
+      amountMinor,
+      currency,
       paidOn: input.paidOn,
       payee: (bill.payee as string | null) ?? null,
       kind: (bill.kind as string | null) ?? null,
@@ -394,17 +414,181 @@ async function markObligationPaidImpl(
     });
   }
 
-  const nextDueOn = dueOn ? nextDueDate(dueOn, (bill.recurrence as string | null) ?? null) : null;
+  // A recurring bill moves on to its next period not already paid ahead, and
+  // takes the amount someone gave for that period, if anyone did (11-010).
+  const recurrence = (bill.recurrence as string | null) ?? null;
+  let nextDueOn: string | null = null;
+  let nextAmount: { amountMinor: number; currency: string } | null = null;
+  if (dueOn && recurrence && recurrence !== "one_off") {
+    const [{ data: paidRows }, { data: givenRows }] = await Promise.all([
+      supabase.from("obligation_history").select("period_label").eq("obligation_id", input.obligationId).gte("period_label", periodLabel).limit(40),
+      supabase.from("obligation_periods").select("period_label, amount_minor, currency").eq("obligation_id", input.obligationId).limit(40),
+    ]);
+    nextDueOn = nextOpenDueDate(dueOn, recurrence, new Set(((paidRows ?? []) as Row[]).map((row) => row.period_label as string)));
+    const given = nextDueOn ? ((givenRows ?? []) as Row[]).find((row) => row.period_label === nextDueOn!.slice(0, 7)) : undefined;
+    if (given) nextAmount = { amountMinor: Number(given.amount_minor), currency: given.currency as string };
+  }
   const { error: updateError } = await supabase
     .from("obligations")
-    .update(nextDueOn ? { due_on: nextDueOn, status: "expected" } : { status: "paid" })
+    .update(
+      nextDueOn
+        ? {
+            due_on: nextDueOn,
+            status: "expected",
+            // Next period's amount is what was given for it, else not in yet — never last month's carried over.
+            amount_minor: nextAmount?.amountMinor ?? null,
+            currency: nextAmount?.currency ?? (bill.currency as string | null) ?? null,
+          }
+        : { status: "paid" },
+    )
     .eq("id", input.obligationId)
     .eq("household_id", input.householdId);
   if (updateError) {
     if (updateError.code === "42501") throw ApiError.forbidden("Only a household administrator can mark a bill paid.");
     throw new Error(`markObligationPaid failed: ${updateError.code ?? "unknown"}`);
   }
-  return { nextDueOn };
+  if (nextAmount && nextDueOn) {
+    await supabase.from("obligation_periods").delete().eq("obligation_id", input.obligationId).eq("period_label", nextDueOn.slice(0, 7));
+  }
+  return {
+    nextDueOn,
+    periodLabel,
+    recorded: amountMinor !== null && Boolean(currency),
+    tookAhead: nextAmount && nextDueOn ? { periodLabel: nextDueOn.slice(0, 7), ...nextAmount } : null,
+    previous: {
+      dueOn,
+      status: bill.status as string,
+      amountMinor: bill.amount_minor === null ? null : Number(bill.amount_minor),
+      currency: (bill.currency as string | null) ?? null,
+    },
+  };
+}
+
+/** What marking a bill paid changed, kept so it can be taken back ("undo"). */
+export type PaidBill = {
+  nextDueOn: string | null;
+  periodLabel: string;
+  /** Whether a history row was written for the period (only when an amount was known). */
+  recorded: boolean;
+  /** The amount given ahead that the next period took, so an undo can give it back. */
+  tookAhead?: { periodLabel: string; amountMinor: number; currency: string } | null;
+  previous: { dueOn: string | null; status: string; amountMinor: number | null; currency: string | null };
+};
+
+/**
+ * Takes back a "paid" (HomeTalk's undo, 11-010): the period's history row
+ * goes, and the bill is put back on the period it was on, with the amount
+ * and status it had.
+ */
+async function undoBillPaymentImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; obligationId: string; paid: PaidBill },
+): Promise<void> {
+  if (input.paid.recorded) await removeTransactionImpl(supabase, { householdId: input.householdId, obligationId: input.obligationId, periodLabel: input.paid.periodLabel });
+  const { error } = await supabase
+    .from("obligations")
+    .update({
+      due_on: input.paid.previous.dueOn,
+      status: input.paid.previous.status,
+      amount_minor: input.paid.previous.amountMinor,
+      currency: input.paid.previous.currency,
+    })
+    .eq("id", input.obligationId)
+    .eq("household_id", input.householdId);
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can change a bill.");
+    throw new Error(`undoBillPayment failed: ${error.code ?? "unknown"}`);
+  }
+  // The next month's amount someone gave ahead goes back where it was.
+  const took = input.paid.tookAhead;
+  if (took) {
+    await supabase
+      .from("obligation_periods")
+      .upsert({ household_id: input.householdId, obligation_id: input.obligationId, period_label: took.periodLabel, amount_minor: took.amountMinor, currency: took.currency }, { onConflict: "obligation_id,period_label" });
+  }
+}
+
+/**
+ * An amount for one of a recurring bill's periods (11-010). The current
+ * period's amount is the bill's own; a coming one's is kept until the bill
+ * reaches it. No amount takes a coming period's back out.
+ */
+async function setBillPeriodAmountImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; obligationId: string; periodLabel: string; amountMinor: number | null; currency: string | null },
+): Promise<{ current: boolean }> {
+  const { data: bill, error } = await supabase.from("obligations").select("due_on").eq("id", input.obligationId).eq("household_id", input.householdId).maybeSingle();
+  if (error) throw new Error(`setBillPeriodAmount failed: ${error.code ?? "unknown"}`);
+  if (!bill) throw ApiError.notFound("That bill is no longer here.");
+  const current = ((bill as Row).due_on as string | null)?.slice(0, 7) === input.periodLabel;
+  if (current) {
+    await updateObligationImpl(supabase, { id: input.obligationId, householdId: input.householdId, amountMinor: input.amountMinor, currency: input.amountMinor === null ? null : input.currency });
+    return { current };
+  }
+  const write =
+    input.amountMinor === null || !input.currency
+      ? supabase.from("obligation_periods").delete().eq("household_id", input.householdId).eq("obligation_id", input.obligationId).eq("period_label", input.periodLabel)
+      : supabase.from("obligation_periods").upsert(
+          { household_id: input.householdId, obligation_id: input.obligationId, period_label: input.periodLabel, amount_minor: input.amountMinor, currency: input.currency },
+          { onConflict: "obligation_id,period_label" },
+        );
+  const { error: writeError } = await write;
+  if (writeError) {
+    if (writeError.code === "42501") throw ApiError.forbidden("Only a household administrator can change a bill.");
+    throw new Error(`setBillPeriodAmount failed: ${writeError.code ?? "unknown"}`);
+  }
+  return { current };
+}
+
+/**
+ * One period paid (11-010): the current one is the bill marked paid, which
+ * moves it on; a coming one paid ahead is kept in its history, so when the
+ * bill gets there it moves straight past it.
+ */
+async function payBillPeriodImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; obligationId: string; periodLabel: string; paidOn: string; amountMinor: number | null; currency: string | null },
+): Promise<{ current: boolean }> {
+  const { data: bill, error } = await supabase
+    .from("obligations")
+    .select("due_on, payee, kind, responsible_member_id")
+    .eq("id", input.obligationId)
+    .eq("household_id", input.householdId)
+    .maybeSingle();
+  if (error) throw new Error(`payBillPeriod failed: ${error.code ?? "unknown"}`);
+  if (!bill) throw ApiError.notFound("That bill is no longer here.");
+  const row = bill as Row;
+  if ((row.due_on as string | null)?.slice(0, 7) === input.periodLabel) {
+    await markObligationPaidImpl(supabase, { householdId: input.householdId, obligationId: input.obligationId, paidOn: input.paidOn, amountMinor: input.amountMinor, currency: input.currency });
+    return { current: true };
+  }
+  if (input.amountMinor === null || !input.currency) throw ApiError.badRequest("Say how much was paid for that month.");
+  await recordAmountImpl(supabase, {
+    householdId: input.householdId,
+    obligationId: input.obligationId,
+    periodLabel: input.periodLabel,
+    amountMinor: input.amountMinor,
+    currency: input.currency,
+    paidOn: input.paidOn,
+    payee: (row.payee as string | null) ?? null,
+    kind: (row.kind as string | null) ?? null,
+    ownerMemberId: (row.responsible_member_id as string | null) ?? null,
+  });
+  await supabase.from("obligation_periods").delete().eq("household_id", input.householdId).eq("obligation_id", input.obligationId).eq("period_label", input.periodLabel);
+  return { current: false };
+}
+
+/** Amounts given ahead for the household's bills' coming periods (bounded); none before the table exists. */
+export async function listGivenPeriods(supabase: SupabaseClient, householdId: string): Promise<Map<string, GivenPeriod[]>> {
+  const { data, error } = await supabase.from("obligation_periods").select("obligation_id, period_label, amount_minor, currency").eq("household_id", householdId).limit(400);
+  const given = new Map<string, GivenPeriod[]>();
+  if (error) return given;
+  for (const row of (data ?? []) as Row[]) {
+    const list = given.get(row.obligation_id as string) ?? [];
+    list.push({ periodLabel: row.period_label as string, amountMinor: Number(row.amount_minor), currency: row.currency as string });
+    given.set(row.obligation_id as string, list);
+  }
+  return given;
 }
 
 /**
@@ -572,5 +756,8 @@ export const restoreObligation = invalidatesContext(restoreObligationImpl, (_sup
 export const recordAmount = invalidatesContext(recordAmountImpl, (_supabase, input) => input.householdId);
 export const markObligationPaid = invalidatesContext(markObligationPaidImpl, (_supabase, input) => input.householdId);
 export const removeTransaction = invalidatesContext(removeTransactionImpl, (_supabase, input) => input.householdId);
+export const undoBillPayment = invalidatesContext(undoBillPaymentImpl, (_supabase, input) => input.householdId);
+export const setBillPeriodAmount = invalidatesContext(setBillPeriodAmountImpl, (_supabase, input) => input.householdId);
+export const payBillPeriod = invalidatesContext(payBillPeriodImpl, (_supabase, input) => input.householdId);
 export const applyObligationSyncPlan = invalidatesContext(applyObligationSyncPlanImpl, (_supabase, input) => input.householdId);
 export const prepareIntent = invalidatesContext(prepareIntentImpl, (_supabase, input) => input.householdId);

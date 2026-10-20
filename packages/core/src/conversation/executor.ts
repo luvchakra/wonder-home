@@ -16,6 +16,7 @@ import { movedSchoolWhen } from "../school/times";
 import type { MealSlot } from "../meals/meals";
 import { createVital, type VitalType } from "../health/vitals";
 import { recordAvailabilityException } from "../household/helpers-repository";
+import { addBillFromTalk, recordBillPaymentFromTalk, setBillAmountFromTalk, undoBillTalk } from "./bill-talk";
 import { addToShoppingList, changeStockFromTalk, linesOf, markBoughtFromTalk, removeFromShoppingList, undoAddToList } from "./grocery-actions";
 import type { HouseholdIntent } from "./intent";
 import { joinWords } from "./proposal";
@@ -97,6 +98,13 @@ export function canExecute(intent: HouseholdIntent): boolean {
     }
     case "record_absence":
       return intent.target.kind === "member" && Boolean(intent.target.reference);
+    // Bills (11-010): a new one needs only its name; paying or pricing one needs the grounded bill.
+    case "add_bill":
+      return typeof (intent.parameters.what ?? intent.target.reference) === "string";
+    case "record_bill_payment":
+      return typeof intent.parameters.billId === "string";
+    case "set_bill_amount":
+      return typeof intent.parameters.billId === "string" && typeof intent.parameters.amount === "number";
     case "set_preference":
       return Boolean(intent.target.reference);
     case "check_agents":
@@ -193,6 +201,12 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await putOnCalendar(intent, context);
       case "record_absence":
         return await recordAbsence(intent, context);
+      case "add_bill":
+        return await addBillFromTalk(intent, context);
+      case "record_bill_payment":
+        return await recordBillPaymentFromTalk(intent, context);
+      case "set_bill_amount":
+        return await setBillAmountFromTalk(intent, context);
       case "check_agents":
         return await runAgentCheck(context);
       case "record_health_appointment":
@@ -285,6 +299,10 @@ async function undoForCorrection(
       await removeMeal(context.supabase, { householdId: context.householdId, mealId: result.mealId });
       return { ok: true, text: `Took **${String(result.name ?? "that meal")}** off the ${linkTo("/meals", "meal plan")}.` };
     }
+    case "add_bill":
+    case "record_bill_payment":
+    case "set_bill_amount":
+      return (await undoBillTalk(corrects.actionType, result, context)) ?? { ok: false, reason: "I cannot change that one from here yet, so I left it as it was." };
     default:
       return { ok: false, reason: "I cannot change that one from here yet, so I left it as it was. You can change it on its own screen." };
   }

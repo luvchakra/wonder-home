@@ -38,6 +38,12 @@ export const INTENT_ACTIONS = [
   "adjust_schedule",
   "set_preference",
   "make_payment",
+  /** "Add the electricity bill, 2,400 due on the 5th every month" — a new bill on Bills (11-010); never a payment. */
+  "add_bill",
+  /** "I paid the electricity bill, 2,340 yesterday" — that month marked paid, the bill moved on; nothing is paid by WonderHome. */
+  "record_bill_payment",
+  /** "Next month's rent is 26,000" — what one of a bill's months comes to. */
+  "set_bill_amount",
   "order_items",
   "assign_responsibility",
   /** "I have a dentist appointment next Tuesday at 4" — books a real appointment via the governed health service. */

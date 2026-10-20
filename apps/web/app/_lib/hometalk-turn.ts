@@ -70,6 +70,7 @@ import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { getHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { answerDocumentChanges, documentReplyClasses, documentReplyText, readDocumentChangeQuestion } from "@wonderhome/core/homesend/talk";
 import { listCatalogRecipes } from "@wonderhome/core/meals/recipe-catalog";
+import { listObligations } from "@wonderhome/core/finance/repository";
 import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
 import { listGroceries } from "@wonderhome/core/commerce/inventory";
 import { listAssets } from "@wonderhome/core/home/repository";
@@ -514,6 +515,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   let recipeRead: Promise<{ id: string; name: string }[]> | null = null;
   let schoolRead: Promise<SchoolItemRef[]> | null = null;
   let assetRead: Promise<{ id: string; name: string }[]> | null = null;
+  let billRead: Promise<{ id: string; name: string; billType: string | null }[]> | null = null;
   const groundingEnv = (read: () => Promise<ReferenceState>): GroundingEnv => ({
     people: peopleItems,
     viewerMemberId: membership.memberId,
@@ -527,6 +529,11 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     schoolItems: () =>
       (schoolRead ??= listSchoolItems(supabase, householdId)
         .then((items) => items.map((entry) => ({ id: entry.id, title: entry.title, childMemberId: entry.childMemberId, dueAt: entry.dueAt?.toISOString() ?? null, status: entry.status, dueTimeKnown: entry.dueTimeKnown, endsAt: entry.endsAt?.toISOString() ?? null })))
+        .catch(() => [])),
+    // The open bills, through the speaker's own session: a member who may not see money reads none (11-010).
+    bills: () =>
+      (billRead ??= listObligations(supabase, householdId)
+        .then((items) => items.filter((entry) => !["paid", "cancelled", "waived"].includes(entry.status)).map((entry) => ({ id: entry.id, name: entry.name, billType: entry.billType ?? null })))
         .catch(() => [])),
     assets: () => (assetRead ??= listAssets(supabase, householdId).then((items) => items.filter((entry) => entry.status === "active").map((entry) => ({ id: entry.id, name: entry.name }))).catch(() => [])),
   });

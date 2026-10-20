@@ -3,6 +3,7 @@ import type { Order } from "../commerce/orders";
 import type { HolidayRecord } from "../calendar/projection";
 import type { FamilyEvent } from "../family/schedule";
 import type { Obligation } from "../finance/payments";
+import { billPeriods } from "../finance/periods";
 import type { HealthAppointment } from "../health/appointments";
 import { classifyCheckup, type HealthCheckup } from "../health/checkups";
 import { FITNESS_ACTIVITY_LABEL, type FitnessGoal } from "../health/fitness";
@@ -198,6 +199,9 @@ export type ContextRecords = {
   orders?: readonly Order[];
   meals?: readonly Meal[];
   obligations?: readonly Obligation[];
+  /** Each bill's paid months (`obligation_history`, bounded) and amounts given ahead (11-010). */
+  billPayments?: readonly { obligationId: string; periodLabel: string; amountMinor: number; currency: string; paidOn: string | null }[];
+  billAhead?: readonly { obligationId: string; periodLabel: string; amountMinor: number; currency: string }[];
   assets?: readonly HomeAsset[];
   serviceRequests?: readonly ServiceRequest[];
   laundry?: readonly LaundryNeed[];
@@ -657,6 +661,56 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         validUntil: bill.dueOn,
         aliases: [bill.name, bill.payee, `${bill.name} bill`, words(bill.kind)],
       });
+    }
+    // Paid months and the months coming, as records (11-010): "how much was
+    // the electricity bill last month?", "when is next month's rent due?".
+    const billName = new Map(records.obligations.map((bill) => [bill.id, bill]));
+    const monthWords = (label: string) => new Date(`${label}-01T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    for (const payment of records.billPayments ?? []) {
+      const bill = billName.get(payment.obligationId);
+      if (!bill) continue;
+      add({
+        domain: "bills",
+        entityType: "bill_payment",
+        entityId: `${payment.obligationId}:${payment.periodLabel}`,
+        summary: `${bill.name} for ${monthWords(payment.periodLabel)} came to ${money(payment.amountMinor, payment.currency)}${payment.paidOn ? `, paid ${payment.paidOn}` : ", paid"}.`,
+        need: "what bills were paid",
+        privacyClass: "financial",
+        subjectMemberIds: [bill.responsibleMemberId],
+        attributes: { title: bill.name, period: payment.periodLabel, amountMinor: payment.amountMinor, currency: payment.currency, paidOn: payment.paidOn, date: payment.paidOn, status: "paid" },
+        source: { type: "obligation_history", capturedAt: payment.paidOn },
+        freshness: "historical",
+        tier: 3,
+        aliases: [bill.name, `${bill.name} bill`, words(bill.kind)],
+      });
+    }
+    for (const bill of open) {
+      const paid = (records.billPayments ?? []).filter((payment) => payment.obligationId === bill.id).map((payment) => ({ periodLabel: payment.periodLabel, amountMinor: payment.amountMinor, currency: payment.currency, paidOn: payment.paidOn }));
+      const ahead = (records.billAhead ?? []).filter((period) => period.obligationId === bill.id);
+      for (const period of billPeriods({ dueOn: bill.dueOn, recurrence: bill.recurrence ?? null, status: bill.status, amountMinor: bill.amountMinor, currency: bill.currency }, paid, ahead)) {
+        if (period.current || period.state === "paid") continue;
+        const what =
+          period.amountMinor !== null && period.currency
+            ? `${money(period.amountMinor, period.currency)}, as given ahead`
+            : period.usualMinor !== null && period.currency
+              ? `amount not in yet; it was ${money(period.usualMinor, period.currency)} last time`
+              : "amount not in yet";
+        add({
+          domain: "bills",
+          entityType: "bill_period",
+          entityId: `${bill.id}:${period.periodLabel}`,
+          summary: `${bill.name} for ${monthWords(period.periodLabel)} is due ${period.dueOn} (${what}).`,
+          need: "what bills are due",
+          privacyClass: "financial",
+          subjectMemberIds: [bill.responsibleMemberId],
+          attributes: { title: bill.name, period: period.periodLabel, amountMinor: period.amountMinor, currency: period.currency, dueOn: period.dueOn, date: period.dueOn, status: "upcoming" },
+          source: { type: "obligations", capturedAt: bill.updatedAt ?? null },
+          freshness: "current",
+          tier: 3,
+          validUntil: period.dueOn,
+          aliases: [bill.name, `${bill.name} bill`, words(bill.kind)],
+        });
+      }
     }
     if (open.length === 0 && records.obligations.length > 0) state("bills", "what bills are due", "Every bill on record is paid or cancelled.", "financial");
     if (records.obligations.length === 0) state("bills", "what bills are due", "No bills are on record yet.", "financial");

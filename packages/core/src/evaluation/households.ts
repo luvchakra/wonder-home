@@ -471,6 +471,7 @@ export function groundingEnvFor(household: GoldenHousehold, memberId: string, re
         .filter((item) => item.status === "pending")
         .map((item) => ({ id: item.id, title: item.title, childMemberId: item.childMemberId, dueAt: item.dueAt ? item.dueAt.toISOString() : null, status: item.status, dueTimeKnown: item.dueTimeKnown, endsAt: item.endsAt ? item.endsAt.toISOString() : null })),
     assets: async () => (household.records.assets ?? []).filter((a) => a.status === "active").map((a) => ({ id: a.id, name: a.name })),
+    bills: async () => (household.records.obligations ?? []).filter((bill) => bill.status !== "paid" && bill.status !== "cancelled").map((bill) => ({ id: bill.id, name: bill.name, billType: bill.billType ?? null })),
   };
 }
 

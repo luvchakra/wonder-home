@@ -223,6 +223,11 @@ export function focusFromResult(action: string, result: Record<string, unknown>,
       return id("eventId") ? [{ entityType: "family_event", entityId: id("eventId"), label: text("title") ?? "that", source: "action_result", at }] : [];
     case "plan_meal":
       return id("mealId") ? [{ entityType: "meal", entityId: id("mealId"), label: text("name") ?? "the meal", source: "action_result", at }] : [];
+    // The bill just added, paid or priced is what "it" means next (11-010).
+    case "add_bill":
+    case "record_bill_payment":
+    case "set_bill_amount":
+      return id("obligationId") ? [{ entityType: "bill", entityId: id("obligationId"), label: text("name") ?? "the bill", source: "action_result", at }] : [];
     case "set_reminder":
       return id("notificationId") ? [{ entityType: "reminder", entityId: id("notificationId"), label: text("what") ?? "the reminder", source: "action_result", at }] : [];
     case "record_absence":
@@ -251,7 +256,7 @@ export function focusFromProposal(input: { actionType: string; parameters: Recor
           : [];
     return items.map((label) => ({ entityType: "thing", entityId: null, label, source: "proposal" as const, at }));
   }
-  if (input.actionType === "make_payment") {
+  if (input.actionType === "make_payment" || input.actionType === "record_bill_payment" || input.actionType === "set_bill_amount") {
     const label = typeof input.parameters.billLabel === "string" ? input.parameters.billLabel : input.targetReference ?? null;
     return label ? [{ entityType: "bill", entityId: typeof input.parameters.billId === "string" ? input.parameters.billId : null, label, source: "proposal", at }] : [];
   }

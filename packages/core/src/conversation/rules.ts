@@ -1,3 +1,4 @@
+import { readBillUtterance } from "./bill-talk";
 import { readItemAmount } from "./quantity";
 import { APPOINTMENT_TYPES, type AppointmentType } from "../health/appointments";
 import { tripQuestion } from "../homebrain/insights";
@@ -208,6 +209,15 @@ const RULES: readonly Rule[] = [
         confidence: 0.96,
       };
     },
+  },
+
+  // --- Bills, recorded (11-010) -------------------------------------------------
+  // Read before the list and the pantry, so "add the electricity bill" is a
+  // bill and not a grocery, and "I paid the rent" is a payment noted, never
+  // one made. Sentences that are not about a bill fall through.
+  {
+    pattern: /^.+$/,
+    read: (_match, utterance) => readBillUtterance(utterance),
   },
 
   // --- Greetings, thanks, help ---------------------------------------------
@@ -989,6 +999,9 @@ export const RULE_ACTIONS: readonly IntentAction[] = [
   "raise_service_request",
   "record_absence",
   "make_payment",
+  "add_bill",
+  "record_bill_payment",
+  "set_bill_amount",
   "order_items",
   "plan_event",
   "adjust_schedule",

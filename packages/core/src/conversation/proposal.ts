@@ -1,7 +1,7 @@
 import { decideAutonomy, type AutonomyMode, type ProposedAction } from "../household/autonomy";
 import { can, type Permission, type PermissionContext } from "../identity/permissions";
 import { WHAT_I_CAN_DO, disposeIntent, isConsequential, type HouseholdIntent } from "./intent";
-import { consentTier, decideForRequest } from "./consent";
+import { consentTier, confirmReasonFor, decideForRequest } from "./consent";
 import { linkTo } from "./reply-format";
 import { screenFor } from "./screens";
 
@@ -54,6 +54,10 @@ export type Proposal =
 /** The permission each action requires. Absent means no special permission. */
 const REQUIRED_PERMISSION: Partial<Record<HouseholdIntent["action"], Permission>> = {
   make_payment: "finance.pay",
+  // Recording bills is the Admins' (RLS: obligations are written by an Admin), who hold finance.pay; nothing is paid.
+  add_bill: "finance.pay",
+  record_bill_payment: "finance.pay",
+  set_bill_amount: "finance.pay",
   assign_responsibility: "responsibilities.manage",
   adjust_schedule: "responsibilities.manage",
   order_items: "finance.view",
@@ -94,6 +98,11 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   adjust_schedule: "schedule",
   set_preference: "draft",
   make_payment: "payment",
+  // A bill on the list, a month marked paid and an amount noted are the
+  // household's own records, each undoable on Bills — never a payment.
+  add_bill: "schedule",
+  record_bill_payment: "schedule",
+  set_bill_amount: "schedule",
   order_items: "order",
   assign_responsibility: "permission_change",
   record_health_appointment: "schedule",
@@ -182,7 +191,7 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
 
   const decision =
     context.requestedBy === "person"
-      ? decideForRequest({ tier: consentTier(intent, context.actor), mode: context.autonomy, action, confirmRequested: context.confirmRequested === true })
+      ? decideForRequest({ tier: consentTier(intent, context.actor), mode: context.autonomy, action, confirmRequested: context.confirmRequested === true, confirmReason: confirmReasonFor(intent.action) })
       : decideAutonomy(context.autonomy, action);
   const preview = buildPreview(intent, decision.reason, action.reversible);
 
@@ -289,6 +298,16 @@ function summarize(intent: HouseholdIntent): string {
       return `Remember that ${intent.utterance.replace(/\.$/, "")}`;
     case "make_payment":
       return `Pay the ${typeof intent.parameters.billLabel === "string" ? intent.parameters.billLabel : (intent.target.reference ?? "bill")}`;
+    case "add_bill": {
+      const amount = typeof intent.parameters.amount === "number" ? ` of ${intent.parameters.amount.toLocaleString("en-IN")}` : "";
+      const day = typeof intent.parameters.dueDay === "number" ? `, due on the ${ordinal(intent.parameters.dueDay)}` : "";
+      const how = intent.parameters.recurrence === "quarterly" ? " every three months" : intent.parameters.recurrence === "yearly" ? " every year" : intent.parameters.recurrence === "monthly" ? " every month" : "";
+      return `Add the ${String(intent.parameters.what ?? intent.target.reference ?? "new")} bill${amount}${day}${how}`;
+    }
+    case "record_bill_payment":
+      return `Mark the ${String(intent.parameters.billLabel ?? intent.target.reference ?? "bill").replace(/\s+bill$/i, "")} bill paid${typeof intent.parameters.amount === "number" ? ` (${intent.parameters.amount.toLocaleString("en-IN")})` : ""}`;
+    case "set_bill_amount":
+      return `Note ${intent.parameters.period === "next" ? "next month's" : "this month's"} ${String(intent.parameters.billLabel ?? intent.target.reference ?? "bill").replace(/\s+bill$/i, "")} bill as ${typeof intent.parameters.amount === "number" ? intent.parameters.amount.toLocaleString("en-IN") : "that amount"}`;
     case "order_items":
       return "Place the order";
     case "assign_responsibility":
@@ -337,6 +356,12 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Move the event", "Re-check anything that depended on the old time"];
     case "make_payment":
       return ["Take the payment", "Mark the bill as paid"];
+    case "add_bill":
+      return ["Add it under Bills, with its coming months ready to fill in", "Remind whoever pays it before it is due — nothing is paid"];
+    case "record_bill_payment":
+      return ["Keep this month's payment in the bill's history", "Move the bill on to its next due date — no money moves"];
+    case "set_bill_amount":
+      return ["Note what that month comes to under Bills"];
     case "order_items":
       return ["Place the order with the merchant", "Update what the household expects to arrive"];
     case "record_health_appointment":
@@ -399,4 +424,11 @@ function describeTarget(intent: HouseholdIntent): string {
 export function needsRecording(intent: HouseholdIntent, proposal: Proposal): boolean {
   if (proposal.kind === "clarify" || proposal.kind === "answer") return false;
   return isConsequential(intent.action) || proposal.kind !== "refused";
+}
+
+/** 1 → "1st", 22 → "22nd". */
+function ordinal(day: number): string {
+  const tens = day % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : (["th", "st", "nd", "rd"][day % 10] ?? "th");
+  return `${day}${suffix}`;
 }

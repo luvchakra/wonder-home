@@ -57,6 +57,8 @@ const ACT: ReadonlySet<HouseholdIntent["action"]> = new Set([
   "set_stock",
   "use_stock",
   "mark_bought",
+  "record_bill_payment",
+  "set_bill_amount",
   "log_vital",
   "log_health_issue",
   "resolve_health_issue",
@@ -64,7 +66,7 @@ const ACT: ReadonlySet<HouseholdIntent["action"]> = new Set([
 ]);
 
 /** Changes that touch someone else's commitments: asked once, in the conversation. */
-const CONFIRM: ReadonlySet<HouseholdIntent["action"]> = new Set(["adjust_schedule", "assign_responsibility", "record_health_appointment"]);
+const CONFIRM: ReadonlySet<HouseholdIntent["action"]> = new Set(["adjust_schedule", "assign_responsibility", "record_health_appointment", "add_bill"]);
 
 /** Never by a yes alone. */
 const STEP_UP: ReadonlySet<HouseholdIntent["action"]> = new Set(["make_payment", "order_items"]);
@@ -101,6 +103,8 @@ export function decideForRequest(input: {
   action: ProposedAction;
   /** "Ask before acting on what I say" (Settings → AI Assistant). */
   confirmRequested: boolean;
+  /** Why this request is asked first, when it is not someone else's plans (`confirmReasonFor`). */
+  confirmReason?: string | null;
 }): AutonomyDecision {
   const tier = input.tier === "act" && input.confirmRequested ? "confirm" : input.tier;
   switch (tier) {
@@ -111,12 +115,17 @@ export function decideForRequest(input: {
       return decision.outcome === "execute" ? { outcome: "execute", reason: "You asked for it." } : decision;
     }
     case "confirm":
-      return { outcome: "needs_approval", reason: input.tier === "act" ? "You asked me to check before acting on what you say." : "It changes plans for someone else, so I'm checking first." };
+      return { outcome: "needs_approval", reason: input.tier === "act" ? "You asked me to check before acting on what you say." : (input.confirmReason ?? "It changes plans for someone else, so I'm checking first.") };
     case "step_up":
       return decideAutonomy(input.mode, input.action);
     default:
       return decideAutonomy(input.mode, input.action);
   }
+}
+
+/** Why a confirm-tier action is asked first, where it is not about someone else's plans. */
+export function confirmReasonFor(action: HouseholdIntent["action"]): string | null {
+  return action === "add_bill" ? "A new bill goes on the household's money records, so I'm checking the details first." : null;
 }
 
 /** "Undo", "take that back", "scratch that" — the last thing HomeTalk did for this person. */

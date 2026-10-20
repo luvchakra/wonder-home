@@ -1,5 +1,7 @@
 import type { Translate } from "@wonderhome/core/i18n/translate";
 
+import { BILL_TYPES } from "@wonderhome/core/finance/bill-catalog";
+
 import type { BillFormLabels } from "../_components/finance-forms";
 import { BILL_KINDS } from "./bill-kinds";
 
@@ -90,5 +92,18 @@ export function billFormLabels(t: Translate): BillFormLabels {
       placeholder: t("billForm.currencyPlaceholder"),
       chooseExisting: t("common.chooseExisting"),
     },
+    whatIsIt: t("billForm.whatIsIt"),
+    somethingElse: t("billForm.somethingElse"),
+    types: Object.fromEntries(BILL_TYPES.map((type) => [type.key, t(`bills.type.${type.key}`)])),
+    whoPays: t("billForm.whoPays"),
+    payeesNear: t("billForm.payeesNear", { place: "{place}" }),
+    payeesAnywhere: t("billForm.payeesAnywhere"),
+    earlierTitle: t("billForm.earlier.title"),
+    earlierHint: t("billForm.earlier.hint"),
+    earlierMonth: t("billForm.earlier.month"),
+    earlierAmount: t("billForm.earlier.amount"),
+    earlierPaidOn: t("billForm.earlier.paidOn"),
+    earlierAdd: t("billForm.earlier.add"),
+    earlierRemove: t("billForm.earlier.remove"),
   };
 }
