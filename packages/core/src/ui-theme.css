@@ -615,3 +615,93 @@
     transition: none;
   }
 }
+
+/*
+ * The child's WonderHome (story 08-017): the same app, brighter. Only a
+ * child's shell carries data-audience="child", so nothing an adult sees
+ * changes. Still warm (rule 1): the cream page under soft washes of the
+ * brand's pink, amber, emerald and indigo, rounder cards, and a few
+ * game pieces — the star counter, the level bar, the "I did it" burst.
+ * Colour is decoration here too; every number also says what it is.
+ */
+[data-audience="child"] {
+  --wh-radius: 1.5rem;
+  --wh-radius-lg: 2rem;
+  background:
+    radial-gradient(42rem 26rem at -10% -5%, oklch(0.9 0.09 350 / 0.45), transparent 65%),
+    radial-gradient(36rem 24rem at 110% 8%, oklch(0.93 0.1 85 / 0.5), transparent 65%),
+    radial-gradient(40rem 30rem at 15% 70%, oklch(0.92 0.08 165 / 0.35), transparent 65%),
+    radial-gradient(40rem 30rem at 95% 95%, oklch(0.9 0.08 285 / 0.4), transparent 65%),
+    var(--wh-background);
+  background-attachment: fixed;
+}
+
+.wh-kid-stars {
+  background: linear-gradient(135deg, oklch(0.95 0.09 90), oklch(0.92 0.1 60));
+  color: oklch(0.42 0.12 60);
+  box-shadow: 0 0 0 1px oklch(0.85 0.1 75 / 0.6) inset;
+}
+
+/* The game card at the top of a child's Home: level, stars and streak. */
+.wh-kid-hero {
+  background: linear-gradient(135deg, oklch(0.6 0.2 285), oklch(0.65 0.2 340) 55%, oklch(0.76 0.16 60));
+  color: oklch(0.99 0 0);
+}
+
+.wh-kid-bar {
+  background: oklch(1 0 0 / 0.3);
+}
+.wh-kid-bar > span {
+  background: linear-gradient(90deg, oklch(0.95 0.12 95), oklch(0.99 0.03 95));
+}
+
+/* Each tab of the child's Home and each mission card gets a bright edge of its own. */
+.wh-kid-card {
+  border: 2px solid color-mix(in oklch, var(--wh-kid-accent, var(--wh-primary)) 35%, transparent);
+  background: linear-gradient(180deg, color-mix(in oklch, var(--wh-kid-accent, var(--wh-primary)) 8%, var(--wh-surface)), var(--wh-surface) 70%);
+}
+
+@keyframes wh-kid-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18) rotate(-4deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes wh-kid-burst {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-2.25rem) scale(1.2);
+  }
+}
+.wh-kid-pop {
+  animation: wh-kid-pop 420ms ease-out;
+}
+.wh-kid-burst {
+  animation: wh-kid-burst 900ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wh-kid-pop,
+  .wh-kid-burst {
+    animation: none;
+  }
+  .wh-kid-burst {
+    opacity: 0;
+  }
+}
+
+:root[data-theme="dark"] [data-audience="child"] {
+  background:
+    radial-gradient(42rem 26rem at -10% -5%, oklch(0.35 0.08 350 / 0.4), transparent 65%),
+    radial-gradient(40rem 30rem at 95% 95%, oklch(0.35 0.08 285 / 0.4), transparent 65%),
+    var(--wh-background);
+}

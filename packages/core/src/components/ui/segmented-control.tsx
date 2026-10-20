@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "../../lib/cn";
+import { SegmentInView } from "./segment-in-view";
 
 /**
  * The pill-shaped tab row the mockups put under a page title: "My day · Family
@@ -25,7 +26,8 @@ export function SegmentedControl({
   className?: string;
 }) {
   return (
-    <nav aria-label={label} className={cn("-mx-4 overflow-x-auto px-4 [scrollbar-width:none]", className)}>
+    <nav aria-label={label} className={cn("relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none]", className)}>
+      <SegmentInView />
       <ul className="inline-flex min-w-full gap-1 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] p-1">
         {segments.map((segment) => {
           const isActive = segment.key === active;

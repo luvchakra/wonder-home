@@ -66,7 +66,7 @@ export function AppShell({
   const activeItem = PRIMARY_NAVIGATION.find((item) => item.key === active);
 
   return (
-    <div className={cn("min-h-dvh text-[var(--wh-foreground)]", className)}>
+    <div data-audience={viewer?.audience} className={cn("min-h-dvh text-[var(--wh-foreground)]", className)}>
       <a
         href="#wh-main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-[var(--wh-radius-sm)] focus:bg-[var(--wh-surface)] focus:px-4 focus:py-2 focus:shadow-[var(--wh-shadow-card)]"

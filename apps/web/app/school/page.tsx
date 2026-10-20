@@ -12,6 +12,7 @@ import { upcomingSchoolItems, type SchoolItem } from "@wonderhome/core/school/it
 import { listActivities, listTeachers } from "@wonderhome/core/school/activities";
 import { listExamTypes, listExams, listTimetable } from "@wonderhome/core/school/exams";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
+import { listCheckIns, listGoals } from "@wonderhome/core/school/goal-repository";
 import { schoolAgenda } from "@wonderhome/core/school/repository";
 import { mapsLink } from "@wonderhome/core/places/provider";
 import { schoolDateValue, schoolDayZone } from "@wonderhome/core/school/times";
@@ -46,6 +47,7 @@ import { ChildClasses } from "../_components/child-classes";
 import { ChildSchoolWeek } from "../_components/child-school-week";
 import { StandDownButton, TeacherSheet } from "./child-details";
 import { ChildSchoolActions, type ChildSchoolLabels } from "./child-school";
+import { GoalsTab } from "./goals-tab";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Kids & School" };
@@ -67,10 +69,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
 
-  if (view.tone === "child") redirect("/?tab=homework");
+  if (view.tone === "child") redirect("/?tab=school");
 
   const entitlement = await may(supabase, householdId, "school.connector");
-  const active = tab === "homework" || tab === "calendar" ? tab : "overview";
+  const active = tab === "homework" || tab === "calendar" || tab === "goals" ? tab : "overview";
   const shell = { active: "more" as const, viewer, secondary, pathname: "/school", back: { href: "/more", label: t("common.back") }, title: t("nav.item.school") };
 
   if (!entitlement.allowed) {
@@ -81,7 +83,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes] = await Promise.all([
+  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes, goals, checkIns] = await Promise.all([
     // The agenda reads the household's school work and messages once; the
     // lists below are those same rows, not a second read of them.
     schoolAgenda(supabase, householdId).catch(() => null),
@@ -96,6 +98,9 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     listTimetable(supabase, householdId).catch(() => []),
     listExams(supabase, householdId).catch(() => []),
     listExamTypes(supabase, householdId).catch(() => ({ builtIn: ["Unit test", "Mid-term", "Finals"], own: [] })),
+    // Each child's goals and the days kept (08-017), only for the tab that shows them.
+    active === "goals" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    active === "goals" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
   ]);
 
   const children = members.filter((member) => member.memberType === "child");
@@ -303,6 +308,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             { key: "overview", label: t("school.tab.overview"), href: `/school${selected ? `?child=${selected}` : ""}`, count: needsYou },
             { key: "homework", label: t("school.tab.homework"), href: `/school?tab=homework${selected ? `&child=${selected}` : ""}`, count: live.length },
             { key: "calendar", label: t("school.tab.calendar"), href: `/school?tab=calendar${selected ? `&child=${selected}` : ""}` },
+            { key: "goals", label: t("school.tab.goals"), href: `/school?tab=goals${selected ? `&child=${selected}` : ""}` },
           ]}
         />
 
@@ -464,6 +470,18 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
               </ul>
             </Card>
           )
+        ) : null}
+
+        {active === "goals" ? (
+          <GoalsTab
+            householdId={householdId}
+            kids={shownChildren.map((kid) => ({ id: kid.id, name: kid.displayName }))}
+            goals={goals}
+            checkIns={checkIns}
+            timezone={timezone}
+            canChange={canChangeSchool}
+            t={t}
+          />
         ) : null}
 
         {active === "calendar" ? (

@@ -14,6 +14,7 @@ import { translatorFor, type Translate } from "@wonderhome/core/i18n/translate";
 import { PRIMARY_NAVIGATION } from "@wonderhome/core/navigation/primary-navigation";
 import { secondaryNavigationFor, SECONDARY_GROUP_ORDER, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
 import { installBannerLabels } from "@wonderhome/core/pwa/install-labels";
+import { childStarCount } from "@wonderhome/core/school/goal-repository";
 import type { ShellLabels, ShellViewer } from "@wonderhome/core/shell/mobile-header";
 
 import { reconcileRemindersSoon } from "./reminders";
@@ -90,11 +91,14 @@ export async function buildSession(
   // worth failing the page for: a slow or failed count leaves the dot off, a
   // missing photo leaves the initials.
   const preferences = preferencesOf(membership.locale, membership.household.timezone);
-  const [unread, , t, avatarUrl] = await Promise.all([
+  const isChild = membership.memberType === "child";
+  const [unread, , t, avatarUrl, stars] = await Promise.all([
     countUnread(supabase, membership.memberId).catch(() => 0),
     markFirstSeen(supabase, membership),
     translatorFor(preferences.language),
     ownAvatarUrl(supabase, membership.avatarPath ?? null),
+    // A child's stars, counted from what they did (story 08-017); only ever read for a child.
+    isChild ? childStarCount(supabase, membership.household.id, membership.memberId).catch(() => 0) : Promise.resolve(0),
   ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
@@ -129,6 +133,7 @@ export async function buildSession(
       language: preferences.language,
       dir: preferences.dir,
       labels,
+      ...(isChild ? { audience: "child" as const, stars: { count: stars, label: t("kids.stars.header", { count: stars }) } } : {}),
     },
     secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }).map((item) => ({
       ...item,

@@ -3,6 +3,7 @@ import {
   ChevronRight,
   PackageCheck,
   ShoppingBasket,
+  ShoppingCart,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
@@ -23,6 +24,7 @@ import {
 } from "@wonderhome/core/commerce/use-soon";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import { ButtonLink } from "@wonderhome/core/ui/button";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -169,6 +171,13 @@ export default async function GroceriesPage({
               {t("grocery.lede")}
             </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+          {toBuyCount > 0 ? (
+            <ButtonLink variant="secondary" href="/groceries/cart">
+              <ShoppingCart aria-hidden className="size-4" />
+              {t("grocery.cart.open")} ({toBuyCount})
+            </ButtonLink>
+          ) : null}
           <AddItemButton
             householdId={householdId}
             items={(items ?? []).map((item) => ({
@@ -185,6 +194,7 @@ export default async function GroceriesPage({
             categories={categories}
             words={words}
           />
+          </div>
         </header>
 
         <SegmentedControl

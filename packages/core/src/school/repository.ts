@@ -136,6 +136,25 @@ async function completeSchoolItemImpl(
   }
 }
 
+/**
+ * Takes back a "done" a person marked by mistake (rule 12): the work is live
+ * again, with no completion on record. Never touches what a portal reported.
+ */
+async function reopenSchoolItemImpl(supabase: SupabaseClient, householdId: string, itemId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("school_items")
+    .update({ status: "pending", completed_at: null, completion_source: null })
+    .eq("id", itemId)
+    .eq("household_id", householdId)
+    .eq("completion_source", "member_confirmed")
+    .select("id");
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("This is not yours to change.");
+    throw new Error(`reopenSchoolItem failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.notFound("That can't be taken back here.");
+}
+
 export type UpdateSchoolItemInput = {
   childMemberId?: string;
   kind?: SchoolItemKind;
@@ -429,6 +448,7 @@ function schoolItemColumns(item: TranslatedSchoolItem) {
 // the next HomeTalk answer sees the change (Wave 1 §14).
 export const createSchoolItem = invalidatesContext(createSchoolItemImpl, (_supabase, input) => input.householdId);
 export const completeSchoolItem = invalidatesContext(completeSchoolItemImpl, () => null);
+export const reopenSchoolItem = invalidatesContext(reopenSchoolItemImpl, (_supabase, householdId) => householdId);
 export const updateSchoolItem = invalidatesContext(updateSchoolItemImpl, (_supabase, householdId) => householdId);
 export const cancelSchoolItem = invalidatesContext(cancelSchoolItemImpl, (_supabase, householdId) => householdId);
 export const restoreSchoolItem = invalidatesContext(restoreSchoolItemImpl, (_supabase, householdId) => householdId);
