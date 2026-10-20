@@ -243,4 +243,20 @@ export const healthHi: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "माप दर्ज करें",
   "healthForm.vital.description": "एक माप — हमेशा वही जो आपने असल में दर्ज किया।",
   "healthForm.vital.editTitle": "माप बदलें",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "जोड़ें",
+  "healthForm.menu.title": "सेहत और फ़िटनेस में जोड़ें",
+  "healthForm.menu.description": "चुनें कि क्या जोड़ना है। हर चीज़ उसी गोपनीयता के साथ रहती है जो आप चुनें।",
+  "healthForm.menu.group.health": "सेहत",
+  "healthForm.menu.group.visits": "डॉक्टर से मिलना",
+  "healthForm.menu.group.fitness": "फ़िटनेस",
+  "healthForm.menu.meta.issue": "कुछ जो आपने देखा, जैसे गले में ख़राश",
+  "healthForm.menu.meta.vital": "एक माप, जैसे वज़न या ब्लड प्रेशर",
+  "healthForm.menu.meta.routine": "तय समय पर लिया जाने वाला माप",
+  "healthForm.menu.meta.record": "लैब रिपोर्ट, पर्चा या ऐसा कोई दस्तावेज़",
+  "healthForm.menu.meta.appointment": "तय दिन और समय पर मिलना",
+  "healthForm.menu.meta.checkup": "बार-बार होने वाली जाँच, जैसे दाँतों की सफ़ाई — समय आने पर बुक करें",
+  "healthForm.menu.meta.session": "आज आपने असल में क्या किया",
+  "healthForm.menu.meta.goal": "आप कितनी बार कुछ जारी रखना चाहेंगे",
 };

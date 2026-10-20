@@ -243,4 +243,20 @@ export const healthDe: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "Messwert erfassen",
   "healthForm.vital.description": "Ein einzelner Messwert — immer das, was du tatsächlich gemessen hast.",
   "healthForm.vital.editTitle": "Messwert bearbeiten",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "Hinzufügen",
+  "healthForm.menu.title": "Zu Gesundheit & Fitness hinzufügen",
+  "healthForm.menu.description": "Wähle, was du hinzufügen möchtest. Alles behält die Privatsphäre, die du wählst.",
+  "healthForm.menu.group.health": "Gesundheit",
+  "healthForm.menu.group.visits": "Arztbesuche",
+  "healthForm.menu.group.fitness": "Fitness",
+  "healthForm.menu.meta.issue": "Etwas, das dir aufgefallen ist, etwa Halsschmerzen",
+  "healthForm.menu.meta.vital": "Ein Messwert, etwa Gewicht oder Blutdruck",
+  "healthForm.menu.meta.routine": "Ein Messwert, der regelmäßig genommen wird",
+  "healthForm.menu.meta.record": "Ein Laborbefund, ein Rezept oder ein ähnliches Dokument",
+  "healthForm.menu.meta.appointment": "Ein Besuch an einem festen Tag und zu einer festen Zeit",
+  "healthForm.menu.meta.checkup": "Eine wiederkehrende Untersuchung, etwa Zahnreinigung – buchen, wenn sie fällig ist",
+  "healthForm.menu.meta.session": "Was du heute wirklich gemacht hast",
+  "healthForm.menu.meta.goal": "Wie oft du etwas beibehalten möchtest",
 };

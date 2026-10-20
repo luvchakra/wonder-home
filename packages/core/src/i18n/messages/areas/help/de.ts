@@ -264,7 +264,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.health.title": "Gesundheit und Fitness",
   "help.guide.health.summary": "Unterlagen, Vitalwerte und Routinen, privat für jede Person, solange sie sie nicht teilt.",
   "help.guide.health.body.1":
-    "„Gesundheit & Fitness“ speichert für jeden Erwachsenen Beschwerden, Vorsorgeuntersuchungen, Termine, Vitalwerte (Gewicht, Blutdruck, Schritte und mehr, oder deine eigene Messgröße), Gesundheitsunterlagen wie Laborwerte und Rezepte, Fitnessziele und Routinen. Es zeigt, was Aufmerksamkeit braucht und was ansteht – nie einen Gesundheitswert.",
+    "„Gesundheit & Fitness“ speichert für jeden Erwachsenen Beschwerden, Vorsorgeuntersuchungen, Termine, Vitalwerte (Gewicht, Blutdruck, Schritte und mehr, oder deine eigene Messgröße), Gesundheitsunterlagen wie Laborwerte und Rezepte, Fitnessziele und Routinen. Es zeigt, was Aufmerksamkeit braucht und was ansteht – nie einen Gesundheitswert. Alles, was du hinzufügen kannst, beginnt mit der einen Schaltfläche Hinzufügen oben, gruppiert in Gesundheit, Arztbesuche und Fitness.",
   "help.guide.health.body.2":
     "Gesundheitsinformationen sind standardmäßig privat für ihre Person. Sie kann sie mit Menschen ihrer Wahl teilen oder nur den praktischen Teil mit dem ganzen Haushalt („17–18 Uhr nicht verfügbar“), und das jederzeit zurücknehmen. Im selben Haushalt zu sein gibt allein niemandem Zugriff. Erziehungsberechtigte sehen die ihres Kindes immer.",
   "help.guide.health.body.3":

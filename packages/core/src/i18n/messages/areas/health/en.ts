@@ -255,4 +255,20 @@ export const healthEn = {
   "healthForm.vital.add": "Record a reading",
   "healthForm.vital.description": "A single measurement — always what you actually recorded.",
   "healthForm.vital.editTitle": "Edit reading",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "Add",
+  "healthForm.menu.title": "Add to Health & Fitness",
+  "healthForm.menu.description": "Pick what you'd like to add. Each keeps the privacy you choose for it.",
+  "healthForm.menu.group.health": "Health",
+  "healthForm.menu.group.visits": "Doctor visits",
+  "healthForm.menu.group.fitness": "Fitness",
+  "healthForm.menu.meta.issue": "Something you've noticed, like a sore throat",
+  "healthForm.menu.meta.vital": "One measurement, like weight or blood pressure",
+  "healthForm.menu.meta.routine": "A measurement to take on a schedule",
+  "healthForm.menu.meta.record": "A lab result, prescription or similar document",
+  "healthForm.menu.meta.appointment": "A visit on a set day and time",
+  "healthForm.menu.meta.checkup": "A check that comes round, like a dental cleaning — book it when it's due",
+  "healthForm.menu.meta.session": "What you actually did today",
+  "healthForm.menu.meta.goal": "How often you'd like to keep something up",
 } as const;

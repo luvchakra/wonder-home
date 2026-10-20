@@ -264,7 +264,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.health.title": "Salud y actividad",
   "help.guide.health.summary": "Historiales, constantes y rutinas, privados para cada persona salvo que los comparta.",
   "help.guide.health.body.1":
-    "Salud y actividad guarda los problemas, revisiones, citas, constantes (peso, tensión arterial, pasos y más, o tu propia medida), historiales de salud como análisis y recetas, objetivos de actividad y rutinas de cada adulto. Muestra lo que necesita atención y lo que viene, nunca una puntuación de salud.",
+    "Salud y actividad guarda los problemas, revisiones, citas, constantes (peso, tensión arterial, pasos y más, o tu propia medida), historiales de salud como análisis y recetas, objetivos de actividad y rutinas de cada adulto. Muestra lo que necesita atención y lo que viene, nunca una puntuación de salud. Todo lo que puedes añadir empieza en el único botón Añadir de arriba, agrupado en Salud, Visitas médicas y Forma física.",
   "help.guide.health.body.2":
     "La información de salud es privada para su persona por defecto. Puede compartirla con quien elija, o compartir solo la parte práctica con todo el hogar (“no disponible de 5 a 6 de la tarde”), y retirarla cuando quiera. Estar en el mismo hogar no da acceso a nadie por sí solo. Un tutor siempre puede ver la de su hijo.",
   "help.guide.health.body.3":

@@ -33,15 +33,21 @@ export function AddRoutineButton({
   members,
   defaultPrivacyScope,
   labels,
+  defaultOpen = false,
+  hideTrigger = false,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
+  /** Opens as it mounts — picked from the page's Add menu rather than its own pill. */
+  defaultOpen?: boolean;
+  /** Leaves its own pill out, when the Add menu is how it is reached. */
+  hideTrigger?: boolean;
 }) {
   const words = labels.routine;
   const common = labels.common;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [vitalType, setVitalType] = useState<VitalType>("blood_pressure");
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createRoutineAction, {});
@@ -58,9 +64,11 @@ export function AddRoutineButton({
 
   return (
     <>
-      <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> {words.add}
-      </Pill>
+      {hideTrigger ? null : (
+        <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
+          <Plus aria-hidden className="size-3.5" /> {words.add}
+        </Pill>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen} title={words.title} description={common.householdCommitment}>
         <form

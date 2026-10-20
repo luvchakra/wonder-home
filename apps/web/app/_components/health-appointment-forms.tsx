@@ -41,6 +41,8 @@ export function BookAppointmentButton({
   defaultAppointmentType = "doctor",
   trigger,
   labels,
+  defaultOpen = false,
+  hideTrigger = false,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
@@ -52,10 +54,14 @@ export function BookAppointmentButton({
   /** A custom trigger, for a checkup row's own contextual "Book" action instead of the generic header pill. */
   trigger?: ReactNode;
   labels: HealthFormLabels;
+  /** Opens as it mounts — picked from the page's Add menu rather than its own pill. */
+  defaultOpen?: boolean;
+  /** Leaves its own pill out, when the Add menu is how it is reached. */
+  hideTrigger?: boolean;
 }) {
   const words = labels.appointment;
   const common = labels.common;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [step, setStep] = useState<Step>(0);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createAppointmentAction, {});
   const [memberId, setMemberId] = useState(defaultMemberId ?? members[0]?.id ?? "");
@@ -73,7 +79,7 @@ export function BookAppointmentButton({
 
   return (
     <>
-      {trigger ? (
+      {hideTrigger ? null : trigger ? (
         <span onClick={() => setOpen(true)}>{trigger}</span>
       ) : (
         <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
