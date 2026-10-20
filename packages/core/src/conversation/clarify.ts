@@ -240,7 +240,7 @@ function answerGroundingQuestion(
   // A choice between named candidates.
   const choice = chooseCandidate(answer, readFocus(candidates));
   if (!choice) return null;
-  if (pending.action === "make_payment") {
+  if (pending.action === "make_payment" || pending.action === "record_bill_payment" || pending.action === "set_bill_amount") {
     return { ...base, target: { kind: "bill", reference: choice.label }, parameters: { ...rest, billLabel: choice.label, ...(choice.entityId ? { billId: choice.entityId } : {}) } };
   }
   // The chosen record, by the id the question offered — which grounding

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**316 of 335 stories done — 94.3%**
+**317 of 337 stories done — 94.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 316 |
+| Done | 317 |
 | In Progress | 4 |
 | Blocked | 1 |
-| Not Started | 10 |
+| Not Started | 11 |
 | Deferred | 4 |
 
 ## By module
@@ -36,7 +36,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 08 Kids & School Intelligence | `█████████░` | 16 | 17 | 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 10 | 10 | — |
-| 11 Bills, Fees & Finance | `██████████` | 9 | 9 | — |
+| 11 Bills, Fees & Finance | `█████████░` | 10 | 11 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `██████████` | 8 | 8 | — |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
@@ -61,6 +61,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
+| `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
@@ -292,7 +293,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 11 — Bills, Fees & Finance
 
-9 of 9 done `██████████`
+10 of 11 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -305,6 +306,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-007` Budget planning | P1 | Done | a budget describes intent; it never stops the rent being paid. Since 2026-09-25 an Admin sets, changes and removes (retires) a budget per kind of bill on Bills & Finance; what it has used is the period's payments in its own currency (`finance/budgets.ts`) — before that the screen read a column that does not exist and always showed the empty state |
 | `11-008` Autonomous recurring payments | P2 | Done | policy and idempotency in place; no payment provider is live |
 | `11-009` Bills & Finance's three counts side by side | P1 | Done | The owner, 2026-10-20: Need you, Upcoming and Settled sit three across as `ExpandableMetricRow`, the same as Kids & School (08-014), with the open tile's bills in one full-width panel below. CLAUDE.md rule 19 names it as the second written exception. Checked at 360px and 1280px, no sideways scroll |
+| `11-010` Bills picked not typed, payees by home location, earlier bills, months made ahead, and HomeTalk/HomeBrain in control | P0 | Done | The owner, 2026-10-20. **Picked:** Add a bill starts from 22 typical bills (`finance/bill-catalog.ts`: electricity, water, piped gas, LPG, rent, maintenance, mobile, broadband, DTH, streaming, newspaper, gym, school fees, tuition, home/car/personal loan EMI, credit card, life/health/vehicle insurance, property tax) or Something else; picking fills kind and how often, and `obligations.bill_type` keeps it. Who in the family pays it is a picker; recurrence is editable. **Payees by location:** `finance/payees.ts` reads the state and city from the address saved under Manage Household (by name, never coordinates) and offers that city's and state's companies first (discoms, water boards, city gas, municipal corporations), then national ones (telecom, broadband, DTH, streaming, banks, cards, insurers); Add a new payee stays. **Earlier bills:** rows on the add form, each a history row. **Made ahead:** `finance/periods.ts` works out this month and the next three (one for quarterly/yearly) from the due date; each says paid, the amount given, or Usually and the last paid, never a guess; the pencil fills one in (`fillBillPeriodAction`): an amount (`obligation_periods`, migration `20261020170000`, live) or a paid day (current month moves the bill on; a later month is paid ahead and skipped, `nextOpenDueDate`); the monthly spend stops at this month. **HomeTalk:** `add_bill` (asked once), `record_bill_payment` and `set_bill_amount` (done at once, undoable, the consumed advance amount restored) in `conversation/bill-talk.ts`, grounded to the household's own bills (`matchBill`; two that fit are one question), financial reply class, capability `bill_records` (in-app voice, never Alexa), golden HT-129–131 and the §21 table. **HomeBrain:** paid months and coming months are facts (`bill_payment`, `bill_period`). No money moves; paying stays `make_payment`. Help ¶7–9 in all eight languages. |
+| `11-011` Payees beyond the catalogue's cities, and outside India | P2 | Not Started | Left open by 11-010: the payee list covers each state's electricity company and the larger cities' water, gas and property tax; smaller cities and other countries show the national list and Add a new payee. Grow the list by city, and add per-country lists once a household outside India asks. |
 
 ### 12 — Family Time & Social Activities
 

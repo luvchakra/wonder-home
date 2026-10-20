@@ -5,11 +5,14 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
+import { billType } from "@wonderhome/core/finance/bill-catalog";
 import {
   cancelObligation,
   createObligation,
+  payBillPeriod,
   recordAmount,
   removeTransaction,
+  setBillPeriodAmount,
   updateObligation,
 } from "@wonderhome/core/finance/repository";
 import { retireBudget, saveBudget } from "@wonderhome/core/finance/budget-repository";
@@ -46,7 +49,33 @@ const obligationFields = z.object({
   recurrence: z
     .enum(["monthly", "quarterly", "yearly", "one_off", ""])
     .optional(),
+  /** Which typical bill it is (`bill-catalog.ts`); empty for "something else". */
+  billType: z.string().regex(/^[a-z_]{2,40}$/).refine((key) => billType(key) !== null).optional().or(z.literal("")),
+  responsibleMemberId: z.union([z.uuid(), z.literal("")]).optional(),
 });
+
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/**
+ * "Earlier bills" on the add form (11-010): each a month, what it came to and
+ * when it was paid, kept in the bill's history from the start. A row with no
+ * month or no amount is left out; a bad one says which.
+ */
+function earlierBillsOf(formData: FormData): { rows: { periodLabel: string; amount: number; paidOn: string | null }[]; error?: string } {
+  const rows: { periodLabel: string; amount: number; paidOn: string | null }[] = [];
+  for (let index = 0; index < 24; index += 1) {
+    const month = String(formData.get(`earlier.${index}.month`) ?? "").trim();
+    const amount = String(formData.get(`earlier.${index}.amount`) ?? "").trim();
+    const paidOn = String(formData.get(`earlier.${index}.paidOn`) ?? "").trim();
+    if (!month && !amount) continue;
+    if (!MONTH.test(month)) return { rows, error: "Pick the month each earlier bill was for." };
+    const value = Number(amount.replace(/,/g, ""));
+    if (!amount || !Number.isFinite(value) || value < 0) return { rows, error: "Say what each earlier bill came to." };
+    if (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) return { rows, error: "Use a date for when it was paid." };
+    rows.push({ periodLabel: month, amount: value, paidOn: paidOn || null });
+  }
+  return { rows };
+}
 
 function requiresCurrencyWithAmount() {
   return { error: "Add a currency along with the amount.", path: ["currency"] };
@@ -74,6 +103,8 @@ export async function createObligationAction(
     currency: formData.get("currency") || undefined,
     dueOn: formData.get("dueOn") || undefined,
     recurrence: formData.get("recurrence") || undefined,
+    billType: formData.get("billType") || undefined,
+    responsibleMemberId: formData.get("responsibleMemberId") || undefined,
   });
   if (!parsed.success) {
     return {
@@ -81,12 +112,15 @@ export async function createObligationAction(
         parsed.error.issues[0]?.message ?? "Please check the details above.",
     };
   }
+  const earlier = earlierBillsOf(formData);
+  if (earlier.error) return { error: earlier.error };
+  if (earlier.rows.length > 0 && !parsed.data.currency) return { error: "Add a currency for the earlier bills." };
 
   try {
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
-    await createObligation(supabase, {
+    const created = await createObligation(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
       kind: parsed.data.kind,
@@ -95,10 +129,30 @@ export async function createObligationAction(
       currency: parsed.data.currency || null,
       dueOn: parsed.data.dueOn || null,
       recurrence: parsed.data.recurrence || null,
+      billType: parsed.data.billType || null,
+      responsibleMemberId: parsed.data.responsibleMemberId || null,
     });
+    // The earlier bills, one history row each, in month order.
+    for (const row of [...earlier.rows].sort((a, b) => a.periodLabel.localeCompare(b.periodLabel))) {
+      await recordAmount(supabase, {
+        householdId: parsed.data.householdId,
+        obligationId: created.id,
+        periodLabel: row.periodLabel,
+        amountMinor: Math.round(row.amount * 100),
+        currency: parsed.data.currency!,
+        paidOn: row.paidOn,
+        payee: parsed.data.payee || null,
+        ownerMemberId: parsed.data.responsibleMemberId || null,
+      });
+    }
 
     revalidatePath("/bills");
-    return { notice: "Added. It’ll appear on the bills list from here." };
+    return {
+      notice:
+        earlier.rows.length > 0
+          ? `Added, with ${earlier.rows.length} earlier ${earlier.rows.length === 1 ? "bill" : "bills"}. The coming months show under it, ready to fill in.`
+          : "Added. The coming months show under it, ready to fill in.",
+    };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "finance").body.error.message };
   }
@@ -126,6 +180,8 @@ export async function updateObligationAction(
     currency: formData.get("currency") || undefined,
     dueOn: formData.get("dueOn") || undefined,
     recurrence: formData.get("recurrence") || undefined,
+    billType: formData.get("billType") || undefined,
+    responsibleMemberId: formData.get("responsibleMemberId") || undefined,
   });
   if (!parsed.success) {
     return {
@@ -148,6 +204,8 @@ export async function updateObligationAction(
       currency: parsed.data.currency || null,
       dueOn: parsed.data.dueOn || null,
       recurrence: parsed.data.recurrence || null,
+      billType: parsed.data.billType || null,
+      responsibleMemberId: parsed.data.responsibleMemberId || null,
     });
 
     revalidatePath("/bills");
@@ -335,6 +393,62 @@ export async function retireBudgetAction(_previous: ActionState, formData: FormD
     await retireBudget(supabase, parsed.data);
     revalidatePath("/bills");
     return { notice: "Removed." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+const periodSchema = z.object({
+  householdId: z.uuid(),
+  obligationId: z.uuid(),
+  periodLabel: z.string().regex(MONTH),
+  amount: z.union([z.coerce.number().min(0), z.literal("")]).optional(),
+  currency: z.union([z.string().regex(/^[A-Z]{3}$/), z.literal("")]).optional(),
+  paidOn: z.union([isoDate, z.literal("")]).optional(),
+});
+
+/**
+ * Filling in one of a bill's periods (11-010): with a paid date it is paid
+ * (the current one moves the bill on; a coming one is paid ahead); without,
+ * the amount is what that period comes to. An empty amount clears it.
+ */
+export async function fillBillPeriodAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = periodSchema.safeParse({
+    householdId: formData.get("householdId"),
+    obligationId: formData.get("obligationId"),
+    periodLabel: formData.get("periodLabel"),
+    amount: formData.get("amount") ?? undefined,
+    currency: formData.get("currency") || undefined,
+    paidOn: formData.get("paidOn") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  const amountMinor = toMinorUnits(parsed.data.amount);
+  const currency = parsed.data.currency || null;
+  if (amountMinor !== null && !currency) return { error: "Add a currency along with the amount." };
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    if (parsed.data.paidOn) {
+      const { current } = await payBillPeriod(supabase, {
+        householdId: parsed.data.householdId,
+        obligationId: parsed.data.obligationId,
+        periodLabel: parsed.data.periodLabel,
+        paidOn: parsed.data.paidOn,
+        amountMinor,
+        currency,
+      });
+      revalidatePath("/bills");
+      return { notice: current ? "Paid. The bill has moved on to its next month." : "Paid ahead. The bill will skip that month." };
+    }
+    await setBillPeriodAmount(supabase, {
+      householdId: parsed.data.householdId,
+      obligationId: parsed.data.obligationId,
+      periodLabel: parsed.data.periodLabel,
+      amountMinor,
+      currency,
+    });
+    revalidatePath("/bills");
+    return { notice: amountMinor === null ? "Cleared." : "Saved. Mark it paid here when you pay it." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "finance").body.error.message };
   }

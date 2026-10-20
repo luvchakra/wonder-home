@@ -187,6 +187,19 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in" },
   },
   {
+    id: "bill_records",
+    label: "Adding a bill, noting what it comes to, and that it was paid",
+    category: "sensitive",
+    actions: ["add_bill", "record_bill_payment", "set_bill_amount"],
+    contentClass: "financial",
+    geminiTools: [],
+    // The same as typing it in HomeTalk's own screen, where Gemini Voice
+    // runs; a smart speaker in a shared room leaves money records to the app.
+    // Nothing here pays anything — paying stays app-only, below.
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
+    note: "Bills are added and marked paid in the WonderHome app, where you can see the amounts.",
+  },
+  {
     id: "home_problems",
     label: "Report a problem with an appliance",
     category: "low_risk",

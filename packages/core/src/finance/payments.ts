@@ -54,6 +54,10 @@ export type Obligation = {
   amountMinor: number | null;
   currency: string | null;
   dueOn: string | null;
+  /** How often it comes; absent where the reader did not ask (older callers, imports). */
+  recurrence?: "monthly" | "quarterly" | "yearly" | "one_off" | null;
+  /** Which typical bill it is (`bill-catalog.ts`), when the household picked one. */
+  billType?: string | null;
   responsibleMemberId: string | null;
   status: ObligationStatus;
   requiresReview: boolean;

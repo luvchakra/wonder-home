@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [Bills picked not typed, payees by location, months made ahead](2026-10-20-bills-made-ahead.md) |
 | 2026-10-20 | [WonderHome's recipe catalog, and recipes you can change](2026-10-20-recipe-catalog.md) |
 | 2026-10-20 | [A child's or helper's request goes to an adult for the final OK](2026-10-20-child-requests-adult-ok.md) |
 | 2026-10-20 | [The cart, and a child's goals in a brighter WonderHome](2026-10-20-cart-and-child-goals.md) |

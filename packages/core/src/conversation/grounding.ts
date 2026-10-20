@@ -1,3 +1,4 @@
+import { matchBill } from "./bill-talk";
 import { groceryCandidates } from "./grocery-actions";
 import { readItemAmount } from "./quantity";
 import type { GroceryItem } from "../commerce/inventory";
@@ -49,6 +50,8 @@ export type GroundingEnv = {
   now: Date;
   /** Read on demand — most turns never need it. */
   references: () => Promise<ReferenceState>;
+  /** The household's open bills (11-010), read only when a sentence is about one. */
+  bills?: () => Promise<readonly { id: string; name: string; billType?: string | null }[]>;
   /** The household's recipes, read only when a plan might be a meal. */
   recipes?: () => Promise<readonly { id: string; name: string }[]>;
   /** WonderHome's recipe catalog (25-022): a dish the household has no recipe for yet can still be planned from it. */
@@ -513,6 +516,40 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
         focus.push({ ...bill, source: "mention", at });
       }
     }
+  }
+
+  // --- A bill paid or priced (11-010): which of the household's bills ------
+  // "It" is the bill just talked about; a name is the one bill that has it
+  // or is that kind of bill. Two that fit are one question; none is said so.
+  if ((grounded.action === "record_bill_payment" || grounded.action === "set_bill_amount") && typeof grounded.parameters.billId !== "string") {
+    const said = (grounded.target.reference ?? "").trim();
+    const anaphor = !said || grounded.target.kind === "unspecified" ? "singular" : anaphorOf(said);
+    const open = (await env.bills?.()) ?? [];
+    let bill: { id: string | null; label: string } | null = null;
+    if (anaphor) {
+      const resolved = resolveAnaphor(anaphor, await env.references(), { kinds: ["bill"], now: env.now });
+      if (resolved.kind === "resolved" && resolved.entities.length === 1) bill = { id: resolved.entities[0]!.entityId, label: resolved.entities[0]!.label };
+      else if (resolved.kind === "ambiguous") return clarify(grounded, "referent", resolved.question.replace(/^Do you mean/, "Which bill do you mean —"), resolved.candidates);
+    } else {
+      const fits = matchBill(said, open);
+      if (fits.length === 1) bill = { id: fits[0]!.id, label: fits[0]!.name };
+      else if (fits.length > 1) {
+        const candidates = fits.slice(0, 4).map((entry) => ({ entityType: "bill", entityId: entry.id, label: entry.name, source: "clarification" as const, at }));
+        return clarify(grounded, "referent", `Which bill — ${joinOr(candidates.map((candidate) => candidate.label))}?`, candidates);
+      }
+    }
+    if (!bill?.id) {
+      const candidates = open.slice(0, 4).map((entry) => ({ entityType: "bill", entityId: entry.id, label: entry.name, source: "clarification" as const, at }));
+      const named = said && !anaphor ? `I don't have a bill called "${said}" yet` : "I can't tell which bill";
+      return clarify(
+        grounded,
+        "referent",
+        candidates.length > 0 ? `${named} — is it ${joinOr(candidates.map((candidate) => candidate.label))}? Or say "add the ${said || "new"} bill" to start tracking it.` : `${named}. Say "add the ${said || "electricity"} bill" to start tracking it.`,
+        candidates,
+      );
+    }
+    grounded = { ...grounded, target: { kind: "bill", reference: bill.label }, parameters: { ...grounded.parameters, billLabel: bill.label, billId: bill.id }, confidence: Math.max(grounded.confidence, 0.85) };
+    focus.push({ entityType: "bill", entityId: bill.id, label: bill.label, source: "mention", at });
   }
 
   return { kind: "grounded", intent: grounded, focus };

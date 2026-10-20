@@ -47,6 +47,11 @@ const env = (references: Partial<ReferenceState> = {}): GroundingEnv => ({
     { id: "r-pasta", name: "Tomato pasta" },
     { id: "r-dal", name: "Dal tadka" },
   ],
+  bills: async () => [
+    { id: "b-power", name: "Electricity", billType: "electricity" },
+    { id: "b-power-2", name: "BESCOM flat 402", billType: "electricity" },
+    { id: "b-rent", name: "Rent", billType: "rent" },
+  ],
   catalogRecipes: async () => [
     { slug: "poha", name: "Poha" },
     { slug: "dal-tadka", name: "Dal tadka" },
@@ -103,6 +108,11 @@ describe("§21 required examples — each is understood, and nothing is claimed 
     // Finance
     { say: "Which bills are due this week?", action: "ask_status", kind: "answer" },
     { say: "Prepare the electricity payment.", action: "make_payment", kind: "needs_approval" },
+    // Bills recorded (11-010): a payment noted is done at once; a new bill is asked first; neither pays anything.
+    { say: "I paid the rent, 25,000 yesterday.", action: "record_bill_payment", kind: "executed" },
+    { say: "Next month's rent is 26,000.", action: "set_bill_amount", kind: "executed" },
+    { say: "Add the water bill, due on the 10th every month.", action: "add_bill", kind: "needs_approval" },
+    { say: "I paid the light bill.", action: "record_bill_payment", kind: "clarify" },
     // Home
     { say: "The washing machine is making that noise again.", action: "raise_service_request", kind: "executed" },
     { say: "Raise a service request.", action: "raise_service_request", kind: "clarify" },
@@ -222,6 +232,16 @@ describe("§22 evaluation matrix", () => {
     const planned: FocusEntity[] = [{ entityType: "meal", entityId: "meal-1", label: "Tomato pasta", source: "action_result", at: minutesAgo(0) }];
     const needs = await kindOf("make sure we have everything", { autonomyFor: () => "execute", references: { conversation: planned } });
     expect(needs.intent?.parameters).toMatchObject({ items: ["pasta", "tomatoes", "basil"], forMeal: "Tomato pasta" });
+  });
+
+  it("bills (11-010): the bill paid is grounded to the household's own, and a child cannot record one", async () => {
+    const rent = await kindOf("I paid the rent, 25,000 yesterday");
+    expect(rent.intent?.parameters).toMatchObject({ billId: "b-rent", billLabel: "Rent", amount: 25000, whenResolved: expect.objectContaining({ date: "2026-09-22" }) });
+    const two = await turn("I paid the light bill");
+    expect(two.text).toMatch(/Which bill — Electricity or BESCOM flat 402\?/);
+    const unknown = await turn("I paid the gym bill");
+    expect(unknown.text).toMatch(/don't have a bill called "gym"/);
+    expect((await kindOf("I paid the rent", { actor: CHILD, autonomyFor: () => "execute" })).kind).not.toBe("executed");
   });
 
   it("recipe catalog (25-022): a dish the household has no recipe for is planned from WonderHome's, its own recipe wins", async () => {

@@ -16,6 +16,7 @@ import type { ActionState } from "../(auth)/actions";
 import {
   cancelObligationAction,
   createObligationAction,
+  fillBillPeriodAction,
   recordAmountAction,
   removeTransactionAction,
   retireBudgetAction,
@@ -97,6 +98,34 @@ export type BillFormLabels = {
   budgetRemoveTitle: string;
   budgetRemoveDescription: string;
   currency: CurrencyFieldLabels;
+  /** Picking the bill (11-010). `types` are the typical bills by key (`bill-catalog.ts`). */
+  whatIsIt: string;
+  somethingElse: string;
+  types: Record<string, string>;
+  whoPays: string;
+  /** `{place}` is the home's city or state. */
+  payeesNear: string;
+  payeesAnywhere: string;
+  earlierTitle: string;
+  earlierHint: string;
+  earlierMonth: string;
+  earlierAmount: string;
+  earlierPaidOn: string;
+  earlierAdd: string;
+  earlierRemove: string;
+};
+
+/** What the bill form offers, worked out on the server from the home's location and the household's own bills. */
+export type BillChoices = {
+  /** Payees for each payee list (`payees.ts` category), nearest first. */
+  payees: Record<string, { near: string[]; others: string[] }>;
+  /** Payees already on this household's bills and transactions. */
+  householdPayees: string[];
+  members: { id: string; displayName: string }[];
+  /** The home's city or state, for the payee hint; null when no address is saved. */
+  place: string | null;
+  /** Each typical bill's kind, how often it comes and its payee list, by key. */
+  types: { key: string; kind: string; recurrence: string; payees: string }[];
 };
 
 /** Fills `{name}`-style placeholders with the household's own words, which are never translated. */
@@ -112,6 +141,9 @@ export type ObligationInitial = {
   amountMinor: number | null;
   currency: string | null;
   dueOn: string | null;
+  billType?: string | null;
+  recurrence?: string | null;
+  responsibleMemberId?: string | null;
 };
 
 function currentPeriodLabel(): string {
@@ -119,13 +151,23 @@ function currentPeriodLabel(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** The fields "add" and "edit" share — only the action, the heading and the submit label differ. */
+const SELECT_CLASS =
+  "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
+
+/**
+ * The fields "add" and "edit" share — only the action, the heading and the
+ * submit label differ. A bill starts from what it is (rule 20): picking
+ * "Electricity" fills in its kind and that it comes monthly, and offers the
+ * electricity companies for where the family lives first. "Something else"
+ * keeps every field the household's own.
+ */
 function ObligationFields({
   householdId,
   initial,
   state,
   defaultCurrency = "INR",
   labels,
+  choices,
 }: {
   householdId: string;
   initial?: ObligationInitial;
@@ -133,64 +175,111 @@ function ObligationFields({
   /** The household's currency, for a new bill (story 22-007). A bill already on record keeps its own. */
   defaultCurrency?: string;
   labels: BillFormLabels;
+  choices: BillChoices;
 }) {
+  const [typeKey, setTypeKey] = useState(initial ? (initial.billType ?? "") : "electricity");
+  const type = choices.types.find((entry) => entry.key === typeKey) ?? null;
+  const [name, setName] = useState(initial?.name ?? (type ? (labels.types[type.key] ?? "") : ""));
+  const [nameTouched, setNameTouched] = useState(Boolean(initial));
+  const [recurrence, setRecurrence] = useState(initial?.recurrence ?? type?.recurrence ?? "monthly");
+  const [earlier, setEarlier] = useState(0);
+  const listed = type ? (choices.payees[type.payees] ?? { near: [], others: [] }) : { near: [], others: [] };
+  // Nearest first, then the rest of this kind's list; the household's own
+  // payees lead only where the kind has no list of its own (a landlord, a
+  // school), and otherwise follow, so a loan never opens on the power company.
+  const ownList = listed.near.length + listed.others.length === 0;
+  const payeeOptions = [...new Set(ownList ? choices.householdPayees : [...listed.near, ...listed.others, ...choices.householdPayees])];
+  const currentPayee = initial?.payee ?? undefined;
+  const byKind = KINDS.map((kind) => ({ kind, types: choices.types.filter((entry) => entry.kind === kind.value) })).filter((group) => group.types.length > 0);
+
   return (
     <>
       {state.error ? <Alert>{state.error}</Alert> : null}
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
+      <input type="hidden" name="billType" value={typeKey} />
+      <div className="space-y-1.5">
+        <label htmlFor="billTypeChoice" className="block text-sm font-medium">
+          {labels.whatIsIt}
+        </label>
+        <select
+          id="billTypeChoice"
+          value={typeKey}
+          onChange={(event) => {
+            const next = choices.types.find((entry) => entry.key === event.target.value) ?? null;
+            setTypeKey(event.target.value);
+            if (next) setRecurrence(next.recurrence);
+            if (!nameTouched) setName(next ? (labels.types[next.key] ?? "") : "");
+          }}
+          className={SELECT_CLASS}
+        >
+          {byKind.map((group) => (
+            <optgroup key={group.kind.value} label={labels.kinds[group.kind.value] ?? group.kind.label}>
+              {group.types.map((entry) => (
+                <option key={entry.key} value={entry.key}>
+                  {labels.types[entry.key] ?? entry.key}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+          <option value="">{labels.somethingElse}</option>
+        </select>
+      </div>
       <Field
         label={labels.name}
         name="name"
         required
         placeholder={labels.namePlaceholder}
         autoComplete="off"
-        defaultValue={initial?.name}
+        value={name}
+        onChange={(event) => {
+          setName(event.target.value);
+          setNameTouched(true);
+        }}
       />
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <label htmlFor="kind" className="block text-sm font-medium">
-            {labels.kind}
-          </label>
-          <select
-            id="kind"
-            name="kind"
-            defaultValue={initial?.kind ?? "utility"}
-            className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-          >
-            {KINDS.map((k) => (
-              <option key={k.value} value={k.value}>
-                {labels.kinds[k.value] ?? k.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        {initial ? null : (
+        {type ? (
+          <input type="hidden" name="kind" value={type.kind} />
+        ) : (
           <div className="space-y-1.5">
-            <label htmlFor="recurrence" className="block text-sm font-medium">
-              {labels.recurs}
+            <label htmlFor="kind" className="block text-sm font-medium">
+              {labels.kind}
             </label>
-            <select
-              id="recurrence"
-              name="recurrence"
-              defaultValue="monthly"
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
-              <option value="monthly">{labels.recurrence.monthly}</option>
-              <option value="quarterly">{labels.recurrence.quarterly}</option>
-              <option value="yearly">{labels.recurrence.yearly}</option>
-              <option value="one_off">{labels.recurrence.one_off}</option>
+            <select id="kind" name="kind" defaultValue={initial?.kind ?? "utility"} className={SELECT_CLASS}>
+              {KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {labels.kinds[k.value] ?? k.label}
+                </option>
+              ))}
             </select>
           </div>
         )}
+        <div className={type ? "col-span-2 space-y-1.5" : "space-y-1.5"}>
+          <label htmlFor="recurrence" className="block text-sm font-medium">
+            {labels.recurs}
+          </label>
+          <select id="recurrence" name="recurrence" value={recurrence} onChange={(event) => setRecurrence(event.target.value)} className={SELECT_CLASS}>
+            <option value="monthly">{labels.recurrence.monthly}</option>
+            <option value="quarterly">{labels.recurrence.quarterly}</option>
+            <option value="yearly">{labels.recurrence.yearly}</option>
+            <option value="one_off">{labels.recurrence.one_off}</option>
+          </select>
+        </div>
       </div>
-      <Field
+      {/* A new list of payees for each kind of bill, so the box starts again when the bill changes. */}
+      <ComboboxField
+        key={`payee-${typeKey}`}
         label={labels.payee}
         name="payee"
-        placeholder={labels.payeePlaceholder}
-        autoComplete="off"
-        defaultValue={initial?.payee ?? undefined}
+        options={currentPayee && !payeeOptions.includes(currentPayee) ? [...payeeOptions, currentPayee] : payeeOptions}
+        defaultValue={currentPayee}
+        placeholder={labels.payeeChoose}
+        emptyLabel={labels.notRecorded}
+        addNewLabel={labels.addPayee}
+        chooseExistingLabel={labels.chooseExisting}
+        newValuePlaceholder={labels.payeePlaceholder}
+        hint={listed.near.length > 0 && choices.place ? fill(labels.payeesNear, { place: choices.place }) : listed.others.length > 0 ? labels.payeesAnywhere : undefined}
       />
       <div className="grid grid-cols-2 gap-3">
         <Field
@@ -206,12 +295,49 @@ function ObligationFields({
         />
         <CurrencyField value={initial?.currency ?? defaultCurrency} labels={labels.currency} />
       </div>
-      <Field
-        label={labels.dueOptional}
-        name="dueOn"
-        type="date"
-        defaultValue={initial?.dueOn ?? undefined}
-      />
+      {/* Full width on a phone: "No one in particular" and the date are never cut (rule 15). */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field
+          label={labels.dueOptional}
+          name="dueOn"
+          type="date"
+          defaultValue={initial?.dueOn ?? undefined}
+        />
+        <Select label={labels.whoPays} name="responsibleMemberId" defaultValue={initial?.responsibleMemberId ?? ""}>
+          <option value="">{labels.noOne}</option>
+          {choices.members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.displayName}
+            </option>
+          ))}
+        </Select>
+      </div>
+      {initial ? null : (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">{labels.earlierTitle}</legend>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.earlierHint}</p>
+          {Array.from({ length: earlier }, (_, index) => (
+            <div key={index} className="grid grid-cols-2 gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-2 sm:grid-cols-3">
+              {/* The month reads whole ("September 2026"), so it has the row to itself on a phone. */}
+              <div className="col-span-2 sm:col-span-1">
+                <Field label={labels.earlierMonth} name={`earlier.${index}.month`} type="month" required />
+              </div>
+              <Field label={labels.earlierAmount} name={`earlier.${index}.amount`} type="number" min={0} step="0.01" inputMode="decimal" required />
+              <Field label={labels.earlierPaidOn} name={`earlier.${index}.paidOn`} type="date" />
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2">
+            <Pill type="button" tone="quiet" className="gap-1.5" onClick={() => setEarlier((count) => Math.min(24, count + 1))}>
+              <Plus aria-hidden className="size-3.5" /> {labels.earlierAdd}
+            </Pill>
+            {earlier > 0 ? (
+              <Pill type="button" tone="quiet" onClick={() => setEarlier((count) => Math.max(0, count - 1))}>
+                {labels.earlierRemove}
+              </Pill>
+            ) : null}
+          </div>
+        </fieldset>
+      )}
     </>
   );
 }
@@ -236,10 +362,12 @@ export function AddBillButton({
   householdId,
   defaultCurrency,
   labels,
+  choices,
 }: {
   householdId: string;
   defaultCurrency?: string;
   labels: BillFormLabels;
+  choices: BillChoices;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -265,7 +393,7 @@ export function AddBillButton({
         description={labels.addDescription}
       >
         <form action={formAction} className="space-y-3">
-          <ObligationFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} labels={labels} />
+          <ObligationFields householdId={householdId} state={state} defaultCurrency={defaultCurrency} labels={labels} choices={choices} />
           <Submit label={labels.addSubmit} pendingLabel={labels.adding} />
         </form>
       </Sheet>
@@ -278,10 +406,12 @@ export function ObligationRowControls({
   householdId,
   bill,
   labels,
+  choices,
 }: {
   householdId: string;
   bill: ObligationInitial;
   labels: BillFormLabels;
+  choices: BillChoices;
 }) {
   const [open, setOpen] = useState(false);
   const [editState, editAction] = useActionState<ActionState, FormData>(
@@ -326,6 +456,7 @@ export function ObligationRowControls({
             initial={bill}
             state={editState}
             labels={labels}
+            choices={choices}
           />
           <Submit label={labels.saveChanges} pendingLabel={labels.saving} />
         </form>
@@ -829,5 +960,94 @@ export function BudgetRowControls({
         {removeState.error ? <p className="text-sm text-[var(--wh-risk)]">{removeState.error}</p> : null}
       </ConfirmationSheet>
     </div>
+  );
+}
+
+export type BillPeriodLabels = {
+  /** `{month}` is the period's month, in the reader's words. */
+  fill: string;
+  /** `{name}` is the bill's own name, `{month}` its month. */
+  fillTitle: string;
+  fillDescription: string;
+  amount: string;
+  paidOn: string;
+  save: string;
+  saving: string;
+  clear: string;
+};
+
+/**
+ * One of a bill's months, filled in (11-010): what it comes to, and the day
+ * it was paid if it has been. The amount starts from what the bill says, or
+ * what it usually is; a paid day marks it paid, ahead of time too.
+ */
+export function BillPeriodButton({
+  householdId,
+  obligationId,
+  billName,
+  periodLabel,
+  month,
+  amountMinor,
+  suggestedMinor,
+  currency,
+  given,
+  labels,
+}: {
+  householdId: string;
+  obligationId: string;
+  billName: string;
+  periodLabel: string;
+  month: string;
+  amountMinor: number | null;
+  /** The usual amount, offered as the starting value when nothing is in yet. */
+  suggestedMinor: number | null;
+  currency: string;
+  /** An amount someone gave ahead, which "Clear" takes back out. */
+  given: boolean;
+  labels: BillPeriodLabels;
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction] = useActionState<ActionState, FormData>(fillBillPeriodAction, {});
+  const start = amountMinor ?? suggestedMinor;
+  const title = fill(labels.fill, { month });
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={title}
+        title={title}
+        className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
+      >
+        <Pencil aria-hidden className="size-4" />
+      </button>
+      <Sheet open={open} onOpenChange={setOpen} title={fill(labels.fillTitle, { name: billName, month })} description={labels.fillDescription}>
+        <form action={formAction} className="space-y-3">
+          {state.error ? <Alert>{state.error}</Alert> : null}
+          {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="obligationId" value={obligationId} />
+          <input type="hidden" name="periodLabel" value={periodLabel} />
+          <input type="hidden" name="currency" value={currency} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={`${labels.amount} (${currency})`} name="amount" type="number" min={0} step="0.01" inputMode="decimal" defaultValue={start !== null ? start / 100 : undefined} />
+            <Field label={labels.paidOn} name="paidOn" type="date" />
+          </div>
+          <Submit label={labels.save} pendingLabel={labels.saving} />
+        </form>
+        {given ? (
+          <form action={formAction} className="mt-2">
+            <input type="hidden" name="householdId" value={householdId} />
+            <input type="hidden" name="obligationId" value={obligationId} />
+            <input type="hidden" name="periodLabel" value={periodLabel} />
+            <input type="hidden" name="amount" value="" />
+            <Button type="submit" variant="secondary" className="w-full">
+              {labels.clear}
+            </Button>
+          </form>
+        ) : null}
+      </Sheet>
+    </>
   );
 }

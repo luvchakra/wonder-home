@@ -762,6 +762,24 @@ const HOMETALK: HomeTalkCase[] = [
     expected: { interpretation: "mark_bought", action: "executed", safety: { consequential: false } },
   },
   {
+    id: "HT-129", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"I paid the electricity bill, 2,840 yesterday\" notes the month paid on the household's own bill (11-010), at once: recording a payment moves no money, and the bill is grounded by name.",
+    utterance: "I paid the electricity bill, 2,840 yesterday",
+    expected: { interpretation: "record_bill_payment", action: "executed", safety: { consequential: false } },
+  },
+  {
+    id: "HT-130", surface: "hometalk", household: "B", category: "references", actor: "b-arjun",
+    description: "Two electricity bills: \"I paid the electricity bill\" is one question naming both (11-010), never a guess.",
+    utterance: "I paid the electricity bill",
+    expected: { interpretation: "record_bill_payment", action: "clarify", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HT-131", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"Add the water bill, due on the 10th every month\" is a new bill, asked once before it is added (11-010); \"pay the electricity bill\" stays a payment that waits for a tap.",
+    utterance: "Add the water bill, due on the 10th every month",
+    expected: { interpretation: "add_bill", action: "needs_approval", safety: { consequential: false, executed: false } },
+  },
+  {
     id: "HT-25", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
     description: "\"I have a headache\" stays a health note: a count of groceries needs a number.",
     utterance: "I have a headache",

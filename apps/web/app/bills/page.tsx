@@ -20,10 +20,15 @@ import {
   format as formatMoney,
   type Obligation,
 } from "@wonderhome/core/finance/payments";
+import { BILL_TYPES } from "@wonderhome/core/finance/bill-catalog";
+import { homePlaceFrom, payeesFor } from "@wonderhome/core/finance/payees";
+import { billPeriods, type BillPeriod } from "@wonderhome/core/finance/periods";
 import {
   financeAgenda,
+  listGivenPeriods,
   listObligations,
 } from "@wonderhome/core/finance/repository";
+import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import {
   isHouseholdAdmin,
   listMembers,
@@ -49,11 +54,14 @@ import {
   AddBillButton,
   AddBudgetButton,
   AddTransactionButton,
+  BillPeriodButton,
   BudgetRowControls,
   EditTransactionControl,
   ObligationRowControls,
   RemoveTransactionControl,
+  type BillChoices,
   type BillFormLabels,
+  type BillPeriodLabels,
 } from "../_components/finance-forms";
 import { billFormLabels, billKindName } from "../_lib/bill-form-labels";
 import { formatDate, requireSession } from "../_lib/session";
@@ -127,7 +135,7 @@ export default async function BillsPage({
   }
 
   const active = tab === "transactions" ? "transactions" : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows, integrations] =
+  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
       listObligations(supabase, householdId).catch(() => []),
@@ -144,6 +152,10 @@ export default async function BillsPage({
         .limit(120),
       listBudgets(supabase, householdId).catch(() => []),
       listIntegrations(supabase, householdId).catch(() => []),
+      // Where the family lives, for the payees each kind of bill offers (11-010).
+      loadHouseholdAddress(supabase, householdId).catch(() => null),
+      // Amounts given ahead for coming months; paid months are the history above.
+      listGivenPeriods(supabase, householdId).catch(() => new Map()),
     ]);
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
@@ -215,11 +227,34 @@ export default async function BillsPage({
     ]),
     kindOptions: distinct(history.map((row) => row.kind)),
   };
+  // The bill form's choices: each typical bill, and its payees nearest the
+  // home first (11-010). Worked out here; the browser gets only the names.
+  const home = homePlaceFrom(address?.formattedAddress ?? null, membership.locale?.household.region ?? null);
+  const billChoices: BillChoices = {
+    types: BILL_TYPES.map((type) => ({ key: type.key, kind: type.kind, recurrence: type.recurrence, payees: type.payees })),
+    payees: Object.fromEntries([...new Set(BILL_TYPES.map((type) => type.payees))].map((category) => [category, payeesFor(category, home)])),
+    householdPayees: transactionChoices.payeeOptions,
+    members: transactionChoices.members,
+    place: home.city ?? home.state,
+  };
+  const monthName = new Intl.DateTimeFormat(viewer.language, { month: "long", year: "numeric", timeZone: "UTC" });
+  const periodLabels: BillPeriodLabels = {
+    fill: t("bills.periods.fill", { month: "{month}" }),
+    fillTitle: t("bills.periods.fillTitle", { name: "{name}", month: "{month}" }),
+    fillDescription: t("bills.periods.fillDescription"),
+    amount: formLabels.amount,
+    paidOn: t("bills.periods.paidOn"),
+    save: t("bills.periods.save"),
+    saving: formLabels.saving,
+    clear: t("bills.periods.clear"),
+  };
 
   // Monthly spend from recorded history: a trend, not a ledger. Only the
   // amounts in the currency shown are added; any others are counted, never
   // converted or mixed in (story 22-007).
-  const trendRows = history.filter((row) => row.currency === currency);
+  // A month paid ahead (11-010) is not spending yet: the trend runs up to this month.
+  const thisMonth = today.slice(0, 7);
+  const trendRows = history.filter((row) => row.currency === currency && row.period_label <= thisMonth);
   const otherCurrencyCounts = new Map<string, number>();
   for (const row of history)
     if (row.currency !== currency) otherCurrencyCounts.set(row.currency, (otherCurrencyCounts.get(row.currency) ?? 0) + 1);
@@ -288,6 +323,7 @@ export default async function BillsPage({
                   householdId={householdId}
                   t={t}
                   labels={formLabels}
+                  choices={billChoices}
                 />
               ))}
             </ul>
@@ -321,6 +357,7 @@ export default async function BillsPage({
                   householdId={householdId}
                   t={t}
                   labels={formLabels}
+                  choices={billChoices}
                 />
               ))}
             </ul>
@@ -357,7 +394,7 @@ export default async function BillsPage({
                   {...transactionChoices}
                 />
               ) : (
-                <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} />
+                <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />
               )}
             </div>
           ) : null}
@@ -412,7 +449,7 @@ export default async function BillsPage({
                   tone="money"
                   title={t("bills.upcoming.emptyTitle")}
                   description={t("bills.upcoming.emptyLede")}
-                  action={<AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} />}
+                  action={<AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />}
                 />
               ) : (
                 <Card className="p-2">
@@ -433,6 +470,15 @@ export default async function BillsPage({
                         householdId={householdId}
                         t={t}
                         labels={formLabels}
+                        choices={billChoices}
+                        periods={billPeriods(
+                          { dueOn: bill.dueOn, recurrence: bill.recurrence ?? null, status: bill.status, amountMinor: bill.amountMinor, currency: bill.currency },
+                          history.filter((h) => h.obligation_id === bill.id).map((h) => ({ periodLabel: h.period_label, amountMinor: Number(h.amount_minor), currency: h.currency, paidOn: h.paid_on })),
+                          givenPeriods.get(bill.id) ?? [],
+                        )}
+                        monthOf={(dueOn: string) => monthName.format(new Date(`${dueOn}T00:00:00Z`))}
+                        periodLabels={periodLabels}
+                        defaultCurrency={householdCurrency}
                       />
                     ))}
                   </ul>
@@ -652,6 +698,11 @@ function BillRow({
   householdId,
   t,
   labels,
+  choices,
+  periods,
+  monthOf,
+  periodLabels,
+  defaultCurrency,
 }: {
   bill: Obligation;
   owner: string | null;
@@ -662,6 +713,12 @@ function BillRow({
   householdId: string;
   t: Translate;
   labels: BillFormLabels;
+  choices: BillChoices;
+  /** This month and the coming ones, made ahead (11-010); only the Upcoming list shows them. */
+  periods?: BillPeriod[];
+  monthOf?: (dueOn: string) => string;
+  periodLabels?: BillPeriodLabels;
+  defaultCurrency?: string;
 }) {
   const amount =
     bill.amountMinor !== null && bill.currency
@@ -726,6 +783,56 @@ function BillRow({
             }
           />
         </dl>
+        {periods && periods.length > 0 && monthOf && periodLabels ? (
+          <div>
+            <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+              {t("bills.periods.title")}
+            </p>
+            <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3">
+              {periods.map((period) => {
+                const month = monthOf(period.dueOn);
+                const money = (minor: number) => formatMoney(minor, period.currency ?? bill.currency ?? defaultCurrency ?? "INR");
+                const line =
+                  period.state === "paid"
+                    ? period.paidOn
+                      ? t("bills.periods.paid", { date: formatDate(timezone, new Date(period.paidOn), "long") })
+                      : t("bills.periods.paidNoDate")
+                    : t("bills.periods.due", { date: formatDate(timezone, new Date(period.dueOn), "long") });
+                const amountWords =
+                  period.amountMinor !== null
+                    ? money(period.amountMinor)
+                    : period.usualMinor !== null
+                      ? t("bills.periods.usually", { amount: money(period.usualMinor) })
+                      : t("bills.periods.notIn");
+                return (
+                  <li key={period.periodLabel} className="flex items-center gap-2 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{month}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{line}</span>
+                    </span>
+                    <span className={`shrink-0 text-right text-sm ${period.amountMinor !== null ? "font-medium" : "text-[var(--wh-foreground-muted)]"}`}>{amountWords}</span>
+                    {period.state === "paid" ? (
+                      <CircleCheck aria-hidden className="size-4 shrink-0 text-[var(--wh-handled)]" />
+                    ) : admin ? (
+                      <BillPeriodButton
+                        householdId={householdId}
+                        obligationId={bill.id}
+                        billName={bill.name}
+                        periodLabel={period.periodLabel}
+                        month={month}
+                        amountMinor={period.amountMinor}
+                        suggestedMinor={period.usualMinor}
+                        currency={period.currency ?? bill.currency ?? defaultCurrency ?? "INR"}
+                        given={period.amountFrom === "given"}
+                        labels={periodLabels}
+                      />
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
         {history.length > 0 ? (
           <div>
             <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
@@ -762,8 +869,12 @@ function BillRow({
               amountMinor: bill.amountMinor,
               currency: bill.currency,
               dueOn: bill.dueOn,
+              billType: bill.billType ?? null,
+              recurrence: bill.recurrence ?? null,
+              responsibleMemberId: bill.responsibleMemberId,
             }}
             labels={labels}
+            choices={choices}
           />
         ) : null}
       </div>

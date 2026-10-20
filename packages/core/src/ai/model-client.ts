@@ -90,6 +90,9 @@ const ModelParametersSchema = z.object({
   scope: text,
   billLabel: text,
   amount: z.number().nullable(),
+  dueDay: z.number().int().min(1).max(31).nullable(),
+  recurrence: z.enum(["monthly", "quarterly", "yearly", "one_off"]).nullable(),
+  period: z.enum(["current", "next"]).nullable(),
   title: text,
   asset: text,
   symptom: text,
@@ -265,7 +268,10 @@ For every grocery action, keep any amount the person said inside the item text e
 - complete_school_item: mark a child's school work done ("mark Asmi's worksheet complete"). target.reference is the child's placeholder when named; parameters.title is the work as said.
 - raise_service_request: something at home needs a repair ("the washing machine is making that noise again", "raise a service request"). parameters.asset is the appliance as said ("it" when not named); parameters.symptom what is wrong, as said.
 - set_preference: state a preference or fact about the household or a person, including correcting an earlier statement. parameters.statement is the fact in plain words; parameters.time a 24h "HH:MM" if a time was stated; parameters.corrects true when it corrects something said earlier. target.reference is a short key like "meals.dinner" or "kids.bedtime".
-- make_payment: pay a bill.
+- make_payment: pay a bill (money moving), never saying a bill was already paid.
+- add_bill: start tracking a new bill ("add the electricity bill, about 2400, due on the 5th every month", "track the home loan EMI"). parameters.what is the bill as said ("electricity", "home loan emi"); parameters.amount the amount as a plain number in the currency's own units (2400, never 240000) when said; parameters.dueDay the day of the month when said; parameters.recurrence "monthly", "quarterly", "yearly" or "one_off" when said.
+- record_bill_payment: say a bill has already been paid ("I paid the electricity bill, 2340 yesterday", "mark rent paid"). target.reference is the bill as said; parameters.amount the amount paid as a plain number when said; parameters.when the day it was paid as said ("yesterday", "on monday").
+- set_bill_amount: say what a bill comes to without it being paid ("the electricity bill is 2340", "next month's rent is 26000"). target.reference is the bill as said; parameters.amount the amount as a plain number; parameters.period "next" for next month's, "current" otherwise.
 - order_items: place or prepare an order.
 - assign_responsibility: change who owns an outcome ("make Child A responsible for groceries", "give the dog walking to Child B"). target.kind is "member" and target.reference is the placeholder of the person who will own it; parameters.outcomeKey is a short dotted key for the outcome ("groceries", "pet.walking", "school.run").
 - find_places: asking for real places to go nearby — somewhere to eat, a cafe, a park, somewhere to hang out with the children ("suggest places for dinner tonight", "where can we go near school after school?"). No parameters are needed; the place search reads the sentence itself.
