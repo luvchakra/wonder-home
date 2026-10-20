@@ -6,6 +6,7 @@ import type { Translate } from "@wonderhome/core/i18n/translate";
 import { localizeReminder } from "@wonderhome/core/notifications/message";
 import { listActivities } from "@wonderhome/core/school/activities";
 import { CAT_COATS, companionLines, loadCompanion, nextClassToday } from "@wonderhome/core/school/companion";
+import { nextSayings } from "@wonderhome/core/school/sayings";
 import { listTimetable } from "@wonderhome/core/school/exams";
 import { listCheckIns, listGoals } from "@wonderhome/core/school/goal-repository";
 import { childProgress, STARS_PER_LEVEL, type ChildProgress, type GoalStanding } from "@wonderhome/core/school/goals";
@@ -52,7 +53,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const [items, events, goals, checkIns, companion, newest, activities, periods, duties] = await Promise.all([
+  const [items, events, goals, checkIns, companion, newest, activities, periods, duties, sayings] = await Promise.all([
     listSchoolItems(supabase, householdId, { childMemberId: memberId }).catch(() => [] as SchoolItem[]),
     listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => [] as FamilyEvent[]),
     listGoals(supabase, householdId, memberId).catch(() => []),
@@ -87,6 +88,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
           return item?.name ?? row.outcome_key.replace(/[._]/g, " ");
         }),
       ),
+    // What the cat has not told them yet, for their age (never twice).
+    nextSayings(supabase, memberId, session.locale.preferences.language).catch(() => null),
   ]);
 
   const school = childView(items, now);
@@ -109,7 +112,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const happeningToday = upcoming.filter((event) => dayOf(event.startsAt) <= today && dayOf(new Date(event.endsAt.getTime() - 1)) >= today);
   // A goal set from school work is that work's own mission, already listed: not a second one.
   const missionGoals = progress.goals.filter((standing) => standing.goal.source?.kind !== "school_item" && (standing.goal.period !== "once" || !standing.met || standing.doneToday));
-  const missionsLeft = school.today.length + missionGoals.filter((standing) => !standing.doneToday && !standing.met).length;
+  const missionsLeft = school.today.length + missionGoals.filter((standing) => !standing.doneToday && !standing.waitingToday && !standing.met).length;
   const missionCount = school.today.length + doneToday.length + missionGoals.length;
 
   // What the cat says, most useful first, each line in the child's words (08-018).
@@ -138,7 +141,12 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
     homework: openWork ? { title: openWork.title, dueToday: school.today.includes(openWork) } : null,
     nextClass: nextClass ? { name: nextClass.name, at: clockFor(nextClass.at) } : null,
     duties,
-  }).map((line) => ({ text: t(line.key as TranslationKey, line.values), ...(line.href ? { href: line.href } : {}) }));
+    sayings,
+  }).map((line) => ({
+    text: line.text ?? t(line.key as TranslationKey, line.values),
+    ...(line.href ? { href: line.href } : {}),
+    ...(line.sayingId ? { sayingId: line.sayingId } : {}),
+  }));
 
   const doneLabels = (name: string, stars: number) => ({
     doIt: t("kids.do"),
@@ -473,7 +481,14 @@ function GoalCard({
           ) : null}
         </div>
         {offerTap ? (
-          <KidDoneButton target={{ kind: "goal", householdId, goalId: goal.id, childMemberId }} done={standing.doneToday} stars={goal.stars} labels={labels} />
+          <KidDoneButton
+            target={{ kind: "goal", householdId, goalId: goal.id, childMemberId }}
+            done={standing.doneToday}
+            waiting={standing.waitingToday}
+            stars={goal.stars}
+            labels={labels}
+            review={{ waiting: t("kids.waiting"), sent: t("kids.waitingSent") }}
+          />
         ) : standing.met ? (
           <span className="shrink-0 rounded-full bg-[var(--wh-handled-soft)] px-3 py-1.5 text-xs font-bold text-[var(--wh-handled)]">{t("kids.goal.met")}</span>
         ) : null}

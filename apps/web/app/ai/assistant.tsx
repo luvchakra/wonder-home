@@ -10,12 +10,13 @@ import {
   Sparkles,
   Wallet,
   X,
+  Square,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
 import type { PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
-import { plainText } from "@wonderhome/core/conversation/reply-format";
+import { spokenSummary } from "@wonderhome/core/conversation/speech";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
 import { AiOrb, ChatDayDivider, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
@@ -60,6 +61,8 @@ export type AssistantMessage = {
 
 /** Far enough back to be deliberate rather than a stray touch. */
 const BACK_AT_LEAST = 120;
+/** How long a typed or spoken turn is waited for before HomeTalk stops waiting and says so. */
+const REPLY_WAIT_MS = 45_000;
 
 const SUGGESTIONS: { key: SuggestionKey; utterance: string; icon: ReactNode }[] = [
   { key: "outing", utterance: "Plan a family outing this weekend.", icon: <CalendarHeart aria-hidden className="size-4 text-[var(--wh-tone-people)]" /> },
@@ -125,6 +128,11 @@ export function Assistant({
   const errorWords = labels.error;
   const [messages, setMessages] = useState<AssistantMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
+  // A reply that hangs can be stopped (the owner, 2026-10-20: "give an option to
+  // stop such a scenario"), and one that takes past REPLY_WAIT_MS stops itself.
+  // Stopping stops the waiting only: a turn the server already began is still on
+  // record, so the words say to look before asking again.
+  const inFlight = useRef<{ controller: AbortController; why: "stopped" | "tooLong" | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   /**
    * The turn that did not get through, kept so it can be sent again — with
@@ -216,11 +224,18 @@ export function Assistant({
         ];
       });
 
+      const flight = { controller: new AbortController(), why: null as "stopped" | "tooLong" | null };
+      inFlight.current = flight;
+      const timer = window.setTimeout(() => {
+        flight.why = "tooLong";
+        flight.controller.abort();
+      }, REPLY_WAIT_MS);
       try {
         const response = await fetch(`/api/v1/households/${householdId}/conversation`, {
           method: "POST",
           headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
           body: JSON.stringify({ utterance, channel, transcriptConfidence, editMessageId }),
+          signal: flight.controller.signal,
         });
         const payload = await response.json();
 
@@ -265,24 +280,39 @@ export function Assistant({
         if (href) talk?.navigate(href);
         return replies.map((reply) => reply.text).join("\n\n");
       } catch (caught) {
+        if (flight.why) {
+          // Stopped, by the person or the clock: said in the conversation, not as a failure.
+          const words = flight.why === "stopped" ? labels.stopped : labels.tooLong;
+          setMessages((current) =>
+            current
+              .filter((message) => message.id !== `${optimisticId}-pending`)
+              .concat({ id: `${optimisticId}-stopped`, role: "assistant", text: words, at: new Date().toISOString() }),
+          );
+          return "";
+        }
         setMessages((current) => current.filter((message) => message.id !== `${optimisticId}-pending`));
         setError(caught instanceof Error ? caught.message : errorWords.answer);
         setFailed({ utterance, channel, transcriptConfidence, key: idempotencyKey, editMessageId });
         return "";
       } finally {
+        window.clearTimeout(timer);
+        if (inFlight.current === flight) inFlight.current = null;
         setBusy(false);
       }
     },
-    [busy, householdId, firstName, errorWords, talk],
+    [busy, householdId, firstName, errorWords, talk, labels.stopped, labels.tooLong],
   );
 
   /** A live turn: send what was heard, and read back what to say (never throws — the hook's own contract). */
   const handleLiveUtterance = useCallback(
     async (transcript: string, confidence: number): Promise<string> => {
       const replyText = await send(transcript, "voice", confidence, undefined, undefined, true);
-      return replyText ? plainText(replyText) : "";
+      // Heard as a short summary (the owner, 2026-10-20); the whole reply stays on screen.
+      return replyText
+        ? spokenSummary(replyText, { language: labels.time.locale, tail: labels.restOnScreen, more: (count) => labels.andMore.replace("{count}", String(count)) })
+        : "";
     },
-    [send],
+    [send, labels.time.locale, labels.restOnScreen, labels.andMore],
   );
 
   /**
@@ -547,6 +577,23 @@ export function Assistant({
                 message.text
               )}
             </ChatMessage>
+              {message.pending ? (
+              <div className="ps-12">
+                <Pill
+                  type="button"
+                  tone="quiet"
+                  aria-label={labels.stopLabel}
+                  onClick={() => {
+                    const flight = inFlight.current;
+                    if (!flight) return;
+                    flight.why = "stopped";
+                    flight.controller.abort();
+                  }}
+                >
+                  <Square aria-hidden className="size-3 fill-current" /> {labels.stop}
+                </Pill>
+              </div>
+            ) : null}
             </Fragment>
           ))}
           </div>

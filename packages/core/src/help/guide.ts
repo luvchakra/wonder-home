@@ -81,8 +81,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "accounts",
     group: "Getting started",
-    updated: "2026-10-16",
-    keywords: ["sign in", "login", "password", "forgot", "reset", "google", "account", "locked out", "log out", "sign out"],
+    updated: "2026-10-21",
+    keywords: ["sign in", "login", "password", "forgot", "reset", "google", "account", "locked out", "log out", "sign out", "about", "version", "release"],
   },
   {
     id: "language",
@@ -93,13 +93,13 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "talk-to-wonderhome",
     group: "Everyday use",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["approve", "approval", "ask a grown-up", "child request", "helper request", "decline", "after school", "after work", "office hours", "school hours", "place book", "saved places", "ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces", "welcome", "getting to know", "vacation", "getaway", "trip", "weekend", "holiday", "look again", "check again", "database", "how many", "guests coming", "should we", "noticed", "likes", "food preferences", "who likes what", "what do you know"],
   },
   {
     id: "voice",
     group: "Everyday use",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["voice", "speech", "microphone", "hands-free", "live", "listen", "gemini live", "alexa", "speak out loud", "pause", "open a screen", "take me to", "go to", "navigate", "glow", "getting ready", "wait", "connecting", "speak now"],
   },
   {
@@ -111,7 +111,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "today-and-home",
     group: "Everyday use",
-    updated: "2026-10-19",
+    updated: "2026-10-20",
     keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe", "pets", "what's new", "new features", "release notes", "changelog", "version", "update"],
   },
   {
@@ -141,20 +141,20 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "meals-and-shopping",
     group: "Everyday use",
-    updated: "2026-10-20",
-    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "recipe ideas", "indian recipes", "diet", "vegetarian", "vegan", "jain", "eggetarian", "non-veg", "calories", "protein", "filter recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps", "week", "weekly plan", "meal plan", "repeat last week", "veg", "non-veg"],
+    updated: "2026-10-21",
+    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "recipe ideas", "indian recipes", "diet", "vegetarian", "vegan", "jain", "eggetarian", "non-veg", "calories", "protein", "filter recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps", "week", "weekly plan", "meal plan", "repeat last week", "veg", "non-veg", "week template", "template", "weekly menu", "choose again", "options", "rotate"],
   },
   {
     id: "health",
     group: "Everyday use",
-    updated: "2026-10-18",
+    updated: "2026-10-21",
     keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private"],
   },
   {
     id: "home-upkeep",
     group: "Everyday use",
-    updated: "2026-09-26",
-    keywords: ["maintenance", "appliance", "repair", "service", "laundry", "pets", "weather", "upkeep", "device"],
+    updated: "2026-10-21",
+    keywords: ["maintenance", "appliance", "repair", "service", "laundry", "pets", "weather", "upkeep", "device", "things", "requests", "warranty", "amc", "retire", "record a service", "serviced", "technician", "cancel request", "coming up"],
   },
   {
     id: "household-and-roles",
@@ -165,7 +165,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "family",
     group: "Your household",
-    updated: "2026-10-18",
+    updated: "2026-10-21",
     keywords: ["invite", "sign in", "email", "phone", "phone number", "sms", "code", "login", "share link", "family", "pets", "profile", "photo", "family calls me", "event", "birthday", "protected time", "gift", "calendar"],
   },
   {

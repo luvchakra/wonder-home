@@ -692,6 +692,8 @@ export const householdEn = {
   "kids.do": "I did it!",
   "kids.done": "Done",
   "kids.undo": "Take back {name}",
+  "kids.waiting": "Waiting for a grown-up",
+  "kids.waitingSent": "Sent to a grown-up to check. Your stars come when they say yes.",
   "kids.earned#one": "{count} star earned",
   "kids.earned#other": "{count} stars earned",
   "kids.goal.daily": "Every day",

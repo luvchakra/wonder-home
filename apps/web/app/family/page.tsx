@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, PawPrint, Sun, UserPlus, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, PawPrint, Sun, UserPlus, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
@@ -10,6 +10,7 @@ import { listRelationships } from "@wonderhome/core/identity/relationships";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
+import { agoText, isFresh, loadKnownPlaces, loadLocations, mapLink, placeAt } from "@wonderhome/core/location/sharing";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -40,6 +41,7 @@ import { relationsLine } from "../_lib/relationship-words";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
 import { ChildQuietControl } from "../_components/child-quiet-control";
+import { LocationSharingToggle } from "../_components/location-sharing-toggle";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { childQuietHours } from "@wonderhome/core/notifications/child-quiet";
 import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
@@ -59,7 +61,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, relationships] = await Promise.all([
+  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, relationships, whereabouts, knownPlaces] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     // Every upcoming event and what needs a person, read once and alongside
@@ -76,6 +78,9 @@ export default async function FamilyPage() {
     readMemberPhones(supabase, householdId).catch(() => new Map<string, string>()),
     // How the family is related (Members & roles), for each person's details.
     listRelationships(supabase, householdId).catch(() => []),
+    // Who shares where they are, and the positions this viewer may see (adults: everyone sharing; others: their own).
+    loadLocations(supabase, householdId).catch(() => ({ sharing: [], locations: [] })),
+    loadKnownPlaces(supabase, householdId, t("location.home")).catch(() => []),
   ]);
   // A child's quiet hours (story 27-015): an Admin, or the child's own guardian, sees and sets them.
   const childIds = members.filter((member) => member.memberType === "child").map((member) => member.id);
@@ -105,6 +110,16 @@ export default async function FamilyPage() {
     const label = (minute: number) => locale.format.time(atLocal(todayKey, minute, timezone));
     return { from: clockOf(window.fromMinute), until: clockOf(window.untilMinute), current: t(own ? "family.childQuiet.custom" : "family.childQuiet.default", { from: label(window.fromMinute), until: label(window.untilMinute) }) };
   };
+  // Where each sharing member is, said as a saved place or "out" (consent-based, 2026-10-20).
+  const sharingOn = new Set(whereabouts.sharing.filter((row) => row.enabled).map((row) => row.memberId));
+  const whereIs = (memberId: string) => {
+    const position = whereabouts.locations.find((row) => row.memberId === memberId);
+    if (!position) return null;
+    const place = placeAt(position, knownPlaces);
+    const ago = agoText(locale.preferences.language, position.recordedAt, now);
+    return { line: `${place ? t("location.at", { place: place.name }) : t("location.out")} · ${ago}`, fresh: isFresh(position.recordedAt, now), map: mapLink(position) };
+  };
+  const viewerIsAdult = membership.memberType === "adult";
   const officeOf = (memberId: string) => offices.find((office) => office.memberId === memberId) ?? null;
   // Each child's current school and its day, read beside their other details.
   const schoolOf = (memberId: string) => {
@@ -219,6 +234,12 @@ export default async function FamilyPage() {
                             {describeRoles(member.roles, member.isOwner)}
                             {member.status === "invited" ? ` · ${t("family.status.invited")}` : member.id === membership.memberId ? ` · ${t("family.you")}` : ""}
                           </span>
+                          {whereIs(member.id) ? (
+                            <span className={`mt-0.5 flex items-center gap-1 text-xs ${whereIs(member.id)!.fresh ? "text-[var(--wh-foreground-muted)]" : "text-[var(--wh-foreground-subtle)]"}`}>
+                              <MapPin aria-hidden className="size-3 shrink-0" />
+                              {whereIs(member.id)!.line}
+                            </span>
+                          ) : null}
                         </span>
                       </>
                     }
@@ -269,6 +290,35 @@ export default async function FamilyPage() {
                             restored: t("family.childQuiet.restored"),
                           }}
                         />
+                      ) : null}
+                      {whereIs(member.id) || (viewerIsAdult && sharingOn.has(member.id)) || (member.memberType === "child" && (isAdminViewer || guarded.has(member.id))) || member.id === membership.memberId ? (
+                        <div className="space-y-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-3 text-sm">
+                          <p className="flex items-center gap-1.5 font-medium">
+                            <MapPin aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-muted)]" />
+                            {whereIs(member.id)?.line ?? (sharingOn.has(member.id) ? t("location.waiting") : t("location.notSharing"))}
+                          </p>
+                          {whereIs(member.id) ? (
+                            <a href={whereIs(member.id)!.map} target="_blank" rel="noopener noreferrer" className="inline-block text-xs font-semibold text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                              {t("location.map")}
+                            </a>
+                          ) : null}
+                          {/* A child's sharing is their guardian's or an Admin's to set; an adult sets their own in Settings. */}
+                          {member.memberType === "child" && (isAdminViewer || guarded.has(member.id)) ? (
+                            <>
+                              <p className="text-xs text-[var(--wh-foreground-muted)]">
+                                {sharingOn.has(member.id) ? t("location.child.on", { name: member.displayName }) : t("location.child.title", { name: member.displayName })}
+                              </p>
+                              <LocationSharingToggle
+                                householdId={householdId}
+                                memberId={member.id}
+                                enabled={sharingOn.has(member.id)}
+                                labels={{ turnOn: t("location.turnOn"), turnOff: t("location.turnOff"), turnedOn: t("location.turnedOn"), turnedOff: t("location.turnedOff") }}
+                              />
+                            </>
+                          ) : member.id === membership.memberId && member.memberType !== "child" ? (
+                            <PillLink href="/settings/location" tone="quiet">{t("location.title")}</PillLink>
+                          ) : null}
+                        </div>
                       ) : null}
                       {member.memberType === "child" && view.permissions.includes("school.manage") ? (
                         <PillLink href={`/school?child=${member.id}`} tone="quiet">

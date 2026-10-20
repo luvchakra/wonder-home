@@ -1,7 +1,15 @@
 "use client";
 
 import { CircleCheck, CircleHelp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+
+import { SwipeToDismiss } from "@wonderhome/core/ui/swipe-to-dismiss";
+
+import { adjustListAction } from "../../(auth)/grocery-actions";
+import { newKey } from "./amounts";
+
+const SWIPE_HINT_KEY = "wh.groceries.swipeHint";
 
 import {
   GroceryRow,
@@ -62,8 +70,12 @@ export function GroceryList({
   /** The household's own date, for "Bought on". */
   today: string;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  // At home and Not counted yet are ways in (the owner, 2026-10-20: "make the cards clickable"):
+  // a tap shows just the items they count, a second tap goes back to the list.
+  const [stockFilter, setStockFilter] = useState<"home" | "uncounted" | null>(null);
   // What the steppers have saved since the page was read, so "To buy" and its button follow along.
   const [onList, setOnList] = useState<Record<string, number>>(() =>
     Object.fromEntries(
@@ -81,7 +93,13 @@ export function GroceryList({
   const needle = query.trim().toLowerCase();
   const shown = items.filter(
     (item) =>
-      (view === "all" || item.toBuy !== null) &&
+      // To buy follows the steppers: an item taken off the list leaves this view at once and stays under All.
+      // A card's filter shows every item it counts, on the list or not, as its number does.
+      (stockFilter === "home"
+        ? item.stock !== null && item.stock > 0
+        : stockFilter === "uncounted"
+          ? item.stock === null
+          : view === "all" || (onList[item.id] ?? 0) > 0) &&
       (!category || item.category === category) &&
       (!needle ||
         [item.name, item.category, ...item.aliases].some((text) =>
@@ -104,8 +122,38 @@ export function GroceryList({
     baseUnit: item.toBuy!.unit,
   }));
 
-  const row = (item: ListItem) => (
+  // On To buy, a row swiped left or right comes off the list (the owner,
+  // 2026-10-20): To buy goes to nothing, it leaves this view and stays under
+  // All. The first row jiggles once per device so the swipe can be found.
+  const takeOff = async (item: ListItem): Promise<boolean> => {
+    const result = await adjustListAction({ householdId, itemId: item.id, kind: "remove", key: newKey("swipe") });
+    if (!result.ok) return false;
+    setOnList((current) => ({ ...current, [item.id]: 0 }));
+    router.refresh();
+    return true;
+  };
+  const [hintShown] = useState(() => {
+    try {
+      const seen = window.localStorage.getItem(SWIPE_HINT_KEY) === "1";
+      if (!seen) window.localStorage.setItem(SWIPE_HINT_KEY, "1");
+      return seen;
+    } catch {
+      return true;
+    }
+  });
+
+  const row = (item: ListItem, index = 0) =>
+    view === "to-buy" ? (
+      <SwipeToDismiss key={`${item.id}:${item.unit}`} label={words.stepper.remove} hint={!hintShown && index === 0} onDismiss={() => takeOff(item)}>
+        {rowBody(item, "div")}
+      </SwipeToDismiss>
+    ) : (
+      rowBody(item, "li")
+    );
+
+  const rowBody = (item: ListItem, as: "li" | "div") => (
     <GroceryRow
+      as={as}
       // A new unit is a new stepper: its amounts are in another base (25-012).
       key={`${item.id}:${item.unit}`}
       name={item.name}
@@ -148,10 +196,28 @@ export function GroceryList({
         // Three across, by the owner's call (an exception to rule 19): labels wrap, never cut.
         <ul className="grid grid-cols-3 gap-2.5">
           <li className="min-w-0">
-            <MetricCard stacked label={words.summary.atHome} value={atHome} icon={CircleCheck} tone="handled" />
+            <MetricCard
+              stacked
+              label={words.summary.atHome}
+              value={atHome}
+              icon={CircleCheck}
+              tone="handled"
+              pressed={stockFilter === "home"}
+              disabled={atHome === 0}
+              onClick={() => setStockFilter((current) => (current === "home" ? null : "home"))}
+            />
           </li>
           <li className="min-w-0">
-            <MetricCard stacked label={words.summary.notCounted} value={notCounted} icon={CircleHelp} tone="attention" />
+            <MetricCard
+              stacked
+              label={words.summary.notCounted}
+              value={notCounted}
+              icon={CircleHelp}
+              tone="attention"
+              pressed={stockFilter === "uncounted"}
+              disabled={notCounted === 0}
+              onClick={() => setStockFilter((current) => (current === "uncounted" ? null : "uncounted"))}
+            />
           </li>
           <li className="min-w-0">
             {canMarkBought && toBuyNow.length > 0 ? (
@@ -241,7 +307,7 @@ export function GroceryList({
         )
       ) : (
         <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-2 shadow-[var(--wh-shadow-card)]">
-          {shown.map(row)}
+          {shown.map((item, index) => row(item, index))}
         </ul>
       )}
     </div>

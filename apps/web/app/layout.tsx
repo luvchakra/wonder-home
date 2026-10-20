@@ -5,6 +5,7 @@ import { TAGLINE } from "@wonderhome/core/brand/mark";
 import { InstallPromptCapture } from "@wonderhome/core/shell/install-prompt-capture";
 import { LiveTalkProvider } from "@wonderhome/core/ui/live-talk";
 
+import { LocationReporter } from "./_components/location-reporter";
 import "./globals.css";
 
 /**
@@ -129,6 +130,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Catches Chromium's one-time install event before any screen mounts (story 00-011). */}
         <InstallPromptCapture />
+        {/* Says where this device is while the app is open, only for someone whose location sharing is on. */}
+        <LocationReporter />
         {/* A live HomeTalk conversation lives here, so it carries on from screen to screen. */}
         <LiveTalkProvider>{children}</LiveTalkProvider>
       </body>

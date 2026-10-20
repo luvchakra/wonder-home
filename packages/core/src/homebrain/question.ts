@@ -3,6 +3,7 @@ import { daysBetween, isoDay, normalizeText, weekdayIndex } from "../context/nor
 import { resolvePerson } from "../context/resolution";
 import { DOMAIN_WORDS, readQuestion } from "../context/retrieval";
 import type { ContextDomain, HouseholdContextItem, PersonRef } from "../context/types";
+import { tomorrowIn } from "../conversation/temporal";
 
 /**
  * Reading a question before anything is retrieved (Wave 2 §5: intent hints,
@@ -241,8 +242,13 @@ export function timeWindow(text: string, options: { timezone: string; now: Date 
 
   if (/\b(?:today|tonight|this evening|this morning|this afternoon)\b/.test(t)) return { label: /\btonight\b/.test(t) ? "tonight" : "today", from: today, to: today };
   if (/\byesterday\b/.test(t)) return { label: "yesterday", from: day(-1), to: day(-1) };
-  if (/\bday after tomorrow\b/.test(t)) return { label: "the day after tomorrow", from: day(2), to: day(2) };
-  if (/\btomorrow\b/.test(t)) return { label: "tomorrow", from: day(1), to: day(1) };
+  // In the small hours "tomorrow" is the day just begun, the one they will wake up to (`tomorrowIn`).
+  // After midnight the reply names the day it took, so nobody has to guess which "tomorrow" was meant.
+  const ahead = tomorrowIn(options.now, options.timezone);
+  const tomorrow = ahead.date;
+  const named = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
+  if (/\bday after tomorrow\b/.test(t)) return { label: ahead.smallHours ? `the day after tomorrow (${named(addDays(tomorrow, 1))})` : "the day after tomorrow", from: addDays(tomorrow, 1), to: addDays(tomorrow, 1) };
+  if (/\btomorrow\b/.test(t)) return { label: ahead.smallHours ? `tomorrow (${named(tomorrow)})` : "tomorrow", from: tomorrow, to: tomorrow };
   if (/\bthis weekend\b|\bweekend\b/.test(t)) {
     const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
     const toSaturday = (6 - weekday + 7) % 7;

@@ -243,4 +243,20 @@ export const healthEs: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "Registrar una medición",
   "healthForm.vital.description": "Una sola medición: siempre lo que registraste de verdad.",
   "healthForm.vital.editTitle": "Editar la medición",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "Añadir",
+  "healthForm.menu.title": "Añadir a Salud y forma física",
+  "healthForm.menu.description": "Elige qué quieres añadir. Cada cosa guarda la privacidad que elijas.",
+  "healthForm.menu.group.health": "Salud",
+  "healthForm.menu.group.visits": "Visitas médicas",
+  "healthForm.menu.group.fitness": "Forma física",
+  "healthForm.menu.meta.issue": "Algo que has notado, como dolor de garganta",
+  "healthForm.menu.meta.vital": "Una medición, como el peso o la tensión",
+  "healthForm.menu.meta.routine": "Una medición que se toma con regularidad",
+  "healthForm.menu.meta.record": "Un análisis, una receta o un documento similar",
+  "healthForm.menu.meta.appointment": "Una visita en un día y hora concretos",
+  "healthForm.menu.meta.checkup": "Una revisión que se repite, como una limpieza dental; resérvala cuando toque",
+  "healthForm.menu.meta.session": "Lo que hiciste hoy de verdad",
+  "healthForm.menu.meta.goal": "Con qué frecuencia te gustaría mantener algo",
 };

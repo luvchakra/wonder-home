@@ -26,7 +26,7 @@ export const INVITATION_SIZES: Record<InvitationShape, { width: number; height: 
   portrait: { width: 1080, height: 1350 },
 };
 
-type Font = { name: string; data: Buffer | ArrayBuffer; weight: 400 | 700; style: "normal" };
+export type Font = { name: string; data: Buffer | ArrayBuffer; weight: 400 | 700; style: "normal" };
 
 /** The vendored fonts, wherever the server was started from (the app folder, or the repository root). */
 async function bundled(file: string): Promise<Buffer> {
@@ -40,7 +40,7 @@ async function bundled(file: string): Promise<Buffer> {
   throw new Error(`invite font missing: ${file}`);
 }
 
-const FONTS = Promise.all([bundled("Sora-Regular.ttf"), bundled("Sora-Bold.ttf"), bundled("Caveat-Bold.woff")]);
+export const FONTS = Promise.all([bundled("Sora-Regular.ttf"), bundled("Sora-Bold.ttf"), bundled("Caveat-Bold.woff")]);
 
 /**
  * Sora and Caveat only draw Latin letters. A title in Devanagari, Arabic or
@@ -60,7 +60,7 @@ const SCRIPT_FONTS: ReadonlyArray<readonly [RegExp, string]> = [
   [/[぀-ヿ㐀-鿿]/, "Noto Sans SC"],
 ];
 
-async function scriptFonts(text: string): Promise<Font[]> {
+export async function scriptFonts(text: string): Promise<Font[]> {
   const families = SCRIPT_FONTS.filter(([pattern]) => pattern.test(text)).map(([, family]) => family);
   const fonts = await Promise.all(
     families.flatMap((family) =>

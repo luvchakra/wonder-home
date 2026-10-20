@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 type Row = Record<string, unknown>;
 
 import { CHANNEL_ADAPTERS } from "./channels";
-import { adminOf, eventChangeNotices, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
+import { adminOf, eventChangeNotices, goalCheckInNotices, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
 import type { LaundryNeed } from "../home/laundry";
 import type { WeatherWindow } from "../home/weather";
 import { sweepNotices } from "./notices-sweep";
@@ -254,5 +254,28 @@ describe("the notice sweep", () => {
     const { client, tables } = memoryDatabase(base({ home_send_items: [], notifications: [reminder] }));
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 0, resolved: 0 });
     expect(tables.notifications![0]!.status).toBe("delivered");
+  });
+});
+
+describe("a child's Done waits for a grown-up (goal check-ins)", () => {
+  const withGuardian = buildDirectory(members, roles, [], [{ child_member_id: "asmi", guardian_member_id: "upasana" }]);
+  const titles = new Map([["read", "Read for 20 mins"]]);
+  const names = new Map([["asmi", "Asmi"]]);
+  const row = { id: "c1", goal_id: "read", child_member_id: "asmi", on_day: "2026-10-20", verified_at: null };
+
+  it("tells the child's guardian, naming the child and the goal, and opens their Goals", () => {
+    const [notice, ...rest] = goalCheckInNotices([row], titles, withGuardian, names, NOW);
+    expect(rest).toHaveLength(0);
+    expect(notice).toMatchObject({ sourceType: "goal_checkin", sourceId: "c1", recipientMemberId: "upasana", category: "school" });
+    expect(notice!.title).toEqual({ key: "reminder.goalCheck.title", params: { name: "Asmi", goal: "Read for 20 mins" } });
+    expect(notice!.action.target).toBe("/school?tab=goals&child=asmi#waiting");
+  });
+
+  it("tells the Admin when the child has no guardian on record", () => {
+    expect(goalCheckInNotices([row], titles, directory, names, NOW)[0]?.recipientMemberId).toBe("kunal");
+  });
+
+  it("says nothing once a grown-up has verified it", () => {
+    expect(goalCheckInNotices([{ ...row, verified_at: "2026-10-20T07:00:00Z" }], titles, withGuardian, names, NOW)).toEqual([]);
   });
 });

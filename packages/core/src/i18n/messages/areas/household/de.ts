@@ -694,6 +694,8 @@ export const householdDe: AreaCatalog<typeof householdEn> = {
   "kids.do": "Geschafft!",
   "kids.done": "Erledigt",
   "kids.undo": "{name} zurücknehmen",
+  "kids.waiting": "Wartet auf Erwachsene",
+  "kids.waitingSent": "An einen Erwachsenen geschickt. Deine Sterne kommen, wenn er Ja sagt.",
   "kids.earned#one": "{count} Stern verdient",
   "kids.earned#other": "{count} Sterne verdient",
   "kids.goal.daily": "Jeden Tag",

@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useId, useState, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
@@ -163,6 +164,7 @@ export function MetricDetailRow({
   title,
   meta,
   badge,
+  href,
 }: {
   /** A pre-rendered `IconTile` element — see the note on `ExpandableMetric.icon`. */
   icon: ReactNode;
@@ -170,16 +172,34 @@ export function MetricDetailRow({
   meta?: string | null;
   /** A short state word beside the row — a due date, a count, a status. */
   badge?: ReactNode;
+  /**
+   * Where the row's own record lives (the owner, 2026-10-20: "make these
+   * clickable"): the whole row opens it, with a chevron that says so.
+   */
+  href?: string;
 }) {
-  return (
-    <li className="flex items-start gap-2.5">
+  const body = (
+    <>
       {icon}
       <span className="min-w-0 flex-1">
         <span className="block text-xs font-medium">{title}</span>
         {meta ? <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{meta}</span> : null}
       </span>
       {badge ? <span className="shrink-0">{badge}</span> : null}
+      {href ? <ChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-[var(--wh-foreground-subtle)]" /> : null}
+    </>
+  );
+  return href ? (
+    <li>
+      <Link
+        href={href}
+        className="-mx-1.5 flex min-h-11 items-start gap-2.5 rounded-[var(--wh-radius-sm)] px-1.5 py-1 transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
+      >
+        {body}
+      </Link>
     </li>
+  ) : (
+    <li className="flex items-start gap-2.5">{body}</li>
   );
 }
 

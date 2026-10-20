@@ -444,6 +444,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   // can carry that domain's own colour badge (rule 3: domain colour, never
   // invented). Built from the same per-domain reads `householdAgenda`
   // already did — nothing here re-evaluates anything.
+  // Each row in the four counts opens its own domain (the owner, 2026-10-20: "make these clickable").
+  const hrefOfDomain = (key: string | undefined) => agenda.domains.find((domain) => domain.key === key)?.href;
   const domainBySubject = new Map<string, DomainSummary["key"]>();
   for (const domain of agenda.domains) {
     for (const need of domain.needs) domainBySubject.set(need.subjectKey, domain.key);
@@ -476,6 +478,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                     icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
                     title={item.title}
                     meta={item.reason}
+                    href={hrefOfDomain(domainBySubject.get(item.subjectKey))}
                   />
                 );
               })}
@@ -503,6 +506,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
                   title={entry.title}
                   meta={entry.meta}
+                  href={hrefOfDomain(entry.key)}
                 />
               );
             })}
@@ -525,6 +529,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   icon={<IconTile icon={CalendarHeart} tone="people" size="sm" />}
                   title={event.title}
                   meta={`${formatDate(timezone, event.startsAt)} · ${formatTime(timezone, event.startsAt)}`}
+                  href={`/family/events/${event.id}`}
                 />
               ))}
             </MetricDetailList>
@@ -551,6 +556,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   icon={<IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />}
                   title={domainName(domain.key)}
                   meta={domain.failed ? t("homeScreen.metric.couldNotCheck") : t("homeScreen.metric.checkedCount", { count: domain.checked })}
+                  href={domain.href}
                 />
               );
             })}

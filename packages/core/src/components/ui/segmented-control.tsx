@@ -26,18 +26,24 @@ export function SegmentedControl({
   className?: string;
 }) {
   return (
-    <nav aria-label={label} className={cn("relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none]", className)}>
+    <nav aria-label={label} className={cn("relative -mx-4 scroll-mt-16 overflow-x-auto px-4 [scrollbar-width:none]", className)}>
       <SegmentInView />
-      {/* Fits the screen it is on (the owner, 2026-10-20: no overflow): each tab
-          takes an equal share, a label wraps to a second line before it is ever
-          cut, and only a row that cannot fit even then scrolls. */}
+      {/* Fits the screen it is on (the owner, 2026-10-20: no overflow, and "the
+          numeral is going in second row"): each tab is as wide as its own label
+          and count, the spare room shared out, so a longer label takes the space
+          a shorter one does not need and its count stays beside it. Only on a
+          screen too narrow for every tab on one line does a count drop under its
+          label (or a label of several words wrap) — never cut; a row that cannot
+          fit even then scrolls. */}
       <ul className="flex w-full gap-0.5 rounded-[var(--wh-radius-lg)] bg-[var(--wh-surface-muted)] p-1">
         {segments.map((segment) => {
           const isActive = segment.key === active;
           return (
-            <li key={segment.key} className="flex-1">
+            <li key={segment.key} className="flex-auto">
               <Link
                 href={segment.href}
+                // The row brings itself to the top (`SegmentInView`), so the page is not also sent to its own top.
+                scroll={false}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex h-full min-h-9 flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-[var(--wh-radius-pill)] px-1.5 py-1 text-center text-[0.8125rem] leading-tight font-semibold transition-colors min-[400px]:px-2.5 sm:px-3.5",
@@ -46,11 +52,11 @@ export function SegmentedControl({
                     : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)] hover:text-[var(--wh-foreground)]",
                 )}
               >
-                {segment.label}
+                <span className="text-balance">{segment.label}</span>
                 {typeof segment.count === "number" && segment.count > 0 ? (
                   <span
                     className={cn(
-                      "grid min-w-5 place-items-center rounded-full px-1 text-[0.625rem] font-bold",
+                      "grid min-w-5 shrink-0 place-items-center rounded-full px-1 text-[0.625rem] font-bold",
                       isActive
                         ? "bg-[var(--wh-primary-foreground)]/20 text-[var(--wh-primary-foreground)]"
                         : "bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)]",

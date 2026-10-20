@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
@@ -21,6 +22,8 @@ export type TimelineItem = {
   state?: "done" | "now" | "upcoming" | "needs_you";
   /** One thing to do, usually a Pill. */
   action?: ReactNode;
+  /** Where the entry's own record lives: its icon, name and line open it (the owner, 2026-10-20). */
+  href?: string;
 };
 
 export function Timeline({ items, className }: { items: readonly TimelineItem[]; className?: string }) {
@@ -57,15 +60,29 @@ export function Timeline({ items, className }: { items: readonly TimelineItem[];
                 item.state === "done" && "opacity-70",
               )}
             >
-              <IconTile icon={item.icon} tone={item.tone ?? "primary"} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className={cn("text-sm font-medium", item.state === "done" && "line-through decoration-[var(--wh-foreground-subtle)]")}>
-                  {item.title}
-                </p>
-                {item.meta ? (
-                  <p className="text-xs text-[var(--wh-foreground-subtle)]">{item.meta}</p>
-                ) : null}
-              </div>
+              {(() => {
+                const body = (
+                  <>
+                    <IconTile icon={item.icon} tone={item.tone ?? "primary"} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-sm font-medium break-words", item.state === "done" && "line-through decoration-[var(--wh-foreground-subtle)]")}>
+                        {item.title}
+                      </p>
+                      {item.meta ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{item.meta}</p> : null}
+                    </div>
+                  </>
+                );
+                return item.href ? (
+                  <Link
+                    href={item.href}
+                    className="-my-1 -ms-1 flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[var(--wh-radius-sm)] py-1 ps-1 hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  body
+                );
+              })()}
               {item.action ? <div className="shrink-0">{item.action}</div> : null}
             </div>
           </li>

@@ -487,6 +487,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             activities={activities}
             timezone={timezone}
             canChange={canChangeSchool}
+            formatDay={(day) => formatDate("UTC", new Date(`${day}T00:00:00.000Z`), "long")}
             t={t}
           />
         ) : null}

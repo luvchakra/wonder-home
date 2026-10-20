@@ -24,6 +24,8 @@ export const groceryZh: AreaCatalog<typeof groceryEn> = {
   "grocery.stepper.amount": "修改{name}的购买数量",
   "grocery.stepper.now": "{name}：待买 {amount}",
   "grocery.stepper.none": "{name}：不用买",
+  "grocery.stepper.remove": "移除",
+  "grocery.stepper.removeLabel": "从清单中移除{name}",
   "grocery.stepper.conflict": "刚才有人改过了，现在显示的是最新内容。",
   "grocery.stepper.failed": "没有保存成功：{reason}",
   "grocery.stock.less": "家里的{name}减少",

@@ -124,7 +124,7 @@ export default async function ManageHouseholdPage() {
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {items.map((item) => (
-                  <li key={item.id} className="flex flex-wrap items-start gap-3 px-2 py-3">
+                  <li key={item.id} className="flex items-start gap-3 px-2 py-3">
                     <IconTile icon={BookOpen} tone="home" size="sm" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{item.name}{!item.active ? <Badge className="ms-2">{t("manage.playbook.paused")}</Badge> : null}</p>
@@ -165,10 +165,12 @@ export default async function ManageHouseholdPage() {
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {rules.map((rule) => (
-                  <li key={rule.id} className="flex flex-wrap items-center gap-3 px-2 py-3">
+                  <li key={rule.id} className="flex items-center gap-3 px-2 py-3">
                     <IconTile icon={ShieldCheck} tone="money" size="sm" />
-                    <p className="min-w-0 flex-1 text-sm font-medium">{rule.name}</p>
-                    <Badge>{policyCategoryWords(rule.category, t)}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium break-words">{rule.name}</p>
+                      <Badge className="mt-1">{policyCategoryWords(rule.category, t)}</Badge>
+                    </div>
                     <PolicyRowControls
                       householdId={householdId}
                       policyId={rule.id}

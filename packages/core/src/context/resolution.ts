@@ -1,6 +1,7 @@
 import { isUsable } from "./freshness";
 import { isoDay, nameSimilarity, normalizeText, similarity, tokens, weekdayIndex } from "./normalize";
 import type { HouseholdContextItem, PersonRef, PetRef, Resolution, ResolutionCandidate } from "./types";
+import { tomorrowIn } from "../conversation/temporal";
 
 /**
  * Who and what a household means (Wave 1 §6).
@@ -278,7 +279,8 @@ function parseReference(reference: string, context: ReferenceContext): ParsedRef
       continue;
     }
     if (word === "tomorrow") {
-      day = isoDay(new Date(context.now.getTime() + 86_400_000), context.timezone);
+      // In the small hours, the day just begun (`tomorrowIn`).
+      day = tomorrowIn(context.now, context.timezone).date;
       continue;
     }
     if (word === "yesterday") {

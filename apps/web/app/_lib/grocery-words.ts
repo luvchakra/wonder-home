@@ -78,6 +78,8 @@ export function groceryWords(translate: Translate, language: string | undefined)
       none: t("grocery.stepper.none"),
       conflict: t("grocery.stepper.conflict"),
       failed: t("grocery.stepper.failed"),
+      remove: t("grocery.stepper.remove"),
+      removeLabel: t("grocery.stepper.removeLabel"),
     },
     summary: {
       atHome: t("grocery.summary.atHome"),

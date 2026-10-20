@@ -84,7 +84,9 @@ export default async function PlacesPage() {
     saving: t("common.saving"),
     failed: t("hometalk.places.failed"),
   };
-  const saved = places.filter((place) => place.status === "saved");
+  // Places a person added by hand come first, apart from those saved from a HomeTalk suggestion (the owner, 2026-10-21).
+  const added = places.filter((place) => place.status === "saved" && place.origin === "added");
+  const saved = places.filter((place) => place.status === "saved" && place.origin !== "added");
   const turnedDown = places.filter((place) => place.status === "not_for_us");
   const firstName = view.displayName.split(/\s+/)[0] ?? view.displayName;
 
@@ -216,9 +218,17 @@ export default async function PlacesPage() {
           <EmptyState icon={MapPin} tone="home" title={t("placeBook.emptyTitle")} description={t("placeBook.emptyLede")} />
         ) : (
           <>
+            {added.length > 0 ? (
+              <section className="space-y-2">
+                <SectionHeader title={t("placeBook.added")} count={added.length} />
+                <Card className="px-3">
+                  <ul className="divide-y divide-[var(--wh-border)]">{added.map(row)}</ul>
+                </Card>
+              </section>
+            ) : null}
             {saved.length > 0 ? (
               <section className="space-y-2">
-                <SectionHeader title={t("placeBook.saved")} />
+                <SectionHeader title={t("placeBook.suggested")} count={saved.length} />
                 <Card className="px-3">
                   <ul className="divide-y divide-[var(--wh-border)]">{saved.map(row)}</ul>
                 </Card>
@@ -226,7 +236,7 @@ export default async function PlacesPage() {
             ) : null}
             {turnedDown.length > 0 ? (
               <section className="space-y-2">
-                <SectionHeader title={t("placeBook.notForUs")} />
+                <SectionHeader title={t("placeBook.notForUs")} count={turnedDown.length} />
                 <Card className="px-3">
                   <ul className="divide-y divide-[var(--wh-border)]">{turnedDown.map(row)}</ul>
                 </Card>

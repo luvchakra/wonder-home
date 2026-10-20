@@ -49,6 +49,15 @@ describe("rankPlaces", () => {
     expect(ranked[2]!.openForWindow).toBeNull();
   });
 
+  it("puts a place someone added by hand above one saved from a suggestion", () => {
+    const known = [
+      { id: "1", placeId: "suggested", name: "Suggested", address: "", kind: "Park", location: null, mapsUri: null, status: "saved" as const, note: null, origin: "suggestion" as const },
+      { id: "2", placeId: "added", name: "Added", address: "", kind: null, location: null, mapsUri: null, status: "saved" as const, note: null, origin: "added" as const },
+    ];
+    const ranked = rankPlaces([place("suggested", { rating: 4.4 }), place("added", { rating: 4.0 })], { anchor: school, window, radiusMeters: 4000, known });
+    expect(ranked.map((entry) => entry.placeId)).toEqual(["added", "suggested"]);
+  });
+
   it("drops places far outside the radius", () => {
     const ranked = rankPlaces([place("far", { location: { latitude: school.latitude + 0.2, longitude: school.longitude } })], { anchor: school, window, radiusMeters: 4000, known: [] });
     expect(ranked).toEqual([]);

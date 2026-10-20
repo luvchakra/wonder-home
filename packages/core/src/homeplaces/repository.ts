@@ -24,6 +24,8 @@ export type HouseholdPlace = {
   mapsUri: string | null;
   status: PlaceStatus;
   note: string | null;
+  /** Added by a person from the place book, or saved from a HomePlaces suggestion. Added ones rank first. */
+  origin?: "added" | "suggestion";
 };
 
 type Row = {
@@ -37,16 +39,16 @@ type Row = {
   maps_uri: string | null;
   status: string;
   note: string | null;
+  origin?: string | null;
 };
 
 export async function listHouseholdPlaces(supabase: SupabaseClient, householdId: string): Promise<HouseholdPlace[]> {
-  const { data, error } = await supabase
-    .from("household_places")
-    .select("id, place_id, name, address, kind, latitude, longitude, maps_uri, status, note")
-    .eq("household_id", householdId)
-    .order("updated_at", { ascending: false });
+  const read = (columns: string) => supabase.from("household_places").select(columns).eq("household_id", householdId).order("updated_at", { ascending: false });
+  let { data, error } = await read("id, place_id, name, address, kind, latitude, longitude, maps_uri, status, note, origin");
+  // Before the origin column exists (20261021001000), a place with no kind was added by hand.
+  if (error?.code === "42703") ({ data, error } = await read("id, place_id, name, address, kind, latitude, longitude, maps_uri, status, note"));
   if (error) throw new Error(`listHouseholdPlaces failed: ${error.code ?? "unknown"}`);
-  return ((data ?? []) as Row[]).map((row) => ({
+  return ((data ?? []) as unknown as Row[]).map((row) => ({
     id: row.id,
     placeId: row.place_id,
     name: row.name,
@@ -56,6 +58,7 @@ export async function listHouseholdPlaces(supabase: SupabaseClient, householdId:
     mapsUri: row.maps_uri,
     status: row.status === "not_for_us" ? "not_for_us" : "saved",
     note: row.note,
+    origin: row.origin === "added" || (row.origin === undefined && row.kind === null && row.status !== "not_for_us") ? "added" : "suggestion",
   }));
 }
 
@@ -67,9 +70,11 @@ async function markPlaceImpl(
     memberId: string;
     place: { placeId: string; name: string; address: string; kind: string | null; location: LatLng | null; mapsUri: string | null };
     status: PlaceStatus;
+    /** "added" from the place book's own search; left out, a place keeps whatever it already was (a new one is a suggestion). */
+    origin?: "added";
   },
 ): Promise<void> {
-  const { error } = await supabase.from("household_places").upsert(
+  const write = (withOrigin: boolean) => supabase.from("household_places").upsert(
     {
       household_id: input.householdId,
       place_id: input.place.placeId,
@@ -81,9 +86,12 @@ async function markPlaceImpl(
       maps_uri: input.place.mapsUri?.slice(0, 500) ?? null,
       status: input.status,
       set_by_member_id: input.memberId,
+      ...(withOrigin ? { origin: "added" } : {}),
     },
     { onConflict: "household_id,place_id" },
   );
+  let { error } = await write(input.origin === "added");
+  if (error?.code === "PGRST204" && input.origin === "added") ({ error } = await write(false));
   if (error) throw refusal(error, "markPlace");
 }
 

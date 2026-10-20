@@ -45,6 +45,8 @@ export type Pet = {
   active?: boolean;
   /** A short-lived URL for the pet's photo, minted at read time (`listPets`); null when there is none. */
   photoUrl?: string | null;
+  /** What the pet likes and dislikes, its favourites, fears and allergies (`pet_preferences`), when the caller read them (`listPets`). */
+  preferences?: import("./pet-preferences").PetPreference[];
 };
 
 export type PetCareNeed = {

@@ -18,8 +18,10 @@ import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
 import { listMeals, listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
 import { shiftDay, WEEK_SLOTS, weekCount, weekDays, weekFrom, weekStartOf } from "@wonderhome/core/meals/week";
-import { DIET_CLASHES, DIETS, isDiet, type Diet, type DietClash } from "@wonderhome/core/meals/diet";
+import { DIETS, isDiet, type Diet } from "@wonderhome/core/meals/diet";
 import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
+import { nextOption, weekdayOf, type TemplateOption } from "@wonderhome/core/meals/week-template";
+import { listTemplateOptions, planWeekFromTemplate, weekPlanned } from "@wonderhome/core/meals/week-template-repository";
 import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
 import { publicEnv } from "@wonderhome/core/config/env";
 import { itemFor } from "@wonderhome/core/meals/shortfall";
@@ -47,12 +49,14 @@ import {
   SuggestMealButton,
 } from "../_components/meal-forms";
 import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
-import { mealFormLabels } from "../_lib/meal-form-labels";
-import type { RecipePickerLabels } from "../_components/recipe-picker";
+import { recipeShareText } from "@wonderhome/core/meals/recipe-share";
+import { RecipeShareButton, type RecipeShareLabels } from "./recipe-share-button";
+import { mealFormLabels, recipePickerLabels } from "../_lib/meal-form-labels";
 import { DietSettings } from "./diet-settings";
 import { RepeatLastWeek } from "./week-controls";
 import { MealIngredientsSheet } from "./meal-ingredients-sheet";
-import { formatDate, formatTime, requireSession } from "../_lib/session";
+import { ChooseAgainButton, WeekPlanCard, WeekTemplateEditor } from "./week-template";
+import { formatTime, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Meals & Cooking" };
 export const dynamic = "force-dynamic";
@@ -94,7 +98,7 @@ export default async function MealsPage({
   const thisWeek = weekStartOf(today);
 
   const entitlement = await may(supabase, householdId, "meals.planning");
-  const active = tab === "recipes" || tab === "preferences" ? tab : "plan";
+  const active = tab === "recipes" || tab === "preferences" || tab === "template" ? tab : "plan";
   const shell = {
     active: "more" as const,
     viewer,
@@ -118,7 +122,7 @@ export default async function MealsPage({
     );
   }
 
-  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, weekMeals] =
+  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, firstWeekMeals, templateOptions, weekRecord] =
     await Promise.all([
       // Every meal from today on, read once: the agenda assesses them and the
       // week below is the same rows, not a second read.
@@ -144,14 +148,71 @@ export default async function MealsPage({
         : Promise.resolve([]),
       // The week being planned, past days included, bounded to its seven days.
       active === "plan" ? listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => [] as Meal[]) : Promise.resolve([] as Meal[]),
+      // The week template (the owner, 2026-10-20): its options, and whether WonderHome has planned this week from it.
+      active === "plan" || active === "template" ? listTemplateOptions(supabase, householdId).catch(() => [] as TemplateOption[]) : Promise.resolve([] as TemplateOption[]),
+      active === "plan" ? weekPlanned(supabase, householdId, weekStart) : Promise.resolve(null),
     ]);
+  const adult = membership.memberType === "adult";
+  // Each week WonderHome picks from the template and plans it, accepted by
+  // default: the first time an adult opens a week not yet past that it has
+  // not planned. Only empty slots are filled; the week is claimed once, so a
+  // meal someone removed afterwards is not put back.
+  let weekMeals = firstWeekMeals;
+  let planned = weekRecord ? weekRecord.planned : null;
+  if (active === "plan" && adult && templateOptions.length > 0 && weekRecord === false && weekDates[6]! >= today) {
+    const filled = await planWeekFromTemplate(supabase, { householdId, week: weekStart, today, timezone, memberId: membership.memberId, once: true }).catch(() => null);
+    if (filled) {
+      planned = filled.planned;
+      if (filled.planned > 0) weekMeals = await listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => firstWeekMeals);
+    }
+  }
   const meals = weekMeals;
   const words = groceryWords(t, viewer.language);
+  // Sharing a household recipe (the owner, 2026-10-20): the whole recipe as a message, and its picture card for WhatsApp.
+  const shareNumber = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 2 });
+  const shareWords = {
+    timeServes: t("meals.recipe.timeServes", { minutes: "{minutes}", serves: "{serves}" }),
+    perServing: t("recipes.share.perServing", { kcal: "{kcal}", protein: "{protein}" }),
+    kcalOnly: t("recipes.share.kcalOnly", { kcal: "{kcal}" }),
+    needs: t("recipes.share.needs"),
+    optional: t("recipes.optional"),
+    steps: t("recipes.steps"),
+    closing: t("recipes.share.closing"),
+    unitName: (unit: string) => words.unitNames[unit] ?? unit,
+    number: (value: number) => shareNumber.format(value),
+  };
+  const shareLabels = (name: string): RecipeShareLabels => ({
+    share: t("recipes.share.share"),
+    shareLabel: t("recipes.share.shareLabel", { name }),
+    title: t("recipes.share.title", { name }),
+    lede: t("recipes.share.lede"),
+    preview: t("recipes.share.preview"),
+    whatsapp: "WhatsApp",
+    whatsappMeta: t("recipes.share.whatsappMeta"),
+    more: t("recipes.share.more"),
+    moreMeta: t("recipes.share.moreMeta"),
+    copy: t("recipes.share.copy"),
+    copyMeta: t("recipes.share.copyMeta"),
+    copied: t("recipes.share.copied"),
+    email: t("recipes.share.email"),
+    emailMeta: t("recipes.share.emailMeta"),
+    picture: t("recipes.share.picture"),
+    pictureMeta: t("recipes.share.pictureMeta"),
+  });
 
   const picked = RECIPE_COURSES.includes(course as RecipeCourse) ? (course as RecipeCourse) : null;
   // Veg / Non-veg beside WonderHome's ideas (the owner, 2026-10-20). An egg dish is not veg, so it shows with non-veg.
   const foodFilter = food === "veg" || food === "nonveg" ? food : null;
   const ideas = catalog.filter((dish) => (!picked || dish.course === picked) && (!foodFilter || (foodFilter === "veg" ? dish.diet === "veg" : dish.diet !== "veg")));
+  // How many ideas each filter would show, alongside the other filter as it stands (the owner, 2026-10-20: "add counts for each tab").
+  const foodMatches = (dish: (typeof catalog)[number], key: "veg" | "nonveg" | null) => !key || (key === "veg" ? dish.diet === "veg" : dish.diet !== "veg");
+  const courseCount = (key: RecipeCourse | null) => catalog.filter((dish) => (!key || dish.course === key) && foodMatches(dish, foodFilter)).length;
+  const foodCount = (key: "veg" | "nonveg" | null) => catalog.filter((dish) => (!picked || dish.course === picked) && foodMatches(dish, key)).length;
+  const countBadge = (count: number, on: boolean) => (
+    <span className={`grid min-w-5 shrink-0 place-items-center rounded-full px-1 text-[0.625rem] font-bold ${on ? "bg-[var(--wh-primary-foreground)]/20 text-[var(--wh-primary-foreground)]" : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-muted)]"}`}>
+      {count}
+    </span>
+  );
   const ideasHref = (next: { course?: RecipeCourse | null; food?: "veg" | "nonveg" | null }) => {
     const params = new URLSearchParams({ tab: "recipes" });
     const courseKey = next.course === undefined ? picked : next.course;
@@ -234,7 +295,7 @@ export default async function MealsPage({
                 members={memberOptions}
                 labels={formLabels}
               />
-            ) : (
+            ) : active === "template" ? null : (
               <>
                 <SuggestMealButton householdId={householdId} labels={formLabels} />
                 <PlanMealButton
@@ -258,6 +319,11 @@ export default async function MealsPage({
               label: t("meals.tab.plan"),
               href: "/meals",
               count: agenda?.meals.length,
+            },
+            {
+              key: "template",
+              label: t("meals.tab.template"),
+              href: "/meals?tab=template",
             },
             {
               key: "recipes",
@@ -326,6 +392,28 @@ export default async function MealsPage({
                   ) : null}
                 </div>
               </div>
+              {weekDates[6]! >= today ? (
+                <WeekPlanCard
+                  householdId={householdId}
+                  week={weekStart}
+                  hasTemplate={templateOptions.length > 0}
+                  canEdit={adult}
+                  planned={planned}
+                  labels={{
+                    title: weekStart === thisWeek ? t("meals.template.planTitle") : t("meals.template.planTitleWeek", { date: weekLabel }),
+                    planned: t("meals.template.planned", { count: "{count}" }),
+                    plannedOne: t("meals.template.plannedOne"),
+                    plannedNone: t("meals.template.plannedNone"),
+                    fill: t("meals.template.fill"),
+                    filling: t("meals.template.filling"),
+                    filled: t("meals.template.filled", { count: "{count}" }),
+                    filledOne: t("meals.template.filledOne"),
+                    filledNone: t("meals.template.filledNone"),
+                    setUp: t("meals.template.setUp"),
+                    setUpLede: t("meals.template.setUpLede"),
+                  }}
+                />
+              ) : null}
               <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {days
                   .filter((day) => !day.past || day.meals.length > 0)
@@ -351,6 +439,7 @@ export default async function MealsPage({
                                   labels={formLabels}
                                   groceries={groceries}
                                   words={words}
+                                  chooseAgain={meal.origin === "week_template" && nextOption({ options: templateOptions, weekday: weekdayOf(meal.onDate), slot: meal.slot, current: meal.recipe?.id ?? null }) !== null}
                                 />
                               ));
                             if (day.past) return null;
@@ -376,6 +465,44 @@ export default async function MealsPage({
               </div>
             </section>
           </>
+        ) : null}
+
+        {active === "template" ? (
+          <WeekTemplateEditor
+            householdId={householdId}
+            canEdit={adult}
+            options={templateOptions}
+            picker={plan}
+            labels={{
+              title: t("meals.template.title"),
+              lede: t("meals.template.lede"),
+              add: t("meals.template.add"),
+              addTitle: t("meals.template.addTitle"),
+              addLede: t("meals.template.addLede"),
+              editTitle: t("meals.template.editTitle"),
+              days: t("meals.template.days"),
+              every: t("meals.template.every"),
+              weekdays: t("meals.template.weekdays"),
+              weekend: t("meals.template.weekend"),
+              day: t("meals.template.day"),
+              meal: t("meals.template.meal"),
+              save: t("meals.template.save"),
+              saving: t("meals.template.saving"),
+              remove: t("meals.template.remove"),
+              removeLabel: t("meals.template.removeLabel", { name: "{name}", day: "{day}", slot: "{slot}" }),
+              editLabel: t("meals.template.editLabel", { name: "{name}", day: "{day}", slot: "{slot}" }),
+              added: t("meals.template.added"),
+              pickDish: t("meals.template.pickDish"),
+              emptyTitle: t("meals.template.emptyTitle"),
+              emptyLede: t("meals.template.emptyLede"),
+              adultsOnly: t("meals.template.adultsOnly"),
+              slotEmpty: t("meals.template.slotEmpty"),
+              addToSlot: t("meals.template.addToSlot", { slot: "{slot}" }),
+              // Monday first; 2026-10-19 is a Monday.
+              dayNames: Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(viewer.language, { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 9, 19 + index, 12)))),
+              slots: formLabels.slots,
+            }}
+          />
         ) : null}
 
         {active === "recipes" ? (
@@ -418,7 +545,15 @@ export default async function MealsPage({
                               </p>
                             ) : null}
                           </div>
-                          <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
+                          <div className="flex shrink-0 flex-col items-center">
+                            <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
+                            <RecipeShareButton
+                              name={recipe.name}
+                              message={recipeShareText(recipe, shareWords)}
+                              cardPath={`/meals/recipe-card/${recipe.id}?lang=${viewer.language}`}
+                              labels={shareLabels(recipe.name)}
+                            />
+                          </div>
                         </div>
                       </Card>
                     );
@@ -453,6 +588,7 @@ export default async function MealsPage({
                           </span>
                         ) : null}
                         {key === null ? t("recipes.course.all") : t(key === "veg" ? "recipes.food.veg" : "recipes.food.nonveg")}
+                        {countBadge(foodCount(key), on)}
                       </Link>
                     );
                   })}
@@ -469,6 +605,7 @@ export default async function MealsPage({
                         scroll={false}
                       >
                         {key ? t(`recipes.course.${key}`) : t("recipes.course.all")}
+                        {countBadge(courseCount(key), on)}
                       </PillLink>
                     );
                   })}
@@ -613,43 +750,6 @@ const PREFERENCE_KIND_KEYS = {
   diet: "meals.prefKind.diet",
 } as const;
 
-/** The recipe picker's words (`RecipePicker`), in the reader's language. */
-function recipePickerLabels(t: Translate, diets: Record<Diet, string>): RecipePickerLabels {
-  return {
-    label: t("mealForm.fromRecipe"),
-    oneOff: t("mealForm.oneOff"),
-    search: t("mealForm.picker.search"),
-    fits: t("mealForm.picker.fits"),
-    any: t("mealForm.picker.any"),
-    anyCalories: t("mealForm.picker.anyCalories"),
-    anyProtein: t("mealForm.picker.anyProtein"),
-    dishDiets: { veg: t("recipes.diet.veg"), egg: t("recipes.diet.egg"), non_veg: t("recipes.diet.non_veg") },
-    diets,
-    clashes: Object.fromEntries(DIET_CLASHES.map((clash) => [clash, t(`meals.dietClash.${clash}` as TranslationKey)])) as Record<DietClash, string>,
-    filterDiet: t("mealForm.picker.filterDiet"),
-    filterCalories: t("mealForm.picker.filterCalories"),
-    filterProtein: t("mealForm.picker.filterProtein"),
-    under: t("mealForm.picker.under", { kcal: "{kcal}" }),
-    atLeast: t("mealForm.picker.atLeast", { grams: "{grams}" }),
-    sort: t("mealForm.picker.sort"),
-    sortSuggested: t("mealForm.picker.sortSuggested"),
-    sortProtein: t("mealForm.picker.sortProtein"),
-    sortCalories: t("mealForm.picker.sortCalories"),
-    yours: t("mealForm.picker.yours"),
-    ready: t("mealForm.readyToCook"),
-    missing: t("mealForm.missingIngredient"),
-    fromWonderHome: t("mealForm.picker.fromWonderHome"),
-    nutrition: t("mealForm.picker.nutrition", { kcal: "{kcal}", protein: "{protein}" }),
-    caloriesOnly: t("mealForm.picker.caloriesOnly", { kcal: "{kcal}" }),
-    proteinOnly: t("mealForm.picker.proteinOnly", { protein: "{protein}" }),
-    notCounted: t("mealForm.picker.notCounted"),
-    time: t("mealForm.picker.time", { minutes: "{minutes}", serves: "{serves}" }),
-    notFor: t("mealForm.picker.notFor", { name: "{name}", diet: "{diet}", reason: "{reason}" }),
-    empty: t("mealForm.picker.empty"),
-    savedOnPlan: t("mealForm.picker.savedOnPlan", { name: "{name}" }),
-  };
-}
-
 /** A preference's kind in the reader's words; a kind the catalog does not know is shown as stored. */
 function preferenceKindWords(t: Translate, kind: string): string {
   const key = PREFERENCE_KIND_KEYS[kind as keyof typeof PREFERENCE_KIND_KEYS];
@@ -682,7 +782,10 @@ function MealCard({
   labels,
   groceries,
   words,
+  chooseAgain,
 }: {
+  /** WonderHome picked it from the week template, and the template lists another dish for it. */
+  chooseAgain: boolean;
   meal: Meal;
   cook: string | null;
   timezone: string;
@@ -729,6 +832,7 @@ function MealCard({
         <div className="min-w-0 flex-1">
           <p className="text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
             {labels.slots[meal.slot]}
+            {meal.origin === "week_template" ? <span className="font-medium normal-case tracking-normal text-[var(--wh-primary)]"> · {t("meals.template.pick")}</span> : null}
           </p>
           <p className="text-sm font-semibold">{meal.name}</p>
           <p className="text-xs text-[var(--wh-foreground-muted)]">
@@ -835,6 +939,14 @@ function MealCard({
           recipes={recipes}
           labels={labels}
         />
+        {chooseAgain ? (
+          <ChooseAgainButton
+            householdId={householdId}
+            mealId={meal.id}
+            onDate={meal.onDate}
+            labels={{ action: t("meals.template.chooseAgain"), working: t("meals.template.choosing"), label: t("meals.template.chooseAgainLabel", { slot: labels.slots[meal.slot] }) }}
+          />
+        ) : null}
       </div>
     </Card>
   );

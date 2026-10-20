@@ -84,6 +84,7 @@ export async function addPlaceAction(_previous: AddPlaceState, formData: FormDat
         mapsUri: mapsLink({ name: place.name, formattedAddress: place.formattedAddress, placeId: place.placeId }),
       },
       status: "saved",
+      origin: "added",
     });
     const note = String(formData.get("note") ?? "").trim().slice(0, 300);
     if (note) {

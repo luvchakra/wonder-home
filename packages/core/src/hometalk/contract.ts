@@ -1,3 +1,5 @@
+import { spokenSummary } from "../conversation/speech";
+import { parseReply } from "../conversation/reply-format";
 /**
  * The canonical HomeTalk contract (voice integration phase 1,
  * `design/voice-integration/01-hometalk-voice-gateway-foundation.md`).
@@ -146,6 +148,14 @@ export const MAX_SPEECH = 420;
  * fit is counted ("and 3 more"), never cut mid-sentence.
  */
 export function speechFrom(text: string): string {
+  // A long answer made of headed items ("**Today** — …", "**Food** — …") is
+  // heard as its opening and what the items are about (the owner, 2026-10-20:
+  // "while reading it out, just give a concise summary"); the screen has the rest.
+  const headedItems = parseReply(text).reduce((count, block) => count + (block.kind === "list" ? block.items.filter((item) => item[0]?.kind === "bold").length : 0), 0);
+  if (headedItems >= 3) {
+    const summary = spokenSummary(text, { tail: "The rest is on the screen.", more: (count) => `${count} more` });
+    if (summary.length <= MAX_SPEECH) return summary;
+  }
   const lines = groupedForSpeech(text)
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/https?:\/\/\S+/g, "")

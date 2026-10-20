@@ -24,6 +24,8 @@ export const groceryFr: AreaCatalog<typeof groceryEn> = {
   "grocery.stepper.amount": "Changer la quantité de {name} à acheter",
   "grocery.stepper.now": "{name} : {amount} à acheter",
   "grocery.stepper.none": "{name} : rien à acheter",
+  "grocery.stepper.remove": "Retirer",
+  "grocery.stepper.removeLabel": "Retirer {name} de la liste",
   "grocery.stepper.conflict": "Quelqu’un vient de le modifier, voici donc la version la plus récente.",
   "grocery.stepper.failed": "Ce n’a pas été enregistré : {reason}",
   "grocery.stock.less": "Moins de {name} à la maison",

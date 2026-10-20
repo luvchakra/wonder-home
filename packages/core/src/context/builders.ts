@@ -14,6 +14,7 @@ import type { HomeAssessment } from "../home/assessment";
 import type { HomeAsset } from "../home/assets";
 import type { LaundryNeed } from "../home/laundry";
 import type { Pet, PetCareNeed } from "../home/pets";
+import { petPreferenceSentence } from "../home/pet-preferences";
 import type { ServiceRequest } from "../home/services";
 import type { HomeSendItem } from "../homesend/items";
 import type { HouseholdPlace } from "../homeplaces/repository";
@@ -398,11 +399,16 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         domain: "pets",
         entityType: "pet",
         entityId: pet.id,
-        summary: `${pet.name} is the household's ${pet.species.toLowerCase()}.`,
+        // What the pet likes rides on its own fact, so "what does Bruno like?" is answered from the record.
+        summary: [`${pet.name} is the household's ${pet.species.toLowerCase()}.`, petPreferenceSentence(pet.name, pet.preferences ?? [])].filter(Boolean).join(" "),
         need: "which pets the household has",
         privacyClass: "general",
         tier: 1,
-        attributes: { name: pet.name, species: pet.species.toLowerCase() },
+        attributes: {
+          name: pet.name,
+          species: pet.species.toLowerCase(),
+          ...((pet.preferences ?? []).length > 0 ? { preferences: (pet.preferences ?? []).map((entry) => ({ kind: entry.kind, subject: entry.subject, ...(entry.note ? { note: entry.note } : {}) })) } : {}),
+        },
         source: { type: "pets" },
         aliases: [pet.name, pet.species, ...speciesAliases(pet.species)],
       });

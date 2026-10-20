@@ -243,4 +243,20 @@ export const healthFr: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "Noter une mesure",
   "healthForm.vital.description": "Une seule mesure — toujours ce que vous avez réellement relevé.",
   "healthForm.vital.editTitle": "Modifier la mesure",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "Ajouter",
+  "healthForm.menu.title": "Ajouter à Santé et forme",
+  "healthForm.menu.description": "Choisissez ce que vous voulez ajouter. Chaque élément garde la confidentialité que vous choisissez.",
+  "healthForm.menu.group.health": "Santé",
+  "healthForm.menu.group.visits": "Visites médicales",
+  "healthForm.menu.group.fitness": "Forme",
+  "healthForm.menu.meta.issue": "Quelque chose que vous avez remarqué, comme un mal de gorge",
+  "healthForm.menu.meta.vital": "Une mesure, comme le poids ou la tension",
+  "healthForm.menu.meta.routine": "Une mesure à prendre régulièrement",
+  "healthForm.menu.meta.record": "Un résultat d'analyse, une ordonnance ou un document semblable",
+  "healthForm.menu.meta.appointment": "Une visite à un jour et une heure précis",
+  "healthForm.menu.meta.checkup": "Un contrôle qui revient, comme un détartrage — à réserver quand il est dû",
+  "healthForm.menu.meta.session": "Ce que vous avez vraiment fait aujourd'hui",
+  "healthForm.menu.meta.goal": "À quelle fréquence vous aimeriez tenir une habitude",
 };

@@ -1,4 +1,4 @@
-import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MessageCircle, MicVocal, ShieldCheck, Speaker, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MapPin, MessageCircle, MicVocal, ShieldCheck, Speaker, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -75,7 +75,7 @@ export default async function SettingsPage() {
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
   const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
-  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice, mySharing] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
@@ -86,6 +86,8 @@ export default async function SettingsPage() {
     whatsappReady ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
     // Their own picked office (HomePlaces 24-005), edited here like the rest of their profile.
     loadWorkPlace(supabase, householdId, membership.memberId).catch(() => null),
+    // Whether they share where they are (their own row; RLS lets every member read who shares).
+    supabase.from("member_location_sharing").select("enabled").eq("member_id", membership.memberId).maybeSingle().then((result) => Boolean((result.data as { enabled?: boolean } | null)?.enabled), () => false),
   ]);
   const me = members.find((member) => member.id === membership.memberId) ?? null;
 
@@ -125,6 +127,7 @@ export default async function SettingsPage() {
   const aiAndPrivacy: Row[] = [
     { icon: Bot, tone: "ai", title: t("settingsPage.ai.title"), meta: t("settingsHome.ai.meta", { source: keyNote.title }), href: "/settings/ai" },
     { icon: ShieldCheck, tone: "primary", title: t("settingsHome.privacy.title"), meta: t("settingsHome.privacy.meta"), href: "/settings/privacy" },
+    { icon: MapPin, tone: "people", title: t("location.title"), meta: mySharing ? t("location.meta.on") : t("location.meta.off"), href: "/settings/location" },
   ];
   const connected: Row[] = [
     // WhatsApp only once the deployment has a number to connect to.

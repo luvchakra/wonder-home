@@ -243,4 +243,20 @@ export const healthAr: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "تسجيل قراءة",
   "healthForm.vital.description": "قياس واحد — دائمًا ما سجّلته فعلًا.",
   "healthForm.vital.editTitle": "تعديل القراءة",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "إضافة",
+  "healthForm.menu.title": "إضافة إلى الصحة واللياقة",
+  "healthForm.menu.description": "اختر ما تريد إضافته. يحتفظ كل شيء بالخصوصية التي تختارها.",
+  "healthForm.menu.group.health": "الصحة",
+  "healthForm.menu.group.visits": "زيارات الطبيب",
+  "healthForm.menu.group.fitness": "اللياقة",
+  "healthForm.menu.meta.issue": "شيء لاحظته، مثل التهاب الحلق",
+  "healthForm.menu.meta.vital": "قياس واحد، مثل الوزن أو ضغط الدم",
+  "healthForm.menu.meta.routine": "قياس يُؤخذ بانتظام",
+  "healthForm.menu.meta.record": "نتيجة تحليل أو وصفة طبية أو مستند مشابه",
+  "healthForm.menu.meta.appointment": "زيارة في يوم ووقت محددين",
+  "healthForm.menu.meta.checkup": "فحص يتكرر، مثل تنظيف الأسنان — احجزه عند موعده",
+  "healthForm.menu.meta.session": "ما فعلته فعلًا اليوم",
+  "healthForm.menu.meta.goal": "كم مرة تودّ المواظبة على شيء",
 };

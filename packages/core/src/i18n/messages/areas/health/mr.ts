@@ -243,4 +243,20 @@ export const healthMr: AreaCatalog<typeof healthEn> = {
   "healthForm.vital.add": "मोजमाप नोंदवा",
   "healthForm.vital.description": "एक मोजमाप — नेहमी तुम्ही प्रत्यक्षात नोंदवलेलेच.",
   "healthForm.vital.editTitle": "मोजमाप बदला",
+
+  // One Add for the screen (the owner, 2026-10-21).
+  "healthForm.menu.label": "जोडा",
+  "healthForm.menu.title": "आरोग्य आणि फिटनेसमध्ये जोडा",
+  "healthForm.menu.description": "काय जोडायचे ते निवडा. प्रत्येक गोष्ट तुम्ही निवडलेल्या गोपनीयतेसह राहते.",
+  "healthForm.menu.group.health": "आरोग्य",
+  "healthForm.menu.group.visits": "डॉक्टरांची भेट",
+  "healthForm.menu.group.fitness": "फिटनेस",
+  "healthForm.menu.meta.issue": "तुमच्या लक्षात आलेले काही, जसे घसा खवखवणे",
+  "healthForm.menu.meta.vital": "एक मोजमाप, जसे वजन किंवा रक्तदाब",
+  "healthForm.menu.meta.routine": "ठरलेल्या वेळी घ्यायचे मोजमाप",
+  "healthForm.menu.meta.record": "लॅब रिपोर्ट, प्रिस्क्रिप्शन किंवा तसा दस्तऐवज",
+  "healthForm.menu.meta.appointment": "ठरलेल्या दिवशी आणि वेळी भेट",
+  "healthForm.menu.meta.checkup": "पुन्हा पुन्हा होणारी तपासणी, जसे दातांची स्वच्छता — वेळ आल्यावर बुक करा",
+  "healthForm.menu.meta.session": "आज तुम्ही प्रत्यक्ष काय केले",
+  "healthForm.menu.meta.goal": "एखादी गोष्ट किती वेळा चालू ठेवायची",
 };

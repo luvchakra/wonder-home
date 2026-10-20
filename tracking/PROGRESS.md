@@ -26,16 +26,16 @@ disagree again.)
 | # | Module | Stories | P0 | P1 | P2 | Done | Status |
 |---|---|---:|---:|---:|---:|---:|---|
 | 00 | Project Bootstrap & Architecture | 11 | 8 | 3 | 0 | 11 | Done |
-| 01 | Identity & Family Accounts | 9 | 5 | 3 | 1 | 9 | Done |
+| 01 | Identity & Family Accounts | 10 | 5 | 4 | 1 | 9 | In Progress (01-014 waits on its migration) |
 | 02 | Household Configuration & Playbook | 9 | 7 | 1 | 1 | 9 | Done |
 | 03 | Outcome & Routine Engine | 8 | 5 | 2 | 1 | 8 | Done |
-| 04 | Conversation, Voice & Text | 19 | 16 | 3 | 0 | 18 | In Progress |
-| 05 | Household Certification & Understanding | 11 | 6 | 4 | 1 | 11 | Done |
+| 04 | Conversation, Voice & Text | 20 | 17 | 3 | 0 | 19 | In Progress |
+| 05 | Household Certification & Understanding | 12 | 6 | 4 | 2 | 12 | Done |
 | 06 | Actionable Notification Engine | 8 | 7 | 1 | 0 | 8 | Done |
 | 07 | Househelper & Home Operations | 8 | 5 | 2 | 1 | 8 | Done |
 | 08 | Kids & School Intelligence | 18 | 10 | 5 | 3 | 17 | In Progress |
 | 09 | Commerce, Groceries & Pet Supplies | 9 | 4 | 4 | 1 | 9 | Done (grocery pantry stories moved to 25 HomeFood) |
-| 10 | Meals & Cooking | 9 | 5 | 2 | 2 | 9 | Done |
+| 10 | Meals & Cooking | 12 | 6 | 4 | 2 | 11 | In Progress (10-012 waits on its migration) |
 | 11 | Bills, Fees & Finance | 11 | 6 | 3 | 2 | 10 | In Progress (11-011 left) |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
@@ -46,11 +46,11 @@ disagree again.)
 | 18 | API & Developer Platform | 8 | 6 | 1 | 1 | 6 | In Progress |
 | 19 | Testing, Observability & Production | 8 | 6 | 2 | 0 | 7 | In Progress |
 | 20 | Subscriptions, Entitlements & Usage | 11 | 4 | 4 | 3 | 10 | In Progress |
-| 21 | Health and Fitness | 8 | 6 | 2 | 0 | 8 | Done |
+| 21 | Health and Fitness | 9 | 6 | 2 | 1 | 9 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
-| 24 | HomePlaces | 8 | 2 | 4 | 2 | 5 | In Progress |
-| 25 | HomeFood | 23 | 12 | 7 | 4 | 18 | In Progress |
+| 24 | HomePlaces | 9 | 2 | 5 | 2 | 5 | In Progress |
+| 25 | HomeFood | 24 | 12 | 7 | 5 | 19 | In Progress |
 | 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
 ## Execution Log
@@ -319,3 +319,19 @@ disagree again.)
 | 2026-10-20 | 08 | 08-019 | Done | `school/goals.test.ts` 7 (school-work goal met by the work, `goalStarts`); school, help and i18n tests 207; typecheck, lint, help links; migration `20261020210000` live; browser QA on the live project at 360px and 1280px: the parent set "Finish Volcano model" (reward Extra park time) and "Go to Piano this week" from Start from, the child saw both, marked the Volcano work done and the goal showed met with its reward; the Overview score read Level 1, 2 stars (1 from goals, 1 from school work), 1 day in a row, 1 of 2 goals met; a school row opened to its details and Show me scrolled to the section (also on the open tab); no horizontal scroll. |
 | 2026-10-20 | 08 | 08-019 | Done | Follow-up (PR #273): Overview without the score card, first names in the child picker, tab row fits 320px and 360px (checked: scrollWidth equals clientWidth, no page overflow on Kids & School, Meals, Groceries, Bills, Notifications, Family, Home & Upkeep at 320/360/1280), teacher picked from the child's teachers in a timetable period; i18n tests, typecheck, lint. |
 | 2026-10-20 | 10 | 10-011 | Done | `meals/week.test.ts` 3 (week bounds, slot count, repeat last week); i18n/meals tests 111; typecheck; browser at 360px on the live project: This week, 1 of 18 meals planned, + Lunch tomorrow opened Plan a meal on Lunch / 21 Oct / 13:30, next week reachable, Veg 33 and Non-veg 1 ideas, no horizontal scroll. Also in PR #273: HomeBrain's Learned tab lists the last 30 days' beliefs (it was empty since 05-010). |
+| 2026-10-20 | 08 | 08-020 | In Progress | A child's Done on a goal waits for a grown-up: code, words, help and tests complete (`goals.test.ts`, `notices.test.ts`, `test-child-goals-rls.mjs` 10/10); migration `20261020230000` written and tested locally, waiting to reach the live project. |
+| 2026-10-20 | 08 | 08-021 | In Progress | The cat's sayings from a 154-line list by age and gender, never repeated (`companion-sayings.test.ts` 4, `companion.test.ts` 10, `test-companion-sayings-rls.mjs` 4/4); migration `20261020231000` waiting to reach the live project. One cat card per tab (PR #276). |
+| 2026-10-20 | 25 | 25-027 | Done | Remove from the list in one tap: the item leaves To buy and stays under All; browser QA at 360px (To buy 5 → 4, no overflow); typecheck. |
+| 2026-10-20 | 26 | 26-016 | Done | Today's entries open their page; a meal changes (pencil) and a new one is planned (Plan a meal) from Today; typecheck, lint; browser QA at 360px and 1280px on the QA household (planned, changed, opened). |
+| 2026-10-20 | 04 | 04-028 | Done | Stop a reply (and a 45 s self-stop); a long reply heard as a short summary in-app and over Alexa/Gemini; speech and gateway tests, eval gates pass; browser QA at 360px. |
+| 2026-10-20 | 11 | 11-013 | Done | Monthly spend as line charts, all bills and each bill, with axes, dots, tap-for-amount and a table view; browser QA at 360px and 1280px. |
+| 2026-10-20 | 13 | 13-009 | In Progress | Pet likes and favourites: table, RLS (3/3), Family UI, HomeBrain fact, words, help; migration `20261020232000` waiting to reach the live project. |
+| 2026-10-21 | 13 | 13-010 | Done | Home & Upkeep redesign: Overview / Things / Requests tabs with counts, Coming up, edit/record service/retire for things, move on/edit/cancel for requests; words and help in eight languages. |
+| 2026-10-20 | 08 | 08-022 | Done | Confetti and balloons on I did it!; waiting button wraps; tab rows size to their content and scroll to the top on a tap; browser QA at 320/360/412px. |
+| 2026-10-20 | 10 | 10-012 | In Progress | Week template with several dishes per meal; WonderHome plans each week from it at once, only into empty slots, accepted unless changed (Choose again, Change meal); picker 8 unit tests, RLS 5/5; migration `20261020234000` waiting to reach the live project. |
+| 2026-10-21 | 01 | 01-014 | In Progress | Location sharing by consent: Settings → Location sharing, a child's set by a guardian in Family, adults see At Home / Out · ago with Open in Maps; RLS 4/4, unit 5; migration `20261020233000` waits for the live project. |
+| 2026-10-21 | 04 | 04-029 | Done | Just after midnight "tomorrow" is the day you wake up to (before 4 am), for actions, questions and resolution; the reply names the date; 3,896 unit tests pass. |
+| 2026-10-21 | 05 | 05-012 | Done | HomeBrain opens on Registered; tabs with counts; three counts in one row. |
+| 2026-10-21 | 21 | 21-009 | Done | Eight Health header pills became one grouped Add (kit `AddMenu`); browser QA at 360px and 1280px. |
+| 2026-10-21 | 24 | 24-012 | In Progress | Place book: Added by you first, then Saved from HomeTalk; added places rank first; migration `20261021001000` waits for the live project. |
+| 2026-10-21 | 25 | 25-028 | Done | Recipe ingredients and steps tick off on screen; Share a recipe (WhatsApp picture card + full recipe message, other apps, copy, email, picture); counts on recipe filters. |

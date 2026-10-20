@@ -100,3 +100,25 @@ describe("the next class today", () => {
     expect(nextClassToday({ ...base, nowHHMM: "18:00", activities: [{ childMemberId: "c1", name: "Piano", days: [2], startsAt: "17:00", startsOn: null, endsOn: null }], periods: [] })).toBeNull();
   });
 });
+
+describe("the cat's fun lines come from sayings the child has not heard", () => {
+  const base = { unread: 0, newestTitle: null, missionsLeft: 1, streak: 0, activeToday: false, almostGoal: null, starsToNextLevel: 20, nextLevel: 2, nextFun: null, today: "2026-10-20" };
+
+  it("deals each unheard saying once, between the reminders, with its id", () => {
+    const lines = companionLines({
+      ...base,
+      sayings: [
+        { id: "o-fact-001", kind: "fact", text: "A day on Venus is longer than its year." },
+        { id: "o-joke-001", kind: "joke", text: "Why was the maths book sad?" },
+      ],
+    });
+    expect(lines.map((line) => line.kind)).toEqual(["mission", "fact", "joke"]);
+    expect(lines.filter((line) => line.sayingId).map((line) => line.sayingId)).toEqual(["o-fact-001", "o-joke-001"]);
+    expect(lines.some((line) => line.key.startsWith("kids.cat.fact."))).toBe(false);
+  });
+
+  it("keeps to reminders once every saying has been heard, and says hello when there are none", () => {
+    expect(companionLines({ ...base, sayings: [] }).map((line) => line.kind)).toEqual(["mission"]);
+    expect(companionLines({ ...base, missionsLeft: 0, sayings: [] }).map((line) => line.kind)).toEqual(["hello"]);
+  });
+});

@@ -378,8 +378,11 @@ export function ChangeMealButton({
   members,
   recipes,
   labels,
+  compact = false,
 }: {
   householdId: string;
+  /** An icon with its words for assistive technology, where a text pill would squeeze the meal's name (rule 11). */
+  compact?: boolean;
   meal: { id: string; name: string; slot: (typeof SLOTS)[number]; onDate: string; readyByTime: string; cookMemberId: string | null; recipeId: string | null };
   members: { id: string; displayName: string }[];
   recipes: { id: string; name: string }[];
@@ -404,16 +407,31 @@ export function ChangeMealButton({
 
   return (
     <>
-      <Pill
-        type="button"
-        tone="quiet"
-        onClick={() => {
-          setRecipeId(meal.recipeId ?? "");
-          setOpen(true);
-        }}
-      >
-        {labels.change}
-      </Pill>
+      {compact ? (
+        <button
+          type="button"
+          aria-label={fill(labels.changeTitle, { name: meal.name })}
+          title={fill(labels.changeTitle, { name: meal.name })}
+          onClick={() => {
+            setRecipeId(meal.recipeId ?? "");
+            setOpen(true);
+          }}
+          className="grid size-11 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+        >
+          <Pencil aria-hidden className="size-4" />
+        </button>
+      ) : (
+        <Pill
+          type="button"
+          tone="quiet"
+          onClick={() => {
+            setRecipeId(meal.recipeId ?? "");
+            setOpen(true);
+          }}
+        >
+          {labels.change}
+        </Pill>
+      )}
       <Sheet open={open} onOpenChange={setOpen} title={fill(labels.changeTitle, { name: meal.name })} description={labels.changeDescription}>
         {open ? (
           <form action={formAction} className="space-y-3">

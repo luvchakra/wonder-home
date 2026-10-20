@@ -64,7 +64,8 @@ export function AgendaExpandableRow({
           <IconTile icon={presentation.icon} tone={presentation.tone} />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">{item.title}</span>
-            <span className="block truncate text-xs text-[var(--wh-foreground-subtle)]">{item.reason}</span>
+            {/* The whole reason, wrapped, never cut (rule 15). */}
+            <span className="block text-xs break-words text-[var(--wh-foreground-subtle)]">{item.reason}</span>
           </span>
           {badge ? (
             <span className="shrink-0">{badge}</span>
