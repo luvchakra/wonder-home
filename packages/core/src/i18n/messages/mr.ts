@@ -13,6 +13,7 @@ import { eventsMr } from "./areas/events/mr";
 import { calendarMr } from "./areas/calendar/mr";
 import { memberInviteMr } from "./areas/memberinvite/mr";
 import { whatsNewMr } from "./areas/whatsnew/mr";
+import { amafMr } from "./areas/amaf/mr";
 import { groceryMr } from "./areas/grocery/mr";
 import { welcomeMr } from "./areas/welcome/mr";
 
@@ -652,6 +653,18 @@ export const mr: Catalog = {
   "meals.empty.title": "या आठवड्यात काहीही ठरलेले नाही",
   "meals.empty.lede": "जेवण ठरवा, आणि WonderHome साहित्य, स्वयंपाक करणाऱ्याचा वेळ आणि सगळ्यांच्या आवडी तपासते — मग काय कमी आहे ते सांगते.",
   "meals.nothingPlannedYet": "अजून काहीही ठरलेले नाही.",
+  "meals.week.label": "{date} चा आठवडा",
+  "meals.week.thisWeek": "हा आठवडा",
+  "meals.week.backToThis": "या आठवड्यावर परत",
+  "meals.week.previous": "मागचा आठवडा",
+  "meals.week.next": "पुढचा आठवडा",
+  "meals.week.planned": "{total} पैकी {planned} जेवणे ठरली",
+  "meals.week.planSlot": "{day} ला {slot} ठरवा",
+  "meals.week.repeat": "मागचा आठवडा पुन्हा",
+  "meals.week.repeating": "कॉपी होत आहे…",
+  "meals.week.copied": "मागच्या आठवड्यातील {count} जेवणे रिकाम्या जागी कॉपी केली.",
+  "meals.week.copiedOne": "मागच्या आठवड्यातील 1 जेवण रिकाम्या जागी कॉपी केले.",
+  "meals.week.copyNone": "मागच्या आठवड्यातून कॉपी करण्यासारखे काही नाही — जागा आधीच ठरल्या आहेत किंवा मागचा आठवडा रिकामा होता.",
   "meals.recipes.emptyTitle": "अजून एकही पाककृती नाही",
   "meals.recipes.emptyLede": "पाककृतीत साहित्य आणि वेळ असतो, त्यामुळे ठरलेल्या जेवणाला काय लागते आणि कधी सुरू करायचे ते कळते.",
   "meals.recipe.timeServes": "{minutes} मिनिटे · {serves} जणांसाठी",
@@ -852,6 +865,7 @@ export const mr: Catalog = {
   ...eventsMr,
   ...calendarMr,
   ...whatsNewMr,
+  ...amafMr,
   ...memberInviteMr,
   ...groceryMr,
   ...welcomeMr,

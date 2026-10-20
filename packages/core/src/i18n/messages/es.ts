@@ -13,6 +13,7 @@ import { eventsEs } from "./areas/events/es";
 import { calendarEs } from "./areas/calendar/es";
 import { memberInviteEs } from "./areas/memberinvite/es";
 import { whatsNewEs } from "./areas/whatsnew/es";
+import { amafEs } from "./areas/amaf/es";
 import { groceryEs } from "./areas/grocery/es";
 import { welcomeEs } from "./areas/welcome/es";
 
@@ -652,6 +653,18 @@ export const es: Catalog = {
   "meals.empty.title": "Nada planificado esta semana",
   "meals.empty.lede": "Planifica una comida y WonderHome revisa los ingredientes, el tiempo de quien cocina y las preferencias de todos, y te dice qué falta.",
   "meals.nothingPlannedYet": "Aún no hay nada planificado.",
+  "meals.week.label": "Semana del {date}",
+  "meals.week.thisWeek": "Esta semana",
+  "meals.week.backToThis": "Volver a esta semana",
+  "meals.week.previous": "Semana anterior",
+  "meals.week.next": "Semana siguiente",
+  "meals.week.planned": "{planned} de {total} comidas planificadas",
+  "meals.week.planSlot": "Planificar {slot} el {day}",
+  "meals.week.repeat": "Repetir la semana pasada",
+  "meals.week.repeating": "Copiando…",
+  "meals.week.copied": "Se copiaron {count} comidas de la semana pasada en los huecos libres.",
+  "meals.week.copiedOne": "Se copió 1 comida de la semana pasada en un hueco libre.",
+  "meals.week.copyNone": "Nada que copiar de la semana pasada: los huecos ya están planificados o la semana pasada estaba vacía.",
   "meals.recipes.emptyTitle": "Todavía no hay recetas",
   "meals.recipes.emptyLede": "Las recetas guardan ingredientes y tiempos, para que una comida planificada sepa qué necesita y cuándo empezar.",
   "meals.recipe.timeServes": "{minutes} min · para {serves}",
@@ -852,6 +865,7 @@ export const es: Catalog = {
   ...eventsEs,
   ...calendarEs,
   ...whatsNewEs,
+  ...amafEs,
   ...memberInviteEs,
   ...groceryEs,
   ...welcomeEs,

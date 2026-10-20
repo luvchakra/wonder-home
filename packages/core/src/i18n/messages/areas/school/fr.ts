@@ -244,6 +244,7 @@ export const schoolFr: AreaCatalog<typeof schoolEn> = {
   "school.timetable.startsAt": "Début",
   "school.timetable.endsAt": "Fin",
   "school.timetable.teacher": "Professeur (facultatif)",
+  "school.timetable.noTeacher": "Aucun enseignant",
   "school.timetable.room": "Salle (facultatif)",
   "school.timetable.save": "Enregistrer le cours",
   "school.timetable.free": "Aucun cours",

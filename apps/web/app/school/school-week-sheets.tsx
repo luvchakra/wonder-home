@@ -33,6 +33,7 @@ export type SchoolWeekWords = {
     startsAt: string;
     endsAt: string;
     teacher: string;
+    noTeacher: string;
     room: string;
     save: string;
   };
@@ -153,7 +154,22 @@ export function RemoveSchoolRecord({ kind, householdId, id, label }: { kind: "pe
 }
 
 /** One period of a child's school week, added or changed (08-015). */
-export function PeriodSheet({ householdId, child, period, weekday, words }: { householdId: string; child: { id: string; name: string }; period?: PeriodValue; weekday?: number; words: SchoolWeekWords }) {
+export function PeriodSheet({
+  householdId,
+  child,
+  period,
+  weekday,
+  teachers = [],
+  words,
+}: {
+  householdId: string;
+  child: { id: string; name: string };
+  period?: PeriodValue;
+  weekday?: number;
+  /** The child's teachers on record, picked rather than typed (the owner, 2026-10-20); a new one can still be added here. */
+  teachers?: string[];
+  words: SchoolWeekWords;
+}) {
   const { open, setOpen, state, submit, pending } = useSheetForm(savePeriodAction);
   const w = words.timetable;
   return (
@@ -185,7 +201,15 @@ export function PeriodSheet({ householdId, child, period, weekday, words }: { ho
             <Field label={w.startsAt} name="startsAt" type="time" required defaultValue={period?.startsAt ?? ""} />
             <Field label={w.endsAt} name="endsAt" type="time" required defaultValue={period?.endsAt ?? ""} />
           </div>
-          <Field label={w.teacher} name="teacherName" defaultValue={period?.teacherName ?? ""} autoComplete="off" maxLength={120} />
+          <ComboboxField
+            label={w.teacher}
+            name="teacherName"
+            options={teachers}
+            defaultValue={period?.teacherName ?? undefined}
+            emptyLabel={w.noTeacher}
+            addNewLabel={words.addNew}
+            chooseExistingLabel={words.chooseExisting}
+          />
           <Field label={w.room} name="room" defaultValue={period?.room ?? ""} autoComplete="off" maxLength={60} />
           <SaveButton pending={pending} label={w.save} pendingLabel={words.saving} />
         </form>

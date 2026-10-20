@@ -29,12 +29,15 @@ export function ChildSchoolWeek({
   periods,
   exams,
   canChange,
+  teachers = [],
   words,
   timezone,
   language,
 }: {
   householdId: string;
   child: { id: string; name: string };
+  /** The child's teachers by name, offered in the period sheet. */
+  teachers?: string[];
   periods: readonly TimetablePeriod[];
   exams: readonly Exam[];
   canChange: boolean;
@@ -91,7 +94,7 @@ export function ChildSchoolWeek({
                       </span>
                       {canChange ? (
                         <span className="flex items-center gap-1">
-                          <PeriodSheet householdId={householdId} child={child} period={period} words={words} />
+                          <PeriodSheet householdId={householdId} child={child} period={period} teachers={teachers} words={words} />
                           <RemoveSchoolRecord kind="period" householdId={householdId} id={period.id} label={words.timetable.remove.replaceAll("{name}", period.subject)} />
                         </span>
                       ) : null}
@@ -100,14 +103,14 @@ export function ChildSchoolWeek({
                 </ul>
                 {canChange ? (
                   <div className="px-2 pb-2">
-                    <PeriodSheet householdId={householdId} child={child} weekday={day.weekday} words={words} />
+                    <PeriodSheet householdId={householdId} child={child} weekday={day.weekday} teachers={teachers} words={words} />
                   </div>
                 ) : null}
               </ExpandableRow>
             ))}
           </ul>
         )}
-        {canChange && days.length === 0 ? <PeriodSheet householdId={householdId} child={child} words={words} /> : null}
+        {canChange && days.length === 0 ? <PeriodSheet householdId={householdId} child={child} teachers={teachers} words={words} /> : null}
       </Card>
 
       <Card className="px-3 pb-1" id={`exams-${child.id}`}>

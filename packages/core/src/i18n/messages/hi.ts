@@ -13,6 +13,7 @@ import { eventsHi } from "./areas/events/hi";
 import { calendarHi } from "./areas/calendar/hi";
 import { memberInviteHi } from "./areas/memberinvite/hi";
 import { whatsNewHi } from "./areas/whatsnew/hi";
+import { amafHi } from "./areas/amaf/hi";
 import { groceryHi } from "./areas/grocery/hi";
 import { welcomeHi } from "./areas/welcome/hi";
 
@@ -652,6 +653,18 @@ export const hi: Catalog = {
   "meals.empty.title": "इस हफ़्ते कुछ तय नहीं",
   "meals.empty.lede": "भोजन तय करें, और WonderHome सामग्री, पकाने वाले का समय और सबकी पसंद जाँचता है — फिर बताता है कि क्या कम है।",
   "meals.nothingPlannedYet": "अभी कुछ तय नहीं।",
+  "meals.week.label": "{date} वाला हफ़्ता",
+  "meals.week.thisWeek": "इस हफ़्ते",
+  "meals.week.backToThis": "इस हफ़्ते पर वापस",
+  "meals.week.previous": "पिछला हफ़्ता",
+  "meals.week.next": "अगला हफ़्ता",
+  "meals.week.planned": "{total} में से {planned} खाने तय",
+  "meals.week.planSlot": "{day} को {slot} तय करें",
+  "meals.week.repeat": "पिछला हफ़्ता दोहराएँ",
+  "meals.week.repeating": "कॉपी हो रहा है…",
+  "meals.week.copied": "पिछले हफ़्ते के {count} खाने खाली जगहों में कॉपी किए।",
+  "meals.week.copiedOne": "पिछले हफ़्ते का 1 खाना खाली जगह में कॉपी किया।",
+  "meals.week.copyNone": "पिछले हफ़्ते से कॉपी करने को कुछ नहीं — जगहें पहले से तय हैं या पिछला हफ़्ता खाली था।",
   "meals.recipes.emptyTitle": "अभी कोई रेसिपी नहीं",
   "meals.recipes.emptyLede": "रेसिपी में सामग्री और समय रहता है, ताकि तय भोजन को पता रहे कि उसे क्या चाहिए और कब शुरू करना है।",
   "meals.recipe.timeServes": "{minutes} मिनट · {serves} लोगों के लिए",
@@ -852,6 +865,7 @@ export const hi: Catalog = {
   ...eventsHi,
   ...calendarHi,
   ...whatsNewHi,
+  ...amafHi,
   ...memberInviteHi,
   ...groceryHi,
   ...welcomeHi,

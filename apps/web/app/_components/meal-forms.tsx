@@ -1,6 +1,7 @@
 "use client";
 
 import { Lightbulb, Pencil, Plus } from "lucide-react";
+import { SLOT_READY_BY } from "@wonderhome/core/meals/week";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -181,10 +182,21 @@ export function PlanMealButton({
   people = [],
   pickerLabels,
   labels,
+  onDate,
+  slot,
+  trigger = "pill",
+  triggerLabel,
 }: {
+  /** The slot row's full name for assistive technology: "Plan lunch on Wednesday". */
+  triggerLabel?: string;
   householdId: string;
   members: { id: string; displayName: string }[];
   labels: MealFormLabels;
+  /** The day and slot it opens on — an empty slot in the week planned straight into. */
+  onDate?: string;
+  slot?: (typeof SLOTS)[number];
+  /** "slot": the quiet "+ Lunch" row of an empty slot in the week; "pill" is the header's Plan a meal. */
+  trigger?: "pill" | "slot";
   /** Every recipe the picker offers, the household's own and WonderHome's (`pickerDishes`). */
   dishes?: PickerDish[];
   familyDiet?: Diet | null;
@@ -226,9 +238,21 @@ export function PlanMealButton({
 
   return (
     <>
-      <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
-        <Plus aria-hidden className="size-3.5" /> {labels.plan}
-      </Pill>
+      {trigger === "slot" && slot ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={triggerLabel}
+          className="flex min-h-11 w-full items-center gap-2 rounded-[var(--wh-radius-sm)] border border-dashed border-[var(--wh-border)] px-3 text-left text-sm text-[var(--wh-foreground-muted)] transition-colors hover:border-[var(--wh-primary)] hover:text-[var(--wh-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+        >
+          <Plus aria-hidden className="size-4 shrink-0" />
+          <span className="min-w-0 flex-1 break-words">{labels.slots[slot]}</span>
+        </button>
+      ) : (
+        <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
+          <Plus aria-hidden className="size-3.5" /> {labels.plan}
+        </Pill>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen} title={labels.plan} description={labels.planDescription}>
         <form action={formAction} className="space-y-3">
@@ -310,7 +334,7 @@ export function PlanMealButton({
             <label htmlFor="slot" className="block text-sm font-medium">
               {labels.slot}
             </label>
-            <select id="slot" name="slot" defaultValue="dinner" className={select}>
+            <select id="slot" name="slot" defaultValue={slot ?? "dinner"} className={select}>
               {SLOTS.map((slot) => (
                 <option key={slot} value={slot}>
                   {labels.slots[slot]}
@@ -319,8 +343,8 @@ export function PlanMealButton({
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label={labels.date} name="onDate" type="date" required defaultValue={today} />
-            <Field label={labels.readyBy} name="readyByTime" type="time" required defaultValue="20:00" />
+            <Field label={labels.date} name="onDate" type="date" required defaultValue={onDate ?? today} />
+            <Field label={labels.readyBy} name="readyByTime" type="time" required defaultValue={slot ? SLOT_READY_BY[slot] : "20:00"} />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="cookMemberId" className="block text-sm font-medium">
