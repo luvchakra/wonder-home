@@ -1,6 +1,7 @@
 import type { Catalog } from "./en";
 import { billsDe } from "./areas/bills/de";
 import { schoolDe } from "./areas/school/de";
+import { recipesDe } from "./areas/recipes/de";
 import { healthDe } from "./areas/health/de";
 import { helpersDe } from "./areas/helpers/de";
 import { homesendDe } from "./areas/homesend/de";
@@ -798,6 +799,7 @@ export const de: Catalog = {
   "mealForm.ideas.for": "Für",
   ...billsDe,
   ...schoolDe,
+  ...recipesDe,
   ...healthDe,
   ...helpersDe,
   ...homesendDe,

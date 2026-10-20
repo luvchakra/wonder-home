@@ -1,6 +1,7 @@
 import type { Catalog } from "./en";
 import { billsZh } from "./areas/bills/zh";
 import { schoolZh } from "./areas/school/zh";
+import { recipesZh } from "./areas/recipes/zh";
 import { healthZh } from "./areas/health/zh";
 import { helpersZh } from "./areas/helpers/zh";
 import { homesendZh } from "./areas/homesend/zh";
@@ -798,6 +799,7 @@ export const zh: Catalog = {
   "mealForm.ideas.for": "用于",
   ...billsZh,
   ...schoolZh,
+  ...recipesZh,
   ...healthZh,
   ...helpersZh,
   ...homesendZh,

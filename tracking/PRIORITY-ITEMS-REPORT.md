@@ -102,6 +102,8 @@ Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as 
 | Play Gemini's voice through the floating window, so switching apps floats it on its own | 04-024 | Done in #237, but the owner's phone check (2026-10-19) says it still doesn't float on its own: 04-025 |
 | Gemini's voice floats on its own on a real phone when switching apps | 04-025 | Next: needs a real Android phone to diagnose |
 | School timetable and exams (exam types, each with subjects, date, time, syllabus, material links) | 08-015 | Done in #243: on Kids & School, each subject on the Calendar, HomeTalk answers from them |
+| A recipe catalog of Indian dishes with pictures, short steps, ingredients and nutrients, planned or saved as your own version and changed there | 25-022, 25-015 | Done: Ideas from WonderHome on Meals → Recipes, a page per dish, Save my version, edit and remove; HomeTalk plans a catalog dish. Translating the dishes' own text is 25-023 |
+| Bills: picked choices instead of free text, payees from the home's location, past bills, upcoming bills made ahead to fill in, HomeTalk and HomeBrain in control | 11 (Bills & Finance) | In Progress |
 | Recipe ingredients from the grocery catalog, with nutrients worked out from them | 25-017 | Done in #241: every ingredient row picks from the catalog or your own items, and empty nutrients are worked out |
 | Don't write "More family time" on school or office events, only on family events | 26-013 | Done in #241 |
 | HomeBrain 4.0: look deeper, the household graph, inferences with evidence, answers shaped by the goal | 14-026, 14-028–14-030 | Done in #241; 14-027 (one pass, streaming) and part of 14-031 open |

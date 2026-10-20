@@ -59,6 +59,7 @@ import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { after } from "next/server";
 import { meaningForTurn, recalledMemoryIds, recordRecall } from "@wonderhome/core/homebrain/sleep/recall";
+import { publicEnv } from "@wonderhome/core/config/env";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { hometalkCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { log } from "@wonderhome/core/observability/logger";
@@ -68,6 +69,7 @@ import { listEvents } from "@wonderhome/core/family/repository";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { getHomeSendItem, listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { answerDocumentChanges, documentReplyClasses, documentReplyText, readDocumentChangeQuestion } from "@wonderhome/core/homesend/talk";
+import { listCatalogRecipes } from "@wonderhome/core/meals/recipe-catalog";
 import { ingredientNames, listRecipeNames } from "@wonderhome/core/meals/repository";
 import { listGroceries } from "@wonderhome/core/commerce/inventory";
 import { listAssets } from "@wonderhome/core/home/repository";
@@ -519,6 +521,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     now: turnStartedAt,
     references: read,
     recipes: () => (recipeRead ??= listRecipeNames(supabase, householdId).catch(() => [])),
+    catalogRecipes: () => listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => []),
     ingredients: (of) => ingredientNames(supabase, householdId, of).catch(() => []),
     groceries: () => listGroceries(supabase, householdId).catch(() => []),
     schoolItems: () =>

@@ -57,6 +57,9 @@ const NON_TENANT_TABLES = new Set([
   "usda_foods",
   // IFCT 2017 (ICMR-NIN) Indian foods, linked from the catalog (25-009): reference data every household reads.
   "ifct_foods",
+  // The shared recipe catalog (HomeFood 25-022): dishes every household reads and none writes; a household's own copy is a `recipes` row.
+  "recipe_catalog",
+  "recipe_catalog_ingredients",
 ]);
 
 export function lintMigrationSource(filename, sql) {

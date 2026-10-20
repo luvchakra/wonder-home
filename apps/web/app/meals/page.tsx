@@ -14,11 +14,16 @@ import {
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
-import { listRecipeChoices, mealAgenda } from "@wonderhome/core/meals/repository";
+import { listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
+import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
+import { publicEnv } from "@wonderhome/core/config/env";
 import { itemFor } from "@wonderhome/core/meals/shortfall";
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
+import Link from "next/link";
+
 import { ActionRow } from "@wonderhome/core/ui/action-row";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Card } from "@wonderhome/core/ui/card";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -31,6 +36,7 @@ import {
   AddPreferenceButton,
   AddRecipeButton,
   ChangeMealButton,
+  EditRecipeButton,
   type MealFormLabels,
   PlanMealButton,
   SuggestMealButton,
@@ -43,17 +49,6 @@ import { formatDate, formatTime, requireSession } from "../_lib/session";
 export const metadata = { title: "Meals & Cooking" };
 export const dynamic = "force-dynamic";
 
-type RecipeRow = {
-  id: string;
-  name: string;
-  active_minutes: number;
-  total_minutes: number;
-  serves: number;
-  calories_per_serving: number | null;
-  protein_grams: number | null;
-  carbs_grams: number | null;
-  fat_grams: number | null;
-};
 type PreferenceRow = {
   id: string;
   member_id: string | null;
@@ -73,9 +68,9 @@ const SLOT_ORDER = ["breakfast", "lunch", "snack", "dinner"] as const;
 export default async function MealsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; course?: string }>;
 }) {
-  const [{ tab }, session] = await Promise.all([
+  const [{ tab, course }, session] = await Promise.all([
     searchParams,
     requireSession("/meals"),
   ]);
@@ -114,7 +109,7 @@ export default async function MealsPage({
     );
   }
 
-  const [agenda, members, recipeRows, preferenceRows, recipeChoices, groceries] =
+  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog] =
     await Promise.all([
       // Every meal from today on, read once: the agenda assesses them and the
       // week below is the same rows, not a second read.
@@ -124,14 +119,8 @@ export default async function MealsPage({
         householdId,
         membership.household.ownerMemberId,
       ).catch(() => []),
-      supabase
-        .from("recipes")
-        .select(
-          "id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, carbs_grams, fat_grams",
-        )
-        .eq("household_id", householdId)
-        .order("name")
-        .limit(40),
+      // The household's own recipes, whole: their cards, their edit forms and the pickers.
+      listRecipesForEdit(supabase, householdId).catch(() => []),
       supabase
         .from("food_preferences")
         .select("id, member_id, kind, subject")
@@ -140,11 +129,17 @@ export default async function MealsPage({
       listRecipeChoices(supabase, householdId).catch(() => []),
       // What is at home and on the list, for each meal's shortfall (25-003a).
       listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
+      // WonderHome's own ideas (25-022), only where they are shown.
+      active === "recipes"
+        ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])
+        : Promise.resolve([]),
     ]);
   const meals = (agenda?.rows ?? []).filter((meal) => meal.onDate >= today && meal.onDate <= weekEnd);
   const words = groceryWords(t, viewer.language);
 
-  const recipes = (recipeRows.data as RecipeRow[] | null) ?? [];
+  const picked = RECIPE_COURSES.includes(course as RecipeCourse) ? (course as RecipeCourse) : null;
+  const ideas = picked ? catalog.filter((dish) => dish.course === picked) : catalog;
+  const pictureOf = new Map(catalog.map((dish) => [dish.id, dish.imageUrl]));
   const preferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
@@ -317,42 +312,124 @@ export default async function MealsPage({
         ) : null}
 
         {active === "recipes" ? (
-          recipes.length === 0 ? (
-            <EmptyState
-              icon={ChefHat}
-              tone="meals"
-              title={t("meals.recipes.emptyTitle")}
-              description={t("meals.recipes.emptyLede")}
-              action={<AddRecipeButton householdId={householdId} labels={formLabels} />}
-            />
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {recipes.map((recipe) => (
-                <Card key={recipe.id} className="wh-lift p-3">
-                  <div
-                    aria-hidden
-                    className="grid h-20 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-meals-soft)]"
-                  >
-                    <CookingPot className="size-8 text-[var(--wh-tone-meals)]" />
-                  </div>
-                  <p className="mt-2 text-sm font-semibold">{recipe.name}</p>
-                  <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                    {t("meals.recipe.timeServes", { minutes: recipe.total_minutes, serves: recipe.serves })}
-                  </p>
-                  {recipe.calories_per_serving !== null ? (
-                    <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                      {nutrientLine(t, {
-                        kcal: recipe.calories_per_serving,
-                        protein: recipe.protein_grams,
-                        carbs: recipe.carbs_grams,
-                        fat: recipe.fat_grams,
-                      })}
-                    </p>
-                  ) : null}
+          <>
+            <section>
+              <SectionHeader title={t("recipes.yours")} count={recipes.length} />
+              {recipes.length === 0 ? (
+                <Card className="flex items-start gap-3 p-4">
+                  <IconTile icon={ChefHat} tone="meals" />
+                  <p className="text-sm text-[var(--wh-foreground-muted)]">{t("recipes.yoursEmpty")}</p>
                 </Card>
-              ))}
-            </div>
-          )
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {recipes.map((recipe) => {
+                    const picture = recipe.catalogRecipeId ? (pictureOf.get(recipe.catalogRecipeId) ?? null) : null;
+                    return (
+                      <Card key={recipe.id} className="wh-lift flex flex-col p-3">
+                        {picture ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
+                          <img src={picture} alt="" loading="lazy" className="h-24 w-full rounded-[var(--wh-radius-sm)] object-cover" />
+                        ) : (
+                          <div aria-hidden className="grid h-24 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-meals-soft)]">
+                            <CookingPot className="size-8 text-[var(--wh-tone-meals)]" />
+                          </div>
+                        )}
+                        <div className="mt-2 flex items-start gap-1">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold break-words">{recipe.name}</p>
+                            <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+                              {t("meals.recipe.timeServes", { minutes: recipe.totalMinutes, serves: recipe.serves })}
+                            </p>
+                            {recipe.caloriesPerServing !== null ? (
+                              <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+                                {nutrientLine(t, {
+                                  kcal: recipe.caloriesPerServing,
+                                  protein: recipe.proteinGrams,
+                                  carbs: recipe.carbsGrams,
+                                  fat: recipe.fatGrams,
+                                })}
+                              </p>
+                            ) : null}
+                          </div>
+                          <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {catalog.length > 0 ? (
+              <section className="space-y-3">
+                <SectionHeader title={t("recipes.ideas")} count={catalog.length} />
+                <p className="-mt-2 text-sm text-[var(--wh-foreground-muted)]">{t("recipes.ideasLede")}</p>
+                <nav aria-label={t("recipes.course")} className="-mx-1 flex flex-wrap gap-2 px-1">
+                  {[null, ...RECIPE_COURSES].map((key) => {
+                    const on = key === picked;
+                    return (
+                      <PillLink
+                        key={key ?? "all"}
+                        href={key ? `/meals?tab=recipes&course=${key}` : "/meals?tab=recipes"}
+                        tone={on ? "primary" : "quiet"}
+                        aria-current={on ? "page" : undefined}
+                        scroll={false}
+                      >
+                        {key ? t(`recipes.course.${key}`) : t("recipes.course.all")}
+                      </PillLink>
+                    );
+                  })}
+                </nav>
+                {ideas.length === 0 ? (
+                  <Card className="p-4 text-sm text-[var(--wh-foreground-muted)]">{t("recipes.courseEmpty")}</Card>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {ideas.map((dish) => (
+                      <Link
+                        key={dish.id}
+                        href={`/meals/recipes/${dish.slug}`}
+                        className="group rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                      >
+                        <Card className="wh-lift h-full overflow-hidden p-0">
+                          {dish.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
+                            <img src={dish.imageUrl} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                          ) : (
+                            <div aria-hidden className="grid aspect-[4/3] place-items-center bg-[var(--wh-tone-meals-soft)]">
+                              <CookingPot className="size-8 text-[var(--wh-tone-meals)]" />
+                            </div>
+                          )}
+                          <div className="space-y-0.5 p-3">
+                            <p className="text-sm font-semibold break-words">{dish.name}</p>
+                            <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+                              {[
+                                t("recipes.minutes", { minutes: dish.prepMinutes + dish.cookMinutes }),
+                                t("recipes.serves", { serves: dish.serves }),
+                                t(`recipes.diet.${dish.diet}`),
+                              ].join(" · ")}
+                            </p>
+                            {dish.caloriesPerServing !== null ? (
+                              <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
+                                {t("recipes.kcal", { kcal: dish.caloriesPerServing })}
+                              </p>
+                            ) : null}
+                          </div>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : recipes.length === 0 ? (
+              <EmptyState
+                icon={ChefHat}
+                tone="meals"
+                title={t("meals.recipes.emptyTitle")}
+                description={t("meals.recipes.emptyLede")}
+                action={<AddRecipeButton householdId={householdId} labels={formLabels} />}
+              />
+            ) : null}
+          </>
         ) : null}
 
         {active === "preferences" ? (

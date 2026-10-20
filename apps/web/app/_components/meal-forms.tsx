@@ -1,6 +1,6 @@
 "use client";
 
-import { Lightbulb, Plus } from "lucide-react";
+import { Lightbulb, Pencil, Plus } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -11,6 +11,8 @@ import { IngredientRows, type IngredientRowsLabels, type IngredientSearchLabels 
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
+import type { RecipeForEdit } from "@wonderhome/core/meals/repository";
+
 import type { ActionState } from "../(auth)/actions";
 import { DishIdeas, type DishIdeaLabels } from "./dish-ideas";
 import {
@@ -20,7 +22,9 @@ import {
   updateMealAction,
   createPreferenceAction,
   createRecipeAction,
+  retireRecipeAction,
   suggestMealAction,
+  updateRecipeAction,
   type RecipeActionState,
   type SuggestMealState, searchIngredientChoicesAction } from "../(auth)/meal-actions";
 
@@ -124,6 +128,12 @@ export type MealFormLabels = {
   addToPlan: string;
   /** Ideas from what is at home (25-018). */
   ideas: DishIdeaLabels;
+  /** Changing and removing a household's own recipe (25-022); `{name}` is the recipe's. */
+  editRecipe: string;
+  editRecipeTitle: string;
+  editRecipeDescription: string;
+  saveRecipe: string;
+  removeRecipe: string;
 };
 
 /** Fills a label's `{placeholders}`; a value is inserted as it is, never read as a pattern. */
@@ -507,23 +517,28 @@ export function AddRecipeSheet({
   open,
   onOpenChange,
   onCreated,
+  recipe,
 }: {
   householdId: string;
   labels: MealFormLabels;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (recipe: { id: string; name: string }) => void;
+  /** A recipe already kept: the same form, filled in, saving changes to it (25-022). */
+  recipe?: RecipeForEdit;
 }) {
-  const [state, formAction] = useActionState<RecipeActionState, FormData>(createRecipeAction, {});
+  const [state, formAction] = useActionState<RecipeActionState, FormData>(recipe ? updateRecipeAction : createRecipeAction, {});
   // A recipe that went through starts the next one on a fresh form (the rows are kept in state), and a caller waiting on it picks it.
   const [handled, setHandled] = useState<string | undefined>(undefined);
   const [formKey, setFormKey] = useState(0);
-  if (state.recipeId && state.recipeId !== handled) {
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | undefined>(undefined);
+  if (!recipe && state.recipeId && state.recipeId !== handled) {
     setHandled(state.recipeId);
     setFormKey((key) => key + 1);
   }
   // Telling the caller is a change in another component, so it waits for the commit.
-  const created = state.recipeId ? { id: state.recipeId, name: state.recipeName ?? "" } : null;
+  const created = !recipe && state.recipeId ? { id: state.recipeId, name: state.recipeName ?? "" } : null;
   useEffect(() => {
     if (!created || !onCreated) return;
     onCreated(created);
@@ -531,30 +546,34 @@ export function AddRecipeSheet({
     // Once per recipe made; the callbacks are the caller's and may change on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [created?.id]);
+  const optionalRows = recipe?.optional.map((name) => ({ name, quantity: null, unit: "unit" }));
 
   return (
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title={labels.recipeTitle}
-      description={labels.recipeDescription}
+      title={recipe ? fill(labels.editRecipeTitle, { name: recipe.name }) : labels.recipeTitle}
+      description={recipe ? labels.editRecipeDescription : labels.recipeDescription}
     >
       <form key={formKey} action={formAction} className="space-y-3">
         {state.error ? <Alert>{state.error}</Alert> : null}
         {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
         <input type="hidden" name="householdId" value={householdId} />
+        {recipe ? <input type="hidden" name="recipeId" value={recipe.id} /> : null}
         <Field
           label={labels.recipeName}
           name="name"
           required
           placeholder={labels.mealPlaceholder}
           autoComplete="off"
+          defaultValue={recipe?.name}
         />
         <Field
           label={labels.cuisine}
           name="cuisine"
           placeholder={labels.cuisinePlaceholder}
           autoComplete="off"
+          defaultValue={recipe?.cuisine ?? undefined}
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Field
@@ -563,7 +582,7 @@ export function AddRecipeSheet({
             type="number"
             min={1}
             required
-            defaultValue={20}
+            defaultValue={recipe?.activeMinutes ?? 20}
           />
           <Field
             label={labels.totalMinutes}
@@ -571,7 +590,7 @@ export function AddRecipeSheet({
             type="number"
             min={1}
             required
-            defaultValue={40}
+            defaultValue={recipe?.totalMinutes ?? 40}
           />
           <Field
             label={labels.serves}
@@ -579,11 +598,12 @@ export function AddRecipeSheet({
             type="number"
             min={1}
             required
-            defaultValue={4}
+            defaultValue={recipe?.serves ?? 4}
           />
         </div>
         <IngredientRows
           prefix="essential"
+          initial={recipe?.essentials}
           labels={{ ...labels.rows, legend: labels.essential }}
           unitLabels={labels.unitNames}
           search={(query) => searchIngredientChoicesAction(householdId, query)}
@@ -593,6 +613,7 @@ export function AddRecipeSheet({
           prefix="optional"
           namesOnly
           initialRows={1}
+          initial={optionalRows}
           labels={{ ...labels.rows, legend: labels.optional, itemPlaceholder: labels.optionalPlaceholder }}
           unitLabels={labels.unitNames}
           search={(query) => searchIngredientChoicesAction(householdId, query)}
@@ -608,6 +629,7 @@ export function AddRecipeSheet({
             type="number"
             min={0}
             placeholder="450"
+            defaultValue={recipe?.caloriesPerServing ?? undefined}
           />
           <Field
             label={labels.protein}
@@ -615,6 +637,7 @@ export function AddRecipeSheet({
             type="number"
             min={0}
             placeholder="18"
+            defaultValue={recipe?.proteinGrams ?? undefined}
           />
           <Field
             label={labels.carbs}
@@ -622,6 +645,7 @@ export function AddRecipeSheet({
             type="number"
             min={0}
             placeholder="55"
+            defaultValue={recipe?.carbsGrams ?? undefined}
           />
           <Field
             label={labels.fat}
@@ -629,17 +653,65 @@ export function AddRecipeSheet({
             type="number"
             min={0}
             placeholder="12"
+            defaultValue={recipe?.fatGrams ?? undefined}
           />
         </div>
-        <Field
-          label={labels.method}
-          name="method"
-          placeholder={labels.methodPlaceholder}
-          autoComplete="off"
-        />
-        <Submit label={labels.addRecipe} pendingLabel={labels.adding} />
+        <div className="space-y-1.5">
+          <label htmlFor="method" className="block text-sm font-medium">
+            {labels.method}
+          </label>
+          {/* Steps are kept a line each, so the method is a box of lines, not one line. */}
+          <textarea
+            id="method"
+            name="method"
+            rows={4}
+            maxLength={4000}
+            placeholder={labels.methodPlaceholder}
+            defaultValue={recipe?.method ?? undefined}
+            className="block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
+          />
+        </div>
+        <Submit label={recipe ? labels.saveRecipe : labels.addRecipe} pendingLabel={recipe ? labels.saving : labels.adding} />
+        {recipe ? (
+          <>
+            {removeError ? <Alert>{removeError}</Alert> : null}
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full text-[var(--wh-risk)]"
+              disabled={removing}
+              onClick={async () => {
+                setRemoving(true);
+                const result = await retireRecipeAction({ householdId, recipeId: recipe.id });
+                setRemoving(false);
+                if (result.error) setRemoveError(result.error);
+                else onOpenChange(false);
+              }}
+            >
+              {removing ? labels.removing : labels.removeRecipe}
+            </Button>
+          </>
+        ) : null}
       </form>
     </Sheet>
+  );
+}
+
+/** The pencil on a household recipe's card: its own form, filled in (25-022, rule 12). */
+export function EditRecipeButton({ householdId, labels, recipe }: { householdId: string; labels: MealFormLabels; recipe: RecipeForEdit }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={fill(labels.editRecipe, { name: recipe.name })}
+        className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
+      >
+        <Pencil aria-hidden className="size-4" />
+      </button>
+      {open ? <AddRecipeSheet householdId={householdId} labels={labels} open={open} onOpenChange={setOpen} recipe={recipe} /> : null}
+    </>
   );
 }
 
