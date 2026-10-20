@@ -206,6 +206,8 @@ export const ar: Catalog = {
   "reminder.homesend.waitingBodyFrom": "أرسله {name} إلى HomeSend. لا يُضاف شيء حتى تقول نعم.",
   "reminder.homesend.failedTitle": "تعذّرت قراءة شيء أُرسل إلى HomeSend",
   "reminder.homesend.failedBody": "هو محفوظ بأمان تحت «فشل آمن» في HomeSend، ولم يُضف شيء.",
+  "reminder.goalCheck.title": "يقول {name} إنه أنجز «{goal}»",
+  "reminder.goalCheck.body": "تحقّق وقل نعم أو ليس بعد. تُحتسب النجوم بعد موافقتك.",
   "reminder.eventReply.title": "ردود على {event}",
   "reminder.eventReply.body": "{yes} قادمون · {maybe} ربما · {no} لا يستطيعون",
   "reminder.helperAway.title": "{name} لن يأتي يوم {date}",

@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**323 of 343 stories done — 94.2%**
+**324 of 346 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 323 |
-| In Progress | 4 |
+| Done | 324 |
+| In Progress | 6 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `█████████░` | 17 | 18 | 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 17 | 20 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 11 | 11 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 11 | 12 | 1 not started |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 11 | 11 | — |
-| 25 HomeFood | `████████░░` | 20 | 25 | 5 not started |
+| 25 HomeFood | `████████░░` | 21 | 26 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 10 | 14 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -61,6 +61,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
+| `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
+| `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -237,7 +239,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-17 of 18 done `█████████░`
+17 of 20 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -259,6 +261,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | P2 | Not Started | Follow-up of 08-015 (PR #243): Family's child details show classes outside school (08-013) but not yet the timetable and exams; Calendar shows exam papers, not the school day's periods |
 | `08-017` A child's goals, and a brighter, game-like WonderHome for children | P1 | Done | The owner, 2026-10-20. **Goals** on Kids & School (a fourth tab): a guardian or an Admin sets, changes and retires a goal with a child — title, kind (picked, with its own way to add one), picture, every day / some days a week / once, stars each time, an optional reward and end date (`child_goals`, `child_goal_checkins`, RLS: the child and guardians read, guardians write goals, the child or a guardian ticks off today; `scripts/test-child-goals-rls.mjs`). **The child's Home** opens with a game card — level (every 20 stars, named), stars and streak, and where the stars came from — and the tabs Today, School (was Homework), Goals and Fun. Today holds the day's missions (goals and school work due), what is on the family calendar today and the next fun thing; "I did it!" ticks off a goal or marks school work done, a second tap takes it back. Stars, levels, streaks and badges are counted, never stored (`school/goals.ts`, tested). **Every screen a child opens** carries `data-audience="child"`: a brighter page, rounder cards and a star counter beside the bell; nothing an adult sees changes. Fun is the family calendar's outings, family time, gatherings, trips, birthdays and occasions, and the Goals tab says so with a link to Calendar. Help ¶8–9 of School in all eight languages |
 | `08-019` Each child's score on Kids & School, goals set from classes and school work with a reward, and a child's school work that opens to its details | P1 | Done | The owner, 2026-10-20 (PR #272). **Score:** under each child's name on the Overview — level, stars (from goals and from school work), streak, goals met now of all, and each reward earned — counted by `childProgress` exactly as the child's Home counts it (`kidProgress`, `ChildScore` in `school/goals-tab.tsx`); the Goals tab shows the same card. **Start from:** adding a goal lists the child's classes outside school and open school work (`goalStarts`, tested). A class fills a weekly goal, as many times as it meets; school work fills a one-off goal ending on its due date, met the day the work is marked done (`child_goals.source_kind`/`source_id`, migration `20261020210000`, live; `childProgress` counts the work's done day as the goal's tick; the server checks the source is that child's). Adults set it; the child sees it, with no separate tick for a work goal and no second mission. **Child Home fixes:** each school row opens under its chevron (`ExpandableRow`) to its kind, subject, when, time it takes, status and the teacher's note, with "I did it!" still one tap; the cat's Show me scrolls to the section it means, also on the tab already open. Words in all eight languages, help ¶11. Follow-ups the same day (PR #273): the score card stays on Goals only (the owner took it off the Overview); the child picker says first names (a full name only when two children share one); the tab row fits a 320px screen with no scroll (`SegmentedControl` labels wrap, the count drops under its label); a timetable period's teacher is picked from the child's teachers, with No teacher set and its own Add new; an event is no longer homework — it is kept under the Overview's Coming up only, out of the Homework tab, its count and Live work. |
+| `08-020` A child's Done on a goal waits for a grown-up | P0 | In Progress | The owner, 2026-10-20 ("send this to adult for verification before making done"). A check-in the child makes is kept unverified (`child_goal_checkins.verified_at`/`verified_by`, migration `20261020230000`): the child sees **Waiting for a grown-up** (amber, hourglass; a second tap takes it back), and it earns no stars, streak or reward until verified (`goalStandings`/`childProgress` count only verified ticks; `waitingToday`). The child's guardian, else an Admin, gets a notice (`goalCheckInNotices`, source `goal_checkin`, one per waiting tick, resolved when answered). Kids & School → Goals shows **Waiting for you** first, each with **Yes, done** (verifies, in their own name) and **Not yet** (takes the tick back) — `answerCheckInAction`. A guardian's or Admin's own tick is verified as made; RLS lets only them verify, and the child can no longer take back a verified tick. Rows from before stay counted. Tests: goals 2, notices 3, RLS 2 (`test-child-goals-rls.mjs` 10/10). Words and help ¶11 in all eight languages. **Waiting on:** the migration reaching the live project (the database tool's calls were cancelled; until it runs, ticks count as before). |
+| `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | P1 | In Progress | The owner, 2026-10-20 ("store a long list of such quotes in a table, tag with age, gender etc. use that to display, never repeat these for a child"). `companion_sayings` holds 154 facts, sayings, ideas, jokes and riddles (`school/companion-sayings.json`, the migration's seed, kept equal by `companion-sayings.test.ts`), each tagged with ages (4–7, 8–12, 13–17, or all), a gender when chosen for one, and topics, in all eight languages. `companion_sayings_for` (security invoker) picks unheard ones for the child's age and gender from their own member row; each line the cat shows is recorded in `companion_sayings_heard` (`heardSayingAction`), so it never comes back, and Tell me another skips any already shown. When every saying is heard, the cat keeps to reminders; without the table it keeps the built-in daily lines. Also fixed: each tab press added another cat card (PR #276). Tests: companion 2, sayings 4, RLS 4 (`test-companion-sayings-rls.mjs`). Help ¶10 in all eight languages. **Waiting on:** migration `20261020231000` reaching the live project. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -547,7 +551,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-20 of 25 done `████████░░`
+21 of 26 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -575,6 +579,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-024` The Groceries screen reads left to right: three cards, one list, two steppers | P0 | Done | The owner, 2026-10-20, from phone screenshots. Header: Add item on the left (Go to cart was there too, then retired with the cart, 25-021). Above the To buy list, three cards in one row: At home, Not counted yet and Mark as bought (the card is the action; the separate full-width button is gone). The list has no category headings. Every row has In stock and To buy as two equal cells, each with its own − amount + (`StockStepper` sets what is at home, `stated`, adults only; the same write as Update stock). No scrollbar line under the category pills. Browser-checked at 360px and 1280px. |
 | `25-025` "Saved under your recipes" links to them | P1 | Done | The owner, 2026-10-20: after Save my version on a catalog dish, the words "your recipes" in the note open Meals → Recipes (`recipes.savedLink`, eight languages); while the note shows, the separate Open your recipes button waits, so there is one way in. Browser-checked on Idli. |
 | `25-026` Every recipe in Plan a meal, with pictures, calories and protein, and a diet for the family and each person | P0 | Done | The owner, 2026-10-20 (screenshot of the plain recipe dropdown). From a recipe is a picker (`RecipePicker`, `meals/recipe-picker.ts`): the household's recipes then WonderHome's not saved yet, each with its picture, kcal and protein a serving, time and serves; filters for the family's diet, a dish's label, calories (under 300/500) and protein (10/20 g+), and an order (suggested, most protein, fewest calories). Picking a WonderHome dish fills its ingredients and saves it to the household's recipes when planned. Diet (migration `20261020200000`, live): a `food_preferences` row of kind `diet`, one of vegetarian, eggetarian, non-vegetarian, vegan or Jain, one for the whole family and one per person, set under Meals → Preferences (anyone for the family and themselves, an Admin for anyone). Fit is decided by rules (`meals/diet.ts`): the catalog's own label, else the ingredients; vegan and Jain read the ingredients. The meal check (`checkPreferences`) treats a diet clash as a house rule, and the picker says who a dish does not suit and why. |
+| `25-027` Remove from the list in one tap | P1 | Done | The owner, 2026-10-20 ("add option to remove from cart, in that case make the to buy amount 0, so it moves out of to buy and stays in all tab"). **Remove** under every To buy amount takes the item off the list (`adjustListAction` kind `remove`): To buy goes to nothing, the row leaves the To buy view at once (the view follows the steppers' saved amounts) and stays under All with the cart button to put it back; a failure says so and restores the amount. Words (`grocery.stepper.remove`, `.removeLabel`) and help ¶2 in all eight languages. Checked at 360px: To buy 5 → 4, the item under All, no overflow. |
 | `25-005` "Make that 2 litres" corrects an amount | P2 | Done | 2026-10-20. `applyCorrection` reads a spoken amount ("2 litres", "500 grams", "10") as a new amount for the one item in an add, order, stock or purchase request, keeping the item and its own words; a proposal still waiting is replaced, and an executed add is taken back off the list and redone. An amount said about a request with no amount (an absence) is not read as a person, and a request with several items is left alone. An executed stock change or purchase has no undo service yet, so a correction of one says so and leaves it as it was (as for every kind without one). Help "Talk to WonderHome" ¶3. |
 
 ### 26 — HomeEvents

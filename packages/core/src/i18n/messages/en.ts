@@ -212,6 +212,8 @@ export const en = {
   "reminder.homesend.waitingBodyFrom": "{name} sent it to HomeSend. Nothing is added until you say yes.",
   "reminder.homesend.failedTitle": "Something sent to HomeSend could not be read",
   "reminder.homesend.failedBody": "It is kept safely under “Failed safely” in HomeSend, and nothing was added.",
+  "reminder.goalCheck.title": "{name} says they did “{goal}”",
+  "reminder.goalCheck.body": "Check it and say yes, or not yet. Stars count once you say yes.",
   "reminder.eventReply.title": "Replies to {event}",
   "reminder.eventReply.body": "{yes} coming · {maybe} maybe · {no} can’t come",
   "reminder.helperAway.title": "{name} won’t be in on {date}",

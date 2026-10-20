@@ -202,6 +202,8 @@ export const fr: Catalog = {
   "reminder.homesend.waitingBodyFrom": "{name} l’a envoyé à HomeSend. Rien n’est ajouté tant que vous n’avez pas dit oui.",
   "reminder.homesend.failedTitle": "Quelque chose envoyé à HomeSend n’a pas pu être lu",
   "reminder.homesend.failedBody": "C’est conservé en sécurité sous « Échecs sans risque » dans HomeSend, et rien n’a été ajouté.",
+  "reminder.goalCheck.title": "{name} dit avoir fait « {goal} »",
+  "reminder.goalCheck.body": "Vérifiez puis répondez oui ou pas encore. Les étoiles comptent une fois que vous dites oui.",
   "reminder.eventReply.title": "Réponses à {event}",
   "reminder.eventReply.body": "{yes} viennent · {maybe} peut-être · {no} ne peuvent pas",
   "reminder.helperAway.title": "{name} ne sera pas là le {date}",

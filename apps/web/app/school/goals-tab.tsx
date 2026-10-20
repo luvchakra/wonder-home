@@ -1,4 +1,4 @@
-import { CalendarHeart, Flame, Gift, Target, Trophy } from "lucide-react";
+import { CalendarHeart, Flame, Gift, Hourglass, Target, Trophy } from "lucide-react";
 
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import type { Activity } from "@wonderhome/core/school/activities";
@@ -11,7 +11,7 @@ import { PillLink } from "@wonderhome/core/ui/pill";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { GoalSheet, RetireGoalButton, type GoalWords } from "./child-goals";
+import { CheckInAnswer, GoalSheet, RetireGoalButton, type GoalWords } from "./child-goals";
 
 /**
  * A child's score, counted exactly as their own Home counts it
@@ -110,10 +110,13 @@ export function GoalsTab({
   activities,
   timezone,
   canChange,
+  formatDay,
   t,
 }: {
   householdId: string;
   kids: { id: string; name: string }[];
+  /** A "2026-10-20" day in the reader's words, for a tick from an earlier day. */
+  formatDay: (day: string) => string;
   goals: StoredGoal[];
   checkIns: (GoalCheckIn & { childMemberId: string })[];
   /** The household's school work, done and open: what a goal set from it counts, and what one can start from. */
@@ -156,6 +159,7 @@ export function GoalsTab({
     metByWork: t("goals.start.metByWork", { name: "{name}" }),
   };
   const dayOf = (at: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(at);
+  const today = dayOf(new Date());
 
   if (kids.length === 0) return <EmptyState icon={Target} tone="care" title={t("goals.noChildren")} description={t("goals.noChildrenLede")} />;
 
@@ -176,6 +180,7 @@ export function GoalsTab({
               count={progress.goals.length || undefined}
               action={canChange ? <GoalSheet householdId={householdId} child={kid} starts={starts} emojis={GOAL_EMOJIS} words={words} /> : undefined}
             />
+            {canChange ? <WaitingForYou householdId={householdId} kid={kid} goals={goals} checkIns={checkIns} today={today} formatDay={formatDay} t={t} /> : null}
             <ChildScore name={kid.name} progress={progress} t={t} />
             <p className="text-sm text-[var(--wh-foreground-muted)]">
               {progress.goals.length > 0
@@ -187,7 +192,7 @@ export function GoalsTab({
             ) : (
               <Card className="px-3">
                 <ul className="divide-y divide-[var(--wh-border)]">
-                  {progress.goals.map(({ goal, done, needed, doneToday, met }) => (
+                  {progress.goals.map(({ goal, done, needed, doneToday, waitingToday, met }) => (
                     <li key={goal.id} className="flex items-start gap-3 py-3">
                       <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-care-soft)] text-xl">
                         {goal.emoji}
@@ -208,7 +213,9 @@ export function GoalsTab({
                                   : t("goals.period.once")
                                 : doneToday
                                   ? t("goals.standing.doneToday")
-                                  : t("goals.standing.notYet"),
+                                  : waitingToday
+                                    ? t("goals.standing.waiting")
+                                    : t("goals.standing.notYet"),
                             t("kids.goal.stars", { count: goal.stars }),
                             goal.reward ? t("goals.standing.reward", { reward: goal.reward }) : null,
                           ]
@@ -242,5 +249,77 @@ export function GoalsTab({
         </div>
       </Card>
     </div>
+  );
+}
+
+/**
+ * What a child said they did and a grown-up has not answered yet (the owner,
+ * 2026-10-20: "send this to adult for verification before making done"):
+ * first on the child's Goals, because it is the one thing here waiting on the
+ * reader. Each says which goal and which day, with "Yes, done" and "Not yet".
+ */
+function WaitingForYou({
+  householdId,
+  kid,
+  goals,
+  checkIns,
+  today,
+  formatDay,
+  t,
+}: {
+  householdId: string;
+  kid: { id: string; name: string };
+  goals: StoredGoal[];
+  checkIns: (GoalCheckIn & { childMemberId: string })[];
+  today: string;
+  formatDay: (day: string) => string;
+  t: Translate;
+}) {
+  const titleOf = new Map(goals.map((goal) => [goal.id, goal]));
+  const waiting = checkIns.filter((entry) => entry.childMemberId === kid.id && entry.verified === false && titleOf.has(entry.goalId));
+  if (waiting.length === 0) return null;
+  return (
+    <Card id="waiting" className="scroll-mt-20 space-y-3 border-[var(--wh-attention)] p-4">
+      <div className="flex items-start gap-3">
+        <IconTile icon={Hourglass} tone="meals" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{t("goals.waiting.title")}</p>
+          <p className="text-xs text-[var(--wh-foreground-muted)]">{t("goals.waiting.lede", { name: kid.name })}</p>
+        </div>
+      </div>
+      <ul className="divide-y divide-[var(--wh-border)]">
+        {waiting.map((entry) => {
+          const goal = titleOf.get(entry.goalId)!;
+          return (
+            <li key={`${entry.goalId}:${entry.onDay}`} className="space-y-2 py-3">
+              <div className="flex items-start gap-3">
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-care-soft)] text-xl">
+                  {goal.emoji}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium break-words">{goal.title}</p>
+                  <p className="text-xs text-[var(--wh-foreground-subtle)]">
+                    {entry.onDay === today ? t("goals.waiting.today", { name: kid.name }) : t("goals.waiting.on", { name: kid.name, day: formatDay(entry.onDay) })}
+                    {" · "}
+                    {t("kids.goal.stars", { count: goal.stars })}
+                  </p>
+                </div>
+              </div>
+              <CheckInAnswer
+                householdId={householdId}
+                goalId={entry.goalId}
+                onDay={entry.onDay}
+                words={{
+                  verify: t("goals.waiting.verify"),
+                  verifyLabel: t("goals.waiting.verifyLabel", { goal: goal.title }),
+                  notYet: t("goals.waiting.notYet"),
+                  notYetLabel: t("goals.waiting.notYetLabel", { goal: goal.title }),
+                }}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

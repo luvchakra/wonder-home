@@ -694,6 +694,8 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "kids.do": "我做到了！",
   "kids.done": "完成",
   "kids.undo": "撤销 {name}",
+  "kids.waiting": "等大人确认",
+  "kids.waitingSent": "已发给大人确认。大人说可以后，你就会得到星星。",
   "kids.earned#one": "得到 {count} 颗星",
   "kids.earned#other": "得到 {count} 颗星",
   "kids.goal.daily": "每天",

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [A child's Done waits for a grown-up; the cat's sayings list; Remove from the list](2026-10-20-goal-verification-cat-sayings.md) |
 | 2026-10-20 | [A cat companion for the child, and clear ways to earn stars](2026-10-20-child-cat-companion.md) |
 | 2026-10-20 | [The cat's colour, facts and reminders; Groceries; HomeTalk opens what it changed](2026-10-20-cat-colours-facts-and-groceries-header.md) |
 | 2026-10-20 | [Recipe picker and diets; bills month by month, line-item budgets, the bill form](2026-10-20-recipe-picker-diets-and-bill-months.md) |

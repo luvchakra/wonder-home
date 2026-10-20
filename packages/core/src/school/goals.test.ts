@@ -111,3 +111,32 @@ describe("goalStarts", () => {
     ]);
   });
 });
+
+describe("a child's own Done waits for a grown-up", () => {
+  it("earns nothing and shows as waiting until it is verified", () => {
+    const waiting = childProgress({
+      goals: [goal({ reward: "Ice cream" })],
+      activeGoalIds: new Set(["read"]),
+      checkIns: [{ goalId: "read", onDay: today, verified: false }],
+      schoolDoneOn: [],
+      today,
+    });
+    expect(waiting.stars).toBe(0);
+    expect(waiting.streak).toBe(0);
+    expect(waiting.goals[0]).toMatchObject({ done: 0, doneToday: false, waitingToday: true, met: false });
+
+    const verified = childProgress({
+      goals: [goal({ reward: "Ice cream" })],
+      activeGoalIds: new Set(["read"]),
+      checkIns: [{ goalId: "read", onDay: today, verified: true }],
+      schoolDoneOn: [],
+      today,
+    });
+    expect(verified.stars).toBe(2);
+    expect(verified.goals[0]).toMatchObject({ done: 1, doneToday: true, waitingToday: false, met: true });
+  });
+
+  it("counts a row with no verification field, as before verification existed", () => {
+    expect(goalStandings([goal()], [{ goalId: "read", onDay: today }], today)[0]).toMatchObject({ doneToday: true, waitingToday: false });
+  });
+});

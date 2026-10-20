@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
 
@@ -12,7 +12,7 @@ import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
-import { retireGoalAction, saveGoalAction } from "../(auth)/goal-actions";
+import { answerCheckInAction, retireGoalAction, saveGoalAction } from "../(auth)/goal-actions";
 import { SubmitButton } from "../_components/submit-pill";
 
 /** Every word the goal editor needs, in the reader's language (built on the server). */
@@ -278,5 +278,55 @@ export function RetireGoalButton({ householdId, id, label }: { householdId: stri
         </span>
       ) : null}
     </>
+  );
+}
+
+/**
+ * A grown-up's answer to a child's "Done" (the owner, 2026-10-20): "Yes,
+ * done" verifies it and the stars count; "Not yet" takes the tick back so the
+ * child can try again. One button commits (blue), the other is quiet.
+ */
+export function CheckInAnswer({
+  householdId,
+  goalId,
+  onDay,
+  words,
+}: {
+  householdId: string;
+  goalId: string;
+  onDay: string;
+  words: { verify: string; verifyLabel: string; notYet: string; notYetLabel: string };
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const answer = (approve: boolean) =>
+    startTransition(async () => {
+      const result = await answerCheckInAction({ householdId, goalId, onDay, approve });
+      if (result.error) setError(result.error);
+      else router.refresh();
+    });
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        disabled={pending}
+        aria-label={words.verifyLabel}
+        onClick={() => answer(true)}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-4 text-sm font-semibold text-[var(--wh-primary-foreground)] hover:bg-[var(--wh-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-70"
+      >
+        <Check aria-hidden className="size-4" /> {words.verify}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        aria-label={words.notYetLabel}
+        onClick={() => answer(false)}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-70"
+      >
+        <Undo2 aria-hidden className="size-4" /> {words.notYet}
+      </button>
+      {error ? <Alert>{error}</Alert> : null}
+    </div>
   );
 }

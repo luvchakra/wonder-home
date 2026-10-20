@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { Minus, Plus, ShoppingCart, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -45,6 +45,10 @@ export type StepperItem = {
  * count. The middle opens a sheet to type any amount in a unit that
  * converts. Every change is announced, and a failure says so and puts the
  * last saved amount back.
+ *
+ * "Remove" under the amount takes it off the list in one tap (the owner,
+ * 2026-10-20): To buy goes to nothing, so the item leaves the To buy view and
+ * stays under All, with the cart button to put it back.
  */
 export function ToBuyStepper({
   householdId,
@@ -142,6 +146,29 @@ export function ToBuyStepper({
   };
 
   const buttonSize = size === "lg" ? "size-11" : "size-9";
+  const router = useRouter();
+  const [removing, setRemoving] = useState(false);
+
+  const remove = async () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    pendingDelta.current = 0;
+    setRemoving(true);
+    const result = await adjustListAction({ householdId, itemId: item.id, kind: "remove", key: newKey("remove") });
+    setRemoving(false);
+    if (!result.ok) {
+      setError(fill(words.stepper.failed, { reason: result.error }));
+      setQuantity(saved.current);
+      announce(saved.current);
+      return;
+    }
+    setError(null);
+    settle(result.after);
+    // The To buy count and the list's own view follow the page.
+    router.refresh();
+  };
 
   return (
     <div className="flex flex-col items-start">
@@ -191,6 +218,17 @@ export function ToBuyStepper({
           </button>
         </div>
       )}
+      {quantity > 0 ? (
+        <button
+          type="button"
+          disabled={removing}
+          aria-label={fill(words.stepper.removeLabel, { name: item.name })}
+          onClick={() => void remove()}
+          className="mt-1 inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-60"
+        >
+          <X className="size-3.5" aria-hidden /> {words.stepper.remove}
+        </button>
+      ) : null}
       <span aria-live="polite" className="sr-only">
         {announcement}
       </span>

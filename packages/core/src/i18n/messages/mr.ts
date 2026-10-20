@@ -202,6 +202,8 @@ export const mr: Catalog = {
   "reminder.homesend.waitingBodyFrom": "{name} ने ते HomeSend मध्ये पाठवले. तुम्ही होय म्हणेपर्यंत काहीही जोडले जात नाही.",
   "reminder.homesend.failedTitle": "HomeSend मध्ये पाठवलेली एक गोष्ट वाचता आली नाही",
   "reminder.homesend.failedBody": "ती HomeSend मध्ये “सुरक्षितपणे अयशस्वी” खाली सुरक्षित आहे, आणि काहीही जोडले गेले नाही.",
+  "reminder.goalCheck.title": "{name} म्हणतात “{goal}” झाले",
+  "reminder.goalCheck.body": "तपासा आणि हो किंवा अजून नाही म्हणा. हो म्हटल्यावरच तारे मोजले जातात.",
   "reminder.eventReply.title": "{event} साठी उत्तरे",
   "reminder.eventReply.body": "{yes} येत आहेत · {maybe} कदाचित · {no} येऊ शकत नाहीत",
   "reminder.helperAway.title": "{name} {date} ला येणार नाहीत",

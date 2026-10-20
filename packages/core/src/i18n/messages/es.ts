@@ -202,6 +202,8 @@ export const es: Catalog = {
   "reminder.homesend.waitingBodyFrom": "{name} lo envió a HomeSend. No se añade nada hasta que digas que sí.",
   "reminder.homesend.failedTitle": "Algo enviado a HomeSend no se pudo leer",
   "reminder.homesend.failedBody": "Está guardado en «Fallos seguros» de HomeSend y no se añadió nada.",
+  "reminder.goalCheck.title": "{name} dice que hizo «{goal}»",
+  "reminder.goalCheck.body": "Compruébalo y di sí o todavía no. Las estrellas cuentan cuando dices que sí.",
   "reminder.eventReply.title": "Respuestas a {event}",
   "reminder.eventReply.body": "{yes} vienen · {maybe} quizá · {no} no pueden",
   "reminder.helperAway.title": "{name} no vendrá el {date}",

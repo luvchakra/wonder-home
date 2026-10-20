@@ -23,7 +23,7 @@ import { localMoment } from "./timing";
  * name, a title and a count crosses to another channel.
  */
 
-export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan"] as const;
+export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin"] as const;
 export type NoticeSourceType = (typeof NOTICE_SOURCE_TYPES)[number];
 
 export type Notice = {
@@ -372,6 +372,47 @@ export function weatherNotices(
       body: msg("reminder.weather.laundry.body"),
       action: { action: "open", target: "/home" },
       expiresAt: need.neededBy,
+    });
+  }
+  return notices;
+}
+
+// --- A child's "Done" on a goal, waiting for a grown-up (the owner, 2026-10-20) ---
+
+export type CheckInRow = { id: string; goal_id: string; child_member_id: string; on_day: string; verified_at: string | null };
+
+/**
+ * One notice per check-in a child made that nobody has verified yet, to the
+ * child's guardian (an Admin when the child has none reachable). It names the
+ * child and the goal, and resolves by itself once a grown-up says yes or "not
+ * yet" — the row is then verified or gone.
+ */
+export function goalCheckInNotices(
+  rows: readonly CheckInRow[],
+  goalTitles: ReadonlyMap<string, string>,
+  directory: Directory,
+  names: ReadonlyMap<string, string>,
+  now: Date,
+): Notice[] {
+  const notices: Notice[] = [];
+  for (const row of rows) {
+    if (row.verified_at !== null) continue;
+    const goal = goalTitles.get(row.goal_id);
+    if (!goal) continue;
+    const guardian = (directory.guardians.get(row.child_member_id) ?? []).find((id) => reachable(directory, id));
+    const recipient = guardian ?? adminOf(directory);
+    if (!recipient) continue;
+    notices.push({
+      sourceType: "goal_checkin",
+      sourceId: row.id,
+      threadKey: `goal-checkin:${row.id}`,
+      recipientMemberId: recipient,
+      category: "school",
+      priority: "normal",
+      title: msg("reminder.goalCheck.title", { name: names.get(row.child_member_id) ?? "", goal }),
+      body: msg("reminder.goalCheck.body"),
+      action: { action: "open", target: `/school?tab=goals&child=${row.child_member_id}#waiting` },
+      expiresAt: new Date(new Date(`${row.on_day}T00:00:00Z`).getTime() + 8 * DAY_MS),
     });
   }
   return notices;

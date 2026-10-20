@@ -81,7 +81,8 @@ export function GroceryList({
   const needle = query.trim().toLowerCase();
   const shown = items.filter(
     (item) =>
-      (view === "all" || item.toBuy !== null) &&
+      // To buy follows the steppers: an item taken off the list leaves this view at once and stays under All.
+      (view === "all" || (onList[item.id] ?? 0) > 0) &&
       (!category || item.category === category) &&
       (!needle ||
         [item.name, item.category, ...item.aliases].some((text) =>

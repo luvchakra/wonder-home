@@ -28,6 +28,8 @@ export const groceryEn = {
   "grocery.stepper.amount": "Change how much {name} to buy",
   "grocery.stepper.now": "{name}: {amount} to buy",
   "grocery.stepper.none": "{name}: nothing to buy",
+  "grocery.stepper.remove": "Remove",
+  "grocery.stepper.removeLabel": "Take {name} off the list",
   "grocery.stepper.conflict": "Someone changed this a moment ago, so it now shows the latest.",
   "grocery.stepper.failed": "That did not save: {reason}",
   "grocery.stock.less": "Less {name} at home",

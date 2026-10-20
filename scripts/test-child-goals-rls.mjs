@@ -109,6 +109,37 @@ test("another household sees nothing and cannot tick anything off", () => {
   );
 });
 
+test("the child's own Done waits for a grown-up: they cannot verify it themselves", () => {
+  const headMember = psql(`select id from public.household_members where profile_id = '${HEAD}';`, options);
+  const kidMember = child;
+  assert.throws(
+    () => asProfile(KID, `insert into public.child_goal_checkins (household_id, goal_id, child_member_id, on_day, verified_at, verified_by) values ('${household}', '${goal}', '${child}', current_date, now(), '${kidMember}');`, options),
+    /row-level security/,
+  );
+  asProfile(KID, `insert into public.child_goal_checkins (household_id, goal_id, child_member_id, on_day) values ('${household}', '${goal}', '${child}', current_date);`, options);
+  asProfile(KID, `update public.child_goal_checkins set verified_at = now(), verified_by = '${kidMember}' where goal_id = '${goal}';`, options);
+  assert.equal(psql(`select count(*) from public.child_goal_checkins where verified_at is null;`, options), "1");
+  // The guardian says yes, in their own name only.
+  assert.throws(
+    () => asProfile(HEAD, `update public.child_goal_checkins set verified_at = now(), verified_by = '${adultMember}' where goal_id = '${goal}';`, options),
+    /row-level security/,
+  );
+  asProfile(HEAD, `update public.child_goal_checkins set verified_at = now(), verified_by = '${headMember}' where goal_id = '${goal}';`, options);
+  assert.equal(psql(`select count(*) from public.child_goal_checkins where verified_at is not null;`, options), "1");
+  // Once verified, the child no longer takes it back; the guardian may.
+  asProfile(KID, `delete from public.child_goal_checkins where goal_id = '${goal}';`, options);
+  assert.equal(psql(`select count(*) from public.child_goal_checkins;`, options), "1");
+  asProfile(HEAD, `delete from public.child_goal_checkins where goal_id = '${goal}';`, options);
+  assert.equal(psql(`select count(*) from public.child_goal_checkins;`, options), "0");
+});
+
+test("a guardian's own tick is verified as it is made", () => {
+  const headMember = psql(`select id from public.household_members where profile_id = '${HEAD}';`, options);
+  asProfile(HEAD, `insert into public.child_goal_checkins (household_id, goal_id, child_member_id, on_day, verified_at, verified_by) values ('${household}', '${goal}', '${child}', current_date, now(), '${headMember}');`, options);
+  assert.equal(psql(`select count(*) from public.child_goal_checkins where verified_by = '${headMember}';`, options), "1");
+  psql(`delete from public.child_goal_checkins;`, options);
+});
+
 test("only a child has goals, and a weekly target fits a week", () => {
   assert.throws(
     () => asProfile(HEAD, `insert into public.child_goals (household_id, child_member_id, title) values ('${household}', '${adultMember}', 'Run');`, options),

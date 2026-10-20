@@ -11,7 +11,7 @@ import { Card } from "@wonderhome/core/ui/card";
 import { CompanionCat } from "@wonderhome/core/ui/companion-cat";
 import { CAT_COATS, type CatCoat } from "@wonderhome/core/school/companion";
 
-import { nameCompanionAction } from "../(auth)/goal-actions";
+import { heardSayingAction, nameCompanionAction } from "../(auth)/goal-actions";
 
 export type CompanionCardLabels = {
   /** `{name}` is the cat's own name. */
@@ -78,7 +78,8 @@ export function CompanionCard({
   visit?: string;
   name: string | null;
   coat: CatCoat;
-  lines: { text: string; href?: string }[];
+  /** A line with `sayingId` is from the sayings list: once shown it is recorded and never shown to this child again. */
+  lines: { text: string; href?: string; sayingId?: string }[];
   labels: CompanionCardLabels;
 }) {
   const router = useRouter();
@@ -91,7 +92,25 @@ export function CompanionCard({
   const [keptCoat, setKeptCoat] = useState<CatCoat>(savedCoat);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // A saying is shown once per child, ever: within a visit, "Tell me another"
+  // skips any already shown, and each one shown is recorded on the server.
+  const [shownSayings, setShownSayings] = useState<ReadonlySet<string>>(() => new Set());
   const line = lines[index % Math.max(1, lines.length)];
+  const skipShown = (from: number) => {
+    for (let step = 1; step <= lines.length; step += 1) {
+      const next = lines[(from + step) % lines.length];
+      if (next && (!next.sayingId || !shownSayings.has(next.sayingId))) return from + step;
+    }
+    return from + 1;
+  };
+  const sayingId = ready ? line?.sayingId : undefined;
+  useEffect(() => {
+    if (!sayingId || shownSayings.has(sayingId)) return;
+    // Remembering what was shown has to follow the showing.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShownSayings((seen) => new Set([...seen, sayingId]));
+    void heardSayingAction({ householdId, sayingId });
+  }, [sayingId, shownSayings, householdId]);
 
   // A new line on every visit: this device remembers how many times the cat has spoken.
   useEffect(() => {
@@ -157,7 +176,7 @@ export function CompanionCard({
                 {lines.length > 1 ? (
                   <button
                     type="button"
-                    onClick={() => setIndex((value) => value + 1)}
+                    onClick={() => setIndex((value) => skipShown(value))}
                     className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
                   >
                     <RefreshCw aria-hidden className="size-4" />{" "}

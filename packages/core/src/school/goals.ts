@@ -48,15 +48,25 @@ export type ChildGoal = {
   source?: { kind: "activity" | "school_item"; id: string } | null;
 };
 
-export type GoalCheckIn = { goalId: string; onDay: string };
+/**
+ * A day ticked off for a goal. `verified: false` is the child's own "Done"
+ * still waiting for a guardian or an Admin (the owner, 2026-10-20): it earns
+ * nothing until then. Absent means verified (a grown-up's tick, or a row from
+ * before verification existed).
+ */
+export type GoalCheckIn = { goalId: string; onDay: string; verified?: boolean };
+
+const counts = (entry: GoalCheckIn) => entry.verified !== false;
 
 export type GoalStanding = {
   goal: ChildGoal;
   /** Check-ins in the goal's current period (today, this week, or ever for a one-off). */
   done: number;
   needed: number;
-  /** Checked in today already — the button then offers to take it back. */
+  /** Checked in today and verified — the button then offers to take it back. */
   doneToday: boolean;
+  /** Ticked today by the child and waiting for a grown-up to verify it. */
+  waitingToday: boolean;
   /** The current period's target is reached: the reward is earned. */
   met: boolean;
 };
@@ -94,12 +104,13 @@ export function goalStandings(goals: readonly ChildGoal[], checkIns: readonly Go
   return goals
     .filter((goal) => !goal.endsOn || goal.endsOn >= today)
     .map((goal) => {
-      const own = checkIns.filter((entry) => entry.goalId === goal.id);
+      const mine = checkIns.filter((entry) => entry.goalId === goal.id);
+      const own = mine.filter(counts);
       const period = periodOf(goal, today, weekStartsOn);
       const inPeriod = period ? own.filter((entry) => entry.onDay >= period.from && entry.onDay <= period.to) : own;
       const needed = goal.period === "week" ? goal.target : 1;
       const done = Math.min(inPeriod.length, needed);
-      return { goal, done, needed, doneToday: own.some((entry) => entry.onDay === today), met: done >= needed };
+      return { goal, done, needed, doneToday: own.some((entry) => entry.onDay === today), waitingToday: mine.some((entry) => entry.onDay === today && !counts(entry)), met: done >= needed };
     });
 }
 
@@ -151,7 +162,8 @@ export function childProgress(input: {
     const day = goal.source?.kind === "school_item" ? doneOn.get(goal.source.id) : undefined;
     return day ? [{ goalId: goal.id, onDay: day }] : [];
   });
-  input = { ...input, checkIns: [...input.checkIns, ...fromWork] };
+  const waiting = input.checkIns.filter((entry) => !counts(entry));
+  input = { ...input, checkIns: [...input.checkIns.filter(counts), ...fromWork] };
   const starsOf = new Map(input.goals.map((goal) => [goal.id, goal.stars]));
   const fromGoals = input.checkIns.reduce((sum, entry) => sum + (starsOf.get(entry.goalId) ?? 0), 0);
   const fromSchool = input.schoolDoneOn.length;
@@ -182,7 +194,7 @@ export function childProgress(input: {
     badges: BADGES.map((key) => ({ key, earned: earned[key] })),
     goals: goalStandings(
       input.goals.filter((goal) => input.activeGoalIds.has(goal.id)),
-      input.checkIns,
+      [...input.checkIns, ...waiting],
       input.today,
       weekStartsOn,
     ),

@@ -202,6 +202,8 @@ export const zh: Catalog = {
   "reminder.homesend.waitingBodyFrom": "{name} 把它发到了 HomeSend。你说“好”之前不会添加任何内容。",
   "reminder.homesend.failedTitle": "发到 HomeSend 的一项内容无法读取",
   "reminder.homesend.failedBody": "它已安全保存在 HomeSend 的“安全失败”中，没有添加任何内容。",
+  "reminder.goalCheck.title": "{name}说已完成“{goal}”",
+  "reminder.goalCheck.body": "请核对后选择“是”或“还没有”。你确认后才计入星星。",
   "reminder.eventReply.title": "{event} 的回复",
   "reminder.eventReply.body": "{yes} 人会来 · {maybe} 人可能 · {no} 人不能来",
   "reminder.helperAway.title": "{name} 在 {date} 不会来",

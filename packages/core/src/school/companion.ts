@@ -22,14 +22,18 @@
  */
 
 import type { AgeBand } from "../identity/age";
+import type { Saying } from "./sayings";
 
 export type CompanionLine = {
-  kind: "news" | "homework" | "class" | "duty" | "mission" | "streak" | "goal" | "fun" | "level" | "fact" | "quote" | "idea" | "hello";
-  /** A `kids.cat.*` catalog key. */
+  kind: "news" | "homework" | "class" | "duty" | "mission" | "streak" | "goal" | "fun" | "level" | "fact" | "quote" | "idea" | "joke" | "riddle" | "hello";
+  /** A `kids.cat.*` catalog key; empty for a saying, which carries its own `text`. */
   key: string;
   values: Record<string, string | number>;
   /** Where tapping the line goes, if it is about something on another screen. */
   href?: string;
+  /** A saying from the list, already in the child's language, and its id (recorded once shown, never shown again). */
+  text?: string;
+  sayingId?: string;
 };
 
 export type CompanionFacts = {
@@ -57,6 +61,13 @@ export type CompanionFacts = {
   nextClass?: { name: string; at: string } | null;
   /** What the child looks after in the household (their responsibilities, by name). */
   duties?: readonly string[];
+  /**
+   * Sayings from the list this child has not heard yet (`nextSayings`). When
+   * present they are the cat's fun lines, so nothing repeats; an empty list
+   * means the child has heard them all and the cat keeps to reminders. Absent
+   * (no list yet) falls back to the built-in daily lines.
+   */
+  sayings?: readonly Saying[] | null;
 };
 
 /** How many facts each age band holds (`kids.cat.fact.<band>.N`), and how many the cat brings out each day. */
@@ -112,8 +123,8 @@ export function companionLines(facts: CompanionFacts): CompanionLine[] {
 
   const day = dayNumber(facts.today);
   const band = factBand(facts.ageBand);
-  const fun: CompanionLine[] = [];
-  for (let n = 0; n < FACTS_A_DAY; n += 1) {
+  const fun: CompanionLine[] = facts.sayings ? facts.sayings.map((saying) => ({ kind: saying.kind, key: "", values: {}, text: saying.text, sayingId: saying.id })) : [];
+  for (let n = 0; !facts.sayings && n < FACTS_A_DAY; n += 1) {
     fun.push({ kind: "fact", key: `kids.cat.fact.${band}.${((day * FACTS_A_DAY + n) % FACTS) + 1}`, values: {} });
     if (n === 0) fun.push({ kind: "quote", key: `kids.cat.quote.${(day % QUOTES) + 1}`, values: {} });
     if (n === 1) fun.push({ kind: "idea", key: `kids.cat.idea.${((day * 7) % IDEAS) + 1}`, values: {} });

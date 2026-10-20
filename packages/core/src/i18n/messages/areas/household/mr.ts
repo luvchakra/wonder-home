@@ -694,6 +694,8 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "kids.do": "मी केले!",
   "kids.done": "झाले",
   "kids.undo": "{name} परत घे",
+  "kids.waiting": "मोठ्यांची वाट",
+  "kids.waitingSent": "मोठ्यांना तपासायला पाठवले. त्यांनी हो म्हटल्यावर तारे मिळतील.",
   "kids.earned#one": "{count} स्टार मिळाला",
   "kids.earned#other": "{count} स्टार मिळाले",
   "kids.goal.daily": "रोज",

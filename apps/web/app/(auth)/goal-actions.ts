@@ -7,7 +7,7 @@ import type { CatCoat } from "@wonderhome/core/school/companion";
 import { ApiError, toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { checkInGoal, retireGoal, saveGoal, undoCheckIn } from "@wonderhome/core/school/goal-repository";
+import { answerCheckIn, checkInGoal, retireGoal, saveGoal, undoCheckIn } from "@wonderhome/core/school/goal-repository";
 import { GOAL_PERIODS } from "@wonderhome/core/school/goals";
 import { completeSchoolItem, reopenSchoolItem } from "@wonderhome/core/school/repository";
 
@@ -113,15 +113,28 @@ export async function retireGoalAction(input: { householdId: string; id: string 
 
 const checkInSchema = z.object({ householdId: z.uuid(), goalId: z.uuid(), childMemberId: z.uuid(), done: z.boolean() });
 
-/** Today ticked off for a goal, or taken back. */
+/**
+ * Today ticked off for a goal, or taken back. The child's own tick waits for
+ * a grown-up to verify it (the owner, 2026-10-20); a guardian's or an Admin's
+ * counts at once — and RLS refuses anyone else claiming that.
+ */
 export async function checkInGoalAction(input: { householdId: string; goalId: string; childMemberId: string; done: boolean }): Promise<ActionState> {
   const parsed = checkInSchema.safeParse(input);
   if (!parsed.success) return { error: "Please try again." };
   return inHousehold(parsed.data.householdId, async (supabase, actor) => {
     const onDay = await householdToday(supabase, parsed.data.householdId);
-    if (parsed.data.done) await checkInGoal(supabase, { ...parsed.data, onDay, checkedBy: actor.memberId });
+    if (parsed.data.done) await checkInGoal(supabase, { ...parsed.data, onDay, checkedBy: actor.memberId, verified: actor.memberId !== parsed.data.childMemberId });
     else await undoCheckIn(supabase, { householdId: parsed.data.householdId, goalId: parsed.data.goalId, onDay });
   });
+}
+
+const answerSchema = z.object({ householdId: z.uuid(), goalId: z.uuid(), onDay: z.iso.date(), approve: z.boolean() });
+
+/** A guardian's or an Admin's answer to a child's "Done": verified, or "not yet" (the tick is taken back). */
+export async function answerCheckInAction(input: { householdId: string; goalId: string; onDay: string; approve: boolean }): Promise<ActionState> {
+  const parsed = answerSchema.safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  return inHousehold(parsed.data.householdId, (supabase, actor) => answerCheckIn(supabase, { ...parsed.data, verifiedBy: actor.memberId }));
 }
 
 const schoolSchema = z.object({ householdId: z.uuid(), id: z.uuid(), done: z.boolean() });
@@ -136,6 +149,20 @@ export async function markSchoolWorkAction(input: { householdId: string; id: str
 }
 
 /** The child names their cat companion and picks its colour (story 08-018) — only ever their own, as RLS holds. */
+/** The cat showed the child this saying: it is never picked for them again. Quiet on failure — it is a nicety. */
+export async function heardSayingAction(input: { householdId: string; sayingId: string }): Promise<void> {
+  const parsed = z.object({ householdId: z.uuid(), sayingId: z.string().regex(/^[a-z0-9-]{3,40}$/) }).safeParse(input);
+  if (!parsed.success) return;
+  try {
+    const supabase = await createClient();
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    const { markSayingHeard } = await import("@wonderhome/core/school/sayings");
+    await markSayingHeard(supabase, { householdId: parsed.data.householdId, memberId: actor.memberId, sayingId: parsed.data.sayingId });
+  } catch {
+    // Not recorded this time: the saying may come round once more. Nothing else depends on it.
+  }
+}
+
 export async function nameCompanionAction(input: { householdId: string; name: string; coat: string }): Promise<{ ok: true; name: string; coat: CatCoat } | { ok: false; error: string }> {
   const parsed = z.object({ householdId: z.uuid(), name: z.string().max(80), coat: z.string().max(20) }).safeParse(input);
   if (!parsed.success) return { ok: false, error: "Try a shorter name." };

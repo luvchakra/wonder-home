@@ -60,6 +60,8 @@ const NON_TENANT_TABLES = new Set([
   // The shared recipe catalog (HomeFood 25-022): dishes every household reads and none writes; a household's own copy is a `recipes` row.
   "recipe_catalog",
   "recipe_catalog_ingredients",
+  // The cat's sayings (08-018): WonderHome's own list every household reads and none writes; what a child heard is per household.
+  "companion_sayings",
 ]);
 
 export function lintMigrationSource(filename, sql) {
