@@ -171,7 +171,8 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
         ? `${formatTime(timezone, item.dueAt)} – ${formatTime(timezone, item.endsAt)}`
         : formatTime(timezone, item.dueAt)
       : t("school.allDay");
-  const live = items.filter((item) => item.status === "pending" || item.status === "in_progress");
+  // Live work is what a child has to do: an event is something to know, kept under the Overview's Coming up, not homework (the owner, 2026-10-20).
+  const live = items.filter((item) => (item.status === "pending" || item.status === "in_progress") && item.kind !== "event");
   const needsYou = agenda ? agenda.deadlines.length + agenda.messages.length : 0;
 
   // "Coming up" previews what's ahead (exams/projects/events a month out,
