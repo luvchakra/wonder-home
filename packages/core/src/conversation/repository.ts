@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
+import { amafMarkFrom, type AmafMark } from "../amaf/session";
 import { placesFrom, type PlaceSuggestion } from "../homeplaces/service";
 import type { PendingClarification } from "./clarify";
 import { readFocus, type FocusEntity } from "./references";
@@ -68,6 +69,8 @@ export type ConversationMessage = {
   localized?: ReplyShown | null;
   /** Places a HomePlaces answer offered, from its metadata. */
   places?: PlaceSuggestion[] | null;
+  /** An Ask me about family question still waiting: the part of the app it fills. */
+  amaf?: AmafMark | null;
 };
 
 export type ReplyShown = { language: string; text: string | null; fallback: string | null };
@@ -168,6 +171,7 @@ export async function listMessages(
       action: byMessage.get(row.id as string) ?? null,
       localized: row.role === "assistant" ? replyShownFrom(row.metadata) : null,
       places: row.role === "assistant" ? placesFrom(row.metadata) : null,
+      amaf: row.role === "assistant" ? amafMarkFrom(row.metadata as Record<string, unknown> | null) : null,
     }))
     .reverse();
 }

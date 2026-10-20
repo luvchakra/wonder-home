@@ -562,6 +562,16 @@ async function createFoodPreferenceImpl(
 }
 
 /**
+ * A preference taken back (rule 12): the person who said it, or an Admin,
+ * removes it — RLS decides, as it does for adding one. Used by Ask me about
+ * family's undo, which puts back exactly what an answer added.
+ */
+async function removeFoodPreferenceImpl(supabase: SupabaseClient, input: { householdId: string; id: string }): Promise<void> {
+  const { error } = await supabase.from("food_preferences").delete().eq("household_id", input.householdId).eq("id", input.id);
+  if (error) throw new Error(`removeFoodPreference failed: ${error.code ?? "unknown"}`);
+}
+
+/**
  * A diet for the whole household (memberId null) or one person, or none
  * (the owner, 2026-10-20). One per scope: the old one is taken away and the
  * new one written, under the same `food_preferences` policies as any
@@ -931,6 +941,7 @@ export const createMeal = invalidatesContext(createMealImpl, (_supabase, input) 
 export const createRecipe = invalidatesContext(createRecipeImpl, (_supabase, input) => input.householdId);
 export const createFoodPreference = invalidatesContext(createFoodPreferenceImpl, (_supabase, input) => input.householdId);
 export const setDiet = invalidatesContext(setDietImpl, (_supabase, input) => input.householdId);
+export const removeFoodPreference = invalidatesContext(removeFoodPreferenceImpl, (_supabase, input) => input.householdId);
 export const attachIngredients = invalidatesContext(attachIngredientsImpl, (_supabase, householdId) => householdId);
 export const attachRecipeToMeal = invalidatesContext(attachRecipeToMealImpl, (_supabase, householdId) => householdId);
 export const updateMeal = invalidatesContext(updateMealImpl, (_supabase, input) => input.householdId);

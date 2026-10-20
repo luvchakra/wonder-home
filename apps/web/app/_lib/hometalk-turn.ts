@@ -47,6 +47,7 @@ import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readF
 import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
+import { isAmafStart } from "@wonderhome/core/amaf/session";
 import { normaliseUtterance } from "@wonderhome/core/conversation/normalise";
 import { gatherHouseholdContext } from "@wonderhome/core/context/repository";
 import { invalidateHouseholdContext } from "@wonderhome/core/context/invalidation";
@@ -107,6 +108,7 @@ import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/
 import { agendaAllows, channelAllowsAction, channelRefusal, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
 import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
+import { continueAmaf, pendingAmaf, startAmaf } from "@/app/_lib/hometalk-amaf";
 import { continueWelcome, pendingWelcome } from "@/app/_lib/hometalk-welcome";
 
 /**
@@ -350,6 +352,27 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // follows — no model is asked. A question back ("what can you do?") is
   // not an answer, so it goes through the ordinary turn and the welcome
   // simply ends there.
+  // Ask me about family (AMAF): "ask me about my family" starts it, and
+  // while its question is the last thing HomeTalk said, an answer goes to
+  // it — rules only, each write through its module's own service. A
+  // question back ("what's on today?") is not an answer: it goes through
+  // the ordinary turn, and the mode simply rests until it is asked for again.
+  // Only in the app: an external voice link has its own narrower door.
+  if (!body.editMessageId && !limits) {
+    const amafAnswer = isAmafStart(body.utterance) ? null : await pendingAmaf(admin, sessionId);
+    if (isAmafStart(body.utterance) || (amafAnswer && !looksLikeQuestion(body.utterance))) {
+      const step = amafAnswer
+        ? await continueAmaf(supabase, { membership, sessionId, pending: amafAnswer, answer: said ?? body.utterance, channel: body.channel, transcriptConfidence: body.transcriptConfidence })
+        : await startAmaf(supabase, { membership, sessionId, utterance: said ?? body.utterance, channel: body.channel, transcriptConfidence: body.transcriptConfidence });
+      return {
+        sessionId,
+        memberMessageId: step.memberMessageId ?? undefined,
+        reply: { id: step.replyId, text: step.text, action: null, preview: null, proposal: "answer", mode: "answer" as BrainMode, amaf: step.amaf, ...(step.navigate ? { navigate: step.navigate } : {}) },
+        welcomeLocalized: true as const,
+      };
+    }
+  }
+
   if (!body.editMessageId && !limits) {
     const welcomeTopic = await pendingWelcome(admin, sessionId);
     if (welcomeTopic && !looksLikeQuestion(body.utterance)) {
