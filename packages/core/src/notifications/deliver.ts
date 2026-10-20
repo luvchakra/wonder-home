@@ -9,6 +9,7 @@ import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type C
 import { parsePushTarget } from "./web-push";
 import { emailWorthSending, pushWorthSending, type PushReason } from "./push-gate";
 import { singleRecipient } from "../email/mailer";
+import { channelAllowed, muteKey, mutesFrom } from "./routing";
 
 /**
  * Sending a notification beyond the app (stories 06-008, 17-006).
@@ -35,13 +36,15 @@ export async function deliverNotification(
     copy?: NotificationCopy | null;
     /** A reminder timed for this person, or an alert about something that happened (decides whether it may buzz). */
     reason?: PushReason;
+    /** What it is about, so the channels this person keeps that kind off are skipped (story 27-002). */
+    category?: string | null;
     now?: Date;
   },
   adapters: Record<DeliveryChannel, ChannelAdapter> = channelAdaptersFromEnv(),
 ): Promise<{ sent: DeliveryChannel[]; failed: DeliveryChannel[] }> {
   const now = input.now ?? new Date();
   try {
-    const [{ data }, { data: household }, { data: member }, { data: devices }] = await Promise.all([
+    const [{ data }, { data: household }, { data: member }, { data: devices }, { data: muteRows }] = await Promise.all([
       admin
         .from("notification_preferences")
         .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target")
@@ -52,7 +55,11 @@ export async function deliverNotification(
       adapters.push?.live
         ? admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", input.recipientMemberId)
         : Promise.resolve({ data: [] }),
+      input.category ? admin.from("notification_channel_mutes").select("category, channel").eq("member_id", input.recipientMemberId) : Promise.resolve({ data: [] }),
     ]);
+    // The channels this person keeps this kind of reminder off. A critical alert ignores them.
+    const kept = new Set(input.notification.priority === "critical" ? [] : mutesFrom(muteRows as { category: unknown; channel: unknown }[] | null).map((mute) => muteKey(mute.category, mute.channel)));
+    const allowed = (channel: DeliveryChannel) => channelAllowed(kept, input.category, channel);
     // Quiet hours are the household's own clock, never the server's.
     const timeZone = ((household as { timezone?: string } | null)?.timezone ?? "Asia/Kolkata") as string;
     const preferences: ChannelPreference[] = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -70,7 +77,7 @@ export async function deliverNotification(
     const subscriptions = ((devices ?? []) as { id: string; endpoint: string; p256dh: string; auth: string }[]);
     const pushPreference = preferences.find((preference) => preference.channel === "push");
     let pushTargets: ChannelPreference[] = [];
-    if (subscriptions.length > 0 && pushPreference?.enabled !== false) {
+    if (subscriptions.length > 0 && pushPreference?.enabled !== false && allowed("push")) {
       const sentToday = await sentInLastDay(admin, input.recipientMemberId, "push", now);
       if (pushWorthSending({ priority: input.notification.priority, reason: input.reason ?? "alert", sentToday })) {
         pushTargets = subscriptions.map((device) => ({
@@ -85,7 +92,7 @@ export async function deliverNotification(
     // earns an inbox (story 27-001): the same gate shape as push, a higher ceiling.
     const emailPreference = preferences.find((preference) => preference.channel === "email");
     let emailTargets: ChannelPreference[] = [];
-    if (emailPreference?.enabled && adapters.email?.live) {
+    if (emailPreference?.enabled && adapters.email?.live && allowed("email")) {
       const sentToday = await sentInLastDay(admin, input.recipientMemberId, "email", now);
       if (emailWorthSending({ priority: input.notification.priority, reason: input.reason ?? "alert", sentToday })) {
         emailTargets = [{ ...emailPreference, target: await emailAddressFor(admin, input.recipientMemberId) }];
@@ -93,7 +100,7 @@ export async function deliverNotification(
     }
     // Only channels that can actually reach someone; a fixture's "not
     // configured" is not an attempt.
-    const live = [...preferences.filter((preference) => preference.channel !== "push" && preference.channel !== "email" && adapters[preference.channel]?.live), ...emailTargets, ...pushTargets];
+    const live = [...preferences.filter((preference) => preference.channel !== "push" && preference.channel !== "email" && allowed(preference.channel) && adapters[preference.channel]?.live), ...emailTargets, ...pushTargets];
     if (live.length === 0) return { sent: [], failed: [] };
 
     const translated = input.copy ? await inRecipientLanguage(input.notification, input.copy, household, member) : input.notification;

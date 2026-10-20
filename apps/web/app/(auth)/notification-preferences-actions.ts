@@ -8,6 +8,7 @@ import { DELIVERY_CHANNELS, type DeliveryChannel } from "@wonderhome/core/notifi
 import { loadChannelPreferences, saveChannelPreference, saveSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
 import { TUNABLE_CATEGORIES } from "@wonderhome/core/notifications/policies";
 import { saveReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
+import { setRoute } from "@wonderhome/core/notifications/routing";
 
 import { reconcileRemindersNow } from "../_lib/reminders";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -270,4 +271,23 @@ export async function sendTestPushAction(_previous: ActionState, formData: FormD
   } catch (thrown) {
     return { error: toErrorBody(thrown, "notifications").body.error.message };
   }
+}
+
+/**
+ * Keep one kind of reminder off one channel, or allow it again (story 27-002).
+ * The person's own choice, through their own session: the table's policy
+ * confines it to their own rows.
+ */
+export async function setChannelRouteAction(input: { householdId: string; category: string; channel: string; allowed: boolean }): Promise<{ ok: true } | { error: string }> {
+  const parsed = z.object({ householdId: z.uuid(), category: z.string().max(40), channel: z.string().max(20), allowed: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    await setRoute(supabase, { ...parsed.data, memberId: membership.memberId });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "notifications").body.error.message };
+  }
+  revalidatePath("/settings/notifications");
+  return { ok: true };
 }

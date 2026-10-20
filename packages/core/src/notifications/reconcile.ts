@@ -468,8 +468,8 @@ export async function deliverDueNotifications(
     .eq("household_id", householdId)
     .eq("status", "generated")
     .lte("scheduled_for", now.toISOString())
-    .select("id, recipient_member_id, title, body, message, priority, scheduled_for, source_type");
-  for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; message: unknown; priority: string; scheduled_for: string; source_type: string | null }[]) {
+    .select("id, recipient_member_id, title, body, message, priority, scheduled_for, source_type, category");
+  for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; message: unknown; priority: string; scheduled_for: string; source_type: string | null; category: string | null }[]) {
     delivered += 1;
     const fresh = now.getTime() - new Date(row.scheduled_for).getTime() <= FRESH_DELIVERY_MINUTES * 60_000;
     const ownDelivery = row.source_type === "reminder" || (row.source_type !== null && managed.has(row.source_type));
@@ -484,6 +484,7 @@ export async function deliverDueNotifications(
           copy: parseCopy(row.message),
           // Only reminders from a record (a bill, school work, a meal) reach here: each was timed for this person.
           reason: "reminder",
+          category: row.category,
           now,
         },
         adapters,

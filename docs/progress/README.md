@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [What goes where: the channel for each kind of reminder (27-002)](2026-10-20-notification-routing.md) |
 | 2026-10-20 | [Notifications by email, and the notification backlog (27-001)](2026-10-20-notification-email.md) |
 | 2026-10-19 | [Destinations for those long weekends (24-011)](2026-10-19-trip-destinations.md) |
 | 2026-10-19 | [Long weekends from public holidays (14-034)](2026-10-19-long-weekends.md) |

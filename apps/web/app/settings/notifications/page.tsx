@@ -1,6 +1,7 @@
 import { ListChecks } from "lucide-react";
 import Link from "next/link";
 
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -8,7 +9,8 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { channelAdaptersFromEnv } from "@wonderhome/core/notifications/channels";
 import { webPushPublicKey } from "@wonderhome/core/notifications/web-push";
 import { loadChannelPreferences, loadSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
-import { REMINDER_POLICIES } from "@wonderhome/core/notifications/policies";
+import { loadMutes, muteKey, ROUTABLE_CHANNELS } from "@wonderhome/core/notifications/routing";
+import { NOTIFICATION_CATEGORIES, REMINDER_POLICIES } from "@wonderhome/core/notifications/policies";
 import { loadReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
 import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
 
@@ -19,6 +21,7 @@ import {
   saveSmartRemindersAction,
 } from "../../(auth)/notification-preferences-actions";
 import { ChannelPreferenceCard } from "../../_components/notification-preferences-form";
+import { ChannelRoutingCard } from "../../_components/channel-routing-card";
 import { PushDeviceCard } from "../../_components/push-device-card";
 import { QuietHoursCard, ReminderPreferencesCard, SmartRemindersCard } from "../../_components/reminder-settings-form";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
@@ -42,8 +45,9 @@ export default async function NotificationSettingsPage() {
   const session = await requireSession("/settings/notifications");
   const { supabase, membership, viewer, secondary } = session;
 
-  const [preferences, reminderPreferences, smart, { data: responsibilityData }, { data: deviceRows }] = await Promise.all([
+  const [preferences, mutes, reminderPreferences, smart, { data: responsibilityData }, { data: deviceRows }] = await Promise.all([
     loadChannelPreferences(supabase, membership.memberId),
+    loadMutes(supabase, membership.memberId).catch(() => []),
     loadReminderPreferences(supabase, membership.memberId),
     loadSmartReminderChoices(supabase, membership.memberId),
     supabase
@@ -171,6 +175,21 @@ export default async function NotificationSettingsPage() {
             unsupported: t("push.device.unsupported"),
             blocked: t("push.device.blocked"),
             otherDevices: t("push.device.otherDevices", { count: "{count}" }),
+          }}
+        />
+
+        {/* What goes where (story 27-002): only channels this person has on and that reach someone here. */}
+        <ChannelRoutingCard
+          householdId={membership.household.id}
+          kinds={NOTIFICATION_CATEGORIES.map((category) => ({ category, name: t(`notifications.category.${category}` as TranslationKey) }))}
+          channels={ROUTABLE_CHANNELS.filter((channel) => adapters[channel].live && preferences.find((preference) => preference.channel === channel)?.enabled).map((channel) => ({ channel, name: t(`settingsPage.notifications.channel.${channel}` as TranslationKey) }))}
+          keptOff={mutes.map((mute) => muteKey(mute.category, mute.channel))}
+          labels={{
+            title: t("channelRouting.title"),
+            lede: t("channelRouting.lede"),
+            none: t("channelRouting.none"),
+            channelFor: t("channelRouting.channelFor", { kind: "{kind}", channel: "{channel}" }),
+            failed: t("channelRouting.failed"),
           }}
         />
 

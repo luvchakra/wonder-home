@@ -870,7 +870,13 @@ reminders about real records, never lines of text fired and forgotten.
   an Admin typed. It earns an inbox by `emailWorthSending` (critical always, high up to
   12 a day, a reminder timed for the person up to 6, low never) and holds for quiet
   hours except critical. Each attempt is a closed-word `notification_events` row. Never
-  mail a notification from anywhere but `deliverNotification`. The backlog for the
+  mail a notification from anywhere but `deliverNotification`.
+- **What goes where** (story 27-002, `notifications/routing.ts`). A person keeps one
+  kind of reminder off one channel (`notification_channel_mutes`, their own rows only);
+  no row means allowed. `deliverNotification` is given the reminder's `category` and
+  skips a muted channel, except for a critical alert, and the in-app list cannot be
+  muted. Only channels that are on and reach someone here are offered, in Settings →
+  Notifications → "What goes where". The backlog for the
   channels and the events still to come is `backlogs/27-Notification-Channels.md`.
 - **Fewer interruptions.** A child's school things due the same day are one
   reminder (`school_day`, `batchSchoolDays`), as urgent as the most urgent

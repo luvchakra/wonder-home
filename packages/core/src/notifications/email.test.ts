@@ -157,3 +157,33 @@ describe("delivery by email", () => {
     expect(noMailer.writes).toEqual([]);
   });
 });
+
+describe("a kind of reminder kept off a channel (story 27-002)", () => {
+  const MUTES = [{ category: "bills", channel: "email" }];
+  const tables = { notification_preferences: PREFERENCES, households: [HOUSEHOLD], household_members: [MEMBER], notification_channel_mutes: MUTES };
+
+  it("skips email for the kind the person keeps off it, and sends the rest", async () => {
+    const off = recordingMailer();
+    const bills = await deliverNotification(fakeDatabase(tables).client, { ...input, category: "bills" }, { ...CHANNEL_ADAPTERS, email: createEmailAdapter(off.mailer, {}) });
+    expect(bills).toEqual({ sent: [], failed: [] });
+    expect(off.sent).toHaveLength(0);
+
+    const on = recordingMailer();
+    const school = await deliverNotification(fakeDatabase(tables).client, { ...input, category: "school" }, { ...CHANNEL_ADAPTERS, email: createEmailAdapter(on.mailer, {}) });
+    expect(school).toEqual({ sent: ["email"], failed: [] });
+    expect(on.sent).toHaveLength(1);
+  });
+
+  it("never lets a mute hold back something critical", async () => {
+    const { mailer, sent } = recordingMailer();
+    const result = await deliverNotification(fakeDatabase(tables).client, { ...input, category: "bills", notification: { ...NOTE, priority: "critical" } }, { ...CHANNEL_ADAPTERS, email: createEmailAdapter(mailer, {}) });
+    expect(result).toEqual({ sent: ["email"], failed: [] });
+    expect(sent).toHaveLength(1);
+  });
+
+  it("sends as before when no kind is named", async () => {
+    const { mailer, sent } = recordingMailer();
+    expect(await deliverNotification(fakeDatabase(tables).client, input, { ...CHANNEL_ADAPTERS, email: createEmailAdapter(mailer, {}) })).toEqual({ sent: ["email"], failed: [] });
+    expect(sent).toHaveLength(1);
+  });
+});
