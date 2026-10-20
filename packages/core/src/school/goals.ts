@@ -40,6 +40,12 @@ export type ChildGoal = {
   stars: number;
   reward: string | null;
   endsOn: string | null;
+  /**
+   * What it was set from (the owner, 2026-10-20): a class outside school, or
+   * a piece of school work — the second is met when that work is marked
+   * done, with no check-in of its own.
+   */
+  source?: { kind: "activity" | "school_item"; id: string } | null;
 };
 
 export type GoalCheckIn = { goalId: string; onDay: string };
@@ -133,10 +139,19 @@ export function childProgress(input: {
   checkIns: readonly GoalCheckIn[];
   /** The local day each piece of school work was marked done. */
   schoolDoneOn: readonly string[];
+  /** Which school work was done, by id and day: what a goal set from it counts. */
+  schoolDone?: readonly { id: string; onDay: string }[];
   today: string;
   weekStartsOn?: number;
 }): ChildProgress {
   const weekStartsOn = input.weekStartsOn ?? 1;
+  // A goal set from a piece of school work is ticked the day that work was marked done.
+  const doneOn = new Map((input.schoolDone ?? []).map((entry) => [entry.id, entry.onDay]));
+  const fromWork = input.goals.flatMap((goal) => {
+    const day = goal.source?.kind === "school_item" ? doneOn.get(goal.source.id) : undefined;
+    return day ? [{ goalId: goal.id, onDay: day }] : [];
+  });
+  input = { ...input, checkIns: [...input.checkIns, ...fromWork] };
   const starsOf = new Map(input.goals.map((goal) => [goal.id, goal.stars]));
   const fromGoals = input.checkIns.reduce((sum, entry) => sum + (starsOf.get(entry.goalId) ?? 0), 0);
   const fromSchool = input.schoolDoneOn.length;
@@ -172,4 +187,66 @@ export function childProgress(input: {
       weekStartsOn,
     ),
   };
+}
+
+/**
+ * Where a goal can start from (the owner, 2026-10-20: "use existing entries
+ * for school and extra classes to define the goals"). Each class outside
+ * school offers "every class this week" — as many times as it meets — and
+ * each piece of open school work offers "finish it", a one-off goal met the
+ * day the work is marked done. Events and notices are things to know, not
+ * things to do, so they offer nothing. The words of the title are the
+ * screen's; this decides only the shape.
+ */
+export type GoalStart = {
+  source: { kind: "activity" | "school_item"; id: string };
+  /** The class's or the work's own name, as recorded. */
+  name: string;
+  goalKind: (typeof GOAL_KINDS)[number];
+  emoji: string;
+  period: GoalPeriod;
+  target: number;
+  /** A school-work goal ends the day the work is due. */
+  endsOn: string | null;
+};
+
+const ACTIVITY_GOAL: Record<string, { goalKind: (typeof GOAL_KINDS)[number]; emoji: string }> = {
+  music: { goalKind: "practice", emoji: "🎹" },
+  dance: { goalKind: "sport", emoji: "🎯" },
+  sport: { goalKind: "sport", emoji: "⚽" },
+  martial_arts: { goalKind: "sport", emoji: "🎯" },
+  art: { goalKind: "practice", emoji: "🎨" },
+  language: { goalKind: "learning", emoji: "🧠" },
+  academic: { goalKind: "learning", emoji: "🧠" },
+};
+
+export function goalStarts(input: {
+  activities: readonly { id: string; name: string; kind: string; days: readonly number[] }[];
+  work: readonly { id: string; title: string; kind: string; status: string; dueOn: string | null }[];
+}): GoalStart[] {
+  const classes = input.activities.map((activity): GoalStart => {
+    const shape = ACTIVITY_GOAL[activity.kind] ?? { goalKind: "practice", emoji: "⭐" };
+    return {
+      source: { kind: "activity", id: activity.id },
+      name: activity.name,
+      ...shape,
+      period: "week",
+      target: Math.min(7, Math.max(1, new Set(activity.days).size)),
+      endsOn: null,
+    };
+  });
+  const work = input.work
+    .filter((item) => item.kind !== "event" && item.kind !== "notice" && (item.status === "pending" || item.status === "in_progress"))
+    .map(
+      (item): GoalStart => ({
+        source: { kind: "school_item", id: item.id },
+        name: item.title,
+        goalKind: "learning",
+        emoji: "📚",
+        period: "once",
+        target: 1,
+        endsOn: item.dueOn,
+      }),
+    );
+  return [...classes, ...work];
 }

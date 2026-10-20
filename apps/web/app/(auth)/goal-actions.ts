@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CatCoat } from "@wonderhome/core/school/companion";
 
-import { toErrorBody } from "@wonderhome/core/api/errors";
+import { ApiError, toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { checkInGoal, retireGoal, saveGoal, undoCheckIn } from "@wonderhome/core/school/goal-repository";
@@ -54,6 +54,8 @@ const goalSchema = z.object({
   stars: z.coerce.number().int().min(1).max(5),
   reward: text(120),
   endsOn: z.union([z.iso.date(), z.literal("")]).optional(),
+  sourceKind: z.enum(["activity", "school_item", ""]).optional(),
+  sourceId: z.union([z.uuid(), z.literal("")]).optional(),
 });
 
 const value = (formData: FormData, name: string) => {
@@ -75,11 +77,29 @@ export async function saveGoalAction(_previous: ActionState, formData: FormData)
     stars: value(formData, "stars"),
     reward: value(formData, "reward"),
     endsOn: value(formData, "endsOn"),
+    sourceKind: value(formData, "sourceKind"),
+    sourceId: value(formData, "sourceId"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
-  return inHousehold(parsed.data.householdId, (supabase, actor) =>
-    saveGoal(supabase, { ...parsed.data, id: parsed.data.id || null, endsOn: parsed.data.endsOn || null, createdBy: actor.memberId }),
-  );
+  const { sourceKind, sourceId, ...goal } = parsed.data;
+  return inHousehold(parsed.data.householdId, async (supabase, actor) => {
+    // A goal set from a class or a piece of school work names one of this child's own, read as this reader may.
+    let source: { kind: "activity" | "school_item"; id: string } | null = null;
+    if (sourceKind && sourceId) {
+      const { data } = await supabase
+        .from(sourceKind === "activity" ? "child_activities" : "school_items")
+        .select("id")
+        .eq("household_id", goal.householdId)
+        .eq("child_member_id", goal.childMemberId)
+        .eq("id", sourceId)
+        .maybeSingle();
+      if (!data) throw ApiError.badRequest("That class or piece of school work is not this child's.");
+      source = { kind: sourceKind, id: sourceId };
+    }
+    // A goal met by finishing school work is a one-off.
+    const period = source?.kind === "school_item" ? "once" : goal.period;
+    await saveGoal(supabase, { ...goal, period, id: goal.id || null, endsOn: goal.endsOn || null, source, createdBy: actor.memberId });
+  });
 }
 
 const ids = z.object({ householdId: z.uuid(), id: z.uuid() });

@@ -92,21 +92,21 @@ export function companionLines(facts: CompanionFacts): CompanionLine[] {
     );
   }
   if (facts.homework) {
-    reminders.push({ kind: "homework", key: facts.homework.dueToday ? "kids.cat.homework.today" : "kids.cat.homework.soon", values: { title: facts.homework.title }, href: "/?tab=school" });
+    reminders.push({ kind: "homework", key: facts.homework.dueToday ? "kids.cat.homework.today" : "kids.cat.homework.soon", values: { title: facts.homework.title }, href: facts.homework.dueToday ? "/?tab=school#due-today" : "/?tab=school#coming-up" });
   }
   if (facts.nextClass) reminders.push({ kind: "class", key: "kids.cat.class", values: { name: facts.nextClass.name, time: facts.nextClass.at } });
-  if (facts.missionsLeft > 0) reminders.push({ kind: "mission", key: "kids.cat.missions", values: { count: facts.missionsLeft }, href: "/?tab=today" });
+  if (facts.missionsLeft > 0) reminders.push({ kind: "mission", key: "kids.cat.missions", values: { count: facts.missionsLeft }, href: "/?tab=today#missions" });
   for (const duty of (facts.duties ?? []).slice(0, 2)) reminders.push({ kind: "duty", key: "kids.cat.duty", values: { name: duty } });
   if (facts.streak > 0 && !facts.activeToday) reminders.push({ kind: "streak", key: "kids.cat.streak.keep", values: { count: facts.streak } });
   else if (facts.streak >= 3) reminders.push({ kind: "streak", key: "kids.cat.streak.proud", values: { count: facts.streak } });
-  if (facts.almostGoal) reminders.push({ kind: "goal", key: "kids.cat.almost", values: { goal: facts.almostGoal }, href: "/?tab=goals" });
+  if (facts.almostGoal) reminders.push({ kind: "goal", key: "kids.cat.almost", values: { goal: facts.almostGoal }, href: "/?tab=goals#goals" });
   if (facts.starsToNextLevel > 0 && facts.starsToNextLevel <= 5) reminders.push({ kind: "level", key: "kids.cat.level", values: { count: facts.starsToNextLevel, level: facts.nextLevel } });
   if (facts.nextFun) {
     reminders.push({
       kind: "fun",
       key: facts.nextFun.inDays === 0 ? "kids.cat.fun.today" : facts.nextFun.inDays === 1 ? "kids.cat.fun.tomorrow" : "kids.cat.fun.soon",
       values: { title: facts.nextFun.title, count: facts.nextFun.inDays },
-      href: "/?tab=fun",
+      href: "/?tab=fun#fun",
     });
   }
 

@@ -46,6 +46,25 @@ export type CompanionCardLabels = {
  */
 const TURN_KEY = "wh.cat.turn";
 
+/**
+ * "Show me" lands on what the cat was talking about (the owner, 2026-10-20:
+ * "nothing happens when I click on Show me"). The link may name the tab the
+ * child is already on, or one still rendering, so the section is looked for
+ * until it is there (at most two seconds) and brought into view.
+ */
+function scrollWhenShown(href: string) {
+  const id = href.split("#")[1];
+  if (!id) return;
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const started = Date.now();
+  const look = () => {
+    const target = document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
+    else if (Date.now() - started < 2000) window.setTimeout(look, 100);
+  };
+  window.setTimeout(look, 50);
+}
+
 export function CompanionCard({
   householdId,
   name,
@@ -126,6 +145,7 @@ export function CompanionCard({
                 {line.href ? (
                   <Link
                     href={line.href}
+                    onClick={() => scrollWhenShown(line.href!)}
                     className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-4 text-sm font-semibold text-[var(--wh-primary-foreground)] hover:bg-[var(--wh-primary-hover)]"
                   >
                     {labels.show} <ArrowRight aria-hidden className="size-4" />
