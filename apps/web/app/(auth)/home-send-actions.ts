@@ -415,6 +415,7 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
         unitCostMinor: unitCostMinor(line.lineTotal === "" ? null : line.lineTotal, quantity, currency),
         currency,
         merchant: input.merchant ?? null,
+        unit: line.unit || null,
       });
       firstPurchase ??= purchase.id;
       await change("purchase", purchase.id);

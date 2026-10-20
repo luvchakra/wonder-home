@@ -38,6 +38,12 @@ export type ShellViewer = {
   dir?: "ltr" | "rtl";
   /** The shell's own words in that language. Anything absent stays in English. */
   labels?: ShellLabels;
+  /**
+   * A child's view of the app (story 08-017): the brighter look, and the stars
+   * they have counted from what they did, beside the bell on every screen.
+   */
+  audience?: "child";
+  stars?: { count: number; label: string };
 };
 
 export type ShellLabels = {
@@ -125,6 +131,16 @@ export function MobileHeader({
           {trailing}
           {viewer ? (
             <>
+              {viewer.stars ? (
+                <Link
+                  href="/?tab=goals"
+                  aria-label={viewer.stars.label}
+                  className="wh-kid-stars hidden h-9 items-center gap-1 rounded-full px-2.5 text-sm font-bold whitespace-nowrap sm:inline-flex"
+                >
+                  <span aria-hidden>⭐</span>
+                  {viewer.stars.count}
+                </Link>
+              ) : null}
               <Link
                 href="/notifications"
                 aria-label={viewer.unread ? `Notifications, ${viewer.unread} unread` : "Notifications"}
@@ -135,7 +151,17 @@ export function MobileHeader({
                   <span aria-hidden className="absolute end-2.5 top-2.5 size-2 rounded-full bg-[var(--wh-attention)] ring-2 ring-[var(--wh-surface)]" />
                 ) : null}
               </Link>
-              <ViewerMenu viewer={viewer} />
+              {viewer.stars ? (
+                // On a phone the count rides on the avatar, so the wordmark keeps its room (rule 15).
+                <span className="relative">
+                  <ViewerMenu viewer={viewer} />
+                  <span aria-hidden className="wh-kid-stars pointer-events-none absolute -end-1 -bottom-1 rounded-full px-1.5 text-[0.625rem] leading-4 font-bold sm:hidden">
+                    ⭐{viewer.stars.count}
+                  </span>
+                </span>
+              ) : (
+                <ViewerMenu viewer={viewer} />
+              )}
             </>
           ) : null}
         </div>
